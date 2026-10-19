@@ -32,6 +32,9 @@ public class RecordedDataTypes {
     public static final int TYPE_SLEEP        = 0x00000800;
     public static final int TYPE_HRV          = 0x00001000;
     public static final int TYPE_AUDIO_REC    = 0x00002000;
+    /** Full history: ask the device for every file it still stores, not only the new ones. Only meaningful alone
+     *  (compared with ==, so TYPE_ALL from a sync button does not trigger it). */
+    public static final int TYPE_HISTORY      = 0x00004000;
 
     public static final int TYPE_ALL          = (int)0xffffffff;
 

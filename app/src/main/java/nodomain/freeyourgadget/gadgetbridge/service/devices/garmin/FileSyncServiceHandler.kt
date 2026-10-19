@@ -167,9 +167,12 @@ class FileSyncServiceHandler(val deviceSupport: GarminSupport) {
         LOG.debug("Requesting file list starting at page {} (cursorId={})", nextPageId, cursorId)
 
         val fileListRequestBuilder = GdiFileSyncService.ItemListRequest.newBuilder().apply {
-            // Exclusion flags? If we omit this, it sends back already synced files going back months.
-            addFlags1(GdiFileSyncService.FileId.newBuilder().setId1(FLAGS_SYNCED).setId2(FLAGS_SYNCED).build())
-            addFlags2(GdiFileSyncService.FileId.newBuilder().setId1(FLAGS_SYNCED).setId2(FLAGS_SYNCED).build())
+            // Exclusion flags? If we omit this, it sends back already synced files going back months,
+            // which is exactly what a history fetch wants.
+            if (!deviceSupport.isFetchingHistory) {
+                addFlags1(GdiFileSyncService.FileId.newBuilder().setId1(FLAGS_SYNCED).setId2(FLAGS_SYNCED).build())
+                addFlags2(GdiFileSyncService.FileId.newBuilder().setId1(FLAGS_SYNCED).setId2(FLAGS_SYNCED).build())
+            }
         }
 
         val currentcursorId = cursorId
@@ -267,6 +270,11 @@ class FileSyncServiceHandler(val deviceSupport: GarminSupport) {
                 LOG.warn("Ignoring file: {} {}", typeName, file)
                 return
             }
+        }
+
+        // A history fetch lists months of already-synced files: only the activities (runs, hikes, swims…) are worth it.
+        if (deviceSupport.isFetchingHistory && fileType != FileType.FILETYPE.ACTIVITY) {
+            return
         }
 
         // ensure the to-be-downloaded file has a good type.name

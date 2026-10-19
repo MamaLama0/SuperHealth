@@ -130,9 +130,9 @@ public class FileTransferHandler implements MessageHandler {
         if (!message.shouldProceed())
             return null;
         if (upload.isIdle())
-            return new FilterMessage();
+            return new FilterMessage(deviceSupport.isFetchingHistory());
         // defer reply until upload idle
-        runWhenUploadIdle(() -> deviceSupport.sendOutgoingMessage("send filter (deferred)", new FilterMessage()));
+        runWhenUploadIdle(() -> deviceSupport.sendOutgoingMessage("send filter (deferred)", new FilterMessage(deviceSupport.isFetchingHistory())));
         return null;
     }
 
