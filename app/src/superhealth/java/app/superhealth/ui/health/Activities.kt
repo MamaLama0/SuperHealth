@@ -65,6 +65,7 @@ import app.superhealth.nutrition.ui.components.SettingRow
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.rounded.FileOpen
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -126,7 +127,7 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
     val devices by vm.devices.collectAsState()
     val list by produceState(emptyList<Bridge.Activity>(), refresh, sh.watchModule) {
         value = runCatching { Bridge.activities(System.currentTimeMillis() - 60 * 86_400_000L) }.getOrDefault(emptyList())
-            .filter { it.source != Bridge.Source.GYM }
+            .filter { it.source != Bridge.Source.GYM && it.kind != Bridge.Kind.STRENGTH } // la musculation a sa propre section
     }
     SectionLabel(tr("Cardio et plein air")) {
         if (list.isNotEmpty()) Text(tr("Tout voir"), Modifier.clickable { nav.navigate("h/activities") }, color = Mf.colors.accent,
@@ -148,7 +149,28 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
             ActivityRow(a) { openActivity(ctx, nav, a) }
         }
     }
+    if (sh.watchModule && devices.isNotEmpty()) PerformanceEntry(nav)
     ImportActivitiesCard(vm, nav)
+}
+
+/** Accès aux performances (records, récupération, charge, volume). */
+@Composable
+fun ColumnScope.PerformanceEntry(nav: NavHostController) {
+    Spacer(Modifier.height(10.dp))
+    val hue = HealthHues.Mind
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius))
+        .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(hue.container(1.4f), HealthHues.Fitness.container(1.1f))))
+        .clickable { nav.navigate("h/performance") }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Mf.colors.card), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(22.dp), tint = hue)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(tr("Performances"), style = MaterialTheme.typography.bodyLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            Text(tr("Records, récupération, charge et volume"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+    }
 }
 
 /** Import d'activités passées : fichiers .fit ou export ZIP de Garmin Connect. */

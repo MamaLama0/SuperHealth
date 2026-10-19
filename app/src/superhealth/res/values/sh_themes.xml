@@ -5,4 +5,58 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowBackground">@color/sh_bg</item>
     </style>
+
+    <!-- Posé sur les thèmes Gadgetbridge (SuperHealthApp.onActivityThemed) : police DM Sans, titres en gras, coins arrondis. -->
+    <style name="SuperHealth.GBOverlay" parent="">
+        <item name="android:fontFamily">@font/dm_sans</item>
+        <item name="fontFamily">@font/dm_sans</item>
+        <item name="android:textViewStyle">@style/SuperHealth.GBText</item>
+        <item name="toolbarStyle">@style/SuperHealth.GBToolbar</item>
+        <item name="shapeAppearanceSmallComponent">@style/SuperHealth.GBShape</item>
+        <item name="shapeAppearanceMediumComponent">@style/SuperHealth.GBShapeCard</item>
+        <item name="shapeAppearanceCornerSmall">@style/SuperHealth.GBShape</item>
+        <item name="shapeAppearanceCornerMedium">@style/SuperHealth.GBShapeCard</item>
+        <item name="shapeAppearanceCornerLarge">@style/SuperHealth.GBShapeCard</item>
+        <item name="materialCardViewStyle">@style/SuperHealth.GBCard</item>
+        <!-- Barre du haut et barre d'état du fond de l'écran, comme les écrans SuperHealth -->
+        <item name="toolbar_bg">?android:attr/colorBackground</item>
+    </style>
+
+    <!-- Remplace le style de titre de Gadgetbridge : DM Sans en gras -->
+    <style name="TextAppearance.App.ToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">21sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/dm_sans</item>
+        <item name="fontFamily">@font/dm_sans</item>
+        <item name="android:textColor">?attr/toolbar_title</item>
+    </style>
+
+    <style name="SuperHealth.GBText" parent="android:Widget.TextView">
+        <item name="android:fontFamily">@font/dm_sans</item>
+    </style>
+
+    <style name="SuperHealth.GBToolbar" parent="Widget.Material3.Toolbar">
+        <item name="titleTextAppearance">@style/SuperHealth.GBToolbarTitle</item>
+    </style>
+
+    <style name="SuperHealth.GBToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/dm_sans</item>
+        <item name="fontFamily">@font/dm_sans</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="SuperHealth.GBShape" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="SuperHealth.GBShapeCard" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
+
+    <style name="SuperHealth.GBCard" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">24dp</item>
+        <item name="cardElevation">0dp</item>
+    </style>
 </resources>

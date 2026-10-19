@@ -120,6 +120,7 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.HeartBroken
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.OutlinedTextField
@@ -176,7 +177,7 @@ import kotlin.math.roundToInt
 private enum class Step(val section: Int) {
     WELCOME(0), NAME(0), SEX(0), BIRTH(0), HEIGHT(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
     GOAL(1), TARGET(1), PROTEIN(1), DIET(1), FLOOR(1), DISTRIBUTION(1),
-    TRAINING(2), EXPERIENCE(2), GYM(2),
+    TRAINING(2), EXPERIENCE(2), GYM(2), PROGRAM(2), LIFT_GOAL(2), DAYS(2), DURATION(2),
     WATCH(3), HEALTH(3),
     GENERATING(4), RESULT(4),
 }
@@ -196,6 +197,7 @@ private fun Step.image() = "illustrations/illustration_" + when (this) {
     Step.ACTIVITY -> 4; Step.HISTORY -> 5; Step.HEALTH -> 24; Step.GOAL -> 17; Step.TARGET -> 22; Step.TRAINING -> 9
     Step.PROTEIN -> 16; Step.DIET -> 3; Step.FLOOR -> 13; Step.DISTRIBUTION -> 25; Step.GENERATING -> 28; Step.RESULT -> 2
     Step.EXPERIENCE -> 11; Step.GYM -> 12; Step.WATCH -> 19
+    Step.PROGRAM -> 8; Step.LIFT_GOAL -> 18; Step.DAYS -> 20; Step.DURATION -> 21
 } + ".webp"
 
 
@@ -231,6 +233,11 @@ fun OnboardingScreen(svm: SuperViewModel) {
     var name by rememberSaveable { mutableStateOf(app.superhealth.ui.userName() ?: "") }
     var experience by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Experience.INTERMEDIATE) }
     var gym by rememberSaveable { mutableStateOf(GymTemplate.COMMERCIAL) }
+    // Programme de musculation généré à la fin du questionnaire (questions essentielles de l'assistant de La Salle).
+    var wantProgram by rememberSaveable { mutableStateOf(true) }
+    var liftGoal by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Goal.HYPERTROPHY) }
+    var liftDays by rememberSaveable { mutableIntStateOf(3) }
+    var liftMinutes by rememberSaveable { mutableIntStateOf(50) }
     var watch by rememberSaveable { mutableStateOf(WatchChoice.LATER) }
     var paired by rememberSaveable { mutableStateOf(GBApplication.app().deviceManager.devices.isNotEmpty()) }
     val lifts = training == Training.STRENGTH || training == Training.BOTH
@@ -240,7 +247,8 @@ fun OnboardingScreen(svm: SuperViewModel) {
         when (it) {
             Step.HEALTH -> healthAvailable
             Step.TARGET -> goal != GoalType.MAINTENANCE
-            Step.EXPERIENCE, Step.GYM -> lifts
+            Step.EXPERIENCE, Step.GYM, Step.PROGRAM -> lifts
+            Step.LIFT_GOAL, Step.DAYS, Step.DURATION -> lifts && wantProgram
             else -> true
         }
     }
@@ -272,6 +280,18 @@ fun OnboardingScreen(svm: SuperViewModel) {
         return an.initialTdee to Targets.checkIn(today, an.initialTdee, weightKg, an.lbmAt(today), p, g, heightCm.toDouble())
     }
 
+    /** Programme de musculation proposé (aperçu sur l'écran final, activé à la validation). */
+    fun draftLiftProgram(): app.superhealth.training.domain.Program? {
+        if (!lifts || !wantProgram) return null
+        val t = svm.training
+        val equipment = t.gymFromTemplate(gym).equipmentIds
+        return t.generate(app.superhealth.training.domain.Generator.Input(
+            goal = liftGoal, daysPerWeek = liftDays, split = app.superhealth.training.domain.Split.recommended(liftDays), minutes = liftMinutes,
+            periodization = app.superhealth.training.domain.Periodization.LINEAR, deload = app.superhealth.training.domain.Deload.LAST,
+            experience = experience, equipment = equipment, name = tr("Mon programme"),
+        ))
+    }
+
     fun finish(program: Boolean) {
         val s = settings.copy(weightUnit = unit, healthConnect = health,
             language = if (Lang.english) Language.EN else Language.FR)
@@ -287,6 +307,12 @@ fun OnboardingScreen(svm: SuperViewModel) {
         val myGym = t.gymFromTemplate(gym, tr("Ma salle"))
         t.saveGym(myGym)
         t.settings { it.copy(onboarded = true, experience = experience, activeGymId = myGym.id) }
+        // Programme généré avec l'équipement de la salle créée, activé directement.
+        if (program) {
+            val p = draftLiftProgram()
+            if (p != null) t.saveProgram(p.copy(gymId = myGym.id), activate = true)
+            else svm.pendingRoute.value = "training:wizard" // base d'exercices pas encore prête : l'assistant prend le relais
+        }
         Watch.setEnabled(watch != WatchChoice.NONE)
         SuperPrefs.update { it.copy(onboarded = true, healthConnect = health) }
         vm.launch {
@@ -295,7 +321,6 @@ fun OnboardingScreen(svm: SuperViewModel) {
             prefs.setSettings(s.copy(onboarded = true))
         }
         if (health) svm.syncNow(ctx)
-        if (program) svm.pendingRoute.value = "training:wizard"
     }
 
     // Montre : autorisations Bluetooth de Gadgetbridge, puis recherche et association.
@@ -473,6 +498,22 @@ fun OnboardingScreen(svm: SuperViewModel) {
                             GymTemplate.BLANK -> Icons.Rounded.CropFree
                         } }) { gym = it }
                     }
+                    Step.PROGRAM -> Page(st, tr("Voulez-vous un programme de musculation ?"), tr("Généré selon votre expérience, votre salle et votre emploi du temps. Il progresse avec vous.")) {
+                        Options(listOf(true, false), wantProgram, { if (it) tr("Oui, créez-le pour moi") else tr("Non, je m'entraîne à ma façon") },
+                            { if (it) tr("Séances, exercices, séries et progression") else tr("Vous pourrez en créer un plus tard dans Activités") },
+                            icon = { if (it) Icons.Rounded.AutoFixHigh else Icons.Rounded.FitnessCenter }) { wantProgram = it }
+                    }
+                    Step.LIFT_GOAL -> Page(st, tr("Quel est votre objectif principal ?"), null) {
+                        Options(app.superhealth.training.domain.Goal.entries, liftGoal, { tr(it.label) }, { tr(it.description) }) { liftGoal = it }
+                    }
+                    Step.DAYS -> Page(st, tr("Combien de séances par semaine ?"), tr("La structure (full body, haut/bas, push/pull/legs…) en découle.")) {
+                        Wheel((1..7).map { trf("%1\$s par semaine", it) }, liftDays - 1) { liftDays = it + 1 }
+                    }
+                    Step.DURATION -> Page(st, tr("Combien de temps par séance ?"), null) {
+                        Options(listOf(30, 50, 70, 90), liftMinutes, { when (it) {
+                            30 -> tr("20 à 40 minutes"); 50 -> tr("40 à 60 minutes"); 70 -> tr("60 à 80 minutes"); else -> tr("80 à 100 minutes")
+                        } }, icon = { Icons.Rounded.Timer }) { liftMinutes = it }
+                    }
                     Step.WATCH -> Page(st, tr("Avez-vous une montre connectée ?"), tr("Pas, fréquence cardiaque, sommeil et séances, sans compte ni cloud.")) {
                         Options(WatchChoice.entries, watch, { it.label }, { it.description }, icon = { when (it) {
                             WatchChoice.PAIR -> Icons.Rounded.Bluetooth; WatchChoice.LATER -> Icons.Rounded.Watch; WatchChoice.NONE -> Icons.Rounded.Close
@@ -532,7 +573,9 @@ fun OnboardingScreen(svm: SuperViewModel) {
                         Spacer(Modifier.height(12.dp))
                         Text(tr("Et aussi"), style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
-                        if (lifts) Feature(Icons.Rounded.FitnessCenter, trf("Musculation : %1\$s, %2\$s", gym.label.let(::tr).lowercase(Lang.locale), experience.label.let(::tr).lowercase(Lang.locale)))
+                        val liftProgram = remember { draftLiftProgram() }
+                        if (liftProgram != null) LiftProgramCard(liftProgram, liftMinutes)
+                        else if (lifts) Feature(Icons.Rounded.FitnessCenter, trf("Musculation : %1\$s, %2\$s", gym.label.let(::tr).lowercase(Lang.locale), experience.label.let(::tr).lowercase(Lang.locale)))
                         Feature(Icons.Rounded.Watch, when (watch) {
                             WatchChoice.NONE -> tr("Module montre désactivé")
                             else -> if (paired) tr("Montre associée") else tr("Montre à associer dans Réglages")
@@ -545,7 +588,7 @@ fun OnboardingScreen(svm: SuperViewModel) {
         if (step != Step.GENERATING) {
             val label = when (step) {
                 Step.WELCOME -> tr("Commencer")
-                Step.RESULT -> if (lifts) tr("Créer mon programme de musculation") else tr("C'est parti")
+                Step.RESULT -> tr("C'est parti")
                 Step.HEALTH -> if (health) tr("Continuer") else tr("Plus tard")
                 Step.NAME -> if (name.isBlank()) tr("Passer") else tr("Continuer")
                 Step.WATCH -> if (watch == WatchChoice.PAIR && !paired) tr("Plus tard") else tr("Continuer")
@@ -555,11 +598,7 @@ fun OnboardingScreen(svm: SuperViewModel) {
             val ok = step != Step.TARGET || (goal == GoalType.CUT && targetKg < weightKg) || (goal == GoalType.BULK && targetKg > weightKg)
             Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 PillButton(tr(label), Modifier.fillMaxWidth(), enabled = ok) {
-                    if (step == Step.RESULT) finish(program = lifts) else next()
-                }
-                if (step == Step.RESULT && lifts) {
-                    Spacer(Modifier.height(8.dp))
-                    PillButton(tr("Plus tard"), Modifier.fillMaxWidth(), strong = false) { finish(program = false) }
+                    if (step == Step.RESULT) finish(program = lifts && wantProgram) else next()
                 }
             }
         }
@@ -850,3 +889,33 @@ fun BodyFatPicker(sex: Sex, selected: Double?, onPick: (Int) -> Unit) {
     }
 }
 
+/** Aperçu du programme de musculation généré : nom, rythme et séances de la semaine. */
+@Composable
+private fun LiftProgramCard(p: app.superhealth.training.domain.Program, minutes: Int) {
+    val blue = app.superhealth.ui.theme.WorkoutBlue
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius))
+        .background(androidx.compose.ui.graphics.lerp(Mf.colors.card, blue, if (Mf.colors.dark) 0.27f else 0.15f)).padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.card), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.FitnessCenter, null, tint = blue)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tr("Votre programme de musculation"), style = MaterialTheme.typography.titleMedium)
+                val training = p.days.count { !it.isRest }
+                Text(trf("%1\$s séances par semaine · ≈ %2\$s min", training, minutes), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        p.days.filter { !it.isRest }.forEachIndexed { i, d ->
+            Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(24.dp).clip(CircleShape).background(blue), contentAlignment = Alignment.Center) {
+                    Text("${i + 1}", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(d.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1)
+                Text(trf("%1\$s exercices", d.exercises.size), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
+            }
+        }
+    }
+}

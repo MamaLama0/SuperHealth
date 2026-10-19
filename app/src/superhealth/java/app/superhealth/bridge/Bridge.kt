@@ -71,7 +71,14 @@ object Bridge {
         weightKg?.let { gb.putString(ActivityUser.PREF_USER_WEIGHT_KG, it.roundToInt().toString()) }
         if (s.stepGoal > 0) gb.putString(ActivityUser.PREF_USER_STEPS_GOAL, s.stepGoal.toString())
         gb.putString("pref_key_theme", s.themeMode.name.lowercase())
-        gb.putString("language", when (s.language.name) { "FR" -> "fr"; "EN" -> "en"; else -> "default" })
+        // Couleur d'accent des écrans Gadgetbridge : la plus proche de celle choisie dans SuperHealth.
+        gb.putString(GBApplication.PREF_ACCENT_COLOR, when (s.accent.name) {
+            "PINK" -> "pink"; "GREEN" -> "green"; "YELLOW" -> "amber"; "PURPLE" -> "violet"; "ORANGE" -> "orange"; "GRAY" -> "white"; else -> "blue"
+        })
+        // Même langue que SuperHealth, y compris en « système » (Lang a déjà tranché entre français et anglais).
+        gb.putString("language", if (Lang.english) "en" else "fr")
+        val gbLang = if (Lang.english) "en" else "fr"
+        if (GBApplication.getLanguage()?.language != gbLang) runCatching { GBApplication.setLanguage(gbLang) }
         gb.apply()
     }
 

@@ -133,6 +133,10 @@ public abstract class AbstractGBActivity extends AppCompatActivity implements GB
             }
         }
 
+        if (activity instanceof Activity) {
+            GBApplication.app().onActivityThemed((Activity) activity);
+        }
+
         activity.setLanguage(GBApplication.getLanguage(), false);
     }
 

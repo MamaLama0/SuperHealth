@@ -26,4 +26,9 @@ class SuperHealthApp : GBApplication() {
         Bridge.start(this)
         SyncWorker.schedule(this)
     }
+
+    /** Écrans Gadgetbridge (réglages de la montre, association…) : police et formes de SuperHealth. */
+    override fun onActivityThemed(activity: android.app.Activity) {
+        activity.theme.applyStyle(nodomain.freeyourgadget.gadgetbridge.R.style.SuperHealth_GBOverlay, true)
+    }
 }

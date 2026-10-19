@@ -171,6 +171,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("h/devices") { DevicesScreen(vm, nav) }
             composable("h/activities") { ActivitiesHistoryScreen(vm, nav) }
             composable("h/permissions") { PermissionsScreen(vm, nav) }
+            composable("h/performance") { app.superhealth.ui.health.PerformanceScreen(vm, nav) }
             composable("h/workout/{id}", listOf(navArgument("id") { type = NavType.LongType })) {
                 WorkoutScreen(nav, it.arguments?.getLong("id") ?: 0L)
             }

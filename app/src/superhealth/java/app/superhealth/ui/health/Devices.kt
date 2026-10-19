@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Watch
+import app.superhealth.ui.theme.container
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -102,7 +104,7 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
             devices.forEachIndexed { i, d ->
                 if (i > 0) RowDivider()
                 DeviceRow(d, onSync = { vm.syncDevice(d) }) {
-                    ctx.startActivity(Intent(ctx, DeviceSettingsActivity::class.java).putExtra(GBDevice.EXTRA_DEVICE, d.device))
+                    DeviceSettingsActivity.start(ctx, d.device)
                 }
             }
             if (devices.isNotEmpty()) RowDivider()
@@ -147,8 +149,9 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
 @Composable
 private fun DeviceRow(d: DeviceUi, onSync: () -> Unit, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
-            Icon(painterResource(d.icon), null, Modifier.size(26.dp), tint = if (d.connected) Mf.colors.accent else Mf.colors.textSecondary)
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(if (d.connected) Mf.colors.accent.container() else Mf.colors.chip),
+            contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Watch, null, Modifier.size(24.dp), tint = if (d.connected) Mf.colors.accent else Mf.colors.textSecondary)
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {

@@ -740,6 +740,13 @@ public class GBApplication extends Application {
      * applying it in that case, since Dynamic Color already ties these colors to the wallpaper.
      */
     @StyleRes
+    /**
+     * Called once a Gadgetbridge activity has its theme: flavors embedding Gadgetbridge in another app
+     * override it to layer their own look (fonts, colors) on top.
+     */
+    public void onActivityThemed(final android.app.Activity activity) {
+    }
+
     public static int getAccentColorOverlay() {
         final String accent = prefs.getString(PREF_ACCENT_COLOR, PREF_ACCENT_COLOR_DEFAULT);
         final boolean dark = isDarkThemeEnabled();

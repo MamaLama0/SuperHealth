@@ -21,6 +21,8 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     ENERGY("Énergie et stress", Section.HEALTH, watch = true),
     VITALS("Constantes", Section.HEALTH, watch = true),
     HYDRATION("Hydratation", Section.HEALTH),
+    RUNNING("Course à pied", Section.TRAINING, watch = true),
+    RECOVERY("Récupération", Section.TRAINING, watch = true),
     ACTIVITIES("Dernières activités", Section.TRAINING),
     TRAINING_WEEK("Semaine d'entraînement", Section.TRAINING),
     MUSCLES("Muscles travaillés", Section.TRAINING),

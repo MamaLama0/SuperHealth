@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.EventAvailable
@@ -130,7 +131,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Cartes affichées sur une demi-largeur (rangées deux par deux, à hauteur égale, quand elles se suivent). */
-private val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION)
+private val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
+    DashCard.RECOVERY)
 
 /** Couleur et icône de chaque carte (pastille d'en-tête, fond des cartes teintées). */
 private fun DashCard.hue(): Color = when (this) {
@@ -147,6 +149,8 @@ private fun DashCard.hue(): Color = when (this) {
     DashCard.ACTIVITIES -> HealthHues.Fitness
     DashCard.STRATEGY -> HealthHues.Body
     DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS -> WorkoutBlue
+    DashCard.RUNNING -> HealthHues.Fitness
+    DashCard.RECOVERY -> HealthHues.Sleep
 }
 
 private fun DashCard.icon(): ImageVector = when (this) {
@@ -167,6 +171,8 @@ private fun DashCard.icon(): ImageVector = when (this) {
     DashCard.MUSCLES -> Icons.Rounded.AccessibilityNew
     DashCard.RECORDS -> Icons.Rounded.EmojiEvents
     DashCard.STRATEGY -> Icons.Rounded.Flag
+    DashCard.RUNNING -> Icons.AutoMirrored.Rounded.DirectionsRun
+    DashCard.RECOVERY -> Icons.Rounded.BatteryChargingFull
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -176,6 +182,7 @@ private class HealthSnap(
     val energy: List<Point> = emptyList(),
     val heartToday: List<Point> = emptyList(),
     val activities: List<Bridge.Activity> = emptyList(),
+    val perf: app.superhealth.health.data.Performance.Snapshot? = null,
 ) {
     fun latest(m: Metric): Pair<LocalDate, Double>? = series[m]?.lastOrNull { it.second != null }?.let { it.first to it.second!! }
     fun today(m: Metric): Double? = series[m]?.lastOrNull()?.takeIf { it.first == LocalDate.now() }?.second
@@ -206,6 +213,7 @@ private fun hasSource(c: DashCard): Boolean = when (c) {
     DashCard.CARDIO -> Bridge.hasSource(Metric.CARDIO_WEEK)
     DashCard.ENERGY -> Bridge.hasSource(Metric.BODY_ENERGY) || Bridge.hasSource(Metric.STRESS)
     DashCard.VITALS -> VITALS.any { Bridge.hasSource(it) }
+    DashCard.RUNNING, DashCard.RECOVERY -> app.superhealth.bridge.Watch.devices().isNotEmpty()
     else -> true
 }
 
@@ -229,7 +237,8 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
         val energy = if (DashCard.ENERGY in cards && Bridge.hasSource(Metric.BODY_ENERGY)) runCatching { HealthRepository.intraday(Metric.BODY_ENERGY, today) }.getOrDefault(emptyList()) else emptyList()
         val heart = if (DashCard.HEART in cards && HealthRepository.isSupported(Metric.HEART_RATE)) runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else emptyList()
         val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(System.currentTimeMillis() - 30 * 86_400_000L) }.getOrDefault(emptyList()) else emptyList()
-        value = HealthSnap(series, cardio, energy, heart, acts).also { lastSnap = it }
+        val perf = if (DashCard.RUNNING in cards || DashCard.RECOVERY in cards) runCatching { app.superhealth.health.data.Performance.snapshot(ctx) }.getOrNull() else null
+        value = HealthSnap(series, cardio, energy, heart, acts, perf).also { lastSnap = it }
     }
 
     fun tab(route: String) = nav.navigate(route) {
@@ -496,6 +505,34 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             }
         }
         DashCard.HEART -> HeartCard(c, h, nav, modifier)
+        DashCard.RUNNING -> {
+            val weeks = h.perf?.weeks.orEmpty().takeLast(8)
+            val cur = weeks.lastOrNull()
+            Tile(c, tr("Course à pied"), modifier, onClick = { nav.go("h/performance") }) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Value(cur?.let { formatNumber(it.runKm, 1) } ?: "—", "km", color = c.hue().onContainer(), big = true)
+                    Spacer(Modifier.weight(1f))
+                    h.perf?.records?.firstOrNull { it.label == "5 km" }?.let { r ->
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(app.superhealth.ui.health.clock(r.sec), style = MaterialTheme.typography.titleMedium, color = c.hue().onContainer())
+                            Text(tr("Record 5 km"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                        }
+                    }
+                }
+                Sub(trf("Cette semaine · %1\$s séance(s)", cur?.sessions ?: 0))
+                Spacer(Modifier.height(12.dp))
+                BarChart(weeks.map { it.runKm.takeIf { k -> k > 0 } }, weeks.map { null }, c.hue(), height = 64.dp, track = softTrack(),
+                    labels = weeks.map { "${it.start.dayOfMonth}/${it.start.monthValue}" })
+            }
+        }
+        DashCard.RECOVERY -> {
+            val p = h.perf
+            Tile(c, tr("Récupération"), modifier, onClick = { nav.go("h/performance") }) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { app.superhealth.ui.health.RecoveryRing(p?.recoveryLeftH, 92.dp, 9.dp) }
+                Spacer(Modifier.height(6.dp))
+                Sub(p?.acwr?.let { trf("Charge %1\$s", tr(app.superhealth.ui.health.loadStatus(it).first).lowercase(app.superhealth.ui.Lang.locale)) })
+            }
+        }
         DashCard.SLEEP -> {
             val series = h.series[Metric.SLEEP].orEmpty()
             val last = h.latest(Metric.SLEEP)
