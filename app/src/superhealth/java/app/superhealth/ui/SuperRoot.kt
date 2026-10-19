@@ -89,11 +89,9 @@ import app.superhealth.ui.health.DevicesScreen
 import app.superhealth.ui.health.LogSheet
 import app.superhealth.ui.health.MetricScreen
 import app.superhealth.ui.health.OtherActivities
-import app.superhealth.ui.health.LiveBanner
-import app.superhealth.ui.health.LiveSessionScreen
 import app.superhealth.ui.health.PermissionsScreen
-import app.superhealth.ui.health.PhoneSessionScreen
-import app.superhealth.ui.health.StartActivity
+import app.superhealth.ui.health.WorkoutMapScreen
+import app.superhealth.ui.health.WorkoutScreen
 import app.superhealth.ui.onboarding.OnboardingScreen
 import app.superhealth.ui.settings.SettingsScreen
 import app.superhealth.ui.theme.Mf
@@ -163,7 +161,7 @@ fun SuperRoot(vm: SuperViewModel) {
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
-            composable("activities") { WorkoutTabScreen(vm.training, nav, top = { StartActivity(nav) }) { OtherActivities(vm, nav) } }
+            composable("activities") { WorkoutTabScreen(vm.training, nav) { OtherActivities(vm, nav) } }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
             composable("h/metric/{metric}", listOf(navArgument("metric") { type = NavType.StringType })) {
@@ -173,15 +171,15 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("h/devices") { DevicesScreen(vm, nav) }
             composable("h/activities") { ActivitiesHistoryScreen(vm, nav) }
             composable("h/permissions") { PermissionsScreen(vm, nav) }
-            composable("act/live") { LiveSessionScreen(vm, nav) }
-            composable("act/phone/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
-                PhoneSessionScreen(vm, nav, it.arguments?.getString("id").orEmpty())
+            composable("h/workout/{id}", listOf(navArgument("id") { type = NavType.LongType })) {
+                WorkoutScreen(nav, it.arguments?.getLong("id") ?: 0L)
+            }
+            composable("h/workout/{id}/map", listOf(navArgument("id") { type = NavType.LongType })) {
+                WorkoutMapScreen(nav, it.arguments?.getLong("id") ?: 0L)
             }
             nutritionGraph(vm.nutrition, nav)
             trainingGraph(vm.training, nav)
         }
-        val live by app.superhealth.bridge.LiveSession.state.collectAsState()
-        if (isTab && live != null) LiveBanner(live!!, Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) { nav.navigate("act/live") }
         if (isTab && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
         if (isTab) BottomBar(current, onTab = { route ->
             nav.navigate(route) {

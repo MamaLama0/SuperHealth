@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.SportsScore
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +55,12 @@ import app.superhealth.ui.relativeDay
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
-import app.superhealth.bridge.WatchHistory
+import app.superhealth.bridge.FitImport
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.foundation.layout.height
 import app.superhealth.nutrition.ui.components.SettingRow
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -67,7 +73,6 @@ import androidx.compose.runtime.setValue
 import app.superhealth.ui.trf
 import kotlinx.coroutines.launch
 import app.superhealth.ui.tr
-import nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutDetailsActivity
 
 fun Bridge.Kind.icon(): ImageVector = when (this) {
     Bridge.Kind.STRENGTH -> Icons.Rounded.FitnessCenter
@@ -92,7 +97,8 @@ fun ActivityRow(a: Bridge.Activity, horizontal: androidx.compose.ui.unit.Dp = 16
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(tr(a.title), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOf(relativeDay(localDate(a.start)), formatDuration(a.minutes.toDouble()), tr(a.source.label)).joinToString(" · "),
+            Text(listOfNotNull(relativeDay(localDate(a.start)), a.watch?.distanceM?.takeIf { it >= 100 }?.let { km(it) + " km" },
+                formatDuration(a.minutes.toDouble()), tr(a.source.label)).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         hr?.let {
@@ -106,8 +112,7 @@ fun ActivityRow(a: Bridge.Activity, horizontal: androidx.compose.ui.unit.Dp = 16
 fun openActivity(ctx: Context, nav: NavHostController, a: Bridge.Activity) {
     when {
         a.gymId != null -> nav.navigate("workoutdetail/${a.gymId}")
-        a.phone != null -> nav.navigate("act/phone/${a.phone.id}")
-        a.watch != null -> ctx.startActivity(WorkoutDetailsActivity.createSingleWorkoutIntent(ctx, a.watch.id, a.watch.device))
+        a.watch != null -> nav.navigate("h/workout/${a.watch.id}")
         else -> Toast.makeText(ctx, app.superhealth.ui.trf("Activité enregistrée par %1\$s", a.hc?.app ?: "Health Connect"), Toast.LENGTH_SHORT).show()
     }
 }
@@ -143,44 +148,82 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
             ActivityRow(a) { openActivity(ctx, nav, a) }
         }
     }
-    if (sh.watchModule) WatchHistoryCard(vm)
+    ImportActivitiesCard(vm, nav)
+}
+
+/** Import d'activités passées : fichiers .fit ou export ZIP de Garmin Connect. */
+@Composable
+fun ColumnScope.ImportActivitiesCard(vm: SuperViewModel, nav: NavHostController) {
+    if (!FitImport.supported()) return
+    val importer = rememberFitImport(vm, nav)
+    Spacer(Modifier.height(10.dp))
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        .clickable { importer() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(HealthHues.Fitness.container()), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.FileOpen, null, Modifier.size(22.dp), tint = HealthHues.Fitness)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(tr("Importer des activités"), style = MaterialTheme.typography.bodyLarge)
+            Text(tr("Fichiers .fit ou export ZIP de Garmin Connect"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+    }
 }
 
 /**
- * Activités passées de la montre : relecture de tout ce qu'elle garde en mémoire (Garmin, y compris ce qui a déjà été
- * envoyé à Garmin Connect), ou import de fichiers .fit / de l'export ZIP de Garmin Connect.
+ * Sélecteur de fichiers + fenêtre de progression puis de résultat. Renvoie l'action qui ouvre le sélecteur.
+ * Après l'import, « Voir » ouvre l'historique des activités.
  */
 @Composable
-fun ColumnScope.WatchHistoryCard(vm: SuperViewModel) {
+fun rememberFitImport(vm: SuperViewModel, nav: NavHostController): () -> Unit {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val devices by vm.devices.collectAsState()
-    if (!WatchHistory.supported()) return
-    var importing by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var result by remember { mutableStateOf<Result<FitImport.ImportResult>?>(null) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
-        importing = true
+        progress = 0 to 0
         scope.launch {
-            val msg = runCatching { WatchHistory.import(ctx, uris) }.fold(
-                { r -> if (r.failed == 0) trf("%1\$s activité(s) importée(s)", r.imported) else trf("%1\$s importée(s), %2\$s illisible(s)", r.imported, r.failed) },
-                { e -> trf("Erreur : %1\$s", e.message) })
-            importing = false
+            result = runCatching { FitImport.import(ctx, uris) { done, total -> progress = done to total } }
+            progress = null
             app.superhealth.health.data.HealthRepository.invalidate(); vm.bump()
-            Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
         }
     }
-    SectionLabel(tr("Historique de la montre"))
-    GroupCard {
-        val busy = devices.any { it.busy }
-        SettingRow(tr("Récupérer les activités passées"), subtitle = tr(if (busy) "Récupération en cours…" else "Tout ce que la montre garde en mémoire, même déjà envoyé à Garmin Connect"),
-            icon = Icons.Rounded.History) {
-            val n = WatchHistory.fetchFromWatch()
-            Toast.makeText(ctx, tr(if (n > 0) "Récupération lancée : cela peut prendre quelques minutes" else "Connectez d'abord la montre"), Toast.LENGTH_LONG).show()
-        }
-        RowDivider()
-        SettingRow(tr("Importer des fichiers .fit"), subtitle = tr(if (importing) "Import en cours…" else "Fichiers .fit, ou export ZIP de Garmin Connect (garmin.com > Exporter vos données)"),
-            icon = Icons.Rounded.FileOpen) { if (!importing) pick.launch(arrayOf("*/*")) }
+    progress?.let { (done, total) ->
+        AlertDialog(onDismissRequest = {}, containerColor = Mf.colors.card, confirmButton = {},
+            title = { Text(tr("Import en cours…")) },
+            text = {
+                Column {
+                    if (total > 0) {
+                        LinearProgressIndicator(progress = { done.toFloat() / total }, Modifier.fillMaxWidth(), color = HealthHues.Fitness,
+                            trackColor = HealthHues.Fitness.container())
+                        Spacer(Modifier.height(8.dp))
+                        Text(trf("%1\$s sur %2\$s fichiers", done, total), color = Mf.colors.textSecondary)
+                    } else LinearProgressIndicator(Modifier.fillMaxWidth(), color = HealthHues.Fitness, trackColor = HealthHues.Fitness.container())
+                }
+            })
     }
+    result?.let { r ->
+        val res = r.getOrNull()
+        AlertDialog(onDismissRequest = { result = null }, containerColor = Mf.colors.card,
+            title = { Text(tr(if (res != null && res.imported > 0) "Activités importées" else "Import terminé")) },
+            text = {
+                Text(r.fold({
+                    listOfNotNull(
+                        trf("%1\$s activité(s) importée(s)", it.imported),
+                        it.skipped.takeIf { n -> n > 0 }?.let { n -> trf("%1\$s déjà présente(s)", n) },
+                        it.failed.takeIf { n -> n > 0 }?.let { n -> trf("%1\$s fichier(s) illisible(s)", n) },
+                    ).joinToString("\n")
+                }, { e -> trf("Erreur : %1\$s", e.message) }))
+            },
+            confirmButton = {
+                if (res != null && res.imported > 0) TextButton(onClick = { result = null; nav.navigate("h/activities") }) { Text(tr("Voir"), color = Mf.colors.accent) }
+                else TextButton(onClick = { result = null }) { Text(tr("OK"), color = Mf.colors.accent) }
+            },
+            dismissButton = { if (res != null && res.imported > 0) TextButton(onClick = { result = null }) { Text(tr("Fermer"), color = Mf.colors.text) } })
+    }
+    return { pick.launch(arrayOf("*/*")) }
 }
 
 /** Historique complet de toutes les activités, par mois. */
@@ -191,7 +234,10 @@ fun ActivitiesHistoryScreen(vm: SuperViewModel, nav: NavHostController) {
     val list by produceState(emptyList<Bridge.Activity>(), refresh) {
         value = runCatching { Bridge.activities(0L) }.getOrDefault(emptyList())
     }
-    DetailScaffold(tr("Toutes les activités"), onBack = { nav.popBackStack() }) {
+    val import = if (FitImport.supported()) rememberFitImport(vm, nav) else null
+    DetailScaffold(tr("Toutes les activités"), onBack = { nav.popBackStack() }, action = {
+        import?.let { IconButton(onClick = it) { Icon(Icons.Rounded.FileOpen, tr("Importer des activités")) } }
+    }) {
         if (list.isEmpty()) MfCard { Text(tr("Aucune activité pour l'instant."), color = Mf.colors.textSecondary) }
         list.groupBy { localDate(it.start).withDayOfMonth(1) }.forEach { (month, items) ->
             SectionLabel(month.format(java.time.format.DateTimeFormatter.ofPattern("LLLL yyyy", app.superhealth.ui.Lang.locale))

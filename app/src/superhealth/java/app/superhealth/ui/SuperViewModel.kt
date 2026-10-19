@@ -89,6 +89,8 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onResume(ctx: Context) {
         if (Watch.enabled) runCatching { GBApplication.deviceService().requestDeviceInfo() }
+        // Montre déconnectée (après une mise à jour, hors de portée…) : reconnexion tout de suite plutôt qu'au prochain essai du moteur.
+        if (Watch.enabled) runCatching { Watch.connectAll() }
         // Montre pas synchronisée depuis 15 min : on récupère ses mesures (courbe cardio, pas, sommeil) à l'ouverture.
         val now = System.currentTimeMillis()
         val ready = if (Watch.enabled) Watch.devices().filter { it.isInitialized && !it.isBusy } else emptyList()

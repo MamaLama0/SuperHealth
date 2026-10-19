@@ -16,6 +16,9 @@ object Watch {
 
     fun devices(): List<GBDevice> = if (enabled) GBApplication.app().deviceManager.devices else emptyList()
 
+    /** Tous les appareils associés, même module désactivé (relire une séance déjà enregistrée). */
+    fun allDevices(): List<GBDevice> = GBApplication.app().deviceManager.devices
+
     fun setEnabled(on: Boolean) {
         if (on == enabled) return
         SuperPrefs.update { it.copy(watchModule = on) }

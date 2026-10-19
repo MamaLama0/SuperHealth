@@ -133,14 +133,12 @@ object Bridge {
     // ---- Activités : musculation, montre et Health Connect dans une seule liste ---------------------------
 
     enum class Kind { STRENGTH, RUN, WALK, HIKE, BIKE, SWIM, YOGA, OTHER }
-    enum class Source(val label: String) { GYM("SuperHealth"), WATCH("Montre"), PHONE("Téléphone"), HEALTH_CONNECT("Health Connect") }
+    enum class Source(val label: String) { GYM("SuperHealth"), WATCH("Montre"), HEALTH_CONNECT("Health Connect") }
 
     data class Activity(
         val key: String, val kind: Kind, val title: String, val start: Long, val end: Long, val source: Source,
         /** Séance de musculation (id d'historique), séance de montre ou séance Health Connect. */
         val gymId: String? = null, val watch: Workout? = null, val hc: HcSession? = null,
-        /** Activité suivie depuis le téléphone (onglet Activités > Démarrer). */
-        val phone: app.superhealth.PhoneSession? = null,
     ) {
         val minutes: Long get() = (end - start) / 60000
     }
@@ -150,15 +148,11 @@ object Bridge {
             Activity("g-${w.id}", Kind.STRENGTH, w.name, w.startTime, w.startTime + w.durationSec * 1000L, Source.GYM, gymId = w.id)
         }
         val watch = runCatching { HealthRepository.workouts(fromMs, toMs) }.getOrDefault(emptyList()).map { w ->
-            Activity("w-${w.id}", kindOf(w.kind.name), w.name?.takeIf { it.isNotBlank() } ?: w.kind.getLabel(GBApplication.getContext()),
+            Activity("w-${w.id}", kindOf(w.kind.name), w.name?.takeIf { it.isNotBlank() } ?: kindLabel(kindOf(w.kind.name).name),
                 w.start.time, w.end.time, Source.WATCH, watch = w)
         }
-        // Suivi téléphone : remplacé par la séance de la montre quand les deux ont été lancées (GPS, distance, cadence).
-        val phone = SuperPrefs.sessions.value.filter { it.start in fromMs..toMs }.filter { s ->
-            watch.none { it.start < s.end && s.start < it.end }
-        }.map { s -> Activity("p-${s.id}", runCatching { Kind.valueOf(s.kind) }.getOrDefault(Kind.OTHER), kindLabel(s.kind), s.start, s.end, Source.PHONE, phone = s) }
         // Séances Health Connect : on écarte celles qui recouvrent une séance déjà listée (même activité vue deux fois).
-        val known = gym + watch + phone
+        val known = gym + watch
         val hc = SuperPrefs.hc.value.sessions.filter { it.start in fromMs..toMs }.filter { s ->
             known.none { it.start < s.end && s.start < it.end }
         }.map { s -> Activity("h-${s.id}", hcKind(s.type), s.title ?: hcLabel(s.type), s.start, s.end, Source.HEALTH_CONNECT, hc = s) }

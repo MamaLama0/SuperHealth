@@ -209,12 +209,6 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     private MediaManager mediaManager;
     private boolean mFirstConnect = false;
     private boolean isBusyFetching;
-    /** Set by a {@link RecordedDataTypes#TYPE_HISTORY} fetch until the sync finishes: list every file, synced or not. */
-    private volatile boolean fetchHistory;
-
-    public boolean isFetchingHistory() {
-        return fetchHistory;
-    }
 
     private int maxPacketSize = 400;
 
@@ -678,12 +672,7 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
             return;
         }
 
-        if (dataTypes == RecordedDataTypes.TYPE_HISTORY) {
-            LOG.info("Fetching the full file history from the watch");
-            fetchHistory = true;
-        }
-
-        if (dataTypes == RecordedDataTypes.TYPE_SYNC || dataTypes == RecordedDataTypes.TYPE_HISTORY) {
+        if (dataTypes == RecordedDataTypes.TYPE_SYNC) {
             requestBatteryUpdate();
         }
 
@@ -1164,7 +1153,6 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         // mid-sync leaves the progress notification pinned indefinitely.
         transferNotification.finish();
         isBusyFetching = false;
-        fetchHistory = false;
         currentlyDownloading = null;
         filesToDownload.clear();
     }
@@ -1297,7 +1285,6 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
      */
     @VisibleForTesting
     void finishFileSync() {
-        fetchHistory = false;
         // FIXME: This should probably only happen after exploresync also finishes
         sendOutgoingMessage("set sync complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, 0));
 

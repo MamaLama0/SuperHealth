@@ -65,19 +65,6 @@ data class HcCache(
 @Serializable
 data class HcSession(val id: String, val type: Int, val title: String?, val start: Long, val end: Long, val app: String)
 
-/**
- * Activité suivie depuis le téléphone (onglet Activités > Démarrer) : chrono et fréquence cardiaque en direct de la montre.
- * [hr] : une valeur moyenne toutes les [HR_STEP_S] secondes depuis le début (null = pas de mesure).
- */
-@Serializable
-data class PhoneSession(
-    val id: String, val kind: String, val start: Long, val end: Long, val activeSec: Long,
-    val avgHr: Int? = null, val maxHr: Int? = null, val kcal: Int? = null, val steps: Int = 0,
-    val hr: List<Int?> = emptyList(),
-) {
-    companion object { const val HR_STEP_S = 10 }
-}
-
 private val SuperJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; coerceInputValues = true }
 
 /** Réglages propres à SuperHealth (les modules gardent les leurs). */
@@ -85,25 +72,16 @@ object SuperPrefs {
     private lateinit var sp: android.content.SharedPreferences
     private val _settings = MutableStateFlow(SuperSettings())
     private val _hc = MutableStateFlow(HcCache())
-    private val _sessions = MutableStateFlow(emptyList<PhoneSession>())
     val settings: StateFlow<SuperSettings> = _settings
     val hc: StateFlow<HcCache> = _hc
-    val sessions: StateFlow<List<PhoneSession>> = _sessions
-    private val sessionList = kotlinx.serialization.builtins.ListSerializer(PhoneSession.serializer())
 
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("superhealth", Context.MODE_PRIVATE)
         _settings.value = sp.getString("settings", null)?.let { runCatching { SuperJson.decodeFromString(SuperSettings.serializer(), it) }.getOrNull() }
             ?: SuperSettings()
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
-        _sessions.value = sp.getString("sessions", null)?.let { runCatching { SuperJson.decodeFromString(sessionList, it) }.getOrNull() } ?: emptyList()
     }
 
-    @Synchronized fun updateSessions(f: (List<PhoneSession>) -> List<PhoneSession>) {
-        val v = f(_sessions.value)
-        _sessions.value = v
-        sp.edit().putString("sessions", SuperJson.encodeToString(sessionList, v)).apply()
-    }
 
     @Synchronized fun update(f: (SuperSettings) -> SuperSettings) {
         val v = f(_settings.value)

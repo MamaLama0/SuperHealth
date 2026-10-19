@@ -56,6 +56,8 @@ data class Workout(
     val start: Date,
     val end: Date,
     val device: GBDevice,
+    val distanceM: Double? = null,
+    val kcal: Double? = null,
 )
 
 /** Weekly cardio minutes (Garmin intensity minutes / Amazfit PAI) against the weekly target. */
@@ -287,7 +289,8 @@ object HealthRepository {
             .list()
             .mapNotNull { s ->
                 val device = byId[s.deviceId] ?: return@mapNotNull null
-                Workout(s.id ?: return@mapNotNull null, s.name, ActivityKind.fromCode(s.activityKind), s.startTime, s.endTime, device)
+                val (distance, kcal) = WorkoutDetails.summaryNumbers(s.summaryData)
+                Workout(s.id ?: return@mapNotNull null, s.name, ActivityKind.fromCode(s.activityKind), s.startTime, s.endTime, device, distance, kcal)
             }
     }
 

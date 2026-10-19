@@ -257,7 +257,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                 QuickPill(tr("Enregistrer un repas"), Icons.Rounded.Add, CaloriesColor, Modifier.weight(1f)) {
                     nav.go("search/${app.superhealth.nutrition.ui.SearchMode.SEARCH}/-1")
                 }
-                QuickPill(tr("Démarrer"), Icons.AutoMirrored.Rounded.DirectionsRun, HealthHues.Activity, Modifier.weight(1f)) { tab("activities") }
+                QuickPill(tr("Pesée"), Icons.Rounded.MonitorWeight, app.superhealth.ui.theme.Base.Pink, Modifier.weight(1f)) { nav.go("weight") }
             }
             // Rappels contextuels (non personnalisables : ce sont des actions à faire).
             if (an.checkInState == CheckInState.NOW) {
