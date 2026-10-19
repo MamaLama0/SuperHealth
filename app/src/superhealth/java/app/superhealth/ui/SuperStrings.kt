@@ -298,6 +298,8 @@ object SuperStrings {
         "Continuer" to "Continue",
         "Commencer" to "Get Started",
 
+        "La courbe du jour arrive à la prochaine synchronisation. Touchez Direct pour la voir en temps réel." to "Today's curve arrives with the next sync. Tap Live to see it in real time.",
+        "La courbe du jour arrive à la prochaine synchronisation de la montre." to "Today's curve arrives with the next watch sync.",
         // Tableau de bord 2, activités en direct, historique de la montre, autorisations
         "Enregistrer un repas" to "Log food",
         "Démarrer" to "Start",

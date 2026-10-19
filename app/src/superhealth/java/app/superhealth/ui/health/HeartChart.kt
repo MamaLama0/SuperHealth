@@ -120,11 +120,11 @@ fun HeartChart(
                 listOf(hi, (hi + lo) / 2, lo).forEach { Text("${it.roundToInt()}", fontSize = 10.sp, color = axis, maxLines = 1) }
             }
         }
-        if (xLabels.isNotEmpty()) BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 4.dp, end = if (showAxis) 32.dp else 0.dp).height(14.dp)) {
+        if (xLabels.isNotEmpty()) BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 4.dp, end = if (showAxis) 32.dp else 0.dp).height(18.dp)) {
             xLabels.forEach { (t, label) ->
                 val f = ((t - x0) / (x1 - x0)).toFloat().coerceIn(0f, 1f)
                 // Étiquette centrée sur son heure, sans déborder des bords.
-                Text(label, fontSize = 10.sp, color = axis, maxLines = 1, textAlign = TextAlign.Center,
+                Text(label, fontSize = 10.sp, lineHeight = 14.sp, color = axis, maxLines = 1, textAlign = TextAlign.Center,
                     modifier = Modifier.width(36.dp).offset(x = (maxWidth * f - 18.dp).coerceIn(0.dp, maxWidth - 36.dp)))
             }
         }

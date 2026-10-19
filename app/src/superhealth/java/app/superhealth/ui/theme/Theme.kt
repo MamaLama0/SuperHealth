@@ -66,7 +66,8 @@ object HealthHues {
 
 /** Fond pastel d'une couleur de famille (cartes teintées, pastilles d'icônes), lisible en clair comme en sombre. */
 @Composable
-fun Color.container(): Color = androidx.compose.ui.graphics.lerp(Mf.colors.card, this, if (Mf.colors.dark) 0.20f else 0.14f)
+fun Color.container(strength: Float = 1f): Color =
+    androidx.compose.ui.graphics.lerp(Mf.colors.card, this, (if (Mf.colors.dark) 0.27f else 0.17f) * strength)
 
 /** Texte posé sur [container] : la couleur elle-même, assombrie en clair pour le contraste. */
 @Composable

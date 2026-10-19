@@ -121,8 +121,8 @@ fun AssetImage(path: String, modifier: Modifier = Modifier, crop: Boolean = fals
 }
 
 @Composable
-fun ProgressBar(fraction: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 4.dp) {
-    Box(modifier.fillMaxWidth().height(height).clip(CircleShape).background(Mf.colors.chip)) {
+fun ProgressBar(fraction: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 4.dp, track: Color = Mf.colors.chip) {
+    Box(modifier.fillMaxWidth().height(height).clip(CircleShape).background(track)) {
         if (fraction > 0f) Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(height).clip(CircleShape).background(color))
     }
 }
@@ -358,9 +358,9 @@ fun LineChart(series: List<Series>, modifier: Modifier = Modifier, height: Dp = 
 
 /** Barres journalières avec ligne de cible pointillée. */
 @Composable
-fun BarChart(values: List<Double?>, target: List<Double?>, color: Color, modifier: Modifier = Modifier, height: Dp = 120.dp, labels: List<String> = emptyList()) {
+fun BarChart(values: List<Double?>, target: List<Double?>, color: Color, modifier: Modifier = Modifier, height: Dp = 120.dp, labels: List<String> = emptyList(),
+             track: Color = Mf.colors.chip) {
     val max = (values.filterNotNull() + target.filterNotNull()).maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
-    val track = Mf.colors.chip
     val line = Mf.colors.textSecondary
     Column(modifier.fillMaxWidth()) {
         Canvas(Modifier.fillMaxWidth().height(height)) {

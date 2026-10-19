@@ -62,7 +62,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -132,16 +134,19 @@ private val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, 
 
 /** Couleur et icône de chaque carte (pastille d'en-tête, fond des cartes teintées). */
 private fun DashCard.hue(): Color = when (this) {
-    DashCard.CALORIES, DashCard.INTAKE -> CaloriesColor
-    DashCard.WEIGHT, DashCard.STRATEGY -> HealthHues.Body
-    DashCard.EXPENDITURE -> HealthHues.Fitness
+    DashCard.CALORIES -> CaloriesColor
+    DashCard.WEIGHT -> app.superhealth.ui.theme.Base.Pink
+    DashCard.INTAKE -> HealthHues.Mind
+    DashCard.EXPENDITURE -> HealthHues.Respiration
     DashCard.MACROS -> ProteinColor
     DashCard.STEPS, DashCard.CARDIO -> HealthHues.Activity
     DashCard.HEART, DashCard.VITALS -> HealthHues.Heart
     DashCard.SLEEP -> HealthHues.Sleep
     DashCard.ENERGY -> HealthHues.Mind
     DashCard.HYDRATION -> HealthHues.Respiration
-    DashCard.ACTIVITIES, DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS -> WorkoutBlue
+    DashCard.ACTIVITIES -> HealthHues.Fitness
+    DashCard.STRATEGY -> HealthHues.Body
+    DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS -> WorkoutBlue
 }
 
 private fun DashCard.icon(): ImageVector = when (this) {
@@ -342,13 +347,14 @@ private fun IconChip(icon: ImageVector, hue: Color, size: androidx.compose.ui.un
  */
 @Composable
 private fun Tile(
-    c: DashCard, title: String, modifier: Modifier, tinted: Boolean = c in HALF, trailing: String? = null,
+    c: DashCard, title: String, modifier: Modifier, tinted: Boolean = true, trailing: String? = null,
     onClick: (() -> Unit)?, padding: PaddingValues = PaddingValues(14.dp),
     bottom: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit,
 ) {
     val hue = c.hue()
     Column(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(if (tinted) hue.container() else Mf.colors.card)
+        modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius))
+            .background(if (tinted) Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f))) else SolidColor(Mf.colors.card))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -357,7 +363,7 @@ private fun Tile(
             Text(title, style = MaterialTheme.typography.titleSmall, color = if (tinted) hue.onContainer() else Mf.colors.text,
                 modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             trailing?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1) }
-            if (onClick != null && !tinted) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+            if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = if (tinted) hue.onContainer().copy(alpha = 0.6f) else Mf.colors.textTertiary)
         }
         Spacer(Modifier.height(10.dp))
         content()
@@ -368,6 +374,10 @@ private fun Tile(
         }
     }
 }
+
+/** Fond des pistes (barres, anneaux) posées sur une carte teintée. */
+@Composable
+private fun softTrack(): Color = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.45f else 0.7f)
 
 /** Grande valeur et son unité. */
 @Composable
@@ -397,9 +407,10 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             Tile(c, tr("Calories restantes"), modifier, onClick = { vm.nutrition.selectedDay.value = an.today; tab("log") }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Ring(if (target.kcal > 0) (consumed.kcal / target.kcal).toFloat() else 0f, CaloriesColor, 128.dp, stroke = 12.dp,
-                        track = CaloriesColor.container()) {
+                        track = softTrack()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(formatNumber(abs(left)), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(formatNumber(abs(left)), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1,
+                                color = CaloriesColor.onContainer())
                             Text(if (left < 0) tr("en trop") else s.energyUnit.label.let(::tr), style = MaterialTheme.typography.labelMedium,
                                 color = if (left < 0) HealthHues.Heart else Mf.colors.textSecondary, maxLines = 1)
                         }
@@ -428,7 +439,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
                     Series(pts.map { it.epochDay to s.weightValue(it.trend) }, c.hue()),
                 ), height = 56.dp, showAxis = false)
             }) {
-                Value(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label))
+                Value(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), color = c.hue().onContainer())
                 Sub(if (week.size >= 2) signed(s.weightValue(week.last().trend - week.first().trend), 2) + tr(" / sem.") else tr("Ajoutez des pesées"))
             }
         }
@@ -438,7 +449,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             Tile(c, tr("Dépense"), modifier, onClick = { nav.go("expenditure") }, bottom = {
                 LineChart(listOf(Series(pts.map { it.epochDay to s.energyValue(it.tdee) }, c.hue())), height = 56.dp, showAxis = false)
             }) {
-                Value(s.energyValue(an.currentTdee).roundToInt().toString(), tr(s.energyUnit.label))
+                Value(s.energyValue(an.currentTdee).roundToInt().toString(), tr(s.energyUnit.label), color = c.hue().onContainer())
                 Sub(when (an.expenditure.lastOrNull()?.status) {
                     Expenditure.Status.HOLDING -> tr("En pause (données insuffisantes)")
                     Expenditure.Status.INITIAL, null -> tr("Estimation initiale")
@@ -451,9 +462,9 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val byDay = an.days.associateBy { it.epochDay }
             val avg = days.mapNotNull { byDay[it]?.intakeKcal }.takeIf { it.isNotEmpty() }?.average()
             Tile(c, tr("Apports des 7 derniers jours"), modifier, onClick = { nav.go("nutrition") }) {
-                Value(avg?.let { s.energyValue(it).roundToInt().toString() } ?: "—", trf("%1\$s / jour en moyenne", tr(s.energyUnit.label)))
+                Value(avg?.let { s.energyValue(it).roundToInt().toString() } ?: "—", trf("%1\$s / jour en moyenne", tr(s.energyUnit.label)), color = c.hue().onContainer())
                 Spacer(Modifier.height(12.dp))
-                BarChart(days.map { byDay[it]?.intakeKcal?.let(s::energyValue) }, days.map { s.energyValue(an.targetFor(it).macros.kcal) }, CaloriesColor,
+                BarChart(days.map { byDay[it]?.intakeKcal?.let(s::energyValue) }, days.map { s.energyValue(an.targetFor(it).macros.kcal) }, c.hue(),
                     height = 90.dp, labels = days.map { dayLetter(LocalDate.ofEpochDay(it)) })
             }
         }
@@ -476,12 +487,12 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val today = h.today(Metric.STEPS)
             val goal = s.stepGoal
             Tile(c, tr("Pas"), modifier, onClick = { nav.go("h/metric/STEPS") }, bottom = {
-                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 48.dp,
+                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 48.dp, track = softTrack(),
                     labels = series.map { dayLetter(it.first) })
             }) {
                 Value(today?.let { formatNumber(it) } ?: "—", color = c.hue().onContainer())
                 Sub(if (goal > 0) trf("Objectif %1\$s", formatNumber(goal.toDouble())) else null)
-                if (goal > 0) { Spacer(Modifier.height(6.dp)); ProgressBar(((today ?: 0.0) / goal).toFloat(), c.hue(), height = 6.dp) }
+                if (goal > 0) { Spacer(Modifier.height(6.dp)); ProgressBar(((today ?: 0.0) / goal).toFloat(), c.hue(), height = 6.dp, track = softTrack()) }
             }
         }
         DashCard.HEART -> HeartCard(c, h, nav, modifier)
@@ -489,7 +500,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val series = h.series[Metric.SLEEP].orEmpty()
             val last = h.latest(Metric.SLEEP)
             Tile(c, tr("Sommeil"), modifier, onClick = { nav.go("h/metric/SLEEP") }, bottom = {
-                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 48.dp, labels = series.map { dayLetter(it.first) })
+                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 48.dp, track = softTrack(), labels = series.map { dayLetter(it.first) })
             }) {
                 Value(last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", color = c.hue().onContainer())
                 Sub(series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatValue(Metric.SLEEP, it.average())) })
@@ -499,7 +510,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val cw = h.cardio
             Tile(c, tr("Minutes cardio"), modifier, onClick = { nav.go("h/metric/CARDIO_WEEK") }) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Ring(cw?.progress ?: 0f, c.hue(), 92.dp, stroke = 9.dp, track = Mf.colors.card.copy(alpha = 0.7f)) {
+                    Ring(cw?.progress ?: 0f, c.hue(), 92.dp, stroke = 9.dp, track = softTrack()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(cw?.total?.toString() ?: "—", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text("/ ${cw?.target ?: 150}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
@@ -536,7 +547,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
                 Value(formatNumber(today), "ml", color = c.hue().onContainer())
                 Sub(trf("Objectif %1\$s ml", formatNumber(goal)))
                 Spacer(Modifier.height(8.dp))
-                ProgressBar((today / goal).toFloat(), c.hue(), height = 6.dp)
+                ProgressBar((today / goal).toFloat(), c.hue(), height = 6.dp, track = softTrack())
             }
         }
         DashCard.VITALS -> {
@@ -556,7 +567,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             Tile(c, tr("Dernières activités"), modifier, onClick = { nav.go("h/activities") }, padding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 4.dp)) {
                 if (h.activities.isEmpty()) Text(tr("Aucune activité ces 30 derniers jours."), style = MaterialTheme.typography.bodyMedium,
                     color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
-                h.activities.take(4).forEach { act -> ActivityRow(act, horizontal = 0.dp) { openActivity(ctx, nav, act) } }
+                h.activities.take(4).forEach { act -> ActivityRow(act, horizontal = 0.dp, chip = softTrack()) { openActivity(ctx, nav, act) } }
             }
         }
         DashCard.TRAINING_WEEK -> {
@@ -615,15 +626,16 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
     }
     val day = h.heartToday.map { it.timestampMs to it.value }
     val rest = h.latest(Metric.RESTING_HR)?.second
-    val now = System.currentTimeMillis()
+    val now = livePts.lastOrNull()?.first ?: System.currentTimeMillis()
     val current = livePts.lastOrNull()?.second ?: day.lastOrNull()?.second
     Tile(c, tr("Fréquence cardiaque"), modifier, onClick = { nav.go("h/metric/HEART_RATE") }) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Value(current?.let { formatNumber(it) } ?: h.latest(Metric.HEART_RATE)?.second?.let { formatNumber(it) } ?: "—", tr("bpm"), big = true)
+            Value(current?.let { formatNumber(it) } ?: h.latest(Metric.HEART_RATE)?.second?.let { formatNumber(it) } ?: "—", tr("bpm"), big = true,
+                color = hue.onContainer())
             Spacer(Modifier.weight(1f))
             if (canLive) {
                 val on = live
-                Row(Modifier.clip(CircleShape).background(if (on) hue else hue.container()).clickable { live = !live; if (!live) livePts.clear() }
+                Row(Modifier.clip(CircleShape).background(if (on) hue else softTrack()).clickable { live = !live; if (!live) livePts.clear() }
                     .padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Sensors, null, Modifier.size(16.dp), tint = if (on) Color.White else hue.onContainer())
                     Spacer(Modifier.width(6.dp))
@@ -643,11 +655,11 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
         Spacer(Modifier.height(12.dp))
         when {
             live -> {
-                // Direct : les 30 dernières minutes (mesures du jour puis mesures temps réel).
-                val window = 30 * 60_000L
-                val pts = (day.filter { it.first >= now - window } + livePts).sortedBy { it.first }
-                HeartChart(pts, hue, height = 150.dp, from = now - window, to = now, gapMs = 11 * 60_000L, live = true, reference = rest,
-                    xLabels = listOf(now - window to timeOf(now - window), now to tr("Maint.")))
+                // Direct : depuis le premier point reçu (fenêtre qui s'élargit jusqu'à 30 min), pour une courbe qui remplit la carte.
+                val from = maxOf(now - 30 * 60_000L, (livePts.firstOrNull()?.first ?: now) - 20_000L)
+                val pts = livePts.filter { it.first >= from }
+                HeartChart(pts, hue, height = 150.dp, from = from, to = maxOf(now, from + 60_000L), gapMs = 60_000L, live = true,
+                    xLabels = listOf(from to timeOf(from), now to tr("Maint.")))
             }
             day.size >= 2 -> {
                 val start = HealthRepository.startMs(LocalDate.now())
@@ -657,7 +669,15 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
             else -> {
                 val pts = h.series[Metric.RESTING_HR].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }
                     .ifEmpty { h.series[Metric.HEART_RATE].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } } }
-                LineChart(listOf(Series(pts, hue, dots = true), Series(pts, hue.copy(alpha = 0.5f))), height = 90.dp, showAxis = true)
+                if (pts.size >= 2) LineChart(listOf(Series(pts, hue, dots = true), Series(pts, hue.copy(alpha = 0.5f))), height = 90.dp,
+                    format = { formatNumber(it) })
+                // Pas encore de courbe du jour : elle arrive à la synchronisation de la montre (ou en direct).
+                else Box(Modifier.fillMaxWidth().height(90.dp).clip(RoundedCornerShape(16.dp)).background(softTrack()), contentAlignment = Alignment.Center) {
+                    Text(tr(if (canLive) "La courbe du jour arrive à la prochaine synchronisation. Touchez Direct pour la voir en temps réel."
+                        else "La courbe du jour arrive à la prochaine synchronisation de la montre."),
+                        style = MaterialTheme.typography.bodySmall, color = hue.onContainer(), modifier = Modifier.padding(horizontal = 16.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
             }
         }
     }
@@ -667,14 +687,14 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
 @Composable
 private fun MacroPill(label: String, value: Double, target: Double, color: Color) {
     val left = target - value
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(color.container()).padding(horizontal = 10.dp, vertical = 7.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(color.container(1.4f)).padding(horizontal = 10.dp, vertical = 7.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = color.onContainer(), modifier = Modifier.weight(1f), maxLines = 1)
             Text(trf(if (left >= 0) "%1\$s g restants" else "%1\$s g en trop", abs(left).roundToInt()), style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold, color = color.onContainer(), maxLines = 1)
         }
         Spacer(Modifier.height(4.dp))
-        ProgressBar(if (target > 0) (value / target).toFloat() else 0f, color, height = 4.dp)
+        ProgressBar(if (target > 0) (value / target).toFloat() else 0f, color, height = 4.dp, track = softTrack())
     }
 }
 
@@ -686,7 +706,7 @@ private fun MacroBar(label: String, value: Double, target: Double, color: Color)
             Text("${value.roundToInt()} / ${target.roundToInt()} g", style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, maxLines = 1)
         }
         Spacer(Modifier.height(4.dp))
-        ProgressBar(if (target > 0) (value / target).toFloat() else 0f, color, height = 5.dp)
+        ProgressBar(if (target > 0) (value / target).toFloat() else 0f, color, height = 5.dp, track = softTrack())
     }
 }
 

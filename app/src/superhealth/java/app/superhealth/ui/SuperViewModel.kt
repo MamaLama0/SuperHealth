@@ -62,12 +62,26 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
 
     val syncing = MutableStateFlow(false)
 
+    /** Dernière synchro de montre demandée automatiquement (retour dans l'app, connexion). */
+    private var lastWatchSync = 0L
+
     init {
         // Synchro de montre terminée (occupée → libre) : données relues, pas et pesées recopiés vers la nutrition.
         devices.distinctUntilChangedBy { list -> list.map { it.address to it.busy } }
             .drop(1)
             .onEach { HealthRepository.invalidate(); Bridge.pullWatch(app); bump() }
             .launchIn(viewModelScope)
+        // Montre qui vient de se (re)connecter : ses mesures sont récupérées si la dernière synchro date de plus de 15 min.
+        // (connectée et libre : juste après la connexion, la montre est occupée par son initialisation).
+        devices.map { list -> list.filter { it.connected && !it.busy }.map { it.address }.toSet() }.distinctUntilChanged()
+            .onEach { ready0 ->
+                val now = System.currentTimeMillis()
+                val ready = devices.value.filter { it.address in ready0 }
+                if (ready.isNotEmpty() && now - lastWatchSync > 15 * 60_000L) {
+                    lastWatchSync = now
+                    ready.forEach { runCatching { Watch.sync(it.device) } }
+                }
+            }.launchIn(viewModelScope)
         ManualLogStore.get(app).changes.drop(1).onEach { HealthRepository.invalidate(); bump() }.launchIn(viewModelScope)
     }
 
@@ -75,6 +89,14 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onResume(ctx: Context) {
         if (Watch.enabled) runCatching { GBApplication.deviceService().requestDeviceInfo() }
+        // Montre pas synchronisée depuis 15 min : on récupère ses mesures (courbe cardio, pas, sommeil) à l'ouverture.
+        val now = System.currentTimeMillis()
+        val ready = if (Watch.enabled) Watch.devices().filter { it.isInitialized && !it.isBusy } else emptyList()
+        // Pas encore connectée : la synchro se fera à la connexion (voir init).
+        if (ready.isNotEmpty() && now - lastWatchSync > 15 * 60_000L) {
+            lastWatchSync = now
+            ready.forEach { runCatching { Watch.sync(it) } }
+        }
         val s = settings.value
         val stale = System.currentTimeMillis() - s.lastHcSync > 15 * 60_000L
         viewModelScope.launch {
