@@ -8,6 +8,8 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kaitai)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 tasks.withType(Test).configureEach {
@@ -182,6 +184,16 @@ android {
             dimension "device_type"
             applicationId "app.localhealth"
             versionNameSuffix "-localhealth"
+        }
+
+        superhealth {
+            // SuperHealth: La Bouffe (nutrition) + La Salle (musculation) + LocalHealth (montres), interface MacroFactor
+            dimension "device_type"
+            applicationId "app.superhealth"
+            versionName "1.0"
+            versionCode 1
+            // Navigation Compose, Room et Health Connect côté nutrition/musculation : Android 8.0 minimum (comme La Bouffe et La Salle)
+            minSdk = 26
         }
 
         banglejs {
@@ -399,7 +411,21 @@ dependencies {
     implementation libs.androidx.lifecycle.runtime.compose
     implementation libs.androidx.lifecycle.viewmodel.compose
     implementation libs.lottie.compose
+
+    // SuperHealth modules (nutrition, training)
+    superhealthImplementation libs.androidx.navigation.compose
+    superhealthImplementation libs.room.runtime
+    superhealthImplementation libs.room.ktx
+    kspSuperhealth libs.room.compiler
+    superhealthImplementation libs.kotlinx.serialization.json
+    superhealthImplementation libs.kotlinx.coroutines.android
+    superhealthImplementation libs.glance.appwidget
+    superhealthImplementation libs.glance.material3
+    superhealthImplementation libs.rive.android
+    superhealthImplementation libs.zxing.android.embedded
 }
+
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 preBuild.dependsOn(":GBDaoGenerator:genSources")
 preBuild.dependsOn(':FitCodeGenerator:genFit')

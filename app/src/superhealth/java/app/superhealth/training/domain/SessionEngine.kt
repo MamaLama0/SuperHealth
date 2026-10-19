@@ -1,0 +1,203 @@
+package app.superhealth.training.domain
+
+import java.util.UUID
+import kotlin.math.max
+import kotlin.math.round
+
+/** Construction et déroulement d'une séance (WorkoutSession) : pré-remplissage, échauffements, progression en séance. */
+class SessionEngine(private val db: ExerciseDb) {
+
+    private fun uid() = UUID.randomUUID().toString()
+
+    // ----- Charges réalisables -----
+
+    fun ladderFor(exerciseId: String, gym: Gym?): LoadLadder {
+        val e = db.exercise(exerciseId) ?: return LoadLadder.step(2.5)
+        val eq = db.resistanceEquipment(e, gym?.equipmentIds)
+        val cats = eq.mapNotNull { it.category }
+        val plates = gym?.plates ?: listOf(25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25)
+        return when {
+            cats.contains("Loadable Bars") -> {
+                val bar = eq.firstOrNull { it.category == "Loadable Bars" }
+                val w = bar?.kg?.takeIf { it > 0 } ?: gym?.barWeight ?: 20.0
+                LoadLadder.barbell(w, plates)
+            }
+            cats.contains("Plate Loaded Machines") -> LoadLadder.barbell(0.0, plates)
+            cats.contains("Free Weights") || cats.contains("Fixed Weight Bars") -> {
+                val step = eq.firstNotNullOfOrNull { it.incrementKg?.takeIf { s -> s > 0 } } ?: gym?.dumbbellStep ?: 2.0
+                LoadLadder.step(step, step, 80.0)
+            }
+            cats.contains("Pin Loaded Machines") || cats.contains("Cable Machines") -> LoadLadder.step(gym?.machineStep ?: 5.0, 0.0, 300.0)
+            else -> LoadLadder.step(1.25, 0.0, 200.0)
+        }
+    }
+
+    /** Pas plus grossier pour les échauffements (« Simplify Warm-Up Plates »). */
+    private fun simplify(w: Double, ladder: LoadLadder): Double {
+        val coarse = ladder.loads.filter { Math.round(it * 100) % 500 == 0L }
+        return if (coarse.isEmpty()) ladder.nearest(w) else LoadLadder(coarse).nearest(w)
+    }
+
+    // ----- Historique -----
+
+    /** Séries de travail de la dernière séance contenant l'exercice. */
+    fun lastSets(exerciseId: String, history: List<Workout>): List<PastSet> {
+        val w = history.filter { h -> h.exercises.any { it.exerciseId == exerciseId && Analytics.workingSets(it).isNotEmpty() } }
+            .maxByOrNull { it.startTime } ?: return emptyList()
+        return w.exercises.filter { it.exerciseId == exerciseId }.flatMap { Analytics.workingSets(it) }
+            .filter { (it.weight ?: 0.0) >= 0 && (it.reps ?: 0) > 0 }
+            .map { PastSet(it.weight ?: 0.0, it.reps!!, it.rir, it.completedAt ?: w.startTime) }
+    }
+
+    // ----- Construction -----
+
+    fun fromProgram(program: Program, day: ProgramDay, cycle: Int, history: List<Workout>, settings: Settings, gym: Gym?): Session {
+        val worked = mutableSetOf<MuscleGroup>()
+        val exercises = day.exercises.map { pe ->
+            val ex = buildExercise(pe.exerciseId, Generator.targetsFor(pe, cycle), history, settings, gym, worked)
+            db.exercise(pe.exerciseId)?.muscleGroups?.let(worked::addAll)
+            ex.copy(supersetGroup = pe.supersetGroup)
+        }
+        return Session(uid(), day.name, System.currentTimeMillis(), exercises, gym?.id, program.id, cycle, day.id)
+    }
+
+    fun fromCustom(w: CustomWorkout, history: List<Workout>, settings: Settings, gym: Gym?): Session {
+        val worked = mutableSetOf<MuscleGroup>()
+        val exercises = w.exercises.map { pe ->
+            val ex = buildExercise(pe.exerciseId, pe.cycles.first(), history, settings, gym, worked)
+            db.exercise(pe.exerciseId)?.muscleGroups?.let(worked::addAll)
+            ex
+        }
+        return Session(uid(), w.name, System.currentTimeMillis(), exercises, gym?.id)
+    }
+
+    fun empty(gym: Gym?) = Session(uid(), "Entraînement libre", System.currentTimeMillis(), emptyList(), gym?.id)
+
+    /** Ajoute un exercice en cours de séance (3 séries de 8-12 à RIR 2 par défaut). */
+    fun addExercise(s: Session, exerciseId: String, history: List<Workout>, settings: Settings, gym: Gym?): Session {
+        val worked = s.exercises.flatMap { db.exercise(it.exerciseId)?.muscleGroups ?: emptyList() }.toMutableSet()
+        val targets = List(3) { TargetSet(restSec = settings.restDefaultSec) }
+        return s.copy(exercises = s.exercises + buildExercise(exerciseId, targets, history, settings, gym, worked))
+    }
+
+    fun buildExercise(
+        exerciseId: String, targets: List<TargetSet>, history: List<Workout>, settings: Settings, gym: Gym?, worked: Set<MuscleGroup>,
+    ): SessionExercise {
+        val e = db.exercise(exerciseId)
+        val upper = e?.upperBody ?: true
+        val last = lastSets(exerciseId, history)
+        val ladder = ladderFor(exerciseId, gym)
+        val oneRm = if (e?.usesWeight == true) Progression.currentOneRm(last, upper) else null
+        val suggestions = if (oneRm != null && oneRm > 0) Progression.suggest(
+            oneRm, targets, upper, ladder, last.firstOrNull()?.weight, settings.weightMatch, settings.expandRepRange,
+        ) else null
+        val work = targets.mapIndexed { i, t ->
+            val sg = suggestions?.getOrNull(i)
+            val prev = last.getOrNull(i) ?: last.lastOrNull()
+            val (w, r) = when {
+                settings.smartProgression && settings.fillWithSmart && sg != null -> sg.weight to sg.reps
+                prev != null -> prev.weight to prev.reps
+                else -> null to null
+            }
+            SetLog(uid(), t.type, weight = w, reps = r, rir = t.rir, target = t, autoWeight = sg?.weight, autoReps = sg?.reps)
+        }
+        val warmUps = warmUps(e, work.firstOrNull()?.weight, oneRm, settings, ladder, worked)
+        val rest = targets.firstOrNull()?.restSec ?: settings.restDefaultSec
+        return SessionExercise(uid(), exerciseId, warmUps + work, restSec = rest)
+    }
+
+    /**
+     * Échauffements. Intelligent : ratios de getSmartWarmUpRatios sur le 1RM estimé, seulement si les muscles principaux
+     * n'ont pas déjà travaillé dans la séance (« Detect when a muscle group has not been worked »), et pas d'échauffement
+     * sans historique (« Smart warm-ups will appear after you've completed a workout that includes this exercise »).
+     * Schéma : pourcentages de la première charge de travail.
+     */
+    fun warmUps(e: Exercise?, workWeight: Double?, oneRm: Double?, settings: Settings, ladder: LoadLadder, worked: Set<MuscleGroup>): List<SetLog> {
+        if (e == null || workWeight == null || workWeight <= 0 || !e.usesWeight) return emptyList()
+        return when (settings.warmUp) {
+            WarmUpMode.NONE -> emptyList()
+            WarmUpMode.SCHEME -> settings.warmUpScheme.map {
+                val w = ladder.nearest(workWeight * it.percent).let { x -> if (settings.simplifyWarmUpPlates) simplify(x, ladder) else x }
+                SetLog(uid(), SetType.WARMUP, weight = w, reps = it.reps)
+            }.filter { (it.weight ?: 0.0) < workWeight }
+            WarmUpMode.SMART -> {
+                if (oneRm == null || oneRm <= 0) return emptyList()
+                if (e.muscleGroups.isNotEmpty() && worked.containsAll(e.muscleGroups)) return emptyList()
+                Strength.smartWarmUpRatios(workWeight / oneRm).mapNotNull { ratio ->
+                    val reps = Strength.warmUpReps(ratio) ?: return@mapNotNull null
+                    val raw = ladder.nearest(oneRm * ratio)
+                    val w = if (settings.simplifyWarmUpPlates) simplify(raw, ladder) else raw
+                    if (w >= workWeight || w <= 0) null else SetLog(uid(), SetType.WARMUP, weight = w, reps = reps)
+                }.distinctBy { it.weight }
+            }
+        }
+    }
+
+    // ----- En séance -----
+
+    /**
+     * Après une série validée : recalcule les séries suivantes non modifiées (applySmartProgressionInSession).
+     * Le 1RM est ré-estimé depuis la série réalisée en tenant compte de la fatigue accumulée.
+     */
+    fun afterSetCompleted(s: Session, exIndex: Int, settings: Settings, gym: Gym?): Session {
+        if (!settings.smartProgression) return s
+        val ex = s.exercises[exIndex]
+        val e = db.exercise(ex.exerciseId) ?: return s
+        if (!e.usesWeight) return s
+        val done = ex.sets.filter { it.done && it.type != SetType.WARMUP && (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }
+        if (done.isEmpty()) return s
+        val oneRm = Progression.currentOneRm(done.map { PastSet(it.weight!!, it.reps!!, it.rir, 0) }, e.upperBody, ex.restSec / 60.0) ?: return s
+        var fatigue = 0.0
+        done.forEach { fatigue = Strength.recover(fatigue + it.reps!!, ex.restSec / 60.0) }
+        val pending = ex.sets.withIndex().filter { !it.value.done && it.value.type != SetType.WARMUP && it.value.target != null }
+        if (pending.isEmpty()) return s
+        val ladder = ladderFor(ex.exerciseId, gym)
+        val sugg = Progression.suggest(
+            oneRm * (1 - Strength.fatigueDrop(fatigue)), pending.map { it.value.target!! }, e.upperBody, ladder,
+            done.last().weight, settings.weightMatch, settings.expandRepRange, progress = 1.0,
+        )
+        val sets = ex.sets.toMutableList()
+        pending.forEachIndexed { k, iv ->
+            val g = sugg[k]
+            sets[iv.index] = iv.value.copy(weight = g.weight, reps = g.reps, autoWeight = g.weight, autoReps = g.reps)
+        }
+        return s.copy(exercises = s.exercises.toMutableList().also { it[exIndex] = ex.copy(sets = sets) })
+    }
+
+    // ----- Fin de séance -----
+
+    /**
+     * Séance → historique. [logAll] (« Log All Sets ») enregistre aussi les séries non cochées qui ont une charge ou des
+     * répétitions ; sinon seules les séries faites sont gardées (« Log Only Completed Sets »).
+     */
+    fun finish(s: Session, now: Long, gym: Gym?, programName: String?, logAll: Boolean = false): Workout {
+        val exercises = s.exercises.map { ex ->
+            ex.copy(sets = ex.sets.mapNotNull { set ->
+                when {
+                    set.done -> set
+                    logAll && (set.reps ?: 0) > 0 -> set.copy(done = true, completedAt = now)
+                    else -> null
+                }
+            })
+        }.filter { it.sets.isNotEmpty() }
+        return Workout(s.id, s.name, s.startTime, s.elapsedSec(now), exercises, gym?.name,
+            s.programId, programName, s.cycleIndex, s.note)
+    }
+
+    /** Programme avancé au jour d'entraînement suivant (cycle suivant après le dernier jour). */
+    fun advance(p: Program, doneDayId: String?): Program {
+        val idx = p.days.indexOfFirst { it.id == doneDayId }.takeIf { it >= 0 } ?: p.dayIndex
+        var d = idx + 1; var c = p.cycleIndex
+        while (true) {
+            if (d >= p.days.size) { d = 0; c++ }
+            if (!p.days[d].isRest || p.days.all { it.isRest }) break
+            d++
+        }
+        if (c >= p.numCycles && p.runIndefinitely) c = 0
+        return p.copy(dayIndex = d, cycleIndex = c)
+    }
+
+    companion object {
+        fun roundKg(v: Double) = round(v * 100) / 100
+    }
+}

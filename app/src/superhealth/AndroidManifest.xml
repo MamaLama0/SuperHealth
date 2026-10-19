@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Réseau : uniquement pour Open Food Facts et le fournisseur IA choisi (tous deux désactivables).
+         Le moteur Gadgetbridge reste hors ligne (BuildConfig.INTERNET_ACCESS = false). -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="replace" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Health Connect : lecture des données des autres apps (les écritures sont déclarées par Gadgetbridge) -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
+    <application
+        android:name="app.superhealth.SuperHealthApp"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true"
+        tools:replace="android:name,android:icon,android:roundIcon,android:label">
+
+        <activity
+            android:name="app.superhealth.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/SuperHealth.Theme"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Le centre de contrôle Gadgetbridge reste accessible depuis Réglages > Montre > Avancé, pas depuis le lanceur -->
+        <activity
+            android:name="nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2"
+            tools:node="merge">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+
+        <!-- Photo temporaire pour l'analyse IA (cache/ai) -->
+        <provider
+            android:name="app.superhealth.nutrition.AiFileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Scanner de code-barres verrouillé en portrait -->
+        <activity
+            android:name="app.superhealth.nutrition.ui.ScanActivity"
+            android:screenOrientation="portrait"
+            android:stateNotNeeded="true"
+            android:theme="@style/zxing_CaptureTheme"
+            android:windowSoftInputMode="stateAlwaysHidden" />
+
+        <receiver android:name="app.superhealth.nutrition.widget.TodayWidgetReceiver" android:exported="true" android:label="@string/widget_today_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_today" />
+        </receiver>
+        <receiver android:name="app.superhealth.nutrition.widget.WeightWidgetReceiver" android:exported="true" android:label="@string/widget_weight_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weight" />
+        </receiver>
+        <receiver android:name="app.superhealth.nutrition.widget.KcalWidgetReceiver" android:exported="true" android:label="@string/widget_kcal_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_kcal" />
+        </receiver>
+        <receiver android:name="app.superhealth.training.widget.NextWorkoutWidgetReceiver" android:exported="true" android:label="@string/widget_next_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next" />
+        </receiver>
+        <receiver android:name="app.superhealth.training.ui.RestDoneReceiver" android:exported="false" />
+        <receiver android:name="app.superhealth.training.ui.SessionActionReceiver" android:exported="false" />
+    </application>
+</manifest>

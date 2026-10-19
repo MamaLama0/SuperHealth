@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_today_desc">Remaining calories and macros, logging shortcuts</string>
+    <string name="widget_weight_desc">Weight trend and expenditure</string>
+    <string name="widget_kcal_name">Calories &amp; macros</string>
+    <string name="widget_kcal_desc">Remaining calories and macros</string>
+    <string name="widget_today_name">Today</string>
+    <string name="widget_weight_name">Weight</string>
+    <string name="widget_next_name">Next workout</string>
+    <string name="widget_next_desc">Today\'s workout, one-tap start, training week</string>
+</resources>

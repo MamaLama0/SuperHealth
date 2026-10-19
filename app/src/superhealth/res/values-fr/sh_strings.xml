@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gadgetbridge_running">SuperHealth est connecté à votre montre</string>
+    <string name="widget_today_desc">Calories et macros restantes, raccourcis de saisie</string>
+    <string name="widget_weight_desc">Tendance du poids et dépense</string>
+    <string name="widget_kcal_name">Calories et macros</string>
+    <string name="widget_kcal_desc">Calories et macros restantes</string>
+    <string name="widget_today_name">Aujourd\'hui</string>
+    <string name="widget_weight_name">Poids</string>
+    <string name="widget_next_name">Prochaine séance</string>
+    <string name="widget_next_desc">Séance du jour, départ en un geste, semaine d\'entraînement</string>
+</resources>
