@@ -6,6 +6,7 @@ import java.nio.file.Files
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kaitai)
 }
 
@@ -176,6 +177,13 @@ android {
             //versionNameSuffix ""
         }
 
+        localhealth {
+            // LocalHealth: Google Health–style UI on top of the Gadgetbridge engine, no network
+            dimension "device_type"
+            applicationId "app.localhealth"
+            versionNameSuffix "-localhealth"
+        }
+
         banglejs {
             dimension "device_type"
             applicationId "com.espruino.gadgetbridge"
@@ -265,6 +273,7 @@ android {
         aidl = true
         buildConfig = true
         viewBinding = true
+        compose = true
         // AGP 9 defaults to false, but we still use it in the androidComponents.onVariants block below
         resValues = true
     }
@@ -377,6 +386,19 @@ dependencies {
 
     // Protocol Buffer specifications
     implementation project(':GBProtobufGenerator')
+
+    // LocalHealth UI
+    implementation platform(libs.compose.bom)
+    implementation libs.compose.ui
+    implementation libs.compose.foundation
+    implementation libs.compose.material3
+    implementation libs.compose.material.icons.extended
+    implementation libs.compose.ui.tooling.preview
+    debugImplementation libs.compose.ui.tooling
+    implementation libs.androidx.activity.compose
+    implementation libs.androidx.lifecycle.runtime.compose
+    implementation libs.androidx.lifecycle.viewmodel.compose
+    implementation libs.lottie.compose
 }
 
 preBuild.dependsOn(":GBDaoGenerator:genSources")

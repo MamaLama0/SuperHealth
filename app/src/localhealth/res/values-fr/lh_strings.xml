@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lh_nav_today">Aujourd\'hui</string>
+    <string name="lh_nav_fitness">Forme</string>
+    <string name="lh_nav_health">Santé</string>
+    <string name="lh_greeting_morning">Bonjour</string>
+    <string name="lh_greeting_afternoon">Bon après-midi</string>
+    <string name="lh_greeting_evening">Bonsoir</string>
+    <string name="lh_devices">Appareils</string>
+    <string name="lh_add_device">Ajouter un appareil</string>
+    <string name="lh_no_device_title">Aucun appareil</string>
+    <string name="lh_no_device_body">Associez votre montre pour commencer. Tout reste sur ce téléphone.</string>
+    <string name="lh_sync">Synchroniser</string>
+    <string name="lh_syncing">Synchronisation…</string>
+    <string name="lh_connect">Connecter</string>
+    <string name="lh_battery">Batterie %1$d %%</string>
+    <string name="lh_settings">Paramètres</string>
+    <string name="lh_advanced">Avancé (Gadgetbridge)</string>
+    <string name="lh_steps">Pas</string>
+    <string name="lh_distance">Distance</string>
+    <string name="lh_active_calories">Calories actives</string>
+    <string name="lh_active_minutes">Minutes actives</string>
+    <string name="lh_heart_rate">Fréquence cardiaque</string>
+    <string name="lh_sleep">Sommeil</string>
+    <string name="lh_sleep_score">Score de sommeil</string>
+    <string name="lh_body_energy">Body Battery</string>
+    <string name="lh_stress">Stress</string>
+    <string name="lh_hrv">Variabilité de la fréquence cardiaque</string>
+    <string name="lh_spo2">Oxygène sanguin</string>
+    <string name="lh_vo2max">Forme cardio (VO₂ max)</string>
+    <string name="lh_weight">Poids</string>
+    <string name="lh_no_data">Aucune donnée</string>
+    <string name="lh_hours_minutes">%1$d h %2$02d</string>
+    <string name="lh_of_goal">sur %1$s</string>
+    <string name="lh_section_activity">Activité</string>
+    <string name="lh_section_sleep_recovery">Sommeil et récupération</string>
+    <string name="lh_section_vitals">Signes vitaux</string>
+    <string name="lh_section_body">Corps</string>
+    <string name="lh_section_exercise">Exercices</string>
+    <string name="lh_offline_badge">100 % sur l\'appareil</string>
+</resources>

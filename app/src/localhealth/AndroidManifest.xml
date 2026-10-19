@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Belt and braces: the engine never gets network access, whatever a dependency asks for -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="nodomain.freeyourgadget.internethelper.INTERNET" tools:node="remove" />
+
+    <application>
+
+        <activity
+            android:name="app.localhealth.HealthActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LocalHealth.Theme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The Gadgetbridge control centre stays reachable from Settings > Advanced, not the launcher -->
+        <activity
+            android:name="nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2"
+            tools:node="merge">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+    </application>
+</manifest>

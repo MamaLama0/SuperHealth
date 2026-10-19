@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string translatable="false" name="app_name">LocalHealth</string>
+    <string name="lh_nav_today">Today</string>
+    <string name="lh_nav_fitness">Fitness</string>
+    <string name="lh_nav_health">Health</string>
+    <string name="lh_greeting_morning">Good morning</string>
+    <string name="lh_greeting_afternoon">Good afternoon</string>
+    <string name="lh_greeting_evening">Good evening</string>
+    <string name="lh_devices">Devices</string>
+    <string name="lh_add_device">Add a device</string>
+    <string name="lh_no_device_title">No device yet</string>
+    <string name="lh_no_device_body">Pair your watch to start tracking. Everything stays on this phone.</string>
+    <string name="lh_sync">Sync</string>
+    <string name="lh_syncing">Syncing…</string>
+    <string name="lh_connect">Connect</string>
+    <string name="lh_battery">Battery %1$d%%</string>
+    <string name="lh_settings">Settings</string>
+    <string name="lh_advanced">Advanced (Gadgetbridge)</string>
+    <string name="lh_steps">Steps</string>
+    <string name="lh_distance">Distance</string>
+    <string name="lh_active_calories">Active calories</string>
+    <string name="lh_active_minutes">Active minutes</string>
+    <string name="lh_heart_rate">Heart rate</string>
+    <string name="lh_sleep">Sleep</string>
+    <string name="lh_sleep_score">Sleep score</string>
+    <string name="lh_body_energy">Body Battery</string>
+    <string name="lh_stress">Stress</string>
+    <string name="lh_hrv">Heart rate variability</string>
+    <string name="lh_spo2">Blood oxygen</string>
+    <string name="lh_vo2max">Cardio fitness (VO₂ max)</string>
+    <string name="lh_weight">Weight</string>
+    <string name="lh_no_data">No data</string>
+    <string name="lh_unit_bpm">bpm</string>
+    <string name="lh_unit_km">km</string>
+    <string name="lh_unit_kcal">kcal</string>
+    <string name="lh_unit_min">min</string>
+    <string name="lh_unit_ms">ms</string>
+    <string name="lh_unit_kg">kg</string>
+    <string name="lh_hours_minutes">%1$dh %2$02dm</string>
+    <string name="lh_of_goal">of %1$s</string>
+    <string name="lh_section_activity">Activity</string>
+    <string name="lh_section_sleep_recovery">Sleep &amp; recovery</string>
+    <string name="lh_section_vitals">Vitals</string>
+    <string name="lh_section_body">Body</string>
+    <string name="lh_section_exercise">Exercise</string>
+    <string name="lh_offline_badge">100% on-device</string>
+</resources>
