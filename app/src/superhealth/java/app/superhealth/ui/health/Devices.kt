@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Sync
@@ -106,6 +107,14 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
             }
             if (devices.isNotEmpty()) RowDivider()
             SettingRow(tr("Associer un appareil"), icon = Icons.Rounded.Add) { permissions.launch(Intent(ctx, PermissionsActivity::class.java)) }
+        }
+        if (devices.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            GroupCard {
+                val missing = remember(devices) { missingWatchPermissions(ctx) }
+                SettingRow(tr("Autorisations"), subtitle = if (missing == 0) tr("Tout est accordé")
+                    else trf("%1\$s à accorder : notifications, SMS, appels…", missing), icon = Icons.Rounded.Security) { nav.navigate("h/permissions") }
+            }
         }
 
         SectionLabel(tr("Avancé"))

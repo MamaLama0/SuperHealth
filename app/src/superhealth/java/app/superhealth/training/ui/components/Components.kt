@@ -68,7 +68,7 @@ import app.superhealth.training.ui.Assets
 import app.superhealth.ui.theme.Mf
 import kotlin.math.roundToInt
 
-val CardShape = RoundedCornerShape(16.dp)
+val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
 
 /** Carte blanche (clair) / #1E1E1E (sombre), coins 16 dp, sans ombre. */
 @Composable

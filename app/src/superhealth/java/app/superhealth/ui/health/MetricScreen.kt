@@ -62,6 +62,7 @@ import app.superhealth.ui.formatValue
 import app.superhealth.ui.formatWithUnit
 import app.superhealth.ui.relativeDay
 import app.superhealth.ui.theme.Mf
+import app.superhealth.bridge.LiveHeart
 import app.superhealth.ui.timeOf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
@@ -148,6 +149,10 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                 span == Span.DAY && intraday.isNotEmpty() -> if (metric == Metric.STEPS) {
                     val byHour = (0..23).map { h -> intraday.filter { java.time.Instant.ofEpochMilli(it.timestampMs).atZone(java.time.ZoneId.systemDefault()).hour == h }.sumOf { it.value }.takeIf { v -> v > 0 } }
                     BarChart(byHour, byHour.map { null }, color, height = 150.dp, labels = (0..23).map { if (it % 6 == 0) "$it" else "" })
+                } else if (metric == Metric.HEART_RATE) {
+                    val start = HealthRepository.startMs(p.from)
+                    HeartChart(intraday.map { it.timestampMs to it.value }, color, height = 170.dp, from = start, to = start + 86_400_000L,
+                        xLabels = listOf(0, 6, 12, 18).map { start + it * 3_600_000L to "${it}h" })
                 } else LineChart(listOf(Series(intraday.map { it.timestampMs / 60000 to it.value }, color)), height = 150.dp)
                 span == Span.DAY -> Text(tr("Pas de détail heure par heure pour ce jour."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                 span == Span.QUARTER || span == Span.YEAR -> {
@@ -176,6 +181,8 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                 }
             }
         }
+
+        if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
 
         if (metric.manual) {
             SectionLabel(tr("Saisies"))
@@ -233,5 +240,36 @@ private fun Stat(label: String, value: String, modifier: Modifier) {
 private fun RoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
     Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.chip).clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, description, tint = if (enabled) Mf.colors.text else Mf.colors.textTertiary)
+    }
+}
+
+/** Fréquence cardiaque en direct : la montre envoie ses mesures tant que la carte est ouverte. */
+@Composable
+private fun LiveHeartCard() {
+    var on by remember { mutableStateOf(false) }
+    val pts = remember { androidx.compose.runtime.mutableStateListOf<Pair<Long, Double>>() }
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    if (on) androidx.compose.runtime.LaunchedEffect(Unit) {
+        LiveHeart.samples.collect { s -> now = s.timeMs; s.bpm?.let { pts += s.timeMs to it.toDouble() } }
+    }
+    SectionLabel(tr("En direct"))
+    MfCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(pts.lastOrNull()?.second?.let { "${it.toInt()}" } ?: "—", style = MaterialTheme.typography.displaySmall)
+                    Text(" " + tr("bpm"), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
+                }
+                Text(tr(if (on) "Mesures envoyées par la montre en temps réel" else "Touchez Démarrer pour suivre votre cœur en direct"),
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            }
+            app.superhealth.nutrition.ui.components.PillButton(tr(if (on) "Arrêter" else "Démarrer"), strong = !on) { on = !on; if (!on) pts.clear() }
+        }
+        if (on) {
+            Spacer(Modifier.height(12.dp))
+            val window = 5 * 60_000L
+            HeartChart(pts.filter { it.first >= now - window }, Metric.HEART_RATE.color, height = 150.dp, from = now - window, to = now,
+                gapMs = 60_000L, live = true)
+        }
     }
 }

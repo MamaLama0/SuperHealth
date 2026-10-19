@@ -89,9 +89,17 @@ import app.superhealth.ui.health.DevicesScreen
 import app.superhealth.ui.health.LogSheet
 import app.superhealth.ui.health.MetricScreen
 import app.superhealth.ui.health.OtherActivities
+import app.superhealth.ui.health.LiveBanner
+import app.superhealth.ui.health.LiveSessionScreen
+import app.superhealth.ui.health.PermissionsScreen
+import app.superhealth.ui.health.PhoneSessionScreen
+import app.superhealth.ui.health.StartActivity
 import app.superhealth.ui.onboarding.OnboardingScreen
 import app.superhealth.ui.settings.SettingsScreen
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.onContainer
+import androidx.compose.foundation.layout.width
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -155,7 +163,7 @@ fun SuperRoot(vm: SuperViewModel) {
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
-            composable("activities") { WorkoutTabScreen(vm.training, nav) { OtherActivities(vm, nav) } }
+            composable("activities") { WorkoutTabScreen(vm.training, nav, top = { StartActivity(nav) }) { OtherActivities(vm, nav) } }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
             composable("h/metric/{metric}", listOf(navArgument("metric") { type = NavType.StringType })) {
@@ -164,9 +172,16 @@ fun SuperRoot(vm: SuperViewModel) {
             }
             composable("h/devices") { DevicesScreen(vm, nav) }
             composable("h/activities") { ActivitiesHistoryScreen(vm, nav) }
+            composable("h/permissions") { PermissionsScreen(vm, nav) }
+            composable("act/live") { LiveSessionScreen(vm, nav) }
+            composable("act/phone/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
+                PhoneSessionScreen(vm, nav, it.arguments?.getString("id").orEmpty())
+            }
             nutritionGraph(vm.nutrition, nav)
             trainingGraph(vm.training, nav)
         }
+        val live by app.superhealth.bridge.LiveSession.state.collectAsState()
+        if (isTab && live != null) LiveBanner(live!!, Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) { nav.navigate("act/live") }
         if (isTab && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
         if (isTab) BottomBar(current, onTab = { route ->
             nav.navigate(route) {
@@ -194,7 +209,7 @@ fun SuperRoot(vm: SuperViewModel) {
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(Mf.colors.card).navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Mf.colors.divider))
-        Row(Modifier.fillMaxWidth().height(62.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(66.dp), verticalAlignment = Alignment.CenterVertically) {
             tabs.take(2).forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Box(
@@ -209,12 +224,17 @@ private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> U
 
 @Composable
 private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val color = if (selected) Mf.colors.text else Mf.colors.textTertiary
+    val color = if (selected) Mf.colors.text else Mf.colors.textSecondary
     Column(
-        modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick).padding(vertical = 6.dp),
+        modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick).padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(tab.icon, tr(tab.label), tint = color, modifier = Modifier.size(24.dp))
+        // Onglet actif : pastille teintée de la couleur d'accent derrière l'icône (comme Google Health).
+        val accent = Mf.colors.accent
+        Box(Modifier.width(56.dp).height(30.dp).clip(CircleShape).background(if (selected) accent.container() else androidx.compose.ui.graphics.Color.Transparent),
+            contentAlignment = Alignment.Center) {
+            Icon(tab.icon, tr(tab.label), tint = if (selected) accent.onContainer() else color, modifier = Modifier.size(22.dp))
+        }
         Spacer(Modifier.height(2.dp))
         Text(tr(tab.label), fontSize = 10.sp, color = color, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1, overflow = TextOverflow.Ellipsis)

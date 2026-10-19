@@ -79,6 +79,7 @@ import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -206,32 +207,32 @@ fun OnboardingScreen(svm: SuperViewModel) {
     val program by vm.program.collectAsState()
     val settings by vm.settings.collectAsState()
 
-    var unit by remember { mutableStateOf(settings.weightUnit) }
-    var sex by remember { mutableStateOf(profile.sex) }
-    var birthYear by remember { mutableIntStateOf(profile.birthYear) }
-    var heightCm by remember { mutableIntStateOf(profile.heightCm.roundToInt()) }
-    var weightKg by remember { mutableDoubleStateOf(if (profile.sex == Sex.FEMALE) 65.0 else 80.0) }
-    var bodyFat by remember { mutableStateOf<Int?>(null) }
-    var activity by remember { mutableStateOf(profile.activity) }
-    var exercise by remember { mutableStateOf(profile.exercise) }
-    var athlete by remember { mutableStateOf(profile.athlete) }
-    var change by remember { mutableStateOf(profile.weightChange) }
-    var lifetime by remember { mutableStateOf(profile.lifetimeWeight) }
-    var goal by remember { mutableStateOf(GoalType.CUT) }
-    var targetKg by remember { mutableDoubleStateOf(0.0) }
-    var rate by remember { mutableDoubleStateOf(0.5) }
-    var training by remember { mutableStateOf(program.training) }
-    var protein by remember { mutableStateOf(program.proteinPreference) }
-    var diet by remember { mutableStateOf(program.dietPreference) }
-    var floor by remember { mutableStateOf(program.calorieFloor) }
-    var shift by remember { mutableStateOf(false) }
-    var highDays by remember { mutableStateOf(setOf(6, 7)) }
-    var health by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf(app.superhealth.ui.userName() ?: "") }
-    var experience by remember { mutableStateOf(app.superhealth.training.domain.Experience.INTERMEDIATE) }
-    var gym by remember { mutableStateOf(GymTemplate.COMMERCIAL) }
-    var watch by remember { mutableStateOf(WatchChoice.LATER) }
-    var paired by remember { mutableStateOf(GBApplication.app().deviceManager.devices.isNotEmpty()) }
+    var unit by rememberSaveable { mutableStateOf(settings.weightUnit) }
+    var sex by rememberSaveable { mutableStateOf(profile.sex) }
+    var birthYear by rememberSaveable { mutableIntStateOf(profile.birthYear) }
+    var heightCm by rememberSaveable { mutableIntStateOf(profile.heightCm.roundToInt()) }
+    var weightKg by rememberSaveable { mutableDoubleStateOf(if (profile.sex == Sex.FEMALE) 65.0 else 80.0) }
+    var bodyFat by rememberSaveable { mutableStateOf<Int?>(null) }
+    var activity by rememberSaveable { mutableStateOf(profile.activity) }
+    var exercise by rememberSaveable { mutableStateOf(profile.exercise) }
+    var athlete by rememberSaveable { mutableStateOf(profile.athlete) }
+    var change by rememberSaveable { mutableStateOf(profile.weightChange) }
+    var lifetime by rememberSaveable { mutableStateOf(profile.lifetimeWeight) }
+    var goal by rememberSaveable { mutableStateOf(GoalType.CUT) }
+    var targetKg by rememberSaveable { mutableDoubleStateOf(0.0) }
+    var rate by rememberSaveable { mutableDoubleStateOf(0.5) }
+    var training by rememberSaveable { mutableStateOf(program.training) }
+    var protein by rememberSaveable { mutableStateOf(program.proteinPreference) }
+    var diet by rememberSaveable { mutableStateOf(program.dietPreference) }
+    var floor by rememberSaveable { mutableStateOf(program.calorieFloor) }
+    var shift by rememberSaveable { mutableStateOf(false) }
+    var highDays by rememberSaveable { mutableStateOf(setOf(6, 7)) }
+    var health by rememberSaveable { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf(app.superhealth.ui.userName() ?: "") }
+    var experience by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Experience.INTERMEDIATE) }
+    var gym by rememberSaveable { mutableStateOf(GymTemplate.COMMERCIAL) }
+    var watch by rememberSaveable { mutableStateOf(WatchChoice.LATER) }
+    var paired by rememberSaveable { mutableStateOf(GBApplication.app().deviceManager.devices.isNotEmpty()) }
     val lifts = training == Training.STRENGTH || training == Training.BOTH
 
     val healthAvailable = remember { HealthConnectHub.status(ctx) == HealthConnectHub.Status.AVAILABLE }
@@ -243,9 +244,9 @@ fun OnboardingScreen(svm: SuperViewModel) {
             else -> true
         }
     }
-    var index by remember { mutableIntStateOf(0) }
+    var index by rememberSaveable { mutableIntStateOf(0) }
     val step = steps[index.coerceIn(0, steps.lastIndex)]
-    var forward by remember { mutableStateOf(true) }
+    var forward by rememberSaveable { mutableStateOf(true) }
     fun next() { forward = true; if (index < steps.lastIndex) index++ }
     fun back() { forward = false; if (index > 0) index-- }
     BackHandler(index > 0 && step != Step.GENERATING) { back() }

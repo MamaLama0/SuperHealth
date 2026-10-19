@@ -6,9 +6,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,27 +21,50 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.EventAvailable
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.MonitorWeight
+import androidx.compose.material.icons.rounded.PieChart
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.SelfImprovement
+import androidx.compose.material.icons.rounded.Sensors
+import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Watch
+import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,11 +72,13 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
 import app.superhealth.bridge.Bridge
+import app.superhealth.bridge.LiveHeart
 import app.superhealth.health.data.CardioWeek
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.Metric
 import app.superhealth.health.data.Point
 import app.superhealth.nutrition.data.CheckInState
+import app.superhealth.nutrition.domain.Expenditure
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.components.BarChart
 import app.superhealth.nutrition.ui.components.LineChart
@@ -58,17 +86,12 @@ import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.ProgressBar
 import app.superhealth.nutrition.ui.components.Ring
-import app.superhealth.nutrition.ui.components.ScreenTitle
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.Series
 import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.nutrition.ui.macros
-import app.superhealth.nutrition.ui.screens.ExpenditureCard
-import app.superhealth.nutrition.ui.screens.InsightCard
-import app.superhealth.nutrition.ui.screens.IntakeCard
-import app.superhealth.nutrition.ui.screens.RemainingRing
 import app.superhealth.nutrition.ui.screens.StrategySummaryCard
-import app.superhealth.nutrition.ui.screens.WeightCard
+import app.superhealth.nutrition.ui.screens.signed
+import app.superhealth.nutrition.ui.weightValue
 import app.superhealth.training.domain.Analytics as TrainingAnalytics
 import app.superhealth.training.ui.components.BodyMap
 import app.superhealth.training.ui.components.StatCell
@@ -83,36 +106,80 @@ import app.superhealth.ui.formatValue
 import app.superhealth.ui.formatWithUnit
 import app.superhealth.ui.go
 import app.superhealth.ui.health.ActivityRow
+import app.superhealth.ui.health.HeartChart
 import app.superhealth.ui.health.openActivity
-import app.superhealth.ui.longToday
 import app.superhealth.ui.localDate
+import app.superhealth.ui.longToday
 import app.superhealth.ui.theme.CaloriesColor
+import app.superhealth.ui.theme.CardRadius
 import app.superhealth.ui.theme.CarbsColor
 import app.superhealth.ui.theme.FatColor
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.ProteinColor
 import app.superhealth.ui.theme.WorkoutBlue
+import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.timeOf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import androidx.compose.ui.platform.LocalContext
 
-/** Cartes affichées sur une demi-largeur (rangées deux par deux quand elles se suivent). */
-private val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION)
+/** Cartes affichées sur une demi-largeur (rangées deux par deux, à hauteur égale, quand elles se suivent). */
+private val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION)
+
+/** Couleur et icône de chaque carte (pastille d'en-tête, fond des cartes teintées). */
+private fun DashCard.hue(): Color = when (this) {
+    DashCard.CALORIES, DashCard.INTAKE -> CaloriesColor
+    DashCard.WEIGHT, DashCard.STRATEGY -> HealthHues.Body
+    DashCard.EXPENDITURE -> HealthHues.Fitness
+    DashCard.MACROS -> ProteinColor
+    DashCard.STEPS, DashCard.CARDIO -> HealthHues.Activity
+    DashCard.HEART, DashCard.VITALS -> HealthHues.Heart
+    DashCard.SLEEP -> HealthHues.Sleep
+    DashCard.ENERGY -> HealthHues.Mind
+    DashCard.HYDRATION -> HealthHues.Respiration
+    DashCard.ACTIVITIES, DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS -> WorkoutBlue
+}
+
+private fun DashCard.icon(): ImageVector = when (this) {
+    DashCard.CALORIES -> Icons.Rounded.LocalFireDepartment
+    DashCard.WEIGHT -> Icons.Rounded.MonitorWeight
+    DashCard.INTAKE -> Icons.Rounded.Restaurant
+    DashCard.EXPENDITURE -> Icons.Rounded.LocalFireDepartment
+    DashCard.MACROS -> Icons.Rounded.PieChart
+    DashCard.STEPS -> Icons.AutoMirrored.Rounded.DirectionsWalk
+    DashCard.HEART -> Icons.Rounded.Favorite
+    DashCard.SLEEP -> Icons.Rounded.Bedtime
+    DashCard.CARDIO -> Icons.AutoMirrored.Rounded.DirectionsRun
+    DashCard.ENERGY -> Icons.Rounded.SelfImprovement
+    DashCard.VITALS -> Icons.Rounded.MonitorHeart
+    DashCard.HYDRATION -> Icons.Rounded.WaterDrop
+    DashCard.ACTIVITIES -> Icons.Rounded.Timeline
+    DashCard.TRAINING_WEEK -> Icons.Rounded.FitnessCenter
+    DashCard.MUSCLES -> Icons.Rounded.AccessibilityNew
+    DashCard.RECORDS -> Icons.Rounded.EmojiEvents
+    DashCard.STRATEGY -> Icons.Rounded.Flag
+}
 
 /** Mesures santé lues pour le tableau de bord. */
 private class HealthSnap(
     val series: Map<Metric, List<Pair<LocalDate, Double?>>> = emptyMap(),
     val cardio: CardioWeek? = null,
     val energy: List<Point> = emptyList(),
+    val heartToday: List<Point> = emptyList(),
     val activities: List<Bridge.Activity> = emptyList(),
 ) {
     fun latest(m: Metric): Pair<LocalDate, Double>? = series[m]?.lastOrNull { it.second != null }?.let { it.first to it.second!! }
     fun today(m: Metric): Double? = series[m]?.lastOrNull()?.takeIf { it.first == LocalDate.now() }?.second
 }
+
+/** Dernières mesures lues : affichées tout de suite au retour sur l'onglet, le temps de relire. */
+private var lastSnap = HealthSnap()
+
+private val VITALS = listOf(Metric.RESTING_HR, Metric.HRV, Metric.SPO2, Metric.RESPIRATORY_RATE, Metric.VO2MAX, Metric.TEMPERATURE, Metric.READINESS)
 
 private fun Metric.dashMetrics(card: DashCard): Boolean = when (card) {
     DashCard.STEPS -> this == Metric.STEPS
@@ -124,21 +191,29 @@ private fun Metric.dashMetrics(card: DashCard): Boolean = when (card) {
     else -> false
 }
 
-private val VITALS = listOf(Metric.RESTING_HR, Metric.HRV, Metric.SPO2, Metric.RESPIRATORY_RATE, Metric.VO2MAX, Metric.TEMPERATURE, Metric.READINESS)
+/**
+ * Une carte « montre » s'affiche dès qu'une source existe (montre qui mesure, ou Health Connect), sans attendre ses données :
+ * les cartes ne surgissent plus après coup en décalant tout l'écran.
+ */
+private fun hasSource(c: DashCard): Boolean = when (c) {
+    DashCard.HEART -> Bridge.hasSource(Metric.HEART_RATE) || Bridge.hasSource(Metric.RESTING_HR)
+    DashCard.SLEEP -> Bridge.hasSource(Metric.SLEEP)
+    DashCard.CARDIO -> Bridge.hasSource(Metric.CARDIO_WEEK)
+    DashCard.ENERGY -> Bridge.hasSource(Metric.BODY_ENERGY) || Bridge.hasSource(Metric.STRESS)
+    DashCard.VITALS -> VITALS.any { Bridge.hasSource(it) }
+    else -> true
+}
 
 @Composable
 fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
     val sh by vm.settings.collectAsState()
     val a by vm.nutrition.analytics.collectAsState()
-    val ns by vm.nutrition.settings.collectAsState()
-    val todayEntries by vm.nutrition.todayEntries.collectAsState()
-    val tst by vm.training.state.collectAsState()
     val refresh by vm.refresh.collectAsState()
     val devices by vm.devices.collectAsState()
     val cards = sh.dashboard
 
-    val health by produceState(HealthSnap(), refresh, cards, sh.watchModule, devices.size) {
+    val health by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size) {
         val today = LocalDate.now()
         val metrics = Metric.entries.filter { m -> cards.any { m.dashMetrics(it) } && Bridge.hasSource(m) }
         val series = metrics.associateWith { m ->
@@ -147,8 +222,9 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         val cardio = if (DashCard.CARDIO in cards && Bridge.hasSource(Metric.CARDIO_WEEK)) runCatching { HealthRepository.cardioWeek(today) }.getOrNull() else null
         val energy = if (DashCard.ENERGY in cards && Bridge.hasSource(Metric.BODY_ENERGY)) runCatching { HealthRepository.intraday(Metric.BODY_ENERGY, today) }.getOrDefault(emptyList()) else emptyList()
+        val heart = if (DashCard.HEART in cards && HealthRepository.isSupported(Metric.HEART_RATE)) runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else emptyList()
         val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(System.currentTimeMillis() - 30 * 86_400_000L) }.getOrDefault(emptyList()) else emptyList()
-        value = HealthSnap(series, cardio, energy, acts)
+        value = HealthSnap(series, cardio, energy, heart, acts).also { lastSnap = it }
     }
 
     fun tab(route: String) = nav.navigate(route) {
@@ -157,36 +233,53 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
         val name = remember(refresh) { app.superhealth.ui.userName() }
-        ScreenTitle(tr("Tableau de bord"), subtitle = (name?.let { trf("Bonjour %1\$s", it) + " · " } ?: "") + longToday(), actions = {
-            IconButton(onClick = { nav.go("dash/edit") }) { Icon(Icons.Rounded.Tune, tr("Personnaliser")) }
-        })
+        // En-tête : salutation et date, réglages du tableau de bord, avatar (profil).
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(longToday(), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+                Text(name?.let { trf("Bonjour %1\$s", it) } ?: tr("Aujourd'hui"), style = MaterialTheme.typography.headlineLarge,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            IconButton(onClick = { nav.go("dash/edit") }) { Icon(Icons.Rounded.Tune, tr("Personnaliser"), tint = Mf.colors.textSecondary) }
+            Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.accent).clickable { nav.go("profile") }, contentAlignment = Alignment.Center) {
+                Text((name ?: "?").take(1).uppercase(app.superhealth.ui.Lang.locale), style = MaterialTheme.typography.titleMedium, color = Color.White)
+            }
+        }
         val an = a ?: return@Column
         Column(Modifier.padding(horizontal = 16.dp)) {
+            // Actions rapides, comme « Enregistrer » et « Commencer » de Google Health.
+            Row(Modifier.padding(top = 6.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                QuickPill(tr("Enregistrer un repas"), Icons.Rounded.Add, CaloriesColor, Modifier.weight(1f)) {
+                    nav.go("search/${app.superhealth.nutrition.ui.SearchMode.SEARCH}/-1")
+                }
+                QuickPill(tr("Démarrer"), Icons.AutoMirrored.Rounded.DirectionsRun, HealthHues.Activity, Modifier.weight(1f)) { tab("activities") }
+            }
             // Rappels contextuels (non personnalisables : ce sont des actions à faire).
             if (an.checkInState == CheckInState.NOW) {
-                Reminder(Icons.Rounded.EventAvailable, tr("Check-in disponible"), tr("Mettez à jour votre programme pour la semaine.")) { nav.go("checkin") }
+                Reminder(Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in disponible"), tr("Mettez à jour votre programme pour la semaine.")) { nav.go("checkin") }
                 Spacer(Modifier.height(12.dp))
             }
             if (an.days.lastOrNull()?.weightKg == null) {
-                Reminder(Icons.Rounded.MonitorWeight, tr("Pesée du jour"), tr("Pesez-vous le matin pour une tendance fiable."), action = tr("Ajouter")) { nav.go("weight") }
+                Reminder(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("Pesée du jour"), tr("Pesez-vous le matin pour une tendance fiable."), action = tr("Ajouter")) { nav.go("weight") }
                 Spacer(Modifier.height(12.dp))
             }
             // Cartes « montre » choisies mais aucune source : ni montre associée, ni Health Connect.
             val noSource = cards.any { it.watch } && !(sh.watchModule && devices.isNotEmpty()) && !sh.healthConnect
             if (noSource) {
-                Reminder(Icons.Rounded.Watch, tr("Constantes indisponibles"),
+                Reminder(Icons.Rounded.Watch, HealthHues.Heart, tr("Constantes indisponibles"),
                     tr("Associez une montre ou connectez Health Connect pour voir votre cœur, votre sommeil et vos constantes.")) { tab("settings") }
                 Spacer(Modifier.height(12.dp))
             }
 
-            val visible = cards.filter { !it.watch || hasData(it, health) }
+            val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh) { cards.filter { !it.watch || hasSource(it) } }
             var i = 0
             while (i < visible.size) {
                 val c = visible[i]
                 if (c in HALF && i + 1 < visible.size && visible[i + 1] in HALF) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Card(visible[i], vm, nav, health, Modifier.weight(1f), ::tab)
-                        Card(visible[i + 1], vm, nav, health, Modifier.weight(1f), ::tab)
+                    // Hauteur commune : la plus haute des deux cartes.
+                    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Card(visible[i], vm, nav, health, Modifier.weight(1f).fillMaxHeight(), ::tab)
+                        Card(visible[i + 1], vm, nav, health, Modifier.weight(1f).fillMaxHeight(), ::tab)
                     }
                     i += 2
                 } else {
@@ -208,39 +301,87 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     }
 }
 
-private fun hasData(c: DashCard, h: HealthSnap): Boolean = when (c) {
-    DashCard.HEART -> h.series[Metric.HEART_RATE] != null || h.series[Metric.RESTING_HR] != null
-    DashCard.SLEEP -> h.series[Metric.SLEEP] != null
-    DashCard.CARDIO -> h.cardio != null
-    DashCard.ENERGY -> h.series[Metric.BODY_ENERGY] != null || h.series[Metric.STRESS] != null
-    DashCard.VITALS -> VITALS.any { h.series[it] != null }
-    else -> true
+@Composable
+private fun QuickPill(label: String, icon: ImageVector, hue: Color, modifier: Modifier, onClick: () -> Unit) {
+    Row(modifier.clip(CircleShape).background(hue.container()).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, Modifier.size(20.dp), tint = hue.onContainer())
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = hue.onContainer(),
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @Composable
-private fun Reminder(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, text: String, action: String? = null, onClick: () -> Unit) {
-    MfCard(onClick = onClick) {
+private fun Reminder(icon: ImageVector, hue: Color, title: String, text: String, action: String? = null, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(Mf.colors.card).clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        IconChip(icon, hue, 40.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        }
+        Spacer(Modifier.width(8.dp))
+        if (action != null) PillButton(action, strong = true, onClick = onClick)
+        else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+    }
+}
+
+@Composable
+private fun IconChip(icon: ImageVector, hue: Color, size: androidx.compose.ui.unit.Dp = 30.dp, onTint: Boolean = false) {
+    Box(Modifier.size(size).clip(CircleShape).background(if (onTint) Mf.colors.card.copy(alpha = 0.85f) else hue.container()), contentAlignment = Alignment.Center) {
+        Icon(icon, null, Modifier.size(size * 0.56f), tint = hue)
+    }
+}
+
+/**
+ * Carte du tableau de bord : pastille d'icône colorée et titre, puis le contenu. [tinted] : fond pastel de la famille
+ * (cartes demi-largeur, à la manière des tuiles de Google Health). Le contenu de [bottom] est poussé en bas de la carte,
+ * pour aligner les graphiques de deux cartes voisines.
+ */
+@Composable
+private fun Tile(
+    c: DashCard, title: String, modifier: Modifier, tinted: Boolean = c in HALF, trailing: String? = null,
+    onClick: (() -> Unit)?, padding: PaddingValues = PaddingValues(14.dp),
+    bottom: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit,
+) {
+    val hue = c.hue()
+    Column(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(if (tinted) hue.container() else Mf.colors.card)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, Modifier.size(28.dp), tint = Mf.colors.accent)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-            }
+            IconChip(c.icon(), hue, onTint = tinted)
             Spacer(Modifier.width(8.dp))
-            if (action != null) PillButton(action, strong = true, onClick = onClick)
-            else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+            Text(title, style = MaterialTheme.typography.titleSmall, color = if (tinted) hue.onContainer() else Mf.colors.text,
+                modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            trailing?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1) }
+            if (onClick != null && !tinted) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+        }
+        Spacer(Modifier.height(10.dp))
+        content()
+        if (bottom != null) {
+            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.weight(1f))
+            bottom()
         }
     }
 }
 
+/** Grande valeur et son unité. */
 @Composable
-private fun CardHeader(title: String, trailing: String? = null) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        trailing?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, maxLines = 1) }
-        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+private fun Value(value: String, unit: String? = null, color: Color = Mf.colors.text, big: Boolean = false) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(value, style = if (big) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium, color = color, maxLines = 1)
+        if (!unit.isNullOrBlank()) Text(" $unit", style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+            modifier = Modifier.padding(bottom = if (big) 6.dp else 4.dp), maxLines = 1)
     }
+}
+
+@Composable
+private fun Sub(text: String?) {
+    text?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
 }
 
 @Composable
@@ -253,32 +394,69 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val consumed = todayEntries.fold(Macros.ZERO) { acc, e -> acc + e.macros() }
             val target = an.targetFor(an.today).macros
             val left = s.energyValue(target.kcal - consumed.kcal)
-            MfCard(modifier, onClick = { vm.nutrition.selectedDay.value = an.today; tab("log") }) {
-                CardHeader(tr("Calories restantes"))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatNumber(abs(left)), style = MaterialTheme.typography.displaySmall)
-                    Text(" " + s.energyUnit.label + if (left < 0) " " + tr("en trop") else "",
-                        style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 5.dp), maxLines = 1)
+            Tile(c, tr("Calories restantes"), modifier, onClick = { vm.nutrition.selectedDay.value = an.today; tab("log") }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Ring(if (target.kcal > 0) (consumed.kcal / target.kcal).toFloat() else 0f, CaloriesColor, 128.dp, stroke = 12.dp,
+                        track = CaloriesColor.container()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(formatNumber(abs(left)), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(if (left < 0) tr("en trop") else s.energyUnit.label.let(::tr), style = MaterialTheme.typography.labelMedium,
+                                color = if (left < 0) HealthHues.Heart else Mf.colors.textSecondary, maxLines = 1)
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MacroPill(tr("Protéines"), consumed.protein, target.protein, ProteinColor)
+                        MacroPill(tr("Lipides"), consumed.fat, target.fat, FatColor)
+                        MacroPill(tr("Glucides"), consumed.carbs, target.carbs, CarbsColor)
+                    }
                 }
-                Spacer(Modifier.height(4.dp))
-                ProgressBar(if (target.kcal > 0) (consumed.kcal / target.kcal).toFloat() else 0f, CaloriesColor, height = 6.dp)
-                Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                    Text(trf("Consommé %1\$s", formatNumber(s.energyValue(consumed.kcal))), style = MaterialTheme.typography.bodySmall,
-                        color = Mf.colors.textSecondary, modifier = Modifier.weight(1f), maxLines = 1)
-                    Text(trf("Objectif %1\$s", formatNumber(s.energyValue(target.kcal))), style = MaterialTheme.typography.bodySmall,
-                        color = Mf.colors.textSecondary, maxLines = 1)
-                }
-                Spacer(Modifier.height(14.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    RemainingRing(tr("Protéines"), consumed.protein, target.protein, ProteinColor)
-                    RemainingRing(tr("Lipides"), consumed.fat, target.fat, FatColor)
-                    RemainingRing(tr("Glucides"), consumed.carbs, target.carbs, CarbsColor)
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    Sub(trf("Consommé %1\$s", formatNumber(s.energyValue(consumed.kcal))))
+                    Spacer(Modifier.weight(1f))
+                    Sub(trf("Objectif %1\$s", formatNumber(s.energyValue(target.kcal))))
                 }
             }
         }
-        DashCard.WEIGHT -> WeightCard(an, s, modifier) { nav.go("weight") }
-        DashCard.EXPENDITURE -> ExpenditureCard(an, s, modifier) { nav.go("expenditure") }
-        DashCard.INTAKE -> Box(modifier) { IntakeCard(an, s) { nav.go("nutrition") } }
+        DashCard.WEIGHT -> {
+            val pts = an.trend.takeLast(28)
+            val week = an.trend.takeLast(8)
+            Tile(c, tr("Tendance du poids"), modifier, onClick = { nav.go("weight") }, bottom = {
+                LineChart(listOf(
+                    Series(pts.filter { it.scale != null }.map { it.epochDay to s.weightValue(it.scale!!) }, c.hue().copy(alpha = 0.45f), dots = true),
+                    Series(pts.map { it.epochDay to s.weightValue(it.trend) }, c.hue()),
+                ), height = 56.dp, showAxis = false)
+            }) {
+                Value(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label))
+                Sub(if (week.size >= 2) signed(s.weightValue(week.last().trend - week.first().trend), 2) + tr(" / sem.") else tr("Ajoutez des pesées"))
+            }
+        }
+        DashCard.EXPENDITURE -> {
+            val pts = an.expenditure.takeLast(28)
+            val first = pts.firstOrNull()?.tdee
+            Tile(c, tr("Dépense"), modifier, onClick = { nav.go("expenditure") }, bottom = {
+                LineChart(listOf(Series(pts.map { it.epochDay to s.energyValue(it.tdee) }, c.hue())), height = 56.dp, showAxis = false)
+            }) {
+                Value(s.energyValue(an.currentTdee).roundToInt().toString(), tr(s.energyUnit.label))
+                Sub(when (an.expenditure.lastOrNull()?.status) {
+                    Expenditure.Status.HOLDING -> tr("En pause (données insuffisantes)")
+                    Expenditure.Status.INITIAL, null -> tr("Estimation initiale")
+                    else -> first?.let { signed(s.energyValue(an.currentTdee - it), 0) + trf(" sur %1\$s j", pts.size) }
+                })
+            }
+        }
+        DashCard.INTAKE -> {
+            val days = (an.today - 6..an.today).toList()
+            val byDay = an.days.associateBy { it.epochDay }
+            val avg = days.mapNotNull { byDay[it]?.intakeKcal }.takeIf { it.isNotEmpty() }?.average()
+            Tile(c, tr("Apports des 7 derniers jours"), modifier, onClick = { nav.go("nutrition") }) {
+                Value(avg?.let { s.energyValue(it).roundToInt().toString() } ?: "—", trf("%1\$s / jour en moyenne", tr(s.energyUnit.label)))
+                Spacer(Modifier.height(12.dp))
+                BarChart(days.map { byDay[it]?.intakeKcal?.let(s::energyValue) }, days.map { s.energyValue(an.targetFor(it).macros.kcal) }, CaloriesColor,
+                    height = 90.dp, labels = days.map { dayLetter(LocalDate.ofEpochDay(it)) })
+            }
+        }
         DashCard.MACROS -> {
             val days = (an.today - 6..an.today)
             val entries by vm.nutrition.repo.entries.allFlow().collectAsState(emptyList())
@@ -286,9 +464,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val n = logged.size.coerceAtLeast(1)
             val avg = logged.values.flatten().fold(Macros.ZERO) { acc, e -> acc + e.macros() }.let { Macros(it.kcal / n, it.protein / n, it.fat / n, it.carbs / n) }
             val tgt = days.map { an.targetFor(it).macros }.let { l -> Macros(l.sumOf { it.kcal } / 7, l.sumOf { it.protein } / 7, l.sumOf { it.fat } / 7, l.sumOf { it.carbs } / 7) }
-            MfCard(modifier, onClick = { nav.go("macros") }) {
-                CardHeader(tr("Macros de la semaine"), trf("%1\$s j journalisés", logged.size))
-                Spacer(Modifier.height(10.dp))
+            Tile(c, tr("Macros de la semaine"), modifier, trailing = trf("%1\$s j journalisés", logged.size), onClick = { nav.go("macros") }) {
                 MacroBar(tr("Protéines"), avg.protein, tgt.protein, ProteinColor)
                 MacroBar(tr("Lipides"), avg.fat, tgt.fat, FatColor)
                 MacroBar(tr("Glucides"), avg.carbs, tgt.carbs, CarbsColor)
@@ -299,93 +475,73 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val series = h.series[Metric.STEPS].orEmpty()
             val today = h.today(Metric.STEPS)
             val goal = s.stepGoal
-            MfCard(modifier, onClick = { nav.go("h/metric/STEPS") }) {
-                CardHeader(tr("Pas"), series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatNumber(it.average())) })
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(today?.let { formatNumber(it) } ?: "—", style = MaterialTheme.typography.headlineMedium)
-                    if (goal > 0) Text(" / " + formatNumber(goal.toDouble()), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary,
-                        modifier = Modifier.padding(bottom = 4.dp))
-                }
-                if (goal > 0) { Spacer(Modifier.height(6.dp)); ProgressBar(((today ?: 0.0) / goal).toFloat(), HealthHues.Activity, height = 6.dp) }
-                Spacer(Modifier.height(12.dp))
-                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, HealthHues.Activity, height = 80.dp,
+            Tile(c, tr("Pas"), modifier, onClick = { nav.go("h/metric/STEPS") }, bottom = {
+                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 48.dp,
                     labels = series.map { dayLetter(it.first) })
+            }) {
+                Value(today?.let { formatNumber(it) } ?: "—", color = c.hue().onContainer())
+                Sub(if (goal > 0) trf("Objectif %1\$s", formatNumber(goal.toDouble())) else null)
+                if (goal > 0) { Spacer(Modifier.height(6.dp)); ProgressBar(((today ?: 0.0) / goal).toFloat(), c.hue(), height = 6.dp) }
             }
         }
-        DashCard.HEART -> {
-            val rest = h.series[Metric.RESTING_HR]
-            val main = if (rest?.any { it.second != null } == true) Metric.RESTING_HR else Metric.HEART_RATE
-            val pts = h.series[main].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }
-            InsightCard(tr(if (main == Metric.RESTING_HR) "FC au repos" else "Fréquence cardiaque"), h.latest(main)?.second?.let { formatNumber(it) } ?: "—", tr("bpm"),
-                h.latest(Metric.HEART_RATE)?.takeIf { main == Metric.RESTING_HR }?.let { trf("Moyenne %1\$s bpm", formatNumber(it.second)) },
-                modifier, { nav.go("h/metric/${main.name}") }) {
-                LineChart(listOf(Series(pts, HealthHues.Heart, dots = true)), height = 56.dp, showAxis = false)
-            }
-        }
+        DashCard.HEART -> HeartCard(c, h, nav, modifier)
         DashCard.SLEEP -> {
             val series = h.series[Metric.SLEEP].orEmpty()
             val last = h.latest(Metric.SLEEP)
-            InsightCard(tr("Sommeil"), last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", "",
-                series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatValue(Metric.SLEEP, it.average())) },
-                modifier, { nav.go("h/metric/SLEEP") }) {
-                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, HealthHues.Sleep, height = 56.dp)
+            Tile(c, tr("Sommeil"), modifier, onClick = { nav.go("h/metric/SLEEP") }, bottom = {
+                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 48.dp, labels = series.map { dayLetter(it.first) })
+            }) {
+                Value(last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", color = c.hue().onContainer())
+                Sub(series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatValue(Metric.SLEEP, it.average())) })
             }
         }
         DashCard.CARDIO -> {
-            val cw = h.cardio ?: return
-            MfCard(modifier, onClick = { nav.go("h/metric/CARDIO_WEEK") }, padding = PaddingValues(14.dp)) {
-                Text(tr("Minutes cardio"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(8.dp))
+            val cw = h.cardio
+            Tile(c, tr("Minutes cardio"), modifier, onClick = { nav.go("h/metric/CARDIO_WEEK") }) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Ring(cw.progress, HealthHues.Activity, 84.dp, stroke = 8.dp) {
+                    Ring(cw?.progress ?: 0f, c.hue(), 92.dp, stroke = 9.dp, track = Mf.colors.card.copy(alpha = 0.7f)) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("${cw.total}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("/ ${cw.target}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                            Text(cw?.total?.toString() ?: "—", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("/ ${cw?.target ?: 150}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                         }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(trf("+%1\$s aujourd'hui", cw.today), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+                Sub(cw?.let { trf("+%1\$s aujourd'hui", it.today) })
             }
         }
         DashCard.ENERGY -> {
             val energy = h.latest(Metric.BODY_ENERGY)
             val stress = h.latest(Metric.STRESS)
-            val main = if (energy != null) Metric.BODY_ENERGY else Metric.STRESS
-            InsightCard(tr(main.label), (energy ?: stress)?.second?.let { formatNumber(it) } ?: "—", "/ 100",
-                if (energy != null && stress != null) trf("Stress %1\$s", formatNumber(stress.second)) else null,
-                modifier, { nav.go("h/metric/${main.name}") }) {
+            val main = if (energy != null || Bridge.hasSource(Metric.BODY_ENERGY)) Metric.BODY_ENERGY else Metric.STRESS
+            Tile(c, tr(main.label), modifier, onClick = { nav.go("h/metric/${main.name}") }, bottom = {
                 val pts = if (h.energy.size >= 2) h.energy.map { it.timestampMs / 60000 to it.value }
                     else h.series[main].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }
-                LineChart(listOf(Series(pts, if (main == Metric.BODY_ENERGY) HealthHues.Activity else HealthHues.Mind)), height = 56.dp, showAxis = false)
+                LineChart(listOf(Series(pts, c.hue())), height = 48.dp, showAxis = false)
+            }) {
+                Value((if (main == Metric.BODY_ENERGY) energy else stress)?.second?.let { formatNumber(it) } ?: "—", "/ 100", color = c.hue().onContainer())
+                Sub(if (energy != null && stress != null) trf("Stress %1\$s", formatNumber(stress.second)) else null)
             }
         }
         DashCard.HYDRATION -> {
             val today = h.today(Metric.HYDRATION) ?: 0.0
             val goal = HealthRepository.goal(Metric.HYDRATION) ?: 2000.0
-            MfCard(modifier, onClick = { nav.go("h/metric/HYDRATION") }, padding = PaddingValues(14.dp)) {
-                Text(tr("Hydratation"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatNumber(today), style = MaterialTheme.typography.headlineMedium)
-                    Text(" ml", style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
-                }
-                Text(trf("Objectif %1\$s ml", formatNumber(goal)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-                Spacer(Modifier.height(8.dp))
-                ProgressBar((today / goal).toFloat(), HealthHues.Respiration, height = 6.dp)
-                Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth().clip(CircleShape).background(Mf.colors.chip).clickable { vm.log(Metric.HYDRATION, 250.0) }.padding(vertical = 7.dp),
+            Tile(c, tr("Hydratation"), modifier, onClick = { nav.go("h/metric/HYDRATION") }, bottom = {
+                Row(Modifier.fillMaxWidth().clip(CircleShape).background(Mf.colors.card).clickable { vm.log(Metric.HYDRATION, 250.0) }.padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Add, null, Modifier.size(16.dp))
-                    Text("250 ml", style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                    Icon(Icons.Rounded.Add, null, Modifier.size(16.dp), tint = c.hue())
+                    Text("250 ml", style = MaterialTheme.typography.labelLarge, maxLines = 1, color = c.hue().onContainer())
                 }
+            }) {
+                Value(formatNumber(today), "ml", color = c.hue().onContainer())
+                Sub(trf("Objectif %1\$s ml", formatNumber(goal)))
+                Spacer(Modifier.height(8.dp))
+                ProgressBar((today / goal).toFloat(), c.hue(), height = 6.dp)
             }
         }
         DashCard.VITALS -> {
-            val tiles = VITALS.filter { h.series[it] != null }
-            MfCard(modifier) {
-                CardHeader(tr("Constantes"))
-                Spacer(Modifier.height(10.dp))
+            val tiles = VITALS.filter { Bridge.hasSource(it) }
+            Tile(c, tr("Constantes"), modifier, onClick = null) {
                 tiles.chunked(3).forEachIndexed { i, row ->
                     if (i > 0) Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -397,20 +553,17 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
         }
         DashCard.ACTIVITIES -> {
             val ctx = LocalContext.current
-            MfCard(modifier, padding = PaddingValues(vertical = 12.dp)) {
-                Row(Modifier.padding(horizontal = 16.dp).clickable { nav.go("h/activities") }) { CardHeader(tr("Dernières activités")) }
+            Tile(c, tr("Dernières activités"), modifier, onClick = { nav.go("h/activities") }, padding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 4.dp)) {
                 if (h.activities.isEmpty()) Text(tr("Aucune activité ces 30 derniers jours."), style = MaterialTheme.typography.bodyMedium,
-                    color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                h.activities.take(4).forEach { act -> ActivityRow(act) { openActivity(ctx, nav, act) } }
+                    color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
+                h.activities.take(4).forEach { act -> ActivityRow(act, horizontal = 0.dp) { openActivity(ctx, nav, act) } }
             }
         }
         DashCard.TRAINING_WEEK -> {
             val st by vm.training.state.collectAsState()
             val weekStart = TrainingAnalytics.weekStart(LocalDate.now())
             val thisWeek = st.history.filter { !localDate(it.startTime).isBefore(weekStart) }
-            MfCard(modifier, onClick = { nav.go("t/insights") }) {
-                CardHeader(tr("Semaine d'entraînement"))
-                Spacer(Modifier.height(8.dp))
+            Tile(c, tr("Semaine d'entraînement"), modifier, onClick = { nav.go("t/insights") }) {
                 Row {
                     StatCell("${thisWeek.size}", tr("Séances"), Modifier.weight(1f))
                     StatCell("${thisWeek.sumOf { w -> w.exercises.sumOf { TrainingAnalytics.workingSets(it).size } }}", tr("Séries"), Modifier.weight(1f))
@@ -425,9 +578,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val db = vm.training.db.collectAsState().value ?: return
             val weekStart = TrainingAnalytics.weekStart(LocalDate.now())
             val sets = TrainingAnalytics.setsByMuscle(st.history.filter { !localDate(it.startTime).isBefore(weekStart) }, db)
-            MfCard(modifier, onClick = { nav.go("levels") }) {
-                CardHeader(tr("Muscles travaillés cette semaine"))
-                Spacer(Modifier.height(8.dp))
+            Tile(c, tr("Muscles travaillés cette semaine"), modifier, onClick = { nav.go("levels") }) {
                 BodyMap(intensity(sets, TrainingAnalytics.SETS_HIGH), st.settings.sex, Modifier.fillMaxWidth().height(220.dp))
             }
         }
@@ -438,14 +589,92 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
                 val sorted = st.history.sortedBy { it.startTime }
                 sorted.flatMapIndexed { i, w -> TrainingAnalytics.newRecords(w, sorted.take(i), db).map { w to it } }.takeLast(6).reversed()
             }
-            Column(modifier) {
-                SectionLabel(tr("Records récents"), Modifier.padding(top = 0.dp))
-                if (records.isEmpty()) MfCard { Text(tr("Vos records apparaîtront après vos premières séances."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary) }
+            Tile(c, tr("Records récents"), modifier, onClick = null, padding = PaddingValues(14.dp)) {
+                if (records.isEmpty()) Text(tr("Vos records apparaîtront après vos premières séances."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                 else Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     records.forEach { (w, r) -> RecordCard(db, st.settings, r, app.superhealth.training.ui.shortDate(w.startTime)) { nav.go("exercise/${r.exerciseId}") } }
                 }
             }
         }
+    }
+}
+
+/**
+ * Fréquence cardiaque : courbe de la journée (mesures de la montre par tranches de 10 min), dernière valeur, plage et
+ * FC au repos. « Direct » : la montre envoie ses mesures en temps réel tant que la carte est à l'écran.
+ * Sans courbe du jour (Health Connect seul), la FC au repos des 14 derniers jours.
+ */
+@Composable
+private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifier: Modifier) {
+    val hue = c.hue()
+    var live by remember { mutableStateOf(false) }
+    val livePts = remember { mutableStateListOf<Pair<Long, Double>>() }
+    val canLive = remember(h) { LiveHeart.available() }
+    if (live) LaunchedEffect(Unit) {
+        LiveHeart.samples.collect { s -> s.bpm?.let { livePts += s.timeMs to it.toDouble() } }
+    }
+    val day = h.heartToday.map { it.timestampMs to it.value }
+    val rest = h.latest(Metric.RESTING_HR)?.second
+    val now = System.currentTimeMillis()
+    val current = livePts.lastOrNull()?.second ?: day.lastOrNull()?.second
+    Tile(c, tr("Fréquence cardiaque"), modifier, onClick = { nav.go("h/metric/HEART_RATE") }) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Value(current?.let { formatNumber(it) } ?: h.latest(Metric.HEART_RATE)?.second?.let { formatNumber(it) } ?: "—", tr("bpm"), big = true)
+            Spacer(Modifier.weight(1f))
+            if (canLive) {
+                val on = live
+                Row(Modifier.clip(CircleShape).background(if (on) hue else hue.container()).clickable { live = !live; if (!live) livePts.clear() }
+                    .padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Sensors, null, Modifier.size(16.dp), tint = if (on) Color.White else hue.onContainer())
+                    Spacer(Modifier.width(6.dp))
+                    Text(tr("Direct"), style = MaterialTheme.typography.labelLarge, color = if (on) Color.White else hue.onContainer())
+                }
+            }
+        }
+        Sub(listOfNotNull(
+            when {
+                live && livePts.isNotEmpty() -> tr("En direct de la montre")
+                day.isNotEmpty() -> trf("Mesuré à %1\$s", timeOf(day.last().first))
+                else -> null
+            },
+            day.takeIf { it.size >= 2 }?.let { d -> trf("%1\$s–%2\$s bpm", d.minOf { it.second }.roundToInt(), d.maxOf { it.second }.roundToInt()) },
+            rest?.let { trf("Repos %1\$s", formatNumber(it)) },
+        ).joinToString(" · ").ifBlank { null })
+        Spacer(Modifier.height(12.dp))
+        when {
+            live -> {
+                // Direct : les 30 dernières minutes (mesures du jour puis mesures temps réel).
+                val window = 30 * 60_000L
+                val pts = (day.filter { it.first >= now - window } + livePts).sortedBy { it.first }
+                HeartChart(pts, hue, height = 150.dp, from = now - window, to = now, gapMs = 11 * 60_000L, live = true, reference = rest,
+                    xLabels = listOf(now - window to timeOf(now - window), now to tr("Maint.")))
+            }
+            day.size >= 2 -> {
+                val start = HealthRepository.startMs(LocalDate.now())
+                HeartChart(day, hue, height = 150.dp, from = start, to = start + 86_400_000L, reference = rest,
+                    xLabels = listOf(0, 6, 12, 18).map { start + it * 3_600_000L to "${it}h" })
+            }
+            else -> {
+                val pts = h.series[Metric.RESTING_HR].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }
+                    .ifEmpty { h.series[Metric.HEART_RATE].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } } }
+                LineChart(listOf(Series(pts, hue, dots = true), Series(pts, hue.copy(alpha = 0.5f))), height = 90.dp, showAxis = true)
+            }
+        }
+    }
+}
+
+/** Macro restante : pastille teintée de la couleur MacroFactor de la macro. */
+@Composable
+private fun MacroPill(label: String, value: Double, target: Double, color: Color) {
+    val left = target - value
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(color.container()).padding(horizontal = 10.dp, vertical = 7.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = color.onContainer(), modifier = Modifier.weight(1f), maxLines = 1)
+            Text(trf(if (left >= 0) "%1\$s g restants" else "%1\$s g en trop", abs(left).roundToInt()), style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold, color = color.onContainer(), maxLines = 1)
+        }
+        Spacer(Modifier.height(4.dp))
+        ProgressBar(if (target > 0) (value / target).toFloat() else 0f, color, height = 4.dp)
     }
 }
 
@@ -463,7 +692,7 @@ private fun MacroBar(label: String, value: Double, target: Double, color: Color)
 
 @Composable
 private fun VitalTile(m: Metric, latest: Pair<LocalDate, Double>?, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(Mf.colors.chip).clickable(onClick = onClick).padding(10.dp)) {
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(m.color.container()).clickable(onClick = onClick).padding(10.dp)) {
         Icon(m.icon, null, Modifier.size(18.dp), tint = m.color)
         Spacer(Modifier.height(6.dp))
         Text(latest?.let { formatWithUnit(m, it.second) } ?: "—", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.superhealth.nutrition.domain.AccentColor
 import app.superhealth.nutrition.domain.ThemeMode
@@ -49,16 +50,31 @@ val MuscleIdle = Color(0xFFEEEEEE)
 /** Couleurs des programmes (WorkoutProgramColor) [INFÉRÉ : palette ThemeColor de MacroFactor]. */
 val ProgramColors = listOf(WorkoutBlue, Base.Red, Base.Green, Base.Orange, Base.Purple, Base.Pink, Base.Yellow, Base.Grey)
 
-/** Familles de mesures santé (montre) ramenées à la palette MacroFactor. */
+/**
+ * Familles de mesures santé : teintes un peu plus douces que la palette MacroFactor, à la manière de Google Health
+ * (chaque famille a sa couleur et son fond pastel, voir [container]).
+ */
 object HealthHues {
-    val Activity = Base.Green
-    val Heart = Base.Red
-    val Sleep = Base.Purple
-    val Mind = Base.Yellow
-    val Respiration = Base.Blue
-    val Fitness = Base.Orange
-    val Body = Base.Blue
+    val Activity = Color(0xFF1F9E85)
+    val Heart = Color(0xFFE5574F)
+    val Sleep = Color(0xFF7B61D9)
+    val Mind = Color(0xFFD9931F)
+    val Respiration = Color(0xFF2E97C7)
+    val Fitness = Color(0xFFE77A45)
+    val Body = Color(0xFF3F7DE8)
 }
+
+/** Fond pastel d'une couleur de famille (cartes teintées, pastilles d'icônes), lisible en clair comme en sombre. */
+@Composable
+fun Color.container(): Color = androidx.compose.ui.graphics.lerp(Mf.colors.card, this, if (Mf.colors.dark) 0.20f else 0.14f)
+
+/** Texte posé sur [container] : la couleur elle-même, assombrie en clair pour le contraste. */
+@Composable
+fun Color.onContainer(): Color = if (Mf.colors.dark) androidx.compose.ui.graphics.lerp(this, Color.White, 0.25f)
+    else androidx.compose.ui.graphics.lerp(this, Color.Black, 0.30f)
+
+/** Rayon des cartes (plus rond que MacroFactor, comme Google Health). */
+val CardRadius = 24.dp
 
 fun AccentColor.color() = when (this) {
     AccentColor.BLUE -> Base.Blue
@@ -89,15 +105,15 @@ data class MfColors(
 )
 
 private fun lightMf(accent: Color) = MfColors(
-    dark = false, background = Color(0xFFF8F8F8), card = Color.White, elevated = Color(0xFFEEEEEE),
-    text = Color(0xFF0D0D0D), textSecondary = Base.Grey, textTertiary = Color(0xFFABB0BA),
-    divider = Color(0xFFE5E6E8), chip = Color(0xFFEEEEEE), accent = accent, strong = Color(0xFF0D0D0D), onStrong = Color.White,
+    dark = false, background = Color(0xFFF0F3F8), card = Color.White, elevated = Color(0xFFE6EBF2),
+    text = Color(0xFF12161C), textSecondary = Color(0xFF5E6773), textTertiary = Color(0xFFA2AAB5),
+    divider = Color(0xFFE3E8EF), chip = Color(0xFFE9EEF5), accent = accent, strong = Color(0xFF12161C), onStrong = Color.White,
 )
 
 private fun darkMf(accent: Color) = MfColors(
-    dark = true, background = Color(0xFF121212), card = Color(0xFF1E1E1E), elevated = Color(0xFF292929),
-    text = Color(0xFFE2E2E2), textSecondary = Color(0xFFB0B0B0), textTertiary = Color(0xFF6D6D6D),
-    divider = Color(0xFF313133), chip = Color(0xFF292929), accent = accent, strong = Color.White, onStrong = Color(0xFF0D0D0D),
+    dark = true, background = Color(0xFF0F1216), card = Color(0xFF1A1E24), elevated = Color(0xFF252A31),
+    text = Color(0xFFE7EAEF), textSecondary = Color(0xFFA5ADB8), textTertiary = Color(0xFF6A727D),
+    divider = Color(0xFF2A3038), chip = Color(0xFF252A31), accent = accent, strong = Color(0xFFE7EAEF), onStrong = Color(0xFF0F1216),
 )
 
 val LocalMf = staticCompositionLocalOf { lightMf(Base.Blue) }
@@ -157,7 +173,7 @@ fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentC
         primary = mf.strong, onPrimary = mf.onStrong, secondary = acc, onSecondary = Color.White,
         background = mf.background, onBackground = mf.text, surface = mf.card, onSurface = mf.text,
         surfaceVariant = mf.elevated, onSurfaceVariant = mf.textSecondary, surfaceContainer = mf.card,
-        surfaceContainerLow = mf.card, surfaceContainerHigh = Color(0xFFF3F3F3), surfaceContainerHighest = mf.elevated,
+        surfaceContainerLow = mf.card, surfaceContainerHigh = Color(0xFFF3F6FA), surfaceContainerHighest = mf.elevated,
         outline = Color(0xFFD1D3D8), outlineVariant = mf.divider, error = Color(0xFFE11900), primaryContainer = mf.elevated,
         onPrimaryContainer = mf.text, secondaryContainer = mf.elevated, onSecondaryContainer = mf.text,
     )

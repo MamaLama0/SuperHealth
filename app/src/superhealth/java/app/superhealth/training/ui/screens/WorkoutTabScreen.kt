@@ -70,13 +70,18 @@ import app.superhealth.training.ui.volume
  * (course, marche, randonnée… de la montre et de Health Connect) et l'historique de musculation.
  */
 @Composable
-fun WorkoutTabScreen(vm: AppViewModel, nav: NavHostController, others: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {}) {
+fun WorkoutTabScreen(
+    vm: AppViewModel, nav: NavHostController,
+    top: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
+    others: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
+) {
     val st by vm.state.collectAsState()
     val db by vm.db.collectAsState()
     val active = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         ScreenTitle(tr("Activités"), actions = { IconButton(onClick = { nav.navigate("history") }) { Icon(Icons.Rounded.History, tr("Historique")) } })
         Column(Modifier.padding(horizontal = 16.dp)) {
+            top()
             SectionLabel(tr("Musculation"))
             if (active != null) ActiveProgramCard(active, db!!, nav,
                 onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") })
