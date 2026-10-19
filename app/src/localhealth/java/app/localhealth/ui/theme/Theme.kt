@@ -57,6 +57,41 @@ val LocalExtendedColors = staticCompositionLocalOf { GhLightExtendedColors }
 val MaterialTheme.extendedColors: ExtendedColorScheme
     @Composable get() = LocalExtendedColors.current
 
+/** The colour family for a metric hue; NEUTRAL is the grey card used for metrics without data. */
+@Composable
+fun familyFor(hue: app.localhealth.data.Hue): ColorFamily {
+    val ext = LocalExtendedColors.current
+    val cs = MaterialTheme.colorScheme
+    return when (hue) {
+        app.localhealth.data.Hue.BLUE -> ext.blue
+        app.localhealth.data.Hue.BLUE_MARINE -> ext.blueMarine
+        app.localhealth.data.Hue.GOLDENROD -> ext.goldenrod
+        app.localhealth.data.Hue.GREEN -> ext.green
+        app.localhealth.data.Hue.LILAC -> ext.lilac
+        app.localhealth.data.Hue.MAGENTA -> ext.magenta
+        app.localhealth.data.Hue.TANGERINE -> ext.tangerine
+        app.localhealth.data.Hue.TEAL -> ext.teal
+        app.localhealth.data.Hue.NEUTRAL -> neutralFamily(cs)
+    }
+}
+
+/** Google Health's grey pill card: surfaceContainerHighest with a surfaceContainerLow icon pill. */
+fun neutralFamily(cs: androidx.compose.material3.ColorScheme) = ColorFamily(
+    color = cs.onSurfaceVariant,
+    container = cs.surfaceContainerHighest,
+    containerVariant = cs.surfaceContainerLow,
+    data = cs.outline,
+    dataBright = cs.onSurfaceVariant,
+    fixed = cs.surfaceContainerHighest,
+    fixedDim = cs.surfaceContainerHigh,
+    variant = cs.onSurfaceVariant,
+    onColor = cs.surface,
+    onContainer = cs.onSurfaceVariant,
+    onFixed = cs.onSurface,
+    onFixedVariant = cs.onSurfaceVariant,
+    onVariant = cs.onSurfaceVariant,
+)
+
 private fun googleSans(weight: FontWeight) = Font(
     R.font.google_sans_flex,
     weight = weight,

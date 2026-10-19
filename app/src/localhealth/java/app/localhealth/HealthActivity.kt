@@ -38,6 +38,6 @@ class HealthActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        vm.refresh()
+        vm.bump()
     }
 }

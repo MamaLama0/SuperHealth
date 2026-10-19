@@ -21,6 +21,7 @@ data class DeviceUi(
     val busy: Boolean,
     val battery: Int?,
     val stateText: String,
+    @androidx.annotation.DrawableRes val icon: Int,
     val device: GBDevice,
 )
 
@@ -36,6 +37,7 @@ fun deviceStateFlow(context: Context): Flow<List<DeviceUi>> = callbackFlow {
             busy = d.isBusy,
             battery = d.getBatteryLevel(0).takeIf { it in 0..100 },
             stateText = d.getStateString(context),
+            icon = d.deviceCoordinator.defaultIconResource,
             device = d,
         )
     }
