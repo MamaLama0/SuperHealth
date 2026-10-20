@@ -70,6 +70,19 @@ class ManualLogStore private constructor(context: Context) :
             }
         }
 
+    /** Remplace toutes les saisies (restauration d'une sauvegarde). */
+    suspend fun replaceAll(logs: List<ManualLog>) = withContext(Dispatchers.IO) {
+        writableDatabase.run {
+            beginTransaction()
+            try {
+                delete("logs", null, null)
+                logs.forEach { l -> insert("logs", null, ContentValues().apply { put("metric", l.metric.name); put("ts", l.timestampMs); put("value", l.value) }) }
+                setTransactionSuccessful()
+            } finally { endTransaction() }
+        }
+        _changes.value++
+    }
+
     companion object {
         @Volatile private var instance: ManualLogStore? = null
         fun get(context: Context): ManualLogStore =

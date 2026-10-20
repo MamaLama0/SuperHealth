@@ -151,9 +151,10 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
 
     fun entriesForDay(day: Long) = entries.forDay(day)
 
-    suspend fun logFood(day: Long, minute: Int, food: FoodEntity, grams: Double) {
+    /** Journalise [grams] de [food] ; renvoie l'id de l'entrée (pour l'annuler). */
+    suspend fun logFood(day: Long, minute: Int, food: FoodEntity, grams: Double): Long {
         val f = grams / 100.0
-        entries.insert(
+        val id = entries.insert(
             FoodEntryEntity(
                 epochDay = day, meal = mealFor(minute), minuteOfDay = minute, foodId = food.id.takeIf { it != 0L }, name = food.name,
                 grams = grams, kcal = food.kcal100 * f, protein = food.protein100 * f, fat = food.fat100 * f, carbs = food.carbs100 * f,
@@ -161,12 +162,12 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             )
         )
         if (food.id != 0L) foods.markUsed(food.id)
+        return id
     }
 
-    suspend fun quickAdd(day: Long, minute: Int, name: String, m: Macros) {
+    suspend fun quickAdd(day: Long, minute: Int, name: String, m: Macros): Long =
         entries.insert(FoodEntryEntity(epochDay = day, meal = mealFor(minute), minuteOfDay = minute, name = name,
             kcal = m.kcal, protein = m.protein, fat = m.fat, carbs = m.carbs))
-    }
 
     /** Copie les entrées d'un jour vers un autre en conservant les heures. */
     suspend fun copyDay(from: Long, to: Long) {
@@ -204,16 +205,17 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
     suspend fun deleteRecipe(id: Long) = db.withTransaction { recipes.deleteFor(id); foods.delete(id) }
 
     /** « Exploser » une recette : journalise chaque ingrédient, au prorata de la quantité choisie. */
-    suspend fun logRecipeIngredients(day: Long, minute: Int, recipe: FoodEntity, grams: Double) {
+    suspend fun logRecipeIngredients(day: Long, minute: Int, recipe: FoodEntity, grams: Double): List<Long> {
         val items = recipes.itemsFor(recipe.id)
         val total = recipe.servingGrams * (recipe.recipeServings ?: 1.0)
         val f = grams / total.coerceAtLeast(1.0)
-        items.forEach {
+        val ids = items.map {
             entries.insert(FoodEntryEntity(epochDay = day, meal = mealFor(minute), minuteOfDay = minute, foodId = it.foodId, name = it.name,
                 grams = it.grams * f, kcal = it.kcal * f, protein = it.protein * f, fat = it.fat * f, carbs = it.carbs * f, fiber = it.fiber * f,
                 microsJson = Micros.scale(it.microsJson, f)))
         }
         foods.markUsed(recipe.id)
+        return ids
     }
 
     /** Repas déduit de l'heure (pour l'export CSV, compatible avec la v1). */

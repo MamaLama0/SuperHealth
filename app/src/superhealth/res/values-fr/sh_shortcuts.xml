@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_search_short">Rechercher</string>
+    <string name="sc_search_long">Rechercher un aliment</string>
+    <string name="sc_scan_short">Scanner</string>
+    <string name="sc_scan_long">Scanner un code-barres</string>
+    <string name="sc_workout_short">Séance</string>
+    <string name="sc_workout_long">Séance du jour</string>
+    <string name="sc_weight_short">Pesée</string>
+    <string name="sc_weight_long">Ajouter une pesée</string>
+</resources>

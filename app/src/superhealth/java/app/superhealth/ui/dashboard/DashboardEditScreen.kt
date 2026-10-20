@@ -1,6 +1,8 @@
 package app.superhealth.ui.dashboard
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,6 +52,17 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
         Text(tr("Choisissez les graphiques du tableau de bord et leur ordre."), style = MaterialTheme.typography.bodyMedium,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
 
+        // Accès direct au choix des constantes de la carte principale.
+        GroupCard {
+            Row(Modifier.fillMaxWidth().clickable { nav.navigate("vitals/edit") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Constantes affichées"), style = MaterialTheme.typography.bodyLarge)
+                    Text(sh.vitals.joinToString(" · ") { n -> tr(app.superhealth.health.data.Metric.entries.firstOrNull { it.name == n }?.label ?: n) },
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.graphicsLayer(rotationZ = -90f), tint = Mf.colors.textTertiary)
+            }
+        }
         SectionLabel(tr("Affichées"))
         if (shown.isEmpty()) Text(tr("Aucune carte affichée"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         else GroupCard {
@@ -84,6 +97,57 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
                             if (c.watch) Text(tr("Montre ou Health Connect"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
                         }
                         Switch(false, { set(shown + c) }, colors = switchColors())
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Constantes : quelles mesures de la montre (ou de Health Connect) dans la carte principale, et dans quel ordre. */
+@Composable
+fun VitalsEditScreen(vm: SuperViewModel, nav: NavHostController) {
+    val sh by vm.settings.collectAsState()
+    val shown = sh.vitals
+    fun set(list: List<String>) = SuperPrefs.update { it.copy(vitals = list) }
+    fun label(n: String) = app.superhealth.health.data.Metric.entries.firstOrNull { it.name == n }?.label ?: n
+    DetailScaffold(tr("Constantes"), onBack = { nav.popBackStack() }, action = {
+        TextButton(onClick = { set(listOf("RESTING_HR", "RESPIRATORY_RATE", "BODY_ENERGY")) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
+    }) {
+        Text(tr("La carte principale du tableau de bord. Choisissez ses mesures et leur ordre ; celles que ni la montre ni Health Connect ne fournissent restent masquées."),
+            style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        SectionLabel(tr("Affichées"))
+        if (shown.isEmpty()) Text(tr("Aucune mesure"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+        else GroupCard {
+            shown.forEachIndexed { i, n ->
+                if (i > 0) RowDivider()
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr(label(n)), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val m = app.superhealth.health.data.Metric.entries.firstOrNull { it.name == n }
+                        if (m != null && !app.superhealth.bridge.Bridge.hasSource(m))
+                            Text(tr("Pas de source pour l'instant"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+                    }
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i - 1, removeAt(i)) }) }, enabled = i > 0) {
+                        Icon(Icons.Rounded.KeyboardArrowUp, tr("Monter"), tint = if (i > 0) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
+                        Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    Switch(true, { set(shown - n) }, Modifier.padding(end = 8.dp), colors = switchColors())
+                }
+            }
+        }
+        val hidden = app.superhealth.VITAL_CHOICES.filter { it !in shown }
+        if (hidden.isNotEmpty()) {
+            SectionLabel(tr("Disponibles"))
+            GroupCard {
+                hidden.forEachIndexed { i, n ->
+                    if (i > 0) RowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr(label(n)), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Switch(false, { set(shown + n) }, colors = switchColors())
                     }
                 }
             }

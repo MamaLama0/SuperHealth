@@ -216,6 +216,11 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         return fetchHistory;
     }
 
+    /** Progress of the running history fetch, read by the app UI: activities queued so far and still to download. */
+    public static volatile int historyTotal;
+    public static volatile int historyRemaining;
+    public static volatile boolean historyRunning;
+
     private int maxPacketSize = 400;
 
     private SleepAsAndroidSender sleepAsAndroidSender;
@@ -345,6 +350,9 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
 
     public void addFileToDownloadList(GdiFileSyncService.File file) {
         filesToDownload.add(new FileToDownload(file));
+        if (fetchHistory) {
+            historyTotal++;
+        }
         if (isBusyFetching && file.hasSize()) {
             transferNotification.incrementTotalSize(file.getSize());
         }
@@ -686,6 +694,9 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         if (dataTypes == RecordedDataTypes.TYPE_HISTORY) {
             LOG.info("Fetching the full file history from the watch");
             fetchHistory = true;
+            historyTotal = 0;
+            historyRemaining = 0;
+            historyRunning = true;
             protocolBufferHandler.getFileSyncServiceHandler().resetForHistory();
         }
 
@@ -1173,12 +1184,17 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         transferNotification.finish();
         isBusyFetching = false;
         fetchHistory = false;
+        historyRunning = false;
         protocolBufferHandler.getFileSyncServiceHandler().stopHistoryListing();
         currentlyDownloading = null;
         filesToDownload.clear();
     }
 
     private void processDownloadQueue() {
+        historyRunning = fetchHistory;
+        if (fetchHistory) {
+            historyRemaining = filesToDownload.size() + (currentlyDownloading != null ? 1 : 0);
+        }
         if (LOG.isTraceEnabled()) {
             LOG.trace(
                     "Processing download queue - {} files to download, currentlyDownloading = {}, isBusyFetching = {}",
@@ -1315,6 +1331,7 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     @VisibleForTesting
     void finishFileSync() {
         fetchHistory = false;
+        historyRunning = false;
         protocolBufferHandler.getFileSyncServiceHandler().stopHistoryListing();
         // FIXME: This should probably only happen after exploresync also finishes
         sendOutgoingMessage("set sync complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, 0));

@@ -142,6 +142,7 @@ class NextWorkoutWidgetReceiver : GlanceAppWidgetReceiver() { override val glanc
 object Widgets {
     /** Par identifiants système (voir La Bouffe : updateAll() dépend d'une table Glance parfois en retard). */
     suspend fun refresh(ctx: Context) {
+        runCatching { app.superhealth.ui.widget.DayWidgets.refresh(ctx) }
         val glance = androidx.glance.appwidget.GlanceAppWidgetManager(ctx)
         android.appwidget.AppWidgetManager.getInstance(ctx).getAppWidgetIds(android.content.ComponentName(ctx, NextWorkoutWidgetReceiver::class.java))
             .forEach { id -> runCatching { NextWorkoutWidget().update(ctx, glance.getGlanceIdBy(id)) } }

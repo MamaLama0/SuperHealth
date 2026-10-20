@@ -5,6 +5,7 @@ import app.superhealth.nutrition.ui.tr
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -107,13 +108,17 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
     /** Ajouts faits depuis l'ouverture : l'écran reste ouvert pour enchaîner les aliments (comme MacroFactor). */
     var added by remember { mutableStateOf(0) }
     var notice by remember { mutableStateOf<String?>(null) }
+    /** Entrées du dernier ajout, pour « Annuler ». */
+    var lastIds by remember { mutableStateOf<List<Long>>(emptyList()) }
+    /** Sélection multiple (appui long sur un aliment) : tout ajouter d'un coup. */
+    val selection = remember { FoodSelection() }
     val scope = rememberCoroutineScope()
     val focus = remember { FocusRequester() }
     val pendingNotice by vm.logNotice.collectAsState()
-    LaunchedEffect(pendingNotice) { pendingNotice?.let { notice = it; added++; vm.logNotice.value = null } }
+    LaunchedEffect(pendingNotice) { pendingNotice?.let { notice = it; lastIds = emptyList(); added++; vm.logNotice.value = null } }
     /** Après un ajout : confirmation, recherche vidée et prête pour l'aliment suivant. */
-    fun afterAdd(text: String) {
-        added++; notice = text; message = null; query = ""
+    fun afterAdd(text: String, ids: List<Long> = emptyList()) {
+        added++; notice = text; lastIds = ids; message = null; query = ""
         if (tab != SearchTab.ALL) tab = SearchTab.ALL
         runCatching { focus.requestFocus() }
     }
@@ -172,17 +177,42 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                 Icon(Icons.Rounded.CheckCircle, null, Modifier.size(20.dp), tint = app.superhealth.ui.theme.HealthHues.Activity)
                 Spacer(Modifier.width(8.dp))
                 Text(n, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (lastIds.isNotEmpty()) androidx.compose.material3.TextButton(onClick = {
+                    val ids = lastIds; lastIds = emptyList()
+                    scope.launch { ids.forEach { vm.repo.entries.delete(it) }; added = (added - 1).coerceAtLeast(0); notice = tr("Ajout annulé") }
+                }) { Text(tr("Annuler"), color = Mf.colors.accent) }
                 PillButton(if (added > 1) trf("Fini (%1\$s)", added) else tr("Fini"), strong = true, onClick = onDone)
             }
         }
         ChipChoice(SearchTab.entries.filter { !ingredient || it != SearchTab.QUICK }, tab, { it.label.tr() },
             Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) { tab = it }
+        if (!ingredient && !selection.active && notice == null && query.isEmpty() && tab == SearchTab.ALL)
+            Text(tr("Astuce : appui long sur un aliment pour en ajouter plusieurs d'un coup."), Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
         if (ingredient) Text(trf("Choisissez un ingrédient pour « %1\$s »", (vm.recipeDraft.collectAsState().value?.name?.ifBlank { tr("nouvelle recette") } ?: "")),
             Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         message?.let {
             Text(it, Modifier.padding(horizontal = 16.dp, vertical = 6.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
                 .background(Mf.colors.accent.copy(alpha = 0.15f)).padding(12.dp), style = MaterialTheme.typography.bodySmall)
         }
+        if (!ingredient && selection.active) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(trf("%1\$s aliment(s) sélectionné(s) · dernière quantité utilisée", selection.items.size), style = MaterialTheme.typography.bodySmall,
+                color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = { selection.items.clear() }) { Text(tr("Effacer"), color = Mf.colors.text) }
+            PillButton(trf("Ajouter %1\$s", selection.items.size), strong = true) {
+                val foods = selection.items.values.toList(); selection.items.clear()
+                scope.launch {
+                    val ids = foods.map { f ->
+                        val saved = if (f.id == 0L) vm.repo.saveFood(f) else f
+                        val g = (if (saved.id != 0L) vm.repo.entries.lastGrams(saved.id) else null) ?: vm.repo.entries.lastGramsByName(saved.name)
+                            ?: saved.servingGrams
+                        vm.repo.logFood(day, minute, saved, g)
+                    }
+                    afterAdd(trf("%1\$s aliments ajoutés au journal", ids.size), ids)
+                }
+            }
+        }
+        androidx.compose.runtime.CompositionLocalProvider(LocalFoodSelection provides if (ingredient) null else selection) {
         when (tab) {
             SearchTab.ALL -> SearchResults(vm, s, query, onPick = { selected = it })
             SearchTab.FAVORITES -> LibraryList(vm, s, favoritesOnly = true, onPick = { selected = it })
@@ -190,12 +220,15 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
             SearchTab.RECIPES -> RecipeList(vm, s, onPick = { selected = it }, onNew = { vm.recipeDraft.value = RecipeDraft(); onNav("recipe") },
                 onAi = if (s.aiEnabled) ({ onNav("aiimport/recipe") }) else null)
             SearchTab.QUICK -> QuickAdd(s) { name, m ->
-                vm.launch { quickAdd(day, minute, name, m) }
-                afterAdd(trf("%1\$s ajouté au journal", name.ifBlank { tr("Ajout rapide") }))
+                scope.launch {
+                    val id = vm.repo.quickAdd(day, minute, name, m)
+                    afterAdd(trf("%1\$s ajouté au journal", name.ifBlank { tr("Ajout rapide") }), listOf(id))
+                }
             }
             SearchTab.CREATE -> CreateFood(s, createBarcode, onAi = if (s.aiEnabled) ({ onNav("aiimport/label") }) else null) { food ->
                 scope.launch { selected = vm.repo.saveFood(food); createBarcode = null; message = null }
             }
+        }
         }
     }
 
@@ -206,7 +239,7 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
             onToggleFavorite = if (food.id != 0L) ({ vm.launch { foods.setFavorite(food.id, !food.favorite) } }) else null,
             addLabel = if (ingredient) tr("Ajouter à la recette") else tr("Ajouter au journal"),
             onExplode = if (isRecipe && !ingredient) { g ->
-                scope.launch { vm.repo.logRecipeIngredients(day, minute, food, g); selected = null; afterAdd(trf("%1\$s ajouté au journal", food.name)) }
+                scope.launch { val ids = vm.repo.logRecipeIngredients(day, minute, food, g); selected = null; afterAdd(trf("%1\$s ajouté au journal", food.name), ids) }
             } else null,
             onEdit = if (isRecipe && !ingredient) {
                 {
@@ -233,9 +266,9 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                     selected = null
                     onDone()
                 } else {
-                    vm.repo.logFood(day, minute, saved, grams)
+                    val id = vm.repo.logFood(day, minute, saved, grams)
                     selected = null
-                    afterAdd(trf("%1\$s ajouté au journal (%2\$s g)", saved.name, num(grams, 0)))
+                    afterAdd(trf("%1\$s ajouté au journal (%2\$s g)", saved.name, num(grams, 0)), listOf(id))
                 }
             }
         }
@@ -279,9 +312,25 @@ private fun RecipeList(vm: AppViewModel, s: Settings, onPick: (FoodEntity) -> Un
     }
 }
 
+/** Aliments cochés par appui long dans la recherche. */
+private class FoodSelection {
+    val items = androidx.compose.runtime.mutableStateMapOf<String, FoodEntity>()
+    val active get() = items.isNotEmpty()
+    fun toggle(f: FoodEntity) { val k = f.selectionKey(); if (items.remove(k) == null) items[k] = f }
+}
+
+private fun FoodEntity.selectionKey() = if (id != 0L) "id$id" else "n$name|$brand"
+
+private val LocalFoodSelection = androidx.compose.runtime.staticCompositionLocalOf<FoodSelection?> { null }
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun FoodRow(food: FoodEntity, s: Settings, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    val sel = LocalFoodSelection.current
+    val checked = sel != null && sel.items.containsKey(food.selectionKey())
+    Row(Modifier.fillMaxWidth().background(if (checked) Mf.colors.accent.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent)
+        .combinedClickable(onClick = { if (sel?.active == true) sel.toggle(food) else onClick() }, onLongClick = sel?.let { { it.toggle(food) } })
+        .padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         FoodIcon(food.name, 42.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -294,6 +343,7 @@ private fun FoodRow(food: FoodEntity, s: Settings, onClick: () -> Unit) {
             MacroLine(Macros(food.kcal100 * k, food.protein100 * k, food.fat100 * k, food.carbs100 * k), { s.energyValue(it) },
                 suffix = listOf(if (per != 100.0) trf("%1\$s (%2\$s g)", food.servingName, (per.toInt())) else tr("100 g"), food.brand).filter { it.isNotBlank() }.joinToString(" · "))
         }
+        if (checked) Icon(Icons.Rounded.CheckCircle, null, Modifier.padding(start = 8.dp), tint = Mf.colors.accent)
     }
 }
 

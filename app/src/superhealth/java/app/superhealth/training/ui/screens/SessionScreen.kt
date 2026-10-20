@@ -96,6 +96,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.animation.animateContentSize
+import androidx.compose.material.icons.rounded.EmojiEvents
+import app.superhealth.training.domain.Strength
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -175,6 +177,8 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     var restFor by remember { mutableStateOf<Int?>(null) }
     var sessionNote by remember { mutableStateOf(false) }
     val previous = remember(st.history) { previousSets(st.history) }
+    /** Meilleur 1RM estimé de chaque exercice avant cette séance : une série qui le dépasse est un record, signalé tout de suite. */
+    val bests = remember(st.history, db) { bestE1rms(st.history, db!!) }
     val scope = rememberCoroutineScope()
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
 
@@ -192,7 +196,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
                 if (page >= s.exercises.size) EndPage(s, onAdd = { nav.navigate("picker/${Picker.SESSION}") }, onFinish = { confirmFinish = true })
                 else {
                     val ex = s.exercises[page]
-                    ExercisePage(vm, st.settings, s, page, ex, db!!.exercise(ex.exerciseId), previous[ex.exerciseId], nav,
+                    ExercisePage(vm, st.settings, s, page, ex, db!!.exercise(ex.exerciseId), previous[ex.exerciseId], bests[ex.exerciseId], nav,
                         onPlates = { plateFor = page to it }, onNote = { noteFor = page }, onRest = { restFor = page },
                         onToggle = { si ->
                             focus.clearFocus()
@@ -267,6 +271,20 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     }
 }
 
+private fun bestE1rms(history: List<Workout>, db: app.superhealth.training.domain.ExerciseDb): Map<String, Double> {
+    val out = mutableMapOf<String, Double>()
+    history.forEach { w ->
+        w.exercises.forEach { ex ->
+            val upper = db.exercise(ex.exerciseId)?.upperBody == true
+            Analytics.workingSets(ex).filter { (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }.forEach { set ->
+                val v = Strength.e1rm(set.weight!!, set.reps!!, set.rir, upper)
+                if (v > (out[ex.exerciseId] ?: 0.0)) out[ex.exerciseId] = v
+            }
+        }
+    }
+    return out
+}
+
 private fun previousSets(history: List<Workout>): Map<String, List<SetLog>> {
     val out = mutableMapOf<String, List<SetLog>>()
     history.sortedByDescending { it.startTime }.forEach { w ->
@@ -316,11 +334,23 @@ private fun ExerciseStrip(s: Session, exercise: (String) -> Exercise?, selected:
     val list = rememberLazyListState()
     LaunchedEffect(selected) { if (selected < s.exercises.size) list.animateScrollToItem((selected - 2).coerceAtLeast(0)) }
     LazyRow(state = list, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+        val letters = s.exercises.mapNotNull { it.supersetGroup }.distinct().mapIndexed { n, g -> g to ('A' + n) }.toMap()
         itemsIndexed(s.exercises, key = { _, e -> e.id }) { i, ex ->
-            val linkedNext = ex.supersetGroup != null && s.exercises.getOrNull(i + 1)?.supersetGroup == ex.supersetGroup
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Superset : les vignettes du groupe partagent une capsule bleue, avec sa lettre au début.
+            val g = ex.supersetGroup
+            val linkedNext = g != null && s.exercises.getOrNull(i + 1)?.supersetGroup == g
+            val linkedPrev = g != null && s.exercises.getOrNull(i - 1)?.supersetGroup == g
+            val grouped = linkedNext || linkedPrev
+            val r = 32.dp
+            Row(Modifier.padding(end = if (linkedNext) 0.dp else 8.dp)
+                .background(if (grouped) WorkoutBlue.copy(alpha = 0.18f) else Color.Transparent,
+                    RoundedCornerShape(topStart = if (linkedPrev) 0.dp else r, bottomStart = if (linkedPrev) 0.dp else r,
+                        topEnd = if (linkedNext) 0.dp else r, bottomEnd = if (linkedNext) 0.dp else r))
+                .padding(start = if (grouped && !linkedPrev) 8.dp else 0.dp, end = if (grouped) 6.dp else 0.dp, top = 3.dp, bottom = 3.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                if (grouped && !linkedPrev) Text("${letters[g] ?: 'A'}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = WorkoutBlue,
+                    modifier = Modifier.padding(end = 4.dp))
                 StripItem(i, ex, exercise(ex.exerciseId), i == selected) { onSelect(i) }
-                Box(Modifier.width(if (linkedNext) 14.dp else 8.dp).height(3.dp).background(if (linkedNext) WorkoutBlue else Color.Transparent))
             }
         }
         item {
@@ -355,7 +385,7 @@ private fun StripItem(index: Int, ex: SessionExercise, e: Exercise?, selected: B
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ExercisePage(
-    vm: AppViewModel, settings: Settings, s: Session, index: Int, ex: SessionExercise, e: Exercise?, previous: List<SetLog>?,
+    vm: AppViewModel, settings: Settings, s: Session, index: Int, ex: SessionExercise, e: Exercise?, previous: List<SetLog>?, best: Double?,
     nav: NavHostController, onPlates: (Double) -> Unit, onNote: () -> Unit, onRest: () -> Unit, onToggle: (Int) -> Unit,
 ) {
     fun edit(f: (SessionExercise) -> SessionExercise) = vm.session { ss -> ss.copy(exercises = ss.exercises.toMutableList().also { it[index] = f(it[index]) }) }
@@ -365,7 +395,8 @@ private fun ExercisePage(
     val inSuperset = ex.supersetGroup != null
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 160.dp)) {
-        Hero(e, settings, index, s.exercises.size, inSuperset) { nav.navigate("exercise/${ex.exerciseId}") }
+        Hero(e, settings, index, s.exercises.size, inSuperset,
+            ex.supersetGroup?.let { g -> s.exercises.mapNotNull { it.supersetGroup }.distinct().indexOf(g).takeIf { it >= 0 }?.let { 'A' + it } }) { nav.navigate("exercise/${ex.exerciseId}") }
         // Actions de l'exercice (workout_exercise_builder)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -423,7 +454,10 @@ private fun ExercisePage(
                 val compact = set.done && set.id !in expanded
                 val tracked = if (si == firstTodo) Modifier.bringIntoViewRequester(bring).onSizeChanged { currentSize = it } else Modifier
                 Box(tracked.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 500f))) {
-                    if (compact) DoneSetRow(settings, set, labels[si]!!, e?.usesWeight != false, onOpen = { expanded.add(set.id) }, onToggle = { onToggle(si) })
+                    if (compact) DoneSetRow(settings, set, labels[si]!!, e?.usesWeight != false,
+                        record = best != null && set.type != SetType.WARMUP && (set.weight ?: 0.0) > 0 && (set.reps ?: 0) > 0 &&
+                            Strength.e1rm(set.weight!!, set.reps!!, set.rir, e?.upperBody == true) > best * 1.001,
+                        onOpen = { expanded.add(set.id) }, onToggle = { onToggle(si) })
                     else SetCard(settings, set, labels[si]!!, prevByIndex[si], e?.usesWeight != false, current = si == firstTodo,
                         onChange = { ns -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns }) } },
                         onToggle = { expanded.remove(set.id); onToggle(si) }, onPlates = onPlates,
@@ -453,7 +487,7 @@ private fun ExercisePage(
 
 /** En-tête : photo de l'exercice (angles a/b/c en touchant), dégradé, nom et muscles. */
 @Composable
-private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, inSuperset: Boolean, onInfo: () -> Unit) {
+private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, inSuperset: Boolean, supersetLetter: Char? = null, onInfo: () -> Unit) {
     val angles = e?.images.orEmpty()
     var angle by remember(e?.id) { mutableIntStateOf(0) }
     val path = angles.getOrNull(angle)?.let { "ex/${e!!.id}_${it}.webp" } ?: e?.thumbnail()
@@ -469,7 +503,7 @@ private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, inSup
         Row(Modifier.align(Alignment.TopStart).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("${index + 1} / ${count}", Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, style = MaterialTheme.typography.labelMedium)
-            if (inSuperset) Text(tr("Superset"), Modifier.clip(CircleShape).background(WorkoutBlue).padding(horizontal = 10.dp, vertical = 4.dp),
+            if (inSuperset) Text(tr("Superset") + (supersetLetter?.let { " $it" } ?: ""), Modifier.clip(CircleShape).background(WorkoutBlue).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, style = MaterialTheme.typography.labelMedium)
         }
         if (angles.size > 1) Row(Modifier.align(Alignment.TopEnd).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -564,7 +598,7 @@ private fun SetCard(
 
 /** Série validée, rétractée : coche pleine, résultat ; touche = rouvrir pour corriger, coche = dévalider. */
 @Composable
-private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeight: Boolean, onOpen: () -> Unit, onToggle: () -> Unit) {
+private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeight: Boolean, record: Boolean = false, onOpen: () -> Unit, onToggle: () -> Unit) {
     Row(Modifier.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClick = onOpen)
         .padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.width(34.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
@@ -573,6 +607,17 @@ private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeigh
             if (usesWeight) "${clean(settings.w(set.weight ?: 0.0))} ${settings.unit.label.tr()}" else null,
             trf("%1\$s reps", (set.reps ?: 0)), set.rir?.let { trf("RIR %1\$s", it) },
         ).joinToString("  ·  "), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+        if (record) {
+            // Nouveau record (1RM estimé) : pastille dorée qui apparaît en rebondissant.
+            val pop = remember { androidx.compose.animation.core.Animatable(0.4f) }
+            LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = 300f)) }
+            Row(Modifier.scale(pop.value).padding(end = 8.dp).clip(CircleShape).background(Color(0xFFFFB300)).padding(horizontal = 8.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(14.dp), tint = Color.White)
+                Spacer(Modifier.width(4.dp))
+                Text(tr("Record"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        }
         Box(Modifier.size(30.dp).clip(CircleShape).background(WorkoutBlue).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.Check, tr("Dévalider"), tint = Color.White, modifier = Modifier.size(18.dp))
         }

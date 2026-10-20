@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
+import app.superhealth.vitalMetrics
 import app.superhealth.bridge.Bridge
 import app.superhealth.bridge.LiveHeart
 import app.superhealth.health.data.CardioWeek
@@ -193,7 +194,8 @@ private class HealthSnap(
 /** Dernières mesures lues : affichées tout de suite au retour sur l'onglet, le temps de relire. */
 private var lastSnap = HealthSnap()
 
-private val VITALS = listOf(Metric.RESTING_HR, Metric.HRV, Metric.SPO2, Metric.RESPIRATORY_RATE, Metric.VO2MAX, Metric.TEMPERATURE, Metric.READINESS)
+/** Constantes choisies (Personnaliser > Constantes). */
+private val VITALS: List<Metric> get() = app.superhealth.SuperPrefs.settings.value.vitalMetrics
 
 private fun Metric.dashMetrics(card: DashCard): Boolean = when (card) {
     DashCard.STEPS -> this == Metric.STEPS
@@ -244,7 +246,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val devices by vm.devices.collectAsState()
     val cards = sh.dashboard
 
-    val health by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size) {
+    val health by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size, sh.vitals) {
         // Lectures de la base de la montre hors du thread principal (elles faisaient saccader l'écran à chaque retour).
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadHealth(ctx, cards) }.also { lastSnap = it }
     }
@@ -596,19 +598,13 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             }
         }
         DashCard.VITALS -> {
-            // Seulement les constantes mesurées ces 14 derniers jours (pas de tuiles vides « — »).
-            val tiles = VITALS.filter { Bridge.hasSource(it) && h.series[it].orEmpty().any { p -> p.second != null } }
-            Tile(c, tr("Constantes"), modifier, onClick = null, tinted = false,
-                trailing = tr("14 j")) {
+            // Les mesures choisies dont une source existe (montre ou Health Connect) ; touche l'en-tête pour les choisir.
+            val tiles = VITALS.filter { Bridge.hasSource(it) }
+            Tile(c, tr("Constantes"), modifier, onClick = { nav.go("vitals/edit") }, tinted = false, trailing = tr("Modifier")) {
                 if (tiles.isEmpty()) Text(tr("Vos constantes apparaîtront après une nuit avec la montre."), style = MaterialTheme.typography.bodyMedium,
                     color = Mf.colors.textSecondary)
-                tiles.chunked(2).forEachIndexed { i, row ->
-                    if (i > 0) Spacer(Modifier.height(10.dp))
-                    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        row.forEach { m -> VitalTile(m, h.series[m].orEmpty(), Modifier.weight(1f).fillMaxHeight()) { nav.go("h/metric/${m.name}") } }
-                        repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
-                    }
-                }
+                val female = vm.nutrition.profile.collectAsState().value.sex.name == "FEMALE"
+                VitalsGrid(tiles, { h.series[it].orEmpty() }, female) { m -> nav.go("h/metric/${m.name}") }
             }
         }
         DashCard.ACTIVITIES -> {
@@ -739,78 +735,3 @@ private fun MacroBar(label: String, value: Double, target: Double, color: Color)
     }
 }
 
-/**
- * Tuile de constante façon Google Health : icône sur pastille de sa couleur, statut par rapport à vos 14 derniers jours,
- * dernière valeur, et sa position dans votre plage personnelle (min–max des 14 jours).
- */
-@Composable
-private fun VitalTile(m: Metric, series: List<Pair<LocalDate, Double?>>, modifier: Modifier, onClick: () -> Unit) {
-    val pts = series.mapNotNull { it.second }
-    val latest = series.lastOrNull { it.second != null }
-    val v = latest?.second
-    val hue = m.color
-    // Statut : écart à la moyenne personnelle, en écarts-types (comme les « plages personnelles » de Google Health).
-    val status = if (v != null && pts.size >= 5) {
-        val mean = pts.average()
-        val sd = kotlin.math.sqrt(pts.sumOf { (it - mean) * (it - mean) } / pts.size).coerceAtLeast(mean * 0.02)
-        val z = (v - mean) / sd
-        when {
-            z > 1.5 -> tr("Élevé")
-            z < -1.5 -> tr("Bas")
-            else -> tr("Habituel")
-        }
-    } else null
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(hue.container(0.9f)).clickable(onClick = onClick).padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(28.dp).clip(CircleShape).background(hue), contentAlignment = Alignment.Center) {
-                Icon(m.icon, null, Modifier.size(16.dp), tint = Color.White)
-            }
-            Spacer(Modifier.weight(1f))
-            status?.let {
-                val usual = it == tr("Habituel")
-                Text(it, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
-                    color = if (usual) hue.onContainer() else Color.White, maxLines = 1,
-                    modifier = Modifier.clip(CircleShape).background(if (usual) Mf.colors.card.copy(alpha = 0.7f) else hue).padding(horizontal = 8.dp, vertical = 3.dp))
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(v?.let { formatValue(m, it) } ?: "—", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                color = hue.onContainer(), maxLines = 1)
-            app.superhealth.ui.unitOf(m)?.takeIf { v != null }?.let {
-                Text(" $it", style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1,
-                    modifier = Modifier.padding(bottom = 3.dp))
-            }
-        }
-        Text(tr(m.label), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.weight(1f))
-        if (v != null && pts.max() > pts.min()) {
-            Spacer(Modifier.height(10.dp))
-            RangeBar(pts.min(), pts.max(), v, hue)
-            Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
-                Text(formatValue(m, pts.min()), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
-                Spacer(Modifier.weight(1f))
-                Text(formatValue(m, pts.max()), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
-            }
-        }
-        if (latest != null && latest.first != LocalDate.now()) Text(app.superhealth.ui.relativeDay(latest.first), style = MaterialTheme.typography.labelSmall,
-            color = Mf.colors.textTertiary, maxLines = 1)
-    }
-}
-
-/** Plage personnelle : piste de min à max, point sur la dernière valeur. */
-@Composable
-private fun RangeBar(min: Double, max: Double, value: Double, hue: Color) {
-    val track = Mf.colors.card.copy(alpha = 0.8f)
-    val ring = Mf.colors.card
-    androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(12.dp)) {
-        val y = size.height / 2
-        val r = size.height / 2
-        drawLine(track, androidx.compose.ui.geometry.Offset(r, y), androidx.compose.ui.geometry.Offset(size.width - r, y), 6.dp.toPx(),
-            cap = androidx.compose.ui.graphics.StrokeCap.Round)
-        val f = if (max > min) ((value - min) / (max - min)).toFloat().coerceIn(0f, 1f) else 0.5f
-        val x = r + f * (size.width - 2 * r)
-        drawCircle(ring, r, androidx.compose.ui.geometry.Offset(x, y))
-        drawCircle(hue, r - 2.dp.toPx(), androidx.compose.ui.geometry.Offset(x, y))
-    }
-}

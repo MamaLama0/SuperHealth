@@ -34,6 +34,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -186,6 +187,12 @@ private enum class QtyUnit { GRAMS, SERVINGS, ENERGY }
  * voulue, comme « Log by Calories » de MacroFactor), aperçu des macros et de l'impact.
  * Recette : [onExplode] journalise les ingrédients séparément, [onEdit] ouvre l'éditeur.
  */
+@Composable
+private fun QtyChip(label: String, onClick: () -> Unit) {
+    Text(label, Modifier.clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.labelLarge, color = Mf.colors.text, maxLines = 1)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoodSheet(
@@ -197,8 +204,10 @@ fun FoodSheet(
     val hasServing = food.servingGrams != 100.0
     var unit by remember { mutableStateOf(if (hasServing) QtyUnit.SERVINGS else QtyUnit.GRAMS) }
     var qty by remember { mutableStateOf(if (hasServing) "1" else "100") }
+    var last by remember { mutableStateOf<Double?>(null) }
     if (lastGrams != null) LaunchedEffect(food) {
         val g = lastGrams() ?: return@LaunchedEffect
+        last = g
         // Portion définie et quantité qui en est un multiple « rond » : en portions, sinon en grammes.
         val servings = g / food.servingGrams
         if (hasServing && kotlin.math.abs(servings * 4 - kotlin.math.round(servings * 4)) < 0.01) qty = num(servings, 2)
@@ -251,6 +260,21 @@ fun FoodSheet(
             }
             NumberField(when (unit) { QtyUnit.SERVINGS -> tr("Nombre de portions"); QtyUnit.GRAMS -> tr("Quantité"); QtyUnit.ENERGY -> tr("Énergie voulue") },
                 qty, { qty = it }, suffix = when (unit) { QtyUnit.SERVINGS -> tr("×"); QtyUnit.GRAMS -> "g"; QtyUnit.ENERGY -> s.energyUnit.label.tr() })
+            // Raccourcis de quantité : moitié, double, dernière quantité utilisée, portion.
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                fun setGrams(g: Double) {
+                    when (unit) {
+                        QtyUnit.SERVINGS -> qty = num(g / food.servingGrams, 2)
+                        QtyUnit.GRAMS -> qty = num(g, 0)
+                        QtyUnit.ENERGY -> qty = num(s.energyValue(food.kcal100 * g / 100), 0)
+                    }
+                }
+                QtyChip("½") { grams?.let { setGrams(it / 2) } }
+                QtyChip("×2") { grams?.let { setGrams(it * 2) } }
+                last?.let { g -> QtyChip(trf("Dernière : %1\$s g", num(g, 0))) { setGrams(g) } }
+                if (hasServing) QtyChip(trf("1 %1\$s", food.servingName)) { setGrams(food.servingGrams) }
+                QtyChip("100 g") { setGrams(100.0) }
+            }
             if (unit == QtyUnit.ENERGY && grams != null) Text(trf("= %1\$s g", (num(grams, 0))), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp))
             TargetImpact(m, target)

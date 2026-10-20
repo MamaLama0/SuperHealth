@@ -33,7 +33,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
 
     companion object {
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
-        val defaults = listOf(CALORIES, WEIGHT, EXPENDITURE, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, VITALS)
+        val defaults = listOf(VITALS, CALORIES, WEIGHT, EXPENDITURE, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK)
     }
 }
 
@@ -72,10 +72,23 @@ data class SuperSettings(
     val dashboard: List<DashCard> = DashCard.defaults,
     /** Raccourcis du « + » (noms de [PlusAction], gardés en texte : une valeur retirée plus tard n'efface pas les réglages). */
     val plus: List<String> = PlusAction.defaults.map { it.name },
+    /** Mesures de la carte Constantes (pièce maîtresse du tableau de bord), noms de [app.superhealth.health.data.Metric]. */
+    val vitals: List<String> = listOf("RESTING_HR", "RESPIRATORY_RATE", "BODY_ENERGY"),
+    /** Constantes déjà placées en tête du tableau de bord (migration unique). */
+    val vitalsHero: Boolean = false,
+    /** Fonds de carte OpenStreetMap des activités (seule connexion liée à vos parcours ; sans eux, le tracé seul). */
+    val onlineMaps: Boolean = true,
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,
 )
+
+/** Mesures que la carte Constantes peut afficher (montre ou Health Connect). */
+val VITAL_CHOICES = listOf("RESTING_HR", "HEART_RATE", "RESPIRATORY_RATE", "BODY_ENERGY", "STRESS", "SPO2", "HRV", "SLEEP", "SLEEP_SCORE",
+    "READINESS", "VO2MAX", "TEMPERATURE", "STEPS")
+
+val SuperSettings.vitalMetrics: List<app.superhealth.health.data.Metric>
+    get() = vitals.mapNotNull { n -> app.superhealth.health.data.Metric.entries.firstOrNull { it.name == n } }
 
 val SuperSettings.plusActions: List<PlusAction> get() = plus.mapNotNull { n -> PlusAction.entries.firstOrNull { it.name == n } }
 
@@ -113,6 +126,10 @@ object SuperPrefs {
         sp = ctx.getSharedPreferences("superhealth", Context.MODE_PRIVATE)
         _settings.value = sp.getString("settings", null)?.let { runCatching { SuperJson.decodeFromString(SuperSettings.serializer(), it) }.getOrNull() }
             ?: SuperSettings()
+        // Constantes devenues la pièce maîtresse : placées une fois en tête (l'utilisateur peut ensuite les déplacer ou les retirer).
+        _settings.value.let { s ->
+            if (!s.vitalsHero) update { it.copy(dashboard = listOf(DashCard.VITALS) + (it.dashboard - DashCard.VITALS), vitalsHero = true) }
+        }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }
 
@@ -121,6 +138,14 @@ object SuperPrefs {
         val v = f(_settings.value)
         _settings.value = v
         sp.edit().putString("settings", SuperJson.encodeToString(SuperSettings.serializer(), v)).apply()
+    }
+
+    /** Réglages SuperHealth en JSON (sauvegarde complète). */
+    fun exportSettings(): String = SuperJson.encodeToString(SuperSettings.serializer(), _settings.value)
+
+    fun importSettings(json: String) {
+        val s = runCatching { SuperJson.decodeFromString(SuperSettings.serializer(), json) }.getOrNull() ?: return
+        update { s.copy(onboarded = true) }
     }
 
     @Synchronized fun setHc(c: HcCache) {

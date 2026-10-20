@@ -73,7 +73,8 @@ private object Tiles {
         val key = "osm/$z/$x/$y"
         memory.get(key)?.let { return@withContext it }
         val f = File(dir, "$key.png")
-        if (!f.exists() || f.length() == 0L) runCatching {
+        // Cartes en ligne désactivées : seules les tuiles déjà en cache s'affichent, aucune requête.
+        if ((!f.exists() || f.length() == 0L) && app.superhealth.SuperPrefs.settings.value.onlineMaps) runCatching {
             val c = URL("https://tile.openstreetmap.org/$z/$x/$y.png").openConnection() as HttpURLConnection
             c.setRequestProperty("User-Agent", "SuperHealth/1.0 (personal health app)")
             c.connectTimeout = 8000; c.readTimeout = 8000

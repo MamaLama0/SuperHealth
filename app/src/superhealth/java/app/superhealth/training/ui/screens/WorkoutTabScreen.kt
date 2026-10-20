@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Add
@@ -87,6 +88,7 @@ fun WorkoutTabScreen(
         Column(Modifier.padding(horizontal = 16.dp)) {
             top()
             SectionLabel(tr("Musculation"))
+            WeekStrip(st.history, st.settings) { nav.navigate("t/insights") }
             if (active != null) ActiveProgramCard(active, db!!, nav,
                 onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") })
             else MfCard(onClick = { nav.navigate("wizard") }) {
@@ -260,4 +262,38 @@ fun HistoryScreen(vm: AppViewModel, nav: NavHostController) {
 private fun dayShort(name: String): String {
     val parts = name.split(' ')
     return if (parts.size > 1 && parts.last().length == 1) "${parts.first().take(5)} ${parts.last()}" else parts.first().take(8)
+}
+
+
+/** Semaine de musculation en un coup d'œil : jours entraînés (lun → dim), séances, séries et volume. */
+@Composable
+private fun WeekStrip(history: List<app.superhealth.training.domain.Workout>, settings: app.superhealth.training.domain.Settings, onClick: () -> Unit) {
+    val today = java.time.LocalDate.now()
+    val start = app.superhealth.training.domain.Analytics.weekStart(today)
+    val week = history.filter { !app.superhealth.ui.localDate(it.startTime).isBefore(start) }
+    val days = week.map { app.superhealth.ui.localDate(it.startTime) }.toSet()
+    val sets = week.sumOf { w -> w.exercises.sumOf { app.superhealth.training.domain.Analytics.workingSets(it).size } }
+    val volume = week.sumOf { w -> w.exercises.sumOf { app.superhealth.training.domain.Analytics.volume(it.sets) } }
+    Row(Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(tr("Cette semaine"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
+            Text(trf(if (week.size > 1) "%1\$s séances" else "%1\$s séance", week.size) + " · " + trf(if (sets > 1) "%1\$s séries" else "%1\$s série", sets),
+                style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            if (volume > 0) Text(settings.volume(volume), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            (0L..6L).forEach { i ->
+                val d = start.plusDays(i)
+                val done = d in days
+                Box(Modifier.size(22.dp).clip(CircleShape).background(when {
+                    done -> app.superhealth.ui.theme.WorkoutBlue
+                    d == today -> app.superhealth.ui.theme.WorkoutBlue.copy(alpha = 0.18f)
+                    else -> Mf.colors.chip
+                }), contentAlignment = Alignment.Center) {
+                    Text(app.superhealth.ui.dayLetter(d), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = if (done) Color.White else Mf.colors.textSecondary)
+                }
+            }
+        }
+    }
 }

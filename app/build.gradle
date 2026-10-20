@@ -194,6 +194,10 @@ android {
             versionCode 1
             // Navigation Compose, Room et Health Connect côté nutrition/musculation : Android 8.0 minimum (comme La Bouffe et La Salle)
             minSdk = 26
+            // Interface en français et en anglais seulement : les ~70 langues de Gadgetbridge sont retirées (resources.arsc).
+            resourceConfigurations += ["en", "fr"]
+            // Téléphones ARM uniquement (pas d'émulateur x86).
+            ndk { abiFilters "arm64-v8a", "armeabi-v7a" }
         }
 
         banglejs {
@@ -236,7 +240,10 @@ android {
             initWith debug
             debuggable false
             profileable true
-            minifyEnabled false
+            // R8 : code inutilisé retiré et optimisé (règles de Gadgetbridge + proguard-superhealth.pro)
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro", "proguard-superhealth.pro"
             signingConfig = signingConfigs.debug
             matchingFallbacks = ['debug']
         }

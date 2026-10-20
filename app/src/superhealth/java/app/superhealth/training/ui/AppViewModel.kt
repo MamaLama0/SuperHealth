@@ -270,11 +270,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun saveWorkout(w: Workout) = update { s -> s.copy(history = s.history.map { if (it.id == w.id) w else it }.sortedBy { it.startTime }) }
 
     /** « Save to Library » : la séance devient un entraînement de la bibliothèque, cibles reprises des séries faites. */
-    fun saveToLibrary(w: Workout) = saveCustom(CustomWorkout(UUID.randomUUID().toString(), w.name, w.exercises.map { ex ->
+    fun saveToLibrary(w: Workout) = saveCustom(asCustom(w))
+
+    /** Refaire une séance passée : mêmes exercices, séries et supersets ; charges proposées d'après l'historique. */
+    fun repeatWorkout(w: Workout) { if (state.value.session == null) startCustom(asCustom(w)) }
+
+    private fun asCustom(w: Workout) = CustomWorkout(UUID.randomUUID().toString(), w.name, w.exercises.map { ex ->
         val work = ex.sets.filter { it.type != SetType.WARMUP }
         val targets = work.map { set -> set.target ?: (set.reps ?: 10).let { r -> app.superhealth.training.domain.TargetSet(set.type, (r - 2).coerceAtLeast(1), r + 2, set.rir ?: 2, ex.restSec) } }
         app.superhealth.training.domain.ProgramExercise(UUID.randomUUID().toString(), ex.exerciseId, listOf(targets.ifEmpty { listOf(app.superhealth.training.domain.TargetSet()) }), ex.supersetGroup)
-    }, state.value.gyms.firstOrNull { it.name == w.gymName }?.id))
+    }, state.value.gyms.firstOrNull { it.name == w.gymName }?.id)
 
     // ----- Sauvegarde -----
 

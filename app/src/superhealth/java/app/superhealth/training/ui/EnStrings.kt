@@ -3,6 +3,14 @@ package app.superhealth.training.ui
 /** Dictionnaire français → anglais (libellés MacroFactor Workouts quand ils existent). Généré depuis tr()/trf(). */
 object EnStrings {
     val map: Map<String, String> = hashMapOf(
+        "Refaire cette séance" to "Repeat this workout",
+        "Reprendre la séance en cours" to "Resume current workout",
+        "Record" to "PR",
+        "Cette semaine" to "This week",
+        "%1\$s séance" to "%1\$s workout",
+        "%1\$s séances" to "%1\$s workouts",
+        "%1\$s série" to "%1\$s set",
+        "%1\$s séries" to "%1\$s sets",
         "Superset %1\$s" to "Superset %1\$s",
         "Retirer du superset" to "Remove from superset",
         "Superset avec l'exercice suivant" to "Superset with next exercise",

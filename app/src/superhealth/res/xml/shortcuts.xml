@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="search" android:enabled="true" android:icon="@drawable/ic_sc_search"
+        android:shortcutShortLabel="@string/sc_search_short" android:shortcutLongLabel="@string/sc_search_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="app.superhealth" android:targetClass="app.superhealth.MainActivity">
+            <extra android:name="route" android:value="search/0/-1" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="scan" android:enabled="true" android:icon="@drawable/ic_sc_scan"
+        android:shortcutShortLabel="@string/sc_scan_short" android:shortcutLongLabel="@string/sc_scan_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="app.superhealth" android:targetClass="app.superhealth.MainActivity">
+            <extra android:name="route" android:value="search/1/-1" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="workout" android:enabled="true" android:icon="@drawable/ic_sc_workout"
+        android:shortcutShortLabel="@string/sc_workout_short" android:shortcutLongLabel="@string/sc_workout_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="app.superhealth" android:targetClass="app.superhealth.MainActivity">
+            <extra android:name="route" android:value="training:startnext" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="weight" android:enabled="true" android:icon="@drawable/ic_sc_weight"
+        android:shortcutShortLabel="@string/sc_weight_short" android:shortcutLongLabel="@string/sc_weight_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="app.superhealth" android:targetClass="app.superhealth.MainActivity">
+            <extra android:name="route" android:value="weight" />
+        </intent>
+    </shortcut>
+</shortcuts>

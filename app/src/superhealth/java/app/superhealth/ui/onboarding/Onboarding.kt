@@ -201,13 +201,23 @@ private fun Step.image() = "illustrations/illustration_" + when (this) {
 } + ".webp"
 
 
+/**
+ * [FULL] : questionnaire d'accueil (enregistré). Les simulations rejouent une partie du questionnaire sans rien enregistrer,
+ * par exemple pour calculer les calories ou le programme d'un ami.
+ */
+enum class OnboardingMode { FULL, NUTRITION_SIM, TRAINING_SIM }
+
 @Composable
-fun OnboardingScreen(svm: SuperViewModel) {
+fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.FULL, onClose: () -> Unit = {}) {
     val vm = svm.nutrition
     val ctx = LocalContext.current
-    val profile by vm.profile.collectAsState()
-    val program by vm.program.collectAsState()
+    val sim = mode != OnboardingMode.FULL
+    // Simulation : valeurs neutres, pas celles de l'utilisateur.
+    val profile = if (sim) remember { app.superhealth.nutrition.domain.Profile() } else vm.profile.collectAsState().value
+    val program = if (sim) remember { app.superhealth.nutrition.domain.Program() } else vm.program.collectAsState().value
     val settings by vm.settings.collectAsState()
+    /** Questionnaire relancé depuis les Réglages : l'utilisateur a déjà des données. */
+    val rerun = mode == OnboardingMode.FULL && settings.onboarded
 
     var unit by rememberSaveable { mutableStateOf(settings.weightUnit) }
     var sex by rememberSaveable { mutableStateOf(profile.sex) }
@@ -223,14 +233,14 @@ fun OnboardingScreen(svm: SuperViewModel) {
     var goal by rememberSaveable { mutableStateOf(GoalType.CUT) }
     var targetKg by rememberSaveable { mutableDoubleStateOf(0.0) }
     var rate by rememberSaveable { mutableDoubleStateOf(0.5) }
-    var training by rememberSaveable { mutableStateOf(program.training) }
+    var training by rememberSaveable { mutableStateOf(if (mode == OnboardingMode.TRAINING_SIM) Training.STRENGTH else program.training) }
     var protein by rememberSaveable { mutableStateOf(program.proteinPreference) }
     var diet by rememberSaveable { mutableStateOf(program.dietPreference) }
     var floor by rememberSaveable { mutableStateOf(program.calorieFloor) }
     var shift by rememberSaveable { mutableStateOf(false) }
     var highDays by rememberSaveable { mutableStateOf(setOf(6, 7)) }
     var health by rememberSaveable { mutableStateOf(false) }
-    var name by rememberSaveable { mutableStateOf(app.superhealth.ui.userName() ?: "") }
+    var name by rememberSaveable { mutableStateOf(if (sim) "" else app.superhealth.ui.userName() ?: "") }
     var experience by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Experience.INTERMEDIATE) }
     var gym by rememberSaveable { mutableStateOf(GymTemplate.COMMERCIAL) }
     // Programme de musculation généré à la fin du questionnaire (questions essentielles de l'assistant de La Salle).
@@ -244,6 +254,11 @@ fun OnboardingScreen(svm: SuperViewModel) {
 
     val healthAvailable = remember { HealthConnectHub.status(ctx) == HealthConnectHub.Status.AVAILABLE }
     val steps = Step.entries.filter {
+        when (mode) {
+            OnboardingMode.NUTRITION_SIM -> if (it.section == 2 && it != Step.TRAINING || it.section == 3 || it == Step.WELCOME || it == Step.NAME) return@filter false
+            OnboardingMode.TRAINING_SIM -> if (it !in setOf(Step.SEX, Step.EXPERIENCE, Step.GYM, Step.LIFT_GOAL, Step.DAYS, Step.DURATION, Step.GENERATING, Step.RESULT)) return@filter false
+            OnboardingMode.FULL -> {}
+        }
         when (it) {
             Step.HEALTH -> healthAvailable
             Step.TARGET -> goal != GoalType.MAINTENANCE
@@ -257,7 +272,24 @@ fun OnboardingScreen(svm: SuperViewModel) {
     var forward by rememberSaveable { mutableStateOf(true) }
     fun next() { forward = true; if (index < steps.lastIndex) index++ }
     fun back() { forward = false; if (index > 0) index-- }
-    BackHandler(index > 0 && step != Step.GENERATING) { back() }
+    BackHandler(step != Step.GENERATING && (index > 0 || sim)) { if (index > 0) back() else onClose() }
+
+    /**
+     * « Passer » : relancé depuis les Réglages, on garde tout tel quel ; premier lancement, l'app démarre avec des réglages
+     * neutres (maintien du poids, pas de pesée inventée) à compléter plus tard.
+     */
+    fun skip() {
+        if (rerun) { SuperPrefs.update { it.copy(onboarded = true) }; return }
+        val t = svm.training
+        val myGym = t.gymFromTemplate(GymTemplate.COMMERCIAL, tr("Ma salle"))
+        t.saveGym(myGym)
+        t.settings { it.copy(onboarded = true, activeGymId = myGym.id) }
+        vm.repo.prefs.setProgram(program.copy(goalType = GoalType.MAINTENANCE, ratePctPerWeek = 0.0, startEpochDay = LocalDate.now().toEpochDay()))
+        vm.repo.prefs.setGoals(listOf(Goal(startDay = LocalDate.now().toEpochDay(), type = GoalType.MAINTENANCE, startWeightKg = weightKg,
+            targetWeightKg = null, ratePctPerWeek = 0.0)))
+        vm.repo.prefs.setSettings(settings.copy(onboarded = true, language = if (Lang.english) Language.EN else Language.FR))
+        SuperPrefs.update { it.copy(onboarded = true) }
+    }
 
     // Profil, programme et objectif tels que saisis : utilisés pour l'aperçu du rythme et pour le résultat.
     val today = LocalDate.now().toEpochDay()
@@ -338,6 +370,10 @@ fun OnboardingScreen(svm: SuperViewModel) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background).safeDrawingPadding().imePadding()) {
         // Barre de progression (masquée sur l'accueil et la génération)
         val showBar = step != Step.WELCOME && step != Step.GENERATING && step != Step.RESULT
+        if (sim && !showBar) Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, tr("Fermer")) }
+            Text(tr("Simulation · rien n'est enregistré"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+        }
         Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showBar) {
                 IconButton(onClick = { back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
@@ -362,6 +398,7 @@ fun OnboardingScreen(svm: SuperViewModel) {
                     }
                 }
             } else if (step == Step.WELCOME) {
+                androidx.compose.material3.TextButton(onClick = { skip() }) { Text(tr("Passer"), color = Mf.colors.textSecondary) }
                 Spacer(Modifier.weight(1f))
                 ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { if (it == Language.FR) "FR" else "EN" }) { l ->
                     vm.repo.prefs.setSettings(settings.copy(language = l)); Lang.apply(l.name)
@@ -576,9 +613,16 @@ fun OnboardingScreen(svm: SuperViewModel) {
                         }
                     }
                     Step.GENERATING -> Generating { next() }
-                    Step.RESULT -> {
+                    Step.RESULT -> if (mode == OnboardingMode.TRAINING_SIM) {
+                        Spacer(Modifier.height(16.dp))
+                        Text(tr("Programme simulé"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        val liftProgram = remember { draftLiftProgram() }
+                        if (liftProgram != null) LiftProgramCard(liftProgram, liftMinutes)
+                        else Text(tr("La base d'exercices se charge encore : réessayez dans un instant."), color = Mf.colors.textSecondary)
+                    } else {
                         val (tdee, ci) = remember { draftCheckIn() }
                         Result(tdee, ci, settings, draftProgram())
+                        if (sim) return@Column
                         Spacer(Modifier.height(12.dp))
                         Text(tr("Et aussi"), style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
@@ -597,7 +641,7 @@ fun OnboardingScreen(svm: SuperViewModel) {
         if (step != Step.GENERATING) {
             val label = when (step) {
                 Step.WELCOME -> tr("Commencer")
-                Step.RESULT -> tr("C'est parti")
+                Step.RESULT -> if (sim) tr("Nouvelle simulation") else tr("C'est parti")
                 Step.HEALTH -> if (health) tr("Continuer") else tr("Plus tard")
                 Step.NAME -> if (name.isBlank()) tr("Passer") else tr("Continuer")
                 Step.WATCH -> if (watch == WatchChoice.PAIR && !paired) tr("Plus tard") else tr("Continuer")
@@ -607,7 +651,18 @@ fun OnboardingScreen(svm: SuperViewModel) {
             val ok = step != Step.TARGET || (goal == GoalType.CUT && targetKg < weightKg) || (goal == GoalType.BULK && targetKg > weightKg)
             Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 PillButton(tr(label), Modifier.fillMaxWidth(), enabled = ok) {
-                    if (step == Step.RESULT) finish(program = lifts && wantProgram) else next()
+                    when {
+                        step == Step.RESULT && sim -> { forward = false; index = 0 }
+                        step == Step.RESULT -> finish(program = lifts && wantProgram)
+                        else -> next()
+                    }
+                }
+                if (sim && step == Step.RESULT) {
+                    if (mode == OnboardingMode.TRAINING_SIM) PillButton(tr("Garder ce programme dans la bibliothèque"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) {
+                        draftLiftProgram()?.let { svm.training.saveProgram(it.copy(name = tr("Programme simulé"))) }
+                        android.widget.Toast.makeText(ctx, tr("Ajouté à la bibliothèque"), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    PillButton(tr("Fermer"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false, onClick = onClose)
                 }
             }
         }

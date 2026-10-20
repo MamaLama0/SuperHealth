@@ -327,6 +327,7 @@ object Widgets {
      * de Glance, pas encore à jour juste après l'ajout d'un nouveau type de widget (un widget recevait alors le contenu d'un autre).
      */
     suspend fun refresh(ctx: Context) {
+        runCatching { app.superhealth.ui.widget.DayWidgets.refresh(ctx) }
         val mgr = android.appwidget.AppWidgetManager.getInstance(ctx)
         val glance = androidx.glance.appwidget.GlanceAppWidgetManager(ctx)
         listOf(TodayWidgetReceiver::class.java to TodayWidget(), WeightWidgetReceiver::class.java to WeightWidget(), KcalWidgetReceiver::class.java to KcalWidget())

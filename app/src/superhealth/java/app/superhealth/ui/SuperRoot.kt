@@ -169,7 +169,10 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("activities") { WorkoutTabScreen(vm.training, nav) { OtherActivities(vm, nav) } }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
+            composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
+            composable("sim/nutrition") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.NUTRITION_SIM) { nav.popBackStack() } }
+            composable("sim/training") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.TRAINING_SIM) { nav.popBackStack() } }
             composable("h/metric/{metric}", listOf(navArgument("metric") { type = NavType.StringType })) {
                 val m = runCatching { Metric.valueOf(it.arguments!!.getString("metric")!!) }.getOrNull() ?: Metric.STEPS
                 MetricScreen(vm, nav, m)

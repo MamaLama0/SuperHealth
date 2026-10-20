@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -294,8 +295,15 @@ fun WorkoutDetailScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     val st by vm.state.collectAsState()
     val w = st.history.firstOrNull { it.id == id } ?: return
     var editDuration by remember { mutableStateOf(false) }
-    WorkoutSummary(vm, w, w.name, { nav.popBackStack() }, onEdit = { nav.navigate("workoutedit/$id") },
-        onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(id); nav.popBackStack() })
+    Box(Modifier.fillMaxSize()) {
+        WorkoutSummary(vm, w, w.name, { nav.popBackStack() }, onEdit = { nav.navigate("workoutedit/$id") },
+            onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(id); nav.popBackStack() })
+        // Refaire cette séance (mêmes exercices et séries, charges d'après l'historique).
+        app.superhealth.training.ui.components.PillButton(if (st.session == null) tr("Refaire cette séance") else tr("Reprendre la séance en cours"),
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(16.dp), icon = Icons.Rounded.Repeat) {
+            vm.repeatWorkout(w); nav.navigate("session")
+        }
+    }
     if (editDuration) DurationDialog(w.durationSec, estimatedDuration(w), onDismiss = { editDuration = false }) { editDuration = false; vm.saveWorkout(w.copy(durationSec = it)) }
 }
 
@@ -323,7 +331,7 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
             Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreHoriz, tr("Options de la séance")) }
         }
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 96.dp)) {
             BodyMap(intensity(sets, max), st.settings.sex, Modifier.fillMaxWidth().height(320.dp))
             if (records.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))

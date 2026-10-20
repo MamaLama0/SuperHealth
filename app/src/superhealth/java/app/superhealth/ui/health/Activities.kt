@@ -30,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -163,6 +164,17 @@ fun ColumnScope.WatchHistoryCard(vm: SuperViewModel) {
     val garmin = devices.filter { app.superhealth.bridge.Watch.supportsHistory(it.device) }
     if (garmin.isEmpty()) return
     val busy = garmin.any { it.busy }
+    // Progression de la récupération (compteurs du moteur Garmin), relue chaque seconde pendant la synchro.
+    var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    if (busy) LaunchedEffect(Unit) {
+        while (true) {
+            progress = if (nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupport.historyRunning) {
+                val total = nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupport.historyTotal
+                (total - nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupport.historyRemaining).coerceAtLeast(0) to total
+            } else null
+            kotlinx.coroutines.delay(1000)
+        }
+    } else progress = null
     Spacer(Modifier.height(10.dp))
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
         .clickable(enabled = !busy) {
@@ -182,8 +194,15 @@ fun ColumnScope.WatchHistoryCard(vm: SuperViewModel) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(tr("Récupérer l'historique de la montre"), style = MaterialTheme.typography.bodyLarge)
-            Text(tr(if (busy) "Synchronisation en cours…" else "Activités encore stockées sur la montre, même déjà synchronisées"),
-                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            val p = progress
+            Text(when {
+                p != null && p.second > 0 -> trf("Récupération : %1\$s / %2\$s activités", p.first, p.second)
+                p != null -> tr("Recherche des activités sur la montre…")
+                busy -> tr("Synchronisation en cours…")
+                else -> tr("Activités encore stockées sur la montre, même déjà synchronisées")
+            }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            if (p != null && p.second > 0) androidx.compose.material3.LinearProgressIndicator(progress = { p.first.toFloat() / p.second },
+                Modifier.fillMaxWidth().padding(top = 6.dp), color = HealthHues.Fitness, trackColor = HealthHues.Fitness.container())
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
     }
