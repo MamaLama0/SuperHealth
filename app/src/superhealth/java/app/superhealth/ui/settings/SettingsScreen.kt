@@ -191,7 +191,11 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
 
             SectionLabel(tr("Modules"))
             GroupCard {
-                SettingRow(tr("Nutrition"), subtitle = tr("Programme, bases d'aliments, IA, algorithmes"), icon = Icons.Rounded.Restaurant) { nav.go("n/settings") }
+                SettingRow(tr("Nutrition"), subtitle = tr("Programme, bases d'aliments, IA"), icon = Icons.Rounded.Restaurant) { nav.go("n/settings") }
+                RowDivider()
+                SwitchRow(tr("Open Food Facts"), tr("Recherche en ligne, code-barres et fiche produit (scores, ingrédients)"), s.openFoodFactsEnabled) { v ->
+                    set { it.copy(openFoodFactsEnabled = v) }
+                }
                 RowDivider()
                 SettingRow(tr("Musculation"), subtitle = tr("Salles, progression, échauffements, repos"), icon = Icons.Rounded.FitnessCenter) { nav.go("t/settings") }
                 RowDivider()
@@ -227,10 +231,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
 
             SectionLabel(tr("Vie privée"))
             GroupCard {
-                SwitchRow(tr("Cartes en ligne"), tr("Fonds OpenStreetMap des courses : la zone affichée est demandée à OpenStreetMap. Désactivé, seul le tracé s'affiche."),
+                SwitchRow(tr("Cartes en ligne"), tr("Fond de carte OpenStreetMap sous les tracés. Désactivé : tracé seul, aucune requête."),
                     sh.onlineMaps) { v -> app.superhealth.SuperPrefs.update { it.copy(onlineMaps = v) } }
             }
-            Text(tr("Aucun traceur ni statistique d'usage. Seules connexions : Open Food Facts (désactivable dans Nutrition), le fournisseur IA si vous l'activez, et ces cartes."),
+            Text(tr("Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, et ces cartes."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
 
             SectionLabel(tr("Simulateurs et questionnaire"))

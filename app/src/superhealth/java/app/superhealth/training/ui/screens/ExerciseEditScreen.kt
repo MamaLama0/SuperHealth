@@ -138,7 +138,7 @@ fun ExerciseEditScreen(vm: AppViewModel, id: String?, nav: NavHostController) {
 
         if (metric == Metric.WEIGHT) {
             SectionLabel(tr("Équipement de résistance"))
-            Text(tr("Sert au calculateur de disques et à l'arrondi des charges. Plusieurs choix = alternatives."),
+            Text(tr("Pour le calculateur de disques et l'arrondi des charges."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             TextInput(tr("Filtrer l'équipement"), eqQuery, { eqQuery = it })
             val pool = remember(eqQuery, db) {
@@ -176,7 +176,7 @@ fun ExerciseEditScreen(vm: AppViewModel, id: String?, nav: NavHostController) {
             nav.previousBackStackEntry?.savedStateHandle?.set("createdExercise", e.id)
             nav.popBackStack()
         }
-        Text(tr("Exercice personnel : il n'est pas proposé par le générateur de programmes."), style = MaterialTheme.typography.labelSmall,
+        Text(tr("Exercice personnel, jamais proposé par le générateur."), style = MaterialTheme.typography.labelSmall,
             color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 10.dp))
     }
 

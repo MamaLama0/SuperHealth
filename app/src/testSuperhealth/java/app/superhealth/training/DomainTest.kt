@@ -36,6 +36,23 @@ class DomainTest {
         assertEquals(10.0, Strength.rtfAt(80.0, one, true), 1e-9)
     }
 
+    @Test fun partialRepsAreBoundedAndImplyFailure() {
+        // sans partielles : comportement inchangé
+        assertEquals(10.0, Strength.rtf(8, 2), 1e-12)
+        // des partielles valent RIR 0, quel que soit le RIR saisi, et restent sous une demi-répétition
+        assertEquals(8.0 + 0.5 * (1 - Math.exp(-0.5)), Strength.rtf(8, 2, 1), 1e-12)
+        var prev = 8.0
+        for (p in 1..20) {
+            val r = Strength.rtf(8, 0, p)
+            assertTrue("croissant", r > prev); assertTrue("borné", r < 8.5); prev = r
+        }
+        // 1RM : 8 reps + partielles > 8 reps à RIR 0, mais < 9 reps à RIR 0
+        val e8 = Strength.e1rm(80.0, 8, 0, true)
+        val e8p = Strength.e1rm(80.0, 8, 0, true, partials = 3)
+        assertTrue(e8p > e8 && e8p < Strength.e1rm(80.0, 9, 0, true))
+        assertEquals(10.5, Strength.fatiguingReps(9, 3), 1e-12)
+    }
+
     @Test fun fatigueModel() {
         assertEquals(0.0, Strength.fatigueDrop(0.0), 0.0)
         assertEquals(2.481 * Math.pow(10.0, 0.582) / 100, Strength.fatigueDrop(10.0), 1e-12)

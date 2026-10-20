@@ -115,7 +115,7 @@ fun VitalsEditScreen(vm: SuperViewModel, nav: NavHostController) {
     DetailScaffold(tr("Constantes"), onBack = { nav.popBackStack() }, action = {
         TextButton(onClick = { set(listOf("RESTING_HR", "RESPIRATORY_RATE", "BODY_ENERGY")) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
     }) {
-        Text(tr("La carte principale du tableau de bord. Choisissez ses mesures et leur ordre ; celles que ni la montre ni Health Connect ne fournissent restent masquées."),
+        Text(tr("La première mesure est la grande bulle, les deux suivantes les petites. Les mesures sans source restent masquées."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         SectionLabel(tr("Affichées"))
         if (shown.isEmpty()) Text(tr("Aucune mesure"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
@@ -165,7 +165,7 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
     DetailScaffold(tr("Bouton +"), onBack = { nav.popBackStack() }, action = {
         TextButton(onClick = { set(PlusAction.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
     }) {
-        Text(tr("Choisissez les raccourcis du bouton + et leur ordre. Avec un seul raccourci, le + l'ouvre directement."),
+        Text(tr("Raccourcis du bouton + et leur ordre. Un seul : le + l'ouvre directement."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         SectionLabel(tr("Affichés"))
         if (shown.isEmpty()) Text(tr("Aucun raccourci"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))

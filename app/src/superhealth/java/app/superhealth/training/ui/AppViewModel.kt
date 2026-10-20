@@ -16,6 +16,7 @@ import app.superhealth.training.domain.Session
 import app.superhealth.training.domain.SessionEngine
 import app.superhealth.training.domain.SetType
 import app.superhealth.training.domain.Settings
+import app.superhealth.training.domain.Supersets
 import app.superhealth.training.domain.Workout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var engineCache: SessionEngine? = null
     private val engine: SessionEngine?
         get() = db.value?.let { d -> if (d === engineFor) engineCache else SessionEngine(d).also { engineFor = d; engineCache = it } }
+
+    init {
+        // programmes enregistrés avant le suivi des jours faits : on les retrouve dans l'historique
+        update { s -> s.copy(programs = s.programs.map { SessionEngine.inferDone(it, s.history) }) }
+    }
 
     /** Résultat de séance à afficher (écran « Workout Complete »). */
     val completed = MutableStateFlow<Workout?>(null)
@@ -77,7 +83,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun activate(id: String?) = update { s ->
         // « Your active program will be moved to your Workout Library and its progress will be reset. »
-        val programs = s.programs.map { if (it.id == s.settings.activeProgramId && it.id != id) it.copy(cycleIndex = 0, dayIndex = 0) else it }
+        val programs = s.programs.map { if (it.id == s.settings.activeProgramId && it.id != id) it.copy(cycleIndex = 0, dayIndex = 0, doneDayIds = emptyList()) else it }
         s.copy(programs = programs, settings = s.settings.copy(activeProgramId = id))
     }
 
@@ -116,7 +122,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         update { it.copy(session = e.fromCustom(w, it.history, it.settings, gym(w.gymId) ?: activeGym())) }
     }
 
-    fun startEmpty() { val e = engine ?: return; update { it.copy(session = e.empty(activeGym())) } }
+    fun startEmpty() { val e = engine ?: return; update { it.copy(session = e.empty(activeGym()).copy(name = tr("Entraînement libre"))) } }
 
     fun session(f: (Session) -> Session) = update { s -> s.session?.let { s.copy(session = f(it)) } ?: s }
 
@@ -147,7 +153,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val rest = when {
                     set.type == SetType.WARMUP && !lastWarm -> 0
                     lastWarm -> s.settings.restAfterWarmUpSec
-                    else -> s.exerciseConfig[ex.exerciseId]?.restSec ?: set.target?.restSec ?: ex.restSec
+                    // repos de l'exercice dans la séance (initialisé depuis la cible, modifiable en séance)
+                    else -> ex.restSec
                 }
                 val inSuperset = ex.supersetGroup != null && sess.exercises.getOrNull(exIndex + 1)?.supersetGroup == ex.supersetGroup
                 val r = if (inSuperset) 0 else rest
@@ -191,23 +198,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun moveExercise(from: Int, to: Int) = session { s ->
         if (to !in s.exercises.indices) return@session s
         val list = s.exercises.toMutableList(); val e = list.removeAt(from); list.add(to, e)
-        s.copy(exercises = list, current = to)
+        val ng = Supersets.normalize(list.map { it.supersetGroup })
+        s.copy(exercises = list.mapIndexed { k, x -> x.copy(supersetGroup = ng[k]) }, current = to)
     }
 
-    /** Superset avec l'exercice suivant (ou détache s'il en fait déjà partie). */
-    fun toggleSuperset(i: Int) = session { s ->
-        val list = s.exercises.toMutableList()
-        val ex = list[i]
-        if (ex.supersetGroup != null) list[i] = ex.copy(supersetGroup = null)
-        else {
-            val j = if (i + 1 < list.size) i + 1 else i - 1
-            if (j < 0) return@session s
-            val g = list[j].supersetGroup ?: (s.exercises.mapNotNull { it.supersetGroup }.maxOrNull() ?: 0) + 1
-            list[i] = ex.copy(supersetGroup = g); list[j] = list[j].copy(supersetGroup = g)
-        }
-        // un groupe réduit à un seul exercice n'est plus un superset
-        val counts = list.groupingBy { it.supersetGroup }.eachCount()
-        s.copy(exercises = list.map { if (it.supersetGroup != null && counts[it.supersetGroup] == 1) it.copy(supersetGroup = null) else it })
+    /** Relie l'exercice au suivant (superset, puis triset…) ; le dernier exercice se relie au précédent. */
+    fun linkNext(i: Int) = session { s ->
+        val g = s.exercises.map { it.supersetGroup }
+        val ng = if (i + 1 < g.size) Supersets.link(g, i) else Supersets.link(g, i - 1)
+        s.copy(exercises = s.exercises.mapIndexed { k, e -> e.copy(supersetGroup = ng[k]) })
+    }
+
+    /** Sort l'exercice de son superset / triset. */
+    fun unlink(i: Int) = session { s ->
+        val ng = Supersets.unlink(s.exercises.map { it.supersetGroup }, i)
+        s.copy(exercises = s.exercises.mapIndexed { k, e -> e.copy(supersetGroup = ng[k]) })
     }
 
     /**
@@ -231,6 +236,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ne = end + deltaSec * 1000L
         if (ne <= System.currentTimeMillis()) { RestTimer.cancel(getApplication()); s.copy(restEndsAt = null) }
         else { RestTimer.schedule(getApplication(), ne, settings.restSound); s.copy(restEndsAt = ne, restDuration = s.restDuration + deltaSec) }
+    }
+
+    /** Nouveau repos pour l'exercice [i] ; un repos en cours est recalé sur la nouvelle durée. */
+    fun setRest(i: Int, sec: Int) = session { s ->
+        val list = s.exercises.toMutableList().also { if (i in it.indices) it[i] = it[i].copy(restSec = sec) }
+        val end = s.restEndsAt
+        val now = System.currentTimeMillis()
+        if (end == null || end <= now || s.restDuration <= 0) return@session s.copy(exercises = list)
+        val ne = end - s.restDuration * 1000L + sec * 1000L
+        if (ne <= now) { RestTimer.cancel(getApplication()); s.copy(exercises = list, restEndsAt = null) }
+        else { RestTimer.schedule(getApplication(), ne, settings.restSound); s.copy(exercises = list, restEndsAt = ne, restDuration = sec) }
     }
 
     fun skipRest() { RestTimer.cancel(getApplication()); session { it.copy(restEndsAt = null) } }

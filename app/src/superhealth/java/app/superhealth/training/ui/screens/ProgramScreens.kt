@@ -186,7 +186,7 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
                     Q(tr("Ajouter une semaine de décharge ?"))
                     Choice(tr("Dernier cycle (recommandé)"), tr("Le bloc se termine par une semaine plus légère pour récupérer avant la phase suivante."), deload == Deload.LAST) { deload = Deload.LAST }
                     Choice(tr("Premier cycle"), tr("Le bloc commence par une semaine plus légère."), deload == Deload.FIRST) { deload = Deload.FIRST }
-                    Choice(tr("Aucune"), tr("S'entraîner en continu sans réduction programmée de l'intensité ou du volume."), deload == Deload.NONE) { deload = Deload.NONE }
+                    Choice(tr("Aucune"), tr("Sans semaine allégée programmée."), deload == Deload.NONE) { deload = Deload.NONE }
                 }
                 8 -> { Q(tr("Votre expérience en musculation")); Experience.entries.forEach { e -> Choice(e.label.tr(), null, exp == e) { exp = e } } }
                 else -> {
@@ -303,7 +303,18 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     var confirm by remember { mutableStateOf<String?>(null) }
     var cycle by remember { mutableIntStateOf(p.cycleIndex.coerceIn(0, p.numCycles - 1)) }
     var rename by remember { mutableStateOf(false) }
+    var pickCycles by remember { mutableStateOf(false) }
+    var pickDeload by remember { mutableStateOf(false) }
     fun save(np: Program) = vm.saveProgram(np)
+    if (pickCycles) ChoiceSheet(tr("Nombre de cycles"), tr("Un cycle = une rotation complète des jours du programme."), (1..12).toList(), p.numCycles,
+        label = { "$it" }, columns = 4, onDismiss = { pickCycles = false }) { n ->
+        pickCycles = false
+        save(p.copy(numCycles = n, cycleIndex = p.cycleIndex.coerceAtMost(n - 1),
+            days = p.days.map { d -> d.copy(exercises = d.exercises.map { pe -> pe.copy(cycles = resize(pe.cycles, n)) }) }))
+        cycle = cycle.coerceAtMost(n - 1)
+    }
+    if (pickDeload) ChoiceSheet(tr("Décharge"), tr("Cycle allégé pour récupérer."), Deload.entries, p.deload, label = { it.label.tr() }, columns = 1,
+        onDismiss = { pickDeload = false }) { pickDeload = false; save(p.copy(deload = it)) }
     if (rename) {
         var n by remember { mutableStateOf(p.name) }
         AlertDialog(onDismissRequest = { rename = false }, containerColor = Mf.colors.card, title = { Text(tr("Renommer le programme")) },
@@ -321,8 +332,8 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         p.days.forEachIndexed { i, d -> DayCard(d, db, cycle) { nav.navigate("programday/${p.id}/${i}") } }
         SectionLabel(tr("Réglages du programme"))
         GroupCard {
-            SettingRow(tr("Cycles"), "${p.numCycles}") { save(p.copy(numCycles = (p.numCycles % 12) + 1, days = p.days.map { d -> d.copy(exercises = d.exercises.map { pe -> pe.copy(cycles = resize(pe.cycles, (p.numCycles % 12) + 1)) }) })) }
-            RowDivider(); SettingRow(tr("Décharge"), p.deload.label.tr()) { save(p.copy(deload = Deload.entries[(p.deload.ordinal + 1) % 3])) }
+            SettingRow(tr("Cycles"), "${p.numCycles}") { pickCycles = true }
+            RowDivider(); SettingRow(tr("Décharge"), p.deload.label.tr()) { pickDeload = true }
             RowDivider(); SettingRow(tr("Périodisation"), p.periodization.label.tr(), subtitle = tr("Organise l'entraînement en phases qui font varier intensité et volume"))
             RowDivider(); SettingRow(tr("Répéter indéfiniment"), if (p.runIndefinitely) tr("Oui") else tr("Non")) { save(p.copy(runIndefinitely = !p.runIndefinitely)) }
             RowDivider(); SettingRow(tr("Couleur"), null) { save(p.copy(color = (p.color + 1) % ProgramColors.size)) }
@@ -332,7 +343,7 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         if (!active) PillButton(tr("Activer le programme"), Modifier.fillMaxWidth()) { confirm = "activate" }
         else PillButton(tr("Désactiver le programme"), Modifier.fillMaxWidth(), strong = false) { confirm = "deactivate" }
         PillButton(tr("Dupliquer"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) {
-            vm.saveProgram(p.copy(id = UUID.randomUUID().toString(), name = p.name + tr(" (copie)"), cycleIndex = 0, dayIndex = 0)); nav.popBackStack()
+            vm.saveProgram(p.copy(id = UUID.randomUUID().toString(), name = p.name + tr(" (copie)"), cycleIndex = 0, dayIndex = 0, doneDayIds = emptyList())); nav.popBackStack()
         }
         PillButton(if (p.archived) tr("Sortir de l'archive") else tr("Archiver"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) { save(p.copy(archived = !p.archived)) }
         Text(tr("Supprimer le programme"), Modifier.fillMaxWidth().clickable { confirm = "delete" }.padding(14.dp), color = Color(0xFFE11900),
@@ -341,12 +352,36 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     confirm?.let { c ->
         AlertDialog(onDismissRequest = { confirm = null }, containerColor = Mf.colors.card,
             title = { Text(when (c) { "activate" -> tr("Activer ce programme ?"); "deactivate" -> tr("Désactiver ce programme ?"); else -> tr("Supprimer ce programme ?") }) },
-            text = { Text(if (c == "delete") tr("Le programme et ses séances seront supprimés. Votre historique est conservé.") else tr("Le programme actif retourne dans la bibliothèque et sa progression est réinitialisée.")) },
+            text = { Text(if (c == "delete") tr("Le programme et ses séances seront supprimés. Votre historique est conservé.") else tr("Le programme actif repart en bibliothèque, sa progression est remise à zéro.")) },
             confirmButton = { TextButton(onClick = {
                 when (c) { "activate" -> vm.activate(id); "deactivate" -> vm.activate(null); else -> { vm.deleteProgram(id); nav.popBackStack() } }
                 confirm = null
             }) { Text(tr("Confirmer"), color = Mf.colors.accent) } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(tr("Annuler"), color = Mf.colors.text) } })
+    }
+}
+
+/** Panneau de choix : toutes les valeurs d'un coup, la valeur actuelle en surbrillance. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T> ChoiceSheet(title: String, subtitle: String?, values: List<T>, current: T, label: (T) -> String, columns: Int, onDismiss: () -> Unit, onPick: (T) -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background) {
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding()) {
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
+            Spacer(Modifier.height(12.dp))
+            values.chunked(columns).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { v ->
+                        val sel = v == current
+                        Text(label(v), Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(if (sel) Mf.colors.strong else Mf.colors.card)
+                            .clickable { onPick(v) }.padding(vertical = 14.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            color = if (sel) Mf.colors.onStrong else Mf.colors.text, style = MaterialTheme.typography.titleMedium)
+                    }
+                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
     }
 }
 

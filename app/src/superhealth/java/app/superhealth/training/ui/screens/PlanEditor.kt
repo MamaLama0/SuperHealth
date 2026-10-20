@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,6 +63,7 @@ import app.superhealth.training.domain.Generator
 import app.superhealth.training.domain.Program
 import app.superhealth.training.domain.ProgramDay
 import app.superhealth.training.domain.ProgramExercise
+import app.superhealth.training.domain.Supersets
 import app.superhealth.training.domain.TargetSet
 import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.Picker
@@ -135,18 +137,10 @@ fun AppViewModel.addToPlan(target: String, ids: List<String>) {
     }
 }
 
-/** Superset avec l'exercice suivant, ou détache l'exercice de son superset. */
-private fun toggleSuperset(list: List<ProgramExercise>, i: Int): List<ProgramExercise> {
-    val out = list.toMutableList()
-    val pe = out[i]
-    if (pe.supersetGroup != null) out[i] = pe.copy(supersetGroup = null)
-    else {
-        val j = i + 1
-        if (j > out.lastIndex) return list
-        val g = out[j].supersetGroup ?: (out.mapNotNull { it.supersetGroup }.maxOrNull() ?: 0) + 1
-        out[i] = pe.copy(supersetGroup = g); out[j] = out[j].copy(supersetGroup = g)
-    }
-    return out
+/** Relie l'exercice au suivant (superset, triset…) ou le sort de son groupe. */
+private fun regroup(list: List<ProgramExercise>, f: (List<Int?>) -> List<Int?>): List<ProgramExercise> {
+    val g = f(list.map { it.supersetGroup })
+    return list.mapIndexed { k, pe -> pe.copy(supersetGroup = g[k]) }
 }
 
 /** Lettre d'un superset (A, B…) dans l'ordre d'apparition. */
@@ -160,7 +154,9 @@ private fun supersetLetters(list: List<ProgramExercise>): Map<Int, Char> =
 @Composable
 fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: List<ProgramExercise>, cycle: Int, nav: NavHostController) {
     var editing by remember { mutableStateOf<Int?>(null) }
+    var reorder by remember { mutableStateOf(false) }
     val letters = supersetLetters(exercises)
+    val sizes = exercises.groupingBy { it.supersetGroup }.eachCount()
     exercises.forEachIndexed { i, pe ->
         val e = db.exercise(pe.exerciseId)
         val t = Generator.targetsFor(pe, cycle)
@@ -174,7 +170,7 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
                 ExerciseThumb(e, 44.dp, 10.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    if (g != null) Text(trf("Superset %1\$s", letters[g] ?: 'A'), style = MaterialTheme.typography.labelSmall, color = WorkoutBlue,
+                    if (g != null) Text(Supersets.label(sizes[g] ?: 2).tr() + " " + (letters[g] ?: 'A'), style = MaterialTheme.typography.labelSmall, color = WorkoutBlue,
                         fontWeight = FontWeight.Bold)
                     Text(e?.name ?: "?", style = MaterialTheme.typography.titleSmall, maxLines = 2)
                     Text(trf("%1\$s · repos %2\$s", targetSummary(t), restLabel(t.firstOrNull()?.restSec ?: 120)), style = MaterialTheme.typography.bodySmall,
@@ -188,16 +184,27 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
             Icon(Icons.Rounded.Link, null, Modifier.size(14.dp), tint = WorkoutBlue)
         }
     }
-    PillButton(tr("Ajouter des exercices"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false, icon = Icons.Rounded.Add) {
-        nav.navigate("picker/${Picker.DAY}?target=${target}")
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PillButton(tr("Ajouter des exercices"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Add) {
+            nav.navigate("picker/${Picker.DAY}?target=${target}")
+        }
+        if (exercises.size > 1) PillButton(tr("Réorganiser"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.SwapVert) { reorder = true }
     }
+    if (reorder) app.superhealth.training.ui.components.ReorderSheet(exercises.map { it.id to db.exercise(it.exerciseId) }, exercises.map { it.supersetGroup },
+        onMove = { from, to -> vm.updatePlan(target) { l -> regroup(l.toMutableList().also { it.add(to, it.removeAt(from)) }) { g -> Supersets.normalize(g) } } },
+        onDismiss = { reorder = false })
     editing?.let { i ->
         val pe = exercises.getOrNull(i) ?: run { editing = null; return }
-        PlanExerciseSheet(pe, cycle, db.exercise(pe.exerciseId)?.name ?: "", inSuperset = pe.supersetGroup != null, hasNext = i < exercises.lastIndex,
+        // le groupe s'étend depuis son dernier membre, quel que soit l'exercice ouvert
+        var groupEnd = i
+        while (pe.supersetGroup != null && exercises.getOrNull(groupEnd + 1)?.supersetGroup == pe.supersetGroup) groupEnd++
+        PlanExerciseSheet(pe, cycle, db.exercise(pe.exerciseId)?.name ?: "", inSuperset = pe.supersetGroup != null, canLink = groupEnd < exercises.lastIndex,
             onDismiss = { editing = null },
             onSave = { ne -> vm.updatePlan(target) { l -> l.toMutableList().also { it[i] = ne } }; editing = null },
             onSaveAll = { ne -> vm.updatePlan(target) { l -> l.toMutableList().also { it[i] = ne } }; editing = null },
-            onSuperset = { vm.updatePlan(target) { toggleSuperset(it, i) }; editing = null },
+            onLink = { vm.updatePlan(target) { regroup(it) { g -> Supersets.link(g, groupEnd) } }; editing = null },
+            onUnlink = { vm.updatePlan(target) { regroup(it) { g -> Supersets.unlink(g, i) } }; editing = null },
+            onReorder = { editing = null; reorder = true },
             onUp = if (i > 0) ({ vm.updatePlan(target) { l -> l.toMutableList().also { java.util.Collections.swap(it, i, i - 1) } }; editing = null }) else null,
             onDown = if (i < exercises.lastIndex) ({ vm.updatePlan(target) { l -> l.toMutableList().also { java.util.Collections.swap(it, i, i + 1) } }; editing = null }) else null,
             onSwap = { editing = null; nav.navigate("picker/${Picker.SWAP_PLAN}?target=${target}|${i}") },
@@ -212,9 +219,9 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlanExerciseSheet(
-    pe: ProgramExercise, cycle: Int, name: String, inSuperset: Boolean, hasNext: Boolean,
+    pe: ProgramExercise, cycle: Int, name: String, inSuperset: Boolean, canLink: Boolean,
     onDismiss: () -> Unit, onSave: (ProgramExercise) -> Unit, onSaveAll: (ProgramExercise) -> Unit,
-    onSuperset: () -> Unit, onUp: (() -> Unit)?, onDown: (() -> Unit)?, onSwap: () -> Unit, onRemove: () -> Unit,
+    onLink: () -> Unit, onUnlink: () -> Unit, onReorder: () -> Unit, onUp: (() -> Unit)?, onDown: (() -> Unit)?, onSwap: () -> Unit, onRemove: () -> Unit,
 ) {
     val cur = Generator.targetsFor(pe, cycle)
     var sets by remember { mutableIntStateOf(cur.size) }
@@ -244,8 +251,9 @@ private fun PlanExerciseSheet(
             } else PillButton(tr("Enregistrer"), Modifier.fillMaxWidth()) { onSaveAll(pe.copy(cycles = pe.cycles.map { built() }.ifEmpty { listOf(built()) })) }
             Spacer(Modifier.height(14.dp))
             GroupCard {
-                if (inSuperset || hasNext) SheetAction(if (inSuperset) Icons.Rounded.LinkOff else Icons.Rounded.Link,
-                    if (inSuperset) tr("Retirer du superset") else tr("Superset avec l'exercice suivant"), onSuperset)
+                if (canLink) SheetAction(Icons.Rounded.Link, if (inSuperset) tr("Ajouter l'exercice suivant au groupe (triset)") else tr("Superset avec l'exercice suivant"), onLink)
+                if (inSuperset) SheetAction(Icons.Rounded.LinkOff, tr("Retirer du superset"), onUnlink)
+                SheetAction(Icons.Rounded.SwapVert, tr("Réorganiser les exercices"), onReorder)
                 SheetAction(Icons.Rounded.SwapHoriz, tr("Remplacer l'exercice"), onSwap)
                 onUp?.let { SheetAction(Icons.Rounded.KeyboardArrowUp, tr("Monter"), it) }
                 onDown?.let { SheetAction(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), it) }
@@ -265,7 +273,7 @@ private fun SheetAction(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun PlanStepper(title: String, value: Int, min: Int, max: Int, step: Int = 1, label: (Int) -> String = { "$it" }, onChange: (Int) -> Unit) {
+internal fun PlanStepper(title: String, value: Int, min: Int, max: Int, step: Int = 1, label: (Int) -> String = { "$it" }, onChange: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Round(Icons.Rounded.Remove, small = true) { if (value - step >= min) onChange(value - step) }
@@ -285,7 +293,7 @@ fun CustomWorkoutScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     var rename by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     DetailScaffold(w.name, nav, actions = { TextButton(onClick = { rename = true }) { Text(tr("Renommer"), color = Mf.colors.accent) } }) {
-        Text(tr("Séance construite à la main : choisissez les exercices, les séries et les supersets. La charge proposée suit votre historique."),
+        Text(tr("Vos exercices, séries et supersets. Les charges proposées suivent votre historique."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         if (w.exercises.isEmpty()) MfCard { Text(tr("Aucun exercice pour l'instant."), color = Mf.colors.textSecondary) }
         PlanExercises(vm, db, CUSTOM + w.id, w.exercises, 0, nav)
@@ -294,7 +302,7 @@ fun CustomWorkoutScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         }
         SectionLabel(tr("Progression"))
         GroupCard {
-            SwitchRow(tr("Progression intelligente"), tr("Désactivée, la séance reprend simplement vos dernières charges et répétitions."),
+            SwitchRow(tr("Progression intelligente"), tr("Désactivée : reprend vos dernières charges et répétitions."),
                 st.settings.smartProgression) { on -> vm.settings { it.copy(smartProgression = on) } }
         }
         PillButton(tr("Dupliquer"), Modifier.fillMaxWidth().padding(top = 12.dp), strong = false) {

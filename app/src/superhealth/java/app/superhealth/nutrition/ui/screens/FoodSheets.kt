@@ -279,6 +279,8 @@ fun FoodSheet(
                 color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp))
             TargetImpact(m, target)
             MicrosSection(app.superhealth.nutrition.data.Micros.parse(food.microsJson).mapValues { it.value * k })
+            // produit à code-barres : fiche Open Food Facts (scores, ingrédients, allergènes)
+            food.barcode?.takeIf { s.openFoodFactsEnabled && it.length >= 8 && it.all(Char::isDigit) }?.let { OffSection(it) }
             if (food.source == app.superhealth.nutrition.data.SwissFoods.SOURCE) Text(trf("Source : %1\$s", app.superhealth.nutrition.data.SwissFoods.CREDIT),
                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 8.dp))
         }

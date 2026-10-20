@@ -157,7 +157,7 @@ fun ExpenditureScreen(vm: AppViewModel, onBack: () -> Unit) {
             }
             Text(title, style = MaterialTheme.typography.titleSmall)
             Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-            if (s.expenditureVersion == ExpenditureVersion.V3) {
+            run {
                 val adj = an.expenditure.filter { it.epochDay > an.today - 14 }.sumOf { it.goalAdjustment }
                 if (abs(adj) > 0.5) Text(trf("Ajustement prédictif (changement d'objectif) sur 14 j : %1\$s %2\$s", (signed(s.energyValue(adj), 0)), s.energyUnit.label.tr()),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.accent, modifier = Modifier.padding(top = 8.dp))

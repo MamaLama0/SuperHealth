@@ -96,7 +96,7 @@ fun PerformanceScreen(vm: SuperViewModel, nav: NavHostController) {
             return@DetailScaffold
         }
         if (s.entries.isEmpty()) {
-            MfCard { Text(tr("Synchronisez ou importez des activités de votre montre pour voir vos performances."), color = Mf.colors.textSecondary) }
+            MfCard { Text(tr("Synchronisez la montre pour voir vos performances."), color = Mf.colors.textSecondary) }
             return@DetailScaffold
         }
 

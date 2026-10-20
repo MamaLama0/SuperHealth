@@ -30,17 +30,23 @@ object Assets {
 
     fun init(context: Context) { app = context.applicationContext }
 
-    fun bitmap(path: String): ImageBitmap? = cache.get(path) ?: runCatching {
-        app.assets.open(path).use { BitmapFactory.decodeStream(it) }?.asImageBitmap()?.also { cache.put(path, it) }
+    /** [sample] > 1 : image réduite (vignettes), décodage bien plus rapide et cache moins encombré. */
+    fun bitmap(path: String, sample: Int = 1): ImageBitmap? = cached(path, sample) ?: runCatching {
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        app.assets.open(path).use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()?.also { cache.put(key(path, sample), it) }
     }.getOrNull()
+
+    fun cached(path: String, sample: Int = 1): ImageBitmap? = cache.get(key(path, sample))
+    private fun key(path: String, sample: Int) = if (sample <= 1) path else "$path@$sample"
 
     fun text(path: String): String? = runCatching { app.assets.open(path).use { it.readBytes().decodeToString() } }.getOrNull()
 }
 
 /** Image d'asset chargée hors du fil principal ; repli sur les initiales (comme les vignettes « DS » de MacroFactor). */
 @Composable
-fun AsyncAsset(path: String?, modifier: Modifier, crop: Boolean = true, fallback: String? = null) {
-    val bmp by produceState<ImageBitmap?>(null, path) { value = path?.let { withContext(Dispatchers.IO) { Assets.bitmap(it) } } }
+fun AsyncAsset(path: String?, modifier: Modifier, crop: Boolean = true, fallback: String? = null, sample: Int = 1) {
+    // image déjà en cache : affichée tout de suite, sans passer par les initiales
+    val bmp by produceState(path?.let { Assets.cached(it, sample) }, path) { if (value == null) value = path?.let { withContext(Dispatchers.IO) { Assets.bitmap(it, sample) } } }
     val b = bmp
     if (b != null) Image(b, null, modifier, contentScale = if (crop) ContentScale.Crop else ContentScale.Fit)
     else Box(modifier.background(Mf.colors.chip), contentAlignment = Alignment.Center) {

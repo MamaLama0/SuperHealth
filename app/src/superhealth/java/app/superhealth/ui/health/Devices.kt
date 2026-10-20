@@ -91,7 +91,7 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
             SwitchRow(tr("Module montre (LocalHealth)"), tr("Connexion Bluetooth aux montres, bracelets et balances"), sh.watchModule) { vm.setWatchModule(it) }
         }
         if (!sh.watchModule) {
-            Text(tr("Module désactivé : SuperHealth ne se connecte à aucun appareil. Les constantes viennent de Health Connect si vous l'avez activé."),
+            Text(tr("Module désactivé : aucun appareil connecté. Les constantes viennent de Health Connect s'il est activé."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
             return@DetailScaffold
         }
@@ -141,7 +141,7 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
                 ctx.startActivity(Intent(ctx, ControlCenterv2::class.java))
             }
         }
-        Text(tr("Le profil (sexe, âge, taille, poids) et l'objectif de pas sont envoyés à la montre depuis votre profil SuperHealth."),
+        Text(tr("Sexe, âge, taille, poids et objectif de pas sont envoyés à la montre."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp))
     }
 }

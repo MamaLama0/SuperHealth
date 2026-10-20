@@ -543,7 +543,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             GymTemplate.BLANK -> Icons.Rounded.CropFree
                         } }) { gym = it }
                     }
-                    Step.PROGRAM -> Page(st, tr("Voulez-vous un programme de musculation ?"), tr("Généré selon votre expérience, votre salle et votre emploi du temps. Il progresse avec vous.")) {
+                    Step.PROGRAM -> Page(st, tr("Voulez-vous un programme de musculation ?"), tr("Selon votre niveau, votre salle et votre emploi du temps.")) {
                         Options(listOf(true, false), wantProgram, { if (it) tr("Oui, créez-le pour moi") else tr("Non, je m'entraîne à ma façon") },
                             { if (it) tr("Séances, exercices, séries et progression") else tr("Vous pourrez en créer un plus tard dans Activités") },
                             icon = { if (it) Icons.Rounded.AutoFixHigh else Icons.Rounded.FitnessCenter }) { wantProgram = it }

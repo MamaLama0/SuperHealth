@@ -30,9 +30,26 @@ object Strength {
     /** Fraction du 1RM soulevable pour [rtf] répétitions jusqu'à l'échec. */
     fun pct(rtf: Double, upper: Boolean) = 0.8 * base(upper).pow(rtf - 1) + 0.2
 
-    /** 1RM estimé d'une série (charge, répétitions, RIR). */
-    fun e1rm(weight: Double, reps: Int, rir: Int?, upper: Boolean): Double =
-        weight / pct((reps + (rir ?: 0)).toDouble().coerceAtLeast(1.0), upper)
+    /** Bonus maximal de répétitions jusqu'à l'échec apporté par les partielles (toujours moins d'une demi-rep). */
+    const val PARTIAL_MAX = 0.5
+    /** Une partielle compte pour une demi-répétition fatigante (amplitude réduite). */
+    const val PARTIAL_FATIGUE = 0.5
+
+    /**
+     * Répétitions jusqu'à l'échec d'une série. Des partielles prouvent l'échec (RIR 0) et que la répétition complète
+     * suivante était impossible : le RTF est donc entre reps et reps + 1. Bonus borné, croissant et vite saturé :
+     * 0,5·(1 − e^(−p/2)) → 1 partielle +0,20, 3 → +0,39, 5 → +0,46. Ce n'est pas un algorithme de MacroFactor : son
+     * StrengthService ne lit pas les partielles dans le binaire analysé (Workouts-analyse/notes/03 §7).
+     */
+    fun rtf(reps: Int, rir: Int?, partials: Int = 0): Double =
+        if (partials > 0) reps + PARTIAL_MAX * (1 - exp(-partials / 2.0)) else (reps + (rir ?: 0)).toDouble()
+
+    /** Répétitions fatigantes d'une série, partielles comprises. */
+    fun fatiguingReps(reps: Int, partials: Int = 0) = reps + PARTIAL_FATIGUE * partials
+
+    /** 1RM estimé d'une série (charge, répétitions, RIR, partielles). */
+    fun e1rm(weight: Double, reps: Int, rir: Int?, upper: Boolean, partials: Int = 0): Double =
+        weight / pct(rtf(reps, rir, partials).coerceAtLeast(1.0), upper)
 
     /** Répétitions jusqu'à l'échec possibles à [weight] pour un 1RM donné (inverse de [pct]). */
     fun rtfAt(weight: Double, oneRm: Double, upper: Boolean): Double {
@@ -126,7 +143,7 @@ object Plates {
 }
 
 /** Série passée utilisée pour estimer la force. */
-data class PastSet(val weight: Double, val reps: Int, val rir: Int?, val time: Long)
+data class PastSet(val weight: Double, val reps: Int, val rir: Int?, val time: Long, val partials: Int = 0)
 
 /**
  * Progression intelligente (Smart Progression) — reconstruction [INFÉRÉ] fondée sur la courbe et la fatigue décodées et
@@ -142,10 +159,10 @@ object Progression {
         var fatigue = 0.0
         var best: Double? = null
         for (s in lastSession) {
-            val raw = Strength.e1rm(s.weight, s.reps, s.rir ?: 2, upper)
+            val raw = Strength.e1rm(s.weight, s.reps, s.rir ?: 2, upper, s.partials)
             val fresh = raw / (1 - Strength.fatigueDrop(fatigue))
             if (best == null || fresh > best) best = fresh
-            fatigue = Strength.recover(fatigue + s.reps, restMin)
+            fatigue = Strength.recover(fatigue + Strength.fatiguingReps(s.reps, s.partials), restMin)
         }
         return best
     }
@@ -189,7 +206,7 @@ object Progression {
             reps = max(1, reps)
             out += Suggestion(w, reps, t.rir, outOfRange, widened)
             previousSetWeight = w
-            fatigue = Strength.recover(fatigue + reps + t.rir * 0.0, t.restSec / 60.0)
+            fatigue = Strength.recover(fatigue + reps, t.restSec / 60.0)
         }
         return out
     }

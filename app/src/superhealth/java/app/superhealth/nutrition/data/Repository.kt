@@ -314,29 +314,22 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
                 DayData(d, intake[d], weights[d], bodyFat[d], flagMap[d]?.fasted == true, flagMap[d]?.partial == true, steps[d])
             }
             val firstWeigh = weights.keys.minOrNull()
-            val trend: List<TrendDay> = when {
-                weights.isEmpty() -> emptyList()
-                settings.trendVersion == TrendVersion.V2 ->
-                    WeightTrendV2.compute(weights, today).map { TrendDay(it.epochDay, it.scale, it.trend, it.tween, it.trendSd) }
-                else -> WeightTrend.compute(weights, settings.trendAlpha.alpha, minOf(start, firstWeigh!!), today)
-                    .map { TrendDay(it.epochDay, it.scale, it.trend, it.trend, 0.0) }
-            }
+            // Algorithmes les plus précis seulement : tendance V2 (Kalman) et dépense V3 (plus de choix dans les réglages).
+            val trend: List<TrendDay> = if (weights.isEmpty()) emptyList()
+                else WeightTrendV2.compute(weights, today).map { TrendDay(it.epochDay, it.scale, it.trend, it.tween, it.trendSd) }
             val trendMap = trend.associate { it.epochDay to it.trend }
             val age = LocalDate.ofEpochDay(today).year - profile.birthYear
             val refWeight = weighIns.firstOrNull()?.weightKg ?: Analytics.DEFAULT_WEIGHT
             val refBf = bodyFat.values.firstOrNull() ?: profile.bodyFatPct
             val goalEvents = goals.map { ExpenditureV3.GoalEvent(it.startDay, it.type, it.ratePctPerWeek) }
             val firstGoal = goalEvents.firstOrNull()
-            val initial = program.initialTdeeOverride ?: when (settings.expenditureVersion) {
-                ExpenditureVersion.V3 -> ExpenditureV3.initialTdee(
-                    Bmr.bmr(profile, refWeight, refBf, age), profile.activity.factor, profile.exercise.bonus, firstGoal,
-                    settings.predictiveGoalAdjustment,
-                )
-                ExpenditureVersion.V1 -> Bmr.initialTdee(profile, refWeight, refBf, age)
-            }
+            val initial = program.initialTdeeOverride ?: ExpenditureV3.initialTdee(
+                Bmr.bmr(profile, refWeight, refBf, age), profile.activity.factor, profile.exercise.bonus, firstGoal,
+                settings.predictiveGoalAdjustment,
+            )
             val exp: List<ExpDay> = when {
                 weights.isEmpty() -> emptyList()
-                settings.expenditureVersion == ExpenditureVersion.V3 -> {
+                else -> {
                     val tweenByDay = trend.associate { it.epochDay to it.tween }
                     val v3Days = days.filter { it.epochDay >= firstWeigh!! }.map { d ->
                         ExpenditureV3.Day(d.epochDay, tweenByDay[d.epochDay] ?: refWeight, d.weightKg, d.intakeKcal, d.fasted, d.partial, d.steps)
@@ -347,7 +340,6 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
                         ExpDay(p.epochDay, p.tdee, p.short, p.long, st, p.goalAdjustment, p.missingDays)
                     }
                 }
-                else -> Expenditure.compute(days, trendMap, initial).map { ExpDay(it.epochDay, it.tdee, it.tdee, it.tdee, it.status) }
             }
             val currentTrend = trend.lastOrNull { it.epochDay <= today }?.trend
             val lastBf = bodyFat.entries.maxByOrNull { it.key }?.value ?: profile.bodyFatPct

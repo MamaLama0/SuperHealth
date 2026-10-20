@@ -87,6 +87,9 @@ class ExerciseDb(private val file: ExerciseDbFile, val custom: List<Exercise> = 
     private val byId = exercises.associateBy { it.id }
     private val equipmentById = equipment.associateBy { it.id }
     private val keys = exercises.associate { it.id to norm((listOf(it.name) + it.alternatives).joinToString(" ")) }
+    /** Noms normalisés, calculés une fois : le tri de la recherche ne refait plus de regex à chaque comparaison. */
+    private val names = exercises.associate { it.id to norm(it.name) }
+    private val defaultOrder = compareByDescending<Exercise> { it.searchBoost ?: 0.0 }.thenBy { it.name }
 
     fun exercise(id: String) = byId[id]
     fun isCustom(id: String) = id.startsWith(CUSTOM_PREFIX)
@@ -117,10 +120,10 @@ class ExerciseDb(private val file: ExerciseDbFile, val custom: List<Exercise> = 
     /** Recherche : tous les mots présents ; tri par début de nom, boost de recherche, longueur. */
     fun search(query: String, pool: List<Exercise> = exercises): List<Exercise> {
         val words = norm(query).split(' ').filter { it.isNotEmpty() }
-        if (words.isEmpty()) return pool.sortedWith(compareByDescending<Exercise> { it.searchBoost ?: 0.0 }.thenBy { it.name })
-        val q = norm(query)
+        if (words.isEmpty()) return pool.sortedWith(defaultOrder)
+        val q = words.joinToString(" ")
         return pool.filter { e -> words.all { keys.getValue(e.id).contains(it) } }
-            .sortedWith(compareBy<Exercise>({ !norm(it.name).startsWith(q) }, { -(it.searchBoost ?: 0.0) }, { it.name.length }))
+            .sortedWith(compareBy<Exercise>({ names[it.id]?.startsWith(q) != true }, { -(it.searchBoost ?: 0.0) }, { it.name.length }))
     }
 
     companion object {

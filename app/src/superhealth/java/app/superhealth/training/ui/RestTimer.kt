@@ -39,16 +39,14 @@ object RestTimer {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
+    /**
+     * Fin du repos : son et vibration seulement. Plus de notification « série suivante » en bandeau : elle masquait le
+     * chronomètre de la notification de séance, qui affiche déjà la série à faire.
+     */
     fun notifyDone(ctx: Context, sound: Boolean) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Fin du repos"), NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null) })
-        val open = PendingIntent.getActivity(ctx, 0, Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-            PendingIntent.FLAG_IMMUTABLE)
-        runCatching {
-            nm.notify(ID, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle(tr("Repos terminé")).setContentText(tr("C'est reparti : série suivante."))
-                .setAutoCancel(true).setContentIntent(open).setPriority(NotificationCompat.PRIORITY_HIGH).build())
-        }
+        nm.cancel(ID)
+        nm.deleteNotificationChannel(CHANNEL)
         if (sound) beep(ctx)
         // la notification de séance repasse du compte à rebours au chronomètre de séance
         SessionNotification.update(ctx, app.superhealth.training.WorkoutApp.store.state.value)

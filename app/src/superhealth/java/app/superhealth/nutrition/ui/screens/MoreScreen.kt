@@ -164,19 +164,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 }
             }
 
-            SectionLabel(tr("Algorithmes"))
-            MfCard {
-                Label(tr("Tendance du poids"))
-                ChipChoice(TrendVersion.entries, s.trendVersion, { it.label.tr() }) { t -> set { it.copy(trendVersion = t) } }
-                if (s.trendVersion == TrendVersion.V1) {
-                    Spacer(Modifier.height(6.dp))
-                    ChipChoice(TrendAlpha.entries, s.trendAlpha, { it.label.tr() }) { t -> set { it.copy(trendAlpha = t) } }
-                }
-                Spacer(Modifier.height(12.dp))
-                Label(tr("Dépense"))
-                ChipChoice(ExpenditureVersion.entries, s.expenditureVersion, { it.label.tr() }) { v -> set { it.copy(expenditureVersion = v) } }
-            }
-            Spacer(Modifier.height(12.dp))
+            SectionLabel(tr("Calculs"))
             GroupCard {
                 SwitchRow(tr("Ajustement prédictif"), tr("Anticipe un changement d'objectif"), s.predictiveGoalAdjustment) { v ->
                     set { it.copy(predictiveGoalAdjustment = v) }

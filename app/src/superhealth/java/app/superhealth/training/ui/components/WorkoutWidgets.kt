@@ -101,7 +101,7 @@ fun BodyMap(intensity: Map<String, Float>, sex: Sex, modifier: Modifier = Modifi
 /** Vignette d'exercice : photo « preferred » de l'APK, sinon initiales. */
 @Composable
 fun ExerciseThumb(e: Exercise?, size: Dp = 48.dp, corner: Dp = 12.dp) {
-    AsyncAsset(e?.thumbnail(), Modifier.size(size).clip(RoundedCornerShape(corner)), fallback = e?.name ?: "?")
+    AsyncAsset(e?.thumbnail(), Modifier.size(size).clip(RoundedCornerShape(corner)), fallback = e?.name ?: "?", sample = if (size <= 64.dp) 2 else 1)
 }
 
 /** Étiquettes de groupes musculaires (MuscleGroupTagRow). */

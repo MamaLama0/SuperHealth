@@ -138,6 +138,8 @@ data class Program(
     /** Position courante : cycle et jour suivants à faire. */
     val cycleIndex: Int = 0,
     val dayIndex: Int = 0,
+    /** Jours faits dans le cycle en cours : on peut les faire dans le désordre sans valider ceux qu'on a sautés. */
+    val doneDayIds: List<String> = emptyList(),
     val archived: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
 )
@@ -211,6 +213,7 @@ data class Workout(
     val programName: String? = null,
     val cycleIndex: Int? = null,
     val note: String = "",
+    val dayId: String? = null,
 )
 
 // ----- Salles et réglages -----

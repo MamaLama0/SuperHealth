@@ -28,6 +28,57 @@ object OpenFoodFacts {
         toFood(product)
     }
 
+    /** Fiche produit d'Open Food Facts (scores, ingrédients, allergènes, photo), affichée dans la fiche aliment. */
+    data class Details(
+        val code: String,
+        val imageUrl: String?,
+        val nutriScore: String?,
+        val nova: Int?,
+        val greenScore: String?,
+        val ingredients: String?,
+        val allergens: List<String>,
+        val additives: List<String>,
+        val labels: List<String>,
+        val quantity: String?,
+        val origins: String?,
+    )
+
+    private const val DETAIL_FIELDS = "code,image_front_small_url,image_front_url,nutriscore_grade,nova_group,ecoscore_grade," +
+        "ingredients_text_fr,ingredients_text,allergens_tags,additives_tags,labels_tags,quantity,origins"
+    private val detailsCache = java.util.concurrent.ConcurrentHashMap<String, Details>()
+
+    suspend fun details(code: String): Details? = detailsCache[code] ?: withContext(Dispatchers.IO) {
+        val json = get("$BASE/api/v2/product/${URLEncoder.encode(code, "UTF-8")}.json?fields=$DETAIL_FIELDS&lc=fr") ?: return@withContext null
+        val p = json["product"] as? JsonObject ?: return@withContext null
+        fun tags(key: String) = (p[key] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }
+            ?.map { it.substringAfter(':').replace('-', ' ').replaceFirstChar { c -> c.uppercase() } }.orEmpty()
+        Details(
+            code = code,
+            imageUrl = p.str("image_front_small_url") ?: p.str("image_front_url"),
+            nutriScore = p.str("nutriscore_grade")?.lowercase()?.takeIf { it in listOf("a", "b", "c", "d", "e") },
+            nova = p.num("nova_group")?.toInt()?.takeIf { it in 1..4 },
+            greenScore = p.str("ecoscore_grade")?.lowercase()?.takeIf { it in listOf("a-plus", "a", "b", "c", "d", "e", "f") },
+            ingredients = (p.str("ingredients_text_fr")?.takeIf { it.isNotBlank() } ?: p.str("ingredients_text"))?.trim()?.takeIf { it.isNotBlank() },
+            allergens = tags("allergens_tags"),
+            additives = (p["additives_tags"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull?.substringAfter(':')?.uppercase() }.orEmpty(),
+            labels = tags("labels_tags").take(8),
+            quantity = p.str("quantity")?.takeIf { it.isNotBlank() },
+            origins = p.str("origins")?.takeIf { it.isNotBlank() },
+        ).also { detailsCache[code] = it }
+    }
+
+    /** Photo du produit (petite taille fournie par OFF). */
+    suspend fun image(url: String): android.graphics.Bitmap? = withContext(Dispatchers.IO) {
+        runCatching {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            try {
+                conn.connectTimeout = 10_000; conn.readTimeout = 15_000
+                conn.setRequestProperty("User-Agent", UA)
+                if (conn.responseCode != 200) null else conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+            } finally { conn.disconnect() }
+        }.getOrNull()
+    }
+
     /** API de recherche actuelle (search-a-licious) ; repli sur l'ancien CGI si elle ne répond pas. */
     suspend fun search(query: String): List<FoodEntity> = withContext(Dispatchers.IO) {
         val q = URLEncoder.encode(query, "UTF-8")

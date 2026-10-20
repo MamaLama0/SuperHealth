@@ -110,10 +110,11 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
         val list = target.substringBefore('|'); val i = target.substringAfter('|').toIntOrNull() ?: return
         vm.updatePlan(list) { l -> l.toMutableList().also { if (i in it.indices) it[i] = it[i].copy(exerciseId = newId) } }
     }
-    val list = remember(query, group, gymOnly, db, swapOf) {
-        val base = db.exercises.filter { e ->
-            (group == null || group!!.key in e.primaryGroups) && (!gymOnly || gym == null || db.isAvailable(e, gym.equipmentIds))
-        }
+    // Exercices disponibles dans la salle : calculés une fois, pas à chaque lettre tapée.
+    val available = remember(db, gym?.equipmentIds) { gym?.let { g -> db.exercises.filter { db.isAvailable(it, g.equipmentIds) } } }
+    // Filtrage et tri hors du fil principal ; la saisie reste fluide pendant la recherche.
+    val list by androidx.compose.runtime.produceState(emptyList<Exercise>(), query, group, gymOnly, db, swapOf, available) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val base = (if (gymOnly && available != null) available else db.exercises).filter { e -> group == null || group!!.key in e.primaryGroups }
         val found = db.search(query, base)
         if (swapOf != null && query.isBlank()) {
             // remplacements intelligents : même schéma de mouvement et mêmes muscles principaux d'abord
@@ -122,7 +123,7 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
                     (if (e.groups.intersect(swapOf.groups.toSet()).isNotEmpty()) 5 else 0)
             }
         } else found
-    }
+    } }
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -261,6 +262,30 @@ fun ExerciseInfoScreen(vm: AppViewModel, id: String, nav: NavHostController) {
             val eq = db.resistanceEquipment(e, vm.activeGym()?.equipmentIds)
             if (eq.isNotEmpty()) { RowDivider(); InfoRow(tr("Équipement"), eq.joinToString(", ") { it.name }) }
             if (e.primaryMuscles.isNotEmpty()) { RowDivider(); InfoRow(tr("Muscles"), e.primaryMuscles.joinToString(", ")) }
+        }
+        // Objectifs : plage de répétitions, RIR et repos de l'exercice dans le programme actif et les séances de la bibliothèque
+        val program = vm.activeProgram()
+        val goals = program?.days.orEmpty().flatMap { d -> d.exercises.filter { it.exerciseId == id }.map { d.name to Generator.targetsFor(it, program!!.cycleIndex) } } +
+            st.customWorkouts.flatMap { w -> w.exercises.filter { it.exerciseId == id }.map { w.name to it.cycles.first() } }
+        if (goals.isNotEmpty()) {
+            SectionLabel(tr("Objectifs"))
+            GroupCard {
+                goals.forEachIndexed { i, (where, t) ->
+                    if (i > 0) RowDivider()
+                    val f = t.firstOrNull()
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp)) {
+                        Text(where, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
+                        if (f != null) Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Tag(trf("%1\$s séries", t.size), true)
+                            Tag(trf("%1\$s–%2\$s reps", f.minReps, f.maxReps), true)
+                            Tag(trf("RIR %1\$s", f.rir), true)
+                            Tag(trf("Repos %1\$s", app.superhealth.training.ui.restLabel(f.restSec)))
+                        }
+                    }
+                }
+            }
+            if (program != null && program.numCycles > 1) Text(trf("Cycle %1\$s du programme actif", program.cycleIndex + 1), style = MaterialTheme.typography.labelSmall,
+                color = Mf.colors.textTertiary, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
         }
         SectionLabel(tr("Réglages"))
         GroupCard {

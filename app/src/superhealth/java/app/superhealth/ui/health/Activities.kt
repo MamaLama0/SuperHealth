@@ -140,9 +140,9 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
             Icon(Icons.Rounded.Watch, null, Modifier.size(28.dp), tint = Mf.colors.accent)
             Spacer(Modifier.width(12.dp))
             Text(when {
-                sh.watchModule && devices.isNotEmpty() -> tr("Lancez une course, une marche ou une randonnée sur votre montre : elle apparaîtra ici après la synchronisation.")
-                sh.healthConnect -> tr("Les activités enregistrées par vos autres apps (Health Connect) apparaîtront ici.")
-                else -> tr("Associez une montre ou connectez Health Connect pour retrouver ici vos courses, marches et randonnées.")
+                sh.watchModule && devices.isNotEmpty() -> tr("Lancez une activité sur la montre : elle apparaîtra ici après synchronisation.")
+                sh.healthConnect -> tr("Les activités de vos autres apps (Health Connect) apparaîtront ici.")
+                else -> tr("Associez une montre ou Health Connect pour retrouver vos activités ici.")
             }, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         }
     } else GroupCard {

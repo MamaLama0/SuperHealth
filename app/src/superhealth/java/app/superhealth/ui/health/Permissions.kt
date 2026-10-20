@@ -158,7 +158,7 @@ fun PermissionsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         if (Build.VERSION.SDK_INT >= 33 && restrictedMissing && !(restricted || blocked)) {
-            Text(tr("Si Android indique « Paramètre restreint », autorisez-les d'abord dans Infos de l'appli > ⋮ > Autoriser les paramètres restreints."),
+            Text(tr("« Paramètre restreint » ? Infos de l'appli > ⋮ > Autoriser les paramètres restreints."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp).clickable { settings.launch(appDetails(ctx)) })
         }
@@ -176,7 +176,7 @@ private fun RestrictedGuide(onOpen: () -> Unit) {
             Text(tr("Paramètres restreints par Android"), style = MaterialTheme.typography.titleMedium, color = hue.onContainer())
         }
         Spacer(Modifier.height(8.dp))
-        Text(tr("SuperHealth a été installée depuis un fichier APK : Android bloque l'accès aux notifications, aux SMS et la superposition tant que vous ne l'avez pas autorisé."),
+        Text(tr("Installée depuis un APK : Android bloque notifications, SMS et superposition tant que vous ne les autorisez pas."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.text)
         Spacer(Modifier.height(8.dp))
         listOf(
@@ -194,7 +194,7 @@ private fun RestrictedGuide(onOpen: () -> Unit) {
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text(tr("Le menu ⋮ n'apparaît qu'après une première tentative refusée : touchez d'abord l'autorisation voulue ci-dessous."),
+        Text(tr("Le menu ⋮ n'apparaît qu'après un premier refus : touchez d'abord l'autorisation ci-dessous."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         Spacer(Modifier.height(12.dp))
         PillButton(tr("Ouvrir Infos de l'appli"), Modifier.fillMaxWidth(), onClick = onOpen)

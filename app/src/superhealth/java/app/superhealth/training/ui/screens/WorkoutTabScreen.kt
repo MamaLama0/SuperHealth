@@ -191,7 +191,8 @@ private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController
             val fit = p.days.size <= 7
             Row(if (fit) Modifier.fillMaxWidth() else Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 p.days.forEachIndexed { i, d ->
-                    val done = i < p.dayIndex
+                    // jour fait dans ce cycle ; un jour de repos l'est quand tous les jours d'entraînement avant lui le sont
+                    val done = if (d.isRest) i < p.dayIndex && p.days.take(i).all { it.isRest || it.id in p.doneDayIds } else d.id in p.doneDayIds
                     val current = i == p.dayIndex
                     Column((if (fit) Modifier.weight(1f) else Modifier.width(64.dp)).height(64.dp).clip(RoundedCornerShape(14.dp))
                         .background(if (current) color.copy(alpha = 0.18f) else Mf.colors.chip)

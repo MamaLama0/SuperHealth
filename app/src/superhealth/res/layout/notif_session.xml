@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Séance en cours (notification) : libellé, gros chronomètre, série à faire, progression. -->
+<!-- Séance en cours (notification) : libellé, gros chronomètre, série à faire, progression.
+     Styles Compat de notification : couleurs du thème des notifications du système (clair / sombre), pas de celui de l'app. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
         <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
             <TextView android:id="@+id/n_label" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textAppearance="@android:style/TextAppearance.Material.Notification.Info" />
+                android:textAppearance="@style/TextAppearance.Compat.Notification.Info" />
             <Chronometer android:id="@+id/n_chrono" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textSize="30sp" android:textStyle="bold" android:textColor="?android:attr/textColorPrimary" />
+                android:textAppearance="@style/TextAppearance.Compat.Notification.Title"
+                android:textSize="30sp" android:textStyle="bold" />
         </LinearLayout>
         <TextView android:id="@+id/n_count" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:textAppearance="@android:style/TextAppearance.Material.Notification.Title" />
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Title" />
     </LinearLayout>
     <TextView android:id="@+id/n_text" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="2"
-        android:ellipsize="end" android:textAppearance="@android:style/TextAppearance.Material.Notification" />
+        android:ellipsize="end" android:textAppearance="@style/TextAppearance.Compat.Notification" />
     <ProgressBar android:id="@+id/n_progress" style="@android:style/Widget.Material.ProgressBar.Horizontal"
         android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" />
 </LinearLayout>

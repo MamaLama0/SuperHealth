@@ -97,6 +97,8 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.animation.animateContentSize
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.SwapVert
 import app.superhealth.training.domain.Strength
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -169,6 +171,9 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
         if (android.os.Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
             askNotif.launch(android.Manifest.permission.POST_NOTIFICATIONS)
     }
+    // écran allumé pendant la séance (mains prises, téléphone posé)
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(Unit) { view.keepScreenOn = true; onDispose { view.keepScreenOn = false } }
     var confirmFinish by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
     var options by remember { mutableStateOf(false) }
@@ -176,6 +181,10 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     var noteFor by remember { mutableStateOf<Int?>(null) }
     var restFor by remember { mutableStateOf<Int?>(null) }
     var sessionNote by remember { mutableStateOf(false) }
+    var reorder by remember { mutableStateOf(false) }
+    var targetsFor by remember { mutableStateOf<Int?>(null) }
+    // « Terminer la séance ? » proposé une fois quand la dernière série est cochée
+    var allDonePrompt by remember { mutableStateOf(false) }
     val previous = remember(st.history) { previousSets(st.history) }
     /** Meilleur 1RM estimé de chaque exercice avant cette séance : une série qui le dépasse est un record, signalé tout de suite. */
     val bests = remember(st.history, db) { bestE1rms(st.history, db!!) }
@@ -197,12 +206,15 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
                 else {
                     val ex = s.exercises[page]
                     ExercisePage(vm, st.settings, s, page, ex, db!!.exercise(ex.exerciseId), previous[ex.exerciseId], bests[ex.exerciseId], nav,
-                        onPlates = { plateFor = page to it }, onNote = { noteFor = page }, onRest = { restFor = page },
+                        onPlates = { plateFor = page to it }, onNote = { noteFor = page }, onRest = { restFor = page }, onReorder = { reorder = true }, onTargets = { targetsFor = page },
                         onToggle = { si ->
                             focus.clearFocus()
                             val wasDone = ex.sets[si].done
                             vm.toggleSet(page, si)
-                            if (!wasDone) vm.state.value.session?.let { ns -> vm.nextFocus(ns, page)?.let { n -> scope.launch { delay(350); pager.animateScrollToPage(n) } } }
+                            if (!wasDone) vm.state.value.session?.let { ns ->
+                                if (ns.exercises.isNotEmpty() && ns.exercises.all { e -> e.sets.all { it.done } }) allDonePrompt = true
+                                else vm.nextFocus(ns, page)?.let { n -> scope.launch { delay(350); pager.animateScrollToPage(n) } }
+                            }
                         })
                 }
             }
@@ -225,6 +237,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
         onFinish = { options = false; confirmFinish = true },
         onSettings = { options = false; nav.navigate("t/settings") },
         onNote = { options = false; sessionNote = true },
+        onReorder = { options = false; reorder = true },
         onGym = { options = false; s.gymId?.let { nav.navigate("gym/${it}") } ?: nav.navigate("gyms") },
         onDiscard = { options = false; confirmDiscard = true })
     if (confirmFinish) {
@@ -247,6 +260,16 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
             confirmButton = { TextButton(onClick = { confirmFinish = false; vm.finishSession() }) { Text(tr("Terminer"), color = Mf.colors.accent) } },
             dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text(tr("Continuer"), color = Mf.colors.text) } })
     }
+    if (allDonePrompt) AlertDialog(onDismissRequest = { allDonePrompt = false }, containerColor = Mf.colors.card,
+        icon = { Icon(Icons.Rounded.Flag, null, tint = WorkoutBlue) },
+        title = { Text(tr("Finir la séance ?")) },
+        text = { Text(tr("Tous les exercices sont faits. Bravo !")) },
+        confirmButton = { TextButton(onClick = { allDonePrompt = false; vm.finishSession() }) { Text(tr("Terminer"), color = Mf.colors.accent) } },
+        dismissButton = { TextButton(onClick = { allDonePrompt = false }) { Text(tr("Continuer"), color = Mf.colors.text) } })
+    targetsFor?.let { ei -> s.exercises.getOrNull(ei)?.let { ex -> TargetsSheet(ex, onDismiss = { targetsFor = null }) { ne -> vm.session { ss ->
+        ss.copy(exercises = ss.exercises.toMutableList().also { if (ei in it.indices) it[ei] = ne }) }; targetsFor = null } } }
+    if (reorder) app.superhealth.training.ui.components.ReorderSheet(s.exercises.map { it.id to db!!.exercise(it.exerciseId) }, s.exercises.map { it.supersetGroup },
+        onMove = { from, to -> vm.moveExercise(from, to); scope.launch { pager.scrollToPage(to) } }, onDismiss = { reorder = false })
     if (confirmDiscard) AlertDialog(onDismissRequest = { confirmDiscard = false }, containerColor = Mf.colors.card,
         title = { Text(tr("Abandonner la séance ?")) },
         text = { Text(tr("Rien ne sera enregistré.")) },
@@ -266,7 +289,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     }
     restFor?.let { ei ->
         RestSheet(s.exercises.getOrNull(ei)?.restSec ?: 120, onDismiss = { restFor = null }) { r ->
-            vm.session { ss -> ss.copy(exercises = ss.exercises.toMutableList().also { it[ei] = it[ei].copy(restSec = r) }) }; restFor = null
+            vm.setRest(ei, r); restFor = null
         }
     }
 }
@@ -277,7 +300,7 @@ private fun bestE1rms(history: List<Workout>, db: app.superhealth.training.domai
         w.exercises.forEach { ex ->
             val upper = db.exercise(ex.exerciseId)?.upperBody == true
             Analytics.workingSets(ex).filter { (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }.forEach { set ->
-                val v = Strength.e1rm(set.weight!!, set.reps!!, set.rir, upper)
+                val v = Strength.e1rm(set.weight!!, set.reps!!, set.rir, upper, set.partialReps)
                 if (v > (out[ex.exerciseId] ?: 0.0)) out[ex.exerciseId] = v
             }
         }
@@ -372,7 +395,7 @@ private fun StripItem(index: Int, ex: SessionExercise, e: Exercise?, selected: B
             drawArc(ring, 0f, 360f, false, style = Stroke(3.dp.toPx()))
             if (frac > 0f) drawArc(WorkoutBlue, -90f, 360f * frac, false, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
         }
-        AsyncAsset(e?.thumbnail(), Modifier.size(42.dp).clip(CircleShape), fallback = e?.name ?: "?")
+        AsyncAsset(e?.thumbnail(), Modifier.size(42.dp).clip(CircleShape), fallback = e?.name ?: "?", sample = 2)
         if (done == ex.sets.size && ex.sets.isNotEmpty()) Box(Modifier.align(Alignment.BottomEnd).size(18.dp).clip(CircleShape).background(WorkoutBlue),
             contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
         else Text("${index + 1}", Modifier.align(Alignment.BottomEnd).size(18.dp).clip(CircleShape).background(if (selected) Mf.colors.strong else Mf.colors.card),
@@ -386,16 +409,17 @@ private fun StripItem(index: Int, ex: SessionExercise, e: Exercise?, selected: B
 @Composable
 private fun ExercisePage(
     vm: AppViewModel, settings: Settings, s: Session, index: Int, ex: SessionExercise, e: Exercise?, previous: List<SetLog>?, best: Double?,
-    nav: NavHostController, onPlates: (Double) -> Unit, onNote: () -> Unit, onRest: () -> Unit, onToggle: (Int) -> Unit,
+    nav: NavHostController, onPlates: (Double) -> Unit, onNote: () -> Unit, onRest: () -> Unit, onReorder: () -> Unit, onTargets: () -> Unit, onToggle: (Int) -> Unit,
 ) {
     fun edit(f: (SessionExercise) -> SessionExercise) = vm.session { ss -> ss.copy(exercises = ss.exercises.toMutableList().also { it[index] = f(it[index]) }) }
     var more by remember { mutableStateOf(false) }
     /** Séries validées rouvertes pour correction. */
     val expanded = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     val inSuperset = ex.supersetGroup != null
+    val groupSize = if (inSuperset) s.exercises.count { it.supersetGroup == ex.supersetGroup } else 0
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 160.dp)) {
-        Hero(e, settings, index, s.exercises.size, inSuperset,
+        Hero(e, settings, index, s.exercises.size, groupSize,
             ex.supersetGroup?.let { g -> s.exercises.mapNotNull { it.supersetGroup }.distinct().indexOf(g).takeIf { it >= 0 }?.let { 'A' + it } }) { nav.navigate("exercise/${ex.exerciseId}") }
         // Actions de l'exercice (workout_exercise_builder)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp),
@@ -405,13 +429,22 @@ private fun ExercisePage(
                 edit { it.copy(sets = listOf(SetLog(UUID.randomUUID().toString(), SetType.WARMUP)) + it.sets) }
             }
             ActionChip(Icons.Rounded.Timer, trf("Repos %1\$s", (restLabel(ex.restSec))), onClick = onRest)
+            ActionChip(Icons.Rounded.Flag, tr("Objectifs"), onClick = onTargets)
             ActionChip(Icons.Rounded.SwapHoriz, tr("Remplacer")) { nav.navigate("picker/${Picker.SWAP}?target=${index}") }
-            if (s.exercises.size > 1) ActionChip(Icons.Rounded.Link, if (inSuperset) tr("Détacher") else tr("Superset"), active = inSuperset) { vm.toggleSuperset(index) }
+            // superset, puis triset en reliant aussi l'exercice suivant
+            // depuis n'importe quel membre du groupe : on relie le dernier du groupe à l'exercice qui le suit
+            var groupEnd = index
+            while (inSuperset && s.exercises.getOrNull(groupEnd + 1)?.supersetGroup == ex.supersetGroup) groupEnd++
+            if (s.exercises.size > 1 && (!inSuperset || groupEnd < s.exercises.size - 1))
+                ActionChip(Icons.Rounded.Link, if (!inSuperset) tr("Superset") else if (groupSize == 2) tr("Triset") else tr("Lier au suivant")) { vm.linkNext(groupEnd) }
+            if (inSuperset) ActionChip(Icons.Rounded.LinkOff, tr("Détacher"), active = true) { vm.unlink(index) }
             ActionChip(Icons.Rounded.FitnessCenter, tr("Calculateur")) { onPlates(ex.sets.firstOrNull { !it.done && it.type != SetType.WARMUP }?.let { it.weight ?: it.autoWeight } ?: 0.0) }
             ActionChip(Icons.Rounded.StickyNote2, tr("Note"), onClick = onNote)
             Box {
                 ActionChip(Icons.Rounded.MoreHoriz, tr("Plus")) { more = true }
                 DropdownMenu(more, { more = false }, containerColor = Mf.colors.card) {
+                    if (s.exercises.size > 1) DropdownMenuItem({ Text(tr("Réorganiser les exercices")) }, leadingIcon = { Icon(Icons.Rounded.SwapVert, null) },
+                        onClick = { more = false; onReorder() })
                     if (index > 0) DropdownMenuItem({ Text(tr("Monter")) }, leadingIcon = { Icon(Icons.Rounded.KeyboardArrowUp, null) },
                         onClick = { more = false; vm.moveExercise(index, index - 1) })
                     if (index < s.exercises.size - 1) DropdownMenuItem({ Text(tr("Descendre")) }, leadingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
@@ -456,9 +489,10 @@ private fun ExercisePage(
                 Box(tracked.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 500f))) {
                     if (compact) DoneSetRow(settings, set, labels[si]!!, e?.usesWeight != false,
                         record = best != null && set.type != SetType.WARMUP && (set.weight ?: 0.0) > 0 && (set.reps ?: 0) > 0 &&
-                            Strength.e1rm(set.weight!!, set.reps!!, set.rir, e?.upperBody == true) > best * 1.001,
+                            Strength.e1rm(set.weight!!, set.reps!!, set.rir, e?.upperBody == true, set.partialReps) > best * 1.001,
                         onOpen = { expanded.add(set.id) }, onToggle = { onToggle(si) })
                     else SetCard(settings, set, labels[si]!!, prevByIndex[si], e?.usesWeight != false, current = si == firstTodo,
+                        showTarget = set.target != null && set.target != ex.sets.getOrNull(si - 1)?.target,
                         onChange = { ns -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns }) } },
                         onToggle = { expanded.remove(set.id); onToggle(si) }, onPlates = onPlates,
                         onType = { t -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = set.copy(type = t) }) } },
@@ -487,7 +521,7 @@ private fun ExercisePage(
 
 /** En-tête : photo de l'exercice (angles a/b/c en touchant), dégradé, nom et muscles. */
 @Composable
-private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, inSuperset: Boolean, supersetLetter: Char? = null, onInfo: () -> Unit) {
+private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, groupSize: Int, supersetLetter: Char? = null, onInfo: () -> Unit) {
     val angles = e?.images.orEmpty()
     var angle by remember(e?.id) { mutableIntStateOf(0) }
     val path = angles.getOrNull(angle)?.let { "ex/${e!!.id}_${it}.webp" } ?: e?.thumbnail()
@@ -503,7 +537,7 @@ private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, inSup
         Row(Modifier.align(Alignment.TopStart).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("${index + 1} / ${count}", Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, style = MaterialTheme.typography.labelMedium)
-            if (inSuperset) Text(tr("Superset") + (supersetLetter?.let { " $it" } ?: ""), Modifier.clip(CircleShape).background(WorkoutBlue).padding(horizontal = 10.dp, vertical = 4.dp),
+            if (groupSize > 0) Text(app.superhealth.training.domain.Supersets.label(groupSize).tr() + (supersetLetter?.let { " $it" } ?: ""), Modifier.clip(CircleShape).background(WorkoutBlue).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, style = MaterialTheme.typography.labelMedium)
         }
         if (angles.size > 1) Row(Modifier.align(Alignment.TopEnd).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -550,10 +584,11 @@ private fun TargetLine(ex: SessionExercise, settings: Settings) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SetCard(
-    settings: Settings, set: SetLog, label: String, prev: SetLog?, usesWeight: Boolean, current: Boolean,
+    settings: Settings, set: SetLog, label: String, prev: SetLog?, usesWeight: Boolean, current: Boolean, showTarget: Boolean = false,
     onChange: (SetLog) -> Unit, onToggle: () -> Unit, onPlates: (Double) -> Unit, onType: (SetType) -> Unit, onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
+    var partials by remember { mutableStateOf(set.partialReps > 0) }
     val warm = set.type == SetType.WARMUP
     val border by animateColorAsState(if (current) WorkoutBlue else Color.Transparent, label = "border")
     val alpha by animateFloatAsState(if (current || set.done) 1f else 0.6f, label = "alpha")
@@ -569,6 +604,9 @@ private fun SetCard(
                 }
                 DropdownMenu(menu, { menu = false }, containerColor = Mf.colors.card) {
                     SetType.entries.forEach { t -> DropdownMenuItem({ Text(t.label.tr()) }, onClick = { menu = false; onType(t) }) }
+                    if (!warm) DropdownMenuItem({ Text(if (partials) tr("Retirer les partielles") else tr("Répétitions partielles")) }, onClick = {
+                        menu = false; partials = !partials; if (!partials) onChange(set.copy(partialReps = 0))
+                    })
                     DropdownMenuItem({ Text(tr("Supprimer la série"), color = Danger) }, onClick = { menu = false; onDelete() })
                 }
             }
@@ -587,11 +625,26 @@ private fun SetCard(
                 Icon(Icons.Rounded.Check, tr("Valider"), tint = if (set.done) Color.White else if (current) Mf.colors.onStrong else Mf.colors.textTertiary, modifier = Modifier.size(24.dp))
             }
         }
+        // répétitions partielles (après l'échec, amplitude réduite) : comptées à part
+        if ((partials || set.rir == 0) && !warm) Row(Modifier.padding(start = 42.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Partielles"), style = MaterialTheme.typography.labelLarge, color = WorkoutBlue, modifier = Modifier.weight(1f))
+            RestButtonSmall("−") { onChange(set.copy(partialReps = (set.partialReps - 1).coerceAtLeast(0))) }
+            Text("${set.partialReps}", Modifier.width(36.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            // des partielles = série menée à l'échec : RIR 0
+            RestButtonSmall("+") { onChange(set.copy(partialReps = set.partialReps + 1, rir = 0)) }
+        }
+        val t = set.target
+        if (showTarget && t != null && !warm) Text(trf("Objectif %1\$s–%2\$s reps · RIR %3\$s · repos %4\$s", t.minReps, t.maxReps, t.rir, restLabel(t.restSec)),
+            Modifier.padding(start = 42.dp, top = 6.dp), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
         if (prev != null || set.type != SetType.STANDARD && !warm) Row(Modifier.padding(start = 42.dp, top = 4.dp)) {
             if (set.type != SetType.STANDARD && !warm) Text(set.type.label.tr(), style = MaterialTheme.typography.labelSmall, color = WorkoutBlue,
                 modifier = Modifier.padding(end = 8.dp))
-            if (prev != null) Text(trf("Précédent %1\$s × %2\$s%3\$s", (clean(settings.w(prev.weight ?: 0.0))), (prev.reps ?: 0), (prev.rir?.let { trf(" · RIR %1\$s", it) } ?: "")),
-                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
+            // toucher la série précédente recopie sa charge et ses répétitions
+            if (prev != null) Text(trf("Précédent %1\$s × %2\$s%3\$s", (clean(settings.w(prev.weight ?: 0.0))), (prev.reps ?: 0), (prev.rir?.let { trf(" · RIR %1\$s", it) } ?: "")) +
+                (if (prev.partialReps > 0) trf(" + %1\$s part.", prev.partialReps) else ""),
+                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary,
+                modifier = Modifier.clip(CircleShape).clickable(enabled = !set.done) { onChange(set.copy(weight = prev.weight ?: set.weight, reps = prev.reps ?: set.reps)) }
+                    .padding(horizontal = 4.dp, vertical = 2.dp))
         }
     }
 }
@@ -605,7 +658,7 @@ private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeigh
         Spacer(Modifier.width(8.dp))
         Text(listOfNotNull(
             if (usesWeight) "${clean(settings.w(set.weight ?: 0.0))} ${settings.unit.label.tr()}" else null,
-            trf("%1\$s reps", (set.reps ?: 0)), set.rir?.let { trf("RIR %1\$s", it) },
+            trf("%1\$s reps", (set.reps ?: 0)) + (if (set.partialReps > 0) trf(" + %1\$s part.", set.partialReps) else ""), set.rir?.let { trf("RIR %1\$s", it) },
         ).joinToString("  ·  "), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         if (record) {
             // Nouveau record (1RM estimé) : pastille dorée qui apparaît en rebondissant.
@@ -746,7 +799,7 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Mf.colors.onStrong.copy(alpha = 0.08f)).padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                AsyncAsset(e?.thumbnail(), Modifier.size(34.dp).clip(CircleShape), fallback = e?.name ?: "?")
+                AsyncAsset(e?.thumbnail(), Modifier.size(34.dp).clip(CircleShape), fallback = e?.name ?: "?", sample = 2)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(tr("Ensuite"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.onStrong.copy(alpha = 0.6f))
@@ -758,6 +811,13 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
                     style = MaterialTheme.typography.titleSmall, color = Mf.colors.onStrong)
             }
         }
+    }
+}
+
+@Composable
+private fun RestButtonSmall(t: String, onClick: () -> Unit) {
+    Box(Modifier.size(34.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(t, style = MaterialTheme.typography.titleMedium, color = Mf.colors.text)
     }
 }
 
@@ -774,7 +834,7 @@ private fun RestButton(t: String, onClick: () -> Unit) {
 @Composable
 private fun WorkoutOptionsSheet(
     s: Session, onDismiss: () -> Unit, onPause: () -> Unit, onMinimize: () -> Unit, onFinish: () -> Unit,
-    onSettings: () -> Unit, onNote: () -> Unit, onGym: () -> Unit, onDiscard: () -> Unit,
+    onSettings: () -> Unit, onNote: () -> Unit, onReorder: () -> Unit, onGym: () -> Unit, onDiscard: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding()) {
@@ -784,6 +844,7 @@ private fun WorkoutOptionsSheet(
                 OptionRow(Icons.Rounded.KeyboardArrowDown, tr("Réduire la séance"), onClick = onMinimize)
                 OptionRow(Icons.Rounded.Flag, tr("Terminer la séance"), onClick = onFinish)
                 OptionRow(Icons.Rounded.StickyNote2, if (s.note.isBlank()) tr("Note de séance") else tr("Modifier la note de séance"), onClick = onNote)
+                if (s.exercises.size > 1) OptionRow(Icons.Rounded.SwapVert, tr("Réorganiser les exercices"), onClick = onReorder)
             }
             Spacer(Modifier.height(12.dp))
             Column(Modifier.clip(RoundedCornerShape(18.dp)).background(Mf.colors.card)) {
@@ -804,6 +865,40 @@ private fun OptionRow(icon: ImageVector, label: String, danger: Boolean = false,
         Icon(icon, null, tint = if (danger) Danger else Mf.colors.text)
         Spacer(Modifier.width(14.dp))
         Text(label, style = MaterialTheme.typography.bodyLarge, color = if (danger) Danger else Mf.colors.text)
+    }
+}
+
+/** Objectifs de l'exercice pour la suite de la séance (« Targets ») : séries, plage de répétitions, RIR, repos. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TargetsSheet(ex: SessionExercise, onDismiss: () -> Unit, onSave: (SessionExercise) -> Unit) {
+    val work = ex.sets.filter { it.type != SetType.WARMUP }
+    val t0 = work.firstNotNullOfOrNull { it.target } ?: app.superhealth.training.domain.TargetSet(restSec = ex.restSec)
+    var sets by remember { mutableIntStateOf(work.size.coerceAtLeast(1)) }
+    var min by remember { mutableIntStateOf(t0.minReps) }
+    var max by remember { mutableIntStateOf(t0.maxReps) }
+    var rir by remember { mutableIntStateOf(t0.rir) }
+    var rest by remember { mutableIntStateOf(ex.restSec) }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.card) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).navigationBarsPadding()) {
+            Text(tr("Objectifs"), style = MaterialTheme.typography.titleLarge)
+            Text(tr("S'appliquent aux séries pas encore faites de cette séance."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            PlanStepper(tr("Séries"), sets, work.count { it.done }.coerceAtLeast(1), 10) { sets = it }
+            PlanStepper(tr("Répétitions min."), min, 1, 50) { min = it; if (max < it) max = it }
+            PlanStepper(tr("Répétitions max."), max, 1, 60) { max = it.coerceAtLeast(min) }
+            PlanStepper(tr("RIR (répétitions en réserve)"), rir, 0, 5) { rir = it }
+            PlanStepper(tr("Repos"), rest, 0, 600, step = 15, label = { restLabel(it) }) { rest = it }
+            PillButton(tr("Appliquer"), Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                val t = t0.copy(minReps = min, maxReps = max.coerceAtLeast(min), rir = rir, restSec = rest)
+                val warm = ex.sets.filter { it.type == SetType.WARMUP }
+                var kept = work.map { if (it.done) it else it.copy(target = t, rir = if (it.rir == null || it.rir == t0.rir) rir else it.rir) }
+                // séries en plus (copie de la dernière) ou en moins (seulement parmi celles pas faites)
+                while (kept.size < sets) { val last = kept.lastOrNull(); kept = kept + SetLog(UUID.randomUUID().toString(), last?.type ?: SetType.STANDARD,
+                    weight = last?.weight ?: last?.autoWeight, reps = last?.reps ?: last?.autoReps, rir = rir, target = t) }
+                while (kept.size > sets) { val k = kept.indexOfLast { !it.done }; if (k < 0) break; kept = kept.filterIndexed { j, _ -> j != k } }
+                onSave(ex.copy(sets = warm + kept, restSec = rest))
+            }
+        }
     }
 }
 
@@ -855,7 +950,7 @@ private fun SetCalc(settings: Settings, ex: SessionExercise?, e: Exercise?, hist
             ?.let { Analytics.workingSets(it) }.orEmpty()
     }
     val oneRm = app.superhealth.training.domain.Progression.currentOneRm(
-        past.filter { it.weight != null && it.reps != null }.map { app.superhealth.training.domain.PastSet(it.weight!!, it.reps!!, it.rir, 0) }, upper)
+        past.filter { it.weight != null && it.reps != null }.map { app.superhealth.training.domain.PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }, upper)
     var reps by remember { mutableStateOf("8") }
     var rir by remember { mutableStateOf("2") }
     Text(tr("Calculateur de série"), style = MaterialTheme.typography.titleLarge)

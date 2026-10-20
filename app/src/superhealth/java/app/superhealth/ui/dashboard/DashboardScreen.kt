@@ -271,13 +271,8 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         val an = a ?: return@Column
         Column(Modifier.padding(horizontal = 16.dp)) {
-            // Actions rapides, comme « Enregistrer » et « Commencer » de Google Health.
-            Row(Modifier.padding(top = 6.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickPill(tr("Enregistrer un repas"), Icons.Rounded.Add, CaloriesColor, Modifier.weight(1f)) {
-                    nav.go("search/${app.superhealth.nutrition.ui.SearchMode.SEARCH}/-1")
-                }
-                QuickPill(tr("Pesée"), Icons.Rounded.MonitorWeight, app.superhealth.ui.theme.Base.Pink, Modifier.weight(1f)) { nav.go("weight") }
-            }
+            // Pas de boutons rapides ici : le + de la barre du bas s'en charge ; seule la pesée du jour est rappelée.
+            Spacer(Modifier.height(6.dp))
             // Rappels contextuels (non personnalisables : ce sont des actions à faire).
             if (an.checkInState == CheckInState.NOW) {
                 Reminder(Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in disponible"), tr("Mettez à jour votre programme pour la semaine.")) { nav.go("checkin") }
@@ -291,7 +286,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             val noSource = cards.any { it.watch } && !(sh.watchModule && devices.isNotEmpty()) && !sh.healthConnect
             if (noSource) {
                 Reminder(Icons.Rounded.Watch, HealthHues.Heart, tr("Constantes indisponibles"),
-                    tr("Associez une montre ou connectez Health Connect pour voir votre cœur, votre sommeil et vos constantes.")) { tab("settings") }
+                    tr("Associez une montre ou Health Connect pour voir cœur, sommeil et constantes.")) { tab("settings") }
                 Spacer(Modifier.height(12.dp))
             }
 
@@ -322,17 +317,6 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             PillButton(tr("Personnaliser le tableau de bord"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Tune) { nav.go("dash/edit") }
             Spacer(Modifier.height(24.dp))
         }
-    }
-}
-
-@Composable
-private fun QuickPill(label: String, icon: ImageVector, hue: Color, modifier: Modifier, onClick: () -> Unit) {
-    Row(modifier.clip(CircleShape).background(hue.container()).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 13.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, Modifier.size(20.dp), tint = hue.onContainer())
-        Spacer(Modifier.width(8.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = hue.onContainer(),
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

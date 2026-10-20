@@ -43,7 +43,7 @@ object Analytics {
             val sets = w.exercises.filter { it.exerciseId == exerciseId }.flatMap { workingSets(it) }
             if (sets.isEmpty()) null else ExercisePoint(
                 w.startTime,
-                sets.filter { (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }.maxOfOrNull { Strength.e1rm(it.weight!!, it.reps!!, it.rir, upper) } ?: 0.0,
+                sets.filter { (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }.maxOfOrNull { Strength.e1rm(it.weight!!, it.reps!!, it.rir, upper, it.partialReps) } ?: 0.0,
                 volume(sets), sets.maxOf { it.weight ?: 0.0 }, sets.maxOf { it.reps ?: 0 }, sets.size,
             )
         }
@@ -68,8 +68,8 @@ object Analytics {
             val vol = volume(ex.sets)
             val prevVol = before.maxOfOrNull { b -> b.exercises.filter { it.exerciseId == ex.exerciseId }.sumOf { volume(it.sets) } } ?: 0.0
             if (vol > prevVol && vol > 0) out += NewRecord(e.id, "Volume", vol)
-            val best = sets.filter { (it.weight ?: 0.0) > 0 }.maxOfOrNull { Strength.e1rm(it.weight!!, it.reps!!, it.rir, e.upperBody) } ?: 0.0
-            val prevBest = prev.filter { (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }.maxOfOrNull { Strength.e1rm(it.weight!!, it.reps!!, it.rir, e.upperBody) } ?: 0.0
+            val best = sets.filter { (it.weight ?: 0.0) > 0 }.maxOfOrNull { Strength.e1rm(it.weight!!, it.reps!!, it.rir, e.upperBody, it.partialReps) } ?: 0.0
+            val prevBest = prev.filter { (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }.maxOfOrNull { Strength.e1rm(it.weight!!, it.reps!!, it.rir, e.upperBody, it.partialReps) } ?: 0.0
             if (best > prevBest && best > 0) out += NewRecord(e.id, "1RM estimé", best)
             val reps = sets.maxOf { it.reps!! }; val prevReps = prev.maxOf { it.reps ?: 0 }
             if (e.usesReps && !e.usesWeight && reps > prevReps) out += NewRecord(e.id, "Répétitions", reps.toDouble())
