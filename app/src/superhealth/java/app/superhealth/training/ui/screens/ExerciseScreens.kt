@@ -98,9 +98,18 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     // clavier ouvert à la première entrée seulement (pas au retour de la fiche ou de la création d'exercice)
     var focused by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(Unit) { if (mode != Picker.SWAP && !focused) { focused = true; runCatching { focus.requestFocus() } } }
+    androidx.compose.runtime.LaunchedEffect(Unit) { if (mode != Picker.SWAP && mode != Picker.SWAP_PLAN && !focused) { focused = true; runCatching { focus.requestFocus() } } }
     val gym = vm.activeGym()
-    val swapOf: Exercise? = if (mode == Picker.SWAP) st.session?.exercises?.getOrNull(target.toIntOrNull() ?: -1)?.let { db.exercise(it.exerciseId) } else null
+    val swapOf: Exercise? = when (mode) {
+        Picker.SWAP -> st.session?.exercises?.getOrNull(target.toIntOrNull() ?: -1)?.let { db.exercise(it.exerciseId) }
+        Picker.SWAP_PLAN -> vm.planExercises(target.substringBefore('|'))?.getOrNull(target.substringAfter('|').toIntOrNull() ?: -1)?.let { db.exercise(it.exerciseId) }
+        else -> null
+    }
+    /** Remplacement dans un jour de programme ou une séance de bibliothèque : mêmes cibles, superset conservé. */
+    fun swapPlan(newId: String) {
+        val list = target.substringBefore('|'); val i = target.substringAfter('|').toIntOrNull() ?: return
+        vm.updatePlan(list) { l -> l.toMutableList().also { if (i in it.indices) it[i] = it[i].copy(exerciseId = newId) } }
+    }
     val list = remember(query, group, gymOnly, db, swapOf) {
         val base = db.exercises.filter { e ->
             (group == null || group!!.key in e.primaryGroups) && (!gymOnly || gym == null || db.isAvailable(e, gym.equipmentIds))
@@ -136,6 +145,7 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
             nav.currentBackStackEntry?.savedStateHandle?.set("createdExercise", null)
             when (mode) {
                 Picker.SWAP -> { swap(vm, target.toInt(), cid); nav.popBackStack() }
+                Picker.SWAP_PLAN -> { swapPlan(cid); nav.popBackStack() }
                 Picker.BROWSE -> nav.navigate("exercise/${cid}")
                 else -> if (cid !in chosen) chosen.add(cid)
             }
@@ -153,6 +163,7 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
                     when (mode) {
                         Picker.BROWSE -> nav.navigate("exercise/${e.id}")
                         Picker.SWAP -> { swap(vm, target.toInt(), e.id); nav.popBackStack() }
+                        Picker.SWAP_PLAN -> { swapPlan(e.id); nav.popBackStack() }
                         else -> if (sel) chosen.remove(e.id) else chosen.add(e.id)
                     }
                 }.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -171,7 +182,7 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
         PillButton(trf("Ajouter %1\$s exercice(s)", chosen.size), Modifier.fillMaxWidth()) {
             when (mode) {
                 Picker.SESSION -> vm.addExercises(chosen.toList())
-                Picker.DAY -> addToDay(vm, target, chosen.toList())
+                Picker.DAY -> vm.addToPlan(target, chosen.toList())
             }
             nav.popBackStack()
         }
@@ -189,22 +200,6 @@ private fun swap(vm: AppViewModel, index: Int, newId: String) = vm.session { s -
     val ex = s.exercises.getOrNull(index) ?: return@session s
     val sets = ex.sets.filter { it.type != SetType.WARMUP && !it.done }.map { SetLog(UUID.randomUUID().toString(), it.type, rir = it.rir, target = it.target) }
     s.copy(exercises = s.exercises.toMutableList().also { it[index] = ex.copy(id = UUID.randomUUID().toString(), exerciseId = newId, sets = ex.sets.filter { it.done } + sets) })
-}
-
-/** Ajoute des exercices à un jour de programme (cible « programId:jour »), 3 séries selon l'objectif du programme. */
-private fun addToDay(vm: AppViewModel, target: String, ids: List<String>) {
-    val (pid, di) = target.split(':').let { it[0] to it[1].toInt() }
-    vm.update { s ->
-        s.copy(programs = s.programs.map { p ->
-            if (p.id != pid) p else p.copy(days = p.days.mapIndexed { i, d ->
-                if (i != di) d else d.copy(exercises = d.exercises + ids.map { id ->
-                    val e = vm.db.value?.exercise(id)
-                    val t = Generator.baseTarget(p.goal, if (e?.isCompound == true) Generator.Template.SECONDARY else Generator.Template.ACCESSORY)
-                    ProgramExercise(UUID.randomUUID().toString(), id, List(p.numCycles.coerceAtLeast(1)) { List(3) { t } })
-                })
-            })
-        })
-    }
 }
 
 /** Fiche exercice (exercise_info) : angles de caméra, muscles, équipement, technique, notes, historique et records. */

@@ -154,8 +154,10 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     val completed by vm.completed.collectAsState()
     // fin de séance : la racine ouvre « Séance terminée » ; sinon (abandon) on revient simplement en arrière
     if (s == null || db == null) { LaunchedEffect(Unit) { if (completed == null) nav.popBackStack() }; return }
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { delay(500); now = System.currentTimeMillis() } }
+    // Horloge de la séance : lue seulement par la barre du haut et la carte de repos (voir Ticking), pour ne pas
+    // recomposer les pages d'exercices deux fois par seconde (saccades au passage d'un exercice à l'autre).
+    val clock = remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { delay(500); clock.longValue = System.currentTimeMillis() } }
     // notifications (séance en cours, fin du repos) : permission demandée à la première séance (Android 13+)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val askNotif = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
@@ -178,12 +180,13 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
 
     val count = s.exercises.size + 1 // dernière page : ajouter des exercices / terminer
     val pager = rememberPagerState(initialPage = s.current.coerceIn(0, count - 1)) { count }
-    LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { if (it < s.exercises.size) vm.setCurrent(it) } }
+    // Exercice courant enregistré une fois la page posée, pas au milieu du glissement.
+    LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.collect { if (it < vm.state.value.session?.exercises?.size ?: 0) vm.setCurrent(it) } }
     fun goTo(i: Int) { scope.launch { pager.animateScrollToPage(i.coerceIn(0, count - 1)) } }
 
     Box(Modifier.fillMaxSize().background(Mf.colors.background)) {
         Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-            TopBar(s, now, onMinimize = { nav.popBackStack() }, onOptions = { options = true }, onFinish = { confirmFinish = true }, onPause = { vm.togglePause() })
+            Ticking(clock) { now -> TopBar(s, now, onMinimize = { nav.popBackStack() }, onOptions = { options = true }, onFinish = { confirmFinish = true }, onPause = { vm.togglePause() }) }
             ExerciseStrip(s, db!!::exercise, pager.currentPage, onSelect = { goTo(it) }, onAdd = { nav.navigate("picker/${Picker.SESSION}") })
             HorizontalPager(pager, Modifier.weight(1f), beyondViewportPageCount = 1, key = { if (it < s.exercises.size) s.exercises[it].id else "end" }) { page ->
                 if (page >= s.exercises.size) EndPage(s, onAdd = { nav.navigate("picker/${Picker.SESSION}") }, onFinish = { confirmFinish = true })
@@ -204,9 +207,11 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
         // la carte reste composée pendant l'animation de sortie : on garde la dernière fin de repos connue
         var shownRest by remember { mutableLongStateOf(0L) }
         if (rest != null) shownRest = rest
-        AnimatedVisibility(rest != null && rest > now, Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
-            RestCard(s, shownRest, now, st.settings, db!!::exercise, vm)
+        Ticking(clock) { now ->
+            AnimatedVisibility(rest != null && rest > now, Modifier.align(Alignment.BottomCenter),
+                enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
+                RestCard(s, shownRest, now, st.settings, db!!::exercise, vm)
+            }
         }
     }
 
@@ -271,6 +276,10 @@ private fun previousSets(history: List<Workout>): Map<String, List<SetLog>> {
 }
 
 // ----- Barre du haut -----
+
+/** Lit l'horloge ici : seul ce contenu se recompose à chaque tic. */
+@Composable
+private fun Ticking(clock: androidx.compose.runtime.MutableLongState, content: @Composable (Long) -> Unit) = content(clock.longValue)
 
 @Composable
 private fun TopBar(s: Session, now: Long, onMinimize: () -> Unit, onOptions: () -> Unit, onFinish: () -> Unit, onPause: () -> Unit) {

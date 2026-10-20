@@ -27,6 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
+import app.superhealth.PlusAction
+import app.superhealth.plusActions
 import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.RowDivider
@@ -82,6 +84,55 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
                             if (c.watch) Text(tr("Montre ou Health Connect"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
                         }
                         Switch(false, { set(shown + c) }, colors = switchColors())
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Raccourcis du bouton « + » : lesquels, dans quel ordre. Un seul choisi : le « + » l'ouvre directement. */
+@Composable
+fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
+    val sh by vm.settings.collectAsState()
+    val shown = sh.plusActions
+    fun set(list: List<PlusAction>) = SuperPrefs.update { it.copy(plus = list.map { a -> a.name }) }
+    DetailScaffold(tr("Bouton +"), onBack = { nav.popBackStack() }, action = {
+        TextButton(onClick = { set(PlusAction.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
+    }) {
+        Text(tr("Choisissez les raccourcis du bouton + et leur ordre. Avec un seul raccourci, le + l'ouvre directement."),
+            style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        SectionLabel(tr("Affichés"))
+        if (shown.isEmpty()) Text(tr("Aucun raccourci"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+        else GroupCard {
+            shown.forEachIndexed { i, a ->
+                if (i > 0) RowDivider()
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr(a.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(tr(a.section.label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+                    }
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i - 1, removeAt(i)) }) }, enabled = i > 0) {
+                        Icon(Icons.Rounded.KeyboardArrowUp, tr("Monter"), tint = if (i > 0) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
+                        Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    Switch(true, { set(shown - a) }, Modifier.padding(end = 8.dp), colors = switchColors())
+                }
+            }
+        }
+        DashCard.Section.entries.forEach { section ->
+            val hidden = PlusAction.entries.filter { it.section == section && it !in shown }
+            if (hidden.isEmpty()) return@forEach
+            SectionLabel(tr(section.label))
+            GroupCard {
+                hidden.forEachIndexed { i, a ->
+                    if (i > 0) RowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr(a.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Switch(false, { set(shown + a) }, colors = switchColors())
                     }
                 }
             }

@@ -45,6 +45,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Add
 import app.superhealth.training.domain.ExerciseDb
 import app.superhealth.training.domain.Generator
 import app.superhealth.training.domain.Program
@@ -78,6 +81,7 @@ fun WorkoutTabScreen(
     val st by vm.state.collectAsState()
     val db by vm.db.collectAsState()
     val active = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
+    var create by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         ScreenTitle(tr("Activités"), actions = { IconButton(onClick = { nav.navigate("history") }) { Icon(Icons.Rounded.History, tr("Historique")) } })
         Column(Modifier.padding(horizontal = 16.dp)) {
@@ -107,9 +111,10 @@ fun WorkoutTabScreen(
                 PillButton(tr("Séance vide"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Bolt) {
                     if (st.session == null) vm.startEmpty(); nav.navigate("session")
                 }
-                // Sans programme actif, la carte « Créer un programme » au-dessus suffit.
-                if (active != null) PillButton(tr("Nouveau programme"), Modifier.weight(1f), strong = false) { nav.navigate("wizard") }
+                // Programme généré ou manuel, ou séance perso (sans l'algorithme de génération).
+                PillButton(tr("Créer"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Add) { create = true }
             }
+            if (create) CreateTrainingSheet(vm, nav) { create = false }
 
             val library = st.programs.filter { it.id != active?.id && !it.archived }
             if (library.isNotEmpty() || st.customWorkouts.isNotEmpty()) {
@@ -121,8 +126,8 @@ fun WorkoutTabScreen(
                     }
                     st.customWorkouts.forEachIndexed { i, w ->
                         if (i > 0 || library.isNotEmpty()) RowDivider()
-                        SettingRow(w.name, trf("%1\$s exercices", w.exercises.size), icon = Icons.Rounded.PlayArrow) {
-                            if (st.session == null) vm.startCustom(w); nav.navigate("session")
+                        SettingRow(w.name, trf("%1\$s exercices", w.exercises.size), subtitle = tr("Séance perso"), icon = Icons.Rounded.FitnessCenter) {
+                            nav.navigate("custom/${w.id}")
                         }
                     }
                 }

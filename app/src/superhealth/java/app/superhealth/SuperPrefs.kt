@@ -37,6 +37,29 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     }
 }
 
+/** Raccourcis proposés par le bouton « + », dans l'ordre par défaut. */
+enum class PlusAction(val label: String, val section: DashCard.Section) {
+    SEARCH("Rechercher", DashCard.Section.NUTRITION),
+    SCAN("Code-barres", DashCard.Section.NUTRITION),
+    QUICK("Ajout rapide", DashCard.Section.NUTRITION),
+    AI("Décrire (IA)", DashCard.Section.NUTRITION),
+    RECIPES("Recettes", DashCard.Section.NUTRITION),
+    CUSTOM_FOOD("Aliment perso", DashCard.Section.NUTRITION),
+    WORKOUT("Séance du programme", DashCard.Section.TRAINING),
+    EMPTY("Séance vide", DashCard.Section.TRAINING),
+    EXERCISES("Exercices", DashCard.Section.TRAINING),
+    PROGRAM_NEW("Nouveau programme", DashCard.Section.TRAINING),
+    WEIGHT("Pesée", DashCard.Section.HEALTH),
+    WATER("Verre d'eau (250 ml)", DashCard.Section.HEALTH),
+    VITALS("Hydratation et constantes", DashCard.Section.HEALTH),
+    BODY("Mesures", DashCard.Section.HEALTH),
+    SYNC("Synchroniser", DashCard.Section.HEALTH);
+
+    companion object {
+        val defaults = listOf(SEARCH, SCAN, QUICK, AI, RECIPES, CUSTOM_FOOD, WORKOUT, EMPTY, EXERCISES, WEIGHT, VITALS, BODY, SYNC)
+    }
+}
+
 @Serializable
 data class SuperSettings(
     /** Questionnaire d'accueil terminé. */
@@ -47,10 +70,14 @@ data class SuperSettings(
     val healthConnect: Boolean = false,
     /** Cartes visibles du tableau de bord, dans l'ordre. */
     val dashboard: List<DashCard> = DashCard.defaults,
+    /** Raccourcis du « + » (noms de [PlusAction], gardés en texte : une valeur retirée plus tard n'efface pas les réglages). */
+    val plus: List<String> = PlusAction.defaults.map { it.name },
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,
 )
+
+val SuperSettings.plusActions: List<PlusAction> get() = plus.mapNotNull { n -> PlusAction.entries.firstOrNull { it.name == n } }
 
 /** Données lues dans Health Connect (autres apps) quand la montre n'est pas gérée par SuperHealth. */
 @Serializable

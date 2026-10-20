@@ -366,7 +366,8 @@ fun BarChart(values: List<Double?>, target: List<Double?>, color: Color, modifie
         Canvas(Modifier.fillMaxWidth().height(height)) {
             val n = values.size.coerceAtLeast(1)
             val slot = size.width / n
-            val bw = slot * 0.56f
+            // Barres fines (comme Google Health) : sur une carte large, elles ne deviennent pas des pastilles.
+            val bw = (slot * 0.56f).coerceAtMost(12.dp.toPx())
             values.forEachIndexed { i, v ->
                 val left = i * slot + (slot - bw) / 2
                 drawRoundRect(track, Offset(left, 0f), Size(bw, size.height), androidx.compose.ui.geometry.CornerRadius(bw / 2))

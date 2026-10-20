@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Info
@@ -207,6 +208,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             SectionLabel(tr("Tableau de bord"))
             GroupCard {
                 SettingRow(tr("Personnaliser"), subtitle = trf("%1\$s carte(s) affichée(s)", sh.dashboard.size), icon = Icons.Rounded.Dashboard) { nav.go("dash/edit") }
+                RowDivider()
+                SettingRow(tr("Bouton +"), subtitle = trf("%1\$s raccourci(s)", sh.plus.size), icon = Icons.Rounded.AddCircle) { nav.go("plus/edit") }
             }
 
             SectionLabel(tr("Données"))

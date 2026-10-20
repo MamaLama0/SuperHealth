@@ -42,7 +42,8 @@ object WorkoutApp {
         store = Store(app)
         // Widget rafraîchi à chaque changement de séance, d'historique ou de programme.
         scope.launch {
-            store.state.map { Triple(it.session, it.history.size, it.programs) }.distinctUntilChanged().debounce(300)
+            // L'exercice affiché (current) ne change pas le widget : pas de rafraîchissement à chaque page de la séance.
+            store.state.map { Triple(it.session?.copy(current = 0), it.history.size, it.programs) }.distinctUntilChanged().debounce(300)
                 .collect { Widgets.refresh(app) }
         }
         db = combine(baseDb, store.state.map { it.customExercises }.distinctUntilChanged()) { b, c -> b?.withCustom(c) }

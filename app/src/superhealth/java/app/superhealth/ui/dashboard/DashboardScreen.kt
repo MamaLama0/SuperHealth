@@ -128,11 +128,13 @@ import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import java.time.LocalDate
 import kotlin.math.abs
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlin.math.roundToInt
 
 /** Cartes affichées sur une demi-largeur (rangées deux par deux, à hauteur égale, quand elles se suivent). */
 private val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
-    DashCard.RECOVERY)
+    DashCard.RECOVERY, DashCard.HEART)
 
 /** Couleur et icône de chaque carte (pastille d'en-tête, fond des cartes teintées). */
 private fun DashCard.hue(): Color = when (this) {
@@ -217,6 +219,22 @@ private fun hasSource(c: DashCard): Boolean = when (c) {
     else -> true
 }
 
+/** Mesures des cartes affichées : séries des jours en parallèle (la base de la montre accepte plusieurs lectures). */
+private suspend fun loadHealth(ctx: android.content.Context, cards: List<DashCard>): HealthSnap = kotlinx.coroutines.coroutineScope {
+        val today = LocalDate.now()
+        val metrics = Metric.entries.filter { m -> cards.any { m.dashMetrics(it) } && Bridge.hasSource(m) }
+        val series = metrics.associateWith { m ->
+            val days = if (m == Metric.STEPS || m == Metric.SLEEP || m == Metric.HYDRATION) 7L else 14L
+            (days - 1 downTo 0).map { today.minusDays(it) }.map { d -> async { d to runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull() } }
+        }
+        val cardio = if (DashCard.CARDIO in cards && Bridge.hasSource(Metric.CARDIO_WEEK)) runCatching { HealthRepository.cardioWeek(today) }.getOrNull() else null
+        val energy = if (DashCard.ENERGY in cards && Bridge.hasSource(Metric.BODY_ENERGY)) runCatching { HealthRepository.intraday(Metric.BODY_ENERGY, today) }.getOrDefault(emptyList()) else emptyList()
+        val heart = if (DashCard.HEART in cards && HealthRepository.isSupported(Metric.HEART_RATE)) runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else emptyList()
+        val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(0L).take(4) }.getOrDefault(emptyList()) else emptyList()
+        val perf = if (DashCard.RUNNING in cards || DashCard.RECOVERY in cards) runCatching { app.superhealth.health.data.Performance.snapshot(ctx) }.getOrNull() else null
+        HealthSnap(series.mapValues { it.value.awaitAll() }, cardio, energy, heart, acts, perf)
+}
+
 @Composable
 fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
@@ -227,18 +245,8 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val cards = sh.dashboard
 
     val health by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size) {
-        val today = LocalDate.now()
-        val metrics = Metric.entries.filter { m -> cards.any { m.dashMetrics(it) } && Bridge.hasSource(m) }
-        val series = metrics.associateWith { m ->
-            val days = if (m == Metric.STEPS || m == Metric.SLEEP || m == Metric.HYDRATION) 7L else 14L
-            (days - 1 downTo 0).map { today.minusDays(it) }.map { d -> d to runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull() }
-        }
-        val cardio = if (DashCard.CARDIO in cards && Bridge.hasSource(Metric.CARDIO_WEEK)) runCatching { HealthRepository.cardioWeek(today) }.getOrNull() else null
-        val energy = if (DashCard.ENERGY in cards && Bridge.hasSource(Metric.BODY_ENERGY)) runCatching { HealthRepository.intraday(Metric.BODY_ENERGY, today) }.getOrDefault(emptyList()) else emptyList()
-        val heart = if (DashCard.HEART in cards && HealthRepository.isSupported(Metric.HEART_RATE)) runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else emptyList()
-        val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(0L).take(4) }.getOrDefault(emptyList()) else emptyList()
-        val perf = if (DashCard.RUNNING in cards || DashCard.RECOVERY in cards) runCatching { app.superhealth.health.data.Performance.snapshot(ctx) }.getOrNull() else null
-        value = HealthSnap(series, cardio, energy, heart, acts, perf).also { lastSnap = it }
+        // Lectures de la base de la montre hors du thread principal (elles faisaient saccader l'écran à chaque retour).
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadHealth(ctx, cards) }.also { lastSnap = it }
     }
 
     fun tab(route: String) = nav.navigate(route) {
@@ -496,7 +504,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val today = h.today(Metric.STEPS)
             val goal = s.stepGoal
             Tile(c, tr("Pas"), modifier, onClick = { nav.go("h/metric/STEPS") }, bottom = {
-                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 48.dp, track = softTrack(),
+                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 34.dp, track = softTrack(),
                     labels = series.map { dayLetter(it.first) })
             }) {
                 Value(today?.let { formatNumber(it) } ?: "—", color = c.hue().onContainer())
@@ -537,7 +545,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             val series = h.series[Metric.SLEEP].orEmpty()
             val last = h.latest(Metric.SLEEP)
             Tile(c, tr("Sommeil"), modifier, onClick = { nav.go("h/metric/SLEEP") }, bottom = {
-                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 48.dp, track = softTrack(), labels = series.map { dayLetter(it.first) })
+                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 34.dp, track = softTrack(), labels = series.map { dayLetter(it.first) })
             }) {
                 Value(last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", color = c.hue().onContainer())
                 Sub(series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatValue(Metric.SLEEP, it.average())) })
@@ -588,13 +596,17 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             }
         }
         DashCard.VITALS -> {
-            val tiles = VITALS.filter { Bridge.hasSource(it) }
-            Tile(c, tr("Constantes"), modifier, onClick = null) {
-                tiles.chunked(3).forEachIndexed { i, row ->
-                    if (i > 0) Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { m -> VitalTile(m, h.latest(m), Modifier.weight(1f)) { nav.go("h/metric/${m.name}") } }
-                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            // Seulement les constantes mesurées ces 14 derniers jours (pas de tuiles vides « — »).
+            val tiles = VITALS.filter { Bridge.hasSource(it) && h.series[it].orEmpty().any { p -> p.second != null } }
+            Tile(c, tr("Constantes"), modifier, onClick = null, tinted = false,
+                trailing = tr("14 j")) {
+                if (tiles.isEmpty()) Text(tr("Vos constantes apparaîtront après une nuit avec la montre."), style = MaterialTheme.typography.bodyMedium,
+                    color = Mf.colors.textSecondary)
+                tiles.chunked(2).forEachIndexed { i, row ->
+                    if (i > 0) Spacer(Modifier.height(10.dp))
+                    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        row.forEach { m -> VitalTile(m, h.series[m].orEmpty(), Modifier.weight(1f).fillMaxHeight()) { nav.go("h/metric/${m.name}") } }
+                        repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
@@ -648,9 +660,9 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
 }
 
 /**
- * Fréquence cardiaque : courbe de la journée (mesures de la montre par tranches de 10 min), dernière valeur, plage et
- * FC au repos. « Direct » : la montre envoie ses mesures en temps réel tant que la carte est à l'écran.
- * Sans courbe du jour (Health Connect seul), la FC au repos des 14 derniers jours.
+ * Fréquence cardiaque, en tuile compacte : dernière valeur, FC au repos et petite courbe du jour (montre, par tranches de 10 min).
+ * « Direct » (pastille en haut) : la montre envoie ses mesures en temps réel tant que la carte est à l'écran.
+ * La courbe détaillée est sur l'écran de la mesure.
  */
 @Composable
 private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifier: Modifier) {
@@ -665,58 +677,38 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
     val rest = h.latest(Metric.RESTING_HR)?.second
     val now = livePts.lastOrNull()?.first ?: System.currentTimeMillis()
     val current = livePts.lastOrNull()?.second ?: day.lastOrNull()?.second
-    Tile(c, tr("Fréquence cardiaque"), modifier, onClick = { nav.go("h/metric/HEART_RATE") }) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Value(current?.let { formatNumber(it) } ?: h.latest(Metric.HEART_RATE)?.second?.let { formatNumber(it) } ?: "—", tr("bpm"), big = true,
-                color = hue.onContainer())
-            Spacer(Modifier.weight(1f))
-            if (canLive) {
-                val on = live
-                Row(Modifier.clip(CircleShape).background(if (on) hue else softTrack()).clickable { live = !live; if (!live) livePts.clear() }
-                    .padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Sensors, null, Modifier.size(16.dp), tint = if (on) Color.White else hue.onContainer())
-                    Spacer(Modifier.width(6.dp))
-                    Text(tr("Direct"), style = MaterialTheme.typography.labelLarge, color = if (on) Color.White else hue.onContainer())
-                }
-            }
-        }
-        Sub(listOfNotNull(
-            when {
-                live && livePts.isNotEmpty() -> tr("En direct de la montre")
-                day.isNotEmpty() -> trf("Mesuré à %1\$s", timeOf(day.last().first))
-                else -> null
-            },
-            day.takeIf { it.size >= 2 }?.let { d -> trf("%1\$s–%2\$s bpm", d.minOf { it.second }.roundToInt(), d.maxOf { it.second }.roundToInt()) },
-            rest?.let { trf("Repos %1\$s", formatNumber(it)) },
-        ).joinToString(" · ").ifBlank { null })
-        Spacer(Modifier.height(12.dp))
+    Tile(c, tr("Cœur"), modifier, onClick = { nav.go("h/metric/HEART_RATE") }, bottom = {
         when {
             live -> {
-                // Direct : depuis le premier point reçu (fenêtre qui s'élargit jusqu'à 30 min), pour une courbe qui remplit la carte.
-                val from = maxOf(now - 30 * 60_000L, (livePts.firstOrNull()?.first ?: now) - 20_000L)
-                val pts = livePts.filter { it.first >= from }
-                HeartChart(pts, hue, height = 150.dp, from = from, to = maxOf(now, from + 60_000L), gapMs = 60_000L, live = true,
-                    xLabels = listOf(from to timeOf(from), now to tr("Maint.")))
+                val from = maxOf(now - 10 * 60_000L, (livePts.firstOrNull()?.first ?: now) - 20_000L)
+                HeartChart(livePts.filter { it.first >= from }, hue, height = 40.dp, from = from, to = maxOf(now, from + 60_000L), gapMs = 60_000L,
+                    live = true, showAxis = false)
             }
             day.size >= 2 -> {
                 val start = HealthRepository.startMs(LocalDate.now())
-                HeartChart(day, hue, height = 150.dp, from = start, to = start + 86_400_000L, reference = rest,
-                    xLabels = listOf(0, 6, 12, 18).map { start + it * 3_600_000L to "${it}h" })
+                HeartChart(day, hue, height = 40.dp, from = start, to = start + 86_400_000L, reference = rest, showAxis = false)
             }
             else -> {
                 val pts = h.series[Metric.RESTING_HR].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }
-                    .ifEmpty { h.series[Metric.HEART_RATE].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } } }
-                if (pts.size >= 2) LineChart(listOf(Series(pts, hue, dots = true), Series(pts, hue.copy(alpha = 0.5f))), height = 90.dp,
-                    format = { formatNumber(it) })
-                // Pas encore de courbe du jour : elle arrive à la synchronisation de la montre (ou en direct).
-                else Box(Modifier.fillMaxWidth().height(90.dp).clip(RoundedCornerShape(16.dp)).background(softTrack()), contentAlignment = Alignment.Center) {
-                    Text(tr(if (canLive) "La courbe du jour arrive à la prochaine synchronisation. Touchez Direct pour la voir en temps réel."
-                        else "La courbe du jour arrive à la prochaine synchronisation de la montre."),
-                        style = MaterialTheme.typography.bodySmall, color = hue.onContainer(), modifier = Modifier.padding(horizontal = 16.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                }
+                if (pts.size >= 2) LineChart(listOf(Series(pts, hue)), height = 40.dp, showAxis = false)
             }
         }
+    }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Value(current?.let { formatNumber(it) } ?: h.latest(Metric.HEART_RATE)?.second?.let { formatNumber(it) } ?: "—", tr("bpm"),
+                color = hue.onContainer())
+            Spacer(Modifier.weight(1f))
+            if (canLive) Box(Modifier.size(30.dp).clip(CircleShape).background(if (live) hue else softTrack())
+                .clickable { live = !live; if (!live) livePts.clear() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Sensors, tr("Direct"), Modifier.size(16.dp), tint = if (live) Color.White else hue.onContainer())
+            }
+        }
+        Sub(when {
+            live -> tr("En direct de la montre")
+            rest != null -> trf("Repos %1\$s", formatNumber(rest))
+            day.isNotEmpty() -> trf("Mesuré à %1\$s", timeOf(day.last().first))
+            else -> null
+        })
     }
 }
 
@@ -747,12 +739,78 @@ private fun MacroBar(label: String, value: Double, target: Double, color: Color)
     }
 }
 
+/**
+ * Tuile de constante façon Google Health : icône sur pastille de sa couleur, statut par rapport à vos 14 derniers jours,
+ * dernière valeur, et sa position dans votre plage personnelle (min–max des 14 jours).
+ */
 @Composable
-private fun VitalTile(m: Metric, latest: Pair<LocalDate, Double>?, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(16.dp)).background(m.color.container()).clickable(onClick = onClick).padding(10.dp)) {
-        Icon(m.icon, null, Modifier.size(18.dp), tint = m.color)
-        Spacer(Modifier.height(6.dp))
-        Text(latest?.let { formatWithUnit(m, it.second) } ?: "—", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(tr(m.label), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+private fun VitalTile(m: Metric, series: List<Pair<LocalDate, Double?>>, modifier: Modifier, onClick: () -> Unit) {
+    val pts = series.mapNotNull { it.second }
+    val latest = series.lastOrNull { it.second != null }
+    val v = latest?.second
+    val hue = m.color
+    // Statut : écart à la moyenne personnelle, en écarts-types (comme les « plages personnelles » de Google Health).
+    val status = if (v != null && pts.size >= 5) {
+        val mean = pts.average()
+        val sd = kotlin.math.sqrt(pts.sumOf { (it - mean) * (it - mean) } / pts.size).coerceAtLeast(mean * 0.02)
+        val z = (v - mean) / sd
+        when {
+            z > 1.5 -> tr("Élevé")
+            z < -1.5 -> tr("Bas")
+            else -> tr("Habituel")
+        }
+    } else null
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(hue.container(0.9f)).clickable(onClick = onClick).padding(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(28.dp).clip(CircleShape).background(hue), contentAlignment = Alignment.Center) {
+                Icon(m.icon, null, Modifier.size(16.dp), tint = Color.White)
+            }
+            Spacer(Modifier.weight(1f))
+            status?.let {
+                val usual = it == tr("Habituel")
+                Text(it, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+                    color = if (usual) hue.onContainer() else Color.White, maxLines = 1,
+                    modifier = Modifier.clip(CircleShape).background(if (usual) Mf.colors.card.copy(alpha = 0.7f) else hue).padding(horizontal = 8.dp, vertical = 3.dp))
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(v?.let { formatValue(m, it) } ?: "—", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                color = hue.onContainer(), maxLines = 1)
+            app.superhealth.ui.unitOf(m)?.takeIf { v != null }?.let {
+                Text(" $it", style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1,
+                    modifier = Modifier.padding(bottom = 3.dp))
+            }
+        }
+        Text(tr(m.label), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.weight(1f))
+        if (v != null && pts.max() > pts.min()) {
+            Spacer(Modifier.height(10.dp))
+            RangeBar(pts.min(), pts.max(), v, hue)
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                Text(formatValue(m, pts.min()), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
+                Spacer(Modifier.weight(1f))
+                Text(formatValue(m, pts.max()), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
+            }
+        }
+        if (latest != null && latest.first != LocalDate.now()) Text(app.superhealth.ui.relativeDay(latest.first), style = MaterialTheme.typography.labelSmall,
+            color = Mf.colors.textTertiary, maxLines = 1)
+    }
+}
+
+/** Plage personnelle : piste de min à max, point sur la dernière valeur. */
+@Composable
+private fun RangeBar(min: Double, max: Double, value: Double, hue: Color) {
+    val track = Mf.colors.card.copy(alpha = 0.8f)
+    val ring = Mf.colors.card
+    androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(12.dp)) {
+        val y = size.height / 2
+        val r = size.height / 2
+        drawLine(track, androidx.compose.ui.geometry.Offset(r, y), androidx.compose.ui.geometry.Offset(size.width - r, y), 6.dp.toPx(),
+            cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        val f = if (max > min) ((value - min) / (max - min)).toFloat().coerceIn(0f, 1f) else 0.5f
+        val x = r + f * (size.width - 2 * r)
+        drawCircle(ring, r, androidx.compose.ui.geometry.Offset(x, y))
+        drawCircle(hue, r - 2.dp.toPx(), androidx.compose.ui.geometry.Offset(x, y))
     }
 }

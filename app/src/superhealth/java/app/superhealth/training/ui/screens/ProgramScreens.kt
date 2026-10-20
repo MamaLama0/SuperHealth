@@ -225,7 +225,7 @@ private val WIZARD_ART = mapOf(
 )
 
 @Composable
-private fun Round(icon: androidx.compose.ui.graphics.vector.ImageVector, small: Boolean = false, onClick: () -> Unit) {
+internal fun Round(icon: androidx.compose.ui.graphics.vector.ImageVector, small: Boolean = false, onClick: () -> Unit) {
     Box(Modifier.size(if (small) 32.dp else 52.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, null, Modifier.size(if (small) 18.dp else 26.dp))
     }
@@ -302,8 +302,16 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     val active = st.settings.activeProgramId == id
     var confirm by remember { mutableStateOf<String?>(null) }
     var cycle by remember { mutableIntStateOf(p.cycleIndex.coerceIn(0, p.numCycles - 1)) }
+    var rename by remember { mutableStateOf(false) }
     fun save(np: Program) = vm.saveProgram(np)
-    DetailScaffold(p.name, nav) {
+    if (rename) {
+        var n by remember { mutableStateOf(p.name) }
+        AlertDialog(onDismissRequest = { rename = false }, containerColor = Mf.colors.card, title = { Text(tr("Renommer le programme")) },
+            text = { TextInput(tr("Nom"), n, { n = it }) },
+            confirmButton = { TextButton(onClick = { save(p.copy(name = n.ifBlank { p.name })); rename = false }) { Text(tr("Enregistrer"), color = Mf.colors.accent) } },
+            dismissButton = { TextButton(onClick = { rename = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
+    }
+    DetailScaffold(p.name, nav, actions = { TextButton(onClick = { rename = true }) { Text(tr("Renommer"), color = Mf.colors.accent) } }) {
         Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(ProgramColors[p.color % ProgramColors.size]))
         Spacer(Modifier.height(10.dp))
         Text(trf("%1\$s séances par cycle de %2\$s jours · %3\$s", (p.days.count { !it.isRest }), p.days.size, p.goal.label.tr()), color = Mf.colors.textSecondary)
@@ -354,28 +362,12 @@ fun ProgramDayScreen(vm: AppViewModel, pid: String, dayIndex: Int, nav: NavHostC
     val p = st.programs.firstOrNull { it.id == pid } ?: return
     val d = p.days.getOrNull(dayIndex) ?: return
     var cycle by remember { mutableIntStateOf(p.cycleIndex.coerceIn(0, p.numCycles - 1)) }
-    var editing by remember { mutableStateOf<Int?>(null) }
     var rename by remember { mutableStateOf(false) }
     fun setDay(nd: ProgramDay) = vm.saveProgram(p.copy(days = p.days.toMutableList().also { it[dayIndex] = nd }))
     DetailScaffold(d.name, nav, actions = { TextButton(onClick = { rename = true }) { Text(tr("Renommer"), color = Mf.colors.accent) } }) {
         if (p.numCycles > 1 && d.exercises.any { it.cycles.size > 1 }) ChipChoice((0 until p.numCycles).toList(), cycle, { trf("Cycle %1\$s", (it + 1)) }) { cycle = it }
         if (d.isRest) MfCard { Text(tr("Jour de repos. Ajoutez des exercices pour le transformer en séance."), color = Mf.colors.textSecondary) }
-        d.exercises.forEachIndexed { i, pe ->
-            val e = db.exercise(pe.exerciseId)
-            val t = Generator.targetsFor(pe, cycle)
-            MfCard(Modifier.padding(vertical = 5.dp), onClick = { editing = i }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ExerciseThumb(e, 44.dp, 10.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(e?.name ?: "?", style = MaterialTheme.typography.titleSmall, maxLines = 2)
-                        Text(trf("%1\$s · repos %2\$s", (targetSummary(t)), (restLabel(t.firstOrNull()?.restSec ?: 120))), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-                    }
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
-                }
-            }
-        }
-        PillButton(tr("Ajouter des exercices"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false, icon = Icons.Rounded.Add) { nav.navigate("picker/${Picker.DAY}?target=${pid}:${dayIndex}") }
+        PlanExercises(vm, db, "${pid}:${dayIndex}", d.exercises, cycle, nav)
         if (!d.isRest) {
             PillButton(tr("Commencer cette séance"), Modifier.fillMaxWidth().padding(top = 8.dp), icon = Icons.Rounded.PlayArrow) {
                 if (st.session == null) vm.startProgramDay(p, dayIndex, cycle); nav.navigate("session")
@@ -383,12 +375,10 @@ fun ProgramDayScreen(vm: AppViewModel, pid: String, dayIndex: Int, nav: NavHostC
             Text(tr("Transformer en jour de repos"), Modifier.fillMaxWidth().clickable { setDay(d.copy(exercises = emptyList(), name = tr("Repos"))) }.padding(14.dp),
                 color = Color(0xFFE11900), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
-    }
-    editing?.let { i ->
-        TargetSheet(d.exercises[i], cycle, db.exercise(d.exercises[i].exerciseId)?.name ?: "", onDismiss = { editing = null },
-            onSave = { ne -> setDay(d.copy(exercises = d.exercises.toMutableList().also { it[i] = ne })); editing = null },
-            onRemove = { setDay(d.copy(exercises = d.exercises.filterIndexed { j, _ -> j != i })); editing = null },
-            onUp = if (i > 0) ({ setDay(d.copy(exercises = d.exercises.toMutableList().also { java.util.Collections.swap(it, i, i - 1) })); editing = null }) else null)
+        if (p.days.size > 1) Text(tr("Supprimer ce jour"), Modifier.fillMaxWidth().clickable {
+            vm.saveProgram(p.copy(days = p.days.filterIndexed { i, _ -> i != dayIndex }, dayIndex = p.dayIndex.coerceAtMost(p.days.size - 2)))
+            nav.popBackStack()
+        }.padding(14.dp), color = Color(0xFFE11900), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
     if (rename) {
         var n by remember { mutableStateOf(d.name) }

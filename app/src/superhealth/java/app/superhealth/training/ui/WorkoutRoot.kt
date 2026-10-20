@@ -82,7 +82,11 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 
 /** Modes du sélecteur d'exercices. */
-object Picker { const val SESSION = "session"; const val SWAP = "swap"; const val DAY = "day"; const val BROWSE = "browse" }
+object Picker {
+    const val SESSION = "session"; const val SWAP = "swap"; const val DAY = "day"; const val BROWSE = "browse"
+    /** Remplacer un exercice d'un jour de programme ou d'une séance de bibliothèque (cible « liste|index »). */
+    const val SWAP_PLAN = "swapplan"
+}
 
 /**
  * Routes du module entraînement dans la navigation de SuperHealth. L'onglet « activities » (programme, autres activités)
@@ -92,6 +96,9 @@ fun NavGraphBuilder.trainingGraph(vm: AppViewModel, nav: NavHostController) {
     composable("session") { SessionScreen(vm, nav) }
     composable("complete") { CompletedScreen(vm, nav, onClose = { vm.completed.value = null; nav.popBackStack() }) }
     composable("wizard") { ProgramWizardScreen(vm, nav) }
+    composable("custom/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
+        app.superhealth.training.ui.screens.CustomWorkoutScreen(vm, it.arguments!!.getString("id")!!, nav)
+    }
     composable("history") { HistoryScreen(vm, nav) }
     composable("levels") { LevelsScreen(vm, nav) }
     composable("t/insights") { DashboardScreen(vm, nav) }

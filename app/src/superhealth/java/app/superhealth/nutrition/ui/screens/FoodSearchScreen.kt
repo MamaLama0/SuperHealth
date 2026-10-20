@@ -172,7 +172,7 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                 Icon(Icons.Rounded.CheckCircle, null, Modifier.size(20.dp), tint = app.superhealth.ui.theme.HealthHues.Activity)
                 Spacer(Modifier.width(8.dp))
                 Text(n, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                PillButton(if (added > 1) trf("Terminé (%1\$s)", added) else tr("Terminé"), strong = true, onClick = onDone)
+                PillButton(if (added > 1) trf("Fini (%1\$s)", added) else tr("Fini"), strong = true, onClick = onDone)
             }
         }
         ChipChoice(SearchTab.entries.filter { !ingredient || it != SearchTab.QUICK }, tab, { it.label.tr() },

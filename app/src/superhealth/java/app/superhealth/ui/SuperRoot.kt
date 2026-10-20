@@ -27,6 +27,10 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
+import app.superhealth.plusActions
+import app.superhealth.PlusAction
+import androidx.compose.material.icons.rounded.LocalDrink
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Close
@@ -126,6 +130,7 @@ fun SuperRoot(vm: SuperViewModel) {
     val current = back?.destination?.route
     val isTab = isTabRoute(current)
     var plus by remember { mutableStateOf(false) }
+    var plusAction by remember { mutableStateOf<String?>(null) }
     var logSheet by remember { mutableStateOf(false) }
 
     // Fin de séance de musculation : écran « séance terminée ».
@@ -164,6 +169,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("activities") { WorkoutTabScreen(vm.training, nav) { OtherActivities(vm, nav) } }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
+            composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
             composable("h/metric/{metric}", listOf(navArgument("metric") { type = NavType.StringType })) {
                 val m = runCatching { Metric.valueOf(it.arguments!!.getString("metric")!!) }.getOrNull() ?: Metric.STEPS
                 MetricScreen(vm, nav, m)
@@ -188,18 +194,30 @@ fun SuperRoot(vm: SuperViewModel) {
                 launchSingleTop = true
                 restoreState = true
             }
-        }, onPlus = { plus = true })
+        }, onPlus = {
+            // Un seul raccourci choisi : le « + » l'ouvre directement.
+            val single = sh.plusActions.mapNotNull { it.resolve(vm) }.singleOrNull()
+            if (single != null) plusAction = single.action else plus = true
+        })
     }
 
-    if (plus) PlusSheet(vm, onDismiss = { plus = false }) { action ->
-        plus = false
+    fun runAction(action: String) {
         when (action) {
+            "water" -> {
+                vm.log(Metric.HYDRATION, 250.0)
+                android.widget.Toast.makeText(nav.context, tr("250 ml d'eau ajoutés"), android.widget.Toast.LENGTH_SHORT).show()
+            }
             "log_health" -> logSheet = true
             "sync" -> vm.syncNow(nav.context)
             "next" -> vm.training.activeProgram()?.let { p -> vm.training.startProgramDay(p, p.dayIndex, p.cycleIndex); nav.navigate("session") }
             "empty" -> { vm.training.startEmpty(); nav.navigate("session") }
-            else -> nav.navigate(action)
+            else -> nav.go(action)
         }
+    }
+    LaunchedEffect(plusAction) { plusAction?.let { plusAction = null; runAction(it) } }
+    if (plus) PlusSheet(vm, onDismiss = { plus = false }, onEdit = { plus = false; nav.go("plus/edit") }) { action ->
+        plus = false
+        runAction(action)
     }
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
 }
@@ -242,49 +260,67 @@ private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: ()
 
 private data class QuickAction(val label: String, val icon: ImageVector, val action: String)
 
-/** « + » : les actions principales de chaque module, regroupées par module. */
+/** Raccourci du « + » tel qu'affiché : libellé, icône et action ; null quand il n'a pas de sens maintenant. */
+private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
+    val ns = vm.nutrition.settings.value
+    val st = vm.training.state.value
+    val sh = vm.settings.value
+    return when (this) {
+        PlusAction.SEARCH -> QuickAction("Rechercher", Icons.Rounded.Search, "search/${SearchMode.SEARCH}/-1")
+        PlusAction.SCAN -> QuickAction("Code-barres", Icons.Rounded.QrCodeScanner, "search/${SearchMode.SCAN}/-1")
+        PlusAction.QUICK -> QuickAction("Ajout rapide", Icons.Rounded.Bolt, "search/${SearchMode.QUICK}/-1")
+        PlusAction.AI -> if (ns.aiEnabled) QuickAction("Décrire (IA)", Icons.Rounded.AutoAwesome, "ai") else null
+        PlusAction.RECIPES -> QuickAction("Recettes", Icons.AutoMirrored.Rounded.MenuBook, "search/${SearchMode.RECIPES}/-1")
+        PlusAction.CUSTOM_FOOD -> QuickAction("Aliment perso", Icons.Rounded.EditNote, "search/${SearchMode.CREATE}/-1")
+        PlusAction.WORKOUT -> {
+            val next = vm.training.activeProgram()?.let { p -> p.days.getOrNull(p.dayIndex)?.takeIf { !it.isRest }?.name }
+            when {
+                st.session != null -> QuickAction("Reprendre", Icons.Rounded.PlayArrow, "session")
+                next != null -> QuickAction(next, Icons.Rounded.PlayArrow, "next")
+                else -> null
+            }
+        }
+        PlusAction.EMPTY -> QuickAction("Séance vide", Icons.Rounded.Bolt, "empty")
+        PlusAction.EXERCISES -> QuickAction("Exercices", Icons.AutoMirrored.Rounded.PlaylistAdd, "picker/${Picker.BROWSE}")
+        PlusAction.PROGRAM_NEW -> QuickAction("Nouveau programme", Icons.Rounded.AutoAwesome, "wizard")
+        PlusAction.WEIGHT -> QuickAction("Pesée", Icons.Rounded.MonitorWeight, "weight")
+        PlusAction.WATER -> QuickAction("Verre d'eau (250 ml)", Icons.Rounded.LocalDrink, "water")
+        PlusAction.VITALS -> QuickAction("Hydratation et constantes", Icons.Rounded.WaterDrop, "log_health")
+        PlusAction.BODY -> QuickAction("Mesures", Icons.Rounded.Straighten, "body")
+        PlusAction.SYNC -> if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null
+    }
+}
+
+/** « + » : les raccourcis choisis (Réglages du « + »), regroupés par module, dans l'ordre choisi. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onAction: (String) -> Unit) {
-    val ns by vm.nutrition.settings.collectAsState()
-    val st by vm.training.state.collectAsState()
+private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> Unit, onAction: (String) -> Unit) {
     val sh by vm.settings.collectAsState()
-    val next = vm.training.activeProgram()?.let { p -> p.days.getOrNull(p.dayIndex)?.takeIf { !it.isRest }?.name }
-    val nutrition = listOfNotNull(
-        QuickAction("Rechercher", Icons.Rounded.Search, "search/${SearchMode.SEARCH}/-1"),
-        QuickAction("Code-barres", Icons.Rounded.QrCodeScanner, "search/${SearchMode.SCAN}/-1"),
-        QuickAction("Ajout rapide", Icons.Rounded.Bolt, "search/${SearchMode.QUICK}/-1"),
-        if (ns.aiEnabled) QuickAction("Décrire (IA)", Icons.Rounded.AutoAwesome, "ai") else null,
-        QuickAction("Recettes", Icons.AutoMirrored.Rounded.MenuBook, "search/${SearchMode.RECIPES}/-1"),
-        QuickAction("Aliment perso", Icons.Rounded.EditNote, "search/${SearchMode.CREATE}/-1"),
-    )
-    val training = listOfNotNull(
-        when {
-            st.session != null -> QuickAction("Reprendre", Icons.Rounded.PlayArrow, "session")
-            next != null -> QuickAction(next, Icons.Rounded.PlayArrow, "next")
-            else -> null
-        },
-        QuickAction("Séance vide", Icons.Rounded.Bolt, "empty"),
-        QuickAction("Exercices", Icons.AutoMirrored.Rounded.PlaylistAdd, "picker/${Picker.BROWSE}"),
-    )
-    val health = listOfNotNull(
-        QuickAction("Pesée", Icons.Rounded.MonitorWeight, "weight"),
-        QuickAction("Hydratation et constantes", Icons.Rounded.WaterDrop, "log_health"),
-        QuickAction("Mesures", Icons.Rounded.Straighten, "body"),
-        if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null,
-    )
+    vm.nutrition.settings.collectAsState()
+    vm.training.state.collectAsState()
+    val chosen = sh.plusActions
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Mf.colors.background, dragHandle = null) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Ajouter"), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                Box(Modifier.padding(end = 8.dp).size(36.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onEdit), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Tune, tr("Personnaliser"), Modifier.size(20.dp))
+                }
                 Box(Modifier.size(36.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.Close, tr("Fermer"), Modifier.size(20.dp))
                 }
             }
-            ActionGroup(tr("Nutrition"), nutrition, onAction)
-            ActionGroup(tr("Entraînement"), training, onAction)
-            ActionGroup(tr("Santé"), health, onAction)
+            app.superhealth.DashCard.Section.entries.forEach { section ->
+                val actions = chosen.filter { it.section == section }.mapNotNull { it.resolve(vm) }
+                if (actions.isNotEmpty()) ActionGroup(tr(when (section) {
+                    app.superhealth.DashCard.Section.NUTRITION -> "Nutrition"
+                    app.superhealth.DashCard.Section.TRAINING -> "Entraînement"
+                    app.superhealth.DashCard.Section.HEALTH -> "Santé"
+                }), actions, onAction)
+            }
+            if (chosen.isEmpty()) Text(tr("Aucun raccourci : touchez l'icône de réglage pour en choisir."), style = MaterialTheme.typography.bodyMedium,
+                color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 16.dp))
             Spacer(Modifier.height(12.dp))
         }
     }

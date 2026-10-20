@@ -230,6 +230,17 @@ android {
         //    proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         //}
 
+        // SuperHealth au quotidien : même identifiant et même clé que le build debug (mise à jour sans perte de données),
+        // mais non débogable pour qu'Android compile et optimise le code (Compose 2 à 3 fois plus fluide).
+        perf {
+            initWith debug
+            debuggable false
+            profileable true
+            minifyEnabled false
+            signingConfig = signingConfigs.debug
+            matchingFallbacks = ['debug']
+        }
+
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
