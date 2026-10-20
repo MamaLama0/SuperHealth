@@ -438,7 +438,15 @@ fun OnboardingScreen(svm: SuperViewModel) {
                         Feature(Icons.Rounded.Restaurant, tr("Repas, pesées et séances partagés avec vos autres apps"))
                         Spacer(Modifier.height(16.dp))
                         PillButton(tr(if (health) tr("Connecté") else tr("Connecter")), Modifier.fillMaxWidth(), icon = if (health) Icons.Rounded.CheckCircle else null) {
-                            if (!health) askHealth.launch(HealthConnectHub.PERMISSIONS)
+                            if (!health) when (HealthConnectHub.status(ctx)) {
+                                // Sans Health Connect (Android 13 et moins sans l'app), la demande plantait l'app.
+                                HealthConnectHub.Status.AVAILABLE -> runCatching { askHealth.launch(HealthConnectHub.PERMISSIONS) }
+                                HealthConnectHub.Status.NEEDS_UPDATE -> runCatching {
+                                    ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=com.google.android.apps.healthdata")))
+                                }
+                                HealthConnectHub.Status.UNAVAILABLE -> android.widget.Toast.makeText(ctx, tr("Health Connect n'est pas disponible sur ce téléphone"),
+                                    android.widget.Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                     Step.GOAL -> Page(st, tr("Quel est votre objectif ?"), null) {
@@ -523,7 +531,8 @@ fun OnboardingScreen(svm: SuperViewModel) {
                             PillButton(if (paired) tr("Montre associée") else tr("Rechercher ma montre"), Modifier.fillMaxWidth(),
                                 icon = if (paired) Icons.Rounded.CheckCircle else Icons.Rounded.Bluetooth) {
                                 if (!Watch.enabled) Watch.setEnabled(true)
-                                askWatchPermissions.launch(Intent(ctx, PermissionsActivity::class.java))
+                                runCatching { askWatchPermissions.launch(Intent(ctx, PermissionsActivity::class.java)) }
+                                    .onFailure { runCatching { pairWatch.launch(Intent(ctx, DiscoveryActivityV2::class.java)) } }
                             }
                             Text(tr("Compatible avec les montres prises en charge par Gadgetbridge (Garmin, Amazfit, Xiaomi, Huawei, Pebble…)."),
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))

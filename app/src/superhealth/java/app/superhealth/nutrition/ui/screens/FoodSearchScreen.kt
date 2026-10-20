@@ -66,6 +66,7 @@ import app.superhealth.nutrition.data.Repository
 import app.superhealth.nutrition.ui.RecipeDraft
 import app.superhealth.nutrition.ui.num
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
 import app.superhealth.nutrition.data.OpenFoodFacts
 import app.superhealth.nutrition.data.SwissFoods
 import app.superhealth.nutrition.domain.Macros
@@ -103,8 +104,19 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
     var selected by remember { mutableStateOf<FoodEntity?>(null) }
     var createBarcode by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    /** Ajouts faits depuis l'ouverture : l'écran reste ouvert pour enchaîner les aliments (comme MacroFactor). */
+    var added by remember { mutableStateOf(0) }
+    var notice by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val focus = remember { FocusRequester() }
+    val pendingNotice by vm.logNotice.collectAsState()
+    LaunchedEffect(pendingNotice) { pendingNotice?.let { notice = it; added++; vm.logNotice.value = null } }
+    /** Après un ajout : confirmation, recherche vidée et prête pour l'aliment suivant. */
+    fun afterAdd(text: String) {
+        added++; notice = text; message = null; query = ""
+        if (tab != SearchTab.ALL) tab = SearchTab.ALL
+        runCatching { focus.requestFocus() }
+    }
 
     val scanner = rememberLauncherForActivityResult(ScanContract()) { result ->
         val code = result.contents ?: return@rememberLauncherForActivityResult
@@ -150,7 +162,18 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                 }
                 if (query.isNotEmpty()) Icon(Icons.Rounded.Close, tr("Effacer"), Modifier.size(20.dp).clickable { query = "" }, tint = Mf.colors.textSecondary)
             }
+            if (s.aiEnabled && !ingredient) IconButton(onClick = { onNav("ai") }) { Icon(Icons.Rounded.AutoAwesome, tr("Décrire avec l'IA")) }
             IconButton(onClick = { scan() }) { Icon(Icons.Rounded.QrCodeScanner, tr("Scanner")) }
+        }
+        notice?.let { n ->
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                .background(app.superhealth.ui.theme.HealthHues.Activity.copy(alpha = 0.16f)).padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.CheckCircle, null, Modifier.size(20.dp), tint = app.superhealth.ui.theme.HealthHues.Activity)
+                Spacer(Modifier.width(8.dp))
+                Text(n, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                PillButton(if (added > 1) trf("Terminé (%1\$s)", added) else tr("Terminé"), strong = true, onClick = onDone)
+            }
         }
         ChipChoice(SearchTab.entries.filter { !ingredient || it != SearchTab.QUICK }, tab, { it.label.tr() },
             Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) { tab = it }
@@ -166,7 +189,10 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
             SearchTab.MINE -> LibraryList(vm, s, favoritesOnly = false, onPick = { selected = it })
             SearchTab.RECIPES -> RecipeList(vm, s, onPick = { selected = it }, onNew = { vm.recipeDraft.value = RecipeDraft(); onNav("recipe") },
                 onAi = if (s.aiEnabled) ({ onNav("aiimport/recipe") }) else null)
-            SearchTab.QUICK -> QuickAdd(s) { name, m -> vm.launch { quickAdd(day, minute, name, m) }; onDone() }
+            SearchTab.QUICK -> QuickAdd(s) { name, m ->
+                vm.launch { quickAdd(day, minute, name, m) }
+                afterAdd(trf("%1\$s ajouté au journal", name.ifBlank { tr("Ajout rapide") }))
+            }
             SearchTab.CREATE -> CreateFood(s, createBarcode, onAi = if (s.aiEnabled) ({ onNav("aiimport/label") }) else null) { food ->
                 scope.launch { selected = vm.repo.saveFood(food); createBarcode = null; message = null }
             }
@@ -179,7 +205,9 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
             food, target, s, onDismiss = { selected = null },
             onToggleFavorite = if (food.id != 0L) ({ vm.launch { foods.setFavorite(food.id, !food.favorite) } }) else null,
             addLabel = if (ingredient) tr("Ajouter à la recette") else tr("Ajouter au journal"),
-            onExplode = if (isRecipe && !ingredient) { g -> scope.launch { vm.repo.logRecipeIngredients(day, minute, food, g); selected = null; onDone() } } else null,
+            onExplode = if (isRecipe && !ingredient) { g ->
+                scope.launch { vm.repo.logRecipeIngredients(day, minute, food, g); selected = null; afterAdd(trf("%1\$s ajouté au journal", food.name)) }
+            } else null,
             onEdit = if (isRecipe && !ingredient) {
                 {
                     scope.launch {
@@ -192,6 +220,7 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                     }
                 }
             } else null,
+            lastGrams = if (ingredient) null else ({ if (food.id != 0L) vm.repo.entries.lastGrams(food.id) else vm.repo.entries.lastGramsByName(food.name) }),
         ) { grams ->
             scope.launch {
                 val saved = if (food.id == 0L) vm.repo.saveFood(food) else food
@@ -201,9 +230,13 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                         kcal = saved.kcal100 * f, protein = saved.protein100 * f, fat = saved.fat100 * f, carbs = saved.carbs100 * f,
                         fiber = saved.fiber100 * f, microsJson = Micros.scale(saved.microsJson, f))
                     vm.recipeDraft.value = (vm.recipeDraft.value ?: RecipeDraft()).let { it.copy(items = it.items + item) }
-                } else vm.repo.logFood(day, minute, saved, grams)
-                selected = null
-                onDone()
+                    selected = null
+                    onDone()
+                } else {
+                    vm.repo.logFood(day, minute, saved, grams)
+                    selected = null
+                    afterAdd(trf("%1\$s ajouté au journal (%2\$s g)", saved.name, num(grams, 0)))
+                }
             }
         }
     }

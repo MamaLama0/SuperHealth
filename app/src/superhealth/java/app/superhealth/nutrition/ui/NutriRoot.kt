@@ -121,7 +121,13 @@ fun NavGraphBuilder.nutritionGraph(vm: AppViewModel, nav: NavHostController) {
         AiImportScreen(vm, recipe = it.arguments?.getString("mode") == "recipe", onBack = { nav.popBackStack() },
             onSettings = { nav.navigate("aisettings") }, onRecipe = { nav.navigate("recipe") { popUpTo("aiimport/{mode}") { inclusive = true } } })
     }
-    composable("ai") { AiLogScreen(vm, onBack = { nav.popBackStack() }, onSettings = { nav.navigate("aisettings") }) }
+    composable("ai") {
+        // Repas ajouté : retour à la recherche d'aliments (comme après un aliment ou un code-barres), pour continuer à journaliser.
+        AiLogScreen(vm, onBack = { nav.popBackStack() }, onSettings = { nav.navigate("aisettings") }, onAdded = {
+            if (nav.previousBackStackEntry?.destination?.route?.startsWith("search/") == true) nav.popBackStack()
+            else nav.navigate("search/${SearchMode.SEARCH}/-1") { popUpTo("ai") { inclusive = true } }
+        })
+    }
     composable("aisettings") { AiSettingsScreen(vm, onBack = { nav.popBackStack() }) }
     composable("recipe") { RecipeEditScreen(vm, onBack = { nav.popBackStack() }, onAddIngredient = { r -> nav.navigate(r) }) }
 }

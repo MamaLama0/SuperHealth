@@ -93,7 +93,7 @@ object Bridge {
         val days = (0L until 14L).map { today.minusDays(it) }
         if (HealthRepository.isSupported(Metric.STEPS)) {
             val rows = days.mapNotNull { d ->
-                HealthRepository.dayValue(ctx, Metric.STEPS, d)?.let { BodyMetricEntity(d.toEpochDay(), Repository.STEPS, it) }
+                steps(ctx, d)?.let { BodyMetricEntity(d.toEpochDay(), Repository.STEPS, it) }
             }
             if (rows.isNotEmpty()) repo.body.upsertMetrics(rows)
         }
@@ -104,8 +104,34 @@ object Bridge {
         if (weights.isNotEmpty()) repo.weighIns.upsertAll(weights)
     }
 
+    /**
+     * Pas par heure du jour [date] : pour chaque heure, le plus grand compte entre la montre et les autres sources
+     * (téléphone via Health Connect). Les heures passées sans la montre comptent donc les pas du téléphone, et une heure
+     * où les deux comptaient n'est pas comptée deux fois.
+     */
+    suspend fun hourlySteps(ctx: Context, date: LocalDate): List<app.superhealth.health.data.Point> {
+        val from = HealthRepository.startMs(date)
+        val to = HealthRepository.endMs(date)
+        val watch = if (Watch.enabled && HealthRepository.isSupported(Metric.STEPS))
+            runCatching { HealthRepository.intraday(Metric.STEPS, date) }.getOrDefault(emptyList()).associate { it.timestampMs to it.value }
+        else emptyMap()
+        val phone = SuperPrefs.hc.value.stepsHourly.filterKeys { it in from until to }
+        return (watch.keys + phone.keys).sorted().map { h -> app.superhealth.health.data.Point(h, maxOf(watch[h] ?: 0.0, phone[h] ?: 0.0)) }
+    }
+
+    /** Total de pas du jour : fusion montre + téléphone heure par heure, sinon total de la montre ou de Health Connect. */
+    suspend fun steps(ctx: Context, date: LocalDate): Double? {
+        val watchTotal = if (Watch.enabled && HealthRepository.isSupported(Metric.STEPS)) HealthRepository.dayValue(ctx, Metric.STEPS, date) else null
+        val hasPhone = SuperPrefs.hc.value.stepsHourly.keys.any { it in HealthRepository.startMs(date) until HealthRepository.endMs(date) }
+        if (!hasPhone) return watchTotal
+            ?: NutriApp.repository.body.metrics().firstOrNull { it.epochDay == date.toEpochDay() && it.metric == Repository.STEPS }?.value
+        val merged = hourlySteps(ctx, date).sumOf { it.value }
+        return maxOf(merged, watchTotal ?: 0.0).takeIf { it > 0 }
+    }
+
     /** Valeur santé du jour : montre gérée par SuperHealth, sinon dernière lecture Health Connect. */
     suspend fun healthValue(ctx: Context, metric: Metric, date: LocalDate): Double? {
+        if (metric == Metric.STEPS) return steps(ctx, date)
         if (Watch.enabled && HealthRepository.isSupported(metric)) HealthRepository.dayValue(ctx, metric, date)?.let { return it }
         val hc = SuperPrefs.hc.value
         val d = date.toEpochDay()

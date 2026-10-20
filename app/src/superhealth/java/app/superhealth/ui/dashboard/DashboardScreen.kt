@@ -236,7 +236,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
         val cardio = if (DashCard.CARDIO in cards && Bridge.hasSource(Metric.CARDIO_WEEK)) runCatching { HealthRepository.cardioWeek(today) }.getOrNull() else null
         val energy = if (DashCard.ENERGY in cards && Bridge.hasSource(Metric.BODY_ENERGY)) runCatching { HealthRepository.intraday(Metric.BODY_ENERGY, today) }.getOrDefault(emptyList()) else emptyList()
         val heart = if (DashCard.HEART in cards && HealthRepository.isSupported(Metric.HEART_RATE)) runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else emptyList()
-        val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(System.currentTimeMillis() - 30 * 86_400_000L) }.getOrDefault(emptyList()) else emptyList()
+        val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(0L).take(4) }.getOrDefault(emptyList()) else emptyList()
         val perf = if (DashCard.RUNNING in cards || DashCard.RECOVERY in cards) runCatching { app.superhealth.health.data.Performance.snapshot(ctx) }.getOrNull() else null
         value = HealthSnap(series, cardio, energy, heart, acts, perf).also { lastSnap = it }
     }
@@ -602,7 +602,7 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
         DashCard.ACTIVITIES -> {
             val ctx = LocalContext.current
             Tile(c, tr("Dernières activités"), modifier, onClick = { nav.go("h/activities") }, padding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 4.dp)) {
-                if (h.activities.isEmpty()) Text(tr("Aucune activité ces 30 derniers jours."), style = MaterialTheme.typography.bodyMedium,
+                if (h.activities.isEmpty()) Text(tr("Aucune activité pour l'instant."), style = MaterialTheme.typography.bodyMedium,
                     color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
                 h.activities.take(4).forEach { act -> ActivityRow(act, horizontal = 0.dp, chip = softTrack()) { openActivity(ctx, nav, act) } }
             }

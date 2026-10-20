@@ -99,6 +99,28 @@ private fun PlateRow.macros(): Macros {
 }
 
 /** Réduit une image à 1024 px max (côté long) en JPEG 85 % avant envoi au modèle. */
+/**
+ * Prise de photo par l'appareil photo du système. L'app déclare la permission CAMERA (scanner de code-barres) :
+ * Android refuse alors ACTION_IMAGE_CAPTURE (SecurityException, l'app plantait) tant qu'elle n'est pas accordée.
+ * Elle est donc demandée d'abord ; sans app photo, rien ne se passe au lieu de planter.
+ */
+@Composable
+private fun rememberCamera(uri: Uri, onTaken: () -> Unit): () -> Unit {
+    val ctx = LocalContext.current
+    val take = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) onTaken() }
+    fun launch() = runCatching { take.launch(uri) }.onFailure {
+        android.widget.Toast.makeText(ctx, tr("Appareil photo indisponible"), android.widget.Toast.LENGTH_SHORT).show()
+    }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launch()
+        else android.widget.Toast.makeText(ctx, tr("Autorisez l'appareil photo pour prendre une photo"), android.widget.Toast.LENGTH_LONG).show()
+    }
+    return {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) launch()
+        else ask.launch(android.Manifest.permission.CAMERA)
+    }
+}
+
 private fun loadJpeg(ctx: Context, uri: Uri): ByteArray? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
@@ -115,7 +137,7 @@ private fun loadJpeg(ctx: Context, uri: Uri): ByteArray? = runCatching {
  * Journalisation par IA (« AI Describe » / photo de MacroFactor) : description et/ou photo → assiette à vérifier → journal.
  */
 @Composable
-fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit) {
+fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit, onAdded: () -> Unit = onBack) {
     val ctx = LocalContext.current
     val cfg by vm.repo.prefs.ai.collectAsState()
     val s by vm.settings.collectAsState()
@@ -129,9 +151,7 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit) {
     val photoFile = remember { File(ctx.cacheDir, "ai/photo.jpg").also { it.parentFile?.mkdirs() } }
     val photoUri = remember { FileProvider.getUriForFile(ctx, ctx.packageName + ".files", photoFile) }
 
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) scope.launch { image = withContext(Dispatchers.IO) { loadJpeg(ctx, photoUri) } }
-    }
+    val camera = rememberCamera(photoUri) { scope.launch { image = withContext(Dispatchers.IO) { loadJpeg(ctx, photoUri) } } }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) scope.launch { image = withContext(Dispatchers.IO) { loadJpeg(ctx, uri) } }
     }
@@ -144,7 +164,7 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(tr("Clé API requise"), style = MaterialTheme.typography.titleMedium)
-                    Text(tr("Ajoutez une clé API (Google AI Studio gratuit, OpenRouter…)."), style = MaterialTheme.typography.bodySmall,
+                    Text(tr("Ajoutez une clé API (OpenRouter ou un fournisseur compatible OpenAI)."), style = MaterialTheme.typography.bodySmall,
                         color = Mf.colors.textSecondary)
                 }
             }
@@ -168,7 +188,7 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit) {
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PillButton(tr("Photo"), strong = false, icon = Icons.Rounded.CameraAlt) { camera.launch(photoUri) }
+                    PillButton(tr("Photo"), strong = false, icon = Icons.Rounded.CameraAlt) { camera() }
                     PillButton(tr("Galerie"), strong = false, icon = Icons.Rounded.PhotoLibrary) {
                         gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }
@@ -226,7 +246,8 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit) {
                                 kcal = mm.kcal, protein = mm.protein, fat = mm.fat, carbs = mm.carbs, fiber = r.item.fiber * k))
                         }
                     }
-                    onBack()
+                    vm.logNotice.value = trf("%1\$s élément(s) ajouté(s) au journal", rows.size)
+                    onAdded()
                 }
             }
             PillButton(tr("Recommencer"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) { plate = emptyList(); stage = null }
@@ -288,11 +309,10 @@ fun AiSettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
         MfCard {
             Text(tr("Fournisseur"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
             ChipChoice(AiProvider.entries, c.provider, { it.label.tr() }) { c = c.copy(provider = it, model = "", baseUrl = "") }
-            Text(c.provider.keyHelp, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+            Text(tr(c.provider.keyHelp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
             TextInput(tr("Clé API"), c.apiKey, { c = c.copy(apiKey = it.trim()) }, placeholder = tr("Collez votre clé"))
             TextInput(tr("Modèle"), c.model, { c = c.copy(model = it.trim()) }, placeholder = c.provider.defaultModel.ifBlank { tr("nom du modèle") })
             val presets = when (c.provider) {
-                AiProvider.GEMINI -> listOf("gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3.1-flash-lite-preview")
                 AiProvider.OPENROUTER -> listOf("google/gemini-2.5-flash-lite", "openai/gpt-4o-mini", "openrouter/free")
                 AiProvider.CUSTOM -> emptyList()
             }
@@ -335,9 +355,7 @@ fun AiImportScreen(vm: AppViewModel, recipe: Boolean, onBack: () -> Unit, onSett
     var label by remember { mutableStateOf<AiFood.Label?>(null) }
     val photoFile = remember { File(ctx.cacheDir, "ai/import.jpg").also { it.parentFile?.mkdirs() } }
     val photoUri = remember { FileProvider.getUriForFile(ctx, ctx.packageName + ".files", photoFile) }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) scope.launch { image = withContext(Dispatchers.IO) { loadJpeg(ctx, photoUri) } }
-    }
+    val camera = rememberCamera(photoUri) { scope.launch { image = withContext(Dispatchers.IO) { loadJpeg(ctx, photoUri) } } }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) scope.launch { image = withContext(Dispatchers.IO) { loadJpeg(ctx, uri) } }
     }
@@ -363,7 +381,7 @@ fun AiImportScreen(vm: AppViewModel, recipe: Boolean, onBack: () -> Unit, onSett
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PillButton(tr("Photo"), strong = false, icon = Icons.Rounded.CameraAlt) { camera.launch(photoUri) }
+                    PillButton(tr("Photo"), strong = false, icon = Icons.Rounded.CameraAlt) { camera() }
                     PillButton(tr("Galerie"), strong = false, icon = Icons.Rounded.PhotoLibrary) {
                         gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }

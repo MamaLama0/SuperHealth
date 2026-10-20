@@ -229,6 +229,37 @@ object HealthConnectHub {
             client.readRecords(ReadRecordsRequest(ExerciseSessionRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
                 .map { HcSession(it.metadata.id, it.exerciseType, it.title, it.startTime.toEpochMilli(), it.endTime.toEpochMilli(), it.metadata.dataOrigin.packageName) }
         else prev.sessions
-        return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start })
+        val steps = if (read(StepsRecord::class) in granted) runCatching { stepsHourly(client, range, me) }.getOrDefault(prev.stepsHourly)
+        else prev.stepsHourly
+        return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps)
+    }
+
+    /**
+     * Pas des autres sources par heure (le podomètre du téléphone est enregistré par Android lui-même dans Health Connect).
+     * Un enregistrement à cheval sur plusieurs heures est réparti au prorata ; entre deux sources, on garde le maximum de
+     * chaque heure (le même pas compté par deux apps ne s'additionne pas).
+     */
+    private suspend fun stepsHourly(client: HealthConnectClient, range: TimeRangeFilter, me: String): Map<Long, Double> {
+        val hour = 3_600_000L
+        val byOrigin = HashMap<String, HashMap<Long, Double>>()
+        var token: String? = null
+        do {
+            val res = client.readRecords(ReadRecordsRequest(StepsRecord::class, range, pageSize = 5000, pageToken = token))
+            res.records.filter { it.metadata.dataOrigin.packageName != me && it.count > 0 }.forEach { r ->
+                val start = r.startTime.toEpochMilli()
+                val end = maxOf(r.endTime.toEpochMilli(), start + 1)
+                val buckets = byOrigin.getOrPut(r.metadata.dataOrigin.packageName) { HashMap() }
+                var h = start / hour * hour
+                while (h < end) {
+                    val overlap = minOf(end, h + hour) - maxOf(start, h)
+                    buckets[h] = (buckets[h] ?: 0.0) + r.count * overlap.toDouble() / (end - start)
+                    h += hour
+                }
+            }
+            token = res.pageToken
+        } while (token != null)
+        val merged = HashMap<Long, Double>()
+        byOrigin.values.forEach { b -> b.forEach { (h, v) -> merged[h] = maxOf(merged[h] ?: 0.0, v) } }
+        return merged.filterValues { it >= 1 }
     }
 }

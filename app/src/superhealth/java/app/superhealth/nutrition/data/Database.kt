@@ -173,6 +173,14 @@ interface EntryDao {
     @Insert
     suspend fun insert(e: FoodEntryEntity): Long
 
+    /** Dernière quantité journalisée pour un aliment de la bibliothèque. */
+    @Query("SELECT grams FROM food_entries WHERE foodId = :foodId AND grams > 0 ORDER BY createdAt DESC LIMIT 1")
+    suspend fun lastGrams(foodId: Long): Double?
+
+    /** Idem pour un aliment pas encore enregistré (Open Food Facts, base suisse) : reconnu par son nom. */
+    @Query("SELECT grams FROM food_entries WHERE name = :name AND grams > 0 ORDER BY createdAt DESC LIMIT 1")
+    suspend fun lastGramsByName(name: String): Double?
+
     @Upsert
     suspend fun upsertAll(e: List<FoodEntryEntity>)
 

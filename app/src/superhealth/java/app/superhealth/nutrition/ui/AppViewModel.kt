@@ -37,6 +37,9 @@ class AppViewModel(val repo: Repository) : ViewModel() {
     /** Presse-papiers du journal (copier / coller d'entrées, CopyPasteService de MacroFactor). */
     val clipboard = MutableStateFlow<List<FoodEntryEntity>>(emptyList())
 
+    /** Confirmation affichée par la recherche d'aliments après un ajout fait ailleurs (IA). */
+    val logNotice = MutableStateFlow<String?>(null)
+
     /** Recette en cours d'édition (conservée pendant la recherche d'ingrédients). */
     val recipeDraft = MutableStateFlow<RecipeDraft?>(null)
 

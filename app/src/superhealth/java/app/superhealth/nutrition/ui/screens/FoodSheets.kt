@@ -34,6 +34,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -189,11 +190,20 @@ private enum class QtyUnit { GRAMS, SERVINGS, ENERGY }
 @Composable
 fun FoodSheet(
     food: FoodEntity, target: Macros?, s: Settings, onDismiss: () -> Unit, onToggleFavorite: (() -> Unit)?,
-    addLabel: String = tr("Ajouter au journal"), onExplode: ((Double) -> Unit)? = null, onEdit: (() -> Unit)? = null, onAdd: (Double) -> Unit,
+    addLabel: String = tr("Ajouter au journal"), onExplode: ((Double) -> Unit)? = null, onEdit: (() -> Unit)? = null,
+    /** Dernière quantité utilisée pour cet aliment (en grammes) : proposée à la place de la portion par défaut. */
+    lastGrams: (suspend () -> Double?)? = null, onAdd: (Double) -> Unit,
 ) {
     val hasServing = food.servingGrams != 100.0
     var unit by remember { mutableStateOf(if (hasServing) QtyUnit.SERVINGS else QtyUnit.GRAMS) }
     var qty by remember { mutableStateOf(if (hasServing) "1" else "100") }
+    if (lastGrams != null) LaunchedEffect(food) {
+        val g = lastGrams() ?: return@LaunchedEffect
+        // Portion définie et quantité qui en est un multiple « rond » : en portions, sinon en grammes.
+        val servings = g / food.servingGrams
+        if (hasServing && kotlin.math.abs(servings * 4 - kotlin.math.round(servings * 4)) < 0.01) qty = num(servings, 2)
+        else { unit = QtyUnit.GRAMS; qty = num(g, 0) }
+    }
     var fav by remember { mutableStateOf(food.favorite) }
     val grams = qty.toNum()?.let {
         when (unit) {

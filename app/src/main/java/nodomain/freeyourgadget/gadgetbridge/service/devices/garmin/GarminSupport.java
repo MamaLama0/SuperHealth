@@ -209,6 +209,12 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     private MediaManager mediaManager;
     private boolean mFirstConnect = false;
     private boolean isBusyFetching;
+    /** Set by a {@link RecordedDataTypes#TYPE_HISTORY} fetch until the sync finishes: list every file, synced or not. */
+    private volatile boolean fetchHistory;
+
+    public boolean isFetchingHistory() {
+        return fetchHistory;
+    }
 
     private int maxPacketSize = 400;
 
@@ -312,6 +318,11 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     }
 
     public void addFileToDownloadList(FileTransferHandler.DirectoryEntry directoryEntry) {
+        if (fetchHistory && directoryEntry.getFiletype() != FileType.FILETYPE.ACTIVITY
+                && directoryEntry.getFiletype() != FileType.FILETYPE.DIRECTORY) {
+            // History fetch: months of monitoring files would take ages, only the activities are worth it.
+            return;
+        }
         if (newSyncProtocol() && directoryEntry.getFiletype() != FileType.FILETYPE.DEVICE_XML) {
             if (directoryEntry.getFiletype() == FileType.FILETYPE.DIRECTORY) {
                 LOG.debug("Got directory entry, syncing with new protocol");
@@ -672,7 +683,13 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
             return;
         }
 
-        if (dataTypes == RecordedDataTypes.TYPE_SYNC) {
+        if (dataTypes == RecordedDataTypes.TYPE_HISTORY) {
+            LOG.info("Fetching the full file history from the watch");
+            fetchHistory = true;
+            protocolBufferHandler.getFileSyncServiceHandler().resetForHistory();
+        }
+
+        if (dataTypes == RecordedDataTypes.TYPE_SYNC || dataTypes == RecordedDataTypes.TYPE_HISTORY) {
             requestBatteryUpdate();
         }
 
@@ -713,7 +730,9 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     }
 
     public boolean newSyncProtocol() {
-        return getDevicePrefs().getBoolean("new_sync_protocol", false);
+        // The legacy directory hides the files already archived (synced to Garmin Connect or to us): a history
+        // fetch goes through the file sync service, which lists them all when the synced flags are not excluded.
+        return fetchHistory || getDevicePrefs().getBoolean("new_sync_protocol", false);
     }
 
     public boolean mlrEnabled() {
@@ -1153,6 +1172,8 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         // mid-sync leaves the progress notification pinned indefinitely.
         transferNotification.finish();
         isBusyFetching = false;
+        fetchHistory = false;
+        protocolBufferHandler.getFileSyncServiceHandler().stopHistoryListing();
         currentlyDownloading = null;
         filesToDownload.clear();
     }
@@ -1228,7 +1249,15 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
             }
         }
 
-        if (filesToDownload.isEmpty() && currentlyDownloading == null && isBusyFetching) {
+        if (fetchHistory && !isBusyFetching && filesToDownload.isEmpty() && currentlyDownloading == null
+                && !protocolBufferHandler.getFileSyncServiceHandler().getHistoryListing()) {
+            // History listing over without any activity to download.
+            LOG.info("History fetch: no activity to download");
+            fetchHistory = false;
+        }
+
+        if (filesToDownload.isEmpty() && currentlyDownloading == null && isBusyFetching
+                && !(fetchHistory && protocolBufferHandler.getFileSyncServiceHandler().getHistoryListing())) {
             LOG.debug("No more files to download, will process pending files");
 
             final List<File> filesToProcess;
@@ -1285,6 +1314,8 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
      */
     @VisibleForTesting
     void finishFileSync() {
+        fetchHistory = false;
+        protocolBufferHandler.getFileSyncServiceHandler().stopHistoryListing();
         // FIXME: This should probably only happen after exploresync also finishes
         sendOutgoingMessage("set sync complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, 0));
 

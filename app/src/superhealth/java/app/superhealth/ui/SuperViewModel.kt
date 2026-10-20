@@ -77,9 +77,14 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
             .onEach { ready0 ->
                 val now = System.currentTimeMillis()
                 val ready = devices.value.filter { it.address in ready0 }
+                // Montre Garmin jamais interrogée et aucune activité en base (nouvel appairage, app réinitialisée) :
+                // on rapatrie d'abord les activités qu'elle garde en mémoire.
+                val history = ready.filter { Watch.supportsHistory(it.device) && !Watch.historyRequested(it.device) }
+                    .filter { d -> runCatching { HealthRepository.workouts(0L, now).none { it.device.address == d.address } }.getOrDefault(false) }
+                history.forEach { runCatching { Watch.fetchHistory(it.device) } }
                 if (ready.isNotEmpty() && now - lastWatchSync > 15 * 60_000L) {
                     lastWatchSync = now
-                    ready.forEach { runCatching { Watch.sync(it.device) } }
+                    (ready - history.toSet()).forEach { runCatching { Watch.sync(it.device) } }
                 }
             }.launchIn(viewModelScope)
         ManualLogStore.get(app).changes.drop(1).onEach { HealthRepository.invalidate(); bump() }.launchIn(viewModelScope)
@@ -122,6 +127,8 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun syncDevice(d: DeviceUi) = Watch.sync(d.device)
+
+    fun fetchHistory(d: DeviceUi) = Watch.fetchHistory(d.device)
 
     fun setWatchModule(on: Boolean) {
         Watch.setEnabled(on)

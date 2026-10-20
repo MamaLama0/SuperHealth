@@ -52,4 +52,23 @@ object Watch {
     }
 
     fun syncAll() = devices().forEach(::sync)
+
+    /** Montre Garmin : peut renvoyer les activités qu'elle garde en mémoire, même celles déjà synchronisées. */
+    fun supportsHistory(device: GBDevice) = device.deviceCoordinator is nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCoordinator
+
+    /**
+     * Récupère toutes les activités encore stockées sur la montre (courses, sorties…), y compris celles déjà envoyées
+     * à Garmin Connect ou à une installation précédente de l'app. Les doublons sont ignorés à l'import.
+     */
+    fun fetchHistory(device: GBDevice) {
+        if (!enabled || !supportsHistory(device)) return
+        if (!device.isInitialized) { GBApplication.deviceService(device).connect(); return }
+        historyPrefs().edit().putLong(device.address, System.currentTimeMillis()).apply()
+        GBApplication.deviceService(device).onFetchRecordedData(nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes.TYPE_HISTORY)
+    }
+
+    /** L'historique de cette montre a-t-il déjà été demandé (automatiquement ou à la main) ? */
+    fun historyRequested(device: GBDevice) = historyPrefs().contains(device.address)
+
+    private fun historyPrefs() = GBApplication.getContext().getSharedPreferences("superhealth_watch_history", android.content.Context.MODE_PRIVATE)
 }

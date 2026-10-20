@@ -60,7 +60,7 @@ enum class Metric(
     val about: String? = null,
 ) {
     STEPS("Pas", null, Icons.AutoMirrored.Rounded.DirectionsWalk, Aggregation.SUM, ChartKind.BARS, Category.FITNESS,
-        about = "Le nombre de pas enregistrés par votre montre. Il affine aussi l'estimation de votre dépense énergétique."),
+        about = "Vos pas, comptés par la montre et par le téléphone (pour chaque heure, le plus grand des deux : rien n'est compté deux fois). Ils affinent aussi l'estimation de votre dépense énergétique."),
     DISTANCE("Distance", "km", Icons.Rounded.Straighten, Aggregation.SUM, ChartKind.BARS, Category.FITNESS, digits = 2),
     CALORIES("Calories actives", "kcal", Icons.Rounded.LocalFireDepartment, Aggregation.SUM, ChartKind.BARS, Category.METABOLISM,
         about = "Calories dépensées en mouvement, estimées par la montre. La dépense utilisée pour vos cibles reste celle calculée à partir de vos pesées et de votre journal."),

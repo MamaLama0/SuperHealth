@@ -126,7 +126,8 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
     val sh by vm.settings.collectAsState()
     val devices by vm.devices.collectAsState()
     val list by produceState(emptyList<Bridge.Activity>(), refresh, sh.watchModule) {
-        value = runCatching { Bridge.activities(System.currentTimeMillis() - 60 * 86_400_000L) }.getOrDefault(emptyList())
+        // Les dernières, quel que soit leur âge (historique rapatrié de la montre, pause hivernale…).
+        value = runCatching { Bridge.activities(0L) }.getOrDefault(emptyList())
             .filter { it.source != Bridge.Source.GYM && it.kind != Bridge.Kind.STRENGTH } // la musculation a sa propre section
     }
     SectionLabel(tr("Cardio et plein air")) {
@@ -150,7 +151,42 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
         }
     }
     if (sh.watchModule && devices.isNotEmpty()) PerformanceEntry(nav)
+    WatchHistoryCard(vm)
     ImportActivitiesCard(vm, nav)
+}
+
+/** Rapatrie les activités gardées en mémoire par une montre Garmin (après une réinitialisation ou un nouvel appairage). */
+@Composable
+fun ColumnScope.WatchHistoryCard(vm: SuperViewModel) {
+    val ctx = LocalContext.current
+    val devices by vm.devices.collectAsState()
+    val garmin = devices.filter { app.superhealth.bridge.Watch.supportsHistory(it.device) }
+    if (garmin.isEmpty()) return
+    val busy = garmin.any { it.busy }
+    Spacer(Modifier.height(10.dp))
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        .clickable(enabled = !busy) {
+            val ready = garmin.filter { it.connected }
+            if (ready.isEmpty()) {
+                garmin.forEach { vm.fetchHistory(it) } // reconnexion d'abord
+                Toast.makeText(ctx, tr("Montre déconnectée : reconnexion en cours, réessayez dans un instant."), Toast.LENGTH_LONG).show()
+            } else {
+                ready.forEach { vm.fetchHistory(it) }
+                Toast.makeText(ctx, tr("Récupération lancée : les activités apparaissent au fil du téléchargement."), Toast.LENGTH_LONG).show()
+            }
+        }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(HealthHues.Fitness.container()), contentAlignment = Alignment.Center) {
+            if (busy) androidx.compose.material3.CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = HealthHues.Fitness)
+            else Icon(Icons.Rounded.History, null, Modifier.size(22.dp), tint = HealthHues.Fitness)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(tr("Récupérer l'historique de la montre"), style = MaterialTheme.typography.bodyLarge)
+            Text(tr(if (busy) "Synchronisation en cours…" else "Activités encore stockées sur la montre, même déjà synchronisées"),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
+    }
 }
 
 /** Accès aux performances (records, récupération, charge, volume). */

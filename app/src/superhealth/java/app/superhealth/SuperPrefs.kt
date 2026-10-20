@@ -61,6 +61,11 @@ data class HcCache(
     val hrv: Map<Long, Double> = emptyMap(),
     val spo2: Map<Long, Double> = emptyMap(),
     val sessions: List<HcSession> = emptyList(),
+    /**
+     * Pas des autres sources (podomètre du téléphone via Health Connect, autres apps) par heure : début de l'heure (ms) → pas.
+     * Fusionnés heure par heure avec ceux de la montre (voir Bridge.steps).
+     */
+    val stepsHourly: Map<Long, Double> = emptyMap(),
 )
 
 /** Séance d'exercice enregistrée par une autre app (course, marche, vélo…). */

@@ -20,6 +20,12 @@ object SuperStrings {
         "Hydratation et constantes" to "Hydration & vitals",
         "Mesures" to "Measurements",
         "Synchroniser" to "Sync",
+        "Récupérer l'historique de la montre" to "Fetch watch history",
+        "Activités encore stockées sur la montre, même déjà synchronisées" to "Activities still stored on the watch, even already synced",
+        "Synchronisation en cours…" to "Syncing…",
+        "Montre déconnectée : reconnexion en cours, réessayez dans un instant." to "Watch disconnected: reconnecting, try again in a moment.",
+        "Récupération lancée : les activités apparaissent au fil du téléchargement." to "Fetch started: activities appear as they download.",
+        "Health Connect n'est pas disponible sur ce téléphone" to "Health Connect is not available on this phone",
 
         // Tableau de bord
         "Tableau de bord" to "Dashboard",
@@ -105,8 +111,8 @@ object SuperStrings {
         "Forme" to "Fitness",
         "Bien-être" to "Wellbeing",
         "Signes vitaux" to "Vitals",
-        "Le nombre de pas enregistrés par votre montre. Il affine aussi l'estimation de votre dépense énergétique." to
-            "Steps recorded by your watch. They also refine your energy expenditure estimate.",
+        "Vos pas, comptés par la montre et par le téléphone (pour chaque heure, le plus grand des deux : rien n'est compté deux fois). Ils affinent aussi l'estimation de votre dépense énergétique." to
+            "Your steps, counted by your watch and your phone (for each hour, the higher of the two: nothing is counted twice). They also refine your energy expenditure estimate.",
         "Calories dépensées en mouvement, estimées par la montre. La dépense utilisée pour vos cibles reste celle calculée à partir de vos pesées et de votre journal." to
             "Calories burned moving, as estimated by your watch. Your targets still use the expenditure calculated from your weigh-ins and food log.",
         "Minutes d'intensité modérée ou soutenue cumulées depuis lundi. L'OMS recommande au moins 150 minutes par semaine." to

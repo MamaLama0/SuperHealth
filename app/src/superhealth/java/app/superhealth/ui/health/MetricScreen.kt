@@ -94,7 +94,8 @@ private fun period(span: Span, offset: Int, today: LocalDate): Period = when (sp
 fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
     val ctx = LocalContext.current
     val refresh by vm.refresh.collectAsState()
-    val intradayOk = metric in setOf(Metric.STEPS, Metric.HEART_RATE, Metric.STRESS, Metric.BODY_ENERGY, Metric.SPO2) && HealthRepository.isSupported(metric)
+    val intradayOk = metric in setOf(Metric.STEPS, Metric.HEART_RATE, Metric.STRESS, Metric.BODY_ENERGY, Metric.SPO2) &&
+        (HealthRepository.isSupported(metric) || metric == Metric.STEPS && app.superhealth.SuperPrefs.hc.value.stepsHourly.isNotEmpty())
     var span by remember { mutableStateOf(if (intradayOk) Span.DAY else Span.WEEK) }
     var offset by remember { mutableIntStateOf(0) }
     var logging by remember { mutableStateOf(false) }
@@ -109,7 +110,10 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
         }
     }
     val intraday by produceState(emptyList<Point>(), metric, span, offset, refresh) {
-        value = if (span == Span.DAY && intradayOk) runCatching { HealthRepository.intraday(metric, p.from) }.getOrDefault(emptyList()) else emptyList()
+        value = if (span == Span.DAY && intradayOk) runCatching {
+            // Pas : montre et téléphone fusionnés heure par heure, comme le total du jour.
+            if (metric == Metric.STEPS) Bridge.hourlySteps(ctx, p.from) else HealthRepository.intraday(metric, p.from)
+        }.getOrDefault(emptyList()) else emptyList()
     }
     val logs by produceState(emptyList<ManualLog>(), metric, span, offset, refresh) {
         value = if (metric.manual) ManualLogStore.get(ctx).query(metric, HealthRepository.startMs(p.from), HealthRepository.endMs(p.to)) else emptyList()

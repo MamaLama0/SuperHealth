@@ -20,8 +20,6 @@ import java.util.Base64
 /** Fournisseurs compatibles avec l'API Chat Completions d'OpenAI. */
 @Serializable
 enum class AiProvider(val label: String, val baseUrl: String, val defaultModel: String, val keyHelp: String) {
-    GEMINI("Google AI Studio", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash-lite",
-        "Clé gratuite sur aistudio.google.com (offre gratuite limitée en requêtes par minute et par jour)."),
     OPENROUTER("OpenRouter", "https://openrouter.ai/api/v1", "google/gemini-2.5-flash-lite",
         "Clé sur openrouter.ai. Modèles gratuits : « openrouter/free » ou suffixe « :free » (débit limité)."),
     CUSTOM("Autre (compatible OpenAI)", "", "", "URL de base se terminant avant /chat/completions (ex. Ollama, Groq…)."),
@@ -30,7 +28,7 @@ enum class AiProvider(val label: String, val baseUrl: String, val defaultModel: 
 /** Réglages IA, stockés à part des réglages (jamais inclus dans la sauvegarde JSON). */
 @Serializable
 data class AiConfig(
-    val provider: AiProvider = AiProvider.GEMINI,
+    val provider: AiProvider = AiProvider.OPENROUTER,
     val apiKey: String = "",
     val model: String = "",
     val baseUrl: String = "",
