@@ -1,6 +1,14 @@
 package app.superhealth.ui.dashboard
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import app.superhealth.sizes
+import app.superhealth.sizeOf
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -22,6 +30,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,7 +60,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
     DetailScaffold(tr("Personnaliser"), onBack = { nav.popBackStack() }, action = {
         TextButton(onClick = { set(DashCard.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
     }) {
-        Text(tr("Choisissez les graphiques du tableau de bord et leur ordre."), style = MaterialTheme.typography.bodyMedium,
+        Text(tr("Choisissez vos cartes, leur taille et leur ordre. Les petites bulles se rangent par trois, les moyennes par deux."), style = MaterialTheme.typography.bodyMedium,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
 
         // Accès direct au choix des constantes de la carte principale.
@@ -63,21 +74,41 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
                 Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.graphicsLayer(rotationZ = -90f), tint = Mf.colors.textTertiary)
             }
         }
-        SectionLabel(tr("Affichées"))
+        GroupCard {
+            Row(Modifier.fillMaxWidth().clickable { nav.navigate("rings/edit") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Anneaux du jour"), style = MaterialTheme.typography.bodyLarge)
+                    Text(app.superhealth.ui.dashboard.Rings.kinds(sh.rings).joinToString(" · ") { tr(it.label) },
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.graphicsLayer(rotationZ = -90f), tint = Mf.colors.textTertiary)
+            }
+        }
+        var reorder by remember { mutableStateOf(false) }
+        if (reorder) app.superhealth.training.ui.components.ReorderSheet(shown.map { it.name to null }, shown.map { null },
+            onMove = { from, to -> set(with(app.superhealth.training.domain.ProgramEdit) { SuperPrefs.settings.value.dashboard.moved(from, to) }) },
+            onDismiss = { reorder = false }, title = tr("Ordre des cartes"), names = shown.map { tr(it.label) })
+        SectionLabel(tr("Affichées")) {
+            if (shown.size > 1) Text(tr("Réorganiser"), Modifier.clickable { reorder = true }, color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
+        }
         if (shown.isEmpty()) Text(tr("Aucune carte affichée"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         else GroupCard {
             shown.forEachIndexed { i, c ->
                 if (i > 0) RowDivider()
-                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(tr(c.section.label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-                    }
-                    IconButton(onClick = { set(shown.toMutableList().apply { add(i - 1, removeAt(i)) }) }, enabled = i > 0) {
-                        Icon(Icons.Rounded.KeyboardArrowUp, tr("Monter"), tint = if (i > 0) Mf.colors.text else Mf.colors.textTertiary)
-                    }
-                    IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
-                        Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
+                        // taille : bulle, demi-largeur, pleine largeur (celles que la carte accepte)
+                        if (c.sizes.size > 1) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            c.sizes.forEach { z ->
+                                val on = sh.sizeOf(c) == z
+                                Text(tr(z.label), style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                                    color = if (on) Mf.colors.onStrong else Mf.colors.text,
+                                    modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.strong else Mf.colors.chip)
+                                        .clickable { SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }
+                                        .padding(horizontal = 10.dp, vertical = 4.dp))
+                            }
+                        } else Text(tr(c.section.label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
                     }
                     Switch(true, { set(shown - c) }, Modifier.padding(end = 8.dp), colors = switchColors())
                 }
@@ -208,3 +239,55 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
 @Composable
 private fun switchColors() = SwitchDefaults.colors(checkedTrackColor = Mf.colors.accent, checkedThumbColor = Color.White,
     uncheckedBorderColor = Color.Transparent, uncheckedTrackColor = Mf.colors.chip)
+
+
+/** Anneaux du jour : quelles mesures (1 à 4), de l'extérieur vers l'intérieur. */
+@Composable
+fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
+    val sh by vm.settings.collectAsState()
+    val shown = Rings.kinds(sh.rings)
+    fun set(list: List<Rings.Kind>) = SuperPrefs.update { it.copy(rings = list.map { k -> k.name }) }
+    DetailScaffold(tr("Anneaux du jour"), onBack = { nav.popBackStack() }, action = {
+        TextButton(onClick = { set(Rings.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
+    }) {
+        Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+            ActivityRings(shown.map { Rings.Ring(it, 0.66, 1.0) }, 150.dp, track = Mf.colors.card)
+        }
+        Text(tr("De l'extérieur vers l'intérieur, jusqu'à 4 anneaux. Aussi dans le widget « Anneaux du jour »."),
+            style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        SectionLabel(tr("Affichés"))
+        GroupCard {
+            shown.forEachIndexed { i, k ->
+                if (i > 0) RowDivider()
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(12.dp).clip(CircleShape).background(k.color))
+                    Spacer(Modifier.width(12.dp))
+                    Text(tr(k.label), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i - 1, removeAt(i)) }) }, enabled = i > 0) {
+                        Icon(Icons.Rounded.KeyboardArrowUp, tr("Monter"), tint = if (i > 0) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
+                        Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    Switch(true, { set(shown - k) }, Modifier.padding(end = 8.dp), enabled = shown.size > 1, colors = switchColors())
+                }
+            }
+        }
+        val hidden = Rings.Kind.entries - shown.toSet()
+        if (hidden.isNotEmpty()) {
+            SectionLabel(tr("Disponibles"))
+            GroupCard {
+                hidden.forEachIndexed { i, k ->
+                    if (i > 0) RowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(12.dp).clip(CircleShape).background(k.color))
+                        Spacer(Modifier.width(12.dp))
+                        Text(tr(k.label), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                        Switch(false, { set(shown + k) }, enabled = shown.size < Rings.MAX, colors = switchColors())
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}

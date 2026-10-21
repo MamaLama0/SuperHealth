@@ -89,7 +89,12 @@ fun WorkoutTabScreen(
             top()
             SectionLabel(tr("Musculation"))
             WeekStrip(st.history, st.settings) { nav.navigate("t/insights") }
-            if (active != null) ActiveProgramCard(active, db!!, nav,
+            var askSkip by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+            if (askSkip) androidx.compose.material3.AlertDialog(onDismissRequest = { askSkip = false }, containerColor = Mf.colors.card,
+                title = { Text(tr("Passer cette séance ?")) }, text = { Text(tr("Elle est retirée du cycle en cours ; la suivante devient la prochaine.")) },
+                confirmButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false; vm.skipNext() }) { Text(tr("Passer"), color = Mf.colors.accent) } },
+                dismissButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
+            if (active != null) ActiveProgramCard(active, db!!, nav, onSkip = { askSkip = true },
                 onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") })
             else MfCard(onClick = { nav.navigate("wizard") }) {
                 // Pas de programme actif : illustration animée (assets Rive de l'APK)
@@ -173,7 +178,7 @@ private fun ProgramRow(p: Program, onClick: () -> Unit) {
 
 /** Programme actif : cycle en cours, jours du cycle, prochaine séance (WorkoutProgramExpandableCard). */
 @Composable
-private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController, onStart: (Int) -> Unit) {
+private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController, onSkip: () -> Unit, onStart: (Int) -> Unit) {
     val color = ProgramColors[p.color % ProgramColors.size]
     MfCard(padding = PaddingValues(0.dp)) {
         Box(Modifier.fillMaxWidth().height(6.dp).background(color))
@@ -214,6 +219,8 @@ private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController
                 NextDay(next, p, db)
                 Spacer(Modifier.height(12.dp))
                 PillButton(trf("Commencer %1\$s", next.name), Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow) { onStart(p.dayIndex) }
+                Text(tr("Passer cette séance"), Modifier.fillMaxWidth().clip(CircleShape).clickable(onClick = onSkip).padding(10.dp),
+                    style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             } else if (p.cycleIndex >= p.numCycles) {
                 Text(tr("Programme terminé ! Lancez un nouveau bloc ou activez un autre programme."), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
             }

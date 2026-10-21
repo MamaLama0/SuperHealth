@@ -62,6 +62,7 @@ import app.superhealth.training.domain.ExerciseDb
 import app.superhealth.training.domain.Generator
 import app.superhealth.training.domain.Program
 import app.superhealth.training.domain.ProgramDay
+import app.superhealth.training.domain.ProgramEdit
 import app.superhealth.training.domain.ProgramExercise
 import app.superhealth.training.domain.Supersets
 import app.superhealth.training.domain.TargetSet
@@ -117,7 +118,7 @@ fun AppViewModel.updatePlan(target: String, f: (List<ProgramExercise>) -> List<P
         } else {
             val (pid, di) = target.split(':').let { it[0] to it[1].toInt() }
             s.copy(programs = s.programs.map { p ->
-                if (p.id != pid) p else p.copy(days = p.days.mapIndexed { i, d -> if (i != di) d else d.copy(exercises = clean(f(d.exercises))) })
+                if (p.id != pid) p else ProgramEdit.fixCursor(p.copy(days = p.days.mapIndexed { i, d -> if (i != di) d else d.copy(exercises = clean(f(d.exercises))) }))
             })
         }
     }
@@ -136,6 +137,10 @@ fun AppViewModel.addToPlan(target: String, ids: List<String>) {
         }
     }
 }
+
+/** Déplace un exercice de la liste ; les supersets coupés par le déplacement sont recalculés. */
+fun AppViewModel.movePlan(target: String, from: Int, to: Int) =
+    updatePlan(target) { l -> regroup(with(ProgramEdit) { l.moved(from, to) }) { g -> Supersets.normalize(g) } }
 
 /** Relie l'exercice au suivant (superset, triset…) ou le sort de son groupe. */
 private fun regroup(list: List<ProgramExercise>, f: (List<Int?>) -> List<Int?>): List<ProgramExercise> {
@@ -191,7 +196,7 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
         if (exercises.size > 1) PillButton(tr("Réorganiser"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.SwapVert) { reorder = true }
     }
     if (reorder) app.superhealth.training.ui.components.ReorderSheet(exercises.map { it.id to db.exercise(it.exerciseId) }, exercises.map { it.supersetGroup },
-        onMove = { from, to -> vm.updatePlan(target) { l -> regroup(l.toMutableList().also { it.add(to, it.removeAt(from)) }) { g -> Supersets.normalize(g) } } },
+        onMove = { from, to -> vm.movePlan(target, from, to) },
         onDismiss = { reorder = false })
     editing?.let { i ->
         val pe = exercises.getOrNull(i) ?: run { editing = null; return }
@@ -205,8 +210,8 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
             onLink = { vm.updatePlan(target) { regroup(it) { g -> Supersets.link(g, groupEnd) } }; editing = null },
             onUnlink = { vm.updatePlan(target) { regroup(it) { g -> Supersets.unlink(g, i) } }; editing = null },
             onReorder = { editing = null; reorder = true },
-            onUp = if (i > 0) ({ vm.updatePlan(target) { l -> l.toMutableList().also { java.util.Collections.swap(it, i, i - 1) } }; editing = null }) else null,
-            onDown = if (i < exercises.lastIndex) ({ vm.updatePlan(target) { l -> l.toMutableList().also { java.util.Collections.swap(it, i, i + 1) } }; editing = null }) else null,
+            onUp = if (i > 0) ({ vm.movePlan(target, i, i - 1); editing = null }) else null,
+            onDown = if (i < exercises.lastIndex) ({ vm.movePlan(target, i, i + 1); editing = null }) else null,
             onSwap = { editing = null; nav.navigate("picker/${Picker.SWAP_PLAN}?target=${target}|${i}") },
             onRemove = { vm.updatePlan(target) { l -> l.filterIndexed { j, _ -> j != i } }; editing = null })
     }

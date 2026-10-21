@@ -167,6 +167,9 @@ interface EntryDao {
     @Query("SELECT * FROM food_entries ORDER BY epochDay, meal, createdAt")
     fun allFlow(): Flow<List<FoodEntryEntity>>
 
+    @Query("SELECT * FROM food_entries WHERE epochDay BETWEEN :from AND :to ORDER BY epochDay, meal, createdAt")
+    fun rangeFlow(from: Long, to: Long): Flow<List<FoodEntryEntity>>
+
     @Query("SELECT * FROM food_entries ORDER BY epochDay, meal, createdAt")
     suspend fun all(): List<FoodEntryEntity>
 

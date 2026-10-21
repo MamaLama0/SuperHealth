@@ -154,8 +154,10 @@ object DayWidgets {
     suspend fun refresh(ctx: Context) {
         val mgr = android.appwidget.AppWidgetManager.getInstance(ctx)
         val glance = androidx.glance.appwidget.GlanceAppWidgetManager(ctx)
-        mgr.getAppWidgetIds(android.content.ComponentName(ctx, DayWidgetReceiver::class.java)).forEach { id ->
-            runCatching { DayWidget().update(ctx, glance.getGlanceIdBy(id)) }
+        listOf(DayWidgetReceiver::class.java to DayWidget(), RingsWidgetReceiver::class.java to RingsWidget()).forEach { (receiver, widget) ->
+            mgr.getAppWidgetIds(android.content.ComponentName(ctx, receiver)).forEach { id ->
+                runCatching { widget.update(ctx, glance.getGlanceIdBy(id)) }
+            }
         }
     }
 }

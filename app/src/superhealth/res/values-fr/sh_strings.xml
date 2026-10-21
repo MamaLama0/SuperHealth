@@ -11,4 +11,6 @@
     <string name="widget_next_desc">Séance du jour, départ en un geste, semaine d\'entraînement</string>
     <string name="widget_day_name">Ma journée</string>
     <string name="widget_day_desc">Calories restantes, pas et prochaine séance</string>
+    <string name="widget_rings_name">Anneaux du jour</string>
+    <string name="widget_rings_desc">Pas, Body Battery et calories mangées</string>
 </resources>

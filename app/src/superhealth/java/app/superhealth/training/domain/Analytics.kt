@@ -76,4 +76,31 @@ object Analytics {
         }
         return out
     }
+
+    /** Totaux d'une semaine (lundi → dimanche) : séances, séries de travail, volume, durée. */
+    data class WeekTotal(val start: LocalDate, val sessions: Int, val sets: Int, val volume: Double, val durationSec: Long)
+
+    /** Les [weeks] dernières semaines, la plus ancienne d'abord, semaine en cours comprise. */
+    fun weeklyTotals(history: List<Workout>, weeks: Int, today: LocalDate): List<WeekTotal> {
+        val current = weekStart(today)
+        val byWeek = history.groupBy { weekStart(day(it.startTime)) }
+        return (weeks - 1 downTo 0).map { k ->
+            val ws = current.minusWeeks(k.toLong())
+            val list = byWeek[ws].orEmpty()
+            WeekTotal(ws, list.size, list.sumOf { w -> w.exercises.sumOf { workingSets(it).size } },
+                list.sumOf { w -> w.exercises.sumOf { volume(it.sets) } }, list.sumOf { it.durationSec })
+        }
+    }
+
+    /** Exercices les plus travaillés (séries de travail) depuis [sinceMs], du plus au moins travaillé. */
+    fun topBySets(history: List<Workout>, sinceMs: Long, limit: Int): List<Pair<String, Int>> =
+        history.filter { it.startTime >= sinceMs }.flatMap { w -> w.exercises.map { it.exerciseId to workingSets(it).size } }
+            .groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }.filterValues { it > 0 }
+            .entries.sortedByDescending { it.value }.take(limit).map { it.key to it.value }
+
+    /** Séries hebdomadaires moyennes par muscle sur les [weeks] dernières semaines glissantes. */
+    fun weeklySetsByMuscle(history: List<Workout>, db: ExerciseDb, weeks: Int, nowMs: Long): Map<MuscleGroup, Double> {
+        val since = nowMs - weeks * 7L * 86_400_000
+        return setsByMuscle(history.filter { it.startTime >= since }, db).mapValues { it.value / weeks }
+    }
 }

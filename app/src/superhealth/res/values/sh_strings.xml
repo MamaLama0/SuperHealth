@@ -10,4 +10,6 @@
     <string name="widget_next_desc">Today\'s workout, one-tap start, training week</string>
     <string name="widget_day_name">My day</string>
     <string name="widget_day_desc">Calories left, steps and next workout</string>
+    <string name="widget_rings_name">Activity rings</string>
+    <string name="widget_rings_desc">Steps, Body Battery and calories eaten</string>
 </resources>

@@ -11,6 +11,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import app.superhealth.ui.SuperRoot
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.theme.SuperTheme
@@ -28,7 +30,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vm.bind(nutrition, training)
-        if (savedInstanceState == null) vm.pendingRoute.value = intent?.getStringExtra(EXTRA_ROUTE)
+        if (savedInstanceState == null) vm.pendingRoute.value = app.superhealth.ui.Routes.external(intent?.getStringExtra(EXTRA_ROUTE))
         enableEdgeToEdge()
         setContent {
             val s by vm.nutrition.settings.collectAsState()
@@ -45,7 +47,14 @@ class MainActivity : ComponentActivity() {
     /** Raccourcis des widgets et de la notification de séance : l'activité existe déjà. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.getStringExtra(EXTRA_ROUTE)?.let { vm.pendingRoute.value = it }
+        app.superhealth.ui.Routes.external(intent.getStringExtra(EXTRA_ROUTE))?.let { vm.pendingRoute.value = it }
+    }
+
+    /** En quittant l'app : widgets à jour (repas, pas et Body Battery de la synchro à l'ouverture). */
+    override fun onStop() {
+        super.onStop()
+        val ctx = applicationContext
+        lifecycleScope.launch { runCatching { app.superhealth.ui.widget.DayWidgets.refresh(ctx) } }
     }
 
     override fun onResume() {

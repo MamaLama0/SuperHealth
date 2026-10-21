@@ -20,6 +20,22 @@ object Habits {
         return Streak(cur, longest, (today - 29..today).count { it in doneDays })
     }
 
+    /** Lundi de la semaine d'un jour (epochDay ; le 1er janvier 1970 était un jeudi). */
+    fun weekStart(day: Long): Long = day - Math.floorMod(day + 3, 7L)
+
+    /**
+     * Semaines actives de suite (au moins un jour fait dans la semaine), comme l'habitude d'entraînement de MacroFactor
+     * Workouts ; la semaine en cours encore vide ne casse pas la série.
+     */
+    fun weekStreak(doneDays: Set<Long>, today: Long): Int {
+        val weeks = doneDays.filter { it <= today }.map(::weekStart).toSet()
+        var w = weekStart(today)
+        if (w !in weeks) w -= 7
+        var n = 0
+        while (w in weeks) { n++; w -= 7 }
+        return n
+    }
+
     /** Ratio taille / hauteur et taille / hanches (métriques dérivées waistToHeight, waistToHip). */
     fun waistToHeight(waistCm: Double, heightCm: Double) = waistCm / heightCm
     fun waistToHip(waistCm: Double, hipsCm: Double) = waistCm / hipsCm

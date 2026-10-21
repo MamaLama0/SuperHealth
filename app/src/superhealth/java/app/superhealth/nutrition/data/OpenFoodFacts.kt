@@ -98,7 +98,7 @@ object OpenFoodFacts {
             conn.readTimeout = 15_000
             conn.setRequestProperty("User-Agent", UA)
             if (conn.responseCode != 200) return null
-            val text = conn.inputStream.bufferedReader().use { it.readText() }
+            val text = conn.inputStream.use { Net.readCapped(it) }
             AppJson.parseToJsonElement(text) as? JsonObject
         } catch (e: Exception) {
             null

@@ -93,6 +93,7 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
     fun bump() { _refresh.value++ }
 
     fun onResume(ctx: Context) {
+        if (::nutrition.isInitialized) nutrition.refreshDay()
         if (Watch.enabled) runCatching { GBApplication.deviceService().requestDeviceInfo() }
         // Montre déconnectée (après une mise à jour, hors de portée…) : reconnexion tout de suite plutôt qu'au prochain essai du moteur.
         if (Watch.enabled) runCatching { Watch.connectAll() }

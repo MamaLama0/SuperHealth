@@ -28,8 +28,21 @@ class AppViewModel(val repo: Repository) : ViewModel() {
     val dayEntries = selectedDay.flatMapLatest { repo.entriesForDay(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val todayEntries = repo.entriesForDay(LocalDate.now().toEpochDay())
+    /** Aujourd'hui, avancé au retour dans l'app (sinon le jour restait celui du lancement après minuit). */
+    private val today = MutableStateFlow(LocalDate.now().toEpochDay())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val todayEntries = today.flatMapLatest { repo.entriesForDay(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Passage à un nouveau jour : le journal ouvert sur « aujourd'hui » suit. */
+    fun refreshDay() {
+        val now = LocalDate.now().toEpochDay()
+        val old = today.value
+        if (now == old) return
+        today.value = now
+        if (selectedDay.value == old) selectedDay.value = now
+    }
 
     val dayFlags = repo.dayFlags.allFlow().map { l -> l.associateBy { it.epochDay } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())

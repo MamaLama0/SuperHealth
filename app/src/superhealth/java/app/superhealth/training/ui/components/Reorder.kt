@@ -57,7 +57,10 @@ import kotlin.math.roundToInt
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReorderSheet(items: List<Pair<String, Exercise?>>, groups: List<Int?>, onMove: (from: Int, to: Int) -> Unit, onDismiss: () -> Unit) {
+fun ReorderSheet(
+    items: List<Pair<String, Exercise?>>, groups: List<Int?>, onMove: (from: Int, to: Int) -> Unit, onDismiss: () -> Unit,
+    title: String = tr("Réorganiser les exercices"), names: List<String>? = null,
+) {
     val rowH = 64.dp
     val rowPx = with(LocalDensity.current) { rowH.toPx() }
     var dragging by remember { mutableStateOf<Int?>(null) }
@@ -66,7 +69,7 @@ fun ReorderSheet(items: List<Pair<String, Exercise?>>, groups: List<Int?>, onMov
     val target = dragging?.let { (it + (offset / rowPx).roundToInt()).coerceIn(0, items.lastIndex) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Mf.colors.background) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding()) {
-            Text(tr("Réorganiser les exercices"), style = MaterialTheme.typography.titleLarge)
+            Text(title, style = MaterialTheme.typography.titleLarge)
             Text(tr("Glissez la poignée, ou envoyez en haut / en bas."), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 10.dp))
             Column(Modifier.verticalScroll(rememberScrollState(), enabled = dragging == null)) {
@@ -93,9 +96,8 @@ fun ReorderSheet(items: List<Pair<String, Exercise?>>, groups: List<Int?>, onMov
                                 else Text("${i + 1}", color = Mf.colors.textSecondary, style = MaterialTheme.typography.labelLarge)
                             }
                             Spacer(Modifier.width(6.dp))
-                            ExerciseThumb(e, 40.dp, 10.dp)
-                            Spacer(Modifier.width(10.dp))
-                            Text(e?.name ?: "?", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            if (names == null) { ExerciseThumb(e, 40.dp, 10.dp); Spacer(Modifier.width(10.dp)) }
+                            Text(names?.getOrNull(i) ?: e?.name ?: "?", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             IconButton(onClick = { if (i > 0) onMove(i, 0) }, enabled = i > 0) {
                                 Icon(Icons.Rounded.KeyboardDoubleArrowUp, tr("En haut"), tint = if (i > 0) Mf.colors.textSecondary else Mf.colors.divider)
                             }

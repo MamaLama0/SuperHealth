@@ -283,7 +283,9 @@ object AiFood {
                 }
             }
         }
-        val conn = (URL(cfg.effectiveUrl + "/chat/completions").openConnection() as HttpURLConnection).apply {
+        val endpoint = cfg.effectiveUrl + "/chat/completions"
+        if (!Net.canSendSecret(endpoint)) throw AiException("Adresse refusée : HTTPS requis (HTTP seulement vers le réseau local).")
+        val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"; doOutput = true; connectTimeout = 15000; readTimeout = 90000
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Authorization", "Bearer ${cfg.apiKey.trim()}")
@@ -292,7 +294,7 @@ object AiFood {
         try {
             conn.outputStream.use { it.write(body.toString().toByteArray()) }
             val code = conn.responseCode
-            val text = (if (code in 200..299) conn.inputStream else conn.errorStream)?.use { it.readBytes().decodeToString() }.orEmpty()
+            val text = (if (code in 200..299) conn.inputStream else conn.errorStream)?.use { Net.readCapped(it) }.orEmpty()
             if (code !in 200..299) {
                 val msg = runCatching { json.parseToJsonElement(text).jsonObject["error"]?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull }.getOrNull()
                     ?: runCatching { json.parseToJsonElement(text).jsonArray[0].jsonObject["error"]?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull }.getOrNull()

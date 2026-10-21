@@ -83,7 +83,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun activate(id: String?) = update { s ->
         // « Your active program will be moved to your Workout Library and its progress will be reset. »
-        val programs = s.programs.map { if (it.id == s.settings.activeProgramId && it.id != id) it.copy(cycleIndex = 0, dayIndex = 0, doneDayIds = emptyList()) else it }
+        val programs = s.programs.map {
+            when {
+                it.id == s.settings.activeProgramId && it.id != id -> app.superhealth.training.domain.ProgramEdit.fixCursor(it.copy(cycleIndex = 0, dayIndex = 0, doneDayIds = emptyList()))
+                it.id == id -> app.superhealth.training.domain.ProgramEdit.fixCursor(it)
+                else -> it
+            }
+        }
         s.copy(programs = programs, settings = s.settings.copy(activeProgramId = id))
     }
 
@@ -260,6 +266,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         planChange.value = null
         val day = PlanDiff.apply(c.day, c.session, c.diff, sel)
         update { s -> s.copy(programs = s.programs.map { p -> if (p.id != c.programId) p else p.copy(days = p.days.map { if (it.id == day.id) day else it }) }) }
+    }
+
+    /** « Removes this session from this week's schedule » : la séance proposée est passée, la suivante devient la prochaine. */
+    fun skipNext() {
+        val e = engine ?: return
+        update { s -> s.copy(programs = s.programs.map { if (it.id == s.settings.activeProgramId) e.advance(it, it.days.getOrNull(it.dayIndex)?.id) else it }) }
     }
 
     fun finishSession(logAll: Boolean = false) {

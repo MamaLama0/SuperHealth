@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
@@ -71,6 +72,7 @@ import app.superhealth.training.domain.MuscleGroup
 import app.superhealth.training.domain.Periodization
 import app.superhealth.training.domain.Program
 import app.superhealth.training.domain.ProgramDay
+import app.superhealth.training.domain.ProgramEdit
 import app.superhealth.training.domain.ProgramExercise
 import app.superhealth.training.domain.Split
 import app.superhealth.training.domain.TargetSet
@@ -270,10 +272,16 @@ private fun ProgramReview(vm: AppViewModel, db: ExerciseDb, p: Program, nav: Nav
 }
 
 @Composable
-private fun DayCard(d: ProgramDay, db: ExerciseDb, cycle: Int, onClick: (() -> Unit)? = null) {
+private fun DayCard(d: ProgramDay, db: ExerciseDb, cycle: Int, mark: String? = null, onClick: (() -> Unit)? = null) {
     MfCard(Modifier.padding(vertical = 5.dp), onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(d.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(d.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false))
+            mark?.let {
+                Spacer(Modifier.width(8.dp))
+                Text(it, style = MaterialTheme.typography.labelSmall, color = Color.White, maxLines = 1,
+                    modifier = Modifier.clip(CircleShape).background(WorkoutBlue).padding(horizontal = 8.dp, vertical = 2.dp))
+            }
+            Spacer(Modifier.weight(1f))
             if (!d.isRest) Text(trf("≈ %1\$s min", (Generator.estimateMinutes(d, cycle))), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
         if (d.isRest) Text(tr("Aucun exercice prévu ce jour"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
@@ -305,7 +313,11 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     var rename by remember { mutableStateOf(false) }
     var pickCycles by remember { mutableStateOf(false) }
     var pickDeload by remember { mutableStateOf(false) }
+    var reorderDays by remember { mutableStateOf(false) }
     fun save(np: Program) = vm.saveProgram(np)
+    if (reorderDays) app.superhealth.training.ui.components.ReorderSheet(p.days.map { it.id to null }, p.days.map { null },
+        onMove = { from, to -> save(ProgramEdit.moveDay(vm.state.value.programs.firstOrNull { it.id == id } ?: p, from, to)) },
+        onDismiss = { reorderDays = false }, title = tr("Réorganiser les jours"), names = p.days.map { if (it.isRest) "${it.name} · ${tr("Repos")}" else it.name })
     if (pickCycles) ChoiceSheet(tr("Nombre de cycles"), tr("Un cycle = une rotation complète des jours du programme."), (1..12).toList(), p.numCycles,
         label = { "$it" }, columns = 4, onDismiss = { pickCycles = false }) { n ->
         pickCycles = false
@@ -329,7 +341,21 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         if (active) Text(trf("Programme actif · cycle %1\$s/%2\$s", (p.cycleIndex + 1), p.numCycles), color = WorkoutBlue, style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(10.dp))
         if (p.numCycles > 1) ChipChoice((0 until p.numCycles).toList(), cycle, { c -> trf("Cycle %1\$s", (c + 1)) + if ((p.deload == Deload.FIRST && c == 0) || (p.deload == Deload.LAST && c == p.numCycles - 1)) tr(" · décharge") else "" }) { cycle = it }
-        p.days.forEachIndexed { i, d -> DayCard(d, db, cycle) { nav.navigate("programday/${p.id}/${i}") } }
+        p.days.forEachIndexed { i, d ->
+            val mark = when {
+                !active -> null
+                d.id in p.doneDayIds -> tr("Fait")
+                i == p.dayIndex -> tr("Prochaine")
+                else -> null
+            }
+            DayCard(d, db, cycle, mark) { nav.navigate("programday/${p.id}/${i}") }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PillButton(tr("Ajouter un jour"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Add) {
+                save(ProgramEdit.addDay(p, ProgramDay(UUID.randomUUID().toString(), trf("Jour %1\$s", p.days.size + 1))))
+            }
+            if (p.days.size > 1) PillButton(tr("Réorganiser"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.SwapVert) { reorderDays = true }
+        }
         SectionLabel(tr("Réglages du programme"))
         GroupCard {
             SettingRow(tr("Cycles"), "${p.numCycles}") { pickCycles = true }
@@ -337,7 +363,7 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
             RowDivider(); SettingRow(tr("Périodisation"), p.periodization.label.tr(), subtitle = tr("Organise l'entraînement en phases qui font varier intensité et volume"))
             RowDivider(); SettingRow(tr("Répéter indéfiniment"), if (p.runIndefinitely) tr("Oui") else tr("Non")) { save(p.copy(runIndefinitely = !p.runIndefinitely)) }
             RowDivider(); SettingRow(tr("Couleur"), null) { save(p.copy(color = (p.color + 1) % ProgramColors.size)) }
-            RowDivider(); SettingRow(tr("Ajouter un jour"), null) { save(p.copy(days = p.days + ProgramDay(UUID.randomUUID().toString(), trf("Jour %1\$s", (p.days.size + 1))))) }
+            RowDivider(); SettingRow(tr("Ajouter un jour de repos"), null) { save(ProgramEdit.addDay(p, ProgramDay(UUID.randomUUID().toString(), tr("Repos")))) }
         }
         Spacer(Modifier.height(14.dp))
         if (!active) PillButton(tr("Activer le programme"), Modifier.fillMaxWidth()) { confirm = "activate" }
@@ -398,7 +424,8 @@ fun ProgramDayScreen(vm: AppViewModel, pid: String, dayIndex: Int, nav: NavHostC
     val d = p.days.getOrNull(dayIndex) ?: return
     var cycle by remember { mutableIntStateOf(p.cycleIndex.coerceIn(0, p.numCycles - 1)) }
     var rename by remember { mutableStateOf(false) }
-    fun setDay(nd: ProgramDay) = vm.saveProgram(p.copy(days = p.days.toMutableList().also { it[dayIndex] = nd }))
+    var confirmRest by remember { mutableStateOf(false) }
+    fun setDay(nd: ProgramDay) = vm.saveProgram(ProgramEdit.setDay(p, dayIndex, nd))
     DetailScaffold(d.name, nav, actions = { TextButton(onClick = { rename = true }) { Text(tr("Renommer"), color = Mf.colors.accent) } }) {
         if (p.numCycles > 1 && d.exercises.any { it.cycles.size > 1 }) ChipChoice((0 until p.numCycles).toList(), cycle, { trf("Cycle %1\$s", (it + 1)) }) { cycle = it }
         if (d.isRest) MfCard { Text(tr("Jour de repos. Ajoutez des exercices pour le transformer en séance."), color = Mf.colors.textSecondary) }
@@ -407,62 +434,23 @@ fun ProgramDayScreen(vm: AppViewModel, pid: String, dayIndex: Int, nav: NavHostC
             PillButton(tr("Commencer cette séance"), Modifier.fillMaxWidth().padding(top = 8.dp), icon = Icons.Rounded.PlayArrow) {
                 if (st.session == null) vm.startProgramDay(p, dayIndex, cycle); nav.navigate("session")
             }
-            Text(tr("Transformer en jour de repos"), Modifier.fillMaxWidth().clickable { setDay(d.copy(exercises = emptyList(), name = tr("Repos"))) }.padding(14.dp),
+            Text(tr("Transformer en jour de repos"), Modifier.fillMaxWidth().clickable { confirmRest = true }.padding(14.dp),
                 color = Color(0xFFE11900), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
         if (p.days.size > 1) Text(tr("Supprimer ce jour"), Modifier.fillMaxWidth().clickable {
-            vm.saveProgram(p.copy(days = p.days.filterIndexed { i, _ -> i != dayIndex }, dayIndex = p.dayIndex.coerceAtMost(p.days.size - 2)))
             nav.popBackStack()
+            vm.saveProgram(ProgramEdit.removeDay(p, dayIndex))
         }.padding(14.dp), color = Color(0xFFE11900), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
+    if (confirmRest) AlertDialog(onDismissRequest = { confirmRest = false }, containerColor = Mf.colors.card,
+        title = { Text(tr("Transformer en jour de repos ?")) }, text = { Text(tr("Les exercices de ce jour seront retirés.")) },
+        confirmButton = { TextButton(onClick = { confirmRest = false; setDay(d.copy(exercises = emptyList(), name = tr("Repos"))) }) { Text(tr("Confirmer"), color = Color(0xFFE11900)) } },
+        dismissButton = { TextButton(onClick = { confirmRest = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
     if (rename) {
         var n by remember { mutableStateOf(d.name) }
         AlertDialog(onDismissRequest = { rename = false }, containerColor = Mf.colors.card, title = { Text(tr("Renommer le jour")) },
             text = { TextInput(tr("Nom"), n, { n = it }) },
             confirmButton = { TextButton(onClick = { setDay(d.copy(name = n.ifBlank { d.name })); rename = false }) { Text(tr("Enregistrer"), color = Mf.colors.accent) } },
             dismissButton = { TextButton(onClick = { rename = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
-    }
-}
-
-/** Éditeur de cibles (EditExerciseTargetSheet) : séries, plage de répétitions, RIR, repos ; « Enregistrer pour tous les cycles ». */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TargetSheet(pe: ProgramExercise, cycle: Int, name: String, onDismiss: () -> Unit, onSave: (ProgramExercise) -> Unit, onRemove: () -> Unit, onUp: (() -> Unit)?) {
-    val cur = Generator.targetsFor(pe, cycle)
-    var sets by remember { mutableIntStateOf(cur.size) }
-    var min by remember { mutableIntStateOf(cur.firstOrNull()?.minReps ?: 8) }
-    var max by remember { mutableIntStateOf(cur.firstOrNull()?.maxReps ?: 12) }
-    var rir by remember { mutableIntStateOf(cur.firstOrNull()?.rir ?: 2) }
-    var rest by remember { mutableIntStateOf(cur.firstOrNull()?.restSec ?: 120) }
-    fun built() = List(sets) { (cur.firstOrNull() ?: TargetSet()).copy(minReps = min, maxReps = max.coerceAtLeast(min), rir = rir, restSec = rest) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Mf.colors.card) {
-        Column(Modifier.padding(20.dp).navigationBarsPadding()) {
-            Text(name, style = MaterialTheme.typography.titleLarge)
-            Text(trf("Cycle %1\$s", (cycle + 1)), color = Mf.colors.textSecondary)
-            Stepper(tr("Séries"), sets, 1, 10) { sets = it }
-            Stepper(tr("Répétitions min."), min, 1, 50) { min = it; if (max < it) max = it }
-            Stepper(tr("Répétitions max."), max, 1, 60) { max = it.coerceAtLeast(min) }
-            Stepper(tr("RIR (répétitions en réserve)"), rir, 0, 5) { rir = it }
-            Stepper(tr("Repos"), rest, 30, 600, step = 15, label = { restLabel(it) }) { rest = it }
-            Spacer(Modifier.height(12.dp))
-            PillButton(tr("Enregistrer pour ce cycle"), Modifier.fillMaxWidth()) {
-                onSave(pe.copy(cycles = pe.cycles.toMutableList().also { it[cycle.coerceIn(0, it.lastIndex)] = built() }))
-            }
-            PillButton(tr("Enregistrer pour tous les cycles"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) { onSave(pe.copy(cycles = pe.cycles.map { built() })) }
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                if (onUp != null) TextButton(onClick = onUp) { Text(tr("Monter"), color = Mf.colors.text) } else Spacer(Modifier.width(1.dp))
-                TextButton(onClick = onRemove) { Text(tr("Retirer l'exercice"), color = Color(0xFFE11900)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Stepper(title: String, value: Int, min: Int, max: Int, step: Int = 1, label: (Int) -> String = { "${it}" }, onChange: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-        Round(Icons.Rounded.Remove, small = true) { if (value - step >= min) onChange(value - step) }
-        Text(label(value), Modifier.width(56.dp), style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Round(Icons.Rounded.Add, small = true) { if (value + step <= max) onChange(value + step) }
     }
 }

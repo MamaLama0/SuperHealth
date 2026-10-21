@@ -68,6 +68,7 @@ class Store(context: Context) {
 
     fun import(text: String) {
         val s = StoreJson.decodeFromString(AppState.serializer(), text)
-        update { s.copy(session = it.session) }
+        // positions de programme invalides (sauvegarde ancienne ou modifiée à la main) recalées
+        update { s.copy(session = it.session, programs = s.programs.map(app.superhealth.training.domain.ProgramEdit::fixCursor)) }
     }
 }

@@ -28,6 +28,11 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.Balance
+import androidx.compose.material.icons.rounded.DonutLarge
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bedtime
@@ -74,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
+import app.superhealth.sizeOf
 import app.superhealth.vitalMetrics
 import app.superhealth.bridge.Bridge
 import app.superhealth.bridge.LiveHeart
@@ -133,12 +139,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlin.math.roundToInt
 
-/** Cartes affichées sur une demi-largeur (rangées deux par deux, à hauteur égale, quand elles se suivent). */
-private val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
-    DashCard.RECOVERY, DashCard.HEART)
-
 /** Couleur et icône de chaque carte (pastille d'en-tête, fond des cartes teintées). */
-private fun DashCard.hue(): Color = when (this) {
+internal fun DashCard.hue(): Color = when (this) {
     DashCard.CALORIES -> CaloriesColor
     DashCard.WEIGHT -> app.superhealth.ui.theme.Base.Pink
     DashCard.INTAKE -> HealthHues.Mind
@@ -154,9 +156,13 @@ private fun DashCard.hue(): Color = when (this) {
     DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS -> WorkoutBlue
     DashCard.RUNNING -> HealthHues.Fitness
     DashCard.RECOVERY -> HealthHues.Sleep
+    DashCard.RINGS -> Rings.Kind.STEPS.color
+    DashCard.HABITS -> HealthHues.Body
+    DashCard.BALANCE -> HealthHues.Respiration
+    DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS, DashCard.MUSCLE_SETS, DashCard.LIFTS -> WorkoutBlue
 }
 
-private fun DashCard.icon(): ImageVector = when (this) {
+internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.CALORIES -> Icons.Rounded.LocalFireDepartment
     DashCard.WEIGHT -> Icons.Rounded.MonitorWeight
     DashCard.INTAKE -> Icons.Rounded.Restaurant
@@ -176,10 +182,17 @@ private fun DashCard.icon(): ImageVector = when (this) {
     DashCard.STRATEGY -> Icons.Rounded.Flag
     DashCard.RUNNING -> Icons.AutoMirrored.Rounded.DirectionsRun
     DashCard.RECOVERY -> Icons.Rounded.BatteryChargingFull
+    DashCard.RINGS -> Icons.Rounded.DonutLarge
+    DashCard.HABITS -> Icons.Rounded.EventAvailable
+    DashCard.BALANCE -> Icons.Rounded.Balance
+    DashCard.NEXT_WORKOUT -> Icons.Rounded.PlayArrow
+    DashCard.TRAINING_TRENDS -> Icons.Rounded.Insights
+    DashCard.MUSCLE_SETS -> Icons.Rounded.AccessibilityNew
+    DashCard.LIFTS -> Icons.AutoMirrored.Rounded.TrendingUp
 }
 
 /** Mesures santé lues pour le tableau de bord. */
-private class HealthSnap(
+internal class HealthSnap(
     val series: Map<Metric, List<Pair<LocalDate, Double?>>> = emptyMap(),
     val cardio: CardioWeek? = null,
     val energy: List<Point> = emptyList(),
@@ -204,6 +217,7 @@ private fun Metric.dashMetrics(card: DashCard): Boolean = when (card) {
     DashCard.ENERGY -> this == Metric.BODY_ENERGY || this == Metric.STRESS
     DashCard.HYDRATION -> this == Metric.HYDRATION
     DashCard.VITALS -> this in VITALS
+    DashCard.RINGS -> this in ringMetrics()
     else -> false
 }
 
@@ -221,6 +235,17 @@ private fun hasSource(c: DashCard): Boolean = when (c) {
     else -> true
 }
 
+/** Mesures montre lues pour les anneaux choisis. */
+private fun ringMetrics(): Set<Metric> = Rings.kinds(app.superhealth.SuperPrefs.settings.value.rings).mapNotNull {
+    when (it) {
+        Rings.Kind.STEPS -> Metric.STEPS
+        Rings.Kind.ENERGY -> Metric.BODY_ENERGY
+        Rings.Kind.WATER -> Metric.HYDRATION
+        Rings.Kind.SLEEP -> Metric.SLEEP
+        else -> null
+    }
+}.toSet()
+
 /** Mesures des cartes affichées : séries des jours en parallèle (la base de la montre accepte plusieurs lectures). */
 private suspend fun loadHealth(ctx: android.content.Context, cards: List<DashCard>): HealthSnap = kotlinx.coroutines.coroutineScope {
         val today = LocalDate.now()
@@ -229,7 +254,8 @@ private suspend fun loadHealth(ctx: android.content.Context, cards: List<DashCar
             val days = if (m == Metric.STEPS || m == Metric.SLEEP || m == Metric.HYDRATION) 7L else 14L
             (days - 1 downTo 0).map { today.minusDays(it) }.map { d -> async { d to runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull() } }
         }
-        val cardio = if (DashCard.CARDIO in cards && Bridge.hasSource(Metric.CARDIO_WEEK)) runCatching { HealthRepository.cardioWeek(today) }.getOrNull() else null
+        val wantCardio = DashCard.CARDIO in cards || (DashCard.RINGS in cards && Rings.Kind.CARDIO in Rings.kinds(app.superhealth.SuperPrefs.settings.value.rings))
+        val cardio = if (wantCardio && Bridge.hasSource(Metric.CARDIO_WEEK)) runCatching { HealthRepository.cardioWeek(today) }.getOrNull() else null
         val energy = if (DashCard.ENERGY in cards && Bridge.hasSource(Metric.BODY_ENERGY)) runCatching { HealthRepository.intraday(Metric.BODY_ENERGY, today) }.getOrDefault(emptyList()) else emptyList()
         val heart = if (DashCard.HEART in cards && HealthRepository.isSupported(Metric.HEART_RATE)) runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else emptyList()
         val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(0L).take(4) }.getOrDefault(emptyList()) else emptyList()
@@ -246,7 +272,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val devices by vm.devices.collectAsState()
     val cards = sh.dashboard
 
-    val health by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size, sh.vitals) {
+    val health by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size, sh.vitals, sh.rings) {
         // Lectures de la base de la montre hors du thread principal (elles faisaient saccader l'écran à chaque retour).
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadHealth(ctx, cards) }.also { lastSnap = it }
     }
@@ -291,19 +317,21 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh) { cards.filter { !it.watch || hasSource(it) } }
-            var i = 0
-            while (i < visible.size) {
-                val c = visible[i]
-                if (c in HALF && i + 1 < visible.size && visible[i + 1] in HALF) {
-                    // Hauteur commune : la plus haute des deux cartes.
-                    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Card(visible[i], vm, nav, health, Modifier.weight(1f).fillMaxHeight(), ::tab)
-                        Card(visible[i + 1], vm, nav, health, Modifier.weight(1f).fillMaxHeight(), ::tab)
+            // Grille de 6 colonnes : bulles (S, 3 par ligne), demi-tuiles (M) et pleine largeur (L), dans l'ordre choisi.
+            app.superhealth.packRows(visible) { sh.sizeOf(it).span }.forEach { row ->
+                val used = row.sumOf { sh.sizeOf(it).span }
+                val hasBubble = row.any { sh.sizeOf(it) == app.superhealth.CardSize.S }
+                // hauteur commune seulement entre tuiles voisines (la mesure intrinsèque est interdite aux mises en page adaptatives)
+                val sameHeight = !hasBubble && row.size > 1
+                Row(Modifier.fillMaxWidth().then(if (sameHeight) Modifier.height(IntrinsicSize.Min) else Modifier),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    row.forEach { c ->
+                        val size = sh.sizeOf(c)
+                        // rangée incomplète : les bulles gardent leur taille, une tuile seule s'étend
+                        val w = if (hasBubble || used == 6) size.span.toFloat() else size.span * 6f / used
+                        Card(c, size, vm, nav, health, Modifier.weight(w).then(if (sameHeight) Modifier.fillMaxHeight() else Modifier), ::tab)
                     }
-                    i += 2
-                } else {
-                    Card(c, vm, nav, health, Modifier.fillMaxWidth(), ::tab)
-                    i += 1
+                    if (hasBubble && used < 6) Spacer(Modifier.weight((6 - used).toFloat()))
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -349,7 +377,7 @@ private fun IconChip(icon: ImageVector, hue: Color, size: androidx.compose.ui.un
  * pour aligner les graphiques de deux cartes voisines.
  */
 @Composable
-private fun Tile(
+internal fun Tile(
     c: DashCard, title: String, modifier: Modifier, tinted: Boolean = true, trailing: String? = null,
     onClick: (() -> Unit)?, padding: PaddingValues = PaddingValues(14.dp),
     bottom: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit,
@@ -380,11 +408,11 @@ private fun Tile(
 
 /** Fond des pistes (barres, anneaux) posées sur une carte teintée. */
 @Composable
-private fun softTrack(): Color = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.45f else 0.7f)
+internal fun softTrack(): Color = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.45f else 0.7f)
 
 /** Grande valeur et son unité. */
 @Composable
-private fun Value(value: String, unit: String? = null, color: Color = Mf.colors.text, big: Boolean = false) {
+internal fun Value(value: String, unit: String? = null, color: Color = Mf.colors.text, big: Boolean = false) {
     Row(verticalAlignment = Alignment.Bottom) {
         Text(value, style = if (big) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium, color = color, maxLines = 1)
         if (!unit.isNullOrBlank()) Text(" $unit", style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
@@ -393,14 +421,20 @@ private fun Value(value: String, unit: String? = null, color: Color = Mf.colors.
 }
 
 @Composable
-private fun Sub(text: String?) {
+internal fun Sub(text: String?) {
     text?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
 }
 
 @Composable
-private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, modifier: Modifier, tab: (String) -> Unit) {
+private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, modifier: Modifier, tab: (String) -> Unit) {
     val an = vm.nutrition.analytics.collectAsState().value ?: return
     val s by vm.nutrition.settings.collectAsState()
+    // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
+    if (c != DashCard.RINGS && (size == app.superhealth.CardSize.S || (size == app.superhealth.CardSize.M && c !in app.superhealth.HALF))) {
+        val d = compactOf(c, vm, h, an, s, nav, tab) ?: return
+        if (size == app.superhealth.CardSize.S) CompactBubble(c, d, modifier) else CompactTile(c, d, modifier)
+        return
+    }
     when (c) {
         DashCard.CALORIES -> {
             val todayEntries by vm.nutrition.todayEntries.collectAsState()
@@ -473,8 +507,8 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
         }
         DashCard.MACROS -> {
             val days = (an.today - 6..an.today)
-            val entries by vm.nutrition.repo.entries.allFlow().collectAsState(emptyList())
-            val logged = entries.filter { it.epochDay in days }.groupBy { it.epochDay }
+            val entries by remember(an.today) { vm.nutrition.repo.entries.rangeFlow(days.first, days.last) }.collectAsState(emptyList())
+            val logged = entries.groupBy { it.epochDay }
             val n = logged.size.coerceAtLeast(1)
             val avg = logged.values.flatten().fold(Macros.ZERO) { acc, e -> acc + e.macros() }.let { Macros(it.kcal / n, it.protein / n, it.fat / n, it.carbs / n) }
             val tgt = days.map { an.targetFor(it).macros }.let { l -> Macros(l.sumOf { it.kcal } / 7, l.sumOf { it.protein } / 7, l.sumOf { it.fat } / 7, l.sumOf { it.carbs } / 7) }
@@ -485,6 +519,17 @@ private fun Card(c: DashCard, vm: SuperViewModel, nav: NavHostController, h: Hea
             }
         }
         DashCard.STRATEGY -> Box(modifier) { StrategySummaryCard(an, s) { nav.go("strategy") } }
+        DashCard.RINGS -> {
+            val todayEntries by vm.nutrition.todayEntries.collectAsState()
+            val sh by vm.settings.collectAsState()
+            RingsCard(c, size, dashRings(sh.rings, h, todayEntries, an, s), s, modifier, nav, tab)
+        }
+        DashCard.HABITS -> HabitsCard(c, vm, an, modifier, nav)
+        DashCard.BALANCE -> BalanceCard(c, an, s, modifier, nav)
+        DashCard.NEXT_WORKOUT -> NextWorkoutCard(c, vm, modifier, nav, tab)
+        DashCard.TRAINING_TRENDS -> TrendsCard(c, vm, modifier, nav)
+        DashCard.MUSCLE_SETS -> MuscleSetsCard(c, vm, modifier, nav)
+        DashCard.LIFTS -> LiftsCard(c, vm, modifier, nav)
         DashCard.STEPS -> {
             val series = h.series[Metric.STEPS].orEmpty()
             val today = h.today(Metric.STEPS)
