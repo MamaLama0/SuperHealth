@@ -157,10 +157,13 @@ internal object WK {
         val pad = h * 0.1f
         fun x(i: Int) = w * i / (values.size - 1).coerceAtLeast(1).toFloat()
         fun y(v: Double) = pad + (h - 2 * pad) * (1 - if (hi > lo) ((v - lo) / (hi - lo)).toFloat() else 0.5f)
-        val line = android.graphics.Path(); pts.forEachIndexed { k, (i, v) -> if (k == 0) line.moveTo(x(i), y(v)) else line.lineTo(x(i), y(v)) }
+        // même tracé lisse et fidèle que les graphiques de l'app (charte commune)
+        val line = android.graphics.Path()
+        app.superhealth.ui.charts.monotone(FloatArray(pts.size) { x(pts[it].first) }, FloatArray(pts.size) { y(pts[it].second) },
+            { a, b -> line.moveTo(a, b) }, { a, b -> line.lineTo(a, b) }, { a, b, c2, d, e, f -> line.cubicTo(a, b, c2, d, e, f) })
         val area = android.graphics.Path(line).apply { lineTo(x(pts.last().first), h.toFloat()); lineTo(x(pts.first().first), h.toFloat()); close() }
         c.drawPath(area, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = android.graphics.LinearGradient(0f, 0f, 0f, h.toFloat(), color.copy(alpha = 0.35f).toArgb(), color.copy(alpha = 0f).toArgb(),
+            shader = android.graphics.LinearGradient(0f, 0f, 0f, h.toFloat(), color.copy(alpha = app.superhealth.ui.charts.ChartStyle.AREA_ALPHA).toArgb(), color.copy(alpha = 0f).toArgb(),
                 android.graphics.Shader.TileMode.CLAMP)
         })
         c.drawPath(line, Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -184,7 +187,7 @@ internal object WK {
             c.drawRoundRect(RectF(x, 0f, x + bw, h.toFloat()), bw / 2, bw / 2, paint)
             val bh = ((v ?: 0.0) / max * h).toFloat().coerceAtLeast(if (v != null && v > 0) bw else 0f)
             if (bh <= 0f) return@forEachIndexed
-            paint.color = (if (goal != null && v!! >= goal) color else color.copy(alpha = 0.6f)).toArgb()
+            paint.color = (if (goal != null && v!! >= goal) color else color.copy(alpha = app.superhealth.ui.charts.ChartStyle.BELOW_GOAL_ALPHA)).toArgb()
             c.drawRoundRect(RectF(x, h - bh, x + bw, h.toFloat()), bw / 2, bw / 2, paint)
         }
         return bmp

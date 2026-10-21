@@ -205,6 +205,7 @@ object DayWidgets {
         val mgr = android.appwidget.AppWidgetManager.getInstance(ctx)
         val glance = androidx.glance.appwidget.GlanceAppWidgetManager(ctx)
         listOf(DayWidgetReceiver::class.java to DayWidget(), RingsWidgetReceiver::class.java to RingsWidget(),
+            RingsFreeWidgetReceiver::class.java to RingsFreeWidget(),
             HydrationWidgetReceiver::class.java to HydrationWidget(), InsightWidgetReceiver::class.java to InsightWidget(),
             VitalsWidgetReceiver::class.java to VitalsWidget(), StepsWidgetReceiver::class.java to StepsWidget(),
             OverviewWidgetReceiver::class.java to OverviewWidget()).forEach { (receiver, widget) ->

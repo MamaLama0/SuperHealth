@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- debug seulement : galerie des graphiques (adb shell am start -n app.superhealth/app.superhealth.debug.ChartGalleryActivity) -->
+        <activity android:name="app.superhealth.debug.ChartGalleryActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
+    </application>
+</manifest>

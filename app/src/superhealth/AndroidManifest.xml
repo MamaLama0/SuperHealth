@@ -92,6 +92,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_rings" />
         </receiver>
+        <receiver android:name="app.superhealth.ui.widget.RingsFreeWidgetReceiver" android:exported="true" android:label="@string/widget_ringsfree_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ringsfree" />
+        </receiver>
         <receiver android:name="app.superhealth.ui.widget.HydrationWidgetReceiver" android:exported="true" android:label="@string/widget_hydration_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_hydration" />

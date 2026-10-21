@@ -146,13 +146,6 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SettingRow(tr("Mesures et photos"), icon = Icons.Rounded.Straighten) { nav.navigate("body") }
             }
 
-            SectionLabel(tr("Bases d'aliments"))
-            GroupCard {
-                SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche et code-barres"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
-                RowDivider()
-                SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
-            }
-
             SectionLabel("IA")
             GroupCard {
                 SwitchRow(tr("Fonctions IA"), tr("Décrire ou photographier un repas"), s.aiEnabled) { v -> set { it.copy(aiEnabled = v) } }

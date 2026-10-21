@@ -69,13 +69,13 @@ import app.superhealth.training.ui.Picker
 import app.superhealth.training.ui.clean
 import app.superhealth.training.ui.components.ExerciseThumb
 import app.superhealth.training.ui.components.GroupCard
-import app.superhealth.training.ui.components.LineChart
+import app.superhealth.ui.charts.LineChart
 import app.superhealth.training.ui.components.MarkdownText
 import app.superhealth.training.ui.components.MfCard
 import app.superhealth.training.ui.components.PillButton
 import app.superhealth.training.ui.components.RowDivider
 import app.superhealth.training.ui.components.SectionLabel
-import app.superhealth.training.ui.components.Series
+import app.superhealth.ui.charts.Series
 import app.superhealth.training.ui.components.StatCell
 import app.superhealth.training.ui.components.SwitchRow
 import app.superhealth.training.ui.components.Tag

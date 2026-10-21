@@ -56,40 +56,41 @@ class RingsWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WK.ALL)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val rings = runCatching { load(context) }.getOrNull()
+        val rings = runCatching { loadRings(context) }.getOrNull()
         val bmp = WK.rings(rings ?: Rings.build(Rings.defaults, { null }, { 0.0 }), WK.px(context, 220.dp), context)
         provideContent { Content(context, rings, bmp) }
     }
+}
 
-    private suspend fun load(ctx: Context): List<Rings.Ring> {
-        val today = LocalDate.now()
-        val repo = NutriApp.repository
-        val s = repo.prefs.settings.value
-        val target = repo.analytics().first().targetFor(today.toEpochDay()).macros
-        val entries = repo.entriesForDay(today.toEpochDay()).first()
-        val kinds = Rings.kinds(app.superhealth.SuperPrefs.settings.value.rings)
-        suspend fun metric(m: Metric) = if (Bridge.hasSource(m)) runCatching { Bridge.healthValue(ctx, m, today) }.getOrNull() else null
-        val cardio = if (Rings.Kind.CARDIO in kinds && Bridge.hasSource(Metric.CARDIO_WEEK))
-            runCatching { app.superhealth.health.data.HealthRepository.cardioWeek(today) }.getOrNull() else null
-        val values = kinds.associateWith { k ->
-            when (k) {
-                Rings.Kind.STEPS -> runCatching { Bridge.steps(ctx, today) }.getOrNull()
-                Rings.Kind.ENERGY -> metric(Metric.BODY_ENERGY)
-                Rings.Kind.KCAL -> entries.takeIf { it.isNotEmpty() }?.sumOf { it.kcal }
-                Rings.Kind.PROTEIN -> entries.takeIf { it.isNotEmpty() }?.sumOf { it.protein }
-                Rings.Kind.WATER -> metric(Metric.HYDRATION)
-                Rings.Kind.SLEEP -> metric(Metric.SLEEP)
-                Rings.Kind.CARDIO -> cardio?.total?.toDouble()
-            }
+/** Anneaux choisis dans l'app, avec les valeurs et objectifs du jour (partagé par les widgets d'anneaux). */
+internal suspend fun loadRings(ctx: Context): List<Rings.Ring> {
+    val today = LocalDate.now()
+    val repo = NutriApp.repository
+    val s = repo.prefs.settings.value
+    val target = repo.analytics().first().targetFor(today.toEpochDay()).macros
+    val entries = repo.entriesForDay(today.toEpochDay()).first()
+    val kinds = Rings.kinds(app.superhealth.SuperPrefs.settings.value.rings)
+    suspend fun metric(m: Metric) = if (Bridge.hasSource(m)) runCatching { Bridge.healthValue(ctx, m, today) }.getOrNull() else null
+    val cardio = if (Rings.Kind.CARDIO in kinds && Bridge.hasSource(Metric.CARDIO_WEEK))
+        runCatching { app.superhealth.health.data.HealthRepository.cardioWeek(today) }.getOrNull() else null
+    val values = kinds.associateWith { k ->
+        when (k) {
+            Rings.Kind.STEPS -> runCatching { Bridge.steps(ctx, today) }.getOrNull()
+            Rings.Kind.ENERGY -> metric(Metric.BODY_ENERGY)
+            Rings.Kind.KCAL -> entries.takeIf { it.isNotEmpty() }?.sumOf { it.kcal }
+            Rings.Kind.PROTEIN -> entries.takeIf { it.isNotEmpty() }?.sumOf { it.protein }
+            Rings.Kind.WATER -> metric(Metric.HYDRATION)
+            Rings.Kind.SLEEP -> metric(Metric.SLEEP)
+            Rings.Kind.CARDIO -> cardio?.total?.toDouble()
         }
-        return Rings.build(kinds, { values[it] }, { app.superhealth.ui.dashboard.ringGoal(it, s.stepGoal, target.kcal, target.protein, cardio?.target) })
     }
+    return Rings.build(kinds, { values[it] }, { app.superhealth.ui.dashboard.ringGoal(it, s.stepGoal, target.kcal, target.protein, cardio?.target) })
 }
 
 /** Valeur d'un anneau, sans objectif : le symbole sur le rayon dit de quelle mesure il s'agit. */
 private fun value(r: Rings.Ring): String = r.value?.let { fmt(r.kind, it) } ?: "—"
 
-private fun fmt(k: Rings.Kind, v: Double) = if (k == Rings.Kind.SLEEP) app.superhealth.ui.formatDuration(v) else formatNumber(v)
+internal fun fmt(k: Rings.Kind, v: Double) = if (k == Rings.Kind.SLEEP) app.superhealth.ui.formatDuration(v) else formatNumber(v)
 
 @Composable
 private fun Content(ctx: Context, rings: List<Rings.Ring>?, bmp: Bitmap) {

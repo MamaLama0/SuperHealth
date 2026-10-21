@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,21 +42,18 @@ import app.superhealth.ui.theme.Mf
 
 /**
  * Fiche Open Food Facts d'un produit à code-barres : photo, Nutri-Score, NOVA, Green-Score, ingrédients, allergènes,
- * additifs et labels. Chargée en arrière-plan à l'ouverture de la fiche aliment (seul le code-barres est envoyé).
+ * additifs et labels. Ne retarde jamais la fiche aliment : déjà là si le scan l'a rapportée, sinon chargée en arrière-plan
+ * et ajoutée en bas quand elle arrive (seul le code-barres est envoyé).
  */
 @Composable
 fun OffSection(code: String) {
-    val state by produceState<Pair<Boolean, OpenFoodFacts.Details?>>(true to null, code) { value = false to OpenFoodFacts.details(code) }
-    val (loading, d) = state
-    if (loading) {
-        Row(Modifier.padding(top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Mf.colors.textSecondary)
-            Spacer(Modifier.width(8.dp))
-            Text(tr("Open Food Facts…"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-        }
-        return
-    }
-    d ?: return
+    val d by produceState(OpenFoodFacts.cachedDetails(code), code) { if (value == null) value = OpenFoodFacts.details(code) }
+    val details = d ?: return
+    OffDetails(details)
+}
+
+@Composable
+private fun OffDetails(d: OpenFoodFacts.Details) {
     Text(tr("Open Food Facts"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 20.dp, bottom = 8.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         d.imageUrl?.let { url ->

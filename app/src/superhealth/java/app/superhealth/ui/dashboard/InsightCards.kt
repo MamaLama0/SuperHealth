@@ -1,5 +1,6 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.ui.charts.smooth
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -260,23 +261,27 @@ private fun DualChart(a: Map<LocalDate, Double>, b: Map<LocalDate, Double>, sa: 
         val start = today.minusDays(days - 1L)
         val pad = 6.dp.toPx()
         val h = size.height - pad * 2
-        for (k in 0..2) drawLine(grid, Offset(0f, pad + h * k / 2), Offset(size.width, pad + h * k / 2), strokeWidth = 1.dp.toPx())
+        for (k in 0..2) drawLine(grid, Offset(0f, pad + h * k / 2), Offset(size.width, pad + h * k / 2), strokeWidth = app.superhealth.ui.charts.ChartStyle.grid.toPx())
         fun x(d: LocalDate) = size.width * (d.toEpochDay() - start.toEpochDay()) / (days - 1).coerceAtLeast(1).toFloat()
         listOf(a to sa, b to sb).forEach { (m, src) ->
             val pts = m.filterKeys { !it.isBefore(start) }.toSortedMap()
             if (pts.isEmpty()) return@forEach
             val lo = pts.values.min(); val hi = pts.values.max()
             fun y(v: Double) = pad + h * (1 - if (hi > lo) ((v - lo) / (hi - lo)).toFloat() else 0.5f)
-            if (src.sparse || pts.size < 2) pts.forEach { (d, v) -> drawCircle(src.color, 3.5.dp.toPx(), Offset(x(d), y(v))) }
+            if (src.sparse || pts.size < 2) pts.forEach { (d, v) -> drawCircle(src.color, app.superhealth.ui.charts.ChartStyle.endDot.toPx(), Offset(x(d), y(v))) }
             else {
-                val path = Path()
+                // trou de plus de 3 jours : la courbe s'interrompt ; tracé lisse et fidèle de la charte commune
+                val segs = mutableListOf<MutableList<Offset>>()
                 var prev: LocalDate? = null
                 pts.forEach { (d, v) ->
-                    // trou de plus de 3 jours : la courbe s'interrompt
-                    if (prev == null || d.toEpochDay() - prev!!.toEpochDay() > 3) path.moveTo(x(d), y(v)) else path.lineTo(x(d), y(v))
-                    prev = d
+                    if (prev == null || d.toEpochDay() - prev!!.toEpochDay() > 3) segs += mutableListOf<Offset>()
+                    segs.last() += Offset(x(d), y(v)); prev = d
                 }
-                drawPath(path, src.color, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round))
+                val path = Path()
+                segs.forEach { seg -> if (seg.size == 1) drawCircle(src.color, app.superhealth.ui.charts.ChartStyle.dot.toPx(), seg[0]) else path.smooth(seg) }
+                drawPath(path, src.color, style = Stroke(app.superhealth.ui.charts.ChartStyle.line.toPx(), cap = StrokeCap.Round,
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                drawCircle(src.color, app.superhealth.ui.charts.ChartStyle.endDot.toPx(), segs.last().last())
             }
         }
     }

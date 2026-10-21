@@ -50,10 +50,10 @@ import app.superhealth.nutrition.data.Analytics
 import app.superhealth.nutrition.domain.Balance
 import app.superhealth.nutrition.domain.Habits
 import app.superhealth.nutrition.domain.Settings as NutritionSettings
-import app.superhealth.nutrition.ui.components.BarChart
-import app.superhealth.nutrition.ui.components.LineChart
+import app.superhealth.ui.charts.BarChart
+import app.superhealth.ui.charts.LineChart
 import app.superhealth.nutrition.ui.components.PillButton
-import app.superhealth.nutrition.ui.components.Series
+import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.training.domain.Analytics as TrainingAnalytics
 import app.superhealth.training.domain.Generator
@@ -222,26 +222,8 @@ internal fun BalanceCard(c: DashCard, an: Analytics, s: NutritionSettings, modif
             else -> tr("Surplus moyen sur 7 jours")
         })
         Spacer(Modifier.height(10.dp))
-        val max = days.mapNotNull { it.second?.let(::abs) }.maxOrNull()?.coerceAtLeast(100.0) ?: 100.0
-        val zero = Mf.colors.textTertiary
-        Canvas(Modifier.fillMaxWidth().height(70.dp)) {
-            val w = size.width / days.size
-            val mid = size.height / 2
-            drawLine(zero, Offset(0f, mid), Offset(size.width, mid), strokeWidth = 1.dp.toPx())
-            days.forEachIndexed { i, (_, v) ->
-                v ?: return@forEachIndexed
-                val h = (abs(v) / max * (mid - 2.dp.toPx())).toFloat().coerceAtLeast(2.dp.toPx())
-                val bw = w * 0.5f
-                val x = i * w + (w - bw) / 2
-                drawRoundRect(if (v > 0) surplus else deficit, Offset(x, if (v > 0) mid - h else mid), Size(bw, h), CornerRadius(bw / 2))
-            }
-        }
-        Row(Modifier.fillMaxWidth()) {
-            days.forEach { (d, _) ->
-                Text(dayLetter(LocalDate.ofEpochDay(d)), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-        }
+        app.superhealth.ui.charts.SignedBarChart(days.map { it.second }, surplus, deficit, height = 70.dp, showAxis = false,
+            labels = days.map { (d, _) -> dayLetter(LocalDate.ofEpochDay(d)) })
     }
 }
 

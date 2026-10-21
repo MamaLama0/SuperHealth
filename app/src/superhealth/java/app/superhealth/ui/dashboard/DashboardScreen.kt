@@ -96,13 +96,13 @@ import app.superhealth.health.data.Point
 import app.superhealth.nutrition.data.CheckInState
 import app.superhealth.nutrition.domain.Expenditure
 import app.superhealth.nutrition.domain.Macros
-import app.superhealth.nutrition.ui.components.BarChart
-import app.superhealth.nutrition.ui.components.LineChart
+import app.superhealth.ui.charts.BarChart
+import app.superhealth.ui.charts.LineChart
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.ProgressBar
 import app.superhealth.nutrition.ui.components.Ring
-import app.superhealth.nutrition.ui.components.Series
+import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.nutrition.ui.macros
 import app.superhealth.nutrition.ui.screens.StrategySummaryCard
@@ -677,7 +677,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val today = h.today(Metric.STEPS)
             val goal = s.stepGoal
             Tile(c, tr("Pas"), modifier, onClick = { nav.go("h/metric/STEPS") }, bottom = {
-                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 34.dp, track = softTrack(),
+                BarChart(series.map { it.second }, series.map { goal.takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 34.dp, track = softTrack(), dimBelowGoal = true,
                     labels = series.map { dayLetter(it.first) })
             }) {
                 Value(today?.let { formatNumber(it) } ?: "—", color = c.hue().onContainer())
@@ -718,7 +718,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val series = h.series[Metric.SLEEP].orEmpty()
             val last = h.latest(Metric.SLEEP)
             Tile(c, tr("Sommeil"), modifier, onClick = { nav.go("h/metric/SLEEP") }, bottom = {
-                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 34.dp, track = softTrack(), labels = series.map { dayLetter(it.first) })
+                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 34.dp, track = softTrack(), dimBelowGoal = true, labels = series.map { dayLetter(it.first) })
             }) {
                 Value(last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", color = c.hue().onContainer())
                 Sub(series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatValue(Metric.SLEEP, it.average())) })

@@ -46,14 +46,14 @@ import app.superhealth.health.data.ManualLog
 import app.superhealth.health.data.ManualLogStore
 import app.superhealth.health.data.Metric
 import app.superhealth.health.data.Point
-import app.superhealth.nutrition.ui.components.BarChart
+import app.superhealth.ui.charts.BarChart
 import app.superhealth.nutrition.ui.components.ChipChoice
 import app.superhealth.nutrition.ui.components.GroupCard
-import app.superhealth.nutrition.ui.components.LineChart
+import app.superhealth.ui.charts.LineChart
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.RowDivider
 import app.superhealth.nutrition.ui.components.SectionLabel
-import app.superhealth.nutrition.ui.components.Series
+import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.Lang
 import app.superhealth.ui.SuperViewModel
@@ -157,7 +157,11 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                     val start = HealthRepository.startMs(p.from)
                     HeartChart(intraday.map { it.timestampMs to it.value }, color, height = 170.dp, from = start, to = start + 86_400_000L,
                         xLabels = listOf(0, 6, 12, 18).map { start + it * 3_600_000L to "${it}h" })
-                } else LineChart(listOf(Series(intraday.map { it.timestampMs / 60000 to it.value }, color)), height = 150.dp)
+                } else {
+                    val start = HealthRepository.startMs(p.from) / 60_000
+                    LineChart(listOf(Series(intraday.map { it.timestampMs / 60000 to it.value }, color, gap = 60.0)), height = 150.dp,
+                        xFrom = start.toDouble(), xTo = (start + 1440).toDouble(), xLabels = listOf(0, 6, 12, 18).map { start + it * 60 to "${it}h" })
+                }
                 span == Span.DAY -> Text(tr("Pas de détail heure par heure pour ce jour."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                 span == Span.QUARTER || span == Span.YEAR -> {
                     // Agrégat par semaine (3 mois) ou par mois (année) pour garder des barres lisibles.
@@ -166,7 +170,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                     val vs = keys.map { k -> aggregate(metric, buckets[k].orEmpty().mapNotNull { it.second }) }
                     val labels = keys.mapIndexed { i, k -> if (span == Span.YEAR) k.month.getDisplayName(java.time.format.TextStyle.NARROW, Lang.locale) else if (i % 3 == 0) "${k.dayOfMonth}/${k.monthValue}" else "" }
                     if (metric.chart == ChartKind.BARS) BarChart(vs, vs.map { null }, color, height = 150.dp, labels = labels)
-                    else LineChart(listOf(Series(keys.zip(vs).mapNotNull { (k, v) -> v?.let { k.toEpochDay() to it } }, color, dots = true)), height = 150.dp)
+                    else LineChart(listOf(Series(keys.zip(vs).mapNotNull { (k, v) -> v?.let { k.toEpochDay() to it } }, color, markers = true)), height = 150.dp)
                 }
                 metric.chart == ChartKind.BARS -> {
                     val goal = HealthRepository.goal(metric)?.takeIf { metric != Metric.CARDIO_WEEK }
@@ -174,7 +178,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                         days.map { goal?.let { g -> if (metric == Metric.SLEEP) g / 60 else g } }, color, height = 150.dp,
                         labels = days.mapIndexed { i, (d, _) -> if (span == Span.WEEK) dayLetter(d) else if (i % 7 == 0) "${d.dayOfMonth}" else "" })
                 }
-                else -> LineChart(listOf(Series(days.mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }, color, dots = true)), height = 150.dp)
+                else -> LineChart(listOf(Series(days.mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }, color, markers = days.size <= 31, gap = 3.0)), height = 150.dp)
             }
             if (values.size >= 2) {
                 Spacer(Modifier.height(14.dp))

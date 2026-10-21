@@ -62,7 +62,7 @@ import app.superhealth.training.domain.Settings
 import app.superhealth.training.domain.Workout
 import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.clean
-import app.superhealth.training.ui.components.BarChart
+import app.superhealth.ui.charts.BarChart
 import app.superhealth.training.ui.components.BodyMap
 import app.superhealth.training.ui.components.ChipChoice
 import app.superhealth.training.ui.components.ExerciseThumb

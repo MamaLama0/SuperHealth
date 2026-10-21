@@ -69,13 +69,13 @@ import app.superhealth.nutrition.domain.Sex
 import app.superhealth.nutrition.ui.AppViewModel
 import app.superhealth.nutrition.ui.components.ChipChoice
 import app.superhealth.nutrition.ui.components.GroupCard
-import app.superhealth.nutrition.ui.components.LineChart
+import app.superhealth.ui.charts.LineChart
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.NumberField
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
 import app.superhealth.nutrition.ui.components.SectionLabel
-import app.superhealth.nutrition.ui.components.Series
+import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.num
 import app.superhealth.nutrition.ui.shortDate
 import app.superhealth.ui.theme.Mf

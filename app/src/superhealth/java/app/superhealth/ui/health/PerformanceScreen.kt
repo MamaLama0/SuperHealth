@@ -37,7 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import app.superhealth.health.data.Performance
-import app.superhealth.nutrition.ui.components.BarChart
+import app.superhealth.ui.charts.BarChart
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.Ring
 import app.superhealth.nutrition.ui.components.SectionLabel

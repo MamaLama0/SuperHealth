@@ -191,11 +191,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
 
             SectionLabel(tr("Modules"))
             GroupCard {
-                SettingRow(tr("Nutrition"), subtitle = tr("Programme, bases d'aliments, IA"), icon = Icons.Rounded.Restaurant) { nav.go("n/settings") }
-                RowDivider()
-                SwitchRow(tr("Open Food Facts"), tr("Recherche en ligne, code-barres et fiche produit (scores, ingrédients)"), s.openFoodFactsEnabled) { v ->
-                    set { it.copy(openFoodFactsEnabled = v) }
-                }
+                SettingRow(tr("Nutrition"), subtitle = tr("Programme, IA, calculs"), icon = Icons.Rounded.Restaurant) { nav.go("n/settings") }
                 RowDivider()
                 SettingRow(tr("Musculation"), subtitle = tr("Salles, progression, échauffements, repos"), icon = Icons.Rounded.FitnessCenter) { nav.go("t/settings") }
                 RowDivider()
@@ -204,6 +200,14 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     RowDivider()
                     SettingRow(tr("Montre et appareils"), subtitle = tr("Associer, synchroniser, réglages de la montre"), icon = Icons.Rounded.Watch) { nav.go("h/devices") }
                 }
+            }
+
+            // bases où sont cherchés les aliments et les codes-barres
+            SectionLabel(tr("Bases d'aliments"))
+            GroupCard {
+                SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
+                RowDivider()
+                SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
             }
 
             SectionLabel(tr("Connexions"))

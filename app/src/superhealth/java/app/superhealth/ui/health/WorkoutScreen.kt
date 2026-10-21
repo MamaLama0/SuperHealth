@@ -36,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import app.superhealth.ui.charts.LineChart
+import app.superhealth.ui.charts.Series
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -398,37 +400,18 @@ private fun Charts(w: WorkoutDetail) {
     }
 }
 
-/** Courbe remplie (allure inversée : plus rapide en haut), ligne de moyenne en pointillés. */
+/**
+ * Courbe remplie de la charte commune (allure inversée : plus rapide en haut, graduations en temps rond), moyenne en
+ * pointillés, distance ou temps de départ et d'arrivée sous l'axe.
+ */
 @Composable
 private fun AreaChart(pts: List<Pair<Double, Double>>, color: Color, invert: Boolean, format: (Double) -> String) {
     if (pts.size < 2) return
-    val ys = pts.map { it.second }
-    val lo = ys.min(); val hi = ys.max().coerceAtLeast(lo + 1)
-    val x0 = pts.first().first; val x1 = pts.last().first.coerceAtLeast(x0 + 0.001)
-    val avg = ys.average()
-    val grid = Mf.colors.divider; val axis = Mf.colors.textSecondary
-    Row {
-        Canvas(Modifier.weight(1f).height(170.dp)) {
-            fun x(v: Double) = ((v - x0) / (x1 - x0) * size.width).toFloat()
-            fun y(v: Double): Float { val f = ((v - lo) / (hi - lo)).toFloat(); return if (invert) f * size.height else (1 - f) * size.height }
-            listOf(0f, 0.5f, 1f).forEach { f -> drawLine(grid, Offset(0f, size.height * f), Offset(size.width, size.height * f), 1.dp.toPx()) }
-            val line = Path()
-            pts.forEachIndexed { i, (a, b) -> if (i == 0) line.moveTo(x(a), y(b)) else line.lineTo(x(a), y(b)) }
-            val base = if (invert) 0f else size.height
-            val area = Path().apply { addPath(line); lineTo(x(pts.last().first), base); lineTo(x(pts.first().first), base); close() }
-            drawPath(area, Brush.verticalGradient(if (invert) listOf(color.copy(alpha = 0f), color.copy(alpha = 0.3f)) else listOf(color.copy(alpha = 0.3f), color.copy(alpha = 0f))))
-            drawPath(line, color, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawLine(axis.copy(alpha = 0.7f), Offset(0f, y(avg)), Offset(size.width, y(avg)), 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f)))
-        }
-        Column(Modifier.height(170.dp).padding(start = 6.dp).width(38.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            val top = if (invert) lo else hi; val bottom = if (invert) hi else lo
-            listOf(top, (hi + lo) / 2, bottom).forEach { Text(format(it), fontSize = 10.sp, color = axis, maxLines = 1) }
-        }
-    }
-    Row(Modifier.fillMaxWidth().padding(end = 44.dp)) {
-        Text(formatNumber(x0, 0), fontSize = 10.sp, color = axis, modifier = Modifier.weight(1f))
-        Text(formatNumber(x1, if (x1 < 10) 1 else 0), fontSize = 10.sp, color = axis)
-    }
+    val x0 = pts.first().first; val x1 = pts.last().first
+    LineChart(listOf(Series(pts, color, area = true)), height = 170.dp, format = format, invertY = invert, timeAxis = invert,
+        reference = pts.map { it.second }.average(), highlightEnd = false,
+        xLabels = listOf(x0 to formatNumber(x0, 0), (x0 + x1) / 2 to formatNumber((x0 + x1) / 2, if (x1 < 10) 1 else 0),
+            x1 to formatNumber(x1, if (x1 < 10) 1 else 0)))
 }
 
 /** Temps passé dans chaque zone cardiaque (bornes de la montre, sinon % de la FC max théorique). */

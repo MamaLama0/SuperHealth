@@ -22,9 +22,15 @@ object OpenFoodFacts {
     private const val UA = "LaBouffe/5.0 (usage personnel)"
     private const val FIELDS = "code,product_name,product_name_fr,brands,nutriments,serving_quantity,serving_size"
 
+    /**
+     * Produit scanné : un seul appel rapporte les macros et la fiche (scores, ingrédients…), mise en cache pour que la
+     * fiche aliment s'ouvre complète. Délais courts : un serveur lent mène à la création plutôt qu'à une longue attente.
+     */
     suspend fun byBarcode(code: String): FoodEntity? = withContext(Dispatchers.IO) {
-        val json = get("$BASE/api/v2/product/${URLEncoder.encode(code, "UTF-8")}.json?fields=$FIELDS") ?: return@withContext null
+        val json = get("$BASE/api/v2/product/${URLEncoder.encode(code, "UTF-8")}.json?fields=$FIELDS,$DETAIL_FIELDS&lc=fr", fast = true)
+            ?: return@withContext null
         val product = json["product"] as? JsonObject ?: return@withContext null
+        runCatching { detailsCache[code] = parseDetails(code, product) }
         toFood(product)
     }
 
@@ -47,12 +53,19 @@ object OpenFoodFacts {
         "ingredients_text_fr,ingredients_text,allergens_tags,additives_tags,labels_tags,quantity,origins"
     private val detailsCache = java.util.concurrent.ConcurrentHashMap<String, Details>()
 
+    /** Fiche déjà chargée (par le scan ou une ouverture précédente), sans réseau. */
+    fun cachedDetails(code: String): Details? = detailsCache[code]
+
     suspend fun details(code: String): Details? = detailsCache[code] ?: withContext(Dispatchers.IO) {
         val json = get("$BASE/api/v2/product/${URLEncoder.encode(code, "UTF-8")}.json?fields=$DETAIL_FIELDS&lc=fr") ?: return@withContext null
         val p = json["product"] as? JsonObject ?: return@withContext null
+        parseDetails(code, p).also { detailsCache[code] = it }
+    }
+
+    private fun parseDetails(code: String, p: JsonObject): Details {
         fun tags(key: String) = (p[key] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }
             ?.map { it.substringAfter(':').replace('-', ' ').replaceFirstChar { c -> c.uppercase() } }.orEmpty()
-        Details(
+        return Details(
             code = code,
             imageUrl = p.str("image_front_small_url") ?: p.str("image_front_url"),
             nutriScore = p.str("nutriscore_grade")?.lowercase()?.takeIf { it in listOf("a", "b", "c", "d", "e") },
@@ -64,7 +77,7 @@ object OpenFoodFacts {
             labels = tags("labels_tags").take(8),
             quantity = p.str("quantity")?.takeIf { it.isNotBlank() },
             origins = p.str("origins")?.takeIf { it.isNotBlank() },
-        ).also { detailsCache[code] = it }
+        )
     }
 
     /** Photo du produit (petite taille fournie par OFF). */
@@ -91,11 +104,11 @@ object OpenFoodFacts {
         json["products"]?.jsonArray?.mapNotNull { (it as? JsonObject)?.let(::toFood) } ?: emptyList()
     }
 
-    private fun get(url: String): JsonObject? {
+    private fun get(url: String, fast: Boolean = false): JsonObject? {
         val conn = URL(url).openConnection() as HttpURLConnection
         return try {
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 15_000
+            conn.connectTimeout = if (fast) 4_000 else 10_000
+            conn.readTimeout = if (fast) 6_000 else 15_000
             conn.setRequestProperty("User-Agent", UA)
             if (conn.responseCode != 200) return null
             val text = conn.inputStream.use { Net.readCapped(it) }

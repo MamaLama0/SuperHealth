@@ -50,14 +50,14 @@ import app.superhealth.nutrition.domain.ProgramStyle
 import app.superhealth.nutrition.domain.Settings
 import app.superhealth.nutrition.ui.AppViewModel
 import app.superhealth.nutrition.ui.components.AssetImage
-import app.superhealth.nutrition.ui.components.BarChart
-import app.superhealth.nutrition.ui.components.LineChart
+import app.superhealth.ui.charts.BarChart
+import app.superhealth.ui.charts.LineChart
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.Ring
 import app.superhealth.nutrition.ui.components.ScreenTitle
 import app.superhealth.nutrition.ui.components.SectionLabel
-import app.superhealth.nutrition.ui.components.Series
+import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.nutrition.ui.macros
 import app.superhealth.nutrition.ui.num

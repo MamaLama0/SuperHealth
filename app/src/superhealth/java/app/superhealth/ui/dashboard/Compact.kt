@@ -1,5 +1,7 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.ui.charts.ChartStyle
+import app.superhealth.ui.charts.smooth
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -256,26 +258,27 @@ internal fun MiniChart(d: CompactData, hue: androidx.compose.ui.graphics.Color, 
         val n = vals.size
         val present = vals.filterNotNull()
         if (d.bars) {
+            // barres de la charte commune : fond de barre, objectif atteint en plein, sinon atténuée
             val max = (present + listOfNotNull(d.goal)).max().coerceAtLeast(1e-9)
-            val slot = size.width / n; val bw = (slot * 0.58f).coerceAtMost(14.dp.toPx())
+            val slot = size.width / n; val bw = (slot * ChartStyle.BAR_FILL).coerceAtMost(ChartStyle.barMax.toPx())
             vals.forEachIndexed { i, v ->
                 val x = i * slot + (slot - bw) / 2
                 drawRoundRect(track, Offset(x, 0f), Size(bw, size.height), androidx.compose.ui.geometry.CornerRadius(bw / 2))
                 val bh = ((v ?: 0.0) / max * size.height).toFloat()
-                if (v != null && v > 0) drawRoundRect(if (d.goal != null && v >= d.goal) hue else hue.copy(alpha = 0.6f),
+                if (v != null && v > 0) drawRoundRect(if (d.goal != null && v >= d.goal) hue else hue.copy(alpha = ChartStyle.BELOW_GOAL_ALPHA),
                     Offset(x, size.height - bh.coerceAtLeast(bw)), Size(bw, bh.coerceAtLeast(bw)), androidx.compose.ui.geometry.CornerRadius(bw / 2))
             }
         } else {
             val lo = present.min(); val hi = present.max()
-            val pad = 3.dp.toPx()
-            fun x(i: Int) = size.width * i / (n - 1).coerceAtLeast(1)
+            val pad = ChartStyle.endDot.toPx() + 1.dp.toPx()
+            fun x(i: Int) = pad + (size.width - 2 * pad) * i / (n - 1).coerceAtLeast(1)
             fun y(v: Double) = pad + (size.height - 2 * pad) * (1 - if (hi > lo) ((v - lo) / (hi - lo)).toFloat() else 0.5f)
             val pts = vals.withIndex().mapNotNull { (i, v) -> v?.let { Offset(x(i), y(it)) } }
-            val line = androidx.compose.ui.graphics.Path().apply { pts.forEachIndexed { k, p -> if (k == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) } }
+            val line = androidx.compose.ui.graphics.Path().apply { smooth(pts) }
             val area = androidx.compose.ui.graphics.Path().apply { addPath(line); lineTo(pts.last().x, size.height); lineTo(pts.first().x, size.height); close() }
-            drawPath(area, Brush.verticalGradient(listOf(hue.copy(alpha = 0.3f), hue.copy(alpha = 0f))))
-            drawPath(line, hue, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
-            drawCircle(hue, 3.5.dp.toPx(), pts.last())
+            drawPath(area, Brush.verticalGradient(listOf(hue.copy(alpha = ChartStyle.AREA_ALPHA), hue.copy(alpha = 0f))))
+            drawPath(line, hue, style = Stroke(ChartStyle.line.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+            drawCircle(hue, ChartStyle.endDot.toPx(), pts.last())
         }
     }
 }
