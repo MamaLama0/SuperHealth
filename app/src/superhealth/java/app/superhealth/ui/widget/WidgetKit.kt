@@ -22,6 +22,9 @@ import androidx.glance.action.Action
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
+import androidx.glance.action.clickable
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.padding
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -55,25 +58,27 @@ internal object WK {
 
     const val RADIUS = 24
 
-    /** Paliers de taille communs (en cases du lanceur) : 1×1, 2×1, 4×1, 2×2, 4×2, 4×4. */
+    /** Les quatre tailles, comme les cartes du tableau de bord : petit 1×1, moyen 2×2, bandeau 4×1, grand 4×2. */
     val ONE = androidx.compose.ui.unit.DpSize(57.dp, 57.dp)
-    val TWO_BY_ONE = androidx.compose.ui.unit.DpSize(130.dp, 57.dp)
-    val FOUR_BY_ONE = androidx.compose.ui.unit.DpSize(270.dp, 57.dp)
-    val TWO_BY_TWO = androidx.compose.ui.unit.DpSize(130.dp, 130.dp)
-    val FOUR_BY_TWO = androidx.compose.ui.unit.DpSize(270.dp, 130.dp)
-    val FOUR_BY_FOUR = androidx.compose.ui.unit.DpSize(270.dp, 270.dp)
-    val ALL = setOf(ONE, TWO_BY_ONE, FOUR_BY_ONE, TWO_BY_TWO, FOUR_BY_TWO, FOUR_BY_FOUR)
+    val MEDIUM = androidx.compose.ui.unit.DpSize(130.dp, 130.dp)
+    val STRIP = androidx.compose.ui.unit.DpSize(270.dp, 57.dp)
+    val LARGE = androidx.compose.ui.unit.DpSize(270.dp, 130.dp)
+    val ALL = setOf(ONE, MEDIUM, STRIP, LARGE)
 
-    /** Forme du widget, d'après sa taille courante. */
-    enum class Shape { TINY, STRIP, WIDE_STRIP, SQUARE, WIDE, BIG }
+    /** Petit, moyen et bandeau : symbole et valeur, peu ou pas de texte ; grand : la version détaillée. */
+    enum class Size { SMALL, MEDIUM, STRIP, LARGE }
 
-    fun shape(size: androidx.compose.ui.unit.DpSize): Shape = when {
-        size.height < 100.dp -> when { size.width >= 250.dp -> Shape.WIDE_STRIP; size.width >= 120.dp -> Shape.STRIP; else -> Shape.TINY }
-        size.width < 100.dp -> Shape.TINY
-        size.width < 250.dp -> Shape.SQUARE
-        size.height >= 240.dp -> Shape.BIG
-        else -> Shape.WIDE
+    fun size(s: androidx.compose.ui.unit.DpSize): Size = when {
+        s.height < 100.dp -> if (s.width >= 250.dp) Size.STRIP else Size.SMALL
+        s.width < 120.dp -> Size.SMALL
+        s.width < 250.dp -> Size.MEDIUM
+        else -> Size.LARGE
     }
+
+    /** Valeur dans la couleur de sa mesure, lisible sur le fond pastel (comme onContainer dans l'app). */
+    fun on(color: Color) = ColorProvider(androidx.compose.ui.graphics.lerp(color, Color.Black, 0.30f), androidx.compose.ui.graphics.lerp(color, Color.White, 0.25f))
+    /** Pastille ronde posée sur un fond pastel. */
+    val chipOn = ColorProvider(Color(0xD9FFFFFF), Color(0xD91C1C1E))
 
     /** Ouvre l'app sur [route] (filtrée par Routes.external). */
     fun open(ctx: Context, route: String): Action =
@@ -187,6 +192,34 @@ internal object WK {
 
     /** Pixels pour [dp] (les images sont rendues à la densité de l'écran). */
     fun px(ctx: Context, dp: Dp): Int = (dp.value * ctx.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+}
+
+/**
+ * Fond d'un widget, comme les cartes du tableau de bord : pastel de la famille de la mesure ([hue]), ou carte blanche
+ * (sombre la nuit) sans [hue]. Toucher : [action].
+ */
+@Composable
+internal fun WidgetCard(action: Action, hue: Color?, padding: Dp = 12.dp, horizontal: Alignment.Horizontal = Alignment.Start,
+                        content: @Composable androidx.glance.layout.ColumnScope.() -> Unit) {
+    androidx.glance.layout.Column(GlanceModifier.fillMaxSize().background(hue?.let { WK.tint(it) } ?: WK.bg).cornerRadius(WK.RADIUS.dp)
+        .padding(padding).clickable(action), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = horizontal, content = content)
+}
+
+/** Pastille ronde du symbole, comme dans l'app ([onTint] : sur fond pastel). */
+@Composable
+internal fun WidgetChip(icon: Int, color: Color, size: Dp, onTint: Boolean = true) {
+    Box(GlanceModifier.size(size).cornerRadius(size / 2).background(if (onTint) WK.chipOn else WK.tint(color)), contentAlignment = Alignment.Center) {
+        Image(ImageProvider(icon), null, GlanceModifier.size(size * 0.56f), colorFilter = ColorFilter.tint(WK.c(color)))
+    }
+}
+
+/** Grande valeur et son unité, dans la couleur de la mesure. */
+@Composable
+internal fun WidgetValue(value: String, unit: String?, color: Color, size: Int) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(value, style = TextStyle(color = WK.on(color), fontSize = size.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        unit?.let { Text(" $it", style = TextStyle(color = WK.sub, fontSize = (size * 0.5f).coerceAtLeast(10f).sp), maxLines = 1) }
+    }
 }
 
 /** En-tête de widget : pastille colorée et titre. */

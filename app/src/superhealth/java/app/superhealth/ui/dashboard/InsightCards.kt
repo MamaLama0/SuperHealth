@@ -87,8 +87,8 @@ internal fun InsightsCard(c: DashCard, size: CardSize, vm: SuperViewModel, s: Nu
             .also { lastInsights = it }
     }
     val shown = list.orEmpty().take(if (size == CardSize.L) 4 else 2)
-    if (size == CardSize.W) {
-        // bandeau : le constat le plus marquant, sur une ligne
+    if (size != CardSize.L) {
+        // moyen et bandeau : le constat le plus marquant seul, sans titre (le symbole et la couleur suffisent)
         val i = list.orEmpty().firstOrNull()
         val hue = i?.source?.color ?: c.hue()
         Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
@@ -97,8 +97,9 @@ internal fun InsightsCard(c: DashCard, size: CardSize, vm: SuperViewModel, s: Nu
                 Icon(i?.icon ?: c.icon(), null, Modifier.size(19.dp), tint = hue)
             }
             Spacer(Modifier.width(10.dp))
-            Text(i?.text(s) ?: tr("Les constats arrivent après quelques jours de suivi."), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(i?.text(s) ?: tr("Les constats arrivent après quelques jours de suivi."), Modifier.weight(1f),
+                style = if (size == CardSize.M) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
+                maxLines = if (size == CardSize.M) 4 else 2, overflow = TextOverflow.Ellipsis)
         }
         return
     }
@@ -163,6 +164,42 @@ internal fun CorrelationCard(c: DashCard, size: CardSize, vm: SuperViewModel, s:
         val l = if (i == 0) listOf(src, if (src == pb) pa else pb) else listOf(if (src == pa) pb else pa, src)
         st.copy(corr = l.map { it.name })
     }
+    val r = data?.let { Correlation.pearson(it.first, it.second) }
+    val rText = r?.takeIf { it.n >= Correlation.MIN_DAYS }?.let { "r " + formatNumber(it.r, 2) } ?: "—"
+    if (size != CardSize.L) {
+        // petit, moyen, bandeau : les deux symboles, les courbes et r ; les séries se choisissent en grand
+        val pair = @Composable {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                listOf(a, b).forEachIndexed { k, src ->
+                    if (k > 0) Spacer(Modifier.width(4.dp))
+                    Box(Modifier.size(26.dp).clip(CircleShape).background(src.color.container()), contentAlignment = Alignment.Center) {
+                        Icon(src.icon, null, Modifier.size(15.dp), tint = src.color)
+                    }
+                }
+            }
+        }
+        val rLabel = @Composable {
+            Text(rText, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = if (r?.significant == true) Mf.colors.text else Mf.colors.textSecondary, maxLines = 1)
+        }
+        val box = modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card).cardClick(null)
+        when (size) {
+            CardSize.S -> Column(box.square().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                pair(); Spacer(Modifier.weight(1f)); rLabel(); Spacer(Modifier.weight(1f))
+            }
+            CardSize.W -> Row(box.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                pair(); Spacer(Modifier.width(10.dp))
+                DualChart(data?.first.orEmpty(), data?.second.orEmpty(), a, b, days, Modifier.weight(1f).height(36.dp))
+                Spacer(Modifier.width(10.dp)); rLabel()
+            }
+            else -> Column(box.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) { pair(); Spacer(Modifier.weight(1f)); rLabel() }
+                Spacer(Modifier.height(10.dp))
+                DualChart(data?.first.orEmpty(), data?.second.orEmpty(), a, b, days, Modifier.fillMaxWidth().height(80.dp))
+            }
+        }
+        return
+    }
     Tile(c, tr("Corrélations"), modifier, tinted = false, onClick = null) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             SourceChip(a, data?.first, s, Modifier.weight(1f)) { pick(0, it) }
@@ -170,12 +207,9 @@ internal fun CorrelationCard(c: DashCard, size: CardSize, vm: SuperViewModel, s:
         }
         Spacer(Modifier.height(10.dp))
         val d = data
-        DualChart(d?.first.orEmpty(), d?.second.orEmpty(), a, b, days, Modifier.fillMaxWidth().height(when (size) {
-            CardSize.XL -> 220.dp; CardSize.L -> 120.dp; else -> 90.dp
-        }))
+        DualChart(d?.first.orEmpty(), d?.second.orEmpty(), a, b, days, Modifier.fillMaxWidth().height(120.dp))
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val r = d?.let { Correlation.pearson(it.first, it.second) }
             Text(when {
                 d == null -> ""
                 r == null || r.n < Correlation.MIN_DAYS -> tr("Pas assez de jours en commun")

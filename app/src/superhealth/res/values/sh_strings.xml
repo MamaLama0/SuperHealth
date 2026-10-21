@@ -20,4 +20,6 @@
     <string name="widget_vitals_desc">Sleep, resting heart rate, Body Battery</string>
     <string name="widget_steps_name">Steps</string>
     <string name="widget_steps_desc">Steps today and over 7 days</string>
+    <string name="widget_overview_name">Overview</string>
+    <string name="widget_overview_desc">Calories, steps, water and Body Battery in one strip</string>
 </resources>

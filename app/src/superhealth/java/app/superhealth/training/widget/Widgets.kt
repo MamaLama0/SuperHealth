@@ -58,6 +58,9 @@ private object W {
     val blue = ColorProvider(Color(0xFF276EF1), Color(0xFF276EF1))
 }
 
+/** Bleu des séances (WorkoutBlue de l'app) : le widget prend le fond pastel de la carte « Prochaine séance ». */
+private val Blue = app.superhealth.ui.theme.WorkoutBlue
+
 private data class Snap(val title: String, val subtitle: String, val action: String, val route: String, val week: Set<Int>, val onboarded: Boolean,
     val progress: Float? = null)
 
@@ -107,7 +110,7 @@ private fun Content(ctx: Context, s: Snap?) {
     val wide = LocalSize.current.width >= 250.dp
     if (LocalSize.current.height < 100.dp && s != null && s.onboarded) {
         // 2×1 et 4×1 : nom de la séance et départ d'une touche
-        Row(GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(horizontal = 12.dp, vertical = 8.dp).clickable(open(ctx, "workout")),
+        Row(GlanceModifier.fillMaxSize().background(app.superhealth.ui.widget.WK.tint(Blue)).cornerRadius(24.dp).padding(horizontal = 12.dp, vertical = 8.dp).clickable(open(ctx, "workout")),
             verticalAlignment = Alignment.CenterVertically) {
             Column(GlanceModifier.defaultWeight()) {
                 Text(s.title, style = TextStyle(color = W.text, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
@@ -120,14 +123,14 @@ private fun Content(ctx: Context, s: Snap?) {
         }
         return
     }
-    Column(GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(14.dp).clickable(open(ctx, "workout"))) {
+    Column(GlanceModifier.fillMaxSize().background(app.superhealth.ui.widget.WK.tint(Blue)).cornerRadius(24.dp).padding(14.dp).clickable(open(ctx, "workout"))) {
         if (s == null || !s.onboarded) {
             Text("La Salle", style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
             Text(tr("Ouvrez l'app pour commencer."), style = TextStyle(color = W.sub, fontSize = 12.sp))
             return@Column
         }
         Text(tr(if (s.route == "session") "Séance en cours" else "Prochaine séance"), style = TextStyle(color = W.sub, fontSize = 12.sp))
-        Text(s.title, style = TextStyle(color = W.text, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(s.title, style = TextStyle(color = app.superhealth.ui.widget.WK.on(Blue), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
         Text(s.subtitle, style = TextStyle(color = W.sub, fontSize = 12.sp), maxLines = 1)
         s.progress?.let {
             Spacer(GlanceModifier.height(8.dp))
@@ -138,7 +141,7 @@ private fun Content(ctx: Context, s: Snap?) {
             if (wide) Row(GlanceModifier.defaultWeight()) {
                 (1..7).forEach { d ->
                     val done = d in s.week
-                    Box(GlanceModifier.size(16.dp).cornerRadius(8.dp).background(if (done) W.blue else W.chip), contentAlignment = Alignment.Center) {
+                    Box(GlanceModifier.size(16.dp).cornerRadius(8.dp).background(if (done) W.blue else app.superhealth.ui.widget.WK.chipOn), contentAlignment = Alignment.Center) {
                         Text(dayLetter(d), style = TextStyle(color = if (done) ColorProvider(Color.White, Color.White) else W.sub, fontSize = 8.sp, fontWeight = FontWeight.Bold))
                     }
                     if (d < 7) Spacer(GlanceModifier.width(2.dp))

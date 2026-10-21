@@ -583,9 +583,7 @@ object SuperStrings {
         "Demi" to "Half",
         "Pleine" to "Full",
         "Choisissez vos cartes, leur taille et leur ordre." to "Choose your cards, their size and order.",
-        "Haute" to "Tall",
         "Bandeau" to "Strip",
-        "Grande" to "Large",
         "Touchez un bloc pour changer sa taille ; appui long sur une carte du tableau de bord pour la régler." to "Tap a block to change its size; long-press a dashboard card to adjust it.",
         "Taille" to "Size",
         "Masquer" to "Hide",
@@ -630,5 +628,13 @@ object SuperStrings {
         "%1\$s séances en 4 semaines, %2\$s de moins qu'avant" to "%1\$s workouts in 4 weeks, %2\$s fewer than before",
         "Protéines" to "Protein",
         "%1\$s exercices" to "%1\$s exercises",
+        "Records (30 j)" to "Records (30 d)",
+        "séries" to "sets",
+        "Muscles dans la zone" to "Muscles in range",
+        "pas" to "steps",
+        "Petit" to "Small",
+        "Grand" to "Large",
+        "Cette semaine" to "This week",
+        "1RM estimé" to "Estimated 1RM",
     )
 }

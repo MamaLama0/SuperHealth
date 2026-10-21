@@ -320,29 +320,17 @@ private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings
     if (cards.isEmpty()) return
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(Mf.colors.card).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        @Composable
-        fun line(row: List<DashCard>, width: Int) {
+        app.superhealth.packRows(cards) { sh.sizeOf(it).span }.forEach { row ->
             val used = row.sumOf { sh.sizeOf(it).span }
             val squares = row.all { sh.sizeOf(it) == app.superhealth.CardSize.S }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 row.forEach { c ->
                     val z = sh.sizeOf(c)
-                    val w = if (used == width || squares || z == app.superhealth.CardSize.S) z.span.coerceAtMost(width).toFloat()
-                        else z.span.coerceAtMost(width) + (width - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
-                    Block(c, z, Modifier.weight(w).height(40.dp * z.rows + if (z.rows >= 2f) 6.dp else 0.dp))
+                    val w = if (used == app.superhealth.GRID || squares || z == app.superhealth.CardSize.S) z.span.toFloat()
+                        else z.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
+                    Block(c, z, Modifier.weight(w).height(if (z == app.superhealth.CardSize.W) 26.dp else 40.dp))
                 }
-                if (squares && used < width) Spacer(Modifier.weight((width - used).toFloat()))
-            }
-        }
-        app.superhealth.packGrid(cards, span = { sh.sizeOf(it).span }) { sh.sizeOf(it).tall }.forEach { row ->
-            if (row.tall.isEmpty()) line(row.items, app.superhealth.GRID)
-            else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.tall.forEach { c -> Block(c, sh.sizeOf(c), Modifier.weight(1f).height(86.dp)) }
-                val room = app.superhealth.GRID - row.tall.size
-                if (room > 0) Column(Modifier.weight(room.toFloat()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (row.items.isNotEmpty()) line(row.items, room)
-                    if (row.bottom.isNotEmpty()) line(row.bottom, room)
-                }
+                if (squares && used < app.superhealth.GRID) Spacer(Modifier.weight((app.superhealth.GRID - used).toFloat()))
             }
         }
         Text(tr("Touchez un bloc pour changer sa taille ; appui long sur une carte du tableau de bord pour la régler."),

@@ -21,4 +21,6 @@
     <string name="widget_vitals_desc">Sommeil, pouls au repos, Body Battery</string>
     <string name="widget_steps_name">Pas</string>
     <string name="widget_steps_desc">Pas du jour et des 7 derniers jours</string>
+    <string name="widget_overview_name">Aperçu</string>
+    <string name="widget_overview_desc">Calories, pas, eau et Body Battery en un bandeau</string>
 </resources>

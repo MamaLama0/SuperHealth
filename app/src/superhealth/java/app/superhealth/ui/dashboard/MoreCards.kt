@@ -132,17 +132,6 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
                 }
             }
         }
-        // Haute : les anneaux sur toute la largeur, les valeurs seules dessous.
-        app.superhealth.CardSize.T -> Column(modifier.fillMaxHeight().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
-            .cardClick { nav.go("rings/edit") }.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            val screen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
-            ActivityRings(rings, ((screen - 32.dp - GAP * 2) / 3 - 20.dp).coerceAtLeast(72.dp), track = Mf.colors.background)
-            Spacer(Modifier.weight(1f))
-            rings.forEach { r ->
-                Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = r.kind.color.onContainer(),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) }.padding(vertical = 1.dp))
-            }
-        }
         // Bandeau : petits anneaux, puis chaque valeur (symbole et couleur de son anneau) sur une ligne.
         app.superhealth.CardSize.W -> Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
             .cardClick { nav.go("rings/edit") }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -157,9 +146,9 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
                 }
             }
         }
-        app.superhealth.CardSize.L, app.superhealth.CardSize.XL -> Tile(c, tr("Anneaux du jour"), modifier, tinted = false, trailing = tr("Modifier"), onClick = { nav.go("rings/edit") }) {
+        app.superhealth.CardSize.L -> Tile(c, tr("Anneaux du jour"), modifier, tinted = false, trailing = tr("Modifier"), onClick = { nav.go("rings/edit") }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ActivityRings(rings, if (size == app.superhealth.CardSize.XL) 190.dp else 140.dp, track = Mf.colors.card)
+                ActivityRings(rings, 140.dp, track = Mf.colors.card)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (rings.size > 3) 4.dp else 10.dp)) {
                     rings.forEach { r ->

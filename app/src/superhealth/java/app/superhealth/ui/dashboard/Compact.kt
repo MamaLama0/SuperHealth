@@ -59,6 +59,8 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
+import app.superhealth.ui.trf
+import app.superhealth.vitalMetrics
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -68,7 +70,7 @@ import kotlin.math.roundToInt
  * barre, null sans objectif. [history] : valeurs récentes, de la plus ancienne à aujourd'hui (barres si [bars], sinon
  * courbe), [goal] : objectif de chaque barre.
  */
-internal class CompactData(
+internal data class CompactData(
     val value: String, val unit: String?, val label: String, val progress: Float?,
     val history: List<Double?> = emptyList(), val bars: Boolean = true, val goal: Double? = null, val onClick: () -> Unit,
 )
@@ -137,7 +139,7 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
             val ws = TrainingAnalytics.weekStart(LocalDate.now())
             val weeks = androidx.compose.runtime.remember(st.history) { TrainingAnalytics.weeklyTotals(st.history, 8, LocalDate.now()) }
             CompactData(st.history.count { !localDate(it.startTime).isBefore(ws) }.toString(), null, tr("Séances (sem.)"), null,
-                weeks.map { it.sets.toDouble().takeIf { v -> v > 0 } }) { nav.go("t/insights") }
+                weeks.map { it.sessions.toDouble().takeIf { v -> v > 0 } }) { nav.go("t/insights") }
         }
         DashCard.HABITS -> {
             val logged = an.days.filter { it.intakeKcal != null || it.fasted }.map { it.epochDay }.toSet()
@@ -148,6 +150,65 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
             val avg = Balance.average(days)
             CompactData(avg?.let { (if (it > 0) "+" else if (it < 0) "−" else "") + formatNumber(abs(s.energyValue(it))) } ?: "—", kcal, tr("Bilan / jour"), null,
                 days.map { it.second?.let(s::energyValue) }, bars = false) { nav.go("expenditure") }
+        }
+        DashCard.VITALS -> {
+            val m = app.superhealth.SuperPrefs.settings.value.vitalMetrics.firstOrNull { h.latest(it) != null } ?: return null
+            CompactData(formatValue(m, h.latest(m)!!.second), app.superhealth.ui.unitOf(m), tr(m.label), null,
+                h.series[m].orEmpty().map { it.second }, bars = false) { nav.go("h/metric/${m.name}") }
+        }
+        DashCard.ACTIVITIES -> {
+            val act = h.activities.firstOrNull()
+            CompactData(act?.let { trf("%1\$s min", it.minutes) } ?: "—", null, act?.title ?: tr("Dernières activités"), null) { nav.go("h/activities") }
+        }
+        DashCard.RECORDS -> {
+            val st by vm.training.state.collectAsState()
+            val db = vm.training.db.collectAsState().value ?: return null
+            val n = androidx.compose.runtime.remember(st.history) {
+                val sorted = st.history.sortedBy { it.startTime }
+                val since = System.currentTimeMillis() - 30L * 86_400_000
+                sorted.withIndex().filter { it.value.startTime >= since }.sumOf { (i, w) -> TrainingAnalytics.newRecords(w, sorted.take(i), db).size }
+            }
+            CompactData(n.toString(), null, tr("Records (30 j)"), null) { nav.go("t/insights") }
+        }
+        DashCard.STRATEGY -> CompactData(formatNumber(s.energyValue(an.targetFor(an.today).macros.kcal)), kcal, tr("Objectif"), null) { nav.go("strategy") }
+        DashCard.FOCUS -> {
+            val n = focusItems(vm, an, h, nav, tab).size
+            CompactData(if (n == 0) "✓" else n.toString(), null, tr("À faire"), null) { nav.go("home") }
+        }
+        DashCard.NEXT_WORKOUT -> {
+            val st by vm.training.state.collectAsState()
+            val p = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
+            val session = st.session
+            val day = p?.days?.getOrNull(p.dayIndex)
+            val done = session?.let { ss -> ss.exercises.sumOf { e -> e.sets.count { it.done } }.toFloat() / ss.exercises.sumOf { it.sets.size }.coerceAtLeast(1) }
+            CompactData(session?.name ?: day?.name ?: "—", null, tr("Prochaine séance"), done) {
+                if (session != null) nav.go("session") else tab("activities")
+            }
+        }
+        DashCard.TRAINING_TRENDS -> {
+            val st by vm.training.state.collectAsState()
+            val weeks = androidx.compose.runtime.remember(st.history) { TrainingAnalytics.weeklyTotals(st.history, 8, LocalDate.now()) }
+            CompactData(weeks.last().sets.toString(), tr("séries"), tr("Cette semaine"), null, weeks.map { it.sets.toDouble().takeIf { v -> v > 0 } }) { nav.go("t/insights") }
+        }
+        DashCard.MUSCLE_SETS -> {
+            val st by vm.training.state.collectAsState()
+            val db = vm.training.db.collectAsState().value ?: return null
+            val sets = androidx.compose.runtime.remember(st.history, db) { TrainingAnalytics.weeklySetsByMuscle(st.history, db, 4, System.currentTimeMillis()) }
+            val inZone = sets.values.count { it >= TrainingAnalytics.SETS_LOW }
+            CompactData("$inZone", "/ ${sets.size}", tr("Muscles dans la zone"), if (sets.isEmpty()) null else inZone.toFloat() / sets.size) { nav.go("levels") }
+        }
+        DashCard.LIFTS -> {
+            val st by vm.training.state.collectAsState()
+            val db = vm.training.db.collectAsState().value ?: return null
+            val since = System.currentTimeMillis() - 84L * 86_400_000
+            val pts = androidx.compose.runtime.remember(st.history, db) {
+                TrainingAnalytics.topBySets(st.history, since, 1).firstOrNull()?.let { (id, _) ->
+                    TrainingAnalytics.history(id, st.history, db).filter { it.time >= since && it.e1rm > 0 }
+                }.orEmpty()
+            }
+            val change = if (pts.size >= 2) (pts.last().e1rm / pts.first().e1rm - 1) * 100 else null
+            CompactData(change?.let { (if (it >= 0) "+" else "") + formatNumber(it, 1) } ?: "—", "%", tr("1RM estimé"), null,
+                pts.map { it.e1rm }, bars = false) { nav.go("t/insights") }
         }
         else -> null
     }
@@ -181,19 +242,6 @@ internal fun CompactBubble(c: DashCard, d: CompactData, modifier: Modifier) {
                 d.unit?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1) }
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(d.label, style = MaterialTheme.typography.labelMedium, color = hue.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center)
-    }
-}
-
-/** Demi-tuile générique : titre, valeur, barre d'objectif. */
-@Composable
-internal fun CompactTile(c: DashCard, d: CompactData, modifier: Modifier) {
-    Tile(c, tr(c.label), modifier, onClick = d.onClick) {
-        Value(d.value, d.unit, color = c.hue().onContainer())
-        Sub(d.label)
-        d.progress?.let { Spacer(Modifier.height(8.dp)); ProgressBar(it.coerceIn(0f, 1f), c.hue(), Modifier.fillMaxWidth(), height = 6.dp, track = softTrack()) }
     }
 }
 
@@ -201,7 +249,8 @@ internal fun CompactTile(c: DashCard, d: CompactData, modifier: Modifier) {
 @Composable
 internal fun MiniChart(d: CompactData, hue: androidx.compose.ui.graphics.Color, modifier: Modifier) {
     val track = softTrack()
-    val vals = d.history
+    // une courbe commence à la première valeur (premières pesées) ; les barres gardent tous leurs jours
+    val vals = if (d.bars) d.history else d.history.dropWhile { it == null }
     if (vals.count { it != null } < 2) { Box(modifier); return }
     Canvas(modifier) {
         val n = vals.size
@@ -258,25 +307,34 @@ private fun TintedBox(c: DashCard, modifier: Modifier, onClick: () -> Unit, padd
         .cardClick(onClick).padding(padding), content = content)
 }
 
-/** Carte haute (1 bloc, 2 rangées) : symbole, valeur, anneau d'objectif et petit graphique de la période. */
+/**
+ * Moyen (2 blocs) : la version à regarder d'un coup d'œil. Le symbole dit de quelle mesure il s'agit : pas de titre,
+ * seulement la valeur et, dessous, la période en petit graphique (ou la barre d'objectif).
+ */
 @Composable
-internal fun CompactTall(c: DashCard, d: CompactData, modifier: Modifier) {
+internal fun CompactMedium(c: DashCard, d: CompactData, modifier: Modifier) {
     val hue = c.hue()
-    TintedBox(c, modifier.fillMaxHeight(), d.onClick) {
-        Box(Modifier.size(26.dp).clip(CircleShape).background(Mf.colors.card.copy(alpha = 0.85f)), contentAlignment = Alignment.Center) {
-            Icon(c.icon(), null, Modifier.size(15.dp), tint = hue)
+    TintedBox(c, modifier.fillMaxWidth(), d.onClick, padding = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(30.dp).clip(CircleShape).background(Mf.colors.card.copy(alpha = 0.85f)), contentAlignment = Alignment.Center) {
+                Icon(c.icon(), null, Modifier.size(17.dp), tint = hue)
+            }
+            Spacer(Modifier.weight(1f))
+            d.progress?.takeIf { d.history.count { it != null } >= 2 }?.let { ProgressDisc(d.copy(value = ""), c, Modifier.size(30.dp)) }
         }
-        Spacer(Modifier.height(8.dp))
-        if (d.progress != null) ProgressDisc(d, c, Modifier.fillMaxWidth().aspectRatio(1f), small = true)
-        else {
-            Text(d.value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = hue.onContainer(), maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
-            d.unit?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1) }
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(d.value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = hue.onContainer(), maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            d.unit?.let { Text(" $it", style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, modifier = Modifier.padding(bottom = 4.dp)) }
         }
-        Spacer(Modifier.weight(1f))
-        MiniChart(d, hue, Modifier.fillMaxWidth().height(44.dp))
-        Spacer(Modifier.height(6.dp))
-        Text(d.label, style = MaterialTheme.typography.labelMedium, color = hue.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val chart = d.history.count { it != null } >= 2
+        if (chart || d.progress != null) {
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(10.dp))
+            if (chart) MiniChart(d, hue, Modifier.fillMaxWidth().height(40.dp))
+            else ProgressBar(d.progress!!.coerceIn(0f, 1f), hue, Modifier.fillMaxWidth(), height = 8.dp, track = softTrack())
+        }
     }
 }
 
@@ -296,24 +354,10 @@ internal fun CompactStrip(c: DashCard, d: CompactData, modifier: Modifier) {
                     d.unit?.let { Text(" $it", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1,
                         modifier = Modifier.padding(bottom = 3.dp)) }
                 }
-                Text(d.label, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (d.history.count { it != null } >= 2) MiniChart(d, hue, Modifier.width(110.dp).height(34.dp))
             else d.progress?.let { ProgressBar(it.coerceIn(0f, 1f), hue, Modifier.width(96.dp), height = 8.dp, track = softTrack()) }
         }
-    }
-}
-
-/** Grande carte (toute la largeur, plus haute) : valeur en grand, barre d'objectif et graphique détaillé de la période. */
-@Composable
-internal fun CompactLarge(c: DashCard, d: CompactData, modifier: Modifier) {
-    val hue = c.hue()
-    Tile(c, tr(c.label), modifier, onClick = d.onClick) {
-        Value(d.value, d.unit, color = hue.onContainer(), big = true)
-        Sub(d.label)
-        d.progress?.let { Spacer(Modifier.height(8.dp)); ProgressBar(it.coerceIn(0f, 1f), hue, Modifier.fillMaxWidth(), height = 8.dp, track = softTrack()) }
-        Spacer(Modifier.height(14.dp))
-        MiniChart(d, hue, Modifier.fillMaxWidth().height(130.dp))
     }
 }
 

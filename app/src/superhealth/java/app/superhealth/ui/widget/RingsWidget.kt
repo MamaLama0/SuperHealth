@@ -93,51 +93,50 @@ private fun fmt(k: Rings.Kind, v: Double) = if (k == Rings.Kind.SLEEP) app.super
 
 @Composable
 private fun Content(ctx: Context, rings: List<Rings.Ring>?, bmp: Bitmap) {
-    val size = LocalSize.current
-    val shape = WK.shape(size)
-    val pad = if (shape == WK.Shape.TINY || shape == WK.Shape.STRIP || shape == WK.Shape.WIDE_STRIP) 8.dp else 12.dp
-    Column(GlanceModifier.fillMaxSize().background(WK.bg).cornerRadius(WK.RADIUS.dp).padding(pad).clickable(WK.open(ctx, "home")),
-        verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-        val side = minOf(size.width, size.height) - pad * 2
-        if (rings == null || shape == WK.Shape.TINY || shape == WK.Shape.SQUARE) {
-            Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(side)); return@Column
-        }
-        when (shape) {
-            // 2×1 et 4×1 : anneaux à gauche, valeurs en ligne (symbole et couleur de chaque anneau)
-            WK.Shape.STRIP, WK.Shape.WIDE_STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(side))
-                Spacer(GlanceModifier.width(8.dp))
-                val show = if (shape == WK.Shape.STRIP) rings.take(2) else rings
-                show.forEach { r ->
-                    Row(GlanceModifier.defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
-                        Image(ImageProvider(WK.icon(r.kind)), null, GlanceModifier.size(12.dp), colorFilter = androidx.glance.ColorFilter.tint(WK.c(r.kind.color)))
-                        Spacer(GlanceModifier.width(3.dp))
-                        Text(value(r), style = TextStyle(color = WK.c(r.kind.color), fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+    val ls = LocalSize.current
+    val size = WK.size(ls)
+    WidgetCard(WK.open(ctx, "home"), null, padding = if (size == WK.Size.LARGE) 14.dp else 8.dp, horizontal = Alignment.CenterHorizontally) {
+        val side = minOf(ls.width, ls.height) - 16.dp
+        when {
+            // petit : les anneaux seuls, chaque symbole sur son rayon
+            rings == null || size == WK.Size.SMALL -> Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(side))
+            // moyen : les anneaux, et les valeurs seules dessous, dans leur couleur
+            size == WK.Size.MEDIUM -> {
+                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(side - 22.dp))
+                Spacer(GlanceModifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    rings.forEachIndexed { i, r ->
+                        if (i > 0) Spacer(GlanceModifier.width(6.dp))
+                        Text(value(r), style = TextStyle(color = WK.on(r.kind.color), fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                     }
                 }
             }
-            // 4×2 : anneaux à gauche, valeurs seules en colonne
-            WK.Shape.WIDE -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(minOf(side, size.width * 0.55f)))
-                Spacer(GlanceModifier.width(12.dp))
+            // bandeau : petits anneaux, puis symbole et valeur de chaque anneau
+            size == WK.Size.STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(side))
+                Spacer(GlanceModifier.width(10.dp))
+                rings.forEach { r ->
+                    Row(GlanceModifier.defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
+                        Image(ImageProvider(WK.icon(r.kind)), null, GlanceModifier.size(13.dp), colorFilter = androidx.glance.ColorFilter.tint(WK.c(r.kind.color)))
+                        Spacer(GlanceModifier.width(3.dp))
+                        Text(value(r), style = TextStyle(color = WK.on(r.kind.color), fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    }
+                }
+            }
+            // grand : le détail, chaque mesure avec son nom et son objectif
+            else -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(minOf(side, ls.width * 0.45f)))
+                Spacer(GlanceModifier.width(14.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     rings.forEachIndexed { i, r ->
-                        if (i > 0) Spacer(GlanceModifier.height(if (rings.size > 3) 2.dp else 6.dp))
-                        Text(value(r), style = TextStyle(color = WK.c(r.kind.color), fontSize = if (rings.size > 3) 15.sp else 18.sp, fontWeight = FontWeight.Bold),
-                            maxLines = 1)
-                    }
-                }
-            }
-            // 4×4 : grands anneaux, puis chaque mesure avec son objectif
-            else -> {
-                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(minOf(size.width - pad * 2, size.height - pad * 2 - 26.dp * rings.size)))
-                Spacer(GlanceModifier.height(8.dp))
-                rings.forEach { r ->
-                    Row(GlanceModifier.fillMaxWidth().height(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Image(ImageProvider(WK.icon(r.kind)), null, GlanceModifier.size(14.dp), colorFilter = androidx.glance.ColorFilter.tint(WK.c(r.kind.color)))
-                        Spacer(GlanceModifier.width(6.dp))
-                        Text(tr(r.kind.label), style = TextStyle(color = WK.sub, fontSize = 12.sp), maxLines = 1, modifier = GlanceModifier.defaultWeight())
-                        Text("${value(r)} / ${fmt(r.kind, r.goal)}", style = TextStyle(color = WK.c(r.kind.color), fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                        if (i > 0) Spacer(GlanceModifier.height(if (rings.size > 3) 2.dp else 5.dp))
+                        // quatre anneaux : nom et valeur sur une même ligne pour tenir dans 2 cases de haut
+                        if (rings.size <= 3) Text(tr(r.kind.label), style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            if (rings.size > 3) Text(tr(r.kind.label) + "  ", style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
+                            Text(value(r), style = TextStyle(color = WK.on(r.kind.color), fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                            Text(" / ${fmt(r.kind, r.goal)}", style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
+                        }
                     }
                 }
             }

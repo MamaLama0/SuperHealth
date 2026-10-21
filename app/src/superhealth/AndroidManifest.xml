@@ -108,6 +108,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_steps" />
         </receiver>
+        <receiver android:name="app.superhealth.ui.widget.OverviewWidgetReceiver" android:exported="true" android:label="@string/widget_overview_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_overview" />
+        </receiver>
         <receiver android:name="app.superhealth.training.widget.NextWorkoutWidgetReceiver" android:exported="true" android:label="@string/widget_next_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next" />

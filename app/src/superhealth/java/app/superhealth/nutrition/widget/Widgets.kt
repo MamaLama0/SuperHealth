@@ -50,7 +50,7 @@ import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.nutrition.ui.tr
 import app.superhealth.nutrition.ui.weight
 import app.superhealth.ui.theme.Base
-import app.superhealth.ui.widget.WK.Shape as WShape
+import app.superhealth.ui.widget.WK.Size as WShape
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -202,59 +202,61 @@ class WeightWidget : GlanceAppWidget() {
 @Composable
 private fun WeightContent(ctx: Context, snap: Snapshot?) {
     val K = app.superhealth.ui.widget.WK
-    val shape = K.shape(LocalSize.current)
-    val value = snap?.trendKg?.let { snap.settings.weight(it) } ?: "—"
+    val size = K.size(LocalSize.current)
+    val hue = Base.Pink
+    val kg = snap?.trendKg?.let { snap.settings.weight(it) }
+    val number = kg?.substringBeforeLast(" ") ?: "—"
+    val unit = kg?.substringAfterLast(" ", "")?.takeIf { it.isNotBlank() }
     val delta = snap?.trendDelta7?.let { d -> (if (d >= 0) "+" else "−") + snap.settings.weight(kotlin.math.abs(d)) + " " + tr("sur 7 j") }
     val spark = androidx.compose.runtime.remember(snap?.trend30) {
-        snap?.trend30?.takeIf { t -> t.count { it != null } >= 2 }?.let { t -> K.spark(t, Base.Pink, K.px(ctx, 240.dp), K.px(ctx, 90.dp)) }
+        snap?.trend30?.takeIf { t -> t.count { it != null } >= 2 }?.let { t -> K.spark(t, hue, K.px(ctx, 240.dp), K.px(ctx, 70.dp)) }
     }
-    val small = shape == WShape.TINY || shape == WShape.STRIP || shape == WShape.WIDE_STRIP
     val curve = @Composable { h: androidx.compose.ui.unit.Dp, modifier: GlanceModifier ->
         if (spark != null) Image(ImageProvider(spark), null, modifier.height(h), contentScale = androidx.glance.layout.ContentScale.FillBounds)
     }
-    val add = @Composable { size: androidx.compose.ui.unit.Dp ->
-        Box(GlanceModifier.size(size).background(W.chip).cornerRadius(size / 2), contentAlignment = Alignment.Center) {
-            Image(ImageProvider(R.drawable.ic_w_add), null, GlanceModifier.size(size * 0.56f), colorFilter = ColorFilter.tint(W.text))
+    val add = @Composable { s: androidx.compose.ui.unit.Dp ->
+        Box(GlanceModifier.size(s).background(K.chipOn).cornerRadius(s / 2), contentAlignment = Alignment.Center) {
+            Image(ImageProvider(R.drawable.ic_w_add), null, GlanceModifier.size(s * 0.56f), colorFilter = ColorFilter.tint(K.on(hue)))
         }
     }
-    Column(GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(if (small) 8.dp else 14.dp).clickable(open(ctx, "weight")),
-        verticalAlignment = Alignment.CenterVertically, horizontalAlignment = if (shape == WShape.TINY) Alignment.CenterHorizontally else Alignment.Start) {
-        when (shape) {
-            WShape.TINY -> {
-                Image(ImageProvider(R.drawable.ic_w_scale), null, GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(W.c(Base.Pink)))
-                Text(snap?.trendKg?.let { snap.settings.weight(it).substringBefore(" ") } ?: "—", style = TextStyle(color = W.text, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+    app.superhealth.ui.widget.WidgetCard(open(ctx, "weight"), hue, padding = if (size == WShape.SMALL) 6.dp else 12.dp,
+        horizontal = if (size == WShape.SMALL) Alignment.CenterHorizontally else Alignment.Start) {
+        when (size) {
+            // petit : le symbole et la tendance, sans unité
+            WShape.SMALL -> {
+                app.superhealth.ui.widget.WidgetChip(R.drawable.ic_w_scale, hue, 24.dp)
+                Text(number, style = TextStyle(color = K.on(hue), fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            }
+            // moyen : la tendance et sa courbe sur 30 jours
+            WShape.MEDIUM -> {
+                app.superhealth.ui.widget.WidgetChip(R.drawable.ic_w_scale, hue, 28.dp)
+                Spacer(GlanceModifier.height(6.dp))
+                app.superhealth.ui.widget.WidgetValue(number, unit, hue, 20)
+                Spacer(GlanceModifier.defaultWeight())
+                curve(36.dp, GlanceModifier.fillMaxWidth())
             }
             WShape.STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Column(GlanceModifier.defaultWeight()) {
-                    Text(value, style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                    delta?.let { Text(it, style = TextStyle(color = W.sub, fontSize = 10.sp), maxLines = 1) }
-                }
-                add(30.dp)
-            }
-            WShape.WIDE_STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text(value, style = TextStyle(color = W.text, fontSize = 17.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                    delta?.let { Text(it, style = TextStyle(color = W.sub, fontSize = 10.sp), maxLines = 1) }
-                }
+                app.superhealth.ui.widget.WidgetChip(R.drawable.ic_w_scale, hue, 32.dp)
                 Spacer(GlanceModifier.width(10.dp))
-                Box(GlanceModifier.defaultWeight()) { curve(34.dp, GlanceModifier.fillMaxWidth()) }
+                app.superhealth.ui.widget.WidgetValue(number, unit, hue, 18)
+                Spacer(GlanceModifier.width(12.dp))
+                Box(GlanceModifier.defaultWeight()) { curve(32.dp, GlanceModifier.fillMaxWidth()) }
                 Spacer(GlanceModifier.width(8.dp))
                 add(30.dp)
             }
-            else -> {
-                val big = shape == WShape.BIG
-                Text(tr("Tendance du poids"), style = TextStyle(color = W.sub, fontSize = 12.sp))
-                Text(value, style = TextStyle(color = W.text, fontSize = if (big) 30.sp else 22.sp, fontWeight = FontWeight.Bold))
-                delta?.let { Text(it, style = TextStyle(color = W.sub, fontSize = 12.sp)) }
-                Spacer(GlanceModifier.defaultWeight())
-                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                    Box(GlanceModifier.defaultWeight()) {
-                        if (spark != null) curve(if (big) 120.dp else 34.dp, GlanceModifier.fillMaxWidth())
-                        else Text(snap?.tdee?.let { tr("Dépense") + " " + snap.settings.energy(it) } ?: "", style = TextStyle(color = W.sub, fontSize = 11.sp), maxLines = 1)
+            // grand : le détail (variation sur 7 jours, dépense) et l'ajout d'une pesée
+            WShape.LARGE -> {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(GlanceModifier.defaultWeight()) {
+                        Text(tr("Tendance du poids"), style = TextStyle(color = W.sub, fontSize = 12.sp), maxLines = 1)
+                        app.superhealth.ui.widget.WidgetValue(number, unit, hue, 22)
+                        Text(listOfNotNull(delta, snap?.tdee?.let { tr("Dépense") + " " + snap.settings.energy(it) }).joinToString(" · "),
+                            style = TextStyle(color = W.sub, fontSize = 11.sp), maxLines = 1)
                     }
-                    Spacer(GlanceModifier.width(8.dp))
-                    add(32.dp)
+                    add(34.dp)
                 }
+                Spacer(GlanceModifier.defaultWeight())
+                curve(34.dp, GlanceModifier.fillMaxWidth())
             }
         }
     }
