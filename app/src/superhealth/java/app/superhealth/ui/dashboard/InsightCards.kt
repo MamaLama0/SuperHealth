@@ -87,6 +87,21 @@ internal fun InsightsCard(c: DashCard, size: CardSize, vm: SuperViewModel, s: Nu
             .also { lastInsights = it }
     }
     val shown = list.orEmpty().take(if (size == CardSize.L) 4 else 2)
+    if (size == CardSize.W) {
+        // bandeau : le constat le plus marquant, sur une ligne
+        val i = list.orEmpty().firstOrNull()
+        val hue = i?.source?.color ?: c.hue()
+        Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+            .cardClick(i?.let { { nav.go(it.route) } }).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(34.dp).clip(CircleShape).background(hue.container()), contentAlignment = Alignment.Center) {
+                Icon(i?.icon ?: c.icon(), null, Modifier.size(19.dp), tint = hue)
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(i?.text(s) ?: tr("Les constats arrivent après quelques jours de suivi."), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        return
+    }
     Tile(c, tr("Insights"), modifier, tinted = false, onClick = null, padding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 6.dp)) {
         if (list != null && shown.isEmpty()) Text(tr("Les constats arrivent après quelques jours de suivi."), style = MaterialTheme.typography.bodyMedium,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 8.dp))
@@ -155,7 +170,9 @@ internal fun CorrelationCard(c: DashCard, size: CardSize, vm: SuperViewModel, s:
         }
         Spacer(Modifier.height(10.dp))
         val d = data
-        DualChart(d?.first.orEmpty(), d?.second.orEmpty(), a, b, days, Modifier.fillMaxWidth().height(if (size == CardSize.L) 120.dp else 90.dp))
+        DualChart(d?.first.orEmpty(), d?.second.orEmpty(), a, b, days, Modifier.fillMaxWidth().height(when (size) {
+            CardSize.XL -> 220.dp; CardSize.L -> 120.dp; else -> 90.dp
+        }))
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             val r = d?.let { Correlation.pearson(it.first, it.second) }

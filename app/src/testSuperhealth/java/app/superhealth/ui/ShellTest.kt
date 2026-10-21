@@ -106,6 +106,26 @@ class ShellTest {
         packRows(items) { it.second }.forEach { r -> assertTrue(r.sumOf { it.second } <= 3) }
     }
 
+    @Test fun tallCardsOpenADoubleRow() {
+        // "T" = haute (1 bloc sur 2 rangées) ; S = 1, M = 2, L = 3
+        val span = mapOf("T" to 1, "S" to 1, "M" to 2, "L" to 3)
+        fun grid(vararg x: String) = app.superhealth.packGrid(x.toList(), span = { span[it.take(1)]!! }) { it.startsWith("T") }
+        // haute + quatre carrés : deux sous-rangées de deux à droite
+        assertEquals(listOf(app.superhealth.GridRow(listOf("S1", "S2"), listOf("T"), listOf("S3", "S4"))), grid("T", "S1", "S2", "S3", "S4"))
+        // haute + deux demis empilées, la pleine passe dessous
+        assertEquals(listOf(app.superhealth.GridRow(listOf("M1"), listOf("T"), listOf("M2")), app.superhealth.GridRow(listOf("L"))), grid("T", "M1", "L", "M2"))
+        // deux hautes côte à côte, une colonne de carrés
+        assertEquals(app.superhealth.GridRow(listOf("S1"), listOf("T1", "T2"), listOf("S2")), grid("T1", "T2", "S1", "S2").single())
+        // une haute ne comble pas le trou d'une rangée simple
+        assertEquals(listOf(app.superhealth.GridRow(listOf("M")), app.superhealth.GridRow(emptyList(), listOf("T"), emptyList())), grid("M", "T"))
+        // trois hautes : rangée pleine sans sous-rangées
+        assertEquals(app.superhealth.GridRow(emptyList(), listOf("T1", "T2", "T3")), grid("T1", "T2", "T3").single())
+        // chaque carte placée une fois
+        val many = (1..30).map { listOf("T", "S", "M", "L")[it % 4] + it }
+        val placed = app.superhealth.packGrid(many, span = { span[it.take(1)]!! }) { it.startsWith("T") }.flatMap { it.tall + it.items + it.bottom }
+        assertEquals(many.sorted(), placed.sorted())
+    }
+
     @Test fun cardSizesFallBackToWhatTheCardAccepts() {
         val s = SuperSettings(dashSizes = mapOf("STEPS" to "S", "VITALS" to "S", "WEIGHT" to "BOGUS"))
         assertEquals(CardSize.S, s.sizeOf(DashCard.STEPS))

@@ -50,6 +50,7 @@ import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.nutrition.ui.tr
 import app.superhealth.nutrition.ui.weight
 import app.superhealth.ui.theme.Base
+import app.superhealth.ui.widget.WK.Shape as WShape
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -188,39 +189,71 @@ private fun Shortcut(ctx: Context, icon: Int, route: String, modifier: GlanceMod
     }
 }
 
-/** Widget « Poids » : tendance, variation sur 7 jours et courbe sur 30 jours ; touche = saisir une pesée. */
+/** Widget « Poids » : tendance, variation sur 7 jours et courbe sur 30 jours (selon la taille) ; touche = saisir une pesée. */
 class WeightWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Single
+    override val sizeMode = SizeMode.Responsive(app.superhealth.ui.widget.WK.ALL)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val first = runCatching { snapshot(context) }.getOrNull()
-        provideContent {
-            val snap = live(context, first)
-            Column(GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(14.dp).clickable(open(context, "weight"))) {
+        provideContent { WeightContent(context, live(context, first)) }
+    }
+}
+
+@Composable
+private fun WeightContent(ctx: Context, snap: Snapshot?) {
+    val K = app.superhealth.ui.widget.WK
+    val shape = K.shape(LocalSize.current)
+    val value = snap?.trendKg?.let { snap.settings.weight(it) } ?: "—"
+    val delta = snap?.trendDelta7?.let { d -> (if (d >= 0) "+" else "−") + snap.settings.weight(kotlin.math.abs(d)) + " " + tr("sur 7 j") }
+    val spark = androidx.compose.runtime.remember(snap?.trend30) {
+        snap?.trend30?.takeIf { t -> t.count { it != null } >= 2 }?.let { t -> K.spark(t, Base.Pink, K.px(ctx, 240.dp), K.px(ctx, 90.dp)) }
+    }
+    val small = shape == WShape.TINY || shape == WShape.STRIP || shape == WShape.WIDE_STRIP
+    val curve = @Composable { h: androidx.compose.ui.unit.Dp, modifier: GlanceModifier ->
+        if (spark != null) Image(ImageProvider(spark), null, modifier.height(h), contentScale = androidx.glance.layout.ContentScale.FillBounds)
+    }
+    val add = @Composable { size: androidx.compose.ui.unit.Dp ->
+        Box(GlanceModifier.size(size).background(W.chip).cornerRadius(size / 2), contentAlignment = Alignment.Center) {
+            Image(ImageProvider(R.drawable.ic_w_add), null, GlanceModifier.size(size * 0.56f), colorFilter = ColorFilter.tint(W.text))
+        }
+    }
+    Column(GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(if (small) 8.dp else 14.dp).clickable(open(ctx, "weight")),
+        verticalAlignment = Alignment.CenterVertically, horizontalAlignment = if (shape == WShape.TINY) Alignment.CenterHorizontally else Alignment.Start) {
+        when (shape) {
+            WShape.TINY -> {
+                Image(ImageProvider(R.drawable.ic_w_scale), null, GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(W.c(Base.Pink)))
+                Text(snap?.trendKg?.let { snap.settings.weight(it).substringBefore(" ") } ?: "—", style = TextStyle(color = W.text, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            }
+            WShape.STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Column(GlanceModifier.defaultWeight()) {
+                    Text(value, style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    delta?.let { Text(it, style = TextStyle(color = W.sub, fontSize = 10.sp), maxLines = 1) }
+                }
+                add(30.dp)
+            }
+            WShape.WIDE_STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Text(value, style = TextStyle(color = W.text, fontSize = 17.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    delta?.let { Text(it, style = TextStyle(color = W.sub, fontSize = 10.sp), maxLines = 1) }
+                }
+                Spacer(GlanceModifier.width(10.dp))
+                Box(GlanceModifier.defaultWeight()) { curve(34.dp, GlanceModifier.fillMaxWidth()) }
+                Spacer(GlanceModifier.width(8.dp))
+                add(30.dp)
+            }
+            else -> {
+                val big = shape == WShape.BIG
                 Text(tr("Tendance du poids"), style = TextStyle(color = W.sub, fontSize = 12.sp))
-                Text(snap?.trendKg?.let { snap.settings.weight(it) } ?: "—",
-                    style = TextStyle(color = W.text, fontSize = 22.sp, fontWeight = FontWeight.Bold))
-                snap?.trendDelta7?.let { d ->
-                    Text((if (d >= 0) "+" else "−") + snap.settings.weight(kotlin.math.abs(d)) + " " + tr("sur 7 j"),
-                        style = TextStyle(color = W.sub, fontSize = 12.sp))
-                }
+                Text(value, style = TextStyle(color = W.text, fontSize = if (big) 30.sp else 22.sp, fontWeight = FontWeight.Bold))
+                delta?.let { Text(it, style = TextStyle(color = W.sub, fontSize = 12.sp)) }
                 Spacer(GlanceModifier.defaultWeight())
-                val spark = androidx.compose.runtime.remember(snap?.trend30) {
-                    snap?.trend30?.takeIf { t -> t.count { it != null } >= 2 }?.let { t ->
-                        app.superhealth.ui.widget.WK.spark(t, Base.Pink, app.superhealth.ui.widget.WK.px(context, 160.dp), app.superhealth.ui.widget.WK.px(context, 34.dp))
-                    }
-                }
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                     Box(GlanceModifier.defaultWeight()) {
-                        if (spark != null) Image(ImageProvider(spark), null, GlanceModifier.fillMaxWidth().height(34.dp),
-                            contentScale = androidx.glance.layout.ContentScale.FillBounds)
-                        else Text(snap?.tdee?.let { tr("Dépense") + " " + snap.settings.energy(it) } ?: "",
-                            style = TextStyle(color = W.sub, fontSize = 11.sp), maxLines = 1)
+                        if (spark != null) curve(if (big) 120.dp else 34.dp, GlanceModifier.fillMaxWidth())
+                        else Text(snap?.tdee?.let { tr("Dépense") + " " + snap.settings.energy(it) } ?: "", style = TextStyle(color = W.sub, fontSize = 11.sp), maxLines = 1)
                     }
                     Spacer(GlanceModifier.width(8.dp))
-                    Box(GlanceModifier.size(32.dp).background(W.chip).cornerRadius(16.dp), contentAlignment = Alignment.Center) {
-                        Image(ImageProvider(R.drawable.ic_w_add), null, GlanceModifier.size(18.dp), colorFilter = ColorFilter.tint(W.text))
-                    }
+                    add(32.dp)
                 }
             }
         }

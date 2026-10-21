@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -60,8 +63,15 @@ import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** Valeur principale d'une carte, pour sa bulle (S) ou sa tuile (M). [progress] : anneau ou barre, null sans objectif. */
-internal class CompactData(val value: String, val unit: String?, val label: String, val progress: Float?, val onClick: () -> Unit)
+/**
+ * Valeur principale d'une carte, pour ses tailles génériques (carré, haute, demi, bandeau, grande). [progress] : anneau ou
+ * barre, null sans objectif. [history] : valeurs récentes, de la plus ancienne à aujourd'hui (barres si [bars], sinon
+ * courbe), [goal] : objectif de chaque barre.
+ */
+internal class CompactData(
+    val value: String, val unit: String?, val label: String, val progress: Float?,
+    val history: List<Double?> = emptyList(), val bars: Boolean = true, val goal: Double? = null, val onClick: () -> Unit,
+)
 
 @Composable
 internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analytics, s: NutritionSettings, nav: NavHostController, tab: (String) -> Unit): CompactData? {
@@ -73,16 +83,21 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
             val consumed = eaten.sumOf { it.macros().kcal }
             val target = an.targetFor(an.today).macros.kcal
             val left = target - consumed
-            CompactData(formatNumber(abs(s.energyValue(left))), kcal, if (left < 0) tr("en trop") else tr("Restantes"), goal(consumed, target)) {
+            val byDay = an.days.associateBy { it.epochDay }
+            CompactData(formatNumber(abs(s.energyValue(left))), kcal, if (left < 0) tr("en trop") else tr("Restantes"), goal(consumed, target),
+                (an.today - 6 until an.today).map { byDay[it]?.intakeKcal?.let(s::energyValue) } + s.energyValue(consumed), goal = s.energyValue(target)) {
                 vm.nutrition.selectedDay.value = an.today; tab("log")
             }
         }
-        DashCard.WEIGHT -> CompactData(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), tr("Tendance"), null) { nav.go("weight") }
-        DashCard.EXPENDITURE -> CompactData(s.energyValue(an.currentTdee).roundToInt().toString(), kcal, tr("Dépense"), null) { nav.go("expenditure") }
+        DashCard.WEIGHT -> CompactData(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), tr("Tendance"), null,
+            (an.today - 27..an.today).map { d -> an.trendByDay[d]?.let(s::weightValue) }, bars = false) { nav.go("weight") }
+        DashCard.EXPENDITURE -> CompactData(s.energyValue(an.currentTdee).roundToInt().toString(), kcal, tr("Dépense"), null,
+            an.expenditure.takeLast(28).map { s.energyValue(it.tdee) }, bars = false) { nav.go("expenditure") }
         DashCard.INTAKE -> {
             val byDay = an.days.associateBy { it.epochDay }
             val avg = (an.today - 6..an.today).mapNotNull { byDay[it]?.intakeKcal }.takeIf { it.isNotEmpty() }?.average()
-            CompactData(avg?.let { s.energyValue(it).roundToInt().toString() } ?: "—", kcal, tr("Apports moy."), null) { nav.go("nutrition") }
+            CompactData(avg?.let { s.energyValue(it).roundToInt().toString() } ?: "—", kcal, tr("Apports moy."), null,
+                (an.today - 6..an.today).map { byDay[it]?.intakeKcal?.let(s::energyValue) }, goal = s.energyValue(an.targetFor(an.today).macros.kcal)) { nav.go("nutrition") }
         }
         DashCard.MACROS -> {
             val eaten by vm.nutrition.todayEntries.collectAsState()
@@ -91,36 +106,48 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
             CompactData(p.roundToInt().toString(), "g", tr("Protéines"), goal(p, target)) { nav.go("macros") }
         }
         DashCard.STEPS -> h.today(Metric.STEPS).let { v ->
-            CompactData(v?.let { formatNumber(it) } ?: "—", null, tr("Pas"), goal(v, s.stepGoal.toDouble())) { nav.go("h/metric/STEPS") }
+            CompactData(v?.let { formatNumber(it) } ?: "—", null, tr("Pas"), goal(v, s.stepGoal.toDouble()),
+                h.series[Metric.STEPS].orEmpty().map { it.second }, goal = s.stepGoal.toDouble().takeIf { it > 0 }) { nav.go("h/metric/STEPS") }
         }
         DashCard.HEART -> {
             val v = h.heartToday.lastOrNull()?.value ?: h.latest(Metric.HEART_RATE)?.second
-            CompactData(v?.let { formatNumber(it) } ?: "—", tr("bpm"), tr("Cœur"), null) { nav.go("h/metric/HEART_RATE") }
+            CompactData(v?.let { formatNumber(it) } ?: "—", tr("bpm"), tr("Cœur"), null,
+                h.series[Metric.RESTING_HR].orEmpty().map { it.second }, bars = false) { nav.go("h/metric/HEART_RATE") }
         }
         DashCard.SLEEP -> h.latest(Metric.SLEEP)?.second.let { v ->
-            CompactData(v?.let { formatValue(Metric.SLEEP, it) } ?: "—", null, tr("Sommeil"), goal(v, 480.0)) { nav.go("h/metric/SLEEP") }
+            CompactData(v?.let { formatValue(Metric.SLEEP, it) } ?: "—", null, tr("Sommeil"), goal(v, 480.0),
+                h.series[Metric.SLEEP].orEmpty().map { it.second }, goal = 480.0) { nav.go("h/metric/SLEEP") }
         }
         DashCard.CARDIO -> CompactData(h.cardio?.total?.toString() ?: "—", "min", tr("Cardio (sem.)"), h.cardio?.progress) { nav.go("h/metric/CARDIO_WEEK") }
         DashCard.ENERGY -> h.latest(Metric.BODY_ENERGY)?.second.let { v ->
-            CompactData(v?.let { formatNumber(it) } ?: "—", null, tr("Body Battery"), goal(v, 100.0)) { nav.go("h/metric/BODY_ENERGY") }
+            CompactData(v?.let { formatNumber(it) } ?: "—", null, tr("Body Battery"), goal(v, 100.0),
+                h.series[Metric.BODY_ENERGY].orEmpty().map { it.second }, bars = false) { nav.go("h/metric/BODY_ENERGY") }
         }
         DashCard.HYDRATION -> h.today(Metric.HYDRATION).let { v ->
-            CompactData(formatNumber(v ?: 0.0), "ml", tr("Hydratation"), goal(v, HealthRepository.goal(Metric.HYDRATION) ?: 2000.0)) { nav.go("h/metric/HYDRATION") }
+            val g = HealthRepository.goal(Metric.HYDRATION) ?: 2000.0
+            CompactData(formatNumber(v ?: 0.0), "ml", tr("Hydratation"), goal(v, g), h.series[Metric.HYDRATION].orEmpty().map { it.second }, goal = g) {
+                nav.go("h/metric/HYDRATION")
+            }
         }
-        DashCard.RUNNING -> CompactData(h.perf?.weeks?.lastOrNull()?.let { formatNumber(it.runKm, 1) } ?: "—", "km", tr("Course (sem.)"), null) { nav.go("h/performance") }
+        DashCard.RUNNING -> CompactData(h.perf?.weeks?.lastOrNull()?.let { formatNumber(it.runKm, 1) } ?: "—", "km", tr("Course (sem.)"), null,
+            h.perf?.weeks.orEmpty().takeLast(8).map { it.runKm.takeIf { k -> k > 0 } }) { nav.go("h/performance") }
         DashCard.RECOVERY -> CompactData(h.perf?.recoveryLeftH?.let { formatNumber(it.toDouble()) } ?: "—", "h", tr("Récupération"), null) { nav.go("h/performance") }
         DashCard.TRAINING_WEEK -> {
             val st by vm.training.state.collectAsState()
             val ws = TrainingAnalytics.weekStart(LocalDate.now())
-            CompactData(st.history.count { !localDate(it.startTime).isBefore(ws) }.toString(), null, tr("Séances (sem.)"), null) { nav.go("t/insights") }
+            val weeks = androidx.compose.runtime.remember(st.history) { TrainingAnalytics.weeklyTotals(st.history, 8, LocalDate.now()) }
+            CompactData(st.history.count { !localDate(it.startTime).isBefore(ws) }.toString(), null, tr("Séances (sem.)"), null,
+                weeks.map { it.sets.toDouble().takeIf { v -> v > 0 } }) { nav.go("t/insights") }
         }
         DashCard.HABITS -> {
             val logged = an.days.filter { it.intakeKcal != null || it.fasted }.map { it.epochDay }.toSet()
             CompactData(Habits.streak(logged, an.today).current.toString(), tr("j."), tr("Série journal"), null) { nav.go("habits") }
         }
         DashCard.BALANCE -> {
-            val avg = Balance.average(Balance.days(an.days, an::tdeeAt, an.today))
-            CompactData(avg?.let { (if (it > 0) "+" else if (it < 0) "−" else "") + formatNumber(abs(s.energyValue(it))) } ?: "—", kcal, tr("Bilan / jour"), null) { nav.go("expenditure") }
+            val days = Balance.days(an.days, an::tdeeAt, an.today)
+            val avg = Balance.average(days)
+            CompactData(avg?.let { (if (it > 0) "+" else if (it < 0) "−" else "") + formatNumber(abs(s.energyValue(it))) } ?: "—", kcal, tr("Bilan / jour"), null,
+                days.map { it.second?.let(s::energyValue) }, bars = false) { nav.go("expenditure") }
         }
         else -> null
     }
@@ -167,6 +194,126 @@ internal fun CompactTile(c: DashCard, d: CompactData, modifier: Modifier) {
         Value(d.value, d.unit, color = c.hue().onContainer())
         Sub(d.label)
         d.progress?.let { Spacer(Modifier.height(8.dp)); ProgressBar(it.coerceIn(0f, 1f), c.hue(), Modifier.fillMaxWidth(), height = 6.dp, track = softTrack()) }
+    }
+}
+
+/** Petit graphique sans texte : barres (objectif atteint en plein) ou courbe avec aire ; rien sous 2 valeurs. */
+@Composable
+internal fun MiniChart(d: CompactData, hue: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    val track = softTrack()
+    val vals = d.history
+    if (vals.count { it != null } < 2) { Box(modifier); return }
+    Canvas(modifier) {
+        val n = vals.size
+        val present = vals.filterNotNull()
+        if (d.bars) {
+            val max = (present + listOfNotNull(d.goal)).max().coerceAtLeast(1e-9)
+            val slot = size.width / n; val bw = (slot * 0.58f).coerceAtMost(14.dp.toPx())
+            vals.forEachIndexed { i, v ->
+                val x = i * slot + (slot - bw) / 2
+                drawRoundRect(track, Offset(x, 0f), Size(bw, size.height), androidx.compose.ui.geometry.CornerRadius(bw / 2))
+                val bh = ((v ?: 0.0) / max * size.height).toFloat()
+                if (v != null && v > 0) drawRoundRect(if (d.goal != null && v >= d.goal) hue else hue.copy(alpha = 0.6f),
+                    Offset(x, size.height - bh.coerceAtLeast(bw)), Size(bw, bh.coerceAtLeast(bw)), androidx.compose.ui.geometry.CornerRadius(bw / 2))
+            }
+        } else {
+            val lo = present.min(); val hi = present.max()
+            val pad = 3.dp.toPx()
+            fun x(i: Int) = size.width * i / (n - 1).coerceAtLeast(1)
+            fun y(v: Double) = pad + (size.height - 2 * pad) * (1 - if (hi > lo) ((v - lo) / (hi - lo)).toFloat() else 0.5f)
+            val pts = vals.withIndex().mapNotNull { (i, v) -> v?.let { Offset(x(i), y(it)) } }
+            val line = androidx.compose.ui.graphics.Path().apply { pts.forEachIndexed { k, p -> if (k == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) } }
+            val area = androidx.compose.ui.graphics.Path().apply { addPath(line); lineTo(pts.last().x, size.height); lineTo(pts.first().x, size.height); close() }
+            drawPath(area, Brush.verticalGradient(listOf(hue.copy(alpha = 0.3f), hue.copy(alpha = 0f))))
+            drawPath(line, hue, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+            drawCircle(hue, 3.5.dp.toPx(), pts.last())
+        }
+    }
+}
+
+/** Anneau de progression seul, valeur au centre (bulles et cartes hautes). */
+@Composable
+private fun ProgressDisc(d: CompactData, c: DashCard, modifier: Modifier, small: Boolean = false) {
+    val hue = c.hue()
+    val track = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.5f else 0.85f)
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val dd = size.minDimension
+            val stroke = dd * 0.09f
+            val box = Size(dd - stroke, dd - stroke)
+            val tl = Offset((size.width - dd) / 2 + stroke / 2, (size.height - dd) / 2 + stroke / 2)
+            drawArc(track, 0f, 360f, false, tl, box, style = Stroke(stroke))
+            d.progress?.takeIf { it > 0f }?.let { p -> drawArc(hue, -90f, 360f * p.coerceAtMost(1f), false, tl, box, style = Stroke(stroke, cap = StrokeCap.Round)) }
+        }
+        Text(d.value, style = if (small) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+            color = hue.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 8.dp))
+    }
+}
+
+@Composable
+private fun TintedBox(c: DashCard, modifier: Modifier, onClick: () -> Unit, padding: androidx.compose.ui.unit.Dp = 12.dp,
+                      content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val hue = c.hue()
+    Column(modifier.clip(RoundedCornerShape(CardRadius)).background(Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f))))
+        .cardClick(onClick).padding(padding), content = content)
+}
+
+/** Carte haute (1 bloc, 2 rangées) : symbole, valeur, anneau d'objectif et petit graphique de la période. */
+@Composable
+internal fun CompactTall(c: DashCard, d: CompactData, modifier: Modifier) {
+    val hue = c.hue()
+    TintedBox(c, modifier.fillMaxHeight(), d.onClick) {
+        Box(Modifier.size(26.dp).clip(CircleShape).background(Mf.colors.card.copy(alpha = 0.85f)), contentAlignment = Alignment.Center) {
+            Icon(c.icon(), null, Modifier.size(15.dp), tint = hue)
+        }
+        Spacer(Modifier.height(8.dp))
+        if (d.progress != null) ProgressDisc(d, c, Modifier.fillMaxWidth().aspectRatio(1f), small = true)
+        else {
+            Text(d.value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = hue.onContainer(), maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            d.unit?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1) }
+        }
+        Spacer(Modifier.weight(1f))
+        MiniChart(d, hue, Modifier.fillMaxWidth().height(44.dp))
+        Spacer(Modifier.height(6.dp))
+        Text(d.label, style = MaterialTheme.typography.labelMedium, color = hue.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Bandeau (toute la largeur, une ligne) : symbole, valeur, et graphique ou barre d'objectif à droite. */
+@Composable
+internal fun CompactStrip(c: DashCard, d: CompactData, modifier: Modifier) {
+    val hue = c.hue()
+    TintedBox(c, modifier.fillMaxWidth(), d.onClick, padding = 10.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(34.dp).clip(CircleShape).background(Mf.colors.card.copy(alpha = 0.85f)), contentAlignment = Alignment.Center) {
+                Icon(c.icon(), null, Modifier.size(19.dp), tint = hue)
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(d.value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = hue.onContainer(), maxLines = 1)
+                    d.unit?.let { Text(" $it", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1,
+                        modifier = Modifier.padding(bottom = 3.dp)) }
+                }
+                Text(d.label, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (d.history.count { it != null } >= 2) MiniChart(d, hue, Modifier.width(110.dp).height(34.dp))
+            else d.progress?.let { ProgressBar(it.coerceIn(0f, 1f), hue, Modifier.width(96.dp), height = 8.dp, track = softTrack()) }
+        }
+    }
+}
+
+/** Grande carte (toute la largeur, plus haute) : valeur en grand, barre d'objectif et graphique détaillé de la période. */
+@Composable
+internal fun CompactLarge(c: DashCard, d: CompactData, modifier: Modifier) {
+    val hue = c.hue()
+    Tile(c, tr(c.label), modifier, onClick = d.onClick) {
+        Value(d.value, d.unit, color = hue.onContainer(), big = true)
+        Sub(d.label)
+        d.progress?.let { Spacer(Modifier.height(8.dp)); ProgressBar(it.coerceIn(0f, 1f), hue, Modifier.fillMaxWidth(), height = 8.dp, track = softTrack()) }
+        Spacer(Modifier.height(14.dp))
+        MiniChart(d, hue, Modifier.fillMaxWidth().height(130.dp))
     }
 }
 

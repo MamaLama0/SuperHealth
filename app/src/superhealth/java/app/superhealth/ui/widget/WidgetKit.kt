@@ -55,6 +55,26 @@ internal object WK {
 
     const val RADIUS = 24
 
+    /** Paliers de taille communs (en cases du lanceur) : 1×1, 2×1, 4×1, 2×2, 4×2, 4×4. */
+    val ONE = androidx.compose.ui.unit.DpSize(57.dp, 57.dp)
+    val TWO_BY_ONE = androidx.compose.ui.unit.DpSize(130.dp, 57.dp)
+    val FOUR_BY_ONE = androidx.compose.ui.unit.DpSize(270.dp, 57.dp)
+    val TWO_BY_TWO = androidx.compose.ui.unit.DpSize(130.dp, 130.dp)
+    val FOUR_BY_TWO = androidx.compose.ui.unit.DpSize(270.dp, 130.dp)
+    val FOUR_BY_FOUR = androidx.compose.ui.unit.DpSize(270.dp, 270.dp)
+    val ALL = setOf(ONE, TWO_BY_ONE, FOUR_BY_ONE, TWO_BY_TWO, FOUR_BY_TWO, FOUR_BY_FOUR)
+
+    /** Forme du widget, d'après sa taille courante. */
+    enum class Shape { TINY, STRIP, WIDE_STRIP, SQUARE, WIDE, BIG }
+
+    fun shape(size: androidx.compose.ui.unit.DpSize): Shape = when {
+        size.height < 100.dp -> when { size.width >= 250.dp -> Shape.WIDE_STRIP; size.width >= 120.dp -> Shape.STRIP; else -> Shape.TINY }
+        size.width < 100.dp -> Shape.TINY
+        size.width < 250.dp -> Shape.SQUARE
+        size.height >= 240.dp -> Shape.BIG
+        else -> Shape.WIDE
+    }
+
     /** Ouvre l'app sur [route] (filtrée par Routes.external). */
     fun open(ctx: Context, route: String): Action =
         actionStartActivity(Intent(ctx, MainActivity::class.java)

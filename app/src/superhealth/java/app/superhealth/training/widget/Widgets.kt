@@ -90,7 +90,7 @@ private fun open(ctx: Context, route: String): Action =
 
 /** Widget « Prochaine séance » : jour du programme (ou séance en cours), bouton de départ, semaine d'entraînement. */
 class NextWorkoutWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(180.dp, 110.dp), DpSize(250.dp, 110.dp)))
+    override val sizeMode = SizeMode.Responsive(setOf(DpSize(130.dp, 57.dp), DpSize(270.dp, 57.dp), DpSize(180.dp, 110.dp), DpSize(250.dp, 110.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val store = WorkoutApp.store
@@ -105,6 +105,21 @@ class NextWorkoutWidget : GlanceAppWidget() {
 @Composable
 private fun Content(ctx: Context, s: Snap?) {
     val wide = LocalSize.current.width >= 250.dp
+    if (LocalSize.current.height < 100.dp && s != null && s.onboarded) {
+        // 2×1 et 4×1 : nom de la séance et départ d'une touche
+        Row(GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(horizontal = 12.dp, vertical = 8.dp).clickable(open(ctx, "workout")),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(GlanceModifier.defaultWeight()) {
+                Text(s.title, style = TextStyle(color = W.text, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                if (wide) Text(s.subtitle, style = TextStyle(color = W.sub, fontSize = 11.sp), maxLines = 1)
+            }
+            Box(GlanceModifier.height(32.dp).background(W.strong).cornerRadius(16.dp).padding(horizontal = 12.dp).clickable(open(ctx, s.route)),
+                contentAlignment = Alignment.Center) {
+                Text(if (wide) s.action else "▶", style = TextStyle(color = W.onStrong, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            }
+        }
+        return
+    }
     Column(GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(14.dp).clickable(open(ctx, "workout"))) {
         if (s == null || !s.onboarded) {
             Text("La Salle", style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))

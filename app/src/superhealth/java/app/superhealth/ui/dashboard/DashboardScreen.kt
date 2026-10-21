@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -314,23 +315,42 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh) { cards.filter { !it.watch || hasSource(it) } }
             // Grille de 3 blocs : carré (S, 1 bloc), demi (M, 2 blocs), pleine largeur (L) ; les trous se comblent tout seuls.
             var editing by remember { mutableStateOf<DashCard?>(null) }
-            app.superhealth.packRows(visible) { sh.sizeOf(it).span }.forEach { row ->
+            @Composable
+            fun line(row: List<DashCard>, width: Int, modifier: Modifier = Modifier) {
                 val used = row.sumOf { sh.sizeOf(it).span }
                 val onlySquares = row.all { sh.sizeOf(it) == app.superhealth.CardSize.S }
                 // hauteur commune entre cartes voisines
                 val sameHeight = row.size > 1
-                Row(Modifier.fillMaxWidth().then(if (sameHeight) Modifier.height(IntrinsicSize.Min) else Modifier),
+                Row(modifier.fillMaxWidth().then(if (sameHeight) Modifier.height(IntrinsicSize.Min) else Modifier),
                     horizontalArrangement = Arrangement.spacedBy(GAP)) {
                     row.forEach { c ->
                         val size = sh.sizeOf(c)
                         // rangée incomplète : un carré garde son bloc, une carte plus large s'étend sur la place libre
-                        val w = if (used == app.superhealth.GRID || onlySquares || size == app.superhealth.CardSize.S) size.span.toFloat()
-                            else size.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
+                        val w = if (used == width || onlySquares || size == app.superhealth.CardSize.S) size.span.coerceAtMost(width).toFloat()
+                            else size.span.coerceAtMost(width) + (width - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
                         androidx.compose.runtime.CompositionLocalProvider(LocalCardLongPress provides { editing = c }, LocalFillHeight provides (sameHeight && !onlySquares)) {
                             Card(c, size, vm, nav, health, Modifier.weight(w).then(if (sameHeight) Modifier.fillMaxHeight() else Modifier), ::tab)
                         }
                     }
-                    if (onlySquares && used < app.superhealth.GRID) Spacer(Modifier.weight((app.superhealth.GRID - used).toFloat()))
+                    if (onlySquares && used < width) Spacer(Modifier.weight((width - used).toFloat()))
+                }
+            }
+            app.superhealth.packGrid(visible, span = { sh.sizeOf(it).span }) { sh.sizeOf(it).tall }.forEach { row ->
+                if (row.tall.isEmpty()) line(row.items, app.superhealth.GRID)
+                else {
+                    // rangée double : cartes hautes à gauche, deux sous-rangées à droite
+                    val room = app.superhealth.GRID - row.tall.size
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(GAP)) {
+                        row.tall.forEach { c ->
+                            androidx.compose.runtime.CompositionLocalProvider(LocalCardLongPress provides { editing = c }, LocalFillHeight provides true) {
+                                Card(c, sh.sizeOf(c), vm, nav, health, Modifier.weight(1f).fillMaxHeight().tallMin(), ::tab)
+                            }
+                        }
+                        if (room > 0) Column(Modifier.weight(room.toFloat()), verticalArrangement = Arrangement.spacedBy(GAP)) {
+                            if (row.items.isNotEmpty()) line(row.items, room)
+                            if (row.bottom.isNotEmpty()) line(row.bottom, room)
+                        }
+                    }
                 }
                 Spacer(Modifier.height(GAP))
             }
@@ -406,6 +426,14 @@ internal fun Modifier.square(): Modifier = if (LocalFillHeight.current) this els
 
 internal val LocalCardLongPress = androidx.compose.runtime.staticCompositionLocalOf<(() -> Unit)?> { null }
 
+/** Hauteur minimale d'une carte haute : deux carrés et l'espace entre eux (sa largeur × 2 + l'écart). */
+internal fun Modifier.tallMin(): Modifier = this.then(Modifier.layout { m, c ->
+    val want = if (c.hasBoundedWidth) c.maxWidth * 2 + GAP.roundToPx() else 0
+    val minH = if (c.hasBoundedHeight) want.coerceIn(c.minHeight, c.maxHeight) else maxOf(c.minHeight, want)
+    val p = m.measure(c.copy(minHeight = minH))
+    layout(p.width, p.height) { p.place(0, 0) }
+})
+
 /** Réglages rapides d'une carte, sans quitter le tableau de bord. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -425,15 +453,20 @@ private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss:
                 Spacer(Modifier.height(16.dp))
                 Text(tr("Taille"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-                    c.sizes.forEach { z ->
-                        val on = sh.sizeOf(c) == z
-                        Column(Modifier.weight(z.span.toFloat()).clip(RoundedCornerShape(16.dp)).background(if (on) Mf.colors.strong else Mf.colors.card)
-                            .clickable { app.superhealth.SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }.padding(vertical = 14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(tr(z.label), style = MaterialTheme.typography.titleSmall, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1)
-                            Text("${z.span}/3", style = MaterialTheme.typography.labelSmall,
-                                color = if (on) Mf.colors.onStrong.copy(alpha = 0.7f) else Mf.colors.textSecondary)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    c.sizes.chunked(3).forEach { line ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            line.forEach { z ->
+                                val on = sh.sizeOf(c) == z
+                                Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(if (on) Mf.colors.strong else Mf.colors.card)
+                                    .clickable { app.superhealth.SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }.padding(vertical = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally) {
+                                    SizeGlyph(z, if (on) Mf.colors.onStrong else c.hue(), if (on) Mf.colors.onStrong.copy(alpha = 0.25f) else Mf.colors.chip)
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(tr(z.label), style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1)
+                                }
+                            }
+                            repeat(3 - line.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
@@ -449,6 +482,20 @@ private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss:
                 PillButton(tr("Tout personnaliser"), Modifier.weight(1f), icon = Icons.Rounded.Tune, onClick = onMore)
             }
         }
+    }
+}
+
+/** Silhouette d'une taille dans une grille de 3 × 2 blocs (la forme en couleur, la grille en fond). */
+@Composable
+internal fun SizeGlyph(z: app.superhealth.CardSize, color: Color, grid: Color) {
+    androidx.compose.foundation.Canvas(Modifier.size(width = 48.dp, height = 32.dp)) {
+        val g = 2.dp.toPx(); val cw = (size.width - 2 * g) / 3; val ch = (size.height - g) / 2
+        val r = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
+        for (i in 0..2) for (j in 0..1) drawRoundRect(grid, androidx.compose.ui.geometry.Offset(i * (cw + g), j * (ch + g)),
+            androidx.compose.ui.geometry.Size(cw, ch), r)
+        val w = z.span * cw + (z.span - 1) * g
+        val h = when { z.rows >= 2f -> size.height; z.rows < 1f -> ch * 0.5f; else -> ch }
+        drawRoundRect(color, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Size(w, h), r)
     }
 }
 
@@ -527,9 +574,20 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
     val an = vm.nutrition.analytics.collectAsState().value ?: return
     val s by vm.nutrition.settings.collectAsState()
     // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
-    if (c != DashCard.RINGS && c in app.superhealth.COMPACT && (size == app.superhealth.CardSize.S || (size == app.superhealth.CardSize.M && c !in app.superhealth.HALF))) {
+    val generic = when (size) {
+        app.superhealth.CardSize.S, app.superhealth.CardSize.T, app.superhealth.CardSize.W, app.superhealth.CardSize.XL -> true
+        app.superhealth.CardSize.M -> c !in app.superhealth.HALF
+        app.superhealth.CardSize.L -> false
+    }
+    if (c != DashCard.RINGS && c in app.superhealth.COMPACT && generic) {
         val d = compactOf(c, vm, h, an, s, nav, tab) ?: return
-        if (size == app.superhealth.CardSize.S) CompactBubble(c, d, modifier) else CompactTile(c, d, modifier)
+        when (size) {
+            app.superhealth.CardSize.S -> CompactBubble(c, d, modifier)
+            app.superhealth.CardSize.T -> CompactTall(c, d, modifier)
+            app.superhealth.CardSize.W -> CompactStrip(c, d, modifier)
+            app.superhealth.CardSize.XL -> CompactLarge(c, d, modifier)
+            else -> CompactTile(c, d, modifier)
+        }
         return
     }
     when (c) {
@@ -624,7 +682,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
         DashCard.HABITS -> HabitsCard(c, vm, an, modifier, nav)
         DashCard.FOCUS -> FocusCard(c, vm, an, h, modifier, nav, tab)
         DashCard.BALANCE -> BalanceCard(c, an, s, modifier, nav)
-        DashCard.NEXT_WORKOUT -> NextWorkoutCard(c, vm, modifier, nav, tab)
+        DashCard.NEXT_WORKOUT -> NextWorkoutCard(c, size, vm, modifier, nav, tab)
         DashCard.TRAINING_TRENDS -> TrendsCard(c, vm, modifier, nav)
         DashCard.MUSCLE_SETS -> MuscleSetsCard(c, vm, modifier, nav)
         DashCard.LIFTS -> LiftsCard(c, vm, modifier, nav)

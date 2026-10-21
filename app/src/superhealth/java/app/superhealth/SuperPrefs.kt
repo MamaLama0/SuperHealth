@@ -51,11 +51,18 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
 }
 
 /**
- * Taille d'une carte dans la grille de [GRID] blocs : S (carré, 1 bloc), M (2 blocs), L (toute la largeur, 3 blocs).
+ * Taille d'une carte dans la grille de [GRID] blocs : S (carré, 1 bloc), T (1 bloc sur 2 rangées), M (2 blocs),
+ * W (bandeau fin sur toute la largeur), L (toute la largeur), XL (toute la largeur, plus haute).
  * Les cartes se rangent dans l'ordre ; un trou en fin de rangée est comblé par la prochaine carte qui y tient.
+ * [rows] : hauteur en rangées (0,5 pour le bandeau), pour l'aperçu de la grille.
  */
 @Serializable
-enum class CardSize(val span: Int, val label: String) { S(1, "Carré"), M(2, "Demi"), L(3, "Pleine") }
+enum class CardSize(val span: Int, val label: String, val rows: Float = 1f) {
+    S(1, "Carré"), T(1, "Haute", 2f), M(2, "Demi"), W(3, "Bandeau", 0.5f), L(3, "Pleine"), XL(3, "Grande", 2f);
+
+    /** Carte haute : à gauche de deux sous-rangées. */
+    val tall: Boolean get() = this == T
+}
 
 const val GRID = 3
 
@@ -68,9 +75,12 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
 val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
     DashCard.RECOVERY, DashCard.HEART)
 
-val DashCard.sizes: List<CardSize> get() = when {
-    this in COMPACT -> CardSize.entries
-    this == DashCard.FOCUS || this == DashCard.INSIGHTS || this == DashCard.CORRELATION -> listOf(CardSize.M, CardSize.L)
+val DashCard.sizes: List<CardSize> get() = when (this) {
+    in COMPACT -> CardSize.entries
+    DashCard.FOCUS -> listOf(CardSize.M, CardSize.L)
+    DashCard.INSIGHTS -> listOf(CardSize.M, CardSize.W, CardSize.L)
+    DashCard.CORRELATION -> listOf(CardSize.M, CardSize.L, CardSize.XL)
+    DashCard.NEXT_WORKOUT -> listOf(CardSize.W, CardSize.L)
     else -> listOf(CardSize.L)
 }
 
@@ -84,18 +94,36 @@ fun SuperSettings.sizeOf(c: DashCard): CardSize =
  * Rangées de la grille : dans l'ordre, chaque rangée prend la première carte restante puis, tant qu'il reste de la place,
  * les cartes suivantes qui y tiennent (une bulle remonte combler le trou laissé à côté d'une demi-carte).
  */
-fun <T> packRows(items: List<T>, width: Int = GRID, span: (T) -> Int): List<List<T>> {
+fun <T> packRows(items: List<T>, width: Int = GRID, span: (T) -> Int): List<List<T>> = packGrid(items, width, span) { false }.map { it.items }
+
+/** Rangée de la grille : [items] côte à côte ; avec des cartes hautes [tall] à gauche, [items] et [bottom] sont les deux sous-rangées à leur droite. */
+data class GridRow<T>(val items: List<T>, val tall: List<T> = emptyList(), val bottom: List<T> = emptyList())
+
+/**
+ * Comme [packRows], avec des cartes hautes ([isTall], 1 bloc sur 2 rangées) : une carte haute ouvre une rangée double,
+ * les cartes hautes qui la suivent directement se placent à côté, et la place restante à droite se remplit en deux
+ * sous-rangées (premières cartes qui y tiennent). Une carte haute ne comble jamais le trou d'une rangée simple.
+ */
+fun <T> packGrid(items: List<T>, width: Int = GRID, span: (T) -> Int, isTall: (T) -> Boolean): List<GridRow<T>> {
     val left = items.toMutableList()
-    val rows = mutableListOf<List<T>>()
-    while (left.isNotEmpty()) {
-        val row = mutableListOf(left.removeAt(0))
-        var used = span(row[0]).coerceIn(1, width)
+    val rows = mutableListOf<GridRow<T>>()
+    fun fill(room: Int, first: MutableList<T> = mutableListOf()): List<T> {
+        var used = first.sumOf { span(it).coerceIn(1, width) }
         var k = 0
-        while (used < width && k < left.size) {
+        while (used < room && k < left.size) {
             val w = span(left[k]).coerceIn(1, width)
-            if (used + w <= width) { row += left.removeAt(k); used += w } else k++
+            if (!isTall(left[k]) && used + w <= room) { first += left.removeAt(k); used += w } else k++
         }
-        rows += row
+        return first
+    }
+    while (left.isNotEmpty()) {
+        val head = left.removeAt(0)
+        if (isTall(head)) {
+            val tall = mutableListOf(head)
+            while (tall.size < width && left.isNotEmpty() && isTall(left[0])) tall += left.removeAt(0)
+            val room = width - tall.size
+            rows += if (room == 0) GridRow(emptyList(), tall) else GridRow(fill(room), tall, fill(room))
+        } else rows += GridRow(fill(width, mutableListOf(head)))
     }
     return rows
 }

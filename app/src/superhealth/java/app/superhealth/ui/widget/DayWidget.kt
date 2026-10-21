@@ -87,7 +87,7 @@ private suspend fun load(ctx: Context): Day {
 }
 
 class DayWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(180.dp, 110.dp), DpSize(250.dp, 110.dp), DpSize(250.dp, 180.dp)))
+    override val sizeMode = SizeMode.Responsive(WK.ALL)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val d = runCatching { load(context) }.getOrNull()
@@ -106,38 +106,97 @@ private val ProteinColor = app.superhealth.ui.theme.ProteinColor
 
 @Composable
 private fun Content(ctx: Context, d: Day?, rings: List<Bitmap>?) {
-    val tall = LocalSize.current.height >= 170.dp
-    Column(GlanceModifier.fillMaxSize().background(WK.bg).cornerRadius(WK.RADIUS.dp).padding(14.dp).clickable(WK.open(ctx, "home"))) {
+    val shape = WK.shape(LocalSize.current)
+    val small = shape == WK.Shape.TINY || shape == WK.Shape.STRIP || shape == WK.Shape.WIDE_STRIP
+    Column(GlanceModifier.fillMaxSize().background(WK.bg).cornerRadius(WK.RADIUS.dp).padding(if (small) 8.dp else 14.dp).clickable(WK.open(ctx, "home")),
+        verticalAlignment = Alignment.CenterVertically) {
         if (d == null || !d.onboarded || rings == null) {
-            Text("SuperHealth", style = TextStyle(color = WK.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
-            Text(tr("Ouvrez l'app pour la configurer."), style = TextStyle(color = WK.sub, fontSize = 12.sp))
+            Text("SuperHealth", style = TextStyle(color = WK.text, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+            if (!small) Text(tr("Ouvrez l'app pour la configurer."), style = TextStyle(color = WK.sub, fontSize = 12.sp))
             return@Column
         }
-        if (tall) {
-            Text(tr("Ma journée"), style = TextStyle(color = WK.text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-            Spacer(GlanceModifier.height(10.dp))
-        }
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Stat(ctx, rings[0], R.drawable.ic_w_food, CaloriesColor, formatNumber(abs(d.kcalLeft)),
-                if (d.kcalLeft >= 0) tr("Restantes") else tr("en trop"), "log")
-            Stat(ctx, rings[1], R.drawable.ic_w_walk, StepsColor, d.steps?.let { formatNumber(it) } ?: "—", tr("Pas"), "h/metric/STEPS")
-            Stat(ctx, rings[2], R.drawable.ic_w_egg, ProteinColor, "${(d.proteinGoal - d.protein).coerceAtLeast(0.0).roundToInt()} g", tr("Protéines"), "log")
-        }
-        if (tall) {
-            Spacer(GlanceModifier.defaultWeight())
-            Row(GlanceModifier.fillMaxWidth().background(WK.chip).cornerRadius(18.dp).padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
-                .clickable(WK.open(ctx, d.workoutRoute)), verticalAlignment = Alignment.CenterVertically) {
-                Image(ImageProvider(R.drawable.ic_w_lift), null, GlanceModifier.size(18.dp), colorFilter = ColorFilter.tint(WK.c(LiftColor)))
-                Spacer(GlanceModifier.width(8.dp))
-                Column(GlanceModifier.defaultWeight()) {
-                    Text(d.workout ?: tr("Musculation"), style = TextStyle(color = WK.text, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                    Text(d.workoutSub, style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
-                }
-                d.action?.let {
-                    Box(GlanceModifier.height(30.dp).background(WK.strong).cornerRadius(15.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                        Text(it, style = TextStyle(color = WK.onStrong, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+        val stats = listOf(
+            Triple(rings[0], R.drawable.ic_w_food, CaloriesColor) to (formatNumber(abs(d.kcalLeft)) to (if (d.kcalLeft >= 0) tr("Restantes") else tr("en trop"))),
+            Triple(rings[1], R.drawable.ic_w_walk, StepsColor) to ((d.steps?.let { formatNumber(it) } ?: "—") to tr("Pas")),
+            Triple(rings[2], R.drawable.ic_w_egg, ProteinColor) to ("${(d.proteinGoal - d.protein).coerceAtLeast(0.0).roundToInt()} g" to tr("Protéines")),
+        )
+        val routes = listOf("log", "h/metric/STEPS", "log")
+        when (shape) {
+            // 1×1 : calories restantes dans leur anneau
+            WK.Shape.TINY -> Box(GlanceModifier.fillMaxSize().clickable(WK.open(ctx, "log")), contentAlignment = Alignment.Center) {
+                Image(ImageProvider(rings[0]), null, GlanceModifier.fillMaxSize())
+                Text(stats[0].second.first, style = TextStyle(color = WK.text, fontSize = 11.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            }
+            // 2×1 : les trois valeurs, chacune avec son symbole
+            WK.Shape.STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                stats.forEachIndexed { i, (art, txt) ->
+                    Column(GlanceModifier.defaultWeight().clickable(WK.open(ctx, routes[i])), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Image(ImageProvider(art.second), null, GlanceModifier.size(14.dp), colorFilter = ColorFilter.tint(WK.c(art.third)))
+                        Text(txt.first, style = TextStyle(color = WK.text, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                     }
                 }
+            }
+            // 4×1 : anneau, valeur et libellé côte à côte
+            WK.Shape.WIDE_STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                stats.forEachIndexed { i, (art, txt) ->
+                    Row(GlanceModifier.defaultWeight().clickable(WK.open(ctx, routes[i])), verticalAlignment = Alignment.CenterVertically) {
+                        Ring(art.first, art.second, art.third, 38.dp)
+                        Spacer(GlanceModifier.width(6.dp))
+                        Column {
+                            Text(txt.first, style = TextStyle(color = WK.text, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                            Text(txt.second, style = TextStyle(color = WK.sub, fontSize = 10.sp), maxLines = 1)
+                        }
+                    }
+                }
+            }
+            // 2×2 : une ligne par mesure
+            WK.Shape.SQUARE -> stats.forEachIndexed { i, (art, txt) ->
+                if (i > 0) Spacer(GlanceModifier.height(6.dp))
+                Row(GlanceModifier.fillMaxWidth().clickable(WK.open(ctx, routes[i])), verticalAlignment = Alignment.CenterVertically) {
+                    Ring(art.first, art.second, art.third, 30.dp)
+                    Spacer(GlanceModifier.width(8.dp))
+                    Text(txt.first, style = TextStyle(color = WK.text, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                }
+            }
+            else -> {
+                val big = shape == WK.Shape.BIG
+                if (big) {
+                    Text(tr("Ma journée"), style = TextStyle(color = WK.text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+                    Spacer(GlanceModifier.height(10.dp))
+                }
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    stats.forEachIndexed { i, (art, txt) -> Stat(ctx, art.first, art.second, art.third, txt.first, txt.second, routes[i]) }
+                }
+                if (big) {
+                    Spacer(GlanceModifier.defaultWeight())
+                    WorkoutRow(ctx, d)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Ring(ring: Bitmap, icon: Int, color: Color, size: androidx.compose.ui.unit.Dp) {
+    Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
+        Image(ImageProvider(ring), null, GlanceModifier.size(size))
+        Image(ImageProvider(icon), null, GlanceModifier.size(size * 0.4f), colorFilter = ColorFilter.tint(WK.c(color)))
+    }
+}
+
+@Composable
+private fun WorkoutRow(ctx: Context, d: Day) {
+    Row(GlanceModifier.fillMaxWidth().background(WK.chip).cornerRadius(18.dp).padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
+        .clickable(WK.open(ctx, d.workoutRoute)), verticalAlignment = Alignment.CenterVertically) {
+        Image(ImageProvider(R.drawable.ic_w_lift), null, GlanceModifier.size(18.dp), colorFilter = ColorFilter.tint(WK.c(LiftColor)))
+        Spacer(GlanceModifier.width(8.dp))
+        Column(GlanceModifier.defaultWeight()) {
+            Text(d.workout ?: tr("Musculation"), style = TextStyle(color = WK.text, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            Text(d.workoutSub, style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
+        }
+        d.action?.let {
+            Box(GlanceModifier.height(30.dp).background(WK.strong).cornerRadius(15.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Text(it, style = TextStyle(color = WK.onStrong, fontSize = 12.sp, fontWeight = FontWeight.Bold))
             }
         }
     }

@@ -62,7 +62,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
     DetailScaffold(tr("Personnaliser"), onBack = { nav.popBackStack() }, action = {
         TextButton(onClick = { set(DashCard.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
     }) {
-        Text(tr("Choisissez vos cartes, leur taille et leur ordre. Une rangée fait 3 blocs : carré 1, demi 2, pleine 3."), style = MaterialTheme.typography.bodyMedium,
+        Text(tr("Choisissez vos cartes, leur taille et leur ordre."), style = MaterialTheme.typography.bodyMedium,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
 
         GridPreview(shown, sh)
@@ -102,7 +102,9 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
                     Column(Modifier.weight(1f)) {
                         Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         // taille : bulle, demi-largeur, pleine largeur (celles que la carte accepte)
-                        if (c.sizes.size > 1) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                        if (c.sizes.size > 1) androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             c.sizes.forEach { z ->
                                 val on = sh.sizeOf(c) == z
                                 Text(tr(z.label), style = MaterialTheme.typography.labelMedium, maxLines = 1,
@@ -296,33 +298,51 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
 }
 
 
+/** Bloc de l'aperçu : toucher passe à la taille suivante que la carte accepte. */
+@Composable
+private fun Block(c: DashCard, z: app.superhealth.CardSize, modifier: Modifier) {
+    Row(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(c.hue().container(1.3f))
+        .clickable(enabled = c.sizes.size > 1) {
+            val next = c.sizes[(c.sizes.indexOf(z) + 1) % c.sizes.size]
+            SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to next.name)) }
+        }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(c.icon(), null, Modifier.size(16.dp), tint = c.hue())
+        if (z.span > 1) {
+            Spacer(Modifier.width(6.dp))
+            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, color = c.hue().onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
 /** Aperçu de la grille (3 blocs par rangée), tel que le tableau de bord la range ; toucher un bloc change sa taille. */
 @Composable
 private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings) {
     if (cards.isEmpty()) return
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(Mf.colors.card).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        app.superhealth.packRows(cards) { sh.sizeOf(it).span }.forEach { row ->
+        @Composable
+        fun line(row: List<DashCard>, width: Int) {
             val used = row.sumOf { sh.sizeOf(it).span }
             val squares = row.all { sh.sizeOf(it) == app.superhealth.CardSize.S }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 row.forEach { c ->
                     val z = sh.sizeOf(c)
-                    val w = if (used == app.superhealth.GRID || squares || z == app.superhealth.CardSize.S) z.span.toFloat()
-                        else z.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
-                    Row(Modifier.weight(w).height(40.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(c.hue().container(1.3f))
-                        .clickable(enabled = c.sizes.size > 1) {
-                            val next = c.sizes[(c.sizes.indexOf(z) + 1) % c.sizes.size]
-                            SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to next.name)) }
-                        }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(c.icon(), null, Modifier.size(16.dp), tint = c.hue())
-                        if (z != app.superhealth.CardSize.S) {
-                            Spacer(Modifier.width(6.dp))
-                            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, color = c.hue().onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
+                    val w = if (used == width || squares || z == app.superhealth.CardSize.S) z.span.coerceAtMost(width).toFloat()
+                        else z.span.coerceAtMost(width) + (width - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
+                    Block(c, z, Modifier.weight(w).height(40.dp * z.rows + if (z.rows >= 2f) 6.dp else 0.dp))
                 }
-                if (squares && used < app.superhealth.GRID) Spacer(Modifier.weight((app.superhealth.GRID - used).toFloat()))
+                if (squares && used < width) Spacer(Modifier.weight((width - used).toFloat()))
+            }
+        }
+        app.superhealth.packGrid(cards, span = { sh.sizeOf(it).span }) { sh.sizeOf(it).tall }.forEach { row ->
+            if (row.tall.isEmpty()) line(row.items, app.superhealth.GRID)
+            else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.tall.forEach { c -> Block(c, sh.sizeOf(c), Modifier.weight(1f).height(86.dp)) }
+                val room = app.superhealth.GRID - row.tall.size
+                if (room > 0) Column(Modifier.weight(room.toFloat()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (row.items.isNotEmpty()) line(row.items, room)
+                    if (row.bottom.isNotEmpty()) line(row.bottom, room)
+                }
             }
         }
         Text(tr("Touchez un bloc pour changer sa taille ; appui long sur une carte du tableau de bord pour la régler."),

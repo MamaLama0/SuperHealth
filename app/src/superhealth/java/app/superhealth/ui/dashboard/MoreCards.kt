@@ -68,6 +68,7 @@ import app.superhealth.ui.localDate
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.WorkoutBlue
 import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.theme.container
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import java.time.LocalDate
@@ -131,9 +132,34 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
                 }
             }
         }
-        app.superhealth.CardSize.L -> Tile(c, tr("Anneaux du jour"), modifier, tinted = false, trailing = tr("Modifier"), onClick = { nav.go("rings/edit") }) {
+        // Haute : les anneaux sur toute la largeur, les valeurs seules dessous.
+        app.superhealth.CardSize.T -> Column(modifier.fillMaxHeight().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+            .cardClick { nav.go("rings/edit") }.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            val screen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+            ActivityRings(rings, ((screen - 32.dp - GAP * 2) / 3 - 20.dp).coerceAtLeast(72.dp), track = Mf.colors.background)
+            Spacer(Modifier.weight(1f))
+            rings.forEach { r ->
+                Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = r.kind.color.onContainer(),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) }.padding(vertical = 1.dp))
+            }
+        }
+        // Bandeau : petits anneaux, puis chaque valeur (symbole et couleur de son anneau) sur une ligne.
+        app.superhealth.CardSize.W -> Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+            .cardClick { nav.go("rings/edit") }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            ActivityRings(rings, 52.dp, track = Mf.colors.background, icons = false)
+            Spacer(Modifier.width(12.dp))
+            rings.forEach { r ->
+                Row(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) }, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(r.kind.icon, null, Modifier.size(14.dp), tint = r.kind.color)
+                    Spacer(Modifier.width(3.dp))
+                    Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = r.kind.color.onContainer(),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        app.superhealth.CardSize.L, app.superhealth.CardSize.XL -> Tile(c, tr("Anneaux du jour"), modifier, tinted = false, trailing = tr("Modifier"), onClick = { nav.go("rings/edit") }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ActivityRings(rings, 140.dp, track = Mf.colors.card)
+                ActivityRings(rings, if (size == app.superhealth.CardSize.XL) 190.dp else 140.dp, track = Mf.colors.card)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (rings.size > 3) 4.dp else 10.dp)) {
                     rings.forEach { r ->
@@ -232,12 +258,32 @@ internal fun BalanceCard(c: DashCard, an: Analytics, s: NutritionSettings, modif
 
 /** Prochaine séance du programme actif (ou séance en cours), à lancer d'une touche. */
 @Composable
-internal fun NextWorkoutCard(c: DashCard, vm: SuperViewModel, modifier: Modifier, nav: NavHostController, tab: (String) -> Unit) {
+internal fun NextWorkoutCard(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel, modifier: Modifier, nav: NavHostController, tab: (String) -> Unit) {
     val st by vm.training.state.collectAsState()
     val db = vm.training.db.collectAsState().value
     val p = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
     val day = p?.days?.getOrNull(p.dayIndex)
     val session = st.session
+    if (size == app.superhealth.CardSize.W) {
+        // bandeau : nom de la séance et départ d'une touche
+        val name = session?.name ?: day?.takeIf { !it.isRest }?.name
+        Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(c.hue().container(1.35f), c.hue().container(0.8f))))
+            .cardClick { if (session != null) nav.go("session") else tab("activities") }.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(c.icon(), null, Modifier.size(22.dp), tint = c.hue())
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(name ?: day?.name ?: tr("Aucun programme actif"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
+                Sub(if (session != null) tr("Séance en cours") else if (day?.isRest == true) tr("Jour de repos") else p?.name)
+            }
+            if (name != null) PillButton(if (session != null) tr("Reprendre") else tr("Commencer"), icon = Icons.Rounded.PlayArrow) {
+                if (session != null) nav.go("session") else if (vm.training.startNext()) nav.go("session") else tab("activities")
+            }
+        }
+        return
+    }
     Tile(c, if (session != null) tr("Séance en cours") else tr("Prochaine séance"), modifier, tinted = true,
         trailing = p?.takeIf { session == null }?.let { trf("Cycle %1\$s/%2\$s", it.cycleIndex + 1, it.numCycles) },
         onClick = { if (session != null) nav.go("session") else tab("activities") }) {
