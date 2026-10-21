@@ -112,16 +112,22 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
             .cardClick { nav.go("rings/edit") }.padding(10.dp), contentAlignment = Alignment.Center) {
             ActivityRings(rings, 92.dp, track = Mf.colors.background, icons = false)
         }
-        app.superhealth.CardSize.M -> Tile(c, tr("Anneaux"), modifier, tinted = false, onClick = { nav.go("rings/edit") }) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { ActivityRings(rings, 120.dp, track = Mf.colors.card) }
-            Spacer(Modifier.height(8.dp))
-            rings.forEach { r ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) }, verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(r.kind.color))
-                    Spacer(Modifier.width(6.dp))
-                    Text(tr(r.kind.label), Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis)
-                    Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+        // Demi : l'anneau d'abord, chaque mesure reconnue au symbole posé sur son rayon ; en face, la valeur seule, dans sa couleur.
+        app.superhealth.CardSize.M -> Box(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+            .cardClick { nav.go("rings/edit") }.padding(10.dp), contentAlignment = Alignment.Center) {
+            // largeur calculée sans BoxWithConstraints : la rangée mesure ses cartes en hauteur intrinsèque
+            val screen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+            val inner = (screen - 32.dp - GAP * 2) * (2f / 3f) + GAP - 20.dp
+            val side = (inner * 0.64f).coerceIn(100.dp, 164.dp)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                ActivityRings(rings, side, track = Mf.colors.background)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (rings.size > 3) 2.dp else 8.dp)) {
+                    rings.forEach { r ->
+                        Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                            color = r.kind.color.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) })
+                    }
                 }
             }
         }

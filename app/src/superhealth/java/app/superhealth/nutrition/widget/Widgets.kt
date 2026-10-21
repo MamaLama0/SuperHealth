@@ -75,6 +75,8 @@ private data class Snapshot(
     val kcal: Double, val kcalTarget: Double,
     val p: Double, val pT: Double, val f: Double, val fT: Double, val c: Double, val cT: Double,
     val trendKg: Double?, val trendDelta7: Double?, val tdee: Double?,
+    /** Tendance des 30 derniers jours (null : pas de valeur ce jour-là). */
+    val trend30: List<Double?> = emptyList(),
 )
 
 private suspend fun snapshot(ctx: Context): Snapshot = snapshots(ctx).first()
@@ -98,6 +100,7 @@ private fun build(s: Settings, an: app.superhealth.nutrition.data.Analytics, es:
         es.sumOf { it.protein }, t.protein, es.sumOf { it.fat }, t.fat, es.sumOf { it.carbs }, t.carbs,
         trend, if (trend != null && before != null) trend - before else null,
         an.expenditure.lastOrNull()?.tdee,
+        (today - 29..today).map { an.trendByDay[it] },
     )
 }
 
@@ -185,7 +188,7 @@ private fun Shortcut(ctx: Context, icon: Int, route: String, modifier: GlanceMod
     }
 }
 
-/** Widget « Poids » : tendance, variation sur 7 jours, dépense ; touche = saisir une pesée. */
+/** Widget « Poids » : tendance, variation sur 7 jours et courbe sur 30 jours ; touche = saisir une pesée. */
 class WeightWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Single
 
@@ -202,9 +205,19 @@ class WeightWidget : GlanceAppWidget() {
                         style = TextStyle(color = W.sub, fontSize = 12.sp))
                 }
                 Spacer(GlanceModifier.defaultWeight())
-                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(snap?.tdee?.let { tr("Dépense") + " " + snap.settings.energy(it) } ?: "",
-                        style = TextStyle(color = W.sub, fontSize = 11.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+                val spark = androidx.compose.runtime.remember(snap?.trend30) {
+                    snap?.trend30?.takeIf { t -> t.count { it != null } >= 2 }?.let { t ->
+                        app.superhealth.ui.widget.WK.spark(t, Base.Pink, app.superhealth.ui.widget.WK.px(context, 160.dp), app.superhealth.ui.widget.WK.px(context, 34.dp))
+                    }
+                }
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                    Box(GlanceModifier.defaultWeight()) {
+                        if (spark != null) Image(ImageProvider(spark), null, GlanceModifier.fillMaxWidth().height(34.dp),
+                            contentScale = androidx.glance.layout.ContentScale.FillBounds)
+                        else Text(snap?.tdee?.let { tr("Dépense") + " " + snap.settings.energy(it) } ?: "",
+                            style = TextStyle(color = W.sub, fontSize = 11.sp), maxLines = 1)
+                    }
+                    Spacer(GlanceModifier.width(8.dp))
                     Box(GlanceModifier.size(32.dp).background(W.chip).cornerRadius(16.dp), contentAlignment = Alignment.Center) {
                         Image(ImageProvider(R.drawable.ic_w_add), null, GlanceModifier.size(18.dp), colorFilter = ColorFilter.tint(W.text))
                     }

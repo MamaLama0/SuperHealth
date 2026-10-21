@@ -63,6 +63,11 @@ class ShellTest {
         listOf("home", "log", "h/metric/STEPS", "training:startnext", "training:startempty", "training:workout", "training:session").forEach {
             assertEquals(it, Routes.external(it))
         }
+        // widget Insights : chaque constat ouvre son écran de lecture
+        listOf("nutrition", "macros", "t/insights", "h/metric/RESTING_HR", "exercise/2a15c6f170d88066b38fd65f8757716f").forEach {
+            assertEquals(it, Routes.external(it))
+        }
+        listOf("exercise/../edit", "exercise/a/b", "exercise/").forEach { assertNull(it, Routes.external(it)) }
     }
 
     @Test fun apiKeyNeverLeavesInCleartext() {

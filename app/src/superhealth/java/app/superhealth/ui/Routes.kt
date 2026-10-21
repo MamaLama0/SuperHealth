@@ -9,8 +9,10 @@ object Routes {
     private val exact = setOf(
         "home", "log", "weight", "settings", "activities",
         "training:startnext", "training:startempty", "training:workout", "training:session",
+        // écrans de lecture ouverts par le widget Insights
+        "nutrition", "macros", "t/insights",
     )
-    private val patterns = listOf(Regex("search/[01]/-1"), Regex("h/metric/[A-Z0-9_]{1,32}"))
+    private val patterns = listOf(Regex("search/[01]/-1"), Regex("h/metric/[A-Z0-9_]{1,32}"), Regex("exercise/[A-Za-z0-9_-]{1,64}"))
 
     fun external(route: String?): String? = route?.takeIf { r -> r in exact || patterns.any { it.matches(r) } }
 }

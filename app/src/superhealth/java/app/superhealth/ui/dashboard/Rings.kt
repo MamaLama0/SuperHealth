@@ -118,8 +118,9 @@ fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifi
         }
         // icône au départ de chaque anneau, comme les flèches d'Apple
         if (icons) rings.forEachIndexed { i, r ->
-            val y = stroke * 0.5f + (stroke + gap) * i - stroke * 0.36f
-            Icon(r.kind.icon, null, Modifier.offset(y = y).size(stroke * 0.72f), tint = Color.Black.copy(alpha = 0.78f))
+            // le symbole seul identifie la mesure (carte demi sans libellés) : assez grand et contrasté
+            val y = stroke * 0.5f + (stroke + gap) * i - stroke * 0.4f
+            Icon(r.kind.icon, null, Modifier.offset(y = y).size(stroke * 0.8f), tint = Color.Black.copy(alpha = 0.85f))
         }
     }
 }

@@ -35,7 +35,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     NEXT_WORKOUT("Prochaine séance", Section.TRAINING),
     TRAINING_TRENDS("Tendances d'entraînement", Section.TRAINING),
     MUSCLE_SETS("Séries par muscle", Section.TRAINING),
-    LIFTS("Progression des exercices", Section.TRAINING);
+    LIFTS("Progression des exercices", Section.TRAINING),
+    INSIGHTS("Insights", Section.HEALTH),
+    CORRELATION("Corrélations", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -68,7 +70,7 @@ val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard
 
 val DashCard.sizes: List<CardSize> get() = when {
     this in COMPACT -> CardSize.entries
-    this == DashCard.FOCUS -> listOf(CardSize.M, CardSize.L)
+    this == DashCard.FOCUS || this == DashCard.INSIGHTS || this == DashCard.CORRELATION -> listOf(CardSize.M, CardSize.L)
     else -> listOf(CardSize.L)
 }
 
@@ -155,6 +157,14 @@ data class SuperSettings(
     val ringsAdded: Boolean = false,
     /** Cartes reprises de MacroFactor (habitudes, bilan, prochaine séance…) déjà proposées (migration unique). */
     val mfCardsAdded: Boolean = false,
+    /** Insights et corrélations déjà ajoutés au tableau de bord (migration unique). */
+    val insightsAdded: Boolean = false,
+    /** Les deux séries superposées de la carte Corrélations (noms de InsightData.Source) et la période en jours. */
+    val corr: List<String> = listOf("SLEEP", "VOLUME"),
+    val corrDays: Int = 30,
+    /** Demande de pesée à l'ouverture tant qu'aucune pesée n'est saisie aujourd'hui ; [weighSkipDay] : « pas aujourd'hui ». */
+    val weighPrompt: Boolean = true,
+    val weighSkipDay: Long = 0,
     /** Fonds de carte OpenStreetMap des activités (seule connexion liée à vos parcours ; sans eux, le tracé seul). */
     val onlineMaps: Boolean = true,
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
@@ -220,6 +230,13 @@ object SuperPrefs {
         if (!_settings.value.ringsAdded) update { it.copy(dashboard = withRings(it.dashboard), ringsAdded = true) }
         // Nouvelles cartes MacroFactor : ajoutées une fois en fin de tableau de bord (retirables dans Personnaliser).
         if (!_settings.value.mfCardsAdded) update { it.copy(dashboard = (it.dashboard + DashCard.newMacroFactorCards).distinct(), mfCardsAdded = true) }
+        // Insights sous les anneaux (ou en tête), corrélations en fin de tableau de bord.
+        if (!_settings.value.insightsAdded) update { s ->
+            val cards = s.dashboard.toMutableList()
+            if (DashCard.INSIGHTS !in cards) cards.add((cards.indexOf(DashCard.RINGS) + 1).coerceAtLeast(0), DashCard.INSIGHTS)
+            if (DashCard.CORRELATION !in cards) cards.add(DashCard.CORRELATION)
+            s.copy(dashboard = cards, insightsAdded = true)
+        }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }
 

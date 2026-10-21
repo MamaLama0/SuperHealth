@@ -50,13 +50,13 @@ import app.superhealth.ui.tr
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
-/** Anneaux du jour sur l'écran d'accueil (pas, Body Battery, calories mangées), dessinés en image : Glance ne trace pas d'arcs. */
+/** Anneaux du jour sur l'écran d'accueil (ceux choisis dans l'app), dessinés en image avec le symbole de chaque mesure. */
 class RingsWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 110.dp), DpSize(250.dp, 110.dp)))
+    override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 110.dp), DpSize(250.dp, 110.dp), DpSize(130.dp, 190.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val rings = runCatching { load(context) }.getOrNull()
-        val bmp = renderRings(rings ?: Rings.build(Rings.defaults, { null }, { 0.0 }), 360)
+        val bmp = WK.rings(rings ?: Rings.build(Rings.defaults, { null }, { 0.0 }), WK.px(context, 150.dp), context)
         provideContent { Content(context, rings, bmp) }
     }
 
@@ -85,59 +85,44 @@ class RingsWidget : GlanceAppWidget() {
     }
 }
 
-private val bg = ColorProvider(Color(0xFFFFFFFF), Color(0xFF000000))
-private val text = ColorProvider(Color(0xFF111111), Color(0xFFF2F2F2))
-private val sub = ColorProvider(Color(0xFF6E6E73), Color(0xFFA1A1A6))
-
-private fun open(ctx: Context, route: String): Action =
-    actionStartActivity(Intent(ctx, MainActivity::class.java)
-        .setAction(Intent.ACTION_VIEW).setData(Uri.parse("superhealth://open/$route"))
-        .putExtra(MainActivity.EXTRA_ROUTE, route)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+/** Valeur d'un anneau, sans objectif : le symbole sur le rayon dit de quelle mesure il s'agit. */
+private fun value(r: Rings.Ring): String = r.value?.let {
+    if (r.kind == Rings.Kind.SLEEP) app.superhealth.ui.formatDuration(it) else formatNumber(it)
+} ?: "—"
 
 @Composable
 private fun Content(ctx: Context, rings: List<Rings.Ring>?, bmp: Bitmap) {
-    val wide = LocalSize.current.width >= 250.dp
-    Row(GlanceModifier.fillMaxSize().background(bg).cornerRadius(24.dp).padding(12.dp).clickable(open(ctx, "home")),
-        verticalAlignment = Alignment.CenterVertically, horizontalAlignment = if (wide) Alignment.Start else Alignment.CenterHorizontally) {
-        val side = minOf(LocalSize.current.height - 24.dp, if (wide) 130.dp else LocalSize.current.width - 24.dp)
-        Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(side))
-        if (wide && rings != null) {
-            Spacer(GlanceModifier.width(14.dp))
-            Column(GlanceModifier.defaultWeight()) {
-                rings.forEachIndexed { i, r ->
-                    if (i > 0) Spacer(GlanceModifier.height(if (rings.size > 3) 1.dp else 4.dp))
-                    Text(tr(r.kind.label), style = TextStyle(color = sub, fontSize = 11.sp), maxLines = 1)
-                    Text("${r.value?.let { formatNumber(it) } ?: "—"} / ${formatNumber(r.goal)}",
-                        style = TextStyle(color = ColorProvider(r.kind.color, r.kind.color), fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+    val size = LocalSize.current
+    val wide = size.width >= 200.dp && size.width > size.height * 1.3f
+    val tall = !wide && size.height >= 170.dp && size.width >= 110.dp
+    val pad = 12.dp
+    Column(GlanceModifier.fillMaxSize().background(WK.bg).cornerRadius(WK.RADIUS.dp).padding(pad).clickable(WK.open(ctx, "home")),
+        verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
+        when {
+            wide && rings != null -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(minOf(size.height - pad * 2, size.width * 0.55f)))
+                Spacer(GlanceModifier.width(12.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    rings.forEachIndexed { i, r ->
+                        if (i > 0) Spacer(GlanceModifier.height(if (rings.size > 3) 2.dp else 6.dp))
+                        Text(value(r), style = TextStyle(color = WK.c(r.kind.color), fontSize = if (rings.size > 3) 15.sp else 18.sp, fontWeight = FontWeight.Bold),
+                            maxLines = 1)
+                    }
                 }
             }
+            tall && rings != null -> {
+                Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(minOf(size.width - pad * 2, size.height - pad * 2 - 30.dp)))
+                Spacer(GlanceModifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    rings.forEachIndexed { i, r ->
+                        if (i > 0) Spacer(GlanceModifier.width(8.dp))
+                        Text(value(r), style = TextStyle(color = WK.c(r.kind.color), fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    }
+                }
+            }
+            else -> Image(ImageProvider(bmp), tr("Anneaux du jour"), GlanceModifier.size(minOf(size.height, size.width) - pad * 2))
         }
     }
-}
-
-/** Les anneaux en image carrée de [px] pixels, même géométrie que la carte du tableau de bord. */
-internal fun renderRings(rings: List<Rings.Ring>, px: Int): Bitmap {
-    val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
-    val c = android.graphics.Canvas(bmp)
-    val n = rings.size.coerceAtLeast(1)
-    val stroke = px * 0.30f / n
-    val gap = stroke * 0.12f
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND }
-    c.rotate(-90f, px / 2f, px / 2f)
-    rings.forEachIndexed { i, r ->
-        val inset = stroke / 2 + i * (stroke + gap)
-        val box = RectF(inset, inset, px - inset, px - inset)
-        val col = r.kind.color
-        paint.shader = null; paint.color = col.copy(alpha = 0.22f).toArgb()
-        c.drawArc(box, 0f, 360f, false, paint)
-        val p = r.progress
-        if (p <= 0.001f) return@forEachIndexed
-        paint.shader = SweepGradient(px / 2f, px / 2f, intArrayOf(Rings.shade(col).toArgb(), col.toArgb(), col.toArgb()), floatArrayOf(0f, 0.5f, 1f))
-        c.drawArc(box, 0f, p.coerceAtMost(1f) * 360f, false, paint)
-        if (p > 1f) { paint.shader = null; paint.color = col.toArgb(); c.drawArc(box, 0f, (p - 1f) * 360f, false, paint) }
-    }
-    return bmp
 }
 
 class RingsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = RingsWidget() }

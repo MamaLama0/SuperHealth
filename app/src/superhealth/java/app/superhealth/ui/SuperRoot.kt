@@ -224,6 +224,29 @@ fun SuperRoot(vm: SuperViewModel) {
         runAction(action)
     }
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
+    WeighInPrompt(vm, current == "home" && tst.session == null)
+}
+
+/**
+ * Pesée du jour demandée à l'ouverture du tableau de bord tant qu'aucune n'est saisie. Fermer la cache jusqu'à la prochaine
+ * ouverture de l'app ; « Pas aujourd'hui » jusqu'à demain ; désactivable dans Réglages > Tableau de bord.
+ */
+@Composable
+private fun WeighInPrompt(vm: SuperViewModel, onHome: Boolean) {
+    val sh by vm.settings.collectAsState()
+    val an by vm.nutrition.analytics.collectAsState()
+    val s by vm.nutrition.settings.collectAsState()
+    val profile by vm.nutrition.profile.collectAsState()
+    var closed by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val today = java.time.LocalDate.now().toEpochDay()
+    val a = an ?: return
+    val weighed = a.days.any { it.epochDay == today && it.weightKg != null }
+    if (!onHome || closed || weighed || !sh.weighPrompt || sh.weighSkipDay == today) return
+    app.superhealth.nutrition.ui.screens.WeighInSheet(null, s, profile.sex, onDismiss = { closed = true }, onDelete = null,
+        onSkip = { closed = true; app.superhealth.SuperPrefs.update { it.copy(weighSkipDay = today) } }) { w ->
+        closed = true
+        vm.nutrition.launch { weighIns.upsert(w) }
+    }
 }
 
 @Composable

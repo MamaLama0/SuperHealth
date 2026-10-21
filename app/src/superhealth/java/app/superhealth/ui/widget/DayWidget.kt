@@ -11,6 +11,13 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
+import androidx.glance.ColorFilter
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.layout.RowScope
+import android.graphics.Bitmap
+import nodomain.freeyourgadget.gadgetbridge.R
+import kotlin.math.roundToInt
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -47,21 +54,11 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import kotlin.math.abs
 
-private object C {
-    val bg = ColorProvider(Color(0xFFFFFFFF), Color(0xFF1C1C1E))
-    val text = ColorProvider(Color(0xFF111111), Color(0xFFF2F2F2))
-    val sub = ColorProvider(Color(0xFF6E6E73), Color(0xFFA1A1A6))
-    val track = ColorProvider(Color(0xFFE6E6EA), Color(0xFF3A3A3C))
-    fun c(color: Color) = ColorProvider(color, color)
-    val kcal = Color(0xFF2E6BE6)
-    val steps = Color(0xFF1E9E6A)
-    val lift = Color(0xFF3D5AFE)
-}
-
-/** Ma journée : calories restantes, pas et prochaine séance. */
+/** Ma journée : calories restantes, pas, protéines et prochaine séance. */
 private data class Day(
     val onboarded: Boolean, val kcalLeft: Double, val kcalFrac: Float, val unit: String,
-    val steps: Double?, val stepGoal: Int, val workout: String?, val workoutSub: String, val workoutRoute: String,
+    val steps: Double?, val stepGoal: Int, val protein: Double, val proteinGoal: Double,
+    val workout: String?, val workoutSub: String, val workoutRoute: String, val action: String?,
 )
 
 private suspend fun load(ctx: Context): Day {
@@ -69,82 +66,96 @@ private suspend fun load(ctx: Context): Day {
     val today = LocalDate.now()
     val s = repo.prefs.settings.value
     val an = repo.analytics().first()
-    val eaten = repo.entriesForDay(today.toEpochDay()).first().sumOf { it.kcal }
-    val target = an.targetFor(today.toEpochDay()).macros.kcal
+    val entries = repo.entriesForDay(today.toEpochDay()).first()
+    val eaten = entries.sumOf { it.kcal }
+    val target = an.targetFor(today.toEpochDay()).macros
     val steps = runCatching { Bridge.steps(ctx, today) }.getOrNull()
     val st = WorkoutApp.store.state.value
     val program = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
     val day = program?.days?.getOrNull(program.dayIndex)
-    val (workout, sub, route) = when {
-        st.session != null -> Triple(st.session!!.name, tr("Séance en cours"), "training:session")
-        day == null -> Triple(null, tr("Aucun programme actif"), "training:workout")
-        day.isRest -> Triple(day.name, tr("Jour de repos"), "training:workout")
-        else -> Triple(day.name, trf("%1\$s exercices · touchez pour commencer", day.exercises.size), "training:startnext")
+    data class W(val name: String?, val sub: String, val route: String, val action: String?)
+    val w = when {
+        st.session != null -> W(st.session!!.name, tr("Séance en cours"), "training:session", tr("Reprendre"))
+        day == null -> W(null, tr("Aucun programme actif"), "training:workout", null)
+        day.isRest -> W(day.name, tr("Jour de repos"), "training:workout", null)
+        else -> W(day.name, trf("%1\$s exercices", day.exercises.size), "training:startnext", tr("Commencer"))
     }
     val kj = s.energyUnit.name == "KJ"
     val k = if (kj) 4.184 else 1.0
-    return Day(s.onboarded, (target - eaten) * k, if (target > 0) (eaten / target).toFloat() else 0f, if (kj) "kJ" else "kcal",
-        steps, s.stepGoal, workout, sub, route)
+    return Day(s.onboarded, (target.kcal - eaten) * k, if (target.kcal > 0) (eaten / target.kcal).toFloat() else 0f, if (kj) "kJ" else "kcal",
+        steps, s.stepGoal, entries.sumOf { it.protein }, target.protein, w.name, w.sub, w.route, w.action)
 }
 
-private fun open(ctx: Context, route: String): Action =
-    actionStartActivity(Intent(ctx, MainActivity::class.java)
-        .setAction(Intent.ACTION_VIEW).setData(Uri.parse("superhealth://open/$route"))
-        .putExtra(MainActivity.EXTRA_ROUTE, route)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
-
 class DayWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(180.dp, 110.dp), DpSize(250.dp, 180.dp)))
+    override val sizeMode = SizeMode.Responsive(setOf(DpSize(180.dp, 110.dp), DpSize(250.dp, 110.dp), DpSize(250.dp, 180.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val d = runCatching { load(context) }.getOrNull()
-        provideContent { Content(context, d) }
+        val px = WK.px(context, 46.dp)
+        val rings = d?.let {
+            listOf(WK.ring(it.kcalFrac, CaloriesColor, px), WK.ring(if (it.stepGoal > 0) ((it.steps ?: 0.0) / it.stepGoal).toFloat() else 0f, StepsColor, px),
+                WK.ring(if (it.proteinGoal > 0) (it.protein / it.proteinGoal).toFloat() else 0f, ProteinColor, px))
+        }
+        provideContent { Content(context, d, rings) }
     }
 }
 
+private val CaloriesColor = app.superhealth.ui.theme.CaloriesColor
+private val StepsColor = app.superhealth.ui.theme.HealthHues.Activity
+private val ProteinColor = app.superhealth.ui.theme.ProteinColor
+
 @Composable
-private fun Content(ctx: Context, d: Day?) {
-    val tall = LocalSize.current.height >= 180.dp
-    Column(GlanceModifier.fillMaxSize().background(C.bg).cornerRadius(24.dp).padding(14.dp).clickable(open(ctx, "home"))) {
-        if (d == null || !d.onboarded) {
-            Text("SuperHealth", style = TextStyle(color = C.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
-            Text(tr("Ouvrez l'app pour la configurer."), style = TextStyle(color = C.sub, fontSize = 12.sp))
+private fun Content(ctx: Context, d: Day?, rings: List<Bitmap>?) {
+    val tall = LocalSize.current.height >= 170.dp
+    Column(GlanceModifier.fillMaxSize().background(WK.bg).cornerRadius(WK.RADIUS.dp).padding(14.dp).clickable(WK.open(ctx, "home"))) {
+        if (d == null || !d.onboarded || rings == null) {
+            Text("SuperHealth", style = TextStyle(color = WK.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
+            Text(tr("Ouvrez l'app pour la configurer."), style = TextStyle(color = WK.sub, fontSize = 12.sp))
             return@Column
         }
         if (tall) {
-            Text(tr("Ma journée"), style = TextStyle(color = C.text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
-            Spacer(GlanceModifier.height(8.dp))
+            Text(tr("Ma journée"), style = TextStyle(color = WK.text, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+            Spacer(GlanceModifier.height(10.dp))
         }
-        Line(ctx, C.kcal, if (d.kcalLeft >= 0) tr("Calories restantes") else tr("Calories en trop"),
-            "${formatNumber(abs(d.kcalLeft))} ${d.unit}", d.kcalFrac, "log")
-        Spacer(GlanceModifier.height(if (tall) 10.dp else 6.dp))
-        Line(ctx, C.steps, tr("Pas"), d.steps?.let { if (d.stepGoal > 0) "${formatNumber(it)} / ${formatNumber(d.stepGoal.toDouble())}" else formatNumber(it) } ?: "—",
-            if (d.stepGoal > 0) ((d.steps ?: 0.0) / d.stepGoal).toFloat() else null, "h/metric/STEPS")
-        Spacer(GlanceModifier.height(if (tall) 10.dp else 6.dp))
-        Row(GlanceModifier.fillMaxWidth().clickable(open(ctx, d.workoutRoute)), verticalAlignment = Alignment.CenterVertically) {
-            Box(GlanceModifier.size(8.dp).cornerRadius(4.dp).background(C.c(C.lift))) {}
-            Spacer(GlanceModifier.width(8.dp))
-            Column(GlanceModifier.defaultWeight()) {
-                Text(d.workout ?: tr("Musculation"), style = TextStyle(color = C.text, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                if (tall) Text(d.workoutSub, style = TextStyle(color = C.sub, fontSize = 11.sp), maxLines = 1)
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Stat(ctx, rings[0], R.drawable.ic_w_food, CaloriesColor, formatNumber(abs(d.kcalLeft)),
+                if (d.kcalLeft >= 0) tr("Restantes") else tr("en trop"), "log")
+            Stat(ctx, rings[1], R.drawable.ic_w_walk, StepsColor, d.steps?.let { formatNumber(it) } ?: "—", tr("Pas"), "h/metric/STEPS")
+            Stat(ctx, rings[2], R.drawable.ic_w_egg, ProteinColor, "${(d.proteinGoal - d.protein).coerceAtLeast(0.0).roundToInt()} g", tr("Protéines"), "log")
+        }
+        if (tall) {
+            Spacer(GlanceModifier.defaultWeight())
+            Row(GlanceModifier.fillMaxWidth().background(WK.chip).cornerRadius(18.dp).padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
+                .clickable(WK.open(ctx, d.workoutRoute)), verticalAlignment = Alignment.CenterVertically) {
+                Image(ImageProvider(R.drawable.ic_w_lift), null, GlanceModifier.size(18.dp), colorFilter = ColorFilter.tint(WK.c(LiftColor)))
+                Spacer(GlanceModifier.width(8.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Text(d.workout ?: tr("Musculation"), style = TextStyle(color = WK.text, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                    Text(d.workoutSub, style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
+                }
+                d.action?.let {
+                    Box(GlanceModifier.height(30.dp).background(WK.strong).cornerRadius(15.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                        Text(it, style = TextStyle(color = WK.onStrong, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+                    }
+                }
             }
         }
     }
 }
 
+private val LiftColor = app.superhealth.ui.theme.WorkoutBlue
+
+/** Anneau, symbole au centre, valeur et libellé ; touche = écran de la mesure. */
 @Composable
-private fun Line(ctx: Context, color: Color, label: String, value: String, frac: Float?, route: String) {
-    Column(GlanceModifier.fillMaxWidth().clickable(open(ctx, route))) {
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(GlanceModifier.size(8.dp).cornerRadius(4.dp).background(C.c(color))) {}
-            Spacer(GlanceModifier.width(8.dp))
-            Text(label, style = TextStyle(color = C.sub, fontSize = 12.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
-            Text(value, style = TextStyle(color = C.text, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+private fun RowScope.Stat(ctx: Context, ring: Bitmap, icon: Int, color: Color, value: String, label: String, route: String) {
+    Column(GlanceModifier.defaultWeight().clickable(WK.open(ctx, route)), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(GlanceModifier.size(46.dp), contentAlignment = Alignment.Center) {
+            Image(ImageProvider(ring), null, GlanceModifier.size(46.dp))
+            Image(ImageProvider(icon), null, GlanceModifier.size(18.dp), colorFilter = ColorFilter.tint(WK.c(color)))
         }
-        if (frac != null) {
-            Spacer(GlanceModifier.height(4.dp))
-            LinearProgressIndicator(frac.coerceIn(0f, 1f), GlanceModifier.fillMaxWidth().height(6.dp), color = C.c(color), backgroundColor = C.track)
-        }
+        Spacer(GlanceModifier.height(4.dp))
+        Text(value, style = TextStyle(color = WK.text, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(label, style = TextStyle(color = WK.sub, fontSize = 10.sp), maxLines = 1)
     }
 }
 
@@ -154,7 +165,9 @@ object DayWidgets {
     suspend fun refresh(ctx: Context) {
         val mgr = android.appwidget.AppWidgetManager.getInstance(ctx)
         val glance = androidx.glance.appwidget.GlanceAppWidgetManager(ctx)
-        listOf(DayWidgetReceiver::class.java to DayWidget(), RingsWidgetReceiver::class.java to RingsWidget()).forEach { (receiver, widget) ->
+        listOf(DayWidgetReceiver::class.java to DayWidget(), RingsWidgetReceiver::class.java to RingsWidget(),
+            HydrationWidgetReceiver::class.java to HydrationWidget(), InsightWidgetReceiver::class.java to InsightWidget(),
+            VitalsWidgetReceiver::class.java to VitalsWidget(), StepsWidgetReceiver::class.java to StepsWidget()).forEach { (receiver, widget) ->
             mgr.getAppWidgetIds(android.content.ComponentName(ctx, receiver)).forEach { id ->
                 runCatching { widget.update(ctx, glance.getGlanceIdBy(id)) }
             }

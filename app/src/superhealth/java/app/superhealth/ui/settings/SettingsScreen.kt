@@ -214,6 +214,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Personnaliser"), subtitle = trf("%1\$s carte(s) affichée(s)", sh.dashboard.size), icon = Icons.Rounded.Dashboard) { nav.go("dash/edit") }
                 RowDivider()
                 SettingRow(tr("Bouton +"), subtitle = trf("%1\$s raccourci(s)", sh.plus.size), icon = Icons.Rounded.AddCircle) { nav.go("plus/edit") }
+                RowDivider()
+                SwitchRow(tr("Pesée du jour"), tr("Demandée à l'ouverture tant qu'elle manque"), sh.weighPrompt) { v ->
+                    app.superhealth.SuperPrefs.update { it.copy(weighPrompt = v) }
+                }
             }
 
             SectionLabel(tr("Données"))

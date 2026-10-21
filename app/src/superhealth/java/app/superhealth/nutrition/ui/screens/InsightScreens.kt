@@ -361,9 +361,11 @@ fun MacrosScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 }
 
+/** Saisie d'une pesée. [onSkip] : bouton « Pas aujourd'hui » (demande de pesée quotidienne). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WeighInSheet(existing: WeighInEntity?, s: app.superhealth.nutrition.domain.Settings, sex: Sex, onDismiss: () -> Unit, onDelete: (() -> Unit)?, onSave: (WeighInEntity) -> Unit) {
+fun WeighInSheet(existing: WeighInEntity?, s: app.superhealth.nutrition.domain.Settings, sex: Sex, onDismiss: () -> Unit, onDelete: (() -> Unit)?,
+                 onSkip: (() -> Unit)? = null, onSave: (WeighInEntity) -> Unit) {
     var day by remember { mutableLongStateOf(existing?.epochDay ?: LocalDate.now().toEpochDay()) }
     var w by remember { mutableStateOf(existing?.let { num(s.weightValue(it.weightKg), 1) } ?: "") }
     var bf by remember { mutableStateOf(existing?.bodyFatPct?.let { num(it, 1) } ?: "") }
@@ -389,6 +391,7 @@ private fun WeighInSheet(existing: WeighInEntity?, s: app.superhealth.nutrition.
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 onDelete?.let { PillButton(tr("Supprimer"), Modifier.weight(1f), strong = false, onClick = it) }
+                onSkip?.let { PillButton(tr("Pas aujourd'hui"), Modifier.weight(1f), strong = false, onClick = it) }
                 PillButton(tr("Enregistrer"), Modifier.weight(1f), enabled = (w.toNum() ?: 0.0) > 0) {
                     onSave(WeighInEntity(day, s.toKg(w.toNum()!!), bf.toNum()?.takeIf { it in 2.0..70.0 }))
                 }

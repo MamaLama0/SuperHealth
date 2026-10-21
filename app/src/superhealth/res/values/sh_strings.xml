@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_today_desc">Remaining calories and macros, logging shortcuts</string>
-    <string name="widget_weight_desc">Weight trend and expenditure</string>
+    <string name="widget_weight_desc">Weight trend and 30-day curve</string>
     <string name="widget_kcal_name">Calories &amp; macros</string>
     <string name="widget_kcal_desc">Remaining calories and macros</string>
     <string name="widget_today_name">Today</string>
@@ -9,7 +9,15 @@
     <string name="widget_next_name">Next workout</string>
     <string name="widget_next_desc">Today\'s workout, one-tap start, training week</string>
     <string name="widget_day_name">My day</string>
-    <string name="widget_day_desc">Calories left, steps and next workout</string>
+    <string name="widget_day_desc">Calories, steps, protein and next workout</string>
     <string name="widget_rings_name">Activity rings</string>
-    <string name="widget_rings_desc">Steps, Body Battery and calories eaten</string>
+    <string name="widget_rings_desc">Your rings, each with its symbol</string>
+    <string name="widget_hydration_name">Hydration</string>
+    <string name="widget_hydration_desc">Water today, add a glass in one tap</string>
+    <string name="widget_insight_name">Insights</string>
+    <string name="widget_insight_desc">Computed facts from your data</string>
+    <string name="widget_vitals_name">Health</string>
+    <string name="widget_vitals_desc">Sleep, resting heart rate, Body Battery</string>
+    <string name="widget_steps_name">Steps</string>
+    <string name="widget_steps_desc">Steps today and over 7 days</string>
 </resources>

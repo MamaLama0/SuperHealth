@@ -33,6 +33,8 @@ import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Balance
 import androidx.compose.material.icons.rounded.DonutLarge
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.StackedLineChart
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Add
@@ -165,6 +167,8 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.HABITS -> HealthHues.Body
     DashCard.BALANCE -> HealthHues.Respiration
     DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS, DashCard.MUSCLE_SETS, DashCard.LIFTS -> WorkoutBlue
+    DashCard.INSIGHTS -> HealthHues.Mind
+    DashCard.CORRELATION -> HealthHues.Respiration
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -195,6 +199,8 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.TRAINING_TRENDS -> Icons.Rounded.Insights
     DashCard.MUSCLE_SETS -> Icons.Rounded.AccessibilityNew
     DashCard.LIFTS -> Icons.AutoMirrored.Rounded.TrendingUp
+    DashCard.INSIGHTS -> Icons.Rounded.Lightbulb
+    DashCard.CORRELATION -> Icons.Rounded.StackedLineChart
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -521,7 +527,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
     val an = vm.nutrition.analytics.collectAsState().value ?: return
     val s by vm.nutrition.settings.collectAsState()
     // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
-    if (c != DashCard.RINGS && (size == app.superhealth.CardSize.S || (size == app.superhealth.CardSize.M && c !in app.superhealth.HALF))) {
+    if (c != DashCard.RINGS && c in app.superhealth.COMPACT && (size == app.superhealth.CardSize.S || (size == app.superhealth.CardSize.M && c !in app.superhealth.HALF))) {
         val d = compactOf(c, vm, h, an, s, nav, tab) ?: return
         if (size == app.superhealth.CardSize.S) CompactBubble(c, d, modifier) else CompactTile(c, d, modifier)
         return
@@ -622,6 +628,8 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
         DashCard.TRAINING_TRENDS -> TrendsCard(c, vm, modifier, nav)
         DashCard.MUSCLE_SETS -> MuscleSetsCard(c, vm, modifier, nav)
         DashCard.LIFTS -> LiftsCard(c, vm, modifier, nav)
+        DashCard.INSIGHTS -> InsightsCard(c, size, vm, s, modifier, nav)
+        DashCard.CORRELATION -> CorrelationCard(c, size, vm, s, modifier)
         DashCard.STEPS -> {
             val series = h.series[Metric.STEPS].orEmpty()
             val today = h.today(Metric.STEPS)

@@ -2,7 +2,7 @@
 <resources>
     <string name="gadgetbridge_running">SuperHealth est connecté à votre montre</string>
     <string name="widget_today_desc">Calories et macros restantes, raccourcis de saisie</string>
-    <string name="widget_weight_desc">Tendance du poids et dépense</string>
+    <string name="widget_weight_desc">Tendance du poids et courbe sur 30 jours</string>
     <string name="widget_kcal_name">Calories et macros</string>
     <string name="widget_kcal_desc">Calories et macros restantes</string>
     <string name="widget_today_name">Aujourd\'hui</string>
@@ -10,7 +10,15 @@
     <string name="widget_next_name">Prochaine séance</string>
     <string name="widget_next_desc">Séance du jour, départ en un geste, semaine d\'entraînement</string>
     <string name="widget_day_name">Ma journée</string>
-    <string name="widget_day_desc">Calories restantes, pas et prochaine séance</string>
+    <string name="widget_day_desc">Calories, pas, protéines et prochaine séance</string>
     <string name="widget_rings_name">Anneaux du jour</string>
-    <string name="widget_rings_desc">Pas, Body Battery et calories mangées</string>
+    <string name="widget_rings_desc">Vos anneaux, chacun avec son symbole</string>
+    <string name="widget_hydration_name">Hydratation</string>
+    <string name="widget_hydration_desc">Eau du jour, un verre ajouté d\'un geste</string>
+    <string name="widget_insight_name">Insights</string>
+    <string name="widget_insight_desc">Constats calculés sur vos données</string>
+    <string name="widget_vitals_name">Santé</string>
+    <string name="widget_vitals_desc">Sommeil, pouls au repos, Body Battery</string>
+    <string name="widget_steps_name">Pas</string>
+    <string name="widget_steps_desc">Pas du jour et des 7 derniers jours</string>
 </resources>

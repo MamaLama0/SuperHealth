@@ -12,3 +12,6 @@
 # Rive (animations), chargé par JNI
 -keep class app.rive.runtime.** { *; }
 -dontwarn app.rive.runtime.**
+
+# Widgets : Glance instancie les ActionCallback par leur nom de classe (bouton « + 250 ml »).
+-keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }
