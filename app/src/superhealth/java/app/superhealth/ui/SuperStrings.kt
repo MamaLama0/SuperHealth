@@ -591,5 +591,8 @@ object SuperStrings {
         "%1\$s pas restants" to "%1\$s steps to go",
         "%1\$s en cours" to "%1\$s in progress",
         "Séance : %1\$s" to "Workout: %1\$s",
+        "À faire" to "To do",
+        "Tout est fait pour aujourd'hui." to "All done for today.",
+        "Associez une montre ou Health Connect" to "Pair a watch or Health Connect",
     )
 }

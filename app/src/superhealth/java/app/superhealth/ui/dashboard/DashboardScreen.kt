@@ -161,6 +161,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.RUNNING -> HealthHues.Fitness
     DashCard.RECOVERY -> HealthHues.Sleep
     DashCard.RINGS -> Rings.Kind.STEPS.color
+    DashCard.FOCUS -> HealthHues.Body
     DashCard.HABITS -> HealthHues.Body
     DashCard.BALANCE -> HealthHues.Respiration
     DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS, DashCard.MUSCLE_SETS, DashCard.LIFTS -> WorkoutBlue
@@ -187,6 +188,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.RUNNING -> Icons.AutoMirrored.Rounded.DirectionsRun
     DashCard.RECOVERY -> Icons.Rounded.BatteryChargingFull
     DashCard.RINGS -> Icons.Rounded.DonutLarge
+    DashCard.FOCUS -> Icons.Rounded.EventAvailable
     DashCard.HABITS -> Icons.Rounded.EventAvailable
     DashCard.BALANCE -> Icons.Rounded.Balance
     DashCard.NEXT_WORKOUT -> Icons.Rounded.PlayArrow
@@ -300,27 +302,9 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         val an = a ?: return@Column
-        FocusChips(vm, an, health, nav, ::tab)
         Column(Modifier.padding(horizontal = 16.dp)) {
-            // Pas de boutons rapides ici : le + de la barre du bas s'en charge ; seule la pesée du jour est rappelée.
+            // Rien d'imposé en tête : rappels et objectifs du jour sont dans la carte « À faire », à placer où l'on veut.
             Spacer(Modifier.height(6.dp))
-            // Rappels contextuels (non personnalisables : ce sont des actions à faire).
-            if (an.checkInState == CheckInState.NOW) {
-                Reminder(Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in disponible"), tr("Mettez à jour votre programme pour la semaine.")) { nav.go("checkin") }
-                Spacer(Modifier.height(12.dp))
-            }
-            if (an.days.lastOrNull()?.weightKg == null) {
-                Reminder(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("Pesée du jour"), tr("Pesez-vous le matin pour une tendance fiable."), action = tr("Ajouter")) { nav.go("weight") }
-                Spacer(Modifier.height(12.dp))
-            }
-            // Cartes « montre » choisies mais aucune source : ni montre associée, ni Health Connect.
-            val noSource = cards.any { it.watch } && !(sh.watchModule && devices.isNotEmpty()) && !sh.healthConnect
-            if (noSource) {
-                Reminder(Icons.Rounded.Watch, HealthHues.Heart, tr("Constantes indisponibles"),
-                    tr("Associez une montre ou Health Connect pour voir cœur, sommeil et constantes.")) { tab("settings") }
-                Spacer(Modifier.height(12.dp))
-            }
-
             val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh) { cards.filter { !it.watch || hasSource(it) } }
             // Grille de 3 blocs : carré (S, 1 bloc), demi (M, 2 blocs), pleine largeur (L) ; les trous se comblent tout seuls.
             var editing by remember { mutableStateOf<DashCard?>(null) }
@@ -359,37 +343,45 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
 }
 
 /**
- * Focus du jour : ce qu'il reste à faire, en pastilles (protéines, pas, séance prévue) ; une pastille disparaît une fois
- * l'objectif atteint.
+ * « À faire » : rappels (check-in, pesée, source manquante) et ce qu'il reste pour les objectifs du jour (protéines, pas,
+ * séance prévue). Une ligne disparaît une fois faite ; carte optionnelle, placée où l'on veut.
  */
 @Composable
-private fun FocusChips(vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics, h: HealthSnap, nav: NavHostController, tab: (String) -> Unit) {
+private fun FocusCard(c: DashCard, vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics, h: HealthSnap, modifier: Modifier,
+                      nav: NavHostController, tab: (String) -> Unit) {
     val s by vm.nutrition.settings.collectAsState()
+    val sh by vm.settings.collectAsState()
+    val devices by vm.devices.collectAsState()
     val eaten by vm.nutrition.todayEntries.collectAsState()
     val st by vm.training.state.collectAsState()
-    val chips = buildList {
-        val p = an.targetFor(an.today).macros.protein - eaten.sumOf { it.macros().protein }
-        if (an.targetFor(an.today).macros.protein > 0 && p > 1) add(Triple(ProteinColor, trf("%1\$s g de protéines", p.roundToInt()), { tab("log") }))
+    val items = buildList<Triple<ImageVector, Color, Pair<String, () -> Unit>>> {
+        if (an.checkInState == CheckInState.NOW) add(Triple(Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in disponible") to { nav.go("checkin") }))
+        if (an.days.lastOrNull()?.weightKg == null) add(Triple(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("Pesée du jour") to { nav.go("weight") }))
+        val target = an.targetFor(an.today).macros.protein
+        val p = target - eaten.sumOf { it.macros().protein }
+        if (target > 0 && p > 1) add(Triple(Icons.Rounded.Restaurant, ProteinColor, trf("%1\$s g de protéines", p.roundToInt()) to { tab("log") }))
         val steps = h.today(Metric.STEPS)
         if (s.stepGoal > 0 && steps != null && steps < s.stepGoal)
-            add(Triple(HealthHues.Activity, trf("%1\$s pas restants", formatNumber(s.stepGoal - steps)), { nav.go("h/metric/STEPS") }))
+            add(Triple(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthHues.Activity, trf("%1\$s pas restants", formatNumber(s.stepGoal - steps)) to { nav.go("h/metric/STEPS") }))
         val prog = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
         val day = prog?.days?.getOrNull(prog.dayIndex)
-        val trainedToday = st.history.any { localDate(it.startTime) == LocalDate.now() }
         when {
-            st.session != null -> add(Triple(WorkoutBlue, trf("%1\$s en cours", st.session!!.name), { nav.go("session") }))
-            day != null && !day.isRest && !trainedToday -> add(Triple(WorkoutBlue, trf("Séance : %1\$s", day.name), { tab("activities") }))
+            st.session != null -> add(Triple(Icons.Rounded.FitnessCenter, WorkoutBlue, trf("%1\$s en cours", st.session!!.name) to { nav.go("session") }))
+            day != null && !day.isRest && st.history.none { localDate(it.startTime) == LocalDate.now() } ->
+                add(Triple(Icons.Rounded.FitnessCenter, WorkoutBlue, trf("Séance : %1\$s", day.name) to { tab("activities") }))
         }
+        if (sh.dashboard.any { it.watch } && !(sh.watchModule && devices.isNotEmpty()) && !sh.healthConnect)
+            add(Triple(Icons.Rounded.Watch, HealthHues.Heart, tr("Associez une montre ou Health Connect") to { tab("settings") }))
     }
-    if (chips.isEmpty()) return
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        chips.forEach { (hue, text, onClick) ->
-            Row(Modifier.clip(CircleShape).background(hue.container(1.3f)).clickable { onClick() }.padding(horizontal = 12.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(7.dp).clip(CircleShape).background(hue))
-                Spacer(Modifier.width(7.dp))
-                Text(text, style = MaterialTheme.typography.labelLarge, color = hue.onContainer(), maxLines = 1)
+    Tile(c, tr("À faire"), modifier, tinted = false, onClick = null, padding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 6.dp)) {
+        if (items.isEmpty()) Text(tr("Tout est fait pour aujourd'hui."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary,
+            modifier = Modifier.padding(bottom = 8.dp))
+        items.forEach { (icon, hue, t) ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { t.second() }.padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconChip(icon, hue, 28.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(t.first, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
             }
         }
     }
@@ -451,22 +443,6 @@ private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss:
                 PillButton(tr("Tout personnaliser"), Modifier.weight(1f), icon = Icons.Rounded.Tune, onClick = onMore)
             }
         }
-    }
-}
-
-@Composable
-private fun Reminder(icon: ImageVector, hue: Color, title: String, text: String, action: String? = null, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(Mf.colors.card).clickable(onClick = onClick).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        IconChip(icon, hue, 40.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-        }
-        Spacer(Modifier.width(8.dp))
-        if (action != null) PillButton(action, strong = true, onClick = onClick)
-        else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
     }
 }
 
@@ -640,6 +616,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             RingsCard(c, size, dashRings(sh.rings, h, todayEntries, an, s), s, modifier, nav, tab)
         }
         DashCard.HABITS -> HabitsCard(c, vm, an, modifier, nav)
+        DashCard.FOCUS -> FocusCard(c, vm, an, h, modifier, nav, tab)
         DashCard.BALANCE -> BalanceCard(c, an, s, modifier, nav)
         DashCard.NEXT_WORKOUT -> NextWorkoutCard(c, vm, modifier, nav, tab)
         DashCard.TRAINING_TRENDS -> TrendsCard(c, vm, modifier, nav)

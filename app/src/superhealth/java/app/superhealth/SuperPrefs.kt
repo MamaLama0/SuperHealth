@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 enum class DashCard(val label: String, val section: Section, val watch: Boolean = false) {
     RINGS("Anneaux du jour", Section.HEALTH),
+    FOCUS("À faire", Section.HEALTH),
     CALORIES("Calories restantes", Section.NUTRITION),
     WEIGHT("Tendance du poids", Section.NUTRITION),
     INTAKE("Calories consommées", Section.NUTRITION),
@@ -67,6 +68,7 @@ val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard
 
 val DashCard.sizes: List<CardSize> get() = when {
     this in COMPACT -> CardSize.entries
+    this == DashCard.FOCUS -> listOf(CardSize.M, CardSize.L)
     else -> listOf(CardSize.L)
 }
 
