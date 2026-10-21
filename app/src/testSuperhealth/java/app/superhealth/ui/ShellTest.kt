@@ -86,12 +86,19 @@ class ShellTest {
         assertTrue(runCatching { Net.readCapped(big.inputStream(), 99) }.exceptionOrNull() is java.io.IOException)
     }
 
-    @Test fun gridPacksRowsOfSixColumns() {
-        // S=2, M=3, L=6
-        val rows = packRows(listOf(2, 2, 2, 3, 3, 6, 2, 3, 2)) { it }
-        assertEquals(listOf(listOf(2, 2, 2), listOf(3, 3), listOf(6), listOf(2, 3), listOf(2)), rows)
+    @Test fun gridPacksRowsOfThreeBlocks() {
+        // S=1, M=2, L=3 ; ordre gardé quand tout tient
+        assertEquals(listOf(listOf(1, 1, 1), listOf(2, 1), listOf(3)), packRows(listOf(1, 1, 1, 2, 1, 3)) { it })
+        // une demi seule devant une pleine : le carré suivant remonte combler le trou
+        assertEquals(listOf(listOf("M", "S"), listOf("L"), listOf("S")), packRows(listOf("M", "L", "S", "S")) { mapOf("S" to 1, "M" to 2, "L" to 3)[it]!! })
+        // deux demis ne tiennent pas ensemble
+        assertEquals(listOf(listOf(2), listOf(2)), packRows(listOf(2, 2)) { it })
         assertEquals(emptyList<List<Int>>(), packRows(emptyList<Int>()) { it })
-        assertEquals(listOf(listOf(9), listOf(6)), packRows(listOf(9, 6)) { it }) // largeur bornée à 6 : une rangée chacun
+        assertEquals(listOf(listOf(9), listOf(3)), packRows(listOf(9, 3)) { it }) // largeur bornée : une rangée chacun
+        // chaque carte placée une seule fois
+        val items = (1..40).map { it % 3 + 1 }.mapIndexed { i, w -> i to w }
+        assertEquals(items.map { it.first }.toSet(), packRows(items) { it.second }.flatten().map { it.first }.toSet())
+        packRows(items) { it.second }.forEach { r -> assertTrue(r.sumOf { it.second } <= 3) }
     }
 
     @Test fun cardSizesFallBackToWhatTheCardAccepts() {

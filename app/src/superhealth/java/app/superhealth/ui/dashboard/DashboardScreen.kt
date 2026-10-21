@@ -2,8 +2,10 @@ package app.superhealth.ui.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -62,6 +64,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -80,6 +83,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
 import app.superhealth.sizeOf
+import app.superhealth.sizes
 import app.superhealth.vitalMetrics
 import app.superhealth.bridge.Bridge
 import app.superhealth.bridge.LiveHeart
@@ -296,6 +300,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         val an = a ?: return@Column
+        FocusChips(vm, an, health, nav, ::tab)
         Column(Modifier.padding(horizontal = 16.dp)) {
             // Pas de boutons rapides ici : le + de la barre du bas s'en charge ; seule la pesée du jour est rappelée.
             Spacer(Modifier.height(6.dp))
@@ -317,24 +322,29 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh) { cards.filter { !it.watch || hasSource(it) } }
-            // Grille de 6 colonnes : bulles (S, 3 par ligne), demi-tuiles (M) et pleine largeur (L), dans l'ordre choisi.
+            // Grille de 3 blocs : carré (S, 1 bloc), demi (M, 2 blocs), pleine largeur (L) ; les trous se comblent tout seuls.
+            var editing by remember { mutableStateOf<DashCard?>(null) }
             app.superhealth.packRows(visible) { sh.sizeOf(it).span }.forEach { row ->
                 val used = row.sumOf { sh.sizeOf(it).span }
-                val hasBubble = row.any { sh.sizeOf(it) == app.superhealth.CardSize.S }
-                // hauteur commune seulement entre tuiles voisines (la mesure intrinsèque est interdite aux mises en page adaptatives)
-                val sameHeight = !hasBubble && row.size > 1
+                val onlySquares = row.all { sh.sizeOf(it) == app.superhealth.CardSize.S }
+                // hauteur commune entre cartes voisines
+                val sameHeight = row.size > 1
                 Row(Modifier.fillMaxWidth().then(if (sameHeight) Modifier.height(IntrinsicSize.Min) else Modifier),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    horizontalArrangement = Arrangement.spacedBy(GAP)) {
                     row.forEach { c ->
                         val size = sh.sizeOf(c)
-                        // rangée incomplète : les bulles gardent leur taille, une tuile seule s'étend
-                        val w = if (hasBubble || used == 6) size.span.toFloat() else size.span * 6f / used
-                        Card(c, size, vm, nav, health, Modifier.weight(w).then(if (sameHeight) Modifier.fillMaxHeight() else Modifier), ::tab)
+                        // rangée incomplète : un carré garde son bloc, une carte plus large s'étend sur la place libre
+                        val w = if (used == app.superhealth.GRID || onlySquares || size == app.superhealth.CardSize.S) size.span.toFloat()
+                            else size.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
+                        androidx.compose.runtime.CompositionLocalProvider(LocalCardLongPress provides { editing = c }, LocalFillHeight provides (sameHeight && !onlySquares)) {
+                            Card(c, size, vm, nav, health, Modifier.weight(w).then(if (sameHeight) Modifier.fillMaxHeight() else Modifier), ::tab)
+                        }
                     }
-                    if (hasBubble && used < 6) Spacer(Modifier.weight((6 - used).toFloat()))
+                    if (onlySquares && used < app.superhealth.GRID) Spacer(Modifier.weight((app.superhealth.GRID - used).toFloat()))
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(GAP))
             }
+            editing?.let { c -> CardSheet(c, sh, onDismiss = { editing = null }) { editing = null; nav.go("dash/edit") } }
             if (visible.isEmpty()) {
                 MfCard(onClick = { nav.go("dash/edit") }) {
                     Text(tr("Aucune carte affichée"), style = MaterialTheme.typography.titleMedium)
@@ -344,6 +354,102 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             Spacer(Modifier.height(4.dp))
             PillButton(tr("Personnaliser le tableau de bord"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Tune) { nav.go("dash/edit") }
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/**
+ * Focus du jour : ce qu'il reste à faire, en pastilles (protéines, pas, séance prévue) ; une pastille disparaît une fois
+ * l'objectif atteint.
+ */
+@Composable
+private fun FocusChips(vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics, h: HealthSnap, nav: NavHostController, tab: (String) -> Unit) {
+    val s by vm.nutrition.settings.collectAsState()
+    val eaten by vm.nutrition.todayEntries.collectAsState()
+    val st by vm.training.state.collectAsState()
+    val chips = buildList {
+        val p = an.targetFor(an.today).macros.protein - eaten.sumOf { it.macros().protein }
+        if (an.targetFor(an.today).macros.protein > 0 && p > 1) add(Triple(ProteinColor, trf("%1\$s g de protéines", p.roundToInt()), { tab("log") }))
+        val steps = h.today(Metric.STEPS)
+        if (s.stepGoal > 0 && steps != null && steps < s.stepGoal)
+            add(Triple(HealthHues.Activity, trf("%1\$s pas restants", formatNumber(s.stepGoal - steps)), { nav.go("h/metric/STEPS") }))
+        val prog = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
+        val day = prog?.days?.getOrNull(prog.dayIndex)
+        val trainedToday = st.history.any { localDate(it.startTime) == LocalDate.now() }
+        when {
+            st.session != null -> add(Triple(WorkoutBlue, trf("%1\$s en cours", st.session!!.name), { nav.go("session") }))
+            day != null && !day.isRest && !trainedToday -> add(Triple(WorkoutBlue, trf("Séance : %1\$s", day.name), { tab("activities") }))
+        }
+    }
+    if (chips.isEmpty()) return
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        chips.forEach { (hue, text, onClick) ->
+            Row(Modifier.clip(CircleShape).background(hue.container(1.3f)).clickable { onClick() }.padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(7.dp).clip(CircleShape).background(hue))
+                Spacer(Modifier.width(7.dp))
+                Text(text, style = MaterialTheme.typography.labelLarge, color = hue.onContainer(), maxLines = 1)
+            }
+        }
+    }
+}
+
+/** Espace entre les cartes de la grille. */
+internal val GAP = 10.dp
+
+/** Appui long sur une carte : réglages rapides (taille, place, masquer). */
+/** Carte posée dans une rangée à hauteur commune : un carré prend toute la hauteur au lieu de rester carré. */
+internal val LocalFillHeight = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/** Carré d'un bloc, ou toute la hauteur de la rangée à côté d'une carte plus haute. */
+@Composable
+internal fun Modifier.square(): Modifier = if (LocalFillHeight.current) this else this.aspectRatio(1f)
+
+internal val LocalCardLongPress = androidx.compose.runtime.staticCompositionLocalOf<(() -> Unit)?> { null }
+
+/** Réglages rapides d'une carte, sans quitter le tableau de bord. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss: () -> Unit, onMore: () -> Unit) {
+    fun move(d: Int) = app.superhealth.SuperPrefs.update { st ->
+        val i = st.dashboard.indexOf(c); val j = (i + d).coerceIn(0, st.dashboard.lastIndex)
+        st.copy(dashboard = with(app.superhealth.training.domain.ProgramEdit) { st.dashboard.moved(i, j) })
+    }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).navigationBarsPadding()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconChip(c.icon(), c.hue(), 36.dp)
+                Spacer(Modifier.width(12.dp))
+                Text(tr(c.label), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (c.sizes.size > 1) {
+                Spacer(Modifier.height(16.dp))
+                Text(tr("Taille"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                    c.sizes.forEach { z ->
+                        val on = sh.sizeOf(c) == z
+                        Column(Modifier.weight(z.span.toFloat()).clip(RoundedCornerShape(16.dp)).background(if (on) Mf.colors.strong else Mf.colors.card)
+                            .clickable { app.superhealth.SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }.padding(vertical = 14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(tr(z.label), style = MaterialTheme.typography.titleSmall, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1)
+                            Text("${z.span}/3", style = MaterialTheme.typography.labelSmall,
+                                color = if (on) Mf.colors.onStrong.copy(alpha = 0.7f) else Mf.colors.textSecondary)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton(tr("Monter"), Modifier.weight(1f), strong = false) { move(-1) }
+                PillButton(tr("Descendre"), Modifier.weight(1f), strong = false) { move(1) }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton(tr("Masquer"), Modifier.weight(1f), strong = false) { app.superhealth.SuperPrefs.update { it.copy(dashboard = it.dashboard - c) }; onDismiss() }
+                PillButton(tr("Tout personnaliser"), Modifier.weight(1f), icon = Icons.Rounded.Tune, onClick = onMore)
+            }
         }
     }
 }
@@ -386,7 +492,7 @@ internal fun Tile(
     Column(
         modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius))
             .background(if (tinted) Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f))) else SolidColor(Mf.colors.card))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
+            .cardClick(onClick).padding(padding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconChip(c.icon(), hue, onTint = tinted)
@@ -404,6 +510,15 @@ internal fun Tile(
             bottom()
         }
     }
+}
+
+/** Toucher : ouvre la carte ; appui long : réglages rapides de la carte. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun Modifier.cardClick(onClick: (() -> Unit)?): Modifier {
+    val long = LocalCardLongPress.current
+    return if (onClick == null && long == null) this
+    else this.then(Modifier.combinedClickable(onClick = onClick ?: {}, onLongClick = long))
 }
 
 /** Fond des pistes (barres, anneaux) posées sur une carte teintée. */

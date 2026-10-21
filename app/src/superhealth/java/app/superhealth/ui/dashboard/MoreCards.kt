@@ -108,8 +108,9 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
                        nav: NavHostController, tab: (String) -> Unit) {
     fun open(k: Rings.Kind) { ringRoute(k).let { if (it == "log") tab("log") else nav.go(it) } }
     when (size) {
-        app.superhealth.CardSize.S -> BoxWithConstraints(modifier.aspectRatio(1f).clip(CircleShape).clickable { nav.go("rings/edit") }, contentAlignment = Alignment.Center) {
-            ActivityRings(rings, maxWidth, track = Mf.colors.card, icons = maxWidth >= 100.dp)
+        app.superhealth.CardSize.S -> Box(modifier.square().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+            .cardClick { nav.go("rings/edit") }.padding(10.dp), contentAlignment = Alignment.Center) {
+            ActivityRings(rings, 92.dp, track = Mf.colors.background, icons = false)
         }
         app.superhealth.CardSize.M -> Tile(c, tr("Anneaux"), modifier, tinted = false, onClick = { nav.go("rings/edit") }) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { ActivityRings(rings, 120.dp, track = Mf.colors.card) }

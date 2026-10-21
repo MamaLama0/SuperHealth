@@ -49,6 +49,8 @@ import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 
 /** Personnalisation : quelles cartes, dans quel ordre. Les cartes « montre » s'affichent dès qu'une source existe. */
@@ -60,9 +62,10 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
     DetailScaffold(tr("Personnaliser"), onBack = { nav.popBackStack() }, action = {
         TextButton(onClick = { set(DashCard.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
     }) {
-        Text(tr("Choisissez vos cartes, leur taille et leur ordre. Les petites bulles se rangent par trois, les moyennes par deux."), style = MaterialTheme.typography.bodyMedium,
+        Text(tr("Choisissez vos cartes, leur taille et leur ordre. Une rangée fait 3 blocs : carré 1, demi 2, pleine 3."), style = MaterialTheme.typography.bodyMedium,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
 
+        GridPreview(shown, sh)
         // Accès direct au choix des constantes de la carte principale.
         GroupCard {
             Row(Modifier.fillMaxWidth().clickable { nav.navigate("vitals/edit") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -289,5 +292,40 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+
+/** Aperçu de la grille (3 blocs par rangée), tel que le tableau de bord la range ; toucher un bloc change sa taille. */
+@Composable
+private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings) {
+    if (cards.isEmpty()) return
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(Mf.colors.card).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        app.superhealth.packRows(cards) { sh.sizeOf(it).span }.forEach { row ->
+            val used = row.sumOf { sh.sizeOf(it).span }
+            val squares = row.all { sh.sizeOf(it) == app.superhealth.CardSize.S }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { c ->
+                    val z = sh.sizeOf(c)
+                    val w = if (used == app.superhealth.GRID || squares || z == app.superhealth.CardSize.S) z.span.toFloat()
+                        else z.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
+                    Row(Modifier.weight(w).height(40.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(c.hue().container(1.3f))
+                        .clickable(enabled = c.sizes.size > 1) {
+                            val next = c.sizes[(c.sizes.indexOf(z) + 1) % c.sizes.size]
+                            SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to next.name)) }
+                        }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(c.icon(), null, Modifier.size(16.dp), tint = c.hue())
+                        if (z != app.superhealth.CardSize.S) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, color = c.hue().onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                if (squares && used < app.superhealth.GRID) Spacer(Modifier.weight((app.superhealth.GRID - used).toFloat()))
+            }
+        }
+        Text(tr("Touchez un bloc pour changer sa taille ; appui long sur une carte du tableau de bord pour la régler."),
+            style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
     }
 }

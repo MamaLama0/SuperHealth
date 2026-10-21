@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -14,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import app.superhealth.ui.theme.CardRadius
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -125,31 +126,37 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
     }
 }
 
-/** Bulle ronde : anneau de progression sur le bord, valeur au centre (même famille que les constantes). */
+/**
+ * Carte carrée (1 bloc) : même fond que les autres cartes, la mesure dans un anneau de progression au centre, son nom dessous.
+ */
 @Composable
 internal fun CompactBubble(c: DashCard, d: CompactData, modifier: Modifier) {
     val hue = c.hue()
     val track = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.5f else 0.85f)
-    BoxWithConstraints(modifier.aspectRatio(1f).clip(CircleShape).background(Brush.radialGradient(listOf(hue.container(1.8f), hue.container(0.9f))))
-        .clickable(onClick = d.onClick), contentAlignment = Alignment.Center) {
-        val small = maxWidth < 100.dp
-        Canvas(Modifier.fillMaxSize()) {
-            val stroke = size.minDimension * 0.06f
-            val inset = stroke * 0.9f
-            val box = Size(size.width - inset * 2, size.height - inset * 2)
-            drawArc(track, 0f, 360f, false, Offset(inset, inset), box, style = Stroke(stroke))
-            d.progress?.takeIf { it > 0f }?.let { p ->
-                drawArc(hue, -90f, 360f * p.coerceAtMost(1f), false, Offset(inset, inset), box, style = Stroke(stroke, cap = StrokeCap.Round))
+    val prog = d.progress
+    Column(modifier.square().clip(RoundedCornerShape(CardRadius))
+        .background(Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f)))).cardClick(d.onClick).padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                // cercle sur le plus petit côté, centré : le bloc peut être plus haut que large
+                val d = size.minDimension
+                val stroke = d * 0.085f
+                val box = Size(d - stroke, d - stroke)
+                val tl = Offset((size.width - d) / 2 + stroke / 2, (size.height - d) / 2 + stroke / 2)
+                drawArc(track, 0f, 360f, false, tl, box, style = Stroke(stroke))
+                prog?.takeIf { it > 0f }?.let { p -> drawArc(hue, -90f, 360f * p.coerceAtMost(1f), false, tl, box, style = Stroke(stroke, cap = StrokeCap.Round)) }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(c.icon(), null, Modifier.size(14.dp), tint = hue)
+                Text(d.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = hue.onContainer(), maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
+                d.unit?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1) }
             }
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = maxWidth * 0.14f)) {
-            Icon(c.icon(), null, Modifier.size(if (small) 13.dp else 16.dp), tint = hue)
-            Text(d.value, style = if (small) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
-                color = hue.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            d.unit?.takeIf { !small }?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1) }
-            Text(d.label, style = MaterialTheme.typography.labelSmall, color = hue.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center)
-        }
+        Spacer(Modifier.height(4.dp))
+        Text(d.label, style = MaterialTheme.typography.labelMedium, color = hue.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center)
     }
 }
 

@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +67,11 @@ fun ReorderSheet(
     var dragging by remember { mutableStateOf<Int?>(null) }
     var offset by remember { mutableFloatStateOf(0f) }
     val letters = groups.filterNotNull().distinct().mapIndexed { n, g -> g to ('A' + n) }.toMap()
-    val target = dragging?.let { (it + (offset / rowPx).roundToInt()).coerceIn(0, items.lastIndex) }
+    // relu à chaque événement : le gestionnaire de glissement vit plus longtemps qu'une composition
+    val lastIndex by rememberUpdatedState(items.lastIndex)
+    val move by rememberUpdatedState(onMove)
+    fun targetOf(from: Int) = (from + (offset / rowPx).roundToInt()).coerceIn(0, lastIndex)
+    val target = dragging?.let(::targetOf)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Mf.colors.background) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding()) {
             Text(title, style = MaterialTheme.typography.titleLarge)
@@ -109,9 +114,9 @@ fun ReorderSheet(
                                     detectDragGestures(
                                         onDragStart = { dragging = i; offset = 0f },
                                         onDragEnd = {
-                                            val from = dragging; val to = target
+                                            val from = dragging; val to = from?.let(::targetOf)
                                             dragging = null; offset = 0f
-                                            if (from != null && to != null && from != to) onMove(from, to)
+                                            if (from != null && to != null && from != to) move(from, to)
                                         },
                                         onDragCancel = { dragging = null; offset = 0f },
                                     ) { change, amount -> change.consume(); offset += amount.y }

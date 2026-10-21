@@ -48,11 +48,13 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
 }
 
 /**
- * Taille d'une carte dans la grille de 6 colonnes : S (bulle ronde, 3 par ligne), M (demi-largeur), L (pleine largeur).
- * Les cartes se rangent dans l'ordre, ligne par ligne, tant qu'elles tiennent.
+ * Taille d'une carte dans la grille de [GRID] blocs : S (carré, 1 bloc), M (2 blocs), L (toute la largeur, 3 blocs).
+ * Les cartes se rangent dans l'ordre ; un trou en fin de rangée est comblé par la prochaine carte qui y tient.
  */
 @Serializable
-enum class CardSize(val span: Int, val label: String) { S(2, "Bulle"), M(3, "Demi"), L(6, "Pleine") }
+enum class CardSize(val span: Int, val label: String) { S(1, "Carré"), M(2, "Demi"), L(3, "Pleine") }
+
+const val GRID = 3
 
 /** Cartes qui ont une valeur principale : disponibles en bulle (S) et en tuile (M). */
 val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.INTAKE, DashCard.MACROS,
@@ -74,14 +76,22 @@ val DashCard.defaultSize: CardSize get() = if (this in HALF) CardSize.M else Car
 fun SuperSettings.sizeOf(c: DashCard): CardSize =
     dashSizes[c.name]?.let { n -> CardSize.entries.firstOrNull { it.name == n } }?.takeIf { it in c.sizes } ?: c.defaultSize
 
-/** Rangées de la grille : chaque rangée tient dans 6 colonnes. */
-fun <T> packRows(items: List<T>, span: (T) -> Int): List<List<T>> {
-    val rows = mutableListOf<MutableList<T>>()
-    var used = 6
-    for (it in items) {
-        val w = span(it).coerceIn(1, 6)
-        if (used + w > 6) { rows += mutableListOf<T>(); used = 0 }
-        rows.last() += it; used += w
+/**
+ * Rangées de la grille : dans l'ordre, chaque rangée prend la première carte restante puis, tant qu'il reste de la place,
+ * les cartes suivantes qui y tiennent (une bulle remonte combler le trou laissé à côté d'une demi-carte).
+ */
+fun <T> packRows(items: List<T>, width: Int = GRID, span: (T) -> Int): List<List<T>> {
+    val left = items.toMutableList()
+    val rows = mutableListOf<List<T>>()
+    while (left.isNotEmpty()) {
+        val row = mutableListOf(left.removeAt(0))
+        var used = span(row[0]).coerceIn(1, width)
+        var k = 0
+        while (used < width && k < left.size) {
+            val w = span(left[k]).coerceIn(1, width)
+            if (used + w <= width) { row += left.removeAt(k); used += w } else k++
+        }
+        rows += row
     }
     return rows
 }
