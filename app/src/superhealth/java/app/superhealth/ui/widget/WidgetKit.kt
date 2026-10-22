@@ -108,13 +108,15 @@ internal object WK {
         val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val c = android.graphics.Canvas(bmp)
         val n = rings.size.coerceAtLeast(1)
-        val stroke = px * 0.30f / n
+        // sans cadre : le liseré sombre déborde de l'anneau extérieur, sa marge est réservée pour qu'il ne soit pas coupé
+        val margin = if (free) px * 0.30f / n * 0.12f * 0.8f + 1f else 0f
+        val stroke = (px - 2 * margin) * 0.30f / n
         val gap = stroke * 0.12f
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND }
         val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke + gap * 1.6f; strokeCap = Paint.Cap.ROUND
             color = android.graphics.Color.argb(150, 0, 0, 0) }
         rings.forEachIndexed { i, r ->
-            val inset = stroke / 2 + i * (stroke + gap)
+            val inset = margin + stroke / 2 + i * (stroke + gap)
             val box = RectF(inset, inset, px - inset, px - inset)
             val col = if (free) vivid(r.kind.color) else r.kind.color
             c.save(); c.rotate(-90f, px / 2f, px / 2f)

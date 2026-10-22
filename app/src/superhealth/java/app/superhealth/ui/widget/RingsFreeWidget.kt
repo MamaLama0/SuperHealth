@@ -58,7 +58,7 @@ internal object RingsScene {
     fun draw(ctx: Context, rings: List<Rings.Ring>, w: Int, h: Int, density: Float): Bitmap {
         val bmp = Bitmap.createBitmap(w.coerceAtLeast(1), h.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        val pad = 4 * density
+        val pad = 6 * density
         val ratio = w / h.toFloat()
         val minRow = 16 * density
         when {
