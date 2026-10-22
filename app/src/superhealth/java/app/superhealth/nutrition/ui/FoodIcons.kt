@@ -8,28 +8,45 @@ import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import app.superhealth.ui.LowPoly
 import java.text.Normalizer
 
 /**
  * Icônes d'aliments extraites de MacroFactor (assets/foods/iNNNN.webp) et index de termes anglais
  * (assets/foods/index.json, construit depuis icon_metadata.jsonl par tools/import_mf_assets.sh).
  * Les noms français sont traduits mot à mot via [FR_EN] avant la recherche.
+ * assets/foods/pack.json échange une partie de ces icônes contre le pack pixel-art acheté (foods/pack/NNN.png, 16×16)
+ * et ajoute quelques aliments absents de MacroFactor (identifiants « pNNN ») ; les autres ont une version pixel-art générée
+ * dans le même style (foods/gen/iNNNN.png, tools/pixel_food_icons.js), en attendant validation une par une.
  */
 object FoodIcons {
     @Serializable
     private data class Entry(val i: String, val n: String, val w: List<String>, val x: List<String> = emptyList())
 
+    @Serializable
+    private data class Pack(val map: Map<String, Int> = emptyMap(), val alias: Map<String, String> = emptyMap(), val extra: List<Entry> = emptyList())
+
     private var entries: List<Entry> = emptyList()
+    private var pack: Map<String, Int> = emptyMap()
+    private var alias: Map<String, String> = emptyMap()
+    private var generated: Set<String> = emptySet()
     private val matchCache = HashMap<String, String?>()
     private val bitmaps = LruCache<String, ImageBitmap>(160)
     private lateinit var app: Context
 
     fun init(context: Context) {
         app = context.applicationContext
+        val json = Json { ignoreUnknownKeys = true }
+        val p = runCatching {
+            json.decodeFromString(Pack.serializer(), app.assets.open("foods/pack.json").use { it.readBytes().decodeToString() })
+        }.getOrDefault(Pack())
         entries = runCatching {
             val text = app.assets.open("foods/index.json").use { it.readBytes().decodeToString() }
-            Json { ignoreUnknownKeys = true }.decodeFromString(ListSerializer(Entry.serializer()), text)
-        }.getOrDefault(emptyList())
+            json.decodeFromString(ListSerializer(Entry.serializer()), text)
+        }.getOrDefault(emptyList()) + p.extra
+        pack = p.map + p.extra.associate { it.i to it.i.drop(1).toInt() }
+        alias = p.alias
+        generated = app.assets.list("foods/gen").orEmpty().map { it.removeSuffix(".png") }.toSet()
     }
 
     /** Identifiant d'icône (ex. « i1000 ») le plus pertinent pour un nom d'aliment, ou null. */
@@ -42,9 +59,13 @@ object FoodIcons {
         return bmp.asImageBitmap().also { bitmaps.put(id, it) }
     }
 
+    /** Icône pixel-art (pack, sinon générée) qui remplace [id] (16×16, à agrandir sans lissage), ou null ; « alias » = équivalent choisi. */
+    fun pixel(id: String): ImageBitmap? = alias[id]?.let { pixel(it) } ?: pack[id]?.let { asset("foods/pack/${it.toString().padStart(3, '0')}.png") }
+        ?: if (id in generated) asset("foods/gen/$id.png") else null
+
     fun asset(path: String): ImageBitmap? {
         bitmaps.get(path)?.let { return it }
-        val bmp = runCatching { app.assets.open(path).use { BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
+        val bmp = runCatching { app.assets.open(LowPoly.path(app, path)).use { BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
         return bmp.asImageBitmap().also { bitmaps.put(path, it) }
     }
 
@@ -79,7 +100,8 @@ object FoodIcons {
         "pomme de terre" to "potato", "pommes de terre" to "potato", "pois chiche" to "chickpeas", "pois chiches" to "chickpeas",
         "noix de coco" to "coconut", "fruit de la passion" to "passion fruit", "fruits de mer" to "seafood", "lait de coco" to "coconut milk",
         "chou fleur" to "cauliflower", "haricot vert" to "green beans", "haricots verts" to "green beans", "petit pois" to "peas",
-        "petits pois" to "peas", "beurre de cacahuete" to "peanut butter", "pain de mie" to "bread", "creme glacee" to "ice cream",
+        "petits pois" to "peas", "beurre de cacahuete" to "peanut butter", "oeuf au plat" to "fried egg", "oeufs au plat" to "fried egg",
+        "aile de poulet" to "chicken wings", "ailes de poulet" to "chicken wings", "pain de mie" to "bread", "creme glacee" to "ice cream",
         "jaune d oeuf" to "egg", "blanc d oeuf" to "egg white", "salade verte" to "lettuce", "patate douce" to "sweet potato",
     )
 
@@ -96,7 +118,7 @@ object FoodIcons {
         "riz" to "rice", "pate" to "pasta", "pates" to "pasta", "spaghetti" to "spaghetti", "nouille" to "noodles", "pain" to "bread",
         "baguette" to "baguette", "brioche" to "brioche", "croissant" to "croissant", "cereale" to "cereal", "avoine" to "oats",
         "flocon" to "oats", "muesli" to "muesli", "granola" to "granola", "biscuit" to "cookie", "gateau" to "cake",
-        "tarte" to "pie", "crepe" to "crepe", "gaufre" to "waffle", "chocolat" to "chocolate", "bonbon" to "candy",
+        "tarte" to "pie", "crepe" to "crepe", "gaufre" to "waffle", "beignet" to "donut", "sucette" to "lollipop", "chocolat" to "chocolate", "bonbon" to "candy",
         "glace" to "ice cream", "sucre" to "sugar", "miel" to "honey", "confiture" to "jam", "lait" to "milk", "yaourt" to "yogurt",
         "yogourt" to "yogurt", "fromage" to "cheese", "beurre" to "butter", "creme" to "cream", "oeuf" to "egg", "oeufs" to "egg",
         "poulet" to "chicken", "dinde" to "turkey", "boeuf" to "beef", "steak" to "steak", "porc" to "pork", "jambon" to "ham",

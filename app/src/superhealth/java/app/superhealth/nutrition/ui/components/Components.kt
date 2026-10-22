@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.FoodIcons
 import app.superhealth.nutrition.ui.num
+import app.superhealth.ui.drawPixelArt
 import app.superhealth.ui.theme.CaloriesColor
 import app.superhealth.ui.theme.CarbsColor
 import app.superhealth.ui.theme.FatColor
@@ -104,12 +105,15 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: @Composa
     }
 }
 
-/** Icône d'aliment MacroFactor associée au nom ; pastille neutre si aucune ne correspond. */
+/** Icône d'aliment associée au nom (pixel-art du pack si elle existe, sinon MacroFactor) ; pastille neutre si aucune ne correspond. */
 @Composable
 fun FoodIcon(name: String, size: Dp = 40.dp, modifier: Modifier = Modifier) {
-    val bmp = remember(name) { FoodIcons.match(name)?.let { FoodIcons.bitmap(it) } }
+    val id = remember(name) { FoodIcons.match(name) }
+    val px = remember(id) { id?.let { FoodIcons.pixel(it) } }
+    val bmp = remember(id) { if (px == null) id?.let { FoodIcons.bitmap(it) } else null }
     Box(modifier.size(size).clip(CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
-        if (bmp != null) Image(bmp, null, Modifier.size(size * 0.72f))
+        if (px != null) Canvas(Modifier.size(size * 0.76f)) { drawPixelArt(px, center, this.size.minDimension) }
+        else if (bmp != null) Image(bmp, null, Modifier.size(size * 0.72f))
         else Icon(Icons.Rounded.Restaurant, null, Modifier.size(size * 0.45f), tint = Mf.colors.textSecondary)
     }
 }
