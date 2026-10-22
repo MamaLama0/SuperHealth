@@ -25,6 +25,10 @@ class SuperHealthApp : GBApplication() {
         WorkoutApp.init(this)
         Bridge.start(this)
         SyncWorker.schedule(this)
+        app.superhealth.backup.BackupWorker.schedule(this)
+        app.superhealth.update.UpdateWorker.schedule(this)
+        // code de récupération des sauvegardes : créé dès le premier démarrage (Keystore, hors du fil principal)
+        Thread { runCatching { app.superhealth.backup.Secrets.backupCode(this) } }.start()
     }
 
     /** Écrans Gadgetbridge (réglages de la montre, association…) : police et formes de SuperHealth. */

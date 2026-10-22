@@ -122,13 +122,6 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     fun set(f: (app.superhealth.nutrition.domain.Settings) -> app.superhealth.nutrition.domain.Settings) = vm.nutrition.repo.prefs.setSettings(f(s))
     fun toast(msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
 
-    val exportAll = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-        uri?.let { scope.launch { toast(runCatching { exportBackup(ctx, vm, it); tr("Sauvegarde exportée") }.getOrElse { e -> trf("Erreur : %1\$s", e.message) }) } }
-    }
-    val importAll = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { scope.launch { toast(runCatching { restoreBackup(ctx, vm, it) }.getOrElse { e -> trf("Erreur : %1\$s", e.message) }) } }
-    }
-
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
         ScreenTitle(tr("Réglages"))
         Column(Modifier.padding(horizontal = 16.dp)) {
@@ -186,7 +179,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 ChipChoice(EnergyUnit.entries, s.energyUnit, { tr(it.label) }) { u -> set { it.copy(energyUnit = u) } }
                 Spacer(Modifier.height(12.dp))
                 Label(tr("Objectif de pas"))
-                ChipChoice(listOf(0, 6000, 8000, 10000, 12000), s.stepGoal, { if (it == 0) tr("Aucun") else formatNumber(it.toDouble()) }) { g -> set { it.copy(stepGoal = g) } }
+                StepGoalEditor(s) { f -> set(f) }
             }
 
             SectionLabel(tr("Modules"))
@@ -219,22 +212,26 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 RowDivider()
                 SettingRow(tr("Bouton +"), subtitle = trf("%1\$s raccourci(s)", sh.plus.size), icon = Icons.Rounded.AddCircle) { nav.go("plus/edit") }
                 RowDivider()
-                SwitchRow(tr("Pesée du jour"), tr("Demandée à l'ouverture tant qu'elle manque"), sh.weighPrompt) { v ->
+                SwitchRow(tr("Succès et progression"), tr("Trophées, niveaux et voyage du petit bonhomme"), sh.achievements) { v ->
+                    app.superhealth.SuperPrefs.update { it.copy(achievements = v) }
+                }
+                RowDivider()
+                SwitchRow(tr("Bandeau de pesée"), tr("En haut de l'accueil tant qu'elle manque"), sh.weighPrompt) { v ->
                     app.superhealth.SuperPrefs.update { it.copy(weighPrompt = v) }
                 }
             }
 
             SectionLabel(tr("Données"))
             GroupCard {
-                SettingRow(tr("Sauvegarde complète"), subtitle = tr("Nutrition, musculation, montre, réglages (un seul fichier ZIP)"), icon = Icons.Rounded.Backup) {
-                    exportAll.launch("superhealth-${LocalDate.now()}.zip")
-                }
+                SettingRow(tr("Sauvegarde"), subtitle = when {
+                    sh.lastBackupError != null -> trf("Échec : %1\$s", sh.lastBackupError)
+                    sh.lastBackup > 0 -> trf("Chiffrée · dernière %1\$s", app.superhealth.ui.relativeDay(app.superhealth.ui.localDate(sh.lastBackup)).lowercase(Lang.locale))
+                    else -> tr("Chiffrée · fichier, Nextcloud, WebDAV ou dossier")
+                }, icon = Icons.Rounded.Backup) { nav.go("backup") }
                 RowDivider()
-                SettingRow(tr("Restaurer"), subtitle = tr("Sauvegarde SuperHealth, La Bouffe ou La Salle"), icon = Icons.Rounded.Restore) {
-                    importAll.launch(arrayOf("application/zip", "application/json", "*/*"))
-                }
+                UpdateRow(nav)
             }
-            Text(tr("Toutes les données restent sur ce téléphone : aucun compte, aucun serveur."), style = MaterialTheme.typography.bodySmall,
+            Text(tr("Aucun compte. Les sauvegardes ne quittent le téléphone que chiffrées, vers la destination choisie."), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
 
             SectionLabel(tr("Vie privée"))
@@ -242,7 +239,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SwitchRow(tr("Cartes en ligne"), tr("Fond de carte OpenStreetMap sous les tracés. Désactivé : tracé seul, aucune requête."),
                     sh.onlineMaps) { v -> app.superhealth.SuperPrefs.update { it.copy(onlineMaps = v) } }
             }
-            Text(tr("Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, et ces cartes."),
+            Text(tr("Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, ces cartes, GitHub (mises à jour) et votre sauvegarde."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
 
             SectionLabel(tr("Simulateurs et questionnaire"))
@@ -339,84 +336,3 @@ private fun HealthConnectSection(vm: SuperViewModel, syncing: Boolean) {
     }
 }
 
-// ---- Sauvegarde complète ------------------------------------------------------------------------------
-
-/** Exécute une tâche de sauvegarde Gadgetbridge (synchrone) et lève une erreur si elle échoue. */
-private fun runGbJob(make: (nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupCallback) -> Runnable) {
-    var error: String? = null
-    var ok = false
-    make(object : nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupCallback {
-        override fun onProgress(progress: Int, message: String?) {}
-        override fun onSuccess(warnings: String?) { ok = true }
-        override fun onFailure(errorMessage: String?) { error = errorMessage }
-    }).run()
-    if (!ok) error(error ?: "montre")
-}
-
-@kotlinx.serialization.Serializable
-private data class LogRow(val metric: String, val ts: Long, val value: Double)
-
-/**
- * Une seule archive pour tout : nutrition, musculation, réglages SuperHealth (tableau de bord, bouton +…), saisies santé
- * (hydratation, glycémie…) et, dans « montre.zip », la sauvegarde Gadgetbridge (base de la montre, réglages des appareils,
- * fichiers .fit des activités).
- */
-private suspend fun exportBackup(ctx: Context, vm: SuperViewModel, uri: Uri) {
-    val nutrition = AppJson.encodeToString(Backup.serializer(), vm.nutrition.repo.backup())
-    val training = WorkoutApp.store.export()
-    val logs = app.superhealth.health.data.ManualLogStore.get(ctx).query(null, 0L, Long.MAX_VALUE).map { LogRow(it.metric.name, it.timestampMs, it.value) }
-    val health = AppJson.encodeToString(kotlinx.serialization.builtins.ListSerializer(LogRow.serializer()), logs)
-    withContext(Dispatchers.IO) {
-        val watch = java.io.File(ctx.cacheDir, "montre-backup.zip").apply { delete() }
-        runCatching { runGbJob { cb -> nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupExportJob(ctx, cb, Uri.fromFile(watch)) } }
-        ZipOutputStream(ctx.contentResolver.openOutputStream(uri, "wt")!!.buffered()).use { zip ->
-            listOf("nutrition.json" to nutrition, "musculation.json" to training, "superhealth.json" to app.superhealth.SuperPrefs.exportSettings(),
-                "sante.json" to health).forEach { (name, text) ->
-                zip.putNextEntry(ZipEntry(name)); zip.write(text.toByteArray()); zip.closeEntry()
-            }
-            if (watch.length() > 0) { zip.putNextEntry(ZipEntry("montre.zip")); watch.inputStream().use { it.copyTo(zip) }; zip.closeEntry() }
-        }
-        watch.delete()
-    }
-}
-
-/** ZIP SuperHealth, ou sauvegarde JSON de La Bouffe (nutrition) / La Salle (musculation). */
-private suspend fun restoreBackup(ctx: Context, vm: SuperViewModel, uri: Uri): String {
-    val watch = java.io.File(ctx.cacheDir, "montre-restore.zip").apply { delete() }
-    val files = withContext(Dispatchers.IO) {
-        val bytes = ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
-        if (bytes.size > 1 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte()) {
-            buildMap {
-                ZipInputStream(bytes.inputStream()).use { zip ->
-                    generateSequence { zip.nextEntry }.forEach { e ->
-                        if (e.name == "montre.zip") watch.outputStream().use { zip.copyTo(it) } else put(e.name, zip.readBytes().decodeToString())
-                    }
-                }
-            }
-        } else {
-            val text = bytes.decodeToString()
-            if ("\"foods\"" in text && "\"entries\"" in text) mapOf("nutrition.json" to text) else mapOf("musculation.json" to text)
-        }
-    }
-    val done = mutableListOf<String>()
-    files["nutrition.json"]?.let { vm.nutrition.repo.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }
-    files["musculation.json"]?.let { WorkoutApp.store.import(it); done += tr("musculation") }
-    files["superhealth.json"]?.let { app.superhealth.SuperPrefs.importSettings(it); done += tr("réglages") }
-    files["sante.json"]?.let { json ->
-        val rows = AppJson.decodeFromString(kotlinx.serialization.builtins.ListSerializer(LogRow.serializer()), json)
-        app.superhealth.health.data.ManualLogStore.get(ctx).replaceAll(rows.mapNotNull { r ->
-            runCatching { app.superhealth.health.data.Metric.valueOf(r.metric) }.getOrNull()?.let { app.superhealth.health.data.ManualLog(0, it, r.ts, r.value) }
-        })
-        done += tr("saisies santé")
-    }
-    if (watch.length() > 0) {
-        val ok = withContext(Dispatchers.IO) {
-            runCatching { runGbJob { cb -> nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupImportJob(ctx, cb, Uri.fromFile(watch)) } }.isSuccess
-        }
-        watch.delete()
-        app.superhealth.health.data.HealthRepository.invalidate()
-        if (ok) done += tr("montre") else done += tr("montre (échec)")
-    }
-    vm.bump()
-    return if (done.isEmpty()) tr("Fichier illisible") else trf("Restauré : %1\$s", done.joinToString(", "))
-}

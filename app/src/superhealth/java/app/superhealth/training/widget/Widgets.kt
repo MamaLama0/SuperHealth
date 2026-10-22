@@ -139,12 +139,14 @@ private fun Content(ctx: Context, s: Snap?) {
         Spacer(GlanceModifier.defaultWeight())
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             if (wide) Row(GlanceModifier.defaultWeight()) {
+                // 7 éléments sans intercalaires : Glance refuse plus de 10 enfants par conteneur
                 (1..7).forEach { d ->
                     val done = d in s.week
-                    Box(GlanceModifier.size(16.dp).cornerRadius(8.dp).background(if (done) W.blue else app.superhealth.ui.widget.WK.chipOn), contentAlignment = Alignment.Center) {
-                        Text(dayLetter(d), style = TextStyle(color = if (done) ColorProvider(Color.White, Color.White) else W.sub, fontSize = 8.sp, fontWeight = FontWeight.Bold))
+                    Box(GlanceModifier.padding(end = if (d < 7) 2.dp else 0.dp)) {
+                        Box(GlanceModifier.size(16.dp).cornerRadius(8.dp).background(if (done) W.blue else app.superhealth.ui.widget.WK.chipOn), contentAlignment = Alignment.Center) {
+                            Text(dayLetter(d), style = TextStyle(color = if (done) ColorProvider(Color.White, Color.White) else W.sub, fontSize = 8.sp, fontWeight = FontWeight.Bold))
+                        }
                     }
-                    if (d < 7) Spacer(GlanceModifier.width(2.dp))
                 }
             } else Spacer(GlanceModifier.defaultWeight())
             Box(GlanceModifier.height(36.dp).background(W.strong).cornerRadius(18.dp).padding(horizontal = 14.dp).clickable(open(ctx, s.route)),

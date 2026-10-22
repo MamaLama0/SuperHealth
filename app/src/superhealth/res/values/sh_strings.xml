@@ -22,6 +22,12 @@
     <string name="widget_vitals_desc">Sleep, resting heart rate, Body Battery</string>
     <string name="widget_steps_name">Steps</string>
     <string name="widget_steps_desc">Steps today and over 7 days</string>
+    <string name="widget_chargeeffort_name">Charge &amp; effort</string>
+    <string name="widget_chargeeffort_desc">Morning recovery and today\'s cardio load</string>
+    <string name="widget_sleep_name">Sleep</string>
+    <string name="widget_sleep_desc">Last night\'s duration and sleep stages</string>
+    <string name="widget_progress_name">Progress</string>
+    <string name="widget_progress_desc">Your journey around the Earth and to the stars</string>
     <string name="widget_overview_name">Overview</string>
     <string name="widget_overview_desc">Calories, steps, water and Body Battery in one strip</string>
 </resources>

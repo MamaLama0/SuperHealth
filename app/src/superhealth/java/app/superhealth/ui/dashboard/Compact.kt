@@ -1,5 +1,6 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.nutrition.domain.stepGoalFor
 import app.superhealth.ui.charts.ChartStyle
 import app.superhealth.ui.charts.smooth
 import androidx.compose.foundation.Canvas
@@ -110,8 +111,9 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
             CompactData(p.roundToInt().toString(), "g", tr("Protéines"), goal(p, target)) { nav.go("macros") }
         }
         DashCard.STEPS -> h.today(Metric.STEPS).let { v ->
-            CompactData(v?.let { formatNumber(it) } ?: "—", null, tr("Pas"), goal(v, s.stepGoal.toDouble()),
-                h.series[Metric.STEPS].orEmpty().map { it.second }, goal = s.stepGoal.toDouble().takeIf { it > 0 }) { nav.go("h/metric/STEPS") }
+            val g = s.stepGoalFor(LocalDate.now()).toDouble()
+            CompactData(v?.let { formatNumber(it) } ?: "—", null, tr("Pas"), goal(v, g),
+                h.series[Metric.STEPS].orEmpty().map { it.second }, goal = g.takeIf { it > 0 }) { nav.go("h/metric/STEPS") }
         }
         DashCard.HEART -> {
             val v = h.heartToday.lastOrNull()?.value ?: h.latest(Metric.HEART_RATE)?.second
@@ -212,7 +214,7 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
             CompactData(change?.let { (if (it >= 0) "+" else "") + formatNumber(it, 1) } ?: "—", "%", tr("1RM estimé"), null,
                 pts.map { it.e1rm }, bars = false) { nav.go("t/insights") }
         }
-        else -> null
+        else -> if (c.isWatchChart) watchCompact(c, h.watch, nav) else null
     }
 }
 
@@ -377,7 +379,7 @@ internal fun dashRings(names: List<String>, h: HealthSnap, eaten: List<FoodEntry
             Rings.Kind.SLEEP -> h.latest(Metric.SLEEP)?.takeIf { it.first == LocalDate.now() }?.second
             Rings.Kind.CARDIO -> h.cardio?.total?.toDouble()
         }
-    }, { k -> ringGoal(k, s.stepGoal, target.kcal, target.protein, h.cardio?.target) })
+    }, { k -> ringGoal(k, s.stepGoalFor(LocalDate.now()), target.kcal, target.protein, h.cardio?.target) })
 }
 
 /** Objectif de chaque anneau (commun au tableau de bord et au widget). */

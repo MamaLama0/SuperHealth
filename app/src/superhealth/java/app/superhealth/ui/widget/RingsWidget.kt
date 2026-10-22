@@ -1,5 +1,6 @@
 package app.superhealth.ui.widget
 
+import app.superhealth.nutrition.domain.stepGoalFor
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -84,7 +85,7 @@ internal suspend fun loadRings(ctx: Context): List<Rings.Ring> {
             Rings.Kind.CARDIO -> cardio?.total?.toDouble()
         }
     }
-    return Rings.build(kinds, { values[it] }, { app.superhealth.ui.dashboard.ringGoal(it, s.stepGoal, target.kcal, target.protein, cardio?.target) })
+    return Rings.build(kinds, { values[it] }, { app.superhealth.ui.dashboard.ringGoal(it, s.stepGoalFor(today), target.kcal, target.protein, cardio?.target) })
 }
 
 /** Valeur d'un anneau, sans objectif : le symbole sur le rayon dit de quelle mesure il s'agit. */

@@ -1,5 +1,6 @@
 package app.superhealth.bridge
 
+import app.superhealth.nutrition.domain.stepGoalFor
 import android.content.Context
 import app.superhealth.HcSession
 import app.superhealth.SuperPrefs
@@ -69,7 +70,7 @@ object Bridge {
         gb.putString(ActivityUser.PREF_USER_DATE_OF_BIRTH, LocalDate.of(p.birthYear, 1, 1).toString())
         gb.putString(ActivityUser.PREF_USER_HEIGHT_CM, p.heightCm.roundToInt().toString())
         weightKg?.let { gb.putString(ActivityUser.PREF_USER_WEIGHT_KG, it.roundToInt().toString()) }
-        if (s.stepGoal > 0) gb.putString(ActivityUser.PREF_USER_STEPS_GOAL, s.stepGoal.toString())
+        s.stepGoalFor(LocalDate.now()).takeIf { it > 0 }?.let { gb.putString(ActivityUser.PREF_USER_STEPS_GOAL, it.toString()) }
         gb.putString("pref_key_theme", s.themeMode.name.lowercase())
         // Couleur d'accent des écrans Gadgetbridge : la plus proche de celle choisie dans SuperHealth.
         gb.putString(GBApplication.PREF_ACCENT_COLOR, when (s.accent.name) {
@@ -142,7 +143,7 @@ object Bridge {
             Metric.SLEEP -> hc.sleepMin[d]
             Metric.HRV -> hc.hrv[d]
             Metric.SPO2 -> hc.spo2[d]
-            Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE -> HealthRepository.dayValue(ctx, metric, date)
+            Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT -> HealthRepository.dayValue(ctx, metric, date)
             else -> null
         }
     }
@@ -159,6 +160,8 @@ object Bridge {
             Metric.SLEEP -> hc.sleepMin.isNotEmpty()
             Metric.HRV -> hc.hrv.isNotEmpty()
             Metric.SPO2 -> hc.spo2.isNotEmpty()
+            Metric.RECOVERY -> hc.hrv.isNotEmpty()
+            Metric.SLEEP_DEBT -> hc.sleepMin.isNotEmpty()
             else -> false
         }
     }

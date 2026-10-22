@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  * Le sommeil d'une date est celui de la nuit qui s'y termine (réveil ce jour-là), comme dans Gadgetbridge et Health Connect.
  */
 object Insights {
-    enum class Type { LIFT, SLEEP_TRAINING, STEPS_WEEK, WEIGHT_RATE, KCAL_WEEK, PROTEIN_WEEK, RESTING_HR, TRAINING_MONTH }
+    enum class Type { LIFT, SLEEP_TRAINING, STEPS_WEEK, WEIGHT_RATE, KCAL_WEEK, PROTEIN_WEEK, RESTING_HR, TRAINING_MONTH, STRAIN_SIGNALS }
 
     /**
      * Un constat. [value] : la grandeur de la phrase (variation en %, minutes, kg / semaine, bpm…), [count] et [total] :
@@ -39,11 +39,14 @@ object Insights {
         val kcalTarget: Map<LocalDate, Double> = emptyMap(),
         val protein: Map<LocalDate, Double> = emptyMap(),
         val proteinTarget: Map<LocalDate, Double> = emptyMap(),
+        val hrv: Map<LocalDate, Double> = emptyMap(),
+        val resp: Map<LocalDate, Double> = emptyMap(),
+        val skinTemp: Map<LocalDate, Double> = emptyMap(),
     )
 
     /** Tous les constats valides, du plus marquant au moins marquant. */
     fun compute(i: Input): List<Insight> =
-        listOfNotNull(lift(i), sleepTraining(i), steps(i), weight(i), kcal(i), protein(i), restingHr(i), training(i)).sortedByDescending { it.score }
+        listOfNotNull(lift(i), sleepTraining(i), steps(i), weight(i), kcal(i), protein(i), restingHr(i), training(i), strain(i)).sortedByDescending { it.score }
 
     // --- seuils ---
     const val LIFT_WINDOW = 42L
@@ -148,6 +151,23 @@ object Insights {
         val before = days(i.today, 28, 55).count { it in i.trainingDays }
         if (before == 0 || abs(now - before) < 2) return null
         return Insight(Type.TRAINING_MONTH, (now - before).toDouble(), count = now, total = before, score = abs(now - before) / 2.0 * 0.8)
+    }
+
+    /**
+     * Signaux de fatigue (alerte de NOOP) : les 2 derniers jours contre une référence de ~28 jours qui s'arrête 3 jours
+     * avant (pour ne pas s'y diluer). Pouls au repos ≥ +5 bpm, VFC ≤ −20 %, température cutanée ≥ +0,6 °C, respiration
+     * ≥ +1,5 /min : au moins deux signaux ensemble, avec 14 jours de référence. [count] = nombre de signaux.
+     */
+    fun strain(i: Input): Insight? {
+        fun split(m: Map<LocalDate, Double>): Pair<List<Double>, List<Double>> =
+            days(i.today, 0, 1).mapNotNull { m[it] } to days(i.today, 3, 30).mapNotNull { m[it] }
+        var n = 0; var tested = 0; var hrvDrop = 0.0
+        split(i.restingHr).let { (r, b) -> if (r.isNotEmpty() && b.size >= 14) { tested++; if (r.average() >= b.average() + 5) n++ } }
+        split(i.hrv).let { (r, b) -> if (r.isNotEmpty() && b.size >= 14) { tested++; val f = r.average() / b.average(); if (f <= 0.80) { n++; hrvDrop = (1 - f) * 100 } } }
+        split(i.skinTemp).let { (r, b) -> if (r.isNotEmpty() && b.size >= 14) { tested++; if (r.average() - b.average() >= 0.6) n++ } }
+        split(i.resp).let { (r, b) -> if (r.isNotEmpty() && b.size >= 14) { tested++; if (r.average() >= b.average() + 1.5) n++ } }
+        if (n < 2) return null
+        return Insight(Type.STRAIN_SIGNALS, hrvDrop, count = n, total = tested, score = 3.0 + n)
     }
 
     /** Jours de today−[from] à today−[to] (inclus). */

@@ -2,13 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Réseau : uniquement pour Open Food Facts et le fournisseur IA choisi (tous deux désactivables).
+    <!-- Réseau : Open Food Facts, le fournisseur IA choisi, GitHub (mises à jour) et la sauvegarde choisie (tous désactivables).
          Le moteur Gadgetbridge reste hors ligne (BuildConfig.INTERNET_ACCESS = false). -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="replace" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Mises à jour depuis les versions GitHub, toujours confirmées par l'utilisateur -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Health Connect : lecture des données des autres apps (les écritures sont déclarées par Gadgetbridge) -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
@@ -64,6 +66,8 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
+        <receiver android:name="app.superhealth.update.InstallReceiver" android:exported="false" />
+
         <!-- Scanner de code-barres verrouillé en portrait -->
         <activity
             android:name="app.superhealth.nutrition.ui.ScanActivity"
@@ -107,6 +111,18 @@
         <receiver android:name="app.superhealth.ui.widget.VitalsWidgetReceiver" android:exported="true" android:label="@string/widget_vitals_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_vitals" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.ChargeEffortWidgetReceiver" android:exported="true" android:label="@string/widget_chargeeffort_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_chargeeffort" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.SleepWidgetReceiver" android:exported="true" android:label="@string/widget_sleep_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_sleep" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.ProgressWidgetReceiver" android:exported="true" android:label="@string/widget_progress_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_progress" />
         </receiver>
         <receiver android:name="app.superhealth.ui.widget.StepsWidgetReceiver" android:exported="true" android:label="@string/widget_steps_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

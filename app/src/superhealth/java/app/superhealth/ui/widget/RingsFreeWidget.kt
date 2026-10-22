@@ -65,18 +65,18 @@ internal object RingsScene {
             // large : anneaux à gauche, une ligne par mesure à droite
             ratio > 1.4f && w - h > 60 * density -> {
                 val side = h - 2 * pad
-                c.drawBitmap(WK.rings(rings, side.toInt(), ctx), pad, pad, null)
+                c.drawBitmap(WK.rings(rings, side.toInt(), ctx, free = true), pad, pad, null)
                 values(ctx, c, rings, pad * 3 + side, pad, w - side - pad * 4, side)
             }
             // haut : anneaux en haut, valeurs dessous s'il reste la place d'une ligne lisible par mesure
             ratio < 0.75f && h - w > rings.size * minRow -> {
                 val side = w - 2 * pad
-                c.drawBitmap(WK.rings(rings, side.toInt(), ctx), pad, pad, null)
+                c.drawBitmap(WK.rings(rings, side.toInt(), ctx, free = true), pad, pad, null)
                 values(ctx, c, rings, pad, side + pad * 2, w - 2 * pad, h - side - pad * 3)
             }
             else -> {
                 val side = minOf(w, h) - 2 * pad
-                c.drawBitmap(WK.rings(rings, side.toInt(), ctx), (w - side) / 2, (h - side) / 2, null)
+                c.drawBitmap(WK.rings(rings, side.toInt(), ctx, free = true), (w - side) / 2, (h - side) / 2, null)
             }
         }
         return bmp
@@ -97,19 +97,19 @@ internal object RingsScene {
         }
         if (width(font) > w) font *= w / width(font)
         bold.textSize = font; light.textSize = font * 0.62f
-        val shadow = android.graphics.Color.argb(150, 0, 0, 0)
+        val shadow = android.graphics.Color.argb(200, 0, 0, 0)
         bold.setShadowLayer(font * 0.12f, 0f, font * 0.05f, shadow); light.setShadowLayer(font * 0.12f, 0f, font * 0.05f, shadow)
         rings.forEachIndexed { i, r ->
             val cy = top + rowH * (i + 0.5f)
             val base = cy + font * 0.36f
             ContextCompat.getDrawable(ctx, WK.icon(r.kind))?.mutate()?.let { d ->
                 val s = font * 0.95f
-                d.setTint(r.kind.color.toArgb())
+                d.setTint(WK.vivid(r.kind.color).toArgb())
                 d.setBounds(x.toInt(), (cy - s / 2).toInt(), (x + s).toInt(), (cy + s / 2).toInt())
                 d.draw(c)
             }
             val (v, g) = texts[i]
-            bold.color = r.kind.color.toArgb()
+            bold.color = WK.vivid(r.kind.color).toArgb()
             val tx = x + font * 1.25f
             c.drawText(v, tx, base, bold)
             c.drawText(g, tx + bold.measureText(v), base, light)

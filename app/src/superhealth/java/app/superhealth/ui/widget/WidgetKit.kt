@@ -100,25 +100,35 @@ internal object WK {
 
     /**
      * Anneaux emboîtés en image carrée de [px] pixels, même géométrie que la carte du tableau de bord ; avec [ctx],
-     * le symbole de chaque mesure est posé au départ de son anneau.
+     * le symbole de chaque mesure est posé au départ de son anneau. [free] : posés sans cadre sur le fond d'écran, ils
+     * gagnent en contraste (piste sombre et opaque de la couleur, liseré sombre sous chaque anneau, dégradé sans ombre)
+     * pour rester lisibles sur un fond clair comme sur un fond chargé.
      */
-    fun rings(rings: List<Rings.Ring>, px: Int, ctx: Context? = null): Bitmap {
+    fun rings(rings: List<Rings.Ring>, px: Int, ctx: Context? = null, free: Boolean = false): Bitmap {
         val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
         val c = android.graphics.Canvas(bmp)
         val n = rings.size.coerceAtLeast(1)
         val stroke = px * 0.30f / n
         val gap = stroke * 0.12f
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND }
+        val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = stroke + gap * 1.6f; strokeCap = Paint.Cap.ROUND
+            color = android.graphics.Color.argb(150, 0, 0, 0) }
         rings.forEachIndexed { i, r ->
             val inset = stroke / 2 + i * (stroke + gap)
             val box = RectF(inset, inset, px - inset, px - inset)
-            val col = r.kind.color
+            val col = if (free) vivid(r.kind.color) else r.kind.color
             c.save(); c.rotate(-90f, px / 2f, px / 2f)
-            paint.shader = null; paint.color = col.copy(alpha = 0.22f).toArgb()
+            paint.shader = null
+            if (free) {
+                // piste : la couleur assombrie, presque opaque, cerclée de noir pour se détacher du fond d'écran
+                c.drawArc(box, 0f, 360f, false, halo)
+                paint.color = Rings.shade(col, 0.32f).copy(alpha = 0.92f).toArgb()
+            } else paint.color = col.copy(alpha = 0.22f).toArgb()
             c.drawArc(box, 0f, 360f, false, paint)
             val p = r.progress
             if (p > 0.001f) {
-                paint.shader = SweepGradient(px / 2f, px / 2f, intArrayOf(Rings.shade(col).toArgb(), col.toArgb(), col.toArgb()), floatArrayOf(0f, 0.5f, 1f))
+                val start = if (free) androidx.compose.ui.graphics.lerp(col, Color.White, 0.18f) else Rings.shade(col)
+                paint.shader = SweepGradient(px / 2f, px / 2f, intArrayOf(start.toArgb(), col.toArgb(), col.toArgb()), floatArrayOf(0f, 0.5f, 1f))
                 c.drawArc(box, 0f, p.coerceAtMost(1f) * 360f, false, paint)
                 if (p > 1f) { paint.shader = null; paint.color = col.toArgb(); c.drawArc(box, 0f, (p - 1f) * 360f, false, paint) }
             }
@@ -126,12 +136,20 @@ internal object WK {
             if (ctx != null) ContextCompat.getDrawable(ctx, icon(r.kind))?.mutate()?.let { d ->
                 val s = stroke * 0.8f
                 val cy = inset
-                d.setTint(android.graphics.Color.argb(217, 0, 0, 0))
+                d.setTint(android.graphics.Color.argb(if (free) 235 else 217, 0, 0, 0))
                 d.setBounds((px / 2f - s / 2).toInt(), (cy - s / 2).toInt(), (px / 2f + s / 2).toInt(), (cy + s / 2).toInt())
                 d.draw(c)
             }
         }
         return bmp
+    }
+
+    /** Couleur d'anneau poussée vers la saturation et la luminosité maximales (sur fond d'écran). */
+    fun vivid(c: Color): Color {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(c.toArgb(), hsv)
+        hsv[1] = (hsv[1] * 1.12f).coerceAtMost(1f); hsv[2] = 1f
+        return Color(android.graphics.Color.HSVToColor(hsv))
     }
 
     /** Un anneau seul ([fraction] plafonnée à un tour), en image carrée. */

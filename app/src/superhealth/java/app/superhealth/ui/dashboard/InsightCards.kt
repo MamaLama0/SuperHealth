@@ -133,6 +133,9 @@ internal fun InsightData.Source.format(v: Double, s: NutritionSettings): String 
     InsightData.Source.RESTING_HR -> formatNumber(v) + " " + tr("bpm")
 }
 
+/** Séries déjà lues : la carte réapparaît sans clignoter quand on y revient en faisant défiler. */
+private val corrCache = HashMap<Triple<InsightData.Source, InsightData.Source, Int>, Pair<Map<LocalDate, Double>, Map<LocalDate, Double>>>()
+
 private fun sources(names: List<String>): Pair<InsightData.Source, InsightData.Source> {
     val all = InsightData.Source.entries
     val a = all.firstOrNull { it.name == names.getOrNull(0) } ?: InsightData.Source.SLEEP
@@ -151,14 +154,15 @@ internal fun CorrelationCard(c: DashCard, size: CardSize, vm: SuperViewModel, s:
     val refresh by vm.refresh.collectAsState()
     val (a, b) = sources(sh.corr)
     val days = sh.corrDays
-    val data by produceState<Pair<Map<LocalDate, Double>, Map<LocalDate, Double>>?>(null, a, b, days, refresh) {
+    val key = Triple(a, b, days)
+    val data by produceState(corrCache[key], a, b, days, refresh) {
         value = withContext(Dispatchers.IO) {
             coroutineScope {
                 val x = async { runCatching { InsightData.series(ctx, a, days) }.getOrDefault(emptyMap()) }
                 val y = async { runCatching { InsightData.series(ctx, b, days) }.getOrDefault(emptyMap()) }
                 x.await() to y.await()
             }
-        }
+        }.also { corrCache[key] = it }
     }
     fun pick(i: Int, src: InsightData.Source) = SuperPrefs.update { st ->
         val (pa, pb) = sources(st.corr)

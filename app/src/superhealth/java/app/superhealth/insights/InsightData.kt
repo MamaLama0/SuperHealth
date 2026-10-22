@@ -89,6 +89,11 @@ object InsightData {
         val sleep = async { series(ctx, Source.SLEEP, 44, today) }
         val steps = async { series(ctx, Source.STEPS, 36, today) }
         val rhr = async { series(ctx, Source.RESTING_HR, 36, today) }
+        suspend fun daily(m: Metric) = if (!Bridge.hasSource(m)) emptyMap() else (0L..31L).map { today.minusDays(it) }
+            .map { d -> async { runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull()?.takeIf { it > 0 }?.let { d to it } } }.awaitAll().filterNotNull().toMap()
+        val hrv = async { daily(Metric.HRV) }
+        val resp = async { daily(Metric.RESPIRATORY_RATE) }
+        val temp = async { daily(Metric.TEMPERATURE) }
         val repo = NutriApp.repository
         val an = repo.analytics().first()
         val days = (0L..8L).map { today.minusDays(it) }
@@ -110,6 +115,7 @@ object InsightData {
             kcalTarget = days.associateWith { an.targetFor(it.toEpochDay()).macros.kcal },
             protein = prot,
             proteinTarget = days.associateWith { an.targetFor(it.toEpochDay()).macros.protein },
+            hrv = hrv.await(), resp = resp.await(), skinTemp = temp.await(),
         )
     }
 
@@ -144,6 +150,7 @@ fun Insights.Insight.text(s: app.superhealth.nutrition.domain.Settings): String 
         Insights.Type.PROTEIN_WEEK -> trf("Protéines atteintes %1\$s jours sur %2\$s cette semaine", count, total)
         Insights.Type.RESTING_HR -> trf(if (value < 0) "Ton pouls au repos a baissé de %1\$s bpm cette semaine" else "Ton pouls au repos a monté de %1\$s bpm cette semaine",
             formatNumber(v, 1))
+        Insights.Type.STRAIN_SIGNALS -> trf("%1\$s signaux de fatigue ensemble : lève le pied aujourd'hui", count)
         Insights.Type.TRAINING_MONTH -> trf(if (value > 0) "%1\$s séances en 4 semaines, %2\$s de plus qu'avant" else "%1\$s séances en 4 semaines, %2\$s de moins qu'avant",
             count, v.roundToInt())
     }
@@ -159,6 +166,7 @@ val Insights.Insight.route: String get() = when (type) {
     Insights.Type.PROTEIN_WEEK -> "macros"
     Insights.Type.RESTING_HR -> "h/metric/RESTING_HR"
     Insights.Type.TRAINING_MONTH -> "t/insights"
+    Insights.Type.STRAIN_SIGNALS -> "h/metric/RECOVERY"
 }
 
 val Insights.Insight.source: InsightData.Source get() = when (type) {
@@ -168,7 +176,7 @@ val Insights.Insight.source: InsightData.Source get() = when (type) {
     Insights.Type.WEIGHT_RATE -> InsightData.Source.WEIGHT
     Insights.Type.KCAL_WEEK -> InsightData.Source.KCAL
     Insights.Type.PROTEIN_WEEK -> InsightData.Source.PROTEIN
-    Insights.Type.RESTING_HR -> InsightData.Source.RESTING_HR
+    Insights.Type.RESTING_HR, Insights.Type.STRAIN_SIGNALS -> InsightData.Source.RESTING_HR
 }
 
 /** Icône de la phrase : flèche de progression pour la force, sinon celle de la mesure. */

@@ -110,7 +110,7 @@ public class GBDaoGenerator {
             outputDir.mkdirs();
         }
 
-        final Schema schema = new Schema(157, MAIN_PACKAGE + ".entities");
+        final Schema schema = new Schema(158, MAIN_PACKAGE + ".entities");
 
         final List<Entity> sampleProvidersToGenerate = new LinkedList<>();
         final List<Entity> batterySampleProvidersToGenerate = new LinkedList<>();
@@ -254,6 +254,7 @@ public class GBDaoGenerator {
         addHuaweiEmotionsSample(schema, user, device);
 
         addUltrahumanActivitySample(schema, user, device);
+        addWhoopActivitySample(schema, user, device);
         sampleProvidersToGenerate.add(addUltrahumanDeviceStateSample(schema, user, device));
 
         addOlleeActivitySample(schema, user, device);
@@ -2666,6 +2667,18 @@ public class GBDaoGenerator {
         sample.addIntProperty(SAMPLE_RAW_INTENSITY).notNull().codeBeforeGetterAndSetter(OVERRIDE);
         sample.addIntProperty(SAMPLE_STEPS).notNull().codeBeforeGetterAndSetter(OVERRIDE);
 
+        return sample;
+    }
+
+    /** WHOOP 4.0 / 5.0 / MG (SuperHealth) : une ligne par minute, reconstruite depuis l'historique seconde par seconde. */
+    private static Entity addWhoopActivitySample(Schema schema, Entity user, Entity device) {
+        Entity sample = addEntity(schema, "WhoopActivitySample");
+        sample.implementsSerializable();
+        addCommonActivitySampleProperties("AbstractActivitySample", sample, user, device);
+        sample.addIntProperty(SAMPLE_RAW_KIND).notNull().codeBeforeGetterAndSetter(OVERRIDE);
+        sample.addIntProperty(SAMPLE_RAW_INTENSITY).notNull().codeBeforeGetterAndSetter(OVERRIDE);
+        sample.addIntProperty(SAMPLE_STEPS).notNull().codeBeforeGetterAndSetter(OVERRIDE);
+        addHeartRateProperties(sample);
         return sample;
     }
 

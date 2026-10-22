@@ -166,11 +166,16 @@ data class Settings(
     val useSteps: Boolean = true,
     /** Objectif de pas quotidien (0 = aucun). */
     val stepGoal: Int = 8000,
+    /** Objectifs par jour de la semaine (lundi → dimanche) ; vide ou 0 : l'objectif quotidien. */
+    val stepGoalDays: List<Int> = emptyList(),
     val predictionStyle: PredictionStyle = PredictionStyle.WEIGHT_DATA,
     val accent: AccentColor = AccentColor.BLUE,
     /** Cibles de micronutriments personnalisées (MicroGoalType.custom) ; absent = référence automatique. */
     val microTargets: Map<String, Double> = emptyMap(),
 )
+
+/** Objectif de pas du jour [date] : celui de son jour de la semaine s'il est fixé, sinon l'objectif quotidien. */
+fun Settings.stepGoalFor(date: java.time.LocalDate): Int = stepGoalDays.getOrNull(date.dayOfWeek.value - 1)?.takeIf { it > 0 } ?: stepGoal
 
 data class Macros(val kcal: Double, val protein: Double, val fat: Double, val carbs: Double) {
     operator fun plus(o: Macros) = Macros(kcal + o.kcal, protein + o.protein, fat + o.fat, carbs + o.carbs)

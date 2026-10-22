@@ -1258,6 +1258,7 @@ public enum DeviceType {
     GENERIC_THERMAL_PRINTER(ThermalPrinterCoordinator.class),
     GENERIC_HEART_RATE(GenericHeartRateCoordinator.class),
     ULTRAHUMAN_RING_AIR(UltrahumanDeviceCoordinator.class),
+    WHOOP(nodomain.freeyourgadget.gadgetbridge.devices.whoop.WhoopCoordinator.class),
     ATC_BLE_OEPL(ATCBLEOEPLCoordinator.class),
     COOSPO_H6(CoospoH6Coordinator.class),
     COOSPO_HW9(CoospoHW9Coordinator.class),

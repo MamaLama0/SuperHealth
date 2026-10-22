@@ -94,7 +94,7 @@ object HealthRepository {
     private const val NONE = Double.NaN
     private val dbPermits = Semaphore(4)
 
-    fun invalidate() = cache.clear()
+    fun invalidate() { cache.clear(); Scores.invalidate() }
 
     /** Montres gérées par le module LocalHealth ; vide quand le module est désactivé. */
     fun devices(): List<GBDevice> = app.superhealth.bridge.Watch.devices()
@@ -146,6 +146,9 @@ object HealthRepository {
             Metric.RESPIRATORY_RATE -> c.supportsRespiratoryRate(d)
             Metric.VO2MAX -> c.supportsVO2Max(d)
             Metric.TEMPERATURE -> c.supportsTemperatureMeasurement(d)
+            Metric.RECOVERY -> c.supportsHrvMeasurement(d)
+            Metric.EFFORT -> c.supportsHeartRateMeasurement(d)
+            Metric.SLEEP_DEBT -> c.supportsSleepMeasurement(d)
             else -> false
         }
     }
@@ -156,7 +159,8 @@ object HealthRepository {
         val key = metric to date
         val cacheable = date.isBefore(LocalDate.now())
         if (cacheable) cache[key]?.let { return it.takeUnless { v -> v.isNaN() } }
-        val v = dbPermits.withPermit { computeDayValue(context, metric, date) }
+        // les scores calculés relisent d'autres mesures : hors du sémaphore (sinon ils pourraient s'y bloquer entre eux)
+        val v = if (metric.computed) computeDayValue(context, metric, date) else dbPermits.withPermit { computeDayValue(context, metric, date) }
         if (cacheable) cache[key] = v ?: NONE
         return v
     }
@@ -189,6 +193,9 @@ object HealthRepository {
             Metric.TEMPERATURE -> samples(from, to) { d, s -> d.deviceCoordinator.getTemperatureSampleProvider(d, s) }
                 .map { it.temperature.toDouble() }.filter { it > 0 }.averageOrNull()
             Metric.READINESS -> readiness(date)
+            Metric.RECOVERY -> Scores.chargeOf(context, date)?.score?.toDouble()
+            Metric.EFFORT -> Scores.effortOf(context, date)
+            Metric.SLEEP_DEBT -> Scores.sleepDebtOf(context, date)
             Metric.WEIGHT -> manual.query(metric, from, to).firstOrNull()?.value
                 ?: samples(from, to) { d, s -> d.deviceCoordinator.getWeightSampleProvider(d, s) }
                     .map { it.weightKg.toDouble() }.lastOrNull { it > 0 }
@@ -253,6 +260,37 @@ object HealthRepository {
                 .filter { it.spo2 in 50..100 }.map { Point(it.timestamp, it.spo2.toDouble()) }
             else -> emptyList()
         }
+    }
+
+    /** Phase d'une nuit : type (léger, profond, paradoxal, éveil) et bornes en ms. */
+    data class SleepPhase(val kind: ActivityKind, val start: Long, val end: Long)
+
+    /**
+     * Nuit qui se termine le jour [date] (la plus longue s'il y en a plusieurs), phase par phase, toutes montres confondues ;
+     * null sans nuit enregistrée.
+     */
+    suspend fun sleepNight(date: LocalDate): List<SleepPhase>? = runCatching {
+        db { db ->
+            val from = ((startMs(date) - 12 * 3_600_000L) / 1000).toInt(); val to = (endMs(date) / 1000).toInt()
+            devices().filter { it.deviceCoordinator.supportsSleepMeasurement(it) }.flatMap { d ->
+                runCatching { d.deviceCoordinator.getSleepSessionProvider(d, db.daoSession).getSleepSessions(from, to) }.getOrDefault(emptyList())
+            }.filter { it.endTime in startMs(date) until endMs(date) }
+                .maxByOrNull { it.endTime - it.startTime }
+                ?.stages?.map { SleepPhase(it.kind, it.startTime, it.endTime) }
+        }
+    }.getOrNull()
+
+    /** Pouls minute par minute (horodatage en s, bpm) du jour, toutes montres confondues : base de l'Effort et des zones. */
+    suspend fun minuteHeart(date: LocalDate): List<Pair<Long, Int>> = withContext(Dispatchers.IO) {
+        val from = (startMs(date) / 1000).toInt(); val to = (endMs(date) / 1000).toInt()
+        runCatching {
+            db { db ->
+                devices().filter { it.deviceCoordinator.supportsHeartRateMeasurement(it) }.flatMap { d ->
+                    d.deviceCoordinator.getSampleProvider(d, db.daoSession)?.getAllActivitySamples(from, to).orEmpty()
+                }
+            }.mapNotNull { s -> s.heartRate.takeIf { it in 30..230 }?.let { s.timestamp.toLong() / 60 * 60 to it } }
+                .groupBy({ it.first }, { it.second }).map { (t, v) -> t to v.average().toInt() }.sortedBy { it.first }
+        }.getOrDefault(emptyList())
     }
 
     // ---- Composite values -------------------------------------------------------------------

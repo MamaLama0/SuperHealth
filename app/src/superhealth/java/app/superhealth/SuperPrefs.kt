@@ -37,13 +37,25 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     MUSCLE_SETS("Séries par muscle", Section.TRAINING),
     LIFTS("Progression des exercices", Section.TRAINING),
     INSIGHTS("Insights", Section.HEALTH),
-    CORRELATION("Corrélations", Section.HEALTH);
+    CORRELATION("Corrélations", Section.HEALTH),
+    CHARGE("Charge", Section.HEALTH, watch = true),
+    EFFORT("Effort", Section.TRAINING, watch = true),
+    SLEEP_STAGES("Phases de sommeil", Section.HEALTH, watch = true),
+    HRV_STATUS("Variabilité cardiaque", Section.HEALTH, watch = true),
+    STRESS_DAY("Stress de la journée", Section.HEALTH, watch = true),
+    HR_ZONES("Zones cardiaques", Section.TRAINING, watch = true),
+    LOAD("Charge d'entraînement", Section.TRAINING, watch = true),
+    DAY_TIMELINE("Ma journée", Section.HEALTH),
+    PROGRESS("Progression", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
     companion object {
         /** Cartes ajoutées avec la reprise des tableaux de bord MacroFactor et MacroFactor Workouts. */
         val newMacroFactorCards = listOf(NEXT_WORKOUT, HABITS, BALANCE, TRAINING_TRENDS, MUSCLE_SETS, LIFTS)
+
+        /** Cartes « montre » de la 1.1 (graphiques des applis de montre, scores WHOOP), ajoutées une fois. */
+        val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
 
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
         val defaults = listOf(RINGS, VITALS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
@@ -64,11 +76,12 @@ const val GRID = 3
 /** Cartes qui ont une valeur principale : disponibles en bulle (S) et en tuile (M). */
 val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.INTAKE, DashCard.MACROS,
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
-    DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE)
+    DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
+    DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE, DashCard.PROGRESS)
 
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
-    DashCard.RECOVERY, DashCard.HEART)
+    DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD)
 
 /** Toutes les cartes ont les quatre tailles, sauf les phrases (Insights) qui n'ont pas de version petite. */
 val DashCard.sizes: List<CardSize> get() = if (this == DashCard.INSIGHTS) listOf(CardSize.M, CardSize.W, CardSize.L) else CardSize.entries
@@ -156,6 +169,8 @@ data class SuperSettings(
     val ringsAdded: Boolean = false,
     /** Cartes reprises de MacroFactor (habitudes, bilan, prochaine séance…) déjà proposées (migration unique). */
     val mfCardsAdded: Boolean = false,
+    /** Cartes montre 1.1 et Progression déjà ajoutées (migration unique). */
+    val watchCardsAdded: Boolean = false,
     /** Insights et corrélations déjà ajoutés au tableau de bord (migration unique). */
     val insightsAdded: Boolean = false,
     /** Les deux séries superposées de la carte Corrélations (noms de InsightData.Source) et la période en jours. */
@@ -166,6 +181,22 @@ data class SuperSettings(
     val weighSkipDay: Long = 0,
     /** Fonds de carte OpenStreetMap des activités (seule connexion liée à vos parcours ; sans eux, le tracé seul). */
     val onlineMaps: Boolean = true,
+    /** Sauvegarde automatique chiffrée : destination (nom de backup.Remote.Kind), serveur WebDAV, dossier (arbre SAF), fréquence en jours (0 : jamais). */
+    val backupDest: String = "NONE",
+    val webdavUrl: String = "",
+    val webdavUser: String = "",
+    val backupFolder: String? = null,
+    val backupEvery: Int = 0,
+    val lastBackup: Long = 0,
+    val lastBackupError: String? = null,
+    /** Mises à jour depuis les versions GitHub : vérification quotidienne, confirmation par notification, dépôt « propriétaire/nom ». */
+    val updateCheck: Boolean = true,
+    val updateConfirm: Boolean = true,
+    val updateRepo: String = "Ouinon0/SuperHealth",
+    val lastUpdateCheck: Long = 0,
+    val updateSkip: String? = null,
+    /** Succès et progression ludique (trophées, voyage autour de la Terre puis vers la Lune), facultatifs. */
+    val achievements: Boolean = true,
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,
@@ -235,6 +266,14 @@ object SuperPrefs {
             if (DashCard.INSIGHTS !in cards) cards.add((cards.indexOf(DashCard.RINGS) + 1).coerceAtLeast(0), DashCard.INSIGHTS)
             if (DashCard.CORRELATION !in cards) cards.add(DashCard.CORRELATION)
             s.copy(dashboard = cards, insightsAdded = true)
+        }
+        // 1.1 : Progression sous les anneaux, graphiques de montre après les constantes (masqués sans montre qui mesure)
+        if (!_settings.value.watchCardsAdded) update { s ->
+            val cards = s.dashboard.toMutableList()
+            if (DashCard.PROGRESS !in cards) cards.add((cards.indexOf(DashCard.RINGS) + 1).coerceAtLeast(0), DashCard.PROGRESS)
+            val at = (cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size
+            cards.addAll(at, DashCard.watchCards11.filter { it !in cards })
+            s.copy(dashboard = cards, watchCardsAdded = true)
         }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }

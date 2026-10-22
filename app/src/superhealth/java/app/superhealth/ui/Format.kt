@@ -22,11 +22,11 @@ fun formatDuration(minutes: Double): String {
 
 /** Valeur sans unité : « 8 432 », « 7 h 12 », « 62,5 ». */
 fun formatValue(metric: Metric, v: Double): String = when (metric) {
-    Metric.SLEEP -> formatDuration(v)
+    Metric.SLEEP, Metric.SLEEP_DEBT -> formatDuration(v)
     else -> formatNumber(v, metric.digits)
 }
 
-fun unitOf(metric: Metric): String? = if (metric == Metric.SLEEP) null else metric.unit?.let(::tr)
+fun unitOf(metric: Metric): String? = if (metric == Metric.SLEEP || metric == Metric.SLEEP_DEBT) null else metric.unit?.let(::tr)
 
 fun formatWithUnit(metric: Metric, v: Double): String {
     val unit = unitOf(metric)

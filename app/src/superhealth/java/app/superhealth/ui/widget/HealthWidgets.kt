@@ -1,5 +1,6 @@
 package app.superhealth.ui.widget
 
+import app.superhealth.nutrition.domain.stepGoalFor
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
@@ -267,7 +268,7 @@ class StepsWidget : GlanceAppWidget() {
         val today = LocalDate.now()
         val days = (6L downTo 0L).map { today.minusDays(it) }
         val values = days.map { d -> runCatching { Bridge.steps(context, d) }.getOrNull() }
-        val goal = NutriApp.repository.prefs.settings.value.stepGoal
+        val goal = NutriApp.repository.prefs.settings.value.stepGoalFor(today)
         val ring = WK.ring(if (goal > 0) ((values.last() ?: 0.0) / goal).toFloat() else 0f, HealthHues.Activity, WK.px(context, 72.dp), 0.12f)
         val bars = WK.bars(values, goal.takeIf { it > 0 }?.toDouble(), HealthHues.Activity, WK.px(context, 240.dp), WK.px(context, 60.dp))
         provideContent { StepsContent(context, values.last(), goal, ring, bars, days.map { dayLetter(it) }) }

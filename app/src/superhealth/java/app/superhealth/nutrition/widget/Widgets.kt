@@ -308,7 +308,10 @@ private fun KcalContent(ctx: Context, s: Snapshot?) {
                 KcalBar(s, left)
                 if (size.height >= 110.dp) {
                     Spacer(GlanceModifier.height(8.dp))
-                    macros.forEach { (l, vt, c) -> MiniMacro(l, vt.first, vt.second, c, GlanceModifier.fillMaxWidth(), compact = true); Spacer(GlanceModifier.height(4.dp)) }
+                    // sous-colonne : Glance refuse plus de 10 éléments dans un même conteneur
+                    Column(GlanceModifier.fillMaxWidth()) {
+                        macros.forEach { (l, vt, c) -> MiniMacro(l, vt.first, vt.second, c, GlanceModifier.fillMaxWidth(), compact = true); Spacer(GlanceModifier.height(4.dp)) }
+                    }
                 }
             }
             size.height < 90.dp && size.width >= 200.dp -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {

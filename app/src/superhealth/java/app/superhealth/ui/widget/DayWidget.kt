@@ -1,5 +1,6 @@
 package app.superhealth.ui.widget
 
+import app.superhealth.nutrition.domain.stepGoalFor
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -83,7 +84,7 @@ private suspend fun load(ctx: Context): Day {
     val kj = s.energyUnit.name == "KJ"
     val k = if (kj) 4.184 else 1.0
     return Day(s.onboarded, (target.kcal - eaten) * k, if (target.kcal > 0) (eaten / target.kcal).toFloat() else 0f, if (kj) "kJ" else "kcal",
-        steps, s.stepGoal, entries.sumOf { it.protein }, target.protein, w.name, w.sub, w.route, w.action)
+        steps, s.stepGoalFor(java.time.LocalDate.now()), entries.sumOf { it.protein }, target.protein, w.name, w.sub, w.route, w.action)
 }
 
 class DayWidget : GlanceAppWidget() {
@@ -208,7 +209,8 @@ object DayWidgets {
             RingsFreeWidgetReceiver::class.java to RingsFreeWidget(),
             HydrationWidgetReceiver::class.java to HydrationWidget(), InsightWidgetReceiver::class.java to InsightWidget(),
             VitalsWidgetReceiver::class.java to VitalsWidget(), StepsWidgetReceiver::class.java to StepsWidget(),
-            OverviewWidgetReceiver::class.java to OverviewWidget()).forEach { (receiver, widget) ->
+            OverviewWidgetReceiver::class.java to OverviewWidget(), ChargeEffortWidgetReceiver::class.java to ChargeEffortWidget(),
+            SleepWidgetReceiver::class.java to SleepWidget(), ProgressWidgetReceiver::class.java to ProgressWidget()).forEach { (receiver, widget) ->
             mgr.getAppWidgetIds(android.content.ComponentName(ctx, receiver)).forEach { id ->
                 runCatching { widget.update(ctx, glance.getGlanceIdBy(id)) }
             }

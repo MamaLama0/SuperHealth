@@ -23,6 +23,12 @@
     <string name="widget_vitals_desc">Sommeil, pouls au repos, Body Battery</string>
     <string name="widget_steps_name">Pas</string>
     <string name="widget_steps_desc">Pas du jour et des 7 derniers jours</string>
+    <string name="widget_chargeeffort_name">Charge et effort</string>
+    <string name="widget_chargeeffort_desc">Récupération du matin et charge cardio du jour</string>
+    <string name="widget_sleep_name">Sommeil</string>
+    <string name="widget_sleep_desc">Durée et phases de la nuit</string>
+    <string name="widget_progress_name">Progression</string>
+    <string name="widget_progress_desc">Votre voyage autour de la Terre et vers les étoiles</string>
     <string name="widget_overview_name">Aperçu</string>
     <string name="widget_overview_desc">Calories, pas, eau et Body Battery en un bandeau</string>
 </resources>
