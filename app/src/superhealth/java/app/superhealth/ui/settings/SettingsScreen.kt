@@ -193,6 +193,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     RowDivider()
                     SettingRow(tr("Montre et appareils"), subtitle = tr("Associer, synchroniser, réglages de la montre"), icon = Icons.Rounded.Watch) { nav.go("h/devices") }
                 }
+                RowDivider()
+                ModulesRow(nav)
             }
 
             // bases où sont cherchés les aliments et les codes-barres
@@ -211,10 +213,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Personnaliser"), subtitle = trf("%1\$s carte(s) affichée(s)", sh.dashboard.size), icon = Icons.Rounded.Dashboard) { nav.go("dash/edit") }
                 RowDivider()
                 SettingRow(tr("Bouton +"), subtitle = trf("%1\$s raccourci(s)", sh.plus.size), icon = Icons.Rounded.AddCircle) { nav.go("plus/edit") }
-                RowDivider()
-                SwitchRow(tr("Succès et progression"), tr("Trophées, niveaux et voyage du petit bonhomme"), sh.achievements) { v ->
-                    app.superhealth.SuperPrefs.update { it.copy(achievements = v) }
-                }
+
                 RowDivider()
                 SwitchRow(tr("Bandeau de pesée"), tr("En haut de l'accueil tant qu'elle manque"), sh.weighPrompt) { v ->
                     app.superhealth.SuperPrefs.update { it.copy(weighPrompt = v) }
@@ -239,7 +238,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SwitchRow(tr("Cartes en ligne"), tr("Fond de carte OpenStreetMap sous les tracés. Désactivé : tracé seul, aucune requête."),
                     sh.onlineMaps) { v -> app.superhealth.SuperPrefs.update { it.copy(onlineMaps = v) } }
             }
-            Text(tr("Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, ces cartes, GitHub (mises à jour) et votre sauvegarde."),
+            Text(tr("Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, ces cartes, GitHub (mises à jour et modules) et votre sauvegarde."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
 
             SectionLabel(tr("Simulateurs et questionnaire"))
@@ -258,7 +257,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "" }
                 SettingRow("SuperHealth", version, subtitle = tr("Usage personnel · sans compte · données sur l'appareil"), icon = Icons.Rounded.Info)
                 RowDivider()
-                SettingRow(tr("Sources"), subtitle = tr("MacroFactor et MacroFactor Workouts (interface, algorithmes) · Gadgetbridge (montres, AGPL) · Open Food Facts (ODbL) · OSAV"))
+                SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (montres, AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (pixel-art, CC0)"))
             }
             Spacer(Modifier.height(24.dp))
         }

@@ -43,6 +43,7 @@ import app.superhealth.achievements.AchievementData
 import app.superhealth.achievements.Achievements
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.Scores
+import app.superhealth.ui.achievements.SpaceArt
 import app.superhealth.ui.achievements.drawJourney
 import app.superhealth.ui.dashboard.chargeColor
 import app.superhealth.ui.formatDuration
@@ -207,7 +208,7 @@ class ProgressWidget : GlanceAppWidget() {
                     Text(tr("Activez les succès dans les réglages."), style = TextStyle(color = WK.sub, fontSize = 12.sp), maxLines = 3)
                     return@WidgetCard
                 }
-                val bmp = scene(s.journey, (ls.width.value * scale - 12 * scale).toInt(), (sceneH * scale - 12 * scale).toInt(), scale, isNight(context))
+                val bmp = scene(context, s.journey, (ls.width.value * scale - 12 * scale).toInt(), (sceneH * scale - 12 * scale).toInt(), scale, isNight(context))
                 Image(ImageProvider(bmp), tr("Progression"), GlanceModifier.fillMaxWidth().height((sceneH - 12).dp).cornerRadius(18.dp))
                 if (showText) {
                     Spacer(GlanceModifier.height(4.dp))
@@ -225,10 +226,10 @@ class ProgressWidget : GlanceAppWidget() {
     private fun isNight(ctx: Context) = (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
         android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-    private fun scene(j: Achievements.Journey, w: Int, h: Int, density: Float, night: Boolean): Bitmap {
+    private fun scene(ctx: Context, j: Achievements.Journey, w: Int, h: Int, density: Float, night: Boolean): Bitmap {
         val img = ImageBitmap(w.coerceAtLeast(1), h.coerceAtLeast(1))
         CanvasDrawScope().draw(Density(density), LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(img), Size(w.toFloat(), h.toFloat())) {
-            drawJourney(j.leg, j.fraction, night)
+            drawJourney(j.leg, j.fraction, night, SpaceArt.all(ctx))
         }
         return img.asAndroidBitmap()
     }

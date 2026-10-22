@@ -1,5 +1,7 @@
 package app.superhealth.ui.health
 
+import app.superhealth.ui.coach.askCoach
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -140,7 +142,16 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
     val detail = w
     val kind = detail?.kind?.name?.let { Bridge.kindOf(it) } ?: Bridge.Kind.OTHER
     val hue = kind.hue()
-    DetailScaffold(tr(detail?.name ?: "Activité"), onBack = { nav.popBackStack() }) {
+    DetailScaffold(tr(detail?.name ?: "Activité"), onBack = { nav.popBackStack() }, action = {
+        // module Coach : analyse de la séance comparée aux précédentes (comme l'Athlete Intelligence de Strava)
+        if (detail != null && app.superhealth.ui.coach.coachAvailable()) IconButton(onClick = {
+            val facts = listOfNotNull(detail.name, Instant.ofEpochMilli(detail.start).atZone(ZoneId.systemDefault()).toLocalDate().toString(),
+                detail.distanceM?.let { "${km(it)} km" }, "${(detail.activeSec / 60).toInt()} min", detail.avgHr?.let { "FC moy. $it" },
+                detail.maxHr?.let { "FC max $it" }, detail.ascentM?.let { "D+ ${it.toInt()} m" }, detail.aerobicTe?.let { "TE aérobie $it" }).joinToString(", ")
+            val p = app.superhealth.coach.Coach.prompts()?.workout?.takeIf { it.isNotBlank() }
+            nav.askCoach(p?.replace("{details}", facts) ?: app.superhealth.ui.trf("Analyse cette séance : %1\$s", facts))
+        }) { Icon(Icons.Rounded.AutoAwesome, tr("Analyse du coach"), tint = app.superhealth.ui.coach.CoachHue) }
+    }) {
         if (detail == null) {
             Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = hue) }
             return@DetailScaffold

@@ -1,10 +1,8 @@
 # SuperHealth
 
 Nutrition, musculation et montre connectée dans une seule app Android, 100 % locale (ni compte ni cloud).
-Interface inspirée de MacroFactor et Google Health, moteur montres de [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge).
-
-> **Usage privé.** Les assets graphiques (illustrations, icônes d'aliments, photos d'exercices, animations) proviennent
-> des APK MacroFactor : ce build ne doit pas être distribué.
+Moteur montres de [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge). Fonctions en plus à télécharger
+depuis l'app (modules : Aventure pixel-art, Coach IA).
 
 ## Fonctions
 
@@ -15,7 +13,9 @@ Interface inspirée de MacroFactor et Google Health, moteur montres de [Gadgetbr
 | **Santé / montre** (ex-« LocalHealth ») | Pas (montre + téléphone fusionnés heure par heure), fréquence cardiaque en direct, sommeil, constantes, activités Garmin façon Garmin Connect (carte, splits, zones), performances, import .fit, récupération de l'historique de la montre |
 | **Scores** | Charge (récupération), Effort (charge cardio du jour), dette de sommeil, charge aiguë / chronique, signaux de fatigue — méthodes publiées documentées par NOOP, calculées pour toute montre |
 | **WHOOP** | Pilote Gadgetbridge pour WHOOP 4.0 et 5.0 / MG : historique seconde par seconde, pouls en direct, sommeil et phases, VFC, pouls au repos, stress, température (5.0), respiration (4.0), pas (5.0) |
-| **Progression** | Succès facultatifs : XP quotidienne, trophées bronze / argent / or, voyage du petit bonhomme autour de la Terre puis en fusée vers la Lune, Mars… |
+| **Modules** | Réglages > Modules : catalogue de la branche [`modules`](../../tree/modules) (ou d'une source non vérifiée ajoutée à la main), téléchargement vérifié (SHA-256), mises à jour automatiques. Un module n'apporte que des données (JSON, PNG) lues par un moteur de l'app |
+| **Aventure** (module) | XP quotidienne, niveaux, trophées, voyage pixel-art de la Terre à la Lune et au-delà ; RPG pixel-art (sprites Kenney, CC0) : boss vaincus avec les kilos soulevés et les kilomètres courus, butin, scénario, héros qui évolue ; icône pixel-art en option |
+| **Coach IA** (module) | Point du jour sur l'accueil, conversation à partir d'un résumé local des 14 derniers jours (visible : « Ce que voit le coach »), analyse des séances, explication des mesures, mémoire validée par l'utilisateur, ton au choix ; même fournisseur IA que la nutrition |
 | **Coque** | Tableau de bord personnalisable (graphiques de montre : phases de sommeil, VFC, stress, zones, charge, journée), bouton « + », bandeau de pesée, objectifs de pas par jour, Health Connect, widgets, FR / EN |
 | **Données** | Sauvegarde chiffrée (AES-256-GCM, code de récupération créé au premier démarrage) en fichier, Nextcloud, WebDAV ou dossier ; mises à jour depuis les versions GitHub (vérification quotidienne, confirmation par notification) |
 
@@ -34,8 +34,11 @@ Flavor Gradle `superhealth` de ce fork (identifiant `app.superhealth`), dans `ap
 | `health/data/` | Lecture des données Gadgetbridge (`HealthRepository`), saisies manuelles, détail des séances, performances |
 | `bridge/` | Liens entre modules : `Bridge` (profil, poids, pas, activités), `HealthConnectHub`, `Watch`, `FitImport`, `SyncWorker` |
 | `health/data/Scores.kt` | Charge, Effort, dette de sommeil, références personnelles |
-| `achievements/`, `ui/achievements/` | XP, trophées, voyage (scène dessinée, sans image) |
-| `backup/`, `update/` | Sauvegarde chiffrée (`BackupCrypto`, `Secrets`, `Remote`, `BackupWorker`), mises à jour GitHub (`Updater`) |
+| `achievements/`, `ui/achievements/` | XP, trophées, voyage (planètes pixel-art de `assets/space`, générées par `tools/pixel_space.py` sauf la Terre et le trou noir) |
+| `modules/`, `ui/settings/ModulesScreen.kt` | Catalogue, installation vérifiée, activation, icône du lanceur (`LauncherIcon`, deux alias) |
+| `adventure/`, `ui/adventure/` | Moteur du module Aventure (combat, scénario) ; contenu dans la branche `modules` |
+| `coach/`, `ui/coach/` | Moteur du module Coach IA (résumé des données, appel au modèle, point du jour, mémoire) ; consignes dans la branche `modules` |
+| `backup/`, `update/` | Sauvegarde chiffrée (`BackupCrypto`, `Secrets`, `Remote`, `BackupWorker`), mises à jour GitHub (`Updater`, dépôt public, sans jeton) |
 
 Une seule source par donnée : profil, langue et unités viennent de la nutrition et sont recopiés vers la musculation et
 le profil Gadgetbridge ; le poids de corps vient des pesées ; les pas fusionnent montre et téléphone (maximum par heure).
@@ -66,11 +69,15 @@ Les tests Robolectric hérités de Gadgetbridge échouent sous ce flavor (« Req
 La CI GitHub (`.github/workflows/build.yml`) construit l'APK `perf` et lance ces tests à chaque push ; l'APK est
 téléchargeable dans les artefacts du run.
 
-## Assets sous copyright
+## Assets
 
-`python3 tools/superhealth_copyright_assets.py export DOSSIER` copie tous les assets tiers (MacroFactor, MacroFactor
-Workouts, icône Apple Santé) dans DOSSIER avec une galerie (`index.html`, `ouvrir.sh`) et un inventaire (`manifest.csv`) ;
-`… import DOSSIER` remet dans l'app les fichiers modifiés (mêmes chemins).
+Les assets graphiques (illustrations, icônes d'aliments, photos d'exercices, animations, planètes pixel-art) sont
+couverts par des droits achetés ; les sprites de l'Aventure viennent de [Kenney](https://kenney.nl) (CC0). L'icône (la
+lune et son cœur, `tools/icons/`) et sa version pixel-art sont propres au projet.
+
+`python3 tools/superhealth_copyright_assets.py export DOSSIER` copie les assets dans DOSSIER avec une galerie
+(`index.html`, `ouvrir.sh`) et un inventaire (`manifest.csv`) ; `… import DOSSIER` remet dans l'app les fichiers
+modifiés (mêmes chemins).
 
 ## Licence
 

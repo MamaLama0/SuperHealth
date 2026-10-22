@@ -1,5 +1,6 @@
 package app.superhealth.ui.health
 
+import app.superhealth.ui.coach.askCoach
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -120,6 +122,12 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
     }
 
     DetailScaffold(tr(metric.label), onBack = { nav.popBackStack() }, action = {
+        // module Coach : « explique-moi cette mesure » avec mes données
+        if (app.superhealth.ui.coach.coachAvailable()) IconButton(onClick = {
+            val q = app.superhealth.coach.Coach.prompts()?.metric?.takeIf { it.isNotBlank() }?.replace("{metric}", tr(metric.label))
+                ?: app.superhealth.ui.trf("Explique-moi l'évolution de ma mesure « %1\$s ».", tr(metric.label))
+            nav.askCoach(q)
+        }) { Icon(Icons.Rounded.AutoAwesome, tr("Demander au coach"), tint = app.superhealth.ui.coach.CoachHue) }
         if (metric.manual) IconButton(onClick = { logging = true }) { Icon(Icons.Rounded.Add, tr("Enregistrer")) }
     }) {
         val spans = if (intradayOk) Span.entries else Span.entries - Span.DAY

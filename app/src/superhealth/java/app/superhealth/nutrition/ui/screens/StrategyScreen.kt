@@ -621,7 +621,7 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
                 NumberField(tr("Masse grasse de référence (facultatif)"), bf, { bf = it }, Modifier.weight(1f), suffix = "%")
                 bf.toNum()?.let { BodyFatSilhouette(pr.sex, it, Modifier.padding(start = 12.dp).size(72.dp)) }
             }
-            Text(trf("Sans valeur : %1\$s %% (valeur par défaut de MacroFactor).", (if (pr.sex == Sex.MALE) 25 else 35)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+            Text(trf("Sans valeur : %1\$s %% (valeur par défaut).", (if (pr.sex == Sex.MALE) 25 else 35)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
             FieldTitle(tr("Activité hors entraînement"))
             ChipChoice(Activity.entries, pr.activity, { it.label.tr() }) { pr = pr.copy(activity = it) }
             FieldTitle(tr("Séances de sport par semaine"))

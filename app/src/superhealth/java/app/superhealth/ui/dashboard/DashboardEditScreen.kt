@@ -1,5 +1,6 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.available
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -121,7 +122,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
         }
 
         DashCard.Section.entries.forEach { section ->
-            val hidden = DashCard.entries.filter { it.section == section && it !in shown }
+            val hidden = DashCard.entries.filter { it.section == section && it !in shown && it.available }
             if (hidden.isEmpty()) return@forEach
             SectionLabel(tr(section.label))
             GroupCard {

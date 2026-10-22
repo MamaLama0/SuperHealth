@@ -1,5 +1,6 @@
 package app.superhealth
 
+import kotlinx.coroutines.launch
 import app.superhealth.bridge.Bridge
 import app.superhealth.bridge.SyncWorker
 import app.superhealth.nutrition.NutriApp
@@ -15,6 +16,8 @@ class SuperHealthApp : GBApplication() {
     override fun onCreate() {
         super.onCreate()
         SuperPrefs.init(this)
+        app.superhealth.modules.Modules.init(this)
+        app.superhealth.coach.Coach.init(this)
         // Module montre désactivé : le moteur reste chargé (base de données) mais ne se connecte à rien.
         if (!SuperPrefs.settings.value.watchModule) {
             getPrefs().preferences.edit().putBoolean(GBPrefs.AUTO_CONNECT_BLUETOOTH, false).apply()
@@ -29,6 +32,10 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.update.UpdateWorker.schedule(this)
         // code de récupération des sauvegardes : créé dès le premier démarrage (Keystore, hors du fil principal)
         Thread { runCatching { app.superhealth.backup.Secrets.backupCode(this) } }.start()
+        // 1.2 : les succès deviennent le module Aventure (téléchargé une fois s'ils étaient activés)
+        if (SuperPrefs.settings.value.onboarded) kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            runCatching { app.superhealth.modules.Modules.migrate(this@SuperHealthApp) }
+        }
     }
 
     /** Écrans Gadgetbridge (réglages de la montre, association…) : police et formes de SuperHealth. */

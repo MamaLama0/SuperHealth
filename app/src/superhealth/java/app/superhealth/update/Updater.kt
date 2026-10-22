@@ -17,7 +17,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import app.superhealth.MainActivity
 import app.superhealth.SuperPrefs
-import app.superhealth.backup.Secrets
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import java.io.File
@@ -34,7 +33,7 @@ import okhttp3.Request
 /**
  * Mises à jour depuis les versions (releases) GitHub du dépôt choisi : une vérification par jour au plus, puis une
  * notification ; l'APK n'est téléchargé et installé qu'après confirmation (ou directement si l'option est désactivée,
- * Android demandant toujours de valider l'installation). Dépôt privé : un jeton GitHub en lecture seule suffit.
+ * Android demandant toujours de valider l'installation). Le dépôt est public : aucun compte ni jeton.
  */
 object Updater {
     @Serializable data class Asset(val name: String, val browser_download_url: String, val url: String, val size: Long = 0)
@@ -77,16 +76,16 @@ object Updater {
     /** APK publié : le build « perf » (même signature que l'app installée), jamais la variante de débogage. */
     fun pickApk(assets: List<Asset>): Asset? = assets.filter { it.name.endsWith(".apk") && !it.name.contains("debug", true) }.maxByOrNull { it.size }
 
-    private fun request(ctx: Context, url: String, accept: String): Request = Request.Builder().url(url).header("Accept", accept)
-        .header("X-GitHub-Api-Version", "2022-11-28").apply { Secrets.get(ctx, Secrets.GITHUB_TOKEN)?.let { header("Authorization", "Bearer $it") } }.build()
+    private fun request(url: String, accept: String): Request = Request.Builder().url(url).header("Accept", accept)
+        .header("X-GitHub-Api-Version", "2022-11-28").build()
 
     /** Dernière version publiée si elle est plus récente que celle installée (et pas ignorée), sinon null. */
     suspend fun check(ctx: Context): Release? = withContext(Dispatchers.IO) {
         val repo = SuperPrefs.settings.value.updateRepo.trim().trim('/')
-        http.newCall(request(ctx, "https://api.github.com/repos/$repo/releases/latest", "application/vnd.github+json")).execute().use { r ->
+        http.newCall(request("https://api.github.com/repos/$repo/releases/latest", "application/vnd.github+json")).execute().use { r ->
             SuperPrefs.update { it.copy(lastUpdateCheck = System.currentTimeMillis()) }
             when (r.code) {
-                404 -> error(tr("aucune version publiée (ou dépôt privé sans jeton)"))
+                404 -> error(tr("aucune version publiée"))
                 401, 403 -> error(trf("accès refusé par GitHub (%1\$s)", r.code))
             }
             if (!r.isSuccessful) error("GitHub ${r.code}")
@@ -107,10 +106,7 @@ object Updater {
     suspend fun download(ctx: Context, rel: Release): File = withContext(Dispatchers.IO) {
         val dir = File(ctx.cacheDir, "updates").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
         val out = File(dir, "SuperHealth-${rel.version}.apk")
-        val private = Secrets.get(ctx, Secrets.GITHUB_TOKEN) != null
-        // dépôt privé : l'API renvoie le fichier (redirection vers le stockage de GitHub, sans le jeton)
-        val req = if (private) request(ctx, rel.apk.url, "application/octet-stream") else Request.Builder().url(rel.apk.browser_download_url).build()
-        http.newCall(req).execute().use { r ->
+        http.newCall(Request.Builder().url(rel.apk.browser_download_url).build()).execute().use { r ->
             if (!r.isSuccessful) error(trf("téléchargement refusé (%1\$s)", r.code))
             val total = r.body.contentLength().takeIf { it > 0 } ?: rel.apk.size
             var done = 0L
@@ -169,6 +165,7 @@ object Updater {
 /** Vérification quotidienne (réseau requis) ; sans confirmation demandée, l'APK est téléchargé d'avance. */
 class UpdateWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
+        runCatching { app.superhealth.modules.Modules.autoUpdate(applicationContext) }
         val s = SuperPrefs.settings.value
         if (!s.updateCheck) return Result.success()
         val rel = runCatching { Updater.check(applicationContext) }.getOrNull() ?: return Result.success()

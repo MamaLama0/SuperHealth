@@ -26,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
-import app.superhealth.backup.Secrets
 import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
@@ -35,7 +34,6 @@ import app.superhealth.nutrition.ui.components.RowDivider
 import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.SwitchRow
-import app.superhealth.nutrition.ui.components.TextInput
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.go
@@ -59,7 +57,7 @@ internal fun UpdateRow(nav: NavHostController) {
         icon = Icons.Rounded.SystemUpdate) { nav.go("update") }
 }
 
-/** Mises à jour : dernière version publiée sur GitHub, notes, installation ; options de vérification et dépôt. */
+/** Mises à jour : dernière version publiée sur GitHub (dépôt public, sans jeton), notes, installation ; options de vérification. */
 @Composable
 fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
@@ -122,15 +120,6 @@ fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
             SwitchRow(tr("Demander avant de télécharger"), tr("Notification d'abord ; sinon l'APK est prêt à installer"), sh.updateConfirm) { v ->
                 SuperPrefs.update { it.copy(updateConfirm = v) }
             }
-        }
-        SectionLabel(tr("Source"))
-        MfCard {
-            var repo by remember { mutableStateOf(sh.updateRepo) }
-            var token by remember { mutableStateOf(Secrets.get(ctx, Secrets.GITHUB_TOKEN) ?: "") }
-            TextInput(tr("Dépôt GitHub"), repo, { repo = it.trim(); SuperPrefs.update { s -> s.copy(updateRepo = repo) } }, placeholder = "propriétaire/nom")
-            TextInput(tr("Jeton (dépôt privé, lecture seule)"), token, { token = it.trim(); Secrets.put(ctx, Secrets.GITHUB_TOKEN, token) }, placeholder = "github_pat_…")
-            Text(tr("Un dépôt public n'a pas besoin de jeton. Le jeton reste chiffré sur le téléphone."),
-                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         }
         Spacer(Modifier.height(24.dp))
     }

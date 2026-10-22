@@ -176,8 +176,10 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
         }
         DashCard.STRATEGY -> CompactData(formatNumber(s.energyValue(an.targetFor(an.today).macros.kcal)), kcal, tr("Objectif"), null) { nav.go("strategy") }
         DashCard.FOCUS -> {
-            val n = focusItems(vm, an, h, nav, tab).size
-            CompactData(if (n == 0) "✓" else n.toString(), null, tr("À faire"), null) { nav.go("home") }
+            val items = focusItems(vm, an, h, nav, tab)
+            val n = items.size
+            // toucher : la première chose à faire (avant, « home » empilait un second tableau de bord)
+            CompactData(if (n == 0) "✓" else n.toString(), null, tr("À faire"), null) { items.firstOrNull()?.third?.second?.invoke() }
         }
         DashCard.NEXT_WORKOUT -> {
             val st by vm.training.state.collectAsState()

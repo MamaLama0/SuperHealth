@@ -191,7 +191,7 @@ private enum class WatchChoice(val label: String, val description: String) {
     NONE("Non, pas de montre", "Le module montre est désactivé (réactivable dans Réglages)"),
 }
 
-/** Illustration (assets MacroFactor « spatiaux ») associée à chaque étape. */
+/** Illustration spatiale (thème « Lune », tools/moon_recolor.sh) associée à chaque étape. */
 private fun Step.image() = "illustrations/illustration_" + when (this) {
     Step.WELCOME -> 1; Step.NAME -> 6; Step.SEX -> 7; Step.BIRTH -> 10; Step.HEIGHT -> 14; Step.WEIGHT -> 23; Step.BODY_FAT -> 15
     Step.ACTIVITY -> 4; Step.HISTORY -> 5; Step.HEALTH -> 24; Step.GOAL -> 17; Step.TARGET -> 22; Step.TRAINING -> 9

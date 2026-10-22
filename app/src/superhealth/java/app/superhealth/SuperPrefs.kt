@@ -46,7 +46,11 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     HR_ZONES("Zones cardiaques", Section.TRAINING, watch = true),
     LOAD("Charge d'entraînement", Section.TRAINING, watch = true),
     DAY_TIMELINE("Ma journée", Section.HEALTH),
-    PROGRESS("Progression", Section.HEALTH);
+    PROGRESS("Progression", Section.HEALTH),
+    /** Module Aventure : le boss du moment, combattu avec la fonte soulevée et les kilomètres courus. */
+    ADVENTURE("Boss du moment", Section.TRAINING),
+    /** Module Coach IA : le point du jour. */
+    COACH("Coach", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -77,11 +81,22 @@ const val GRID = 3
 val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.INTAKE, DashCard.MACROS,
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
-    DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE, DashCard.PROGRESS)
+    DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE, DashCard.PROGRESS, DashCard.ADVENTURE,
+    DashCard.COACH)
 
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
     DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD)
+
+/** Module téléchargeable dont dépend la carte (null : toujours disponible). */
+val DashCard.module: String? get() = when (this) {
+    DashCard.PROGRESS, DashCard.ADVENTURE -> app.superhealth.modules.Modules.ADVENTURE
+    DashCard.COACH -> app.superhealth.modules.Modules.COACH
+    else -> null
+}
+
+/** Carte affichable : son module (s'il en faut un) est installé et activé. */
+val DashCard.available: Boolean get() = module?.let { app.superhealth.modules.Modules.isActive(it) } ?: true
 
 /** Toutes les cartes ont les quatre tailles, sauf les phrases (Insights) qui n'ont pas de version petite. */
 val DashCard.sizes: List<CardSize> get() = if (this == DashCard.INSIGHTS) listOf(CardSize.M, CardSize.W, CardSize.L) else CardSize.entries
@@ -128,10 +143,12 @@ enum class PlusAction(val label: String, val section: DashCard.Section) {
     WATER("Verre d'eau (250 ml)", DashCard.Section.HEALTH),
     VITALS("Hydratation et constantes", DashCard.Section.HEALTH),
     BODY("Mesures", DashCard.Section.HEALTH),
-    SYNC("Synchroniser", DashCard.Section.HEALTH);
+    SYNC("Synchroniser", DashCard.Section.HEALTH),
+    /** Module Coach IA. */
+    COACH("Demander au coach", DashCard.Section.HEALTH);
 
     companion object {
-        val defaults = listOf(SEARCH, SCAN, QUICK, AI, RECIPES, CUSTOM_FOOD, WORKOUT, EMPTY, EXERCISES, WEIGHT, VITALS, BODY, SYNC)
+        val defaults = listOf(SEARCH, SCAN, QUICK, AI, RECIPES, CUSTOM_FOOD, WORKOUT, EMPTY, EXERCISES, WEIGHT, VITALS, BODY, SYNC, COACH)
     }
 }
 
@@ -195,8 +212,22 @@ data class SuperSettings(
     val updateRepo: String = "Ouinon0/SuperHealth",
     val lastUpdateCheck: Long = 0,
     val updateSkip: String? = null,
-    /** Succès et progression ludique (trophées, voyage autour de la Terre puis vers la Lune), facultatifs. */
+    /** Succès activés avant la 1.2 (ils font désormais partie du module Aventure, installé une fois si c'était le cas). */
     val achievements: Boolean = true,
+    /** Modules : sources ajoutées à la main (non vérifiées), mises à jour automatiques, migration 1.2 faite. */
+    val moduleSources: List<String> = emptyList(),
+    val modulesAuto: Boolean = true,
+    val modulesMigrated: Boolean = false,
+    /** Aventure : jour (epochDay) où commence le combat des boss ; icône de l'app en pixel-art. */
+    val adventureStart: Long = 0,
+    /** Apparence du héros choisie (sprite) ; -1 : celle du niveau atteint. */
+    val adventureHero: Int = -1,
+    val pixelIcon: Boolean = false,
+    /** Coach IA : ton (nom de coach.Coach.Tone), ce qu'il doit retenir (écrit ou validé par l'utilisateur), modèle dédié (vide : celui de l'IA). */
+    val coachTone: String = "WARM",
+    val coachMemory: List<String> = emptyList(),
+    val coachModel: String = "",
+    val coachBrief: Boolean = true,
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,

@@ -218,6 +218,8 @@ fun AchievementsScreen(vm: SuperViewModel, nav: NavHostController) {
         val (lvl, inLvl, need) = s.level
         JourneyScene(s.journey, Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(CardRadius)))
         Spacer(Modifier.height(12.dp))
+        app.superhealth.ui.adventure.AdventureTeaser(vm, nav)
+        Spacer(Modifier.height(12.dp))
         MfCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LevelRing(lvl, inLvl.toFloat() / need, Modifier.size(56.dp))

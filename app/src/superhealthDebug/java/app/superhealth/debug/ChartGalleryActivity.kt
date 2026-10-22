@@ -1,5 +1,7 @@
 package app.superhealth.debug
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -111,6 +113,15 @@ private fun Gallery(page: Int) {
                             val bmp = app.superhealth.ui.widget.RingsScene.draw(ctx, rings, (w * d).toInt(), (h * d).toInt(), d)
                             androidx.compose.foundation.Image(bmp.asImageBitmap(), null, Modifier.size(w.dp, h.dp).border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f)))
                         }
+                    }
+                }
+            }
+            5 -> {
+                // voyage pixel-art : chaque étape à 0,6 (explorateur sur la Terre, puis fusée)
+                app.superhealth.achievements.Achievements.Leg.entries.forEach { leg ->
+                    Case(leg.label) {
+                        app.superhealth.ui.achievements.JourneyScene(app.superhealth.achievements.Achievements.Journey(leg, 0.6f, emptyList()),
+                            Modifier.fillMaxWidth().height(170.dp))
                     }
                 }
             }

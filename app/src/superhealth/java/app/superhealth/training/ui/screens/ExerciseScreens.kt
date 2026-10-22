@@ -309,7 +309,6 @@ fun ExerciseInfoScreen(vm: AppViewModel, id: String, nav: NavHostController) {
                 }
             }
         }
-        Text(tr("Contenu : MacroFactor Workouts (usage personnel)."), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 12.dp))
     }
 }
 

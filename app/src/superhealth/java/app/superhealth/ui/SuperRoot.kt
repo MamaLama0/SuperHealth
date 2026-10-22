@@ -147,11 +147,15 @@ fun SuperRoot(vm: SuperViewModel) {
     LaunchedEffect(pending) {
         val r = pending ?: return@LaunchedEffect
         vm.pendingRoute.value = null
+        // Widget ou notification : les feuilles ouvertes se ferment et la pile repart de l'accueil (jamais deux tableaux de bord
+        // empilés : un second « home » faisait ensuite revenir les onglets sur l'accueil, cartes et onglets semblant ne plus répondre).
+        plus = false; logSheet = false
         runCatching {
             when {
-                r.startsWith("training:") -> handleTrainingRoute(vm.training, nav, r.removePrefix("training:"))
-                r == "log" -> nav.navigate("log") { popUpTo("home"); launchSingleTop = true }
-                else -> nav.navigate(r)
+                r.startsWith("training:") -> { nav.popBackStack(nav.graph.findStartDestination().id, false); handleTrainingRoute(vm.training, nav, r.removePrefix("training:")) }
+                isTabRoute(r) -> nav.openTab(r, fresh = true)
+                r == current -> Unit
+                else -> nav.navigate(r) { popUpTo(nav.graph.findStartDestination().id); launchSingleTop = true }
             }
         }
     }
@@ -172,6 +176,9 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("achievements") { app.superhealth.ui.achievements.AchievementsScreen(vm, nav) }
             composable("backup") { app.superhealth.ui.settings.BackupScreen(vm, nav) }
             composable("update") { app.superhealth.ui.settings.UpdateScreen(vm, nav) }
+            composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
+            composable("adventure") { app.superhealth.ui.adventure.AdventureScreen(vm, nav) }
+            composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
@@ -195,13 +202,7 @@ fun SuperRoot(vm: SuperViewModel) {
             trainingGraph(vm.training, nav)
         }
         if (isTab && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
-        if (isTab) BottomBar(current, onTab = { route ->
-            nav.navigate(route) {
-                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                launchSingleTop = true
-                restoreState = true
-            }
-        }, onPlus = {
+        if (isTab) BottomBar(current, onTab = { route -> nav.openTab(route) }, onPlus = {
             // Un seul raccourci choisi : le « + » l'ouvre directement.
             val single = sh.plusActions.mapNotNull { it.resolve(vm) }.singleOrNull()
             if (single != null) plusAction = single.action else plus = true
@@ -277,6 +278,7 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
         PlusAction.SCAN -> QuickAction("Code-barres", Icons.Rounded.QrCodeScanner, "search/${SearchMode.SCAN}/-1")
         PlusAction.QUICK -> QuickAction("Ajout rapide", Icons.Rounded.Bolt, "search/${SearchMode.QUICK}/-1")
         PlusAction.AI -> if (ns.aiEnabled) QuickAction("Décrire (IA)", Icons.Rounded.AutoAwesome, "ai") else null
+        PlusAction.COACH -> if (app.superhealth.ui.coach.coachAvailable()) QuickAction("Demander au coach", Icons.Rounded.AutoAwesome, "coach") else null
         PlusAction.RECIPES -> QuickAction("Recettes", Icons.AutoMirrored.Rounded.MenuBook, "search/${SearchMode.RECIPES}/-1")
         PlusAction.CUSTOM_FOOD -> QuickAction("Aliment perso", Icons.Rounded.EditNote, "search/${SearchMode.CREATE}/-1")
         PlusAction.WORKOUT -> {
@@ -358,5 +360,18 @@ private fun ActionTile(a: QuickAction, modifier: Modifier, onClick: () -> Unit) 
     }
 }
 
-/** Ouvre un écran depuis n'importe où (cartes du tableau de bord, réglages…). */
-fun NavHostController.go(route: String) = runCatching { navigate(route) }
+/** Ouvre un écran depuis n'importe où (cartes du tableau de bord, réglages…) ; un onglet passe par [openTab]. */
+fun NavHostController.go(route: String) = runCatching { if (isTabRoute(route)) openTab(route) else navigate(route) }
+
+/**
+ * Onglet de la barre du bas : un seul exemplaire de chaque onglet dans la pile. [fresh] (widget, notification) : l'onglet
+ * s'ouvre à sa racine au lieu de retrouver l'écran où on l'avait laissé.
+ */
+fun NavHostController.openTab(route: String, fresh: Boolean = false) {
+    val start = graph.findStartDestination().id
+    navigate(route) {
+        popUpTo(start) { saveState = !fresh }
+        launchSingleTop = true
+        restoreState = !fresh
+    }
+}

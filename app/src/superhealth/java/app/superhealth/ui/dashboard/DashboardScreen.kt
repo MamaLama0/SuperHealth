@@ -1,5 +1,6 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.available
 import app.superhealth.nutrition.domain.stepGoalFor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,6 +31,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Balance
 import androidx.compose.material.icons.rounded.DonutLarge
@@ -124,6 +127,7 @@ import app.superhealth.ui.formatNumber
 import app.superhealth.ui.formatValue
 import app.superhealth.ui.formatWithUnit
 import app.superhealth.ui.go
+import app.superhealth.ui.openTab
 import app.superhealth.ui.health.ActivityRow
 import app.superhealth.ui.health.HeartChart
 import app.superhealth.ui.health.openActivity
@@ -181,6 +185,8 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.LOAD -> WorkoutBlue
     DashCard.DAY_TIMELINE -> HealthHues.Activity
     DashCard.PROGRESS -> androidx.compose.ui.graphics.Color(0xFFF2A93B)
+    DashCard.ADVENTURE -> androidx.compose.ui.graphics.Color(0xFFE5574F)
+    DashCard.COACH -> androidx.compose.ui.graphics.Color(0xFF8E7CF0)
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -222,6 +228,8 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.LOAD -> Icons.AutoMirrored.Rounded.TrendingUp
     DashCard.DAY_TIMELINE -> Icons.Rounded.Timeline
     DashCard.PROGRESS -> Icons.Rounded.EmojiEvents
+    DashCard.ADVENTURE -> Icons.Rounded.Shield
+    DashCard.COACH -> Icons.Rounded.AutoAwesome
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -322,13 +330,12 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     }
     val health = remember(base, watchSnap) { base.with(watchSnap) }
 
-    fun tab(route: String) = nav.navigate(route) {
-        popUpTo(nav.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true
-    }
+    fun tab(route: String) { runCatching { nav.openTab(route) } }
 
     val name = remember(refresh) { app.superhealth.ui.userName() }
-    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, sh.achievements) {
-        cards.filter { (!it.watch || hasSource(it)) && (it != DashCard.PROGRESS || sh.achievements) && (!it.isWatchChart || watchSource(it)) }
+    val modules by app.superhealth.modules.Modules.installed.collectAsState()
+    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules) {
+        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) }
     }
     val rows = remember(visible, sh.dashSizes) { app.superhealth.packRows(visible) { sh.sizeOf(it).span } }
     var editing by remember { mutableStateOf<DashCard?>(null) }
@@ -343,6 +350,9 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                     Text(name?.let { trf("Bonjour %1\$s", it) } ?: tr("Aujourd'hui"), style = MaterialTheme.typography.headlineLarge,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                // module Coach : son étincelle en tête, à portée de pouce
+                if (modules.any { it.kind == app.superhealth.modules.Modules.COACH && it.enabled })
+                    IconButton(onClick = { nav.go("coach") }) { Icon(Icons.Rounded.AutoAwesome, tr("Coach"), tint = app.superhealth.ui.coach.CoachHue) }
                 IconButton(onClick = { nav.go("dash/edit") }) { Icon(Icons.Rounded.Tune, tr("Personnaliser"), tint = Mf.colors.textSecondary) }
                 Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.accent).clickable { nav.go("profile") }, contentAlignment = Alignment.Center) {
                     Text((name ?: "?").take(1).uppercase(app.superhealth.ui.Lang.locale), style = MaterialTheme.typography.titleMedium, color = Color.White)
@@ -637,7 +647,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
     // Petit, moyen et bandeau : versions à regarder d'un coup d'œil, communes à toutes les cartes qui ont une valeur ;
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
-        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.PROGRESS -> true
+        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.PROGRESS, DashCard.ADVENTURE, DashCard.COACH -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -759,6 +769,8 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
         DashCard.LOAD -> LoadCard(c, h.watch, modifier, nav)
         DashCard.DAY_TIMELINE -> DayTimelineCard(c, h, h.watch, modifier, nav)
         DashCard.PROGRESS -> app.superhealth.ui.achievements.ProgressCard(c, size, vm, modifier, nav)
+        DashCard.ADVENTURE -> app.superhealth.ui.adventure.BossCard(c, size, vm, modifier, nav)
+        DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.STEPS -> {
             val series = h.series[Metric.STEPS].orEmpty()
             val today = h.today(Metric.STEPS)

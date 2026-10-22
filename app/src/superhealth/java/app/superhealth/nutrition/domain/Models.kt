@@ -26,8 +26,8 @@ import kotlinx.serialization.Serializable
  * non-athlète → équation B, athlète « récréatif » → moyenne A/B, sportif/athlète → équation A.
  */
 @Serializable enum class BmrEquation(val label: String) {
-    MACROFACTOR_B("MacroFactor"),
-    MACROFACTOR_A("MacroFactor (masse maigre seule)"),
+    MACROFACTOR_B("Automatique"),
+    MACROFACTOR_A("Masse maigre seule"),
     CUNNINGHAM("Cunningham (1980)"),
 }
 

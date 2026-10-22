@@ -14,7 +14,7 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
     override suspend fun doWork(): Result {
         if (SuperPrefs.settings.value.healthConnect) runCatching { HealthConnectHub.sync(applicationContext) }
         runCatching { Bridge.pullWatch(applicationContext) }
-        if (SuperPrefs.settings.value.achievements) runCatching { announceTrophies(applicationContext) }
+        if (app.superhealth.modules.Modules.isActive(app.superhealth.modules.Modules.ADVENTURE)) runCatching { announceTrophies(applicationContext) }
         app.superhealth.nutrition.widget.Widgets.refresh(applicationContext)
         app.superhealth.training.widget.Widgets.refresh(applicationContext)
         return Result.success()

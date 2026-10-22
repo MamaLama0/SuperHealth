@@ -1,5 +1,6 @@
 package app.superhealth.training.ui
 
+import app.superhealth.ui.openTab
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -124,9 +125,9 @@ fun NavGraphBuilder.trainingGraph(vm: AppViewModel, nav: NavHostController) {
 /** Raccourcis du widget et de la notification (« training:… »), consommés par la coque. */
 fun handleTrainingRoute(vm: AppViewModel, nav: NavHostController, r: String) {
     when (r) {
-        "startnext" -> if (vm.startNext()) nav.navigate("session") else nav.navigate("activities")
+        "startnext" -> if (vm.startNext()) nav.navigate("session") else nav.openTab("activities", fresh = true)
         "startempty" -> { vm.startEmpty(); nav.navigate("session") }
-        "workout" -> nav.navigate("activities") { popUpTo("activities"); launchSingleTop = true }
+        "workout" -> nav.openTab("activities", fresh = true)
         "session" -> if (vm.state.value.session != null) nav.navigate("session") { launchSingleTop = true }
         else -> nav.navigate(r)
     }
