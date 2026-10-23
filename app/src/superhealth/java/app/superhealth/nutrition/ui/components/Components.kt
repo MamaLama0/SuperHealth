@@ -107,16 +107,12 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: @Composa
     }
 }
 
-/** Icône d'aliment associée au nom (pixel-art du pack si elle existe, sinon MacroFactor) ; pastille neutre si aucune ne correspond. */
+/** Icône d'aliment associée au nom, toujours en pixel-art (pack, sinon générée) ; aliment non reconnu : le repas générique. */
 @Composable
 fun FoodIcon(name: String, size: Dp = 40.dp, modifier: Modifier = Modifier) {
-    val id = remember(name) { FoodIcons.match(name) }
-    val px = remember(id) { id?.let { FoodIcons.pixel(it) } }
-    val bmp = remember(id) { if (px == null) id?.let { FoodIcons.bitmap(it) } else null }
+    val px = remember(name) { (FoodIcons.match(name)?.let { FoodIcons.pixel(it) }) ?: FoodIcons.pixel(FoodIcons.GENERIC) }
     Box(modifier.size(size).clip(CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
         if (px != null) Canvas(Modifier.size(size * 0.76f)) { drawPixelArt(px, center, this.size.minDimension) }
-        else if (bmp != null) Image(bmp, null, Modifier.size(size * 0.72f))
-        else Icon(Icons.Rounded.Restaurant, null, Modifier.size(size * 0.45f), tint = Mf.colors.textSecondary)
     }
 }
 

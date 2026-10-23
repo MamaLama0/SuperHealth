@@ -519,15 +519,18 @@ private fun ExercisePage(
     }
 }
 
-/** En-tête : photo de l'exercice (angles a/b/c en touchant), dégradé, nom et muscles. */
+/** En-tête : photo de l'exercice (angles a/b/c, ou début/fin du mouvement pour RepDB, en touchant), dégradé, nom et muscles. */
 @Composable
 private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, groupSize: Int, supersetLetter: Char? = null, onInfo: () -> Unit) {
     val angles = e?.images.orEmpty()
     var angle by remember(e?.id) { mutableIntStateOf(0) }
     val path = angles.getOrNull(angle)?.let { "ex/${e!!.id}_${it}.webp" } ?: e?.thumbnail()
-    Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(230.dp).clip(RoundedCornerShape(24.dp)).background(Mf.colors.chip)
+    // RepDB : image carrée entière (pas de recadrage qui couperait la tête ou les pieds), sur son propre fond
+    val square = e?.repDbImages == true
+    Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(230.dp).clip(RoundedCornerShape(24.dp))
+        .background(if (square) app.superhealth.training.domain.RepDbBackground else Mf.colors.chip)
         .clickable { if (angles.size > 1) angle = (angle + 1) % angles.size else onInfo() }) {
-        if (path != null && angles.isNotEmpty()) AsyncAsset(path, Modifier.fillMaxSize(), fallback = e?.name ?: "?")
+        if (path != null && angles.isNotEmpty()) AsyncAsset(path, Modifier.fillMaxSize(), crop = !square, fallback = e?.name ?: "?")
         else if (e != null) {
             // Pas de photo dans l'APK : silhouette des muscles travaillés (principaux en plein, secondaires atténués)
             val intensity = e.secondaryMuscleGroups.associate { it.key to 0.45f } + e.muscleGroups.associate { it.key to 1f }

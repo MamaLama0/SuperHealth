@@ -11,12 +11,13 @@ import kotlinx.serialization.json.Json
 import java.text.Normalizer
 
 /**
- * Icônes d'aliments extraites de MacroFactor (assets/foods/iNNNN.webp) et index de termes anglais
- * (assets/foods/index.json, construit depuis icon_metadata.jsonl par tools/import_mf_assets.sh).
+ * Icônes d'aliments en pixel-art uniquement, repérées par les identifiants MacroFactor (iNNNN) et un index de termes anglais
+ * (assets/foods/index.json, construit depuis icon_metadata.jsonl par tools/import_mf_assets.sh) ; les images MacroFactor
+ * elles-mêmes ne sont plus dans l'APK (originaux dans ../Asset-free/assets/foods).
  * Les noms français sont traduits mot à mot via [FR_EN] avant la recherche.
  * assets/foods/pack.json échange une partie de ces icônes contre le pack pixel-art acheté (foods/pack/NNN.png, 16×16)
  * et ajoute quelques aliments absents de MacroFactor (identifiants « pNNN ») ; les autres ont une version pixel-art générée
- * dans le même style (foods/gen/iNNNN.png, tools/pixel_food_icons.js), en attendant validation une par une.
+ * dans le même style (foods/gen/iNNNN.png, tools/pixel_food_icons.js).
  */
 object FoodIcons {
     @Serializable
@@ -52,11 +53,8 @@ object FoodIcons {
     @Synchronized
     fun match(name: String): String? = matchCache.getOrPut(name) { compute(name) }
 
-    fun bitmap(id: String): ImageBitmap? {
-        bitmaps.get(id)?.let { return it }
-        val bmp = runCatching { app.assets.open("foods/$id.webp").use { BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
-        return bmp.asImageBitmap().also { bitmaps.put(id, it) }
-    }
+    /** Icône des aliments non reconnus (repas et boisson). */
+    const val GENERIC = "i14"
 
     /** Icône pixel-art (pack, sinon générée) qui remplace [id] (16×16, à agrandir sans lissage), ou null ; « alias » = équivalent choisi. */
     fun pixel(id: String): ImageBitmap? = alias[id]?.let { pixel(it) } ?: pack[id]?.let { asset("foods/pack/${it.toString().padStart(3, '0')}.png") }
