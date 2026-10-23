@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import app.superhealth.ui.LowPoly
 import java.text.Normalizer
 
 /**
@@ -65,7 +64,7 @@ object FoodIcons {
 
     fun asset(path: String): ImageBitmap? {
         bitmaps.get(path)?.let { return it }
-        val bmp = runCatching { app.assets.open(LowPoly.path(app, path)).use { BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
+        val bmp = runCatching { app.assets.open(path).use { BitmapFactory.decodeStream(it) } }.getOrNull() ?: return null
         return bmp.asImageBitmap().also { bitmaps.put(path, it) }
     }
 

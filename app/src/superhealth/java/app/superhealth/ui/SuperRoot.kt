@@ -176,6 +176,9 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("achievements") { app.superhealth.ui.achievements.AchievementsScreen(vm, nav) }
             composable("backup") { app.superhealth.ui.settings.BackupScreen(vm, nav) }
             composable("update") { app.superhealth.ui.settings.UpdateScreen(vm, nav) }
+            composable("settings/look") { app.superhealth.ui.settings.LookSettingsScreen(vm, nav) }
+            composable("settings/units") { app.superhealth.ui.settings.UnitsSettingsScreen(vm, nav) }
+            composable("settings/hc") { app.superhealth.ui.settings.HealthConnectSettingsScreen(vm, nav) }
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
             composable("adventure") { app.superhealth.ui.adventure.AdventureScreen(vm, nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }

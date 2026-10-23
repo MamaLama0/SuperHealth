@@ -46,15 +46,29 @@ import app.superhealth.ui.trf
 import app.superhealth.update.Updater
 import kotlinx.coroutines.launch
 
-/** Ligne des réglages : version installée et état des mises à jour. */
+/**
+ * Ligne « À propos » des réglages : la version installée et, à droite, « À jour » ou la version disponible. À jour, un appui
+ * revérifie sur place ; une version disponible ouvre la page d'installation.
+ */
 @Composable
-internal fun UpdateRow(nav: NavHostController) {
+internal fun VersionRow(nav: NavHostController) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     val st by Updater.state.collectAsState()
     val sh by SuperPrefs.settings.collectAsState()
-    SettingRow(tr("Mises à jour"), (st as? Updater.State.Available)?.let { trf("%1\$s disponible", it.release.version) },
-        subtitle = trf("Version %1\$s · %2\$s", Updater.installed(ctx), if (sh.updateCheck) tr("vérifiée chaque jour") else tr("vérification désactivée")),
-        icon = Icons.Rounded.SystemUpdate) { nav.go("update") }
+    LaunchedEffect(Unit) { if (st is Updater.State.Idle && sh.updateCheck) Updater.refresh(ctx) }
+    val (value, color) = when (val s = st) {
+        is Updater.State.Available -> trf("%1\$s disponible", s.release.version) to Mf.colors.accent
+        is Updater.State.Downloading -> trf("%1\$s · %2\$s %%", s.release.version, (s.fraction * 100).toInt()) to Mf.colors.accent
+        is Updater.State.Ready -> trf("%1\$s prête", s.release.version) to Mf.colors.accent
+        Updater.State.Checking -> tr("Vérification…") to null
+        is Updater.State.UpToDate -> tr("À jour") to null
+        is Updater.State.Failed -> tr("Non vérifiée") to null
+        Updater.State.Idle -> null to null
+    }
+    val pending = st is Updater.State.Available || st is Updater.State.Downloading || st is Updater.State.Ready
+    SettingRow("SuperHealth " + Updater.installed(ctx), value, icon = Icons.Rounded.SystemUpdate, hue = if (pending) Mf.colors.accent else null, valueColor = color,
+        onClick = { if (pending) nav.go("update") else if (st !is Updater.State.Checking) scope.launch { Updater.refresh(ctx) } })
 }
 
 /** Mises à jour : dernière version publiée sur GitHub (dépôt public, sans jeton), notes, installation ; options de vérification. */
@@ -79,17 +93,23 @@ fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
 
     DetailScaffold(tr("Mises à jour"), onBack = { nav.popBackStack() }) {
         MfCard {
-            Text(trf("Version installée : %1\$s", Updater.installed(ctx)), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
-            Spacer(Modifier.height(8.dp))
             when (val s = st) {
                 Updater.State.Idle, Updater.State.Checking -> Text(tr("Vérification…"), style = MaterialTheme.typography.titleMedium)
-                is Updater.State.UpToDate -> Text(tr("SuperHealth est à jour"), style = MaterialTheme.typography.titleMedium)
-                is Updater.State.Failed -> Text(trf("Échec : %1\$s", s.message), style = MaterialTheme.typography.bodyMedium, color = app.superhealth.ui.theme.HealthHues.Heart)
+                is Updater.State.UpToDate -> {
+                    Text(tr("À jour"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(trf("Version %1\$s", Updater.installed(ctx)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                }
+                is Updater.State.Failed -> {
+                    Text(trf("Échec : %1\$s", s.message), style = MaterialTheme.typography.bodyMedium, color = app.superhealth.ui.theme.HealthHues.Heart)
+                    Spacer(Modifier.height(10.dp))
+                    PillButton(tr("Réessayer"), strong = false) { scope.launch { Updater.refresh(ctx) } }
+                }
                 is Updater.State.Available, is Updater.State.Downloading, is Updater.State.Ready -> {
                     val rel = when (s) { is Updater.State.Available -> s.release; is Updater.State.Downloading -> s.release; is Updater.State.Ready -> s.release; else -> null }!!
                     Text(trf("Version %1\$s disponible", rel.version), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(trf("Installée : %1\$s", Updater.installed(ctx)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     if (rel.notes.isNotBlank()) {
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(rel.notes.lines().filter { it.isNotBlank() }.take(14).joinToString("\n") { it.trimStart('#', ' ').replace("**", "") },
                             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     }
@@ -105,18 +125,10 @@ fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
                 }
             }
-            if (st !is Updater.State.Downloading && st !is Updater.State.Checking) {
-                Spacer(Modifier.height(10.dp))
-                PillButton(tr("Vérifier maintenant"), strong = false) { scope.launch { Updater.refresh(ctx) } }
-            }
-            if (sh.lastUpdateCheck > 0) Text(trf("Dernière vérification : %1\$s", relativeDay(localDate(sh.lastUpdateCheck)) + " " + timeOf(sh.lastUpdateCheck)),
-                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 8.dp))
         }
 
         SectionLabel(tr("Options"))
         GroupCard {
-            SwitchRow(tr("Vérifier chaque jour"), tr("Une requête par jour à GitHub"), sh.updateCheck) { v -> SuperPrefs.update { it.copy(updateCheck = v) } }
-            RowDivider()
             SwitchRow(tr("Demander avant de télécharger"), tr("Notification d'abord ; sinon l'APK est prêt à installer"), sh.updateConfirm) { v ->
                 SuperPrefs.update { it.copy(updateConfirm = v) }
             }

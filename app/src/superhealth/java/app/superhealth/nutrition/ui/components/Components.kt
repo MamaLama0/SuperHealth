@@ -71,6 +71,8 @@ import app.superhealth.ui.theme.CaloriesColor
 import app.superhealth.ui.theme.CarbsColor
 import app.superhealth.ui.theme.FatColor
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.ProteinColor
 import kotlin.math.roundToInt
 
@@ -192,14 +194,17 @@ fun MacroLine(m: Macros, energyValue: (Double) -> Double, suffix: String? = null
 
 /** Ligne de réglage façon MacroFactor : titre, valeur à droite, chevron. */
 @Composable
-fun SettingRow(title: String, value: String? = null, subtitle: String? = null, icon: ImageVector? = null, danger: Boolean = false, onClick: (() -> Unit)? = null) {
+fun SettingRow(title: String, value: String? = null, subtitle: String? = null, icon: ImageVector? = null, danger: Boolean = false,
+               hue: Color? = null, valueColor: Color? = null, onClick: (() -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         icon?.let {
-            Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
-                Icon(it, null, Modifier.size(18.dp), tint = if (danger) MaterialTheme.colorScheme.error else Mf.colors.text)
+            // [hue] : pastille ronde pastel de la famille (comme les cartes), sinon carré gris
+            Box(Modifier.size(34.dp).clip(if (hue != null) CircleShape else RoundedCornerShape(9.dp)).background(hue?.container() ?: Mf.colors.chip),
+                contentAlignment = Alignment.Center) {
+                Icon(it, null, Modifier.size(18.dp), tint = if (danger) MaterialTheme.colorScheme.error else hue?.onContainer() ?: Mf.colors.text)
             }
             Spacer(Modifier.width(14.dp))
         }
@@ -207,7 +212,7 @@ fun SettingRow(title: String, value: String? = null, subtitle: String? = null, i
             Text(tr(title), style = MaterialTheme.typography.bodyLarge, color = if (danger) MaterialTheme.colorScheme.error else Mf.colors.text)
             subtitle?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
         }
-        value?.let { Text(tr(it), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, textAlign = TextAlign.End,
+        value?.let { Text(tr(it), style = MaterialTheme.typography.bodyMedium, color = valueColor ?: Mf.colors.textSecondary, textAlign = TextAlign.End,
             maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp).widthIn(max = 150.dp)) }
         if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
     }

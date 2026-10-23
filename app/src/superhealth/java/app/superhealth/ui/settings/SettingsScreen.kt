@@ -61,6 +61,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Autorenew
+import androidx.compose.material.icons.rounded.Map
+import androidx.compose.material.icons.rounded.MonitorWeight
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Straighten
+import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.graphics.vector.ImageVector
+import app.superhealth.nutrition.ui.screens.DetailScaffold
+import app.superhealth.ui.theme.HealthHues
+import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.onContainer
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.navigation.NavHostController
@@ -93,9 +109,6 @@ import app.superhealth.ui.theme.color
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import java.time.LocalDate
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
-import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -103,24 +116,19 @@ import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
 
 /**
- * Réglages : ce qui est commun aux trois modules (profil, langue, apparence, unités, connexions, données),
- * puis une page par module pour ses réglages propres.
+ * Réglages : une page d'accueil courte, en groupes (accueil, suivi, général, données, outils, à propos), chaque ligne
+ * menant à sa page ; seuls les interrupteurs simples restent sur place.
  */
 @Composable
 fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     val sh by vm.settings.collectAsState()
     val s by vm.nutrition.settings.collectAsState()
     val profile by vm.nutrition.profile.collectAsState()
     val a by vm.nutrition.analytics.collectAsState()
     val devices by vm.devices.collectAsState()
-    val syncing by vm.syncing.collectAsState()
     var editName by remember { mutableStateOf(false) }
     var nameTick by remember { mutableIntStateOf(0) }
     val name = remember(nameTick) { app.superhealth.ui.userName() }
-    fun set(f: (app.superhealth.nutrition.domain.Settings) -> app.superhealth.nutrition.domain.Settings) = vm.nutrition.repo.prefs.setSettings(f(s))
-    fun toast(msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
         ScreenTitle(tr("Réglages"))
@@ -128,7 +136,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             // Profil : la seule source de sexe, âge, taille et poids pour la nutrition, la musculation et la montre.
             MfCard(onClick = { nav.go("profile") }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(52.dp).clip(CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(56.dp).clip(CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
                         Text((name ?: "?").take(1).uppercase(Lang.locale), style = MaterialTheme.typography.headlineSmall, color = Color.White)
                     }
                     Spacer(Modifier.width(14.dp))
@@ -140,124 +148,74 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                             a?.currentTrendKg?.let { s.weight(it) },
                         ).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2)
                     }
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            GroupCard { SettingRow(tr("Prénom"), name ?: tr("Non renseigné")) { editName = true } }
-
-            SectionLabel(tr("Langue"))
-            MfCard {
-                ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { it.label }) { l -> set { it.copy(language = l) } }
-            }
-
-            SectionLabel(tr("Apparence"))
-            MfCard {
-                Label(tr("Thème"))
-                ChipChoice(ThemeMode.entries, s.themeMode, { tr(it.label) }) { m -> set { it.copy(themeMode = m) } }
-                Spacer(Modifier.height(16.dp))
-                Label(tr("Couleur d'accent"))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    AccentColor.entries.forEach { c ->
-                        val sel = c == s.accent
-                        Box(
-                            Modifier.size(34.dp).clip(CircleShape).background(c.color())
-                                .border(if (sel) 3.dp else 0.dp, if (sel) Mf.colors.strong else Color.Transparent, CircleShape)
-                                .clickable { set { it.copy(accent = c) } },
-                            contentAlignment = Alignment.Center,
-                        ) { if (sel) Icon(Icons.Rounded.Check, tr(c.label), tint = Color.White, modifier = Modifier.size(18.dp)) }
-                    }
+                    IconButton(onClick = { editName = true }) { Icon(Icons.Rounded.Edit, tr("Prénom"), tint = Mf.colors.textSecondary) }
                 }
             }
 
-            SectionLabel(tr("Unités et objectifs"))
-            MfCard {
-                Label(tr("Poids"))
-                ChipChoice(WeightUnit.entries, s.weightUnit, { tr(it.label) }) { u -> set { it.copy(weightUnit = u) } }
-                Spacer(Modifier.height(12.dp))
-                Label(tr("Énergie"))
-                ChipChoice(EnergyUnit.entries, s.energyUnit, { tr(it.label) }) { u -> set { it.copy(energyUnit = u) } }
-                Spacer(Modifier.height(12.dp))
-                Label(tr("Objectif de pas"))
-                StepGoalEditor(s) { f -> set(f) }
-            }
-
-            SectionLabel(tr("Modules"))
-            GroupCard {
-                SettingRow(tr("Nutrition"), subtitle = tr("Programme, IA, calculs"), icon = Icons.Rounded.Restaurant) { nav.go("n/settings") }
+            Group(tr("Accueil")) {
+                SettingRow(tr("Cartes"), trf("%1\$s affichées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider()
-                SettingRow(tr("Musculation"), subtitle = tr("Salles, progression, échauffements, repos"), icon = Icons.Rounded.FitnessCenter) { nav.go("t/settings") }
+                SettingRow(tr("Bouton +"), trf("%1\$s raccourcis", sh.plus.size), icon = Icons.Rounded.AddCircle, hue = HealthHues.Activity) { nav.go("plus/edit") }
                 RowDivider()
-                SwitchRow(tr("Montre (LocalHealth)"), if (sh.watchModule) trf("%1\$s appareil(s) associé(s)", devices.size) else tr("Désactivé"), sh.watchModule) { vm.setWatchModule(it) }
-                if (sh.watchModule) {
-                    RowDivider()
-                    SettingRow(tr("Montre et appareils"), subtitle = tr("Associer, synchroniser, réglages de la montre"), icon = Icons.Rounded.Watch) { nav.go("h/devices") }
+                IconSwitchRow(tr("Bandeau de pesée"), tr("Tant que la pesée du jour manque"), Icons.Rounded.MonitorWeight, HealthHues.Body, sh.weighPrompt) { v ->
+                    SuperPrefs.update { it.copy(weighPrompt = v) }
                 }
+            }
+
+            Group(tr("Fonctions")) {
+                SettingRow(tr("Nutrition"), subtitle = tr("Programme, IA, calculs, bases d'aliments"), icon = Icons.Rounded.Restaurant, hue = HealthHues.Mind) { nav.go("n/settings") }
+                RowDivider()
+                SettingRow(tr("Musculation"), subtitle = tr("Salles, progression, échauffements, repos"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) { nav.go("t/settings") }
+                RowDivider()
+                IconSwitchRow(tr("Montre"), if (sh.watchModule) trf("%1\$s appareil(s)", devices.size) else tr("Désactivée"), Icons.Rounded.Watch, HealthHues.Respiration,
+                    sh.watchModule, onClick = { nav.go("h/devices") }) { vm.setWatchModule(it) }
                 RowDivider()
                 ModulesRow(nav)
             }
 
-            // bases où sont cherchés les aliments et les codes-barres
-            SectionLabel(tr("Bases d'aliments"))
-            GroupCard {
-                SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
+            Group(tr("Général")) {
+                SettingRow(tr("Apparence et langue"), subtitle = "${tr(s.themeMode.label)} · ${s.accent.let { tr(it.label) }} · ${if (Lang.english) "English" else "Français"}",
+                    icon = Icons.Rounded.Palette, hue = Mf.colors.accent) { nav.go("settings/look") }
                 RowDivider()
-                SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
+                SettingRow(tr("Unités et objectifs"), "${tr(s.weightUnit.label)} · ${tr(s.energyUnit.label)}",
+                    icon = Icons.Rounded.Straighten, hue = HealthHues.Activity) { nav.go("settings/units") }
             }
 
-            SectionLabel(tr("Connexions"))
-            HealthConnectSection(vm, syncing)
-
-            SectionLabel(tr("Tableau de bord"))
-            GroupCard {
-                SettingRow(tr("Personnaliser"), subtitle = trf("%1\$s carte(s) affichée(s)", sh.dashboard.size), icon = Icons.Rounded.Dashboard) { nav.go("dash/edit") }
-                RowDivider()
-                SettingRow(tr("Bouton +"), subtitle = trf("%1\$s raccourci(s)", sh.plus.size), icon = Icons.Rounded.AddCircle) { nav.go("plus/edit") }
-
-                RowDivider()
-                SwitchRow(tr("Bandeau de pesée"), tr("En haut de l'accueil tant qu'elle manque"), sh.weighPrompt) { v ->
-                    app.superhealth.SuperPrefs.update { it.copy(weighPrompt = v) }
+            Group(tr("Données")) {
+                SettingRow(tr("Health Connect"), if (sh.healthConnect) tr("Activé") else tr("Désactivé"), icon = Icons.Rounded.Favorite, hue = HealthHues.Heart) {
+                    nav.go("settings/hc")
                 }
-            }
-
-            SectionLabel(tr("Données"))
-            GroupCard {
+                RowDivider()
                 SettingRow(tr("Sauvegarde"), subtitle = when {
                     sh.lastBackupError != null -> trf("Échec : %1\$s", sh.lastBackupError)
-                    sh.lastBackup > 0 -> trf("Chiffrée · dernière %1\$s", app.superhealth.ui.relativeDay(app.superhealth.ui.localDate(sh.lastBackup)).lowercase(Lang.locale))
-                    else -> tr("Chiffrée · fichier, Nextcloud, WebDAV ou dossier")
-                }, icon = Icons.Rounded.Backup) { nav.go("backup") }
+                    sh.lastBackup > 0 -> trf("Dernière %1\$s", app.superhealth.ui.relativeDay(app.superhealth.ui.localDate(sh.lastBackup)).lowercase(Lang.locale))
+                    else -> tr("Chiffrée, vers un fichier, Nextcloud ou WebDAV")
+                }, icon = Icons.Rounded.Backup, hue = HealthHues.Respiration) { nav.go("backup") }
                 RowDivider()
-                UpdateRow(nav)
+                IconSwitchRow(tr("Cartes en ligne"), tr("Fond OpenStreetMap sous les tracés"), Icons.Rounded.Map, HealthHues.Activity, sh.onlineMaps) { v ->
+                    SuperPrefs.update { it.copy(onlineMaps = v) }
+                }
             }
-            Text(tr("Aucun compte. Les sauvegardes ne quittent le téléphone que chiffrées, vers la destination choisie."), style = MaterialTheme.typography.bodySmall,
-                color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+            Note(tr("Aucun compte, aucun traceur. Les sauvegardes ne quittent le téléphone que chiffrées."))
 
-            SectionLabel(tr("Vie privée"))
-            GroupCard {
-                SwitchRow(tr("Cartes en ligne"), tr("Fond de carte OpenStreetMap sous les tracés. Désactivé : tracé seul, aucune requête."),
-                    sh.onlineMaps) { v -> app.superhealth.SuperPrefs.update { it.copy(onlineMaps = v) } }
-            }
-            Text(tr("Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, ces cartes, GitHub (mises à jour et modules) et votre sauvegarde."),
-                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
-
-            SectionLabel(tr("Simulateurs et questionnaire"))
-            GroupCard {
-                SettingRow(tr("Simuler des cibles caloriques"), subtitle = tr("Pour un ami : rien n'est enregistré"), icon = Icons.Rounded.Restaurant) { nav.go("sim/nutrition") }
+            Group(tr("Outils")) {
+                SettingRow(tr("Simuler des cibles caloriques"), subtitle = tr("Pour un ami, rien n'est enregistré"), icon = Icons.Rounded.Calculate, hue = HealthHues.Mind) { nav.go("sim/nutrition") }
                 RowDivider()
-                SettingRow(tr("Simuler un programme de musculation"), subtitle = tr("Générer un programme sans rien enregistrer"), icon = Icons.Rounded.FitnessCenter) { nav.go("sim/training") }
+                SettingRow(tr("Simuler un programme"), subtitle = tr("Musculation, rien n'est enregistré"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) { nav.go("sim/training") }
                 RowDivider()
-                SettingRow(tr("Refaire le questionnaire d'accueil"), subtitle = tr("Remplace votre profil et vos objectifs ; « Passer » annule"), icon = Icons.Rounded.Restore) {
-                    app.superhealth.SuperPrefs.update { it.copy(onboarded = false) }
+                SettingRow(tr("Refaire le questionnaire"), subtitle = tr("« Passer » annule"), icon = Icons.Rounded.Restore) {
+                    SuperPrefs.update { it.copy(onboarded = false) }
                 }
             }
 
-            SectionLabel(tr("À propos"))
-            GroupCard {
-                val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "" }
-                SettingRow("SuperHealth", version, subtitle = tr("Usage personnel · sans compte · données sur l'appareil"), icon = Icons.Rounded.Info)
+            Group(tr("À propos")) {
+                VersionRow(nav)
                 RowDivider()
-                SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (montres, AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (pixel-art, CC0)"))
+                IconSwitchRow(tr("Vérifier chaque jour"), tr("Une requête par jour à GitHub"), Icons.Rounded.Autorenew, null, sh.updateCheck) { v ->
+                    SuperPrefs.update { it.copy(updateCheck = v) }
+                }
+                RowDivider()
+                SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (CC0)"), icon = Icons.Rounded.Info)
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -280,6 +238,103 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             },
             dismissButton = { TextButton(onClick = { editName = false }) { Text(tr("Annuler"), color = Mf.colors.text) } },
         )
+    }
+}
+
+/** Apparence et langue : thème, couleur d'accent, langue de l'app. */
+@Composable
+fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
+    val s by vm.nutrition.settings.collectAsState()
+    fun set(f: (app.superhealth.nutrition.domain.Settings) -> app.superhealth.nutrition.domain.Settings) = vm.nutrition.repo.prefs.setSettings(f(s))
+    DetailScaffold(tr("Apparence et langue"), onBack = { nav.popBackStack() }) {
+        MfCard {
+            Label(tr("Thème"))
+            ChipChoice(ThemeMode.entries, s.themeMode, { tr(it.label) }) { m -> set { it.copy(themeMode = m) } }
+            Spacer(Modifier.height(18.dp))
+            Label(tr("Couleur d'accent"))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                AccentColor.entries.forEach { c ->
+                    val sel = c == s.accent
+                    Box(
+                        Modifier.size(36.dp).clip(CircleShape).background(c.color())
+                            .border(if (sel) 3.dp else 0.dp, if (sel) Mf.colors.strong else Color.Transparent, CircleShape)
+                            .clickable { set { it.copy(accent = c) } },
+                        contentAlignment = Alignment.Center,
+                    ) { if (sel) Icon(Icons.Rounded.Check, tr(c.label), tint = Color.White, modifier = Modifier.size(18.dp)) }
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        MfCard {
+            Label(tr("Langue"))
+            ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { it.label }) { l -> set { it.copy(language = l) } }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Unités et objectifs : poids, énergie, objectif de pas. */
+@Composable
+fun UnitsSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
+    val s by vm.nutrition.settings.collectAsState()
+    fun set(f: (app.superhealth.nutrition.domain.Settings) -> app.superhealth.nutrition.domain.Settings) = vm.nutrition.repo.prefs.setSettings(f(s))
+    DetailScaffold(tr("Unités et objectifs"), onBack = { nav.popBackStack() }) {
+        MfCard {
+            Label(tr("Poids"))
+            ChipChoice(WeightUnit.entries, s.weightUnit, { tr(it.label) }) { u -> set { it.copy(weightUnit = u) } }
+            Spacer(Modifier.height(14.dp))
+            Label(tr("Énergie"))
+            ChipChoice(EnergyUnit.entries, s.energyUnit, { tr(it.label) }) { u -> set { it.copy(energyUnit = u) } }
+        }
+        Spacer(Modifier.height(12.dp))
+        MfCard {
+            Label(tr("Objectif de pas"))
+            StepGoalEditor(s) { f -> set(f) }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Health Connect : activation, synchronisation, autorisations. */
+@Composable
+fun HealthConnectSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
+    val syncing by vm.syncing.collectAsState()
+    DetailScaffold(tr("Health Connect"), onBack = { nav.popBackStack() }) {
+        HealthConnectSection(vm, syncing)
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Groupe de la page d'accueil des réglages : petit intitulé, puis une carte de lignes. */
+@Composable
+private fun Group(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = Mf.colors.textSecondary,
+        modifier = Modifier.padding(start = 6.dp, top = 22.dp, bottom = 8.dp))
+    GroupCard(content = content)
+}
+
+@Composable
+private fun Note(text: String) = Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+    modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp))
+
+/**
+ * Interrupteur avec pastille d'icône, aligné sur les autres lignes. Avec [onClick], le texte ouvre la page du réglage quand
+ * il est actif (montre → appareils) ; sinon tout appui bascule l'interrupteur.
+ */
+@Composable
+private fun IconSwitchRow(title: String, value: String, icon: ImageVector, hue: Color?, checked: Boolean, onClick: (() -> Unit)? = null, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { if (checked && onClick != null) onClick() else onChange(!checked) }.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(34.dp).clip(CircleShape).background(hue?.container() ?: Mf.colors.chip), contentAlignment = Alignment.Center) {
+            Icon(icon, null, Modifier.size(18.dp), tint = hue?.onContainer() ?: Mf.colors.text)
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(value, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        }
+        Switch(checked, onChange, colors = SwitchDefaults.colors(checkedTrackColor = Mf.colors.accent, checkedThumbColor = Color.White,
+            uncheckedBorderColor = Color.Transparent, uncheckedTrackColor = Mf.colors.chip))
     }
 }
 

@@ -17,7 +17,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
-import app.superhealth.ui.LowPoly
 import app.superhealth.ui.theme.Mf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,7 +33,7 @@ object Assets {
     /** [sample] > 1 : image réduite (vignettes), décodage bien plus rapide et cache moins encombré. */
     fun bitmap(path: String, sample: Int = 1): ImageBitmap? = cached(path, sample) ?: runCatching {
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-        app.assets.open(LowPoly.path(app, path)).use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()?.also { cache.put(key(path, sample), it) }
+        app.assets.open(path).use { BitmapFactory.decodeStream(it, null, opts) }?.asImageBitmap()?.also { cache.put(key(path, sample), it) }
     }.getOrNull()
 
     fun cached(path: String, sample: Int = 1): ImageBitmap? = cache.get(key(path, sample))

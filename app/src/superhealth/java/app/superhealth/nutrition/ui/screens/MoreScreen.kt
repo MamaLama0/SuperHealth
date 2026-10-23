@@ -166,6 +166,14 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SwitchRow(tr("Pas dans la dépense"), tr("Réagit plus vite aux changements d'activité"), s.useSteps) { v -> set { it.copy(useSteps = v) } }
             }
 
+            // bases où sont cherchés les aliments et les codes-barres
+            SectionLabel(tr("Bases d'aliments"))
+            GroupCard {
+                SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
+                RowDivider()
+                SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
+            }
+
             SectionLabel(tr("Données"))
             GroupCard {
                 SettingRow(tr("Exporter une sauvegarde"), subtitle = tr("JSON complet"), icon = Icons.Rounded.Backup) { exportJson.launch("superhealth-nutrition-${stamp}.json") }

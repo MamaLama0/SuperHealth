@@ -106,8 +106,8 @@ internal fun moduleIcon(kind: String): ImageVector = when (kind) {
 @Composable
 internal fun ModulesRow(nav: NavHostController) {
     val installed by Modules.installed.collectAsState()
-    SettingRow(tr("Modules à télécharger"), subtitle = if (installed.isEmpty()) tr("Aventure pixel-art, coach IA…")
-        else installed.joinToString(" · ") { it.name }, icon = Icons.Rounded.Extension) { nav.go("modules") }
+    SettingRow(tr("Modules"), subtitle = if (installed.isEmpty()) tr("Aventure pixel-art, coach IA…")
+        else installed.joinToString(" · ") { it.name }, icon = Icons.Rounded.Extension, hue = app.superhealth.ui.theme.HealthHues.Sleep) { nav.go("modules") }
 }
 
 /**
@@ -271,15 +271,8 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
 
 @Composable
 private fun ModuleOptions(kind: String, nav: NavHostController) {
-    val ctx = LocalContext.current
-    val sh by SuperPrefs.settings.collectAsState()
     when (kind) {
         Modules.ADVENTURE -> {
-            RowDivider()
-            SwitchRow(tr("Icône pixel-art"), tr("La lune de l'icône, version pixel"), sh.pixelIcon) { v ->
-                SuperPrefs.update { it.copy(pixelIcon = v) }
-                app.superhealth.modules.LauncherIcon.apply(ctx)
-            }
             RowDivider()
             SettingRow(tr("Ouvrir l'aventure"), subtitle = tr("Boss, butin, journal de quête")) { nav.go("adventure") }
         }

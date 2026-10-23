@@ -218,11 +218,10 @@ data class SuperSettings(
     val moduleSources: List<String> = emptyList(),
     val modulesAuto: Boolean = true,
     val modulesMigrated: Boolean = false,
-    /** Aventure : jour (epochDay) où commence le combat des boss ; icône de l'app en pixel-art. */
+    /** Aventure : jour (epochDay) où commence le combat des boss. */
     val adventureStart: Long = 0,
     /** Apparence du héros choisie (sprite) ; -1 : celle du niveau atteint. */
     val adventureHero: Int = -1,
-    val pixelIcon: Boolean = false,
     /** Coach IA : ton (nom de coach.Coach.Tone), ce qu'il doit retenir (écrit ou validé par l'utilisateur), modèle dédié (vide : celui de l'IA). */
     val coachTone: String = "WARM",
     val coachMemory: List<String> = emptyList(),

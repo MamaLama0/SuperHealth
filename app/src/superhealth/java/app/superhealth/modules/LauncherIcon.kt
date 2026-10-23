@@ -3,17 +3,16 @@ package app.superhealth.modules
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
-import app.superhealth.SuperPrefs
 
 /**
- * Icône de l'app : la lune habituelle, ou sa version pixel-art quand le module Aventure est actif et l'option choisie.
+ * Icône de l'app : la lune habituelle, ou la même lune en pixel-art dès que le module Aventure (la version « jeu ») est actif.
  * Deux alias du lanceur pointent vers MainActivity ; un seul est activé à la fois.
  */
 object LauncherIcon {
     private const val DEFAULT = "app.superhealth.Launcher"
     private const val PIXEL = "app.superhealth.LauncherPixel"
 
-    fun pixelWanted(): Boolean = Modules.isActive(Modules.ADVENTURE) && SuperPrefs.settings.value.pixelIcon
+    fun pixelWanted(): Boolean = Modules.isActive(Modules.ADVENTURE)
 
     fun apply(ctx: Context) {
         val pixel = pixelWanted()
