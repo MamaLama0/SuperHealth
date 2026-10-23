@@ -35,7 +35,7 @@ class SuperHealthApp : GBApplication() {
         // 1.2 : les succès deviennent le module Aventure (téléchargé une fois s'ils étaient activés)
         if (SuperPrefs.settings.value.onboarded) kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             runCatching { app.superhealth.modules.Modules.migrate(this@SuperHealthApp) }
-            // icône du lanceur : la version pixel-art suit le module Aventure (installations faites avant la 1.3 comprises)
+            // icône du lanceur : la lune de base (désactive l'alias pixel-art si une version précédente l'avait activé)
             runCatching { app.superhealth.modules.LauncherIcon.apply(this@SuperHealthApp) }
         }
     }

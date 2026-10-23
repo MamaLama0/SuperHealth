@@ -5,14 +5,14 @@ import android.content.Context
 import android.content.pm.PackageManager
 
 /**
- * Icône de l'app : la lune habituelle, ou la même lune en pixel-art dès que le module Aventure (la version « jeu ») est actif.
- * Deux alias du lanceur pointent vers MainActivity ; un seul est activé à la fois.
+ * Icône de l'app : toujours la lune de base (choix de l'utilisateur, 2026-10-23). L'alias pixel-art reste dans le manifeste,
+ * désactivé : [apply] le désactive aussi sur les téléphones où l'Aventure l'avait activé.
  */
 object LauncherIcon {
     private const val DEFAULT = "app.superhealth.Launcher"
     private const val PIXEL = "app.superhealth.LauncherPixel"
 
-    fun pixelWanted(): Boolean = Modules.isActive(Modules.ADVENTURE)
+    fun pixelWanted(): Boolean = false
 
     fun apply(ctx: Context) {
         val pixel = pixelWanted()

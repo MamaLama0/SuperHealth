@@ -72,8 +72,8 @@ téléchargeable dans les artefacts du run.
 ## Assets
 
 Les assets graphiques (illustrations, icônes d'aliments, photos d'exercices, animations, planètes pixel-art) sont
-couverts par des droits achetés ; les sprites de l'Aventure viennent de [Kenney](https://kenney.nl) (CC0). L'icône (la
-lune et son cœur, `tools/icons/`) et sa version pixel-art sont propres au projet. Les icônes d'aliments sont toutes en
+couverts par des droits achetés ; les sprites de l'Aventure viennent de [Kenney](https://kenney.nl) (CC0). L'icône de l'app est
+le cœur rose sur fond blanc. Les icônes d'aliments sont toutes en
 pixel-art.
 
 Exercise data by [RepDB](https://repdb.co) : une partie des images d'exercices vient de l'offre gratuite de RepDB

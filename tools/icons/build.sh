@@ -1,5 +1,7 @@
 #!/bin/bash
 # Icônes du lanceur : lune (moon_*.svg) et sa version pixel-art (pixel_icon.py), pour chaque densité.
+# PLUS UTILISÉ depuis le 23/10/2026 : l'icône de l'app est redevenue le cœur sur fond blanc (fichiers d'origine dans res) ;
+# lancer ce script remettrait la lune.
 # usage : tools/icons/build.sh  (depuis la racine du dépôt ; inkscape et ImageMagick requis)
 set -e
 cd "$(dirname "$0")"
