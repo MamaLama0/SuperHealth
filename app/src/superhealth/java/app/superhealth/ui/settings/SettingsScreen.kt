@@ -121,7 +121,6 @@ import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
  */
 @Composable
 fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
-    val ctx = LocalContext.current
     val sh by vm.settings.collectAsState()
     val s by vm.nutrition.settings.collectAsState()
     val profile by vm.nutrition.profile.collectAsState()
@@ -217,11 +216,6 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
                 RowDivider()
                 SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (CC0)"), icon = Icons.Rounded.Info)
-                RowDivider()
-                // attribution exigée par la licence gratuite de RepDB (images d'exercices), avec un lien visible
-                SettingRow(tr("Images d'exercices"), subtitle = "Exercise data by RepDB (repdb.co)", icon = Icons.Rounded.FitnessCenter) {
-                    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://repdb.co"))) }
-                }
             }
             Spacer(Modifier.height(24.dp))
         }

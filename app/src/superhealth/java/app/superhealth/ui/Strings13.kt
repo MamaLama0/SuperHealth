@@ -17,7 +17,6 @@ object Strings13 {
         "Installée : %1\$s" to "Installed: %1\$s",
         "Version %1\$s" to "Version %1\$s",
         "Général" to "General",
-        "Images d'exercices" to "Exercise images",
         "Outils" to "Tools",
         "Apparence et langue" to "Appearance & language",
         "Programme, IA, calculs, bases d'aliments" to "Program, AI, calculations, food databases",

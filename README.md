@@ -76,10 +76,9 @@ couverts par des droits achetés ; les sprites de l'Aventure viennent de [Kenney
 le cœur rose sur fond blanc. Les icônes d'aliments sont toutes en
 pixel-art.
 
-Exercise data by [RepDB](https://repdb.co) : une partie des images d'exercices vient de l'offre gratuite de RepDB
-(utilisation dans l'app, attribution obligatoire, pas de redistribution comme jeu de données). Les exercices concernés sont
+Une partie des images d'exercices vient de RepDB (version « + » achetée, sans attribution). Les exercices concernés sont
 listés dans `tools/repdb/map.csv` (une ligne par exercice, ajoutée ou retirée à la main) ; `python3 tools/repdb_images.py`
-applique la liste en repartant des originaux (`../Asset-free/assets` et `../Asset-free/RepDB`).
+applique la liste en repartant des originaux (`../Asset-free/assets` et `../Asset-free/RepDB/flat`).
 
 `python3 tools/superhealth_copyright_assets.py export DOSSIER` copie les assets dans DOSSIER avec une galerie
 (`index.html`, `ouvrir.sh`) et un inventaire (`manifest.csv`) ; `… import DOSSIER` remet dans l'app les fichiers
