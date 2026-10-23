@@ -7,7 +7,6 @@ L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis l
 
 | Module | Moteur | Contenu |
 |---|---|---|
-| `adventure` — Aventure | `adventure` | `world.json` (héros, boss, scénario), `sprites.png` (Kenney Tiny Dungeon, CC0) |
 | `coach` — Coach IA | `coach` | `prompts.json` (consignes du coach, tons, point du jour, questions suggérées) |
 
 ## Publier une version
@@ -19,7 +18,5 @@ L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis l
 ## Source non vérifiée
 
 N'importe quel serveur HTTPS peut publier un `index.json` au même format ; l'app l'affiche comme « non vérifié ».
-Champs d'un module : `id`, `kind` (`adventure` ou `coach`), `name`, `summary`, `nameEn`, `summaryEn`, `version`,
+Champs d'un module : `id`, `kind` (`coach`), `name`, `summary`, `nameEn`, `summaryEn`, `version`,
 `size`, `sha256`, `url` (relative à l'index), `minApp`, `color`.
-
-Crédits : sprites [Kenney](https://kenney.nl) — Tiny Dungeon (CC0).

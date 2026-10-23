@@ -2,12 +2,6 @@
   "name": "SuperHealth",
   "modules": [
     {
-      "id": "adventure", "kind": "adventure", "minApp": "1.2", "color": "#E5574F",
-      "name": "Aventure", "nameEn": "Adventure",
-      "summary": "Un petit RPG pixel-art : niveaux, trophées, voyage jusqu'à la Lune et des boss à vaincre avec la fonte soulevée et les kilomètres courus. Icône pixel-art en option.",
-      "summaryEn": "A tiny pixel-art RPG: levels, trophies, a journey to the Moon and bosses you defeat with the weight you lift and the kilometres you run. Optional pixel-art icon."
-    },
-    {
       "id": "coach", "kind": "coach", "minApp": "1.2", "color": "#8E7CF0",
       "name": "Coach IA", "nameEn": "AI Coach",
       "summary": "Un coach qui répond à partir de tes repas, de ton poids, de tes séances et de ta montre : point du jour, analyse des séances, questions libres. Utilise ta clé IA.",
