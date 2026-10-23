@@ -9,7 +9,8 @@ import javax.crypto.spec.SecretKeySpec
 
 /**
  * Chiffrement des sauvegardes : AES-256-GCM, clé tirée du code de récupération par PBKDF2-HMAC-SHA256 avec un sel propre à
- * chaque fichier. Le code est aléatoire (160 bits) : sans lui, le fichier est illisible, y compris pour l'hébergeur.
+ * chaque fichier. Le code (160 bits) est tiré de l'identifiant du téléphone ([deviceCode]) : la même installation, ou une
+ * réinstallation sur le même téléphone, retrouve le même code. Sans lui, le fichier est illisible, y compris pour l'hébergeur.
  *
  * Format `.shbak` : « SHBK » · version (1) · itérations (u32 BE) · sel (16) · nonce (12) · données chiffrées + étiquette GCM (16).
  * L'en-tête entier est authentifié (données associées) : le modifier rend le fichier illisible au lieu de l'affaiblir.
@@ -27,9 +28,26 @@ object BackupCrypto {
 
     class WrongCode : Exception("code de récupération incorrect ou fichier altéré")
 
-    /** Nouveau code : 32 caractères (160 bits), en 8 groupes de 4. */
-    fun newCode(random: SecureRandom = SecureRandom()): String {
-        val chars = CharArray(32) { ALPHABET[random.nextInt(32)] }
+    /** Nouveau code aléatoire : 32 caractères (160 bits), en 8 groupes de 4 (repli si le téléphone n'a pas d'identifiant). */
+    fun newCode(random: SecureRandom = SecureRandom()): String = format(ByteArray(20).also(random::nextBytes))
+
+    /**
+     * Code déterministe tiré de [seed] (ANDROID_ID : propre au téléphone, à l'utilisateur Android et à la clé de signature,
+     * inchangé après une réinstallation, renouvelé par une remise à zéro) : HMAC-SHA256, 160 premiers bits.
+     */
+    fun deviceCode(seed: String): String {
+        val mac = javax.crypto.Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec("SuperHealth backup code v1".toByteArray(), "HmacSHA256"))
+        return format(mac.doFinal(seed.trim().lowercase().toByteArray()).copyOf(20))
+    }
+
+    /** 20 octets → 32 caractères de 5 bits, en 8 groupes de 4. */
+    private fun format(bytes: ByteArray): String {
+        val chars = CharArray(32) { i ->
+            val bit = i * 5
+            val v = ((bytes[bit / 8].toInt() and 0xff) shl 8 or (bytes.getOrElse(bit / 8 + 1) { 0 }.toInt() and 0xff)) shr (11 - bit % 8)
+            ALPHABET[v and 31]
+        }
         return chars.toList().chunked(4).joinToString("-") { it.joinToString("") }
     }
 

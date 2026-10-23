@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Icône pixel-art (module Aventure) : la lune de base redessinée en pixels, sur toute la toile ; même monochrome -->
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/sh_pixel_sky"/>
-    <foreground android:drawable="@mipmap/sh_launcher_pixel"/>
-    <monochrome android:drawable="@mipmap/sh_launcher_monochrome"/>
-</adaptive-icon>

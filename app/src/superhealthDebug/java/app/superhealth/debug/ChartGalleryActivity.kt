@@ -116,15 +116,6 @@ private fun Gallery(page: Int) {
                     }
                 }
             }
-            5 -> {
-                // voyage pixel-art : chaque étape à 0,6 (explorateur sur la Terre, puis fusée)
-                app.superhealth.achievements.Achievements.Leg.entries.forEach { leg ->
-                    Case(leg.label) {
-                        app.superhealth.ui.achievements.JourneyScene(app.superhealth.achievements.Achievements.Journey(leg, 0.6f, emptyList()),
-                            Modifier.fillMaxWidth().height(170.dp))
-                    }
-                }
-            }
             else -> {
                 Case("Vide") { LineChart(emptyList(), height = 120.dp) }
                 Case("Un point") { LineChart(listOf(Series(listOf(1L to 72.0), blue)), height = 120.dp) }

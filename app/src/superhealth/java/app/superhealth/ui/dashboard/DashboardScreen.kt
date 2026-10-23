@@ -32,7 +32,6 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Balance
 import androidx.compose.material.icons.rounded.DonutLarge
@@ -184,8 +183,6 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.HR_ZONES -> HealthHues.Fitness
     DashCard.LOAD -> WorkoutBlue
     DashCard.DAY_TIMELINE -> HealthHues.Activity
-    DashCard.PROGRESS -> androidx.compose.ui.graphics.Color(0xFFF2A93B)
-    DashCard.ADVENTURE -> androidx.compose.ui.graphics.Color(0xFFE5574F)
     DashCard.COACH -> androidx.compose.ui.graphics.Color(0xFF8E7CF0)
 }
 
@@ -227,8 +224,6 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.HR_ZONES -> Icons.Rounded.Favorite
     DashCard.LOAD -> Icons.AutoMirrored.Rounded.TrendingUp
     DashCard.DAY_TIMELINE -> Icons.Rounded.Timeline
-    DashCard.PROGRESS -> Icons.Rounded.EmojiEvents
-    DashCard.ADVENTURE -> Icons.Rounded.Shield
     DashCard.COACH -> Icons.Rounded.AutoAwesome
 }
 
@@ -647,7 +642,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
     // Petit, moyen et bandeau : versions à regarder d'un coup d'œil, communes à toutes les cartes qui ont une valeur ;
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
-        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.PROGRESS, DashCard.ADVENTURE, DashCard.COACH -> true
+        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -768,8 +763,6 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
         DashCard.HR_ZONES -> HrZonesCard(c, h.watch, modifier, nav)
         DashCard.LOAD -> LoadCard(c, h.watch, modifier, nav)
         DashCard.DAY_TIMELINE -> DayTimelineCard(c, h, h.watch, modifier, nav)
-        DashCard.PROGRESS -> app.superhealth.ui.achievements.ProgressCard(c, size, vm, modifier, nav)
-        DashCard.ADVENTURE -> app.superhealth.ui.adventure.BossCard(c, size, vm, modifier, nav)
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.STEPS -> {
             val series = h.series[Metric.STEPS].orEmpty()

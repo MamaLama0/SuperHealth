@@ -1,6 +1,5 @@
 package app.superhealth
 
-import kotlinx.coroutines.launch
 import app.superhealth.bridge.Bridge
 import app.superhealth.bridge.SyncWorker
 import app.superhealth.nutrition.NutriApp
@@ -30,13 +29,12 @@ class SuperHealthApp : GBApplication() {
         SyncWorker.schedule(this)
         app.superhealth.backup.BackupWorker.schedule(this)
         app.superhealth.update.UpdateWorker.schedule(this)
-        // code de récupération des sauvegardes : créé dès le premier démarrage (Keystore, hors du fil principal)
-        Thread { runCatching { app.superhealth.backup.Secrets.backupCode(this) } }.start()
-        // 1.2 : les succès deviennent le module Aventure (téléchargé une fois s'ils étaient activés)
-        if (SuperPrefs.settings.value.onboarded) kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            runCatching { app.superhealth.modules.Modules.migrate(this@SuperHealthApp) }
-            // icône du lanceur : la lune de base (désactive l'alias pixel-art si une version précédente l'avait activé)
-            runCatching { app.superhealth.modules.LauncherIcon.apply(this@SuperHealthApp) }
+        // icône du lanceur : l'icône pixel-art de l'Aventure (1.2) avait pu désactiver l'alias de base
+        runCatching {
+            val launcher = android.content.ComponentName(this, "app.superhealth.Launcher")
+            if (packageManager.getComponentEnabledSetting(launcher) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)
+                packageManager.setComponentEnabledSetting(launcher, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
+                    android.content.pm.PackageManager.DONT_KILL_APP)
         }
     }
 

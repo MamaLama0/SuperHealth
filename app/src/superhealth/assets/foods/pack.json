@@ -17,6 +17,7 @@
   },
   "alias": {"i532": "i505", "i1055": "i754", "i1091": "i236", "i1096": "i617"},
   "extra": [
+    {"i": "p152", "n": "bread", "w": ["bread", "sliced bread", "loaf", "pain"], "x": ["burger", "hot dog", "garlic", "banana"]},
     {"i": "p106", "n": "donut", "w": ["donut", "doughnut", "donuts", "beignet"], "x": []},
     {"i": "p073", "n": "fried egg", "w": ["fried egg", "sunny side up", "egg sunny side up"], "x": []},
     {"i": "p074", "n": "chicken wings", "w": ["chicken wings", "wings", "buffalo wings"], "x": []},

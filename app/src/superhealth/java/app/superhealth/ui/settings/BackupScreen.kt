@@ -144,7 +144,7 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
                 }) { Icon(Icons.Rounded.ContentCopy, tr("Copier")) }
             }
             Spacer(Modifier.height(6.dp))
-            Text(tr("Chaque sauvegarde est chiffrée avec ce code. Notez-le hors du téléphone : sans lui, une sauvegarde est illisible."),
+            Text(tr("Propre à ce téléphone, il reste le même après une réinstallation. Notez-le pour restaurer sur un autre téléphone."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
 

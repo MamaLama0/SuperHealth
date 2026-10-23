@@ -38,6 +38,17 @@ class BackupCryptoTest {
         assertFalse(BackupCrypto.isValidCode("ABCD-1234"))
         assertFalse(BackupCrypto.isEncrypted("PK\u0003\u0004 zip".toByteArray()))
     }
+
+    @Test fun deviceCodeIsStable() {
+        // même identifiant → même code (réinstallation) ; autre identifiant → autre code
+        val code = BackupCrypto.deviceCode("9774d56d682e549c")
+        assertEquals(code, BackupCrypto.deviceCode("9774D56D682E549C "))
+        assertEquals(39, code.length)
+        assertTrue(BackupCrypto.isValidCode(code))
+        assertFalse(code == BackupCrypto.deviceCode("9774d56d682e549d"))
+        val enc = BackupCrypto.encrypt(data, code, iterations = 1000)
+        assertArrayEquals(data, BackupCrypto.decrypt(enc, BackupCrypto.deviceCode("9774d56d682e549c")))
+    }
 }
 
 class PropfindTest {

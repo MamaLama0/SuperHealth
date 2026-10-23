@@ -33,7 +33,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -94,10 +93,9 @@ import kotlinx.coroutines.launch
 
 /** Couleur et symbole d'un module (sa couleur d'index si elle est donnée). */
 internal fun moduleHue(kind: String, color: String?): Color = color?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
-    ?: when (kind) { Modules.ADVENTURE -> Color(0xFFE5574F); Modules.COACH -> Color(0xFF8E7CF0); else -> Color(0xFF6B9BF2) }
+    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); else -> Color(0xFF6B9BF2) }
 
 internal fun moduleIcon(kind: String): ImageVector = when (kind) {
-    Modules.ADVENTURE -> Icons.Rounded.Shield
     Modules.COACH -> Icons.Rounded.AutoAwesome
     else -> Icons.Rounded.Extension
 }
@@ -106,7 +104,7 @@ internal fun moduleIcon(kind: String): ImageVector = when (kind) {
 @Composable
 internal fun ModulesRow(nav: NavHostController) {
     val installed by Modules.installed.collectAsState()
-    SettingRow(tr("Modules"), subtitle = if (installed.isEmpty()) tr("Aventure pixel-art, coach IA…")
+    SettingRow(tr("Modules"), subtitle = if (installed.isEmpty()) tr("Coach IA…")
         else installed.joinToString(" · ") { it.name }, icon = Icons.Rounded.Extension, hue = app.superhealth.ui.theme.HealthHues.Sleep) { nav.go("modules") }
 }
 
@@ -135,7 +133,13 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
         // installés d'abord (même hors ligne), puis ce que proposent les sources
         val ids = (installed.map { it.id } + catalog.map { it.module.id }).distinct()
         if (ids.isEmpty()) MfCard {
-            Text(if (loading) tr("Lecture du catalogue…") else tr("Catalogue indisponible : vérifiez la connexion."), color = Mf.colors.textSecondary)
+            // une réponse HTTP (404 : dépôt privé ou déplacé) n'est pas un problème de connexion
+            val http = errors[Modules.OFFICIAL]?.takeIf { it.startsWith("HTTP") }
+            Text(when {
+                loading -> tr("Lecture du catalogue…")
+                http != null -> trf("Catalogue indisponible (%1\$s).", http)
+                else -> tr("Catalogue indisponible : vérifiez la connexion.")
+            }, color = Mf.colors.textSecondary)
         }
         ids.forEach { id ->
             Spacer(Modifier.height(10.dp))
@@ -172,7 +176,9 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
     }
 
     if (adding) {
-        var url by remember { mutableStateOf("https://") }
+        // curseur après « https:// » pour qu'une adresse collée ou tapée le complète
+        var field by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue("https://", androidx.compose.ui.text.TextRange(8))) }
+        val url = field.text.trim()
         val ok = Modules.acceptable(url) && url.length > 10
         AlertDialog(
             onDismissRequest = { adding = false }, containerColor = Mf.colors.card,
@@ -182,7 +188,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                 Column {
                     Text(tr("Ajoutez seulement une source en qui vous avez confiance."), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(url, { url = it.trim() }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(
+                    OutlinedTextField(field, { field = it }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Mf.colors.accent, unfocusedBorderColor = Mf.colors.divider))
                 }
             },
@@ -272,10 +278,6 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
 @Composable
 private fun ModuleOptions(kind: String, nav: NavHostController) {
     when (kind) {
-        Modules.ADVENTURE -> {
-            RowDivider()
-            SettingRow(tr("Ouvrir l'aventure"), subtitle = tr("Boss, butin, journal de quête")) { nav.go("adventure") }
-        }
         Modules.COACH -> {
             RowDivider()
             SettingRow(tr("Ouvrir le coach"), subtitle = tr("Ton, mémoire, point du jour")) { nav.go("coach") }

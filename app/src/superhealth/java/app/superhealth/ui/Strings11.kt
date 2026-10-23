@@ -19,7 +19,6 @@ object Strings11 {
         "Code de récupération" to "Recovery code",
         "Afficher" to "Show",
         "Code copié" to "Code copied",
-        "Chaque sauvegarde est chiffrée avec ce code. Notez-le hors du téléphone : sans lui, une sauvegarde est illisible." to "Every backup is encrypted with this code. Keep it off the phone: without it a backup cannot be read.",
         "Sauvegarde automatique" to "Automatic backup",
         "Adresse du serveur" to "Server address",
         "Adresse du dossier WebDAV" to "WebDAV folder address",

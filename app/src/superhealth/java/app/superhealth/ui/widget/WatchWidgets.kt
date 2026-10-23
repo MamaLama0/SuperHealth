@@ -39,12 +39,8 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.superhealth.SuperPrefs
-import app.superhealth.achievements.AchievementData
-import app.superhealth.achievements.Achievements
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.Scores
-import app.superhealth.ui.achievements.SpaceArt
-import app.superhealth.ui.achievements.drawJourney
 import app.superhealth.ui.dashboard.chargeColor
 import app.superhealth.ui.formatDuration
 import app.superhealth.ui.formatNumber
@@ -190,49 +186,3 @@ class SleepWidget : GlanceAppWidget() {
 }
 
 class SleepWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = SleepWidget() }
-
-/** Progression : la scène du voyage (bonhomme sur la Terre, fusée…), le niveau et l'étape. */
-class ProgressWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Exact
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val s = if (SuperPrefs.settings.value.achievements) runCatching { AchievementData.summary(context) }.getOrNull() else null
-        provideContent {
-            val ls = LocalSize.current
-            val d = context.resources.displayMetrics.density
-            val scale = minOf(d, 900f / maxOf(ls.width.value, ls.height.value, 1f))
-            val showText = ls.height.value >= 110 && s != null
-            val sceneH = if (showText) ls.height.value - 44 else ls.height.value
-            WidgetCard(WK.open(context, "achievements"), null, padding = 6.dp, horizontal = Alignment.CenterHorizontally) {
-                if (s == null) {
-                    Text(tr("Activez les succès dans les réglages."), style = TextStyle(color = WK.sub, fontSize = 12.sp), maxLines = 3)
-                    return@WidgetCard
-                }
-                val bmp = scene(context, s.journey, (ls.width.value * scale - 12 * scale).toInt(), (sceneH * scale - 12 * scale).toInt(), scale, isNight(context))
-                Image(ImageProvider(bmp), tr("Progression"), GlanceModifier.fillMaxWidth().height((sceneH - 12).dp).cornerRadius(18.dp))
-                if (showText) {
-                    Spacer(GlanceModifier.height(4.dp))
-                    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(trf("Niv. %1\$s", s.level.first), style = TextStyle(color = WK.on(Gold), fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                        Spacer(GlanceModifier.width(8.dp))
-                        Text(tr(s.journey.leg.label) + " · ${(s.journey.fraction * 100).toInt()} %", style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1,
-                            modifier = GlanceModifier.defaultWeight())
-                    }
-                }
-            }
-        }
-    }
-
-    private fun isNight(ctx: Context) = (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-        android.content.res.Configuration.UI_MODE_NIGHT_YES
-
-    private fun scene(ctx: Context, j: Achievements.Journey, w: Int, h: Int, density: Float, night: Boolean): Bitmap {
-        val img = ImageBitmap(w.coerceAtLeast(1), h.coerceAtLeast(1))
-        CanvasDrawScope().draw(Density(density), LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(img), Size(w.toFloat(), h.toFloat())) {
-            drawJourney(j.leg, j.fraction, night, SpaceArt.all(ctx))
-        }
-        return img.asAndroidBitmap()
-    }
-}
-
-class ProgressWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = ProgressWidget() }

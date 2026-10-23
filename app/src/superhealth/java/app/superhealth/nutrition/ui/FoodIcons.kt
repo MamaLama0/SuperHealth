@@ -98,6 +98,7 @@ object FoodIcons {
         "noix de coco" to "coconut", "fruit de la passion" to "passion fruit", "fruits de mer" to "seafood", "lait de coco" to "coconut milk",
         "chou fleur" to "cauliflower", "haricot vert" to "green beans", "haricots verts" to "green beans", "petit pois" to "peas",
         "petits pois" to "peas", "beurre de cacahuete" to "peanut butter", "oeuf au plat" to "fried egg", "oeufs au plat" to "fried egg",
+        "pain au chocolat" to "croissant", "pains au chocolat" to "croissant", "pain de seigle" to "rye bread", "pain perdu" to "toast",
         "aile de poulet" to "chicken wings", "ailes de poulet" to "chicken wings", "pain de mie" to "bread", "creme glacee" to "ice cream",
         "jaune d oeuf" to "egg", "blanc d oeuf" to "egg white", "salade verte" to "lettuce", "patate douce" to "sweet potato",
     )

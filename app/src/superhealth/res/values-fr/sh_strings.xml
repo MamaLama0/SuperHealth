@@ -27,8 +27,6 @@
     <string name="widget_chargeeffort_desc">Récupération du matin et charge cardio du jour</string>
     <string name="widget_sleep_name">Sommeil</string>
     <string name="widget_sleep_desc">Durée et phases de la nuit</string>
-    <string name="widget_progress_name">Progression</string>
-    <string name="widget_progress_desc">Votre voyage autour de la Terre et vers les étoiles</string>
     <string name="widget_overview_name">Aperçu</string>
     <string name="widget_overview_desc">Calories, pas, eau et Body Battery en un bandeau</string>
 </resources>

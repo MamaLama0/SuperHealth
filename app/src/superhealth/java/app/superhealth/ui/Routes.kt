@@ -12,7 +12,7 @@ object Routes {
         // écrans de lecture ouverts par le widget Insights
         "nutrition", "macros", "t/insights",
         // notification de mise à jour
-        "update", "achievements", "adventure", "coach", "modules",
+        "update", "coach", "modules",
     )
     private val patterns = listOf(Regex("search/[01]/-1"), Regex("h/metric/[A-Z0-9_]{1,32}"), Regex("exercise/[A-Za-z0-9_-]{1,64}"))
 

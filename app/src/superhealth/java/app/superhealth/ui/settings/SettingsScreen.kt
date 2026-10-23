@@ -215,7 +215,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     SuperPrefs.update { it.copy(updateCheck = v) }
                 }
                 RowDivider()
-                SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (CC0)"), icon = Icons.Rounded.Info)
+                SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV"), icon = Icons.Rounded.Info)
             }
             Spacer(Modifier.height(24.dp))
         }

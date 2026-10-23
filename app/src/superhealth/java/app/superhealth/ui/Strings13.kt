@@ -7,6 +7,9 @@ object Strings13 {
         "%1\$s raccourcis" to "%1\$s shortcuts",
         "%1\$s prête" to "%1\$s ready",
         "Activé" to "On",
+        "Coach IA…" to "AI coach…",
+        "Catalogue indisponible (%1\$s)." to "Catalogue unavailable (%1\$s).",
+        "Propre à ce téléphone, il reste le même après une réinstallation. Notez-le pour restaurer sur un autre téléphone." to "Tied to this phone, it stays the same after a reinstall. Write it down to restore on another phone.",
         "Désactivée" to "Off",
         "À jour" to "Up to date",
         "Non vérifiée" to "Not checked",
@@ -30,6 +33,6 @@ object Strings13 {
         "Musculation, rien n'est enregistré" to "Strength training, nothing is saved",
         "Refaire le questionnaire" to "Redo the questionnaire",
         "« Passer » annule" to "\"Skip\" cancels",
-        "Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (CC0)" to "Gadgetbridge (AGPL) · Open Food Facts (ODbL) · FSVO · Kenney (CC0)",
+        "Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV" to "Gadgetbridge (AGPL) · Open Food Facts (ODbL) · FSVO",
     )
 }

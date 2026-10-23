@@ -46,9 +46,6 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     HR_ZONES("Zones cardiaques", Section.TRAINING, watch = true),
     LOAD("Charge d'entraînement", Section.TRAINING, watch = true),
     DAY_TIMELINE("Ma journée", Section.HEALTH),
-    PROGRESS("Progression", Section.HEALTH),
-    /** Module Aventure : le boss du moment, combattu avec la fonte soulevée et les kilomètres courus. */
-    ADVENTURE("Boss du moment", Section.TRAINING),
     /** Module Coach IA : le point du jour. */
     COACH("Coach", Section.HEALTH);
 
@@ -81,7 +78,7 @@ const val GRID = 3
 val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.INTAKE, DashCard.MACROS,
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
-    DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE, DashCard.PROGRESS, DashCard.ADVENTURE,
+    DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE,
     DashCard.COACH)
 
 /** Cartes conçues en demi-largeur. */
@@ -90,7 +87,6 @@ val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard
 
 /** Module téléchargeable dont dépend la carte (null : toujours disponible). */
 val DashCard.module: String? get() = when (this) {
-    DashCard.PROGRESS, DashCard.ADVENTURE -> app.superhealth.modules.Modules.ADVENTURE
     DashCard.COACH -> app.superhealth.modules.Modules.COACH
     else -> null
 }
@@ -212,16 +208,9 @@ data class SuperSettings(
     val updateRepo: String = "Ouinon0/SuperHealth",
     val lastUpdateCheck: Long = 0,
     val updateSkip: String? = null,
-    /** Succès activés avant la 1.2 (ils font désormais partie du module Aventure, installé une fois si c'était le cas). */
-    val achievements: Boolean = true,
-    /** Modules : sources ajoutées à la main (non vérifiées), mises à jour automatiques, migration 1.2 faite. */
+    /** Modules : sources ajoutées à la main (non vérifiées), mises à jour automatiques. */
     val moduleSources: List<String> = emptyList(),
     val modulesAuto: Boolean = true,
-    val modulesMigrated: Boolean = false,
-    /** Aventure : jour (epochDay) où commence le combat des boss. */
-    val adventureStart: Long = 0,
-    /** Apparence du héros choisie (sprite) ; -1 : celle du niveau atteint. */
-    val adventureHero: Int = -1,
     /** Coach IA : ton (nom de coach.Coach.Tone), ce qu'il doit retenir (écrit ou validé par l'utilisateur), modèle dédié (vide : celui de l'IA). */
     val coachTone: String = "WARM",
     val coachMemory: List<String> = emptyList(),
@@ -297,10 +286,9 @@ object SuperPrefs {
             if (DashCard.CORRELATION !in cards) cards.add(DashCard.CORRELATION)
             s.copy(dashboard = cards, insightsAdded = true)
         }
-        // 1.1 : Progression sous les anneaux, graphiques de montre après les constantes (masqués sans montre qui mesure)
+        // 1.1 : graphiques de montre après les constantes (masqués sans montre qui mesure)
         if (!_settings.value.watchCardsAdded) update { s ->
             val cards = s.dashboard.toMutableList()
-            if (DashCard.PROGRESS !in cards) cards.add((cards.indexOf(DashCard.RINGS) + 1).coerceAtLeast(0), DashCard.PROGRESS)
             val at = (cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size
             cards.addAll(at, DashCard.watchCards11.filter { it !in cards })
             s.copy(dashboard = cards, watchCardsAdded = true)

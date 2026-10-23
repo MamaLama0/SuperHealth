@@ -62,15 +62,16 @@ object Archive {
     }
 
     /**
-     * Restaure [bytes] ; une archive chiffrée est ouverte avec le code de ce téléphone, ou [code] s'il est donné (sauvegarde
-     * d'un autre téléphone). Lève [BackupCrypto.WrongCode] si le code ne l'ouvre pas. Rend le résumé de ce qui a été restauré.
+     * Restaure [bytes] ; une archive chiffrée est ouverte avec le code de ce téléphone ou un code déjà utilisé ici, ou [code]
+     * s'il est donné (sauvegarde d'un autre téléphone). Lève [BackupCrypto.WrongCode] si aucun ne l'ouvre. Rend le résumé de
+     * ce qui a été restauré.
      */
     suspend fun restore(ctx: Context, bytes: ByteArray, code: String? = null): String {
-        val plain = if (BackupCrypto.isEncrypted(bytes)) {
-            withContext(Dispatchers.Default) { BackupCrypto.decrypt(bytes, code ?: Secrets.backupCode(ctx)) }
+        val plain = if (BackupCrypto.isEncrypted(bytes)) withContext(Dispatchers.Default) {
+            if (code != null) BackupCrypto.decrypt(bytes, code).also { Secrets.remember(ctx, code) }
+            else Secrets.restoreCodes(ctx).firstNotNullOfOrNull { c -> runCatching { BackupCrypto.decrypt(bytes, c) }.getOrNull() }
+                ?: throw BackupCrypto.WrongCode()
         } else bytes
-        // le code d'un autre téléphone qui ouvre l'archive devient celui de ce téléphone : les prochaines sauvegardes le gardent
-        if (code != null && BackupCrypto.isEncrypted(bytes)) Secrets.put(ctx, Secrets.BACKUP_CODE, code.trim())
         val watch = File(ctx.cacheDir, "montre-restore.zip").apply { delete() }
         val files = withContext(Dispatchers.IO) {
             if (plain.size > 1 && plain[0] == 'P'.code.toByte() && plain[1] == 'K'.code.toByte()) {

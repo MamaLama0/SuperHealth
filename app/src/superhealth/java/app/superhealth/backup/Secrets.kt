@@ -37,9 +37,29 @@ object Secrets {
         prefs(ctx).edit().putString(name, Base64.encodeToString(out, Base64.NO_WRAP)).apply()
     }
 
-    /** Code de récupération, créé au premier démarrage. */
-    @Synchronized fun backupCode(ctx: Context): String =
-        get(ctx, BACKUP_CODE) ?: BackupCrypto.newCode().also { put(ctx, BACKUP_CODE, it) }
+    /** Codes d'anciennes sauvegardes (code aléatoire d'avant la 1.3, codes saisis à une restauration), un par ligne. */
+    const val KNOWN_CODES = "backup_codes_known"
+
+    /**
+     * Code de récupération de ce téléphone : tiré de ANDROID_ID, donc le même après une réinstallation. Sans identifiant
+     * (cas théorique), un code aléatoire gardé ici.
+     */
+    @Synchronized fun backupCode(ctx: Context): String {
+        val id = android.provider.Settings.Secure.getString(ctx.contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+        if (!id.isNullOrBlank()) return BackupCrypto.deviceCode(id)
+        return get(ctx, BACKUP_CODE) ?: BackupCrypto.newCode().also { put(ctx, BACKUP_CODE, it) }
+    }
+
+    /** Codes à essayer pour ouvrir une sauvegarde : celui du téléphone, puis les anciens. */
+    fun restoreCodes(ctx: Context): List<String> =
+        (listOf(backupCode(ctx)) + get(ctx, KNOWN_CODES).orEmpty().lines() + listOfNotNull(get(ctx, BACKUP_CODE)))
+            .filter { BackupCrypto.isValidCode(it) }.distinctBy { BackupCrypto.normalize(it) }
+
+    /** Retient [code] pour les prochaines restaurations (le code de ce téléphone ne change pas). */
+    @Synchronized fun remember(ctx: Context, code: String) {
+        val known = get(ctx, KNOWN_CODES).orEmpty().lines().filter { it.isNotBlank() }
+        if (known.none { BackupCrypto.normalize(it) == BackupCrypto.normalize(code) }) put(ctx, KNOWN_CODES, (known + code.trim()).joinToString("\n"))
+    }
 
     private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 

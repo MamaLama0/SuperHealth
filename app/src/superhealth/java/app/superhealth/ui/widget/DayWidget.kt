@@ -210,7 +210,7 @@ object DayWidgets {
             HydrationWidgetReceiver::class.java to HydrationWidget(), InsightWidgetReceiver::class.java to InsightWidget(),
             VitalsWidgetReceiver::class.java to VitalsWidget(), StepsWidgetReceiver::class.java to StepsWidget(),
             OverviewWidgetReceiver::class.java to OverviewWidget(), ChargeEffortWidgetReceiver::class.java to ChargeEffortWidget(),
-            SleepWidgetReceiver::class.java to SleepWidget(), ProgressWidgetReceiver::class.java to ProgressWidget()).forEach { (receiver, widget) ->
+            SleepWidgetReceiver::class.java to SleepWidget()).forEach { (receiver, widget) ->
             mgr.getAppWidgetIds(android.content.ComponentName(ctx, receiver)).forEach { id ->
                 runCatching { widget.update(ctx, glance.getGlanceIdBy(id)) }
             }

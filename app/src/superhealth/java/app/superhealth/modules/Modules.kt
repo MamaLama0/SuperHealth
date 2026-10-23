@@ -34,9 +34,8 @@ object Modules {
     const val OFFICIAL = "https://raw.githubusercontent.com/Ouinon0/SuperHealth/modules/dist/index.json"
 
     /** Moteurs présents dans cette version de l'app (un module d'un autre type demande une mise à jour). */
-    const val ADVENTURE = "adventure"
     const val COACH = "coach"
-    val engines = setOf(ADVENTURE, COACH)
+    val engines = setOf(COACH)
 
     @Serializable
     data class Module(
@@ -99,8 +98,12 @@ object Modules {
 
     fun init(ctx: Context) {
         root = File(ctx.filesDir, "modules").apply { mkdirs() }
-        _installed.value = runCatching { json.decodeFromString(ListSerializer(Installed.serializer()), File(root, "installed.json").readText()) }
+        val saved = runCatching { json.decodeFromString(ListSerializer(Installed.serializer()), File(root, "installed.json").readText()) }
             .getOrDefault(emptyList()).filter { File(root, it.id).isDirectory }
+        // module dont le moteur a quitté l'app (l'Aventure, retirée en 1.3) : effacé
+        val (kept, gone) = saved.partition { it.kind in engines }
+        gone.forEach { File(root, it.id).deleteRecursively() }
+        if (gone.isEmpty()) _installed.value = kept else save(kept)
     }
 
     private fun save(list: List<Installed>) {
@@ -246,23 +249,12 @@ object Modules {
         onChanged(ctx, m.kind)
     }
 
-    /**
-     * Effets d'un changement : cartes du tableau de bord, icône pixel-art, caches des moteurs. L'aventure commence avec les
-     * 7 derniers jours : la première visite montre déjà les coups de la semaine.
-     */
+    /** Effets d'un changement : cartes du tableau de bord, caches des moteurs. */
     private fun onChanged(ctx: Context, kind: String) {
         val on = isActive(kind)
         // module retiré ou désactivé : ses cartes quittent le tableau de bord (elles reviennent à la réactivation)
         if (!on) SuperPrefs.update { s -> s.copy(dashboard = s.dashboard.filter { it.module != kind }) }
         when (kind) {
-            ADVENTURE -> {
-                app.superhealth.adventure.AdventureArt.invalidate()
-                if (on) SuperPrefs.update { s ->
-                    s.copy(adventureStart = s.adventureStart.takeIf { it > 0 } ?: java.time.LocalDate.now().minusDays(7).toEpochDay(),
-                        dashboard = withCards(s.dashboard, app.superhealth.DashCard.PROGRESS, app.superhealth.DashCard.ADVENTURE))
-                }
-                LauncherIcon.apply(ctx)
-            }
             COACH -> {
                 app.superhealth.coach.Coach.invalidate()
                 if (on) SuperPrefs.update { s ->
@@ -273,31 +265,10 @@ object Modules {
         }
     }
 
-    private fun withCards(cards: List<app.superhealth.DashCard>, after: app.superhealth.DashCard, add: app.superhealth.DashCard): List<app.superhealth.DashCard> {
-        if (add in cards) return cards
-        val i = cards.indexOf(after)
-        return cards.toMutableList().also { if (i >= 0) it.add(i + 1, add) else it.add(add) }
-    }
-
     /** Mises à jour automatiques (vérification quotidienne) : modules installés dont une version plus récente est publiée. */
     suspend fun autoUpdate(ctx: Context) {
         if (!SuperPrefs.settings.value.modulesAuto || _installed.value.isEmpty()) return
         refresh()
         _installed.value.mapNotNull { update(it) }.filter { compatible(ctx, it.module) }.forEach { install(ctx, it) }
-    }
-
-    /**
-     * Passage à la 1.2 : les succès (activés jusqu'ici dans l'app) font partie du module Aventure, installé une fois
-     * automatiquement s'ils étaient activés.
-     */
-    suspend fun migrate(ctx: Context) {
-        val s = SuperPrefs.settings.value
-        if (s.modulesMigrated) return
-        if (s.achievements && !isActive(ADVENTURE)) {
-            refresh()
-            val e = catalog.value.firstOrNull { it.verified && it.module.kind == ADVENTURE } ?: return
-            if (!install(ctx, e)) return
-        }
-        SuperPrefs.update { it.copy(modulesMigrated = true) }
     }
 }

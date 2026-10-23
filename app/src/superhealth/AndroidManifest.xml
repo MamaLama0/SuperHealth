@@ -43,7 +43,7 @@
             android:theme="@style/SuperHealth.Theme"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Icône du lanceur : la lune, ou sa version pixel-art (module Aventure) ; un seul alias activé à la fois (modules.LauncherIcon) -->
+        <!-- Icône du lanceur (alias : l'activité principale n'a pas de filtre LAUNCHER) -->
         <activity-alias
             android:name="app.superhealth.Launcher"
             android:targetActivity="app.superhealth.MainActivity"
@@ -56,19 +56,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <!-- Raccourcis de l'icône (appui long) : rechercher, scanner, séance du jour, pesée -->
-            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
-        </activity-alias>
-        <activity-alias
-            android:name="app.superhealth.LauncherPixel"
-            android:targetActivity="app.superhealth.MainActivity"
-            android:icon="@mipmap/ic_launcher_pixel"
-            android:roundIcon="@mipmap/ic_launcher_pixel_round"
-            android:enabled="false"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
 
@@ -141,10 +128,6 @@
         <receiver android:name="app.superhealth.ui.widget.SleepWidgetReceiver" android:exported="true" android:label="@string/widget_sleep_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_sleep" />
-        </receiver>
-        <receiver android:name="app.superhealth.ui.widget.ProgressWidgetReceiver" android:exported="true" android:label="@string/widget_progress_name">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_progress" />
         </receiver>
         <receiver android:name="app.superhealth.ui.widget.StepsWidgetReceiver" android:exported="true" android:label="@string/widget_steps_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
