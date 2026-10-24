@@ -68,8 +68,6 @@ import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -169,14 +167,14 @@ import kotlin.math.roundToInt
 /**
  * Questionnaire d'accueil de SuperHealth : un seul parcours pour les trois modules.
  * - Vous : prénom, sexe, naissance, taille, poids, silhouette, activité, historique (questions de MacroFactor) ;
- * - Objectif : type, cible et rythme, protéines, diète, plancher, répartition ;
+ * - Objectif : type, poids cible, durée (le rythme en découle, comme dans MacroFactor), protéines, diète, plancher, répartition ;
  * - Entraînement : type d'entraînement, puis expérience et salle si musculation (questions de MacroFactor Workouts) ;
  * - Connexions : montre (module LocalHealth, désactivable) et Health Connect ;
  * puis génération animée du programme nutrition et, au choix, du programme de musculation.
  */
 private enum class Step(val section: Int) {
     WELCOME(0), NAME(0), SEX(0), BIRTH(0), HEIGHT(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
-    GOAL(1), TARGET(1), PROTEIN(1), DIET(1), FLOOR(1), DISTRIBUTION(1),
+    GOAL(1), TARGET(1), PACE(1), PROTEIN(1), DIET(1), FLOOR(1), DISTRIBUTION(1),
     TRAINING(2), EXPERIENCE(2), GYM(2), PROGRAM(2), LIFT_GOAL(2), DAYS(2), DURATION(2),
     WATCH(3), HEALTH(3),
     GENERATING(4), RESULT(4),
@@ -194,7 +192,7 @@ private enum class WatchChoice(val label: String, val description: String) {
 /** Illustration spatiale (thème « Lune », tools/moon_recolor.sh) associée à chaque étape. */
 private fun Step.image() = "illustrations/illustration_" + when (this) {
     Step.WELCOME -> 1; Step.NAME -> 6; Step.SEX -> 7; Step.BIRTH -> 10; Step.HEIGHT -> 14; Step.WEIGHT -> 23; Step.BODY_FAT -> 15
-    Step.ACTIVITY -> 4; Step.HISTORY -> 5; Step.HEALTH -> 24; Step.GOAL -> 17; Step.TARGET -> 22; Step.TRAINING -> 9
+    Step.ACTIVITY -> 4; Step.HISTORY -> 5; Step.HEALTH -> 24; Step.GOAL -> 17; Step.TARGET -> 22; Step.PACE -> 26; Step.TRAINING -> 9
     Step.PROTEIN -> 16; Step.DIET -> 3; Step.FLOOR -> 13; Step.DISTRIBUTION -> 25; Step.GENERATING -> 28; Step.RESULT -> 2
     Step.EXPERIENCE -> 11; Step.GYM -> 12; Step.WATCH -> 19
     Step.PROGRAM -> 8; Step.LIFT_GOAL -> 18; Step.DAYS -> 20; Step.DURATION -> 21
@@ -224,15 +222,23 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var birthYear by rememberSaveable { mutableIntStateOf(profile.birthYear) }
     var heightCm by rememberSaveable { mutableIntStateOf(profile.heightCm.roundToInt()) }
     var weightKg by rememberSaveable { mutableDoubleStateOf(if (profile.sex == Sex.FEMALE) 65.0 else 80.0) }
+    // questionnaire relancé : la molette part de la dernière pesée plutôt que d'une valeur par défaut
+    var weightLoaded by rememberSaveable { mutableStateOf(sim) }
+    if (!weightLoaded) LaunchedEffect(Unit) {
+        vm.repo.weighIns.all().lastOrNull()?.let { weightKg = it.weightKg }
+        weightLoaded = true
+    }
     var bodyFat by rememberSaveable { mutableStateOf<Int?>(null) }
     var activity by rememberSaveable { mutableStateOf(profile.activity) }
     var exercise by rememberSaveable { mutableStateOf(profile.exercise) }
     var athlete by rememberSaveable { mutableStateOf(profile.athlete) }
     var change by rememberSaveable { mutableStateOf(profile.weightChange) }
     var lifetime by rememberSaveable { mutableStateOf(profile.lifetimeWeight) }
-    var goal by rememberSaveable { mutableStateOf(GoalType.CUT) }
-    var targetKg by rememberSaveable { mutableDoubleStateOf(0.0) }
+    // questionnaire relancé : objectif et cible du programme en cours comme point de départ
+    var goal by rememberSaveable { mutableStateOf(if (rerun) program.goalType else GoalType.CUT) }
+    var targetKg by rememberSaveable { mutableDoubleStateOf(if (rerun) program.targetWeightKg ?: 0.0 else 0.0) }
     var rate by rememberSaveable { mutableDoubleStateOf(0.5) }
+    var weeks by rememberSaveable { mutableIntStateOf(10) }
     var training by rememberSaveable { mutableStateOf(if (mode == OnboardingMode.TRAINING_SIM) Training.STRENGTH else program.training) }
     var protein by rememberSaveable { mutableStateOf(program.proteinPreference) }
     var diet by rememberSaveable { mutableStateOf(program.dietPreference) }
@@ -261,7 +267,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         }
         when (it) {
             Step.HEALTH -> healthAvailable
-            Step.TARGET -> goal != GoalType.MAINTENANCE
+            Step.TARGET, Step.PACE -> goal != GoalType.MAINTENANCE
             Step.EXPERIENCE, Step.GYM, Step.PROGRAM -> lifts
             Step.LIFT_GOAL, Step.DAYS, Step.DURATION -> lifts && wantProgram
             else -> true
@@ -293,6 +299,30 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
 
     // Profil, programme et objectif tels que saisis : utilisés pour l'aperçu du rythme et pour le résultat.
     val today = LocalDate.now().toEpochDay()
+    fun targetOk() = (goal == GoalType.CUT && targetKg < weightKg - 0.05) || (goal == GoalType.BULK && targetKg > weightKg + 0.05)
+    /**
+     * Durée → rythme en % du poids par semaine (unité des programmes de MacroFactor) : écart / semaines / poids actuel.
+     * Les durées proposées gardent le rythme entre 0,1 % et le maximum de MacroFactor (1 % en perte, 0,5 % en prise).
+     */
+    fun rateFor(w: Int) = abs(targetKg - weightKg) / w / weightKg * 100
+    /** Cible par défaut (5 kg dans le sens de l'objectif), gardée si elle va déjà dans le bon sens. */
+    fun initTarget() {
+        if (goal != GoalType.MAINTENANCE && !targetOk()) targetKg = (weightKg + if (goal == GoalType.CUT) -5 else 5).coerceIn(35.0, 250.0)
+    }
+    fun paceWeeks(): List<Int> {
+        val delta = abs(targetKg - weightKg).coerceAtLeast(0.1)
+        val max = if (goal == GoalType.BULK) 0.5 else 1.0
+        val shortest = kotlin.math.ceil(delta / (weightKg * max / 100)).toInt().coerceAtLeast(1)
+        val longest = (delta / (weightKg * 0.1 / 100)).toInt().coerceIn(shortest, 156)
+        return (shortest..longest).toList()
+    }
+    /** Durée par défaut : celle du rythme recommandé de MacroFactor (0,5 % en perte, 0,25 % en prise), puis le rythme exact qui en découle. */
+    fun initPace() {
+        val options = paceWeeks()
+        val pref = abs(targetKg - weightKg) / (weightKg * (if (goal == GoalType.BULK) 0.25 else 0.5) / 100)
+        weeks = pref.roundToInt().coerceIn(options.first(), options.last())
+        rate = rateFor(weeks)
+    }
     fun draftProfile() = profile.copy(sex = sex, birthYear = birthYear, heightCm = heightCm.toDouble(), activity = activity,
         bodyFatPct = bodyFat?.toDouble(), weightChange = change, lifetimeWeight = lifetime, exercise = exercise, athlete = athlete)
     fun draftTarget() = when {
@@ -493,29 +523,36 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             GoalType.CUT -> Icons.AutoMirrored.Rounded.TrendingDown
                             GoalType.MAINTENANCE -> Icons.AutoMirrored.Rounded.TrendingFlat
                             GoalType.BULK -> Icons.AutoMirrored.Rounded.TrendingUp
-                        } }) { g ->
-                            goal = g
-                            rate = if (g == GoalType.BULK) 0.25 else 0.5
-                            targetKg = 0.0
-                        }
+                        } }) { g -> if (g != goal) { goal = g; targetKg = 0.0 } }
                     }
-                    Step.TARGET -> Page(st, if (goal == GoalType.CUT) tr("Jusqu'où et à quel rythme ?") else tr("Jusqu'où et à quel rythme ?"), null) {
-                        if (targetKg == 0.0) targetKg = (weightKg + if (goal == GoalType.CUT) -5 else 5).coerceIn(35.0, 250.0)
-                        SmallLabel(tr("Poids cible"))
-                        WeightWheel(targetKg, unit, height = 150) { targetKg = it }
-                        SmallLabel(tr("Rythme"))
-                        RatePicker(rate, goal) { rate = it }
-                        val delta = abs(weightKg - targetKg)
+                    Step.TARGET -> Page(st, tr("Quel poids visez-vous ?"),
+                        trf("Poids actuel : %1\$s", settings.copy(weightUnit = unit).weight(weightKg, 1))) {
+                        WeightWheel(targetKg, unit) { targetKg = it }
+                        val delta = targetKg - weightKg
+                        Text((if (delta > 0) "+" else if (delta < 0) "−" else "") + settings.copy(weightUnit = unit).weight(abs(delta), 1),
+                            style = MaterialTheme.typography.titleMedium, color = Mf.colors.textSecondary, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            textAlign = TextAlign.Center)
+                        if (!targetOk()) Text(if (goal == GoalType.CUT) tr("Choisissez un poids plus bas que le poids actuel.") else tr("Choisissez un poids plus haut que le poids actuel."),
+                            color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            textAlign = TextAlign.Center)
+                    }
+                    Step.PACE -> Page(st, tr("En combien de temps ?"), tr("Le rythme et votre budget calorique en découlent.")) {
+                        val options = paceWeeks()
+                        Wheel(options.map { w -> trf("%1\$s sem. · %2\$s", w, shortDate(today + w * 7L)) }, options.indexOf(weeks).coerceAtLeast(0), height = 200) {
+                            weeks = options[it]; rate = rateFor(weeks)
+                        }
                         val kgWeek = weightKg * rate / 100
-                        val weeks = if (kgWeek > 0) delta / kgWeek else 0.0
                         val (_, ci) = remember(rate, targetKg, goal) { draftCheckIn() }
+                        val max = if (goal == GoalType.BULK) 0.5 else 1.0
+                        Spacer(Modifier.height(12.dp))
+                        Text(trf("%1\$s %% du poids / semaine", num(rate, 2)), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                        Text(tr(when { rate <= max * 0.3 -> "Doux"; rate <= max * 0.6 -> "Modéré (recommandé)"; else -> "Ambitieux" }),
+                            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                         Spacer(Modifier.height(12.dp))
                         RowStat(tr("Par semaine"), settings.copy(weightUnit = unit).weight(kgWeek, 2))
-                        RowStat(tr("Date de fin estimée"), shortDate(today + (weeks * 7).roundToInt()))
+                        RowStat(tr("Date de fin estimée"), shortDate(today + weeks * 7L))
                         RowStat(tr("Budget initial"), settings.energy(ci.kcal))
-                        if ((goal == GoalType.CUT && targetKg >= weightKg) || (goal == GoalType.BULK && targetKg <= weightKg))
-                            Text(tr("La cible doit aller dans le sens de l'objectif."), color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
                     }
                     Step.TRAINING -> Page(st, tr("Quel entraînement pendant ce programme ?"), null) {
                         Options(Training.entries, training, { when (it) {
@@ -648,13 +685,17 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                 Step.BODY_FAT -> if (bodyFat == null) tr("Passer") else tr("Continuer")
                 else -> tr("Continuer")
             }
-            val ok = step != Step.TARGET || (goal == GoalType.CUT && targetKg < weightKg) || (goal == GoalType.BULK && targetKg > weightKg)
+            val ok = step != Step.TARGET || targetOk()
             Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 PillButton(tr(label), Modifier.fillMaxWidth(), enabled = ok) {
                     when {
                         step == Step.RESULT && sim -> { forward = false; index = 0 }
                         step == Step.RESULT -> finish(program = lifts && wantProgram)
-                        else -> next()
+                        else -> {
+                            if (step == Step.GOAL) initTarget()
+                            if (step == Step.TARGET) initPace()
+                            next()
+                        }
                     }
                 }
                 if (sim && step == Step.RESULT) {
@@ -824,23 +865,6 @@ private fun WeightWheel(kg: Double, unit: WeightUnit, height: Int = 220, onKg: (
         Text(",", fontSize = 24.sp, modifier = Modifier.padding(horizontal = 4.dp))
         Wheel((0..9).map { it.toString() }, tenth, height, Modifier.weight(0.8f)) { tenth = it }
         Text(unit.label.tr(), fontSize = 20.sp, modifier = Modifier.padding(start = 8.dp).width(36.dp))
-    }
-}
-
-/** Rythme en % du poids par semaine (goal_rate_picker) : bornes et repères de MacroFactor. */
-@Composable
-private fun RatePicker(rate: Double, goal: GoalType, onRate: (Double) -> Unit) {
-    val max = if (goal == GoalType.BULK) 0.5 else 1.0
-    Column {
-        Text(trf("%1\$s %% du poids / semaine", num(rate, 2)), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Text(tr(when {
-            rate <= max * 0.3 -> tr("Doux")
-            rate <= max * 0.6 -> tr("Modéré (recommandé)")
-            else -> tr("Ambitieux")
-        }), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Slider(rate.toFloat(), { onRate((it * 20).roundToInt() / 20.0) }, valueRange = 0.1f..max.toFloat(),
-            colors = SliderDefaults.colors(thumbColor = Mf.colors.accent, activeTrackColor = Mf.colors.accent, inactiveTrackColor = Mf.colors.chip))
     }
 }
 

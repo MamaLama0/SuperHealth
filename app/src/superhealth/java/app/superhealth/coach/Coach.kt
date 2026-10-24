@@ -206,8 +206,8 @@ object Coach {
                     appendLine()
                     appendLine("## Cardio and other activities (watch / Health Connect)")
                     cardio.sortedBy { it.start }.forEach { a ->
-                        val km = a.watch?.distanceM?.takeIf { it > 0 }?.let { ", ${n(it / 1000, 1)} km" } ?: ""
-                        val kcal = a.watch?.kcal?.takeIf { it > 0 }?.let { ", ${n(it)} kcal" } ?: ""
+                        val km = a.distanceM?.takeIf { it > 0 }?.let { ", ${n(it / 1000, 1)} km" } ?: ""
+                        val kcal = (a.watch?.kcal ?: a.run?.kcal)?.takeIf { it > 0 }?.let { ", ${n(it)} kcal" } ?: ""
                         appendLine("- ${TrainingAnalytics.day(a.start).format(dayFmt)}: ${a.title} (${a.kind.name.lowercase()}), ${a.minutes} min$km$kcal")
                     }
                 }
@@ -289,7 +289,7 @@ object Coach {
 
     /** Pose une question (avec les 12 derniers messages) ; la réponse est ajoutée à la conversation. */
     suspend fun ask(ctx: Context, question: String): Msg {
-        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du module introuvable : réinstallez-le dans Réglages > Modules."))
+        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val user = Msg("user", question.trim())
         saveChat(chat.value + user)
         val history = chat.value.takeLast(12)
@@ -299,7 +299,7 @@ object Coach {
 
     /** Point du jour (comme le Daily Outlook de WHOOP) : préparé une fois par jour, gardé jusqu'au lendemain. */
     suspend fun makeBrief(ctx: Context): Brief {
-        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du module introuvable : réinstallez-le dans Réglages > Modules."))
+        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val raw = split(complete(p, system(p, context(ctx)), listOf(Msg("user", p.brief)))).first
         val lines = raw.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val head = lines.firstOrNull { !it.startsWith("•") && !it.startsWith("-") && !it.startsWith("*") }?.trim('*', '#', ' ') ?: ""

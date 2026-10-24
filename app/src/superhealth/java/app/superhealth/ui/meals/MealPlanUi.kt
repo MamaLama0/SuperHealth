@@ -1,0 +1,225 @@
+package app.superhealth.ui.meals
+
+import android.content.Intent
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.RestaurantMenu
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import app.superhealth.SuperPrefs
+import app.superhealth.backup.Secrets
+import app.superhealth.meals.MealPlanner
+import app.superhealth.nutrition.data.FoodEntryEntity
+import app.superhealth.nutrition.domain.Macros
+import app.superhealth.nutrition.ui.components.PillButton
+import app.superhealth.nutrition.ui.components.RowDivider
+import app.superhealth.nutrition.ui.components.SettingRow
+import app.superhealth.ui.formatNumber
+import app.superhealth.ui.go
+import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.tr
+import app.superhealth.ui.trf
+import java.time.LocalTime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** Teinte du plugin (comme sa fiche dans Réglages > Plugins). */
+val MealsHue = Color(0xFFF2994A)
+
+/** Photos de recettes déjà chargées : la carte ne clignote pas quand le journal défile. */
+private val photos = HashMap<String, Bitmap>()
+
+/**
+ * Carte « Repas prévus », en haut du journal quand le plugin est actif : propose les repas qui restent pour finir la journée
+ * sur les cibles, chacun s'ajoute au journal d'un geste.
+ */
+@Composable
+fun MealPlanCard(day: Long, entries: List<FoodEntryEntity>, target: Macros?, energy: (Double) -> String, modifier: Modifier = Modifier) {
+    val installed by app.superhealth.modules.Modules.installed.collectAsState()
+    if (installed.none { it.kind == app.superhealth.modules.Modules.MEALS && it.enabled }) return
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val plans by MealPlanner.plans.collectAsState()
+    val plan = plans[day]
+    var busy by remember(day) { mutableStateOf(false) }
+    var error by remember(day) { mutableStateOf<String?>(null) }
+    var open by remember(day) { mutableStateOf<Int?>(null) }
+    fun propose() {
+        if (target == null) return
+        busy = true; error = null
+        scope.launch {
+            runCatching { MealPlanner.generate(ctx, day, target, entries) }.onFailure { error = it.message ?: it.javaClass.simpleName }
+            busy = false
+        }
+    }
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Mf.colors.card).animateContentSize().padding(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(34.dp).clip(CircleShape).background(MealsHue.container()), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.RestaurantMenu, null, Modifier.size(18.dp), tint = MealsHue)
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(tr("Repas prévus"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            when {
+                busy -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MealsHue)
+                plan != null -> {
+                    IconButton(onClick = { propose() }) { Icon(Icons.Rounded.Refresh, tr("Autres repas"), tint = Mf.colors.textSecondary) }
+                    IconButton(onClick = { MealPlanner.clear(day) }) { Icon(Icons.Rounded.Close, tr("Retirer"), tint = Mf.colors.textSecondary) }
+                }
+            }
+        }
+        if (plan == null) {
+            Text(tr("Des repas pour finir la journée pile sur vos cibles."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+                modifier = Modifier.padding(top = 6.dp, bottom = 10.dp))
+            PillButton(if (busy) tr("Préparation…") else tr("Proposer mes repas"), Modifier.fillMaxWidth(), enabled = !busy && target != null,
+                icon = Icons.Rounded.AutoAwesome) { propose() }
+        } else {
+            plan.meals.forEachIndexed { i, m ->
+                if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Mf.colors.divider))
+                MealRow(m, open == i, energy, onToggle = { open = if (open == i) null else i }) {
+                    val now = LocalTime.now().let { it.hour * 60 + it.minute }
+                    scope.launch { MealPlanner.log(day, m, now) }
+                }
+            }
+            if (plan.provider == "spoonacular") Text(tr("Recettes : spoonacular"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary,
+                modifier = Modifier.padding(top = 6.dp).clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://spoonacular.com/food-api"))) })
+        }
+        error?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = Color(0xFFE5574F), modifier = Modifier.padding(top = 8.dp)) }
+    }
+}
+
+@Composable
+private fun MealRow(m: MealPlanner.Meal, open: Boolean, energy: (Double) -> String, onToggle: () -> Unit, onLog: () -> Unit) {
+    val ctx = LocalContext.current
+    val mm = m.macros
+    val slot = MealPlanner.content()?.slots?.getOrNull(m.slot)?.name?.text ?: ""
+    Column(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(listOfNotNull(slot, m.minutes?.let { trf("%1\$s min", it) }).joinToString(" · "),
+                    style = MaterialTheme.typography.labelMedium, color = MealsHue.onContainer())
+                Text(m.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = if (open) 3 else 1, overflow = TextOverflow.Ellipsis)
+                Text(energy(mm.kcal) + " · " + trf("P %1\$s · L %2\$s · G %3\$s", formatNumber(mm.protein), formatNumber(mm.fat), formatNumber(mm.carbs)),
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.size(36.dp).clip(CircleShape).background(if (m.logged) MealsHue else MealsHue.container())
+                .clickable(enabled = !m.logged, onClick = onLog), contentAlignment = Alignment.Center) {
+                Icon(if (m.logged) Icons.Rounded.Check else Icons.Rounded.Add, if (m.logged) tr("Ajouté") else tr("Ajouter au journal"),
+                    Modifier.size(20.dp), tint = if (m.logged) Color.White else MealsHue)
+            }
+        }
+        AnimatedVisibility(open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Column(Modifier.padding(top = 8.dp)) {
+                m.image?.let { url -> RecipePhoto(url) }
+                m.servings?.let { Text(trf("%1\$s portion(s)", formatNumber(it, 2)), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 4.dp)) }
+                m.ingredients.forEach { i ->
+                    Row(Modifier.padding(vertical = 2.dp)) {
+                        Box(Modifier.padding(top = 7.dp).size(5.dp).clip(CircleShape).background(MealsHue))
+                        Spacer(Modifier.width(8.dp))
+                        Text((if (i.grams > 0) trf("%1\$s g ", formatNumber(i.grams)) else "") + i.name, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                m.url?.let { url ->
+                    Text(tr("Voir la recette"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent,
+                        modifier = Modifier.padding(top = 6.dp).clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecipePhoto(url: String) {
+    val bmp by produceState(photos[url], url) {
+        if (value == null) value = withContext(Dispatchers.IO) {
+            runCatching {
+                if (!app.superhealth.nutrition.data.Net.canSendSecret(url)) return@runCatching null
+                (java.net.URL(url).openConnection() as java.net.HttpURLConnection).run {
+                    connectTimeout = 10000; readTimeout = 15000
+                    try { if (responseCode == 200) inputStream.use { android.graphics.BitmapFactory.decodeStream(it) } else null } finally { disconnect() }
+                }
+            }.getOrNull()?.also { photos[url] = it }
+        }
+    }
+    bmp?.let {
+        Image(it.asImageBitmap(), null, Modifier.fillMaxWidth().height(150.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Crop)
+    }
+}
+
+/** Réglages du plugin (fiche dans Réglages > Plugins) : fournisseur, clé Spoonacular, aliments à éviter. */
+@Composable
+fun MealPlannerOptions(nav: NavHostController) {
+    val ctx = LocalContext.current
+    val sh by SuperPrefs.settings.collectAsState()
+    var key by remember { mutableStateOf(Secrets.get(ctx, MealPlanner.SPOONACULAR_KEY) ?: "") }
+    var exclude by remember { mutableStateOf(sh.mealsExclude) }
+    val colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MealsHue, unfocusedBorderColor = Mf.colors.divider)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        RowDivider()
+        Text(if (key.isBlank()) tr("Repas composés par votre IA à partir de la base d'aliments.") else tr("Vraies recettes Spoonacular (photo, temps, lien)."),
+            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp))
+        OutlinedTextField(key, { key = it.trim(); Secrets.put(ctx, MealPlanner.SPOONACULAR_KEY, key) }, Modifier.fillMaxWidth(), singleLine = true,
+            label = { Text(tr("Clé Spoonacular (gratuite, facultative)")) }, visualTransformation = PasswordVisualTransformation(), colors = colors)
+        Text(tr("Créer une clé gratuite"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent,
+            modifier = Modifier.padding(horizontal = 4.dp).clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://spoonacular.com/food-api/console#Signup"))) })
+        OutlinedTextField(exclude, { exclude = it.take(200); SuperPrefs.update { s -> s.copy(mealsExclude = exclude) } }, Modifier.fillMaxWidth(),
+            label = { Text(tr("Aliments à éviter")) }, placeholder = { Text(tr("ex. champignons, porc"), color = Mf.colors.textTertiary) }, colors = colors)
+        if (key.isBlank()) SettingRow(tr("Fournisseur IA"), subtitle = tr("Clé et modèle, partagés avec la nutrition")) { nav.go("aisettings") }
+    }
+}

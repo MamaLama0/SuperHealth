@@ -56,7 +56,6 @@ import app.superhealth.ui.relativeDay
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
-import app.superhealth.bridge.FitImport
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TextButton
@@ -99,8 +98,8 @@ fun ActivityRow(a: Bridge.Activity, horizontal: androidx.compose.ui.unit.Dp = 16
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(tr(a.title), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOfNotNull(relativeDay(localDate(a.start)), a.watch?.distanceM?.takeIf { it >= 100 }?.let { km(it) + " km" },
-                formatDuration(a.minutes.toDouble()), tr(a.source.label)).joinToString(" · "),
+            Text(listOfNotNull(relativeDay(localDate(a.start)), a.distanceM?.takeIf { it >= 100 }?.let { km(it) + " km" },
+                formatDuration(a.minutes.toDouble()), a.run?.app ?: tr(a.source.label)).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         hr?.let {
@@ -115,6 +114,7 @@ fun openActivity(ctx: Context, nav: NavHostController, a: Bridge.Activity) {
     when {
         a.gymId != null -> nav.navigate("workoutdetail/${a.gymId}")
         a.watch != null -> nav.navigate("h/workout/${a.watch.id}")
+        a.run != null -> nav.navigate("h/workout/${a.run.id}")
         else -> Toast.makeText(ctx, app.superhealth.ui.trf("Activité enregistrée par %1\$s", a.hc?.app ?: "Health Connect"), Toast.LENGTH_SHORT).show()
     }
 }
@@ -126,7 +126,8 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
     val refresh by vm.refresh.collectAsState()
     val sh by vm.settings.collectAsState()
     val devices by vm.devices.collectAsState()
-    val list by produceState(emptyList<Bridge.Activity>(), refresh, sh.watchModule) {
+    val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
+    val list by produceState(emptyList<Bridge.Activity>(), refresh, sh.watchModule, imported) {
         // Les dernières, quel que soit leur âge (historique rapatrié de la montre, pause hivernale…).
         value = runCatching { Bridge.activities(0L) }.getOrDefault(emptyList())
             .filter { it.source != Bridge.Source.GYM && it.kind != Bridge.Kind.STRENGTH } // la musculation a sa propre section
@@ -228,10 +229,9 @@ fun ColumnScope.PerformanceEntry(nav: NavHostController) {
     }
 }
 
-/** Import d'activités passées : fichiers .fit ou export ZIP de Garmin Connect. */
+/** Import d'activités passées : fichiers GPX, TCX, FIT ou export ZIP des apps de running. */
 @Composable
 fun ColumnScope.ImportActivitiesCard(vm: SuperViewModel, nav: NavHostController) {
-    if (!FitImport.supported()) return
     val importer = rememberFitImport(vm, nav)
     Spacer(Modifier.height(10.dp))
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
@@ -242,7 +242,7 @@ fun ColumnScope.ImportActivitiesCard(vm: SuperViewModel, nav: NavHostController)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(tr("Importer des activités"), style = MaterialTheme.typography.bodyLarge)
-            Text(tr("Fichiers .fit ou export ZIP de Garmin Connect"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            Text(tr("Strava, Garmin, Polar, Suunto, Coros, Nike… (GPX, TCX, FIT ou ZIP)"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
     }
@@ -257,12 +257,12 @@ fun rememberFitImport(vm: SuperViewModel, nav: NavHostController): () -> Unit {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var result by remember { mutableStateOf<Result<FitImport.ImportResult>?>(null) }
+    var result by remember { mutableStateOf<Result<app.superhealth.bridge.RunImport.ImportResult>?>(null) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         progress = 0 to 0
         scope.launch {
-            result = runCatching { FitImport.import(ctx, uris) { done, total -> progress = done to total } }
+            result = runCatching { app.superhealth.bridge.RunImport.import(ctx, uris) { done, total -> progress = done to total } }
             progress = null
             app.superhealth.health.data.HealthRepository.invalidate(); vm.bump()
         }
@@ -308,12 +308,13 @@ fun rememberFitImport(vm: SuperViewModel, nav: NavHostController): () -> Unit {
 fun ActivitiesHistoryScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
     val refresh by vm.refresh.collectAsState()
-    val list by produceState(emptyList<Bridge.Activity>(), refresh) {
+    val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
+    val list by produceState(emptyList<Bridge.Activity>(), refresh, imported) {
         value = runCatching { Bridge.activities(0L) }.getOrDefault(emptyList())
     }
-    val import = if (FitImport.supported()) rememberFitImport(vm, nav) else null
+    val import = rememberFitImport(vm, nav)
     DetailScaffold(tr("Toutes les activités"), onBack = { nav.popBackStack() }, action = {
-        import?.let { IconButton(onClick = it) { Icon(Icons.Rounded.FileOpen, tr("Importer des activités")) } }
+        IconButton(onClick = import) { Icon(Icons.Rounded.FileOpen, tr("Importer des activités")) }
     }) {
         if (list.isEmpty()) MfCard { Text(tr("Aucune activité pour l'instant."), color = Mf.colors.textSecondary) }
         list.groupBy { localDate(it.start).withDayOfMonth(1) }.forEach { (month, items) ->

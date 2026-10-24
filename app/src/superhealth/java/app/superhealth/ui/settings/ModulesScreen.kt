@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.RestaurantMenu
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -93,10 +94,11 @@ import kotlinx.coroutines.launch
 
 /** Couleur et symbole d'un module (sa couleur d'index si elle est donnée). */
 internal fun moduleHue(kind: String, color: String?): Color = color?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
-    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); else -> Color(0xFF6B9BF2) }
+    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); Modules.MEALS -> Color(0xFFF2994A); else -> Color(0xFF6B9BF2) }
 
 internal fun moduleIcon(kind: String): ImageVector = when (kind) {
     Modules.COACH -> Icons.Rounded.AutoAwesome
+    Modules.MEALS -> Icons.Rounded.RestaurantMenu
     else -> Icons.Rounded.Extension
 }
 
@@ -104,7 +106,7 @@ internal fun moduleIcon(kind: String): ImageVector = when (kind) {
 @Composable
 internal fun ModulesRow(nav: NavHostController) {
     val installed by Modules.installed.collectAsState()
-    SettingRow(tr("Modules"), subtitle = if (installed.isEmpty()) tr("Coach IA…")
+    SettingRow(tr("Plugins"), subtitle = if (installed.isEmpty()) tr("Coach IA, repas…")
         else installed.joinToString(" · ") { it.name }, icon = Icons.Rounded.Extension, hue = app.superhealth.ui.theme.HealthHues.Sleep) { nav.go("modules") }
 }
 
@@ -124,10 +126,10 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
     LaunchedEffect(sh.moduleSources) { Modules.refresh() }
     var adding by remember { mutableStateOf(false) }
 
-    DetailScaffold(tr("Modules"), onBack = { nav.popBackStack() }, action = {
+    DetailScaffold(tr("Plugins"), onBack = { nav.popBackStack() }, action = {
         IconButton(onClick = { scope.launch { Modules.refresh() } }, enabled = !loading) { Icon(Icons.Rounded.Refresh, tr("Actualiser"), tint = Mf.colors.textSecondary) }
     }) {
-        Text(tr("Ajoutez des fonctions à SuperHealth. Un module n'apporte que du contenu (images, textes, consignes), jamais de code."),
+        Text(tr("Ajoutez des fonctions à SuperHealth. Un plugin n'apporte que du contenu (images, textes, consignes), jamais de code."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
 
         // installés d'abord (même hors ligne), puis ce que proposent les sources
@@ -148,7 +150,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
 
         SectionLabel(tr("Options"))
         GroupCard {
-            SwitchRow(tr("Mises à jour automatiques"), tr("Les modules installés se mettent à jour seuls, une fois par jour"), sh.modulesAuto) { v ->
+            SwitchRow(tr("Mises à jour automatiques"), tr("Les plugins installés se mettent à jour seuls, une fois par jour"), sh.modulesAuto) { v ->
                 SuperPrefs.update { it.copy(modulesAuto = v) }
             }
         }
@@ -253,7 +255,7 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
                 Text(if (f != null) trf("Téléchargement… %1\$s %%", (f * 100).toInt()) else tr("Installation…"), style = MaterialTheme.typography.labelLarge,
                     color = hue.onContainer())
             }
-            inst == null && !compatible -> Text(tr("Ce module demande une version plus récente de SuperHealth."), style = MaterialTheme.typography.bodySmall,
+            inst == null && !compatible -> Text(tr("Ce plugin demande une version plus récente de SuperHealth."), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary)
             inst == null && entry != null -> PillButton(tr("Installer"), Modifier.fillMaxWidth()) { install() }
             inst != null -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -284,6 +286,7 @@ private fun ModuleOptions(kind: String, nav: NavHostController) {
             RowDivider()
             SettingRow(tr("Fournisseur IA"), subtitle = tr("Clé et modèle, partagés avec la nutrition")) { nav.go("aisettings") }
         }
+        Modules.MEALS -> app.superhealth.ui.meals.MealPlannerOptions(nav)
     }
 }
 

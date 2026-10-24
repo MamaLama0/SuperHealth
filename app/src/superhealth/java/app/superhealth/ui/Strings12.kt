@@ -4,17 +4,17 @@ package app.superhealth.ui
 object Strings12 {
     val map: Map<String, String> = hashMapOf(
         // Modules
-        "Modules" to "Modules",
-        "Modules à télécharger" to "Downloadable modules",
+        "Plugins" to "Plugins",
+        "Plugins à télécharger" to "Downloadable plugins",
         "Aventure pixel-art, coach IA…" to "Pixel-art adventure, AI coach…",
-        "Ajoutez des fonctions à SuperHealth. Un module n'apporte que du contenu (images, textes, consignes), jamais de code." to
-            "Add features to SuperHealth. A module only brings content (images, texts, instructions), never code.",
+        "Ajoutez des fonctions à SuperHealth. Un plugin n'apporte que du contenu (images, textes, consignes), jamais de code." to
+            "Add features to SuperHealth. A plugin only brings content (images, texts, instructions), never code.",
         "Actualiser" to "Refresh",
         "Lecture du catalogue…" to "Reading the catalogue…",
         "Catalogue indisponible : vérifiez la connexion." to "Catalogue unavailable: check your connection.",
         "Options" to "Options",
         "Mises à jour automatiques" to "Automatic updates",
-        "Les modules installés se mettent à jour seuls, une fois par jour" to "Installed modules update themselves once a day",
+        "Les plugins installés se mettent à jour seuls, une fois par jour" to "Installed plugins update themselves once a day",
         "Sources non vérifiées" to "Unverified sources",
         "Source non vérifiée" to "Unverified source",
         "Ajouter une source" to "Add a source",
@@ -26,7 +26,7 @@ object Strings12 {
         "désactivé" to "off",
         "%1\$s Ko" to "%1\$s KB",
         "%1\$s Mo" to "%1\$s MB",
-        "Ce module demande une version plus récente de SuperHealth." to "This module needs a newer version of SuperHealth.",
+        "Ce plugin demande une version plus récente de SuperHealth." to "This plugin needs a newer version of SuperHealth.",
         "Téléchargement… %1\$s %%" to "Downloading… %1\$s %%",
         "Installation…" to "Installing…",
         "Mettre à jour (v%1\$s)" to "Update (v%1\$s)",
@@ -52,8 +52,8 @@ object Strings12 {
         "aucune version publiée" to "no published version",
         "Gadgetbridge (montres, AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (pixel-art, CC0)" to
             "Gadgetbridge (watches, AGPL) · Open Food Facts (ODbL) · FSVO · Kenney (pixel art, CC0)",
-        "Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, ces cartes, GitHub (mises à jour et modules) et votre sauvegarde." to
-            "No trackers. Connections: Open Food Facts (can be turned off), AI if enabled, these maps, GitHub (updates and modules) and your backup.",
+        "Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, ces cartes, GitHub (mises à jour et plugins) et votre sauvegarde." to
+            "No trackers. Connections: Open Food Facts (can be turned off), AI if enabled, these maps, GitHub (updates and plugins) and your backup.",
 
         "Automatique" to "Automatic",
         "Masse maigre seule" to "Lean mass only",
@@ -80,7 +80,7 @@ object Strings12 {
         "Journal de quête" to "Quest log",
         "Succès et voyage" to "Achievements and journey",
         "Préparation du donjon…" to "Preparing the dungeon…",
-        "Contenu du module introuvable : réinstallez-le dans Réglages > Modules." to "Module content not found: reinstall it in Settings > Modules.",
+        "Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins." to "Plugin content not found: reinstall it in Settings > Plugins.",
 
         // Coach
         "Coach" to "Coach",

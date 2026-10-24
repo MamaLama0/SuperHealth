@@ -223,7 +223,7 @@ fun ExerciseInfoScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         }
         if (e.images.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             (listOfNotNull(e.preferredImage) + e.images.filter { it != e.preferredImage }).forEach { k ->
-                AsyncAsset("ex/${e.id}_${k}.webp", Modifier.width(if (e.repDbImages) 220.dp else 170.dp).aspectRatio(if (e.repDbImages) 1f else 360f / 640f).clip(RoundedCornerShape(16.dp)))
+                AsyncAsset("ex/${e.id}_${k}.webp", Modifier.width(170.dp).aspectRatio(360f / 640f).clip(RoundedCornerShape(16.dp)))
             }
         }
         Spacer(Modifier.height(12.dp))

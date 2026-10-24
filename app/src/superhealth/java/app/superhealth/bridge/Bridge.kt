@@ -169,14 +169,15 @@ object Bridge {
     // ---- Activités : musculation, montre et Health Connect dans une seule liste ---------------------------
 
     enum class Kind { STRENGTH, RUN, WALK, HIKE, BIKE, SWIM, YOGA, OTHER }
-    enum class Source(val label: String) { GYM("SuperHealth"), WATCH("Montre"), HEALTH_CONNECT("Health Connect") }
+    enum class Source(val label: String) { GYM("SuperHealth"), WATCH("Montre"), HEALTH_CONNECT("Health Connect"), IMPORT("Import") }
 
     data class Activity(
         val key: String, val kind: Kind, val title: String, val start: Long, val end: Long, val source: Source,
-        /** Séance de musculation (id d'historique), séance de montre ou séance Health Connect. */
-        val gymId: String? = null, val watch: Workout? = null, val hc: HcSession? = null,
+        /** Séance de musculation (id d'historique), séance de montre, séance Health Connect ou séance importée. */
+        val gymId: String? = null, val watch: Workout? = null, val hc: HcSession? = null, val run: RunImport.Run? = null,
     ) {
         val minutes: Long get() = (end - start) / 60000
+        val distanceM: Double? get() = watch?.distanceM ?: run?.distanceM
     }
 
     suspend fun activities(fromMs: Long, toMs: Long = System.currentTimeMillis()): List<Activity> {
@@ -187,8 +188,11 @@ object Bridge {
             Activity("w-${w.id}", kindOf(w.kind.name), w.name?.takeIf { it.isNotBlank() } ?: kindLabel(kindOf(w.kind.name).name),
                 w.start.time, w.end.time, Source.WATCH, watch = w)
         }
+        val imported = RunImport.runs.value.filter { it.start in fromMs..toMs }.map { r ->
+            Activity("i-${r.id}", runCatching { Kind.valueOf(r.kind) }.getOrDefault(Kind.OTHER), r.name, r.start, r.end, Source.IMPORT, run = r)
+        }
         // Séances Health Connect : on écarte celles qui recouvrent une séance déjà listée (même activité vue deux fois).
-        val known = gym + watch
+        val known = gym + watch + imported
         val hc = SuperPrefs.hc.value.sessions.filter { it.start in fromMs..toMs }.filter { s ->
             known.none { it.start < s.end && s.start < it.end }
         }.map { s -> Activity("h-${s.id}", hcKind(s.type), s.title ?: hcLabel(s.type), s.start, s.end, Source.HEALTH_CONNECT, hc = s) }

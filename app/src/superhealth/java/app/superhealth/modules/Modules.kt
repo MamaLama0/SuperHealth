@@ -22,7 +22,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * Modules téléchargeables. Le moteur de chaque module est dans l'app ; le module apporte son contenu (images pixel-art,
+ * Plugins téléchargeables (appelés « modules » dans le code et la branche du dépôt). Le moteur de chaque module est dans l'app ; le module apporte son contenu (images pixel-art,
  * scénario, boss, consignes du coach…) depuis la branche « modules » du dépôt GitHub, ou d'une source ajoutée à la main.
  *
  * Un module ne contient jamais de code : seulement des données (JSON, PNG) lues par le moteur du même [Module.kind].
@@ -35,7 +35,8 @@ object Modules {
 
     /** Moteurs présents dans cette version de l'app (un module d'un autre type demande une mise à jour). */
     const val COACH = "coach"
-    val engines = setOf(COACH)
+    const val MEALS = "meals"
+    val engines = setOf(COACH, MEALS)
 
     @Serializable
     data class Module(
@@ -262,6 +263,7 @@ object Modules {
                         plus = if ("COACH" in s.plus) s.plus else s.plus + "COACH")
                 }
             }
+            MEALS -> app.superhealth.meals.MealPlanner.invalidate()
         }
     }
 

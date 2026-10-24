@@ -2,6 +2,7 @@ package app.superhealth.ui.health
 
 import app.superhealth.ui.coach.askCoach
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -142,6 +143,7 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
     val detail = w
     val kind = detail?.kind?.name?.let { Bridge.kindOf(it) } ?: Bridge.Kind.OTHER
     val hue = kind.hue()
+    var confirmDelete by remember { mutableStateOf(false) }
     DetailScaffold(tr(detail?.name ?: "Activité"), onBack = { nav.popBackStack() }, action = {
         // module Coach : analyse de la séance comparée aux précédentes (comme l'Athlete Intelligence de Strava)
         if (detail != null && app.superhealth.ui.coach.coachAvailable()) IconButton(onClick = {
@@ -151,7 +153,17 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             val p = app.superhealth.coach.Coach.prompts()?.workout?.takeIf { it.isNotBlank() }
             nav.askCoach(p?.replace("{details}", facts) ?: app.superhealth.ui.trf("Analyse cette séance : %1\$s", facts))
         }) { Icon(Icons.Rounded.AutoAwesome, tr("Analyse du coach"), tint = app.superhealth.ui.coach.CoachHue) }
+        // séance importée (fichier GPX, TCX, FIT) : peut être retirée
+        if (detail != null && id < 0) IconButton(onClick = { confirmDelete = true }) {
+            Icon(Icons.Rounded.Delete, tr("Supprimer"), tint = Mf.colors.textSecondary)
+        }
     }) {
+        if (confirmDelete) androidx.compose.material3.AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Mf.colors.card,
+            title = { Text(tr("Supprimer cette activité importée ?")) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = {
+                confirmDelete = false; app.superhealth.bridge.RunImport.delete(id); nav.popBackStack()
+            }) { Text(tr("Supprimer"), color = androidx.compose.ui.graphics.Color(0xFFE5574F)) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
         if (detail == null) {
             Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = hue) }
             return@DetailScaffold

@@ -270,7 +270,7 @@ object SuperStrings {
         "Énergie" to "Energy",
         "Objectif de pas" to "Step goal",
         "Aucun" to "None",
-        "Modules" to "Modules",
+        "Plugins" to "Plugins",
         "Programme, bases d'aliments, IA, algorithmes" to "Program, food databases, AI, algorithms",
         "Salles, progression, échauffements, repos" to "Gyms, progression, warm-ups, rest",
         "Montre (LocalHealth)" to "Watch (LocalHealth)",

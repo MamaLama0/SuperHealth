@@ -50,12 +50,7 @@ data class Exercise(
     val usesReps get() = metrics.any { it.startsWith("r") }
     val usesDuration get() = metrics.any { it.startsWith("d") && it != "ds" && it != "dl" }
     fun thumbnail(): String? = (preferredImage ?: images.firstOrNull())?.let { "ex/${id}_$it.webp" }
-    /** Images RepDB (tools/repdb_images.py) : s/p = début/fin du mouvement, m = unique ; carrées sur fond bleu clair. Les autres (a/b/c) : angles MacroFactor en portrait. */
-    val repDbImages get() = images.any { it == "s" || it == "p" || it == "m" }
 }
-
-/** Fond des images RepDB : prolonge l'image quand elle est affichée sans recadrage. */
-val RepDbBackground = androidx.compose.ui.graphics.Color(0xFFD7F0FA)
 
 @Serializable
 data class Equipment(

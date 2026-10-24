@@ -73,6 +73,7 @@ import app.superhealth.nutrition.ui.components.MacroLine
 import app.superhealth.nutrition.ui.components.MacroSummary
 import app.superhealth.nutrition.ui.components.Ring
 import app.superhealth.nutrition.ui.dayLabel
+import app.superhealth.nutrition.ui.energy
 import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.nutrition.ui.hourLabel
 import app.superhealth.nutrition.ui.macros
@@ -144,6 +145,10 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                     Spacer(Modifier.height(14.dp))
                     MacroSummary(total, target, { s.energyValue(it) }, Modifier.padding(horizontal = 18.dp))
                 }
+            }
+            // plugin Planificateur de repas : repas restants pour tomber sur les cibles
+            item(key = "mealplan") {
+                app.superhealth.ui.meals.MealPlanCard(day, entries, target, { s.energy(it) }, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp))
             }
             if (selection.isNotEmpty()) item {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.strong)

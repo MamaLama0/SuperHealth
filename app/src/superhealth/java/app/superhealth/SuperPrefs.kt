@@ -216,6 +216,8 @@ data class SuperSettings(
     val coachMemory: List<String> = emptyList(),
     val coachModel: String = "",
     val coachBrief: Boolean = true,
+    /** Planificateur de repas : aliments à éviter (texte libre, transmis au fournisseur). */
+    val mealsExclude: String = "",
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,

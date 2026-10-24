@@ -112,6 +112,14 @@ object AiFood {
         val items = parseAnalyzed(raw)
         if (items.isEmpty()) throw AiException(if (raw.contains(NOT_A_FOOD)) "Aucun aliment reconnu." else "Réponse du modèle illisible.")
 
+        return match(cfg, items, candidates, onStage)
+    }
+
+    /**
+     * Étapes query_foods et select_search_result : chaque aliment estimé est rapproché d'une entrée de la base locale
+     * (choisie par le modèle, puis contrôlée par [plausible]) ; sans correspondance, l'estimation du modèle reste.
+     */
+    suspend fun match(cfg: AiConfig, items: List<Item>, candidates: suspend (String) -> List<FoodEntity>, onStage: (Stage) -> Unit = {}): List<Item> {
         onStage(Stage.SEARCH)
         val cands = items.map { candidates(it.query.ifBlank { it.name }).take(6) }
         if (cands.all { it.isEmpty() }) { onStage(Stage.DONE); return items }
@@ -265,10 +273,11 @@ object AiFood {
 
     // ----- Appel réseau (Chat Completions) -----
 
-    suspend fun chat(cfg: AiConfig, system: String, user: String, imageJpeg: ByteArray?): String = withContext(Dispatchers.IO) {
+    suspend fun chat(cfg: AiConfig, system: String, user: String, imageJpeg: ByteArray?, temperature: Double = 0.2, maxTokens: Int? = null): String = withContext(Dispatchers.IO) {
         val body = buildJsonObject {
             put("model", cfg.effectiveModel)
-            put("temperature", 0.2)
+            put("temperature", temperature)
+            maxTokens?.let { put("max_tokens", it) }
             putJsonArray("messages") {
                 addJsonObject { put("role", "system"); put("content", system) }
                 addJsonObject {

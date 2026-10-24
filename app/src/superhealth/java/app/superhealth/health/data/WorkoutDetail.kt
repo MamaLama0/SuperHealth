@@ -70,6 +70,7 @@ object WorkoutDetails {
     private val LOG = LoggerFactory.getLogger(WorkoutDetails::class.java)
 
     suspend fun load(ctx: Context, id: Long): WorkoutDetail? = withContext(Dispatchers.IO) {
+        if (id < 0) return@withContext app.superhealth.bridge.RunImport.detail(id) // séance importée (GPX, TCX, FIT sans montre)
         val summary = GBApplication.acquireDbReadOnly().use { db ->
             db.daoSession.baseActivitySummaryDao.load(id)?.also { it.device } // appareil chargé tant que la session est ouverte
         } ?: return@withContext null
