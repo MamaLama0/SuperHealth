@@ -14,6 +14,20 @@
       "size": 2611,
       "sha256": "65200fe288b289904617dcde66db870aa549a9cda4f28290b3078fc2c93cc2e8",
       "url": "coach-1.0.0.zip"
+    },
+    {
+      "id": "meals",
+      "kind": "meals",
+      "minApp": "1.4",
+      "color": "#F2994A",
+      "name": "Repas",
+      "nameEn": "Meal planner",
+      "summary": "Propose les repas qui restent pour finir la journée pile sur tes cibles, en haut du journal. Recettes Spoonacular (clé gratuite) ou repas composés par ton IA avec la base d'aliments.",
+      "summaryEn": "Suggests the meals left to finish the day right on your targets, at the top of the food log. Spoonacular recipes (free key) or meals built by your AI from the food database.",
+      "version": "1.0.0",
+      "size": 1341,
+      "sha256": "c9159ca5dc5c0b88fc7fb9ff958e91f87c5b981f895155870b73efb7546d5fe6",
+      "url": "meals-1.0.0.zip"
     }
   ]
 }

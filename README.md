@@ -1,13 +1,14 @@
-# Modules SuperHealth
+# Plugins SuperHealth
 
-Branche `modules` du dépôt : le contenu des modules téléchargeables depuis l'app (Réglages > Modules).
+Branche `modules` du dépôt : le contenu des plugins téléchargeables depuis l'app (Réglages > Plugins).
 
-Un module n'apporte **que des données** (JSON, PNG) lues par un moteur déjà présent dans l'app — jamais de code.
+Un plugin n'apporte **que des données** (JSON, PNG) lues par un moteur déjà présent dans l'app — jamais de code.
 L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis la décompresse dans ses fichiers privés.
 
-| Module | Moteur | Contenu |
+| Plugin | Moteur | Contenu |
 |---|---|---|
 | `coach` — Coach IA | `coach` | `prompts.json` (consignes du coach, tons, point du jour, questions suggérées) |
+| `meals` — Repas | `meals` | `planner.json` (consignes du planificateur IA, créneaux de repas : nom, part des calories, heure) |
 
 ## Publier une version
 
@@ -18,5 +19,5 @@ L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis l
 ## Source non vérifiée
 
 N'importe quel serveur HTTPS peut publier un `index.json` au même format ; l'app l'affiche comme « non vérifié ».
-Champs d'un module : `id`, `kind` (`coach`), `name`, `summary`, `nameEn`, `summaryEn`, `version`,
+Champs d'un plugin : `id`, `kind` (`coach`, `meals`), `name`, `summary`, `nameEn`, `summaryEn`, `version`,
 `size`, `sha256`, `url` (relative à l'index), `minApp`, `color`.
