@@ -20,8 +20,8 @@ import java.util.Base64
 /** Fournisseurs compatibles avec l'API Chat Completions d'OpenAI. */
 @Serializable
 enum class AiProvider(val label: String, val baseUrl: String, val defaultModel: String, val keyHelp: String) {
-    OPENROUTER("OpenRouter", "https://openrouter.ai/api/v1", "google/gemini-2.5-flash-lite",
-        "Clé sur openrouter.ai. Modèles gratuits : « openrouter/free » ou suffixe « :free » (débit limité)."),
+    OPENROUTER("OpenRouter", "https://openrouter.ai/api/v1", "google/gemini-3.1-flash-lite",
+        "Clé sur openrouter.ai."),
     CUSTOM("Autre (compatible OpenAI)", "", "", "URL de base se terminant avant /chat/completions (ex. Ollama, Groq…)."),
 }
 

@@ -298,6 +298,13 @@ private fun PlateItem(r: PlateRow, s: app.superhealth.nutrition.domain.Settings,
     }
 }
 
+private fun presetLabel(id: String) = when (id.substringBefore('/')) {
+    "deepseek" -> "DeepSeek"
+    "z-ai" -> "GLM"
+    "google" -> "Gemini 3.1 Flash"
+    else -> id
+}
+
 /** Réglages de l'IA : fournisseur, clé, modèle, test. */
 @Composable
 fun AiSettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
@@ -313,10 +320,10 @@ fun AiSettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
             TextInput(tr("Clé API"), c.apiKey, { c = c.copy(apiKey = it.trim()) }, placeholder = tr("Collez votre clé"))
             TextInput(tr("Modèle"), c.model, { c = c.copy(model = it.trim()) }, placeholder = c.provider.defaultModel.ifBlank { tr("nom du modèle") })
             val presets = when (c.provider) {
-                AiProvider.OPENROUTER -> listOf("google/gemini-2.5-flash-lite", "openai/gpt-4o-mini", "openrouter/free")
+                AiProvider.OPENROUTER -> listOf("deepseek/deepseek-v4.1-flash", "z-ai/glm-5.3-flash", "google/gemini-3.1-flash-lite")
                 AiProvider.CUSTOM -> emptyList()
             }
-            if (presets.isNotEmpty()) ChipChoice(presets, c.effectiveModel, { it }) { c = c.copy(model = it) }
+            if (presets.isNotEmpty()) ChipChoice(presets, c.effectiveModel, { presetLabel(it) }) { c = c.copy(model = it) }
             if (c.provider == AiProvider.CUSTOM) TextInput(tr("URL de base"), c.baseUrl, { c = c.copy(baseUrl = it.trim()) }, placeholder = "https://…/v1")
             Text(tr("Le modèle doit accepter les images pour les photos."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))

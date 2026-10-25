@@ -141,6 +141,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Charge saisie sur une série : répétitions recalculées en direct. */
+    fun setWeight(exIndex: Int, setIndex: Int, weight: Double?) {
+        val e = engine ?: return
+        update { s ->
+            val sess = s.session ?: return@update s
+            val ex = sess.exercises.getOrNull(exIndex) ?: return@update s
+            val set = ex.sets.getOrNull(setIndex) ?: return@update s
+            if (set.weight == weight) return@update s
+            val sets = ex.sets.toMutableList().also { it[setIndex] = set.copy(weight = weight) }
+            val next = sess.copy(exercises = sess.exercises.toMutableList().also { it[exIndex] = ex.copy(sets = sets) })
+            s.copy(session = e.weightChanged(next, exIndex, setIndex, s.history, s.settings, gym(sess.gymId)))
+        }
+    }
+
     /** Valide / dévalide une série ; lance le minuteur de repos et la progression en séance. */
     fun toggleSet(exIndex: Int, setIndex: Int) {
         val e = engine ?: return

@@ -493,7 +493,11 @@ private fun ExercisePage(
                         onOpen = { expanded.add(set.id) }, onToggle = { onToggle(si) })
                     else SetCard(settings, set, labels[si]!!, prevByIndex[si], e?.usesWeight != false, current = si == firstTodo,
                         showTarget = set.target != null && set.target != ex.sets.getOrNull(si - 1)?.target,
-                        onChange = { ns -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns }) } },
+                        onChange = { ns ->
+                            // charge seule modifiée : répétitions recalculées en direct
+                            if (ns.weight != set.weight && ns.copy(weight = set.weight) == set) vm.setWeight(index, si, ns.weight)
+                            else edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns }) }
+                        },
                         onToggle = { expanded.remove(set.id); onToggle(si) }, onPlates = onPlates,
                         onType = { t -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = set.copy(type = t) }) } },
                         onDelete = { edit { it.copy(sets = it.sets.filterIndexed { j, _ -> j != si }) } })

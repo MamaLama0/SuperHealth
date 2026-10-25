@@ -603,7 +603,7 @@ object EnStrings {
         "Cheville droite" to "Right ankle",
         "Face" to "Front",
         "Dos" to "Back",
-        "Clé sur openrouter.ai. Modèles gratuits : « openrouter/free » ou suffixe « :free » (débit limité)." to "Key at openrouter.ai. Free models: \"openrouter/free\" or the \":free\" suffix (rate limited).",
+        "Clé sur openrouter.ai." to "Key at openrouter.ai.",
         "Autre (compatible OpenAI)" to "Other (OpenAI-compatible)",
         "URL de base se terminant avant /chat/completions (ex. Ollama, Groq…)." to "Base URL ending before /chat/completions (e.g. Ollama, Groq…).",
         "Analyse du repas" to "Analyzing the meal",

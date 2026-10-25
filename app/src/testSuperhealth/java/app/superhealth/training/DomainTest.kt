@@ -90,6 +90,19 @@ class DomainTest {
         assertTrue(s.zipWithNext().all { (a, b) -> b.reps <= a.reps || b.weight < a.weight }) // la fatigue réduit la suite
     }
 
+    @Test fun forcedWeightRecomputesReps() {
+        val ladder = LoadLadder.barbell(20.0, listOf(25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25))
+        val t = List(3) { TargetSet(minReps = 6, maxReps = 15, rir = 2, restSec = 150) }
+        val one = Strength.e1rm(80.0, 10, 2, true)
+        val base = Progression.suggest(one, t, true, ladder, 80.0, weightMatch = true, expandRange = false, progress = 1.0)
+        val heavier = Progression.suggest(one, t, true, ladder, 80.0, weightMatch = true, expandRange = false, progress = 1.0, forced = mapOf(0 to 90.0))
+        val lighter = Progression.suggest(one, t, true, ladder, 80.0, weightMatch = true, expandRange = false, progress = 1.0, forced = mapOf(0 to 70.0))
+        assertEquals(90.0, heavier[0].weight, 0.0)
+        assertTrue(heavier[0].reps < base[0].reps)       // plus lourd : moins de répétitions
+        assertTrue(lighter[0].reps > base[0].reps)       // plus léger : plus de répétitions
+        assertTrue(heavier[1].weight <= 90.0 && heavier[1].reps >= 6) // suite : charge choisie gardée si la plage tient
+    }
+
     @Test fun databaseLoads() {
         assertTrue(db.exercises.size > 1300)
         assertEquals("Barbell bench press", db.exercise(bench)?.name)

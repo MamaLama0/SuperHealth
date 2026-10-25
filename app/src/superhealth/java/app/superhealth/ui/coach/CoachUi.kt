@@ -380,7 +380,7 @@ private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
             SectionLabel(tr("Modèle"))
             MfCard {
                 TextInput(tr("Modèle du coach (vide : celui de l'IA)"), sh.coachModel, { v -> SuperPrefs.update { it.copy(coachModel = v.trim()) } },
-                    placeholder = "google/gemini-2.5-flash")
+                    placeholder = "deepseek/deepseek-v4.1-flash")
                 Text(tr("Un modèle plus grand répond mieux aux questions d'entraînement ; le fournisseur et la clé sont ceux de l'IA."),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
                 Spacer(Modifier.height(6.dp))

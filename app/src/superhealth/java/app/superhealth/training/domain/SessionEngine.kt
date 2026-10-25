@@ -136,30 +136,68 @@ class SessionEngine(private val db: ExerciseDb) {
     // ----- En séance -----
 
     /**
-     * Après une série validée : recalcule les séries suivantes non modifiées (applySmartProgressionInSession).
-     * Le 1RM est ré-estimé depuis la série réalisée en tenant compte de la fatigue accumulée.
+     * Après une série validée : recalcule les séries suivantes (applySmartProgressionInSession).
+     * Le 1RM est ré-estimé depuis la série réalisée en tenant compte de la fatigue accumulée ; une charge changée à la main
+     * est gardée et seules ses répétitions sont recalculées.
      */
     fun afterSetCompleted(s: Session, exIndex: Int, settings: Settings, gym: Gym?): Session {
         if (!settings.smartProgression) return s
         val ex = s.exercises[exIndex]
+        val forced = ex.sets.withIndex().filter { (_, v) -> v.isPlanned && v.weight != null && v.weight != v.autoWeight }
+            .associate { it.index to it.value.weight!! }
+        return replan(s, exIndex, emptyList(), settings, gym, forced, fromIndex = 0)
+    }
+
+    /**
+     * Charge changée sur une série à venir : ses répétitions et celles des séries automatiques qui suivent sont recalculées
+     * en direct, avec le même modèle que [afterSetCompleted] (ou que la suggestion d'ouverture si rien n'est encore validé).
+     */
+    fun weightChanged(s: Session, exIndex: Int, setIndex: Int, history: List<Workout>, settings: Settings, gym: Gym?): Session {
+        if (!settings.smartProgression) return s
+        val ex = s.exercises[exIndex]
+        val w = ex.sets.getOrNull(setIndex)?.weight ?: return s
+        if (w <= 0 || !ex.sets[setIndex].isPlanned) return s
+        // séries à venir avant celle-ci : gardées telles quelles
+        val forced = ex.sets.withIndex().filter { (i, v) -> v.isPlanned && v.weight != null && (i <= setIndex || v.weight != v.autoWeight) }
+            .associate { it.index to it.value.weight!! }
+        return replan(s, exIndex, history, settings, gym, forced, fromIndex = setIndex)
+    }
+
+    private val SetLog.isPlanned get() = !done && type != SetType.WARMUP && target != null
+
+    /** Recalcule les séries à venir à partir de [fromIndex] ; [forced] = charges imposées par index de série. */
+    private fun replan(s: Session, exIndex: Int, history: List<Workout>, settings: Settings, gym: Gym?, forced: Map<Int, Double>, fromIndex: Int): Session {
+        val ex = s.exercises[exIndex]
         val e = db.exercise(ex.exerciseId) ?: return s
         if (!e.usesWeight) return s
         val done = ex.sets.filter { it.done && it.type != SetType.WARMUP && (it.weight ?: 0.0) > 0 && (it.reps ?: 0) > 0 }
-        if (done.isEmpty()) return s
-        val oneRm = Progression.currentOneRm(done.map { PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }, e.upperBody, ex.restSec / 60.0) ?: return s
-        var fatigue = 0.0
-        done.forEach { fatigue = Strength.recover(fatigue + Strength.fatiguingReps(it.reps!!, it.partialReps), ex.restSec / 60.0) }
-        val pending = ex.sets.withIndex().filter { !it.value.done && it.value.type != SetType.WARMUP && it.value.target != null }
+        val oneRm: Double
+        val prevWeight: Double?
+        val progress: Double
+        if (done.isNotEmpty()) {
+            val rm = Progression.currentOneRm(done.map { PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }, e.upperBody, ex.restSec / 60.0) ?: return s
+            var fatigue = 0.0
+            done.forEach { fatigue = Strength.recover(fatigue + Strength.fatiguingReps(it.reps!!, it.partialReps), ex.restSec / 60.0) }
+            oneRm = rm * (1 - Strength.fatigueDrop(fatigue)); prevWeight = done.last().weight; progress = 1.0
+        } else {
+            val last = lastSets(ex.exerciseId, history)
+            oneRm = Progression.currentOneRm(last, e.upperBody) ?: return s
+            prevWeight = last.firstOrNull()?.weight; progress = Strength.SESSION_PROGRESS
+        }
+        if (oneRm <= 0) return s
+        val pending = ex.sets.withIndex().filter { it.value.isPlanned }
         if (pending.isEmpty()) return s
-        val ladder = ladderFor(ex.exerciseId, gym)
         val sugg = Progression.suggest(
-            oneRm * (1 - Strength.fatigueDrop(fatigue)), pending.map { it.value.target!! }, e.upperBody, ladder,
-            done.last().weight, settings.weightMatch, settings.expandRepRange, progress = 1.0,
+            oneRm, pending.map { it.value.target!! }, e.upperBody, ladderFor(ex.exerciseId, gym),
+            prevWeight, settings.weightMatch, settings.expandRepRange, progress,
+            forced = pending.withIndex().mapNotNull { (k, iv) -> forced[iv.index]?.let { k to it } }.toMap(),
         )
         val sets = ex.sets.toMutableList()
         pending.forEachIndexed { k, iv ->
+            if (iv.index < fromIndex) return@forEachIndexed
             val g = sugg[k]
-            sets[iv.index] = iv.value.copy(weight = g.weight, reps = g.reps, autoWeight = g.weight, autoReps = g.reps)
+            sets[iv.index] = if (iv.index in forced) iv.value.copy(reps = g.reps, autoReps = g.reps)
+            else iv.value.copy(weight = g.weight, reps = g.reps, autoWeight = g.weight, autoReps = g.reps)
         }
         return s.copy(exercises = s.exercises.toMutableList().also { it[exIndex] = ex.copy(sets = sets) })
     }

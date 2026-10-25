@@ -174,14 +174,26 @@ object Progression {
     fun suggest(
         oneRm: Double, targets: List<TargetSet>, upper: Boolean, ladder: LoadLadder,
         prevWeight: Double?, weightMatch: Boolean, expandRange: Boolean, progress: Double = Strength.SESSION_PROGRESS,
+        forced: Map<Int, Double> = emptyMap(),
     ): List<Suggestion> {
         val strength = oneRm * progress
         var fatigue = 0.0
         val out = mutableListOf<Suggestion>()
         var previousSetWeight: Double? = null
-        for (t in targets) {
+        for ((k, t) in targets.withIndex()) {
             val effective = strength * (1 - Strength.fatigueDrop(fatigue))
             fun repsAt(w: Double) = floor(Strength.rtfAt(w, effective, upper) - t.rir + 1e-9).toInt()
+            // charge choisie à la main : seules les répétitions sont calculées (au RIR cible, plafonnées comme les suggestions)
+            forced[k]?.let { w ->
+                var reps = repsAt(w)
+                val widened = reps > t.maxReps && expandRange && reps <= t.maxReps + 2
+                if (reps > t.maxReps && !widened) reps = t.maxReps
+                reps = max(1, reps)
+                out += Suggestion(w, reps, t.rir, outOfRange = reps < t.minReps, widened = widened)
+                previousSetWeight = w
+                fatigue = Strength.recover(fatigue + reps, t.restSec / 60.0)
+                continue
+            }
             val keep = previousSetWeight ?: if (weightMatch) prevWeight else null
             val ideal = Strength.weightFor(effective, (t.maxReps + t.rir).toDouble(), upper)
             // charge la plus lourde qui garde au moins le minimum de répétitions
