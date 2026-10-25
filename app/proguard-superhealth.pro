@@ -9,9 +9,6 @@
 -keep class app.superhealth.** extends android.content.BroadcastReceiver
 -keep class app.superhealth.** extends androidx.work.ListenableWorker { <init>(...); }
 -keep class app.superhealth.** extends androidx.glance.appwidget.GlanceAppWidgetReceiver
-# Rive (animations), chargé par JNI
--keep class app.rive.runtime.** { *; }
--dontwarn app.rive.runtime.**
 
 # Widgets : Glance instancie les ActionCallback par leur nom de classe (bouton « + 250 ml »).
 -keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }

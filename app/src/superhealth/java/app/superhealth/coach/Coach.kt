@@ -66,6 +66,8 @@ object Coach {
         val brief: String,
         val workout: String = "",
         val metric: String = "",
+        /** Bilan de la semaine : une phrase ; {week} = les chiffres de la semaine. */
+        val week: String = "",
         val suggestions: List<Txt> = emptyList(),
         val temperature: Double = 0.5,
         val maxTokens: Int = 700,
@@ -310,6 +312,9 @@ object Coach {
         runCatching { File(dir, "brief.json").writeText(json.encodeToString(Brief.serializer(), b)) }
         return b
     }
+
+    /** Une question isolée (hors conversation), réponse sans balise mémoire. */
+    suspend fun once(ctx: Context, p: Prompts, question: String): String = split(complete(p, system(p, context(ctx)), listOf(Msg("user", question)))).first
 
     fun briefIsToday(): Boolean = brief.value?.day == LocalDate.now().toEpochDay()
 

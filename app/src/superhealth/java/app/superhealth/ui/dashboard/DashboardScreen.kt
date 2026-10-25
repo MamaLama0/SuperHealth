@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Balance
 import androidx.compose.material.icons.rounded.DonutLarge
@@ -184,7 +185,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.HR_ZONES -> HealthHues.Fitness
     DashCard.LOAD -> WorkoutBlue
     DashCard.DAY_TIMELINE -> HealthHues.Activity
-    DashCard.COACH -> app.superhealth.ui.coach.CoachHue
+    DashCard.COACH, DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachHue
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -226,6 +227,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.LOAD -> Icons.AutoMirrored.Rounded.TrendingUp
     DashCard.DAY_TIMELINE -> Icons.Rounded.Timeline
     DashCard.COACH -> Icons.Rounded.AutoAwesome
+    DashCard.COACH_WEEK -> Icons.Rounded.DateRange
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -647,7 +649,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
     // Petit, moyen et bandeau : versions à regarder d'un coup d'œil, communes à toutes les cartes qui ont une valeur ;
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
-        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH -> true
+        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -769,6 +771,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
         DashCard.LOAD -> LoadCard(c, h.watch, modifier, nav)
         DashCard.DAY_TIMELINE -> DayTimelineCard(c, h, h.watch, modifier, nav)
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
+        DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachWeekCard(c, size, vm, modifier, nav)
         DashCard.STEPS -> {
             val series = h.series[Metric.STEPS].orEmpty()
             val today = h.today(Metric.STEPS)

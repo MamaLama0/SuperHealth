@@ -149,12 +149,20 @@ object Modules {
         loading.value = false
     }
 
-    fun newer(remote: String, local: String) = app.superhealth.update.Updater.newer(remote, local)
+    /** Versions des plugins : semver (1.2.0 < 1.10.0), composante par composante, contrairement à celles de l'app. */
+    fun newer(remote: String, local: String): Boolean {
+        val a = app.superhealth.update.Updater.parts(remote); val b = app.superhealth.update.Updater.parts(local)
+        for (i in 0 until maxOf(a.size, b.size)) {
+            val d = (a.getOrNull(i)?.toIntOrNull() ?: 0) - (b.getOrNull(i)?.toIntOrNull() ?: 0)
+            if (d != 0) return d > 0
+        }
+        return false
+    }
 
     /** Mise à jour disponible pour un module installé. */
     fun update(i: Installed): Entry? = catalog.value.firstOrNull { it.module.id == i.id && it.source == i.source && newer(it.module.version, i.version) }
 
-    fun compatible(ctx: Context, m: Module) = m.kind in engines && !newer(m.minApp, app.superhealth.update.Updater.installed(ctx))
+    fun compatible(ctx: Context, m: Module) = m.kind in engines && !app.superhealth.update.Updater.newer(m.minApp, app.superhealth.update.Updater.installed(ctx))
 
     private fun setJob(id: String, j: Job?) { jobs.value = if (j == null) jobs.value - id else jobs.value + (id to j) }
 
@@ -259,7 +267,8 @@ object Modules {
             COACH -> {
                 app.superhealth.coach.Coach.invalidate()
                 if (on) SuperPrefs.update { s ->
-                    s.copy(dashboard = if (app.superhealth.DashCard.COACH in s.dashboard) s.dashboard else listOf(app.superhealth.DashCard.COACH) + s.dashboard,
+                    s.copy(dashboard = if (app.superhealth.DashCard.COACH in s.dashboard) s.dashboard
+                        else listOf(app.superhealth.DashCard.COACH, app.superhealth.DashCard.COACH_WEEK) + (s.dashboard - app.superhealth.DashCard.COACH_WEEK),
                         plus = if ("COACH" in s.plus) s.plus else s.plus + "COACH")
                 }
             }

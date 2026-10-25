@@ -27,8 +27,6 @@ CATEGORIES = [
     ("res/mipmap-xhdpi", "Icône de l'app", "Apple (icône de l'app Santé)", "AndroidManifest (icône du lanceur)"),
     ("res/mipmap-xxhdpi", "Icône de l'app", "Apple (icône de l'app Santé)", "AndroidManifest (icône du lanceur)"),
     ("res/mipmap-xxxhdpi", "Icône de l'app", "Apple (icône de l'app Santé)", "AndroidManifest (icône du lanceur)"),
-    ("assets/illustrations", "Illustrations", "MacroFactor", "nutrition/ui (accueil, programme, check-in)"),
-    ("assets/rive", "Animations Rive", "MacroFactor / MacroFactor Workouts", "training/ui/components/Rive.kt"),
     ("assets/misc", "Divers (logos, rubans, assiette)", "MacroFactor / MacroFactor Workouts", "nutrition/ui, training/ui"),
     ("assets/foods", "Icônes d'aliments", "MacroFactor", "nutrition/ui/FoodIcons.kt"),
     ("assets/bodyfat", "Repères de masse grasse", "MacroFactor", "nutrition/ui/screens/BodyScreens.kt"),

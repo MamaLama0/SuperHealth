@@ -47,7 +47,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     LOAD("Charge d'entraînement", Section.TRAINING, watch = true),
     DAY_TIMELINE("Ma journée", Section.HEALTH),
     /** Module Coach IA : le point du jour. */
-    COACH("Coach", Section.HEALTH);
+    COACH("Coach", Section.HEALTH),
+    /** Module Coach IA : le bilan des 7 derniers jours. */
+    COACH_WEEK("Ma semaine", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -79,7 +81,7 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
     DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE,
-    DashCard.COACH)
+    DashCard.COACH, DashCard.COACH_WEEK)
 
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
@@ -87,7 +89,7 @@ val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard
 
 /** Module téléchargeable dont dépend la carte (null : toujours disponible). */
 val DashCard.module: String? get() = when (this) {
-    DashCard.COACH -> app.superhealth.modules.Modules.COACH
+    DashCard.COACH, DashCard.COACH_WEEK -> app.superhealth.modules.Modules.COACH
     else -> null
 }
 
@@ -186,6 +188,8 @@ data class SuperSettings(
     val watchCardsAdded: Boolean = false,
     /** Insights et corrélations déjà ajoutés au tableau de bord (migration unique). */
     val insightsAdded: Boolean = false,
+    /** 1.6 : carte « Ma semaine » du coach déjà placée sous la carte Coach (migration unique). */
+    val coachWeekAdded: Boolean = false,
     /** Les deux séries superposées de la carte Corrélations (noms de InsightData.Source) et la période en jours. */
     val corr: List<String> = listOf("SLEEP", "VOLUME"),
     val corrDays: Int = 30,
@@ -294,6 +298,13 @@ object SuperPrefs {
             val at = (cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size
             cards.addAll(at, DashCard.watchCards11.filter { it !in cards })
             s.copy(dashboard = cards, watchCardsAdded = true)
+        }
+        // 1.6 : « Ma semaine » juste sous la carte Coach (sans Coach au tableau de bord, elle reste à ajouter à la main)
+        if (!_settings.value.coachWeekAdded) update { s ->
+            val cards = s.dashboard.toMutableList()
+            val at = cards.indexOf(DashCard.COACH)
+            if (at >= 0 && DashCard.COACH_WEEK !in cards) cards.add(at + 1, DashCard.COACH_WEEK)
+            s.copy(dashboard = cards, coachWeekAdded = true)
         }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }

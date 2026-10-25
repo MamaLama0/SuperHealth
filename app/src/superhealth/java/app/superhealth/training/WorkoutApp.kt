@@ -1,7 +1,6 @@
 package app.superhealth.training
 
 import android.app.Application
-import app.rive.runtime.kotlin.core.Rive
 import app.superhealth.training.data.Store
 import app.superhealth.training.domain.ExerciseDb
 import app.superhealth.training.ui.Assets
@@ -38,7 +37,6 @@ object WorkoutApp {
 
     fun init(app: Application) {
         Assets.init(app)
-        Rive.init(app)
         store = Store(app)
         // Widget rafraîchi à chaque changement de séance, d'historique ou de programme.
         scope.launch {

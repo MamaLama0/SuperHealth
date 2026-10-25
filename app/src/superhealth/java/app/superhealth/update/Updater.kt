@@ -61,16 +61,38 @@ object Updater {
 
     fun installed(ctx: Context): String = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "0"
 
-    /** « v1.2.3 », « 1.2 » → [1, 2, 3] ; comparaison composante par composante (1.10 après 1.9). */
-    fun parts(v: String): List<Int> = v.trim().removePrefix("v").removePrefix("V").split('.', '-', '+').map { p -> p.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+    /** « v1.2.3 », « 1.2 » → ["1", "2", "3"] (chiffres de chaque composante). */
+    fun parts(v: String): List<String> = v.trim().removePrefix("v").removePrefix("V").split('.', '-', '+').map { p -> p.takeWhile(Char::isDigit) }
 
+    /**
+     * Versions décimales (majeure +0.1, mineure +0.01) : la composante après le premier point est une fraction,
+     * donc 1.41 < 1.5 < 1.51 < 1.6. Les composantes suivantes (1.1.1) se comparent comme des entiers.
+     */
     fun newer(remote: String, local: String): Boolean {
         val a = parts(remote); val b = parts(local)
-        for (i in 0 until maxOf(a.size, b.size)) {
-            val d = a.getOrElse(i) { 0 } - b.getOrElse(i) { 0 }
+        val major = (a.getOrNull(0)?.toIntOrNull() ?: 0) - (b.getOrNull(0)?.toIntOrNull() ?: 0)
+        if (major != 0) return major > 0
+        val fa = a.getOrElse(1) { "" }; val fb = b.getOrElse(1) { "" }
+        val w = maxOf(fa.length, fb.length)
+        val frac = fa.padEnd(w, '0').compareTo(fb.padEnd(w, '0'))
+        if (frac != 0) return frac > 0
+        for (i in 2 until maxOf(a.size, b.size)) {
+            val d = (a.getOrNull(i)?.toIntOrNull() ?: 0) - (b.getOrNull(i)?.toIntOrNull() ?: 0)
             if (d != 0) return d > 0
         }
         return false
+    }
+
+    /**
+     * Version affichée : sans « v » ni zéro final après le point (« v1.60 » → « 1.6 »). Les versions sont publiées avec
+     * une fraction à deux chiffres pour que les anciens comparateurs (composante par composante, 1.41 et 1.5) les voient aussi.
+     */
+    fun display(tag: String): String {
+        val v = tag.trim().removePrefix("v").removePrefix("V")
+        val dot = v.indexOf('.')
+        if (dot < 0 || v.indexOf('.', dot + 1) >= 0 || v.substring(dot + 1).any { !it.isDigit() }) return v
+        val frac = v.substring(dot + 1).trimEnd('0').ifEmpty { "0" }
+        return v.substring(0, dot) + "." + frac
     }
 
     /** APK publié : le build « perf » (même signature que l'app installée), jamais la variante de débogage. */
@@ -91,7 +113,7 @@ object Updater {
             if (!r.isSuccessful) error("GitHub ${r.code}")
             val gh = json.decodeFromString(GhRelease.serializer(), r.body.string())
             val apk = pickApk(gh.assets) ?: return@withContext null
-            val v = gh.tag_name.removePrefix("v")
+            val v = display(gh.tag_name)
             if (gh.draft || !newer(v, installed(ctx))) null else Release(v, gh.body.orEmpty().trim(), apk, gh.html_url)
         }
     }
@@ -121,8 +143,26 @@ object Updater {
                 }
             }
         }
+        verify(ctx, out, rel)
         state.value = State.Ready(rel, out)
         out
+    }
+
+    /**
+     * Contrôle de l'APK avant de le proposer à Android : fichier complet, même application, même clé de signature que
+     * l'app installée et version plus récente. Un fichier refusé est supprimé (un message court remplace l'échec d'Android).
+     */
+    private fun verify(ctx: Context, apk: File, rel: Release) {
+        fun fail(msg: String): Nothing { apk.delete(); error(msg) }
+        if (rel.apk.size > 0 && apk.length() != rel.apk.size) fail(tr("téléchargement incomplet, réessayez"))
+        val pm = ctx.packageManager
+        val flags = android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+        val info = pm.getPackageArchiveInfo(apk.path, flags) ?: fail(tr("fichier de mise à jour illisible"))
+        if (info.packageName != ctx.packageName) fail(tr("ce fichier n'est pas SuperHealth"))
+        val mine = pm.getPackageInfo(ctx.packageName, flags)
+        fun certs(i: android.content.pm.PackageInfo) = i.signingInfo?.apkContentsSigners?.map { it.toCharsString() }?.toSet().orEmpty()
+        if (certs(info).isEmpty() || certs(info) != certs(mine)) fail(tr("signature différente de l'app installée"))
+        if (!newer(info.versionName ?: "0", installed(ctx))) fail(tr("cette version n'est pas plus récente"))
     }
 
     /** Installation par PackageInstaller ; Android demande la confirmation (voir [InstallReceiver]). */

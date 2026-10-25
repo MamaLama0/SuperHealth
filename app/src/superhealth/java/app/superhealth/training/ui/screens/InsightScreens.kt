@@ -279,6 +279,10 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
         WorkoutSummary(vm, w, tr("Séance terminée"), onClose, onEdit = { nav.navigate("workoutedit/${w.id}") },
             onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(w.id); onClose() })
+        // Confettis de fin de séance, une seule fois
+        var confetti by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+        LaunchedEffect(Unit) { if (confetti) { kotlinx.coroutines.delay(4500); confetti = false } }
+        if (confetti) app.superhealth.training.ui.components.Confetti(Modifier.fillMaxSize())
     }
     if (longAsked) LongWorkoutDialog(w, onKeep = { longAsked = false; vm.saveWorkout(w.copy(durationSec = MAX_WORKOUT_SEC)) },
         onEstimate = { longAsked = false; vm.saveWorkout(w.copy(durationSec = it)) }, onEdit = { longAsked = false; editDuration = true })

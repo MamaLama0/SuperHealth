@@ -128,15 +128,13 @@ object MealPlanner {
      */
     suspend fun generate(ctx: Context, day: Long, target: Macros, logged: List<FoodEntryEntity>): Plan {
         val c = content() ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
-        val eaten = logged.fold(Macros.ZERO) { a, e -> a + Macros(e.kcal, e.protein, e.fat, e.carbs) }
-        val left = Macros((target.kcal - eaten.kcal).coerceAtLeast(0.0), (target.protein - eaten.protein).coerceAtLeast(0.0),
-            (target.fat - eaten.fat).coerceAtLeast(0.0), (target.carbs - eaten.carbs).coerceAtLeast(0.0))
+        val left = left(target, logged)
         if (left.kcal < 80) throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
         val usedSlots = logged.map { it.meal }.toSet()
         var open = c.slots.indices.filter { it !in usedSlots }
         if (open.isEmpty()) open = listOf(c.slots.lastIndex)
         val shareSum = open.sumOf { c.slots[it].share }
-        val goals = open.associateWith { i -> val k = c.slots[i].share / shareSum; Macros(left.kcal * k, left.protein * k, left.fat * k, left.carbs * k) }
+        val goals = goals(c, left, open)
 
         val provider = if (hasSpoonacular(ctx)) "spoonacular" else "ai"
         // Spoonacular planifie une journée entière (petit-déjeuner, déjeuner, dîner) : calories de ces trois repas à ce rythme
@@ -145,6 +143,49 @@ object MealPlanner {
         val plan = Plan(day, provider, meals.sortedBy { it.slot })
         save(plans.value + (day to plan))
         return plan
+    }
+
+    /** Ce qui reste des cibles du jour (jamais négatif). */
+    fun left(target: Macros, logged: List<FoodEntryEntity>): Macros {
+        val eaten = logged.fold(Macros.ZERO) { a, e -> a + Macros(e.kcal, e.protein, e.fat, e.carbs) }
+        return Macros((target.kcal - eaten.kcal).coerceAtLeast(0.0), (target.protein - eaten.protein).coerceAtLeast(0.0),
+            (target.fat - eaten.fat).coerceAtLeast(0.0), (target.carbs - eaten.carbs).coerceAtLeast(0.0))
+    }
+
+    /** Part de [left] de chaque repas de [open] (parts du plugin renormalisées). */
+    private fun goals(c: Content, left: Macros, open: List<Int>): Map<Int, Macros> {
+        val shareSum = open.sumOf { c.slots[it].share }
+        return open.associateWith { i -> val k = c.slots[i].share / shareSum; Macros(left.kcal * k, left.protein * k, left.fat * k, left.carbs * k) }
+    }
+
+    /**
+     * Cible d'un repas choisi : sa part de ce qui reste, partagée avec les autres repas encore vides (un repas déjà commencé
+     * garde sa part, ce qui y est déjà journalisé étant compté dans ce qui reste).
+     */
+    fun slotGoal(target: Macros, logged: List<FoodEntryEntity>, slot: Int): Macros? {
+        val c = content() ?: return null
+        val used = logged.map { it.meal }.toSet()
+        val open = (c.slots.indices.filter { it !in used } + slot).distinct()
+        return goals(c, left(target, logged), open)[slot]
+    }
+
+    /**
+     * Repas composé avec les aliments choisis : grammes calculés sur l'appareil ([Portions]), aucune IA ni réseau.
+     * Remplace un éventuel repas déjà prévu pour le même créneau.
+     */
+    fun compose(day: Long, slot: Int, foods: List<FoodEntity>, goal: Macros): Pair<Meal, Portions.Result> {
+        val r = Portions.solve(foods.map { Portions.Food(it.kcal100, it.protein100, it.fat100, it.carbs100) },
+            Portions.Goal(goal.kcal, goal.protein, goal.fat, goal.carbs))
+        val ings = foods.zip(r.grams).map { (f, g) ->
+            val k = g / 100
+            Ingredient(f.name, g, f.kcal100 * k, f.protein100 * k, f.fat100 * k, f.carbs100 * k, f.fiber100 * k, f.id.takeIf { it != 0L })
+        }
+        val title = foods.take(3).joinToString(", ") { it.name } + if (foods.size > 3) "…" else ""
+        val meal = Meal(slot, title, ings)
+        val p = plans.value[day]
+        val others = p?.meals.orEmpty().filter { it.slot != slot }
+        save(plans.value + (day to Plan(day, if (p == null || others.isEmpty()) "foods" else p.provider, (others + meal).sortedBy { it.slot })))
+        return meal to r
     }
 
     /** Facteur qui amène [kcal] sur [goal] (borné), pour des portions réalistes. */
