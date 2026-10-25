@@ -95,11 +95,7 @@ enum class Range(val label: String, val days: Int?) { W1("1S", 7), M1("1M", 30),
 @Composable
 fun DetailScaffold(title: String, onBack: () -> Unit, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
-            Text(tr(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            action?.invoke()
-        }
+        app.superhealth.nutrition.ui.components.NavBar(tr(title), onBack) { action?.invoke() }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding(), content = content)
     }
 }

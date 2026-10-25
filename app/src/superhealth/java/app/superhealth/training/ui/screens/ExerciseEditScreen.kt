@@ -107,10 +107,10 @@ fun ExerciseEditScreen(vm: AppViewModel, id: String?, nav: NavHostController) {
     }
 
     DetailScaffold(if (old == null) tr("Nouvel exercice") else tr("Modifier l'exercice"), nav, actions = {
-        if (old != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Rounded.DeleteOutline, tr("Supprimer"), tint = Color(0xFFE11900)) }
+        if (old != null) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Rounded.DeleteOutline, tr("Supprimer"), tint = app.superhealth.ui.theme.Base.Red) }
     }) {
         TextInput(tr("Nom de l'exercice"), name, { name = it }, placeholder = tr("Ex. : Développé incliné à la machine"))
-        if (duplicate) Text(tr("Un exercice porte déjà ce nom"), color = Color(0xFFE11900), style = MaterialTheme.typography.bodySmall)
+        if (duplicate) Text(tr("Un exercice porte déjà ce nom"), color = app.superhealth.ui.theme.Base.Red, style = MaterialTheme.typography.bodySmall)
         TextInput(tr("Autres noms (séparés par une virgule)"), alt, { alt = it })
 
         SectionLabel(tr("Muscles"))
@@ -186,7 +186,7 @@ fun ExerciseEditScreen(vm: AppViewModel, id: String?, nav: NavHostController) {
             title = { Text(tr("Supprimer l'exercice ?")) },
             text = { Text(if (used > 0) trf("Il apparaît dans %1\$s séance(s) de l'historique, qui garderont leurs séries.", used) else tr("Il sera retiré de vos programmes.")) },
             confirmButton = { TextButton(onClick = { confirmDelete = false; vm.deleteCustomExercise(old.id); nav.popBackStack("activities", false) }) {
-                Text(tr("Supprimer"), color = Color(0xFFE11900), fontWeight = FontWeight.SemiBold) } },
+                Text(tr("Supprimer"), color = app.superhealth.ui.theme.Base.Red, fontWeight = FontWeight.SemiBold) } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
     }
 }

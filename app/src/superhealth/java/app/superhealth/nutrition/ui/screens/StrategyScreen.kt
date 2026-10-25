@@ -1,5 +1,8 @@
 package app.superhealth.nutrition.ui.screens
 
+import androidx.compose.material.icons.rounded.Balance
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material.icons.automirrored.rounded.TrendingDown
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import android.app.DatePickerDialog
@@ -104,8 +107,11 @@ private val longFmt get() = DateTimeFormatter.ofPattern("EEEE d MMMM", app.super
 private val dateFmt get() = DateTimeFormatter.ofPattern("d MMM yyyy", app.superhealth.nutrition.ui.Lang.locale)
 
 fun goalLabel(t: GoalType) = when (t) { GoalType.CUT -> tr("Perte de poids"); GoalType.BULK -> tr("Prise de poids"); GoalType.MAINTENANCE -> tr("Maintien") }
-fun goalIllustration(t: GoalType) = when (t) {
-    GoalType.CUT -> "illustrations/illustration_2.webp"; GoalType.BULK -> "illustrations/illustration_5.webp"; else -> "illustrations/illustration_10.webp"
+/** Symbole de l'objectif (perte : tendance à la baisse, prise : à la hausse, maintien : équilibre). */
+fun goalIcon(t: GoalType) = when (t) {
+    GoalType.CUT -> androidx.compose.material.icons.Icons.AutoMirrored.Rounded.TrendingDown
+    GoalType.BULK -> androidx.compose.material.icons.Icons.AutoMirrored.Rounded.TrendingUp
+    else -> androidx.compose.material.icons.Icons.Rounded.Balance
 }
 fun fmtDate(day: Long): String = LocalDate.ofEpochDay(day).format(dateFmt)
 
@@ -114,7 +120,7 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
     val a by vm.analytics.collectAsState()
     val s by vm.settings.collectAsState()
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Stratégie"))
+        ScreenTitle(tr("Stratégie"), onBack = { nav.popBackStack() })
         val an = a ?: return@Column
         val p = an.program
         Column(Modifier.padding(horizontal = 16.dp)) {
@@ -234,8 +240,11 @@ private fun CheckInBanner(an: Analytics, onCheckIn: () -> Unit) {
 private fun GoalCard(an: Analytics, s: Settings, onEdit: () -> Unit) {
     val g = an.currentGoal
     MfCard(padding = PaddingValues(0.dp)) {
-        AssetImage(goalIllustration(g?.type ?: GoalType.MAINTENANCE), Modifier.fillMaxWidth().height(140.dp), crop = true)
         Column(Modifier.padding(16.dp)) {
+            Box(Modifier.padding(bottom = 10.dp).size(44.dp).clip(RoundedCornerShape(12.dp)).background(app.superhealth.ui.theme.HealthHues.Body),
+                contentAlignment = Alignment.Center) {
+                Icon(goalIcon(g?.type ?: GoalType.MAINTENANCE), null, Modifier.size(26.dp), tint = androidx.compose.ui.graphics.Color.White)
+            }
             Text(tr("Objectif actuel"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
             Text(g?.let { goalLabel(it.type) } ?: tr("Aucun objectif"), style = MaterialTheme.typography.headlineSmall)
             if (g != null) {
@@ -406,7 +415,6 @@ fun CheckInScreen(vm: AppViewModel, onBack: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         when (step) {
             0 -> {
-                AssetImage("illustrations/illustration_4.webp", Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(20.dp)), crop = true)
                 SectionLabel(tr("Pesée"))
                 MfCard {
                     Text(if (recentWeigh) tr("Vous avez des pesées récentes. Vous pouvez en ajouter une pour aujourd'hui.")

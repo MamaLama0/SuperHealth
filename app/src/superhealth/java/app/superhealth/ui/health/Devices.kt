@@ -96,9 +96,11 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
             return@DetailScaffold
         }
 
-        SectionLabel(tr("Appareils")) {
-            if (devices.any { it.busy || it.connecting }) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = Mf.colors.accent)
-            else if (devices.isNotEmpty()) IconButton(onClick = { vm.syncNow(ctx) }) { Icon(Icons.Rounded.Sync, tr("Synchroniser")) }
+        Row(verticalAlignment = Alignment.Bottom) {
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Appareils"), Modifier.weight(1f))
+            if (devices.any { it.busy || it.connecting }) CircularProgressIndicator(Modifier.padding(end = 12.dp, bottom = 6.dp).size(18.dp), strokeWidth = 2.dp, color = Mf.colors.accent)
+            else if (devices.isNotEmpty()) Text(tr("Synchroniser"), Modifier.padding(end = 12.dp, bottom = 7.dp).clickable { vm.syncNow(ctx) },
+                color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
         }
         GroupCard {
             devices.forEachIndexed { i, d ->
@@ -119,7 +121,7 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
 
-        SectionLabel(tr("Avancé"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Avancé"), Modifier.padding(start = 0.dp))
         GroupCard {
             SettingRow(tr("Objectifs d'activité"), subtitle = tr("Sommeil, distance, minutes actives"), icon = Icons.Rounded.Flag) {
                 ctx.startActivity(Intent(ctx, AboutUserPreferencesActivity::class.java))

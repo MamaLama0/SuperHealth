@@ -62,9 +62,9 @@ internal fun StepGoalEditor(s: Settings, set: ((Settings) -> Settings) -> Unit) 
     val perDay = s.stepGoalDays.any { it > 0 }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(tr("Par jour de la semaine"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Switch(perDay, { on ->
+        app.superhealth.nutrition.ui.components.Toggle(perDay, { on ->
             set { it.copy(stepGoalDays = if (on) List(7) { _ -> it.stepGoal } else emptyList()) }
-        }, colors = SwitchDefaults.colors(checkedTrackColor = Mf.colors.accent))
+        })
     }
     if (perDay) {
         Spacer(Modifier.height(4.dp))

@@ -120,9 +120,7 @@ fun WorkoutEditScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     BackHandler { exit() }
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = ::exit) { Icon(Icons.Rounded.Close, tr("Fermer")) }
-            Text(tr("Modifier la séance"), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        app.superhealth.nutrition.ui.components.NavBar(tr("Modifier la séance"), ::exit, backIcon = Icons.Rounded.Close) {
             TextButton(onClick = { vm.saveWorkout(w.copy(exercises = w.exercises.filter { it.sets.isNotEmpty() })); nav.popBackStack() }, enabled = w != original) {
                 Text(tr("Enregistrer"), color = if (w != original) Mf.colors.accent else Mf.colors.textTertiary, fontWeight = FontWeight.SemiBold)
             }
@@ -366,6 +364,6 @@ private fun DiffRow(title: String, detail: String, kept: Boolean, onUndo: () -> 
                 textDecoration = if (kept) null else TextDecoration.LineThrough, color = if (kept) Mf.colors.text else Mf.colors.textTertiary)
             if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
-        TextButton(onClick = onUndo) { Text(if (kept) tr("Défaire") else tr("Rétablir"), color = if (kept) Color(0xFFE11900) else Mf.colors.accent) }
+        TextButton(onClick = onUndo) { Text(if (kept) tr("Défaire") else tr("Rétablir"), color = if (kept) app.superhealth.ui.theme.Base.Red else Mf.colors.accent) }
     }
 }

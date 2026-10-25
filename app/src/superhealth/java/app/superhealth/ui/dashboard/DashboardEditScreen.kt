@@ -98,8 +98,9 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
         if (shown.isEmpty()) Text(tr("Aucune carte affichée"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         else GroupCard {
             shown.forEachIndexed { i, c ->
-                if (i > 0) RowDivider()
-                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (i > 0) RowDivider(56.dp)
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CardGlyph(c)
                     Column(Modifier.weight(1f)) {
                         Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         // taille : bulle, demi-largeur, pleine largeur (celles que la carte accepte)
@@ -116,7 +117,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
                             }
                         } else Text(tr(c.section.label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
                     }
-                    Switch(true, { set(shown - c) }, Modifier.padding(end = 8.dp), colors = switchColors())
+                    app.superhealth.nutrition.ui.components.Toggle(true, { set(shown - c) }, Modifier.padding(end = 8.dp))
                 }
             }
         }
@@ -124,16 +125,17 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
         DashCard.Section.entries.forEach { section ->
             val hidden = DashCard.entries.filter { it.section == section && it !in shown && it.available }
             if (hidden.isEmpty()) return@forEach
-            SectionLabel(tr(section.label))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr(section.label), Modifier.padding(start = 0.dp))
             GroupCard {
                 hidden.forEachIndexed { i, c ->
-                    if (i > 0) RowDivider()
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (i > 0) RowDivider(56.dp)
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        CardGlyph(c)
                         Column(Modifier.weight(1f)) {
                             Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (c.watch) Text(tr("Montre ou Health Connect"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
                         }
-                        Switch(false, { set(shown + c) }, colors = switchColors())
+                        app.superhealth.nutrition.ui.components.Toggle(false, { set(shown + c) })
                     }
                 }
             }
@@ -154,7 +156,7 @@ fun VitalsEditScreen(vm: SuperViewModel, nav: NavHostController) {
     }) {
         Text(tr("La première mesure est la grande bulle, les deux suivantes les petites. Les mesures sans source restent masquées."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-        SectionLabel(tr("Affichées"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Affichées"), Modifier.padding(start = 0.dp))
         if (shown.isEmpty()) Text(tr("Aucune mesure"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         else GroupCard {
             shown.forEachIndexed { i, n ->
@@ -172,19 +174,19 @@ fun VitalsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                     IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
                         Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
                     }
-                    Switch(true, { set(shown - n) }, Modifier.padding(end = 8.dp), colors = switchColors())
+                    app.superhealth.nutrition.ui.components.Toggle(true, { set(shown - n) }, Modifier.padding(end = 8.dp))
                 }
             }
         }
         val hidden = app.superhealth.VITAL_CHOICES.filter { it !in shown }
         if (hidden.isNotEmpty()) {
-            SectionLabel(tr("Disponibles"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Disponibles"), Modifier.padding(start = 0.dp))
             GroupCard {
                 hidden.forEachIndexed { i, n ->
                     if (i > 0) RowDivider()
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(tr(label(n)), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Switch(false, { set(shown + n) }, colors = switchColors())
+                        app.superhealth.nutrition.ui.components.Toggle(false, { set(shown + n) })
                     }
                 }
             }
@@ -204,7 +206,7 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
     }) {
         Text(tr("Raccourcis du bouton + et leur ordre. Un seul : le + l'ouvre directement."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-        SectionLabel(tr("Affichés"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Affichés"), Modifier.padding(start = 0.dp))
         if (shown.isEmpty()) Text(tr("Aucun raccourci"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         else GroupCard {
             shown.forEachIndexed { i, a ->
@@ -220,20 +222,20 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
                     IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
                         Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
                     }
-                    Switch(true, { set(shown - a) }, Modifier.padding(end = 8.dp), colors = switchColors())
+                    app.superhealth.nutrition.ui.components.Toggle(true, { set(shown - a) }, Modifier.padding(end = 8.dp))
                 }
             }
         }
         DashCard.Section.entries.forEach { section ->
             val hidden = PlusAction.entries.filter { it.section == section && it !in shown }
             if (hidden.isEmpty()) return@forEach
-            SectionLabel(tr(section.label))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr(section.label), Modifier.padding(start = 0.dp))
             GroupCard {
                 hidden.forEachIndexed { i, a ->
                     if (i > 0) RowDivider()
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(tr(a.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Switch(false, { set(shown + a) }, colors = switchColors())
+                        app.superhealth.nutrition.ui.components.Toggle(false, { set(shown + a) })
                     }
                 }
             }
@@ -241,11 +243,6 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
         Spacer(Modifier.height(24.dp))
     }
 }
-
-@Composable
-private fun switchColors() = SwitchDefaults.colors(checkedTrackColor = Mf.colors.accent, checkedThumbColor = Color.White,
-    uncheckedBorderColor = Color.Transparent, uncheckedTrackColor = Mf.colors.chip)
-
 
 /** Anneaux du jour : quelles mesures (1 à 4), de l'extérieur vers l'intérieur. */
 @Composable
@@ -261,7 +258,7 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         Text(tr("De l'extérieur vers l'intérieur, jusqu'à 4 anneaux. Aussi dans le widget « Anneaux du jour »."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-        SectionLabel(tr("Affichés"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Affichés"), Modifier.padding(start = 0.dp))
         GroupCard {
             shown.forEachIndexed { i, k ->
                 if (i > 0) RowDivider()
@@ -275,13 +272,13 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                     IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
                         Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
                     }
-                    Switch(true, { set(shown - k) }, Modifier.padding(end = 8.dp), enabled = shown.size > 1, colors = switchColors())
+                    app.superhealth.nutrition.ui.components.Toggle(true, { set(shown - k) }, Modifier.padding(end = 8.dp), enabled = shown.size > 1)
                 }
             }
         }
         val hidden = Rings.Kind.entries - shown.toSet()
         if (hidden.isNotEmpty()) {
-            SectionLabel(tr("Disponibles"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Disponibles"), Modifier.padding(start = 0.dp))
             GroupCard {
                 hidden.forEachIndexed { i, k ->
                     if (i > 0) RowDivider()
@@ -289,7 +286,7 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                         Box(Modifier.size(12.dp).clip(CircleShape).background(k.color))
                         Spacer(Modifier.width(12.dp))
                         Text(tr(k.label), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                        Switch(false, { set(shown + k) }, enabled = shown.size < Rings.MAX, colors = switchColors())
+                        app.superhealth.nutrition.ui.components.Toggle(false, { set(shown + k) }, enabled = shown.size < Rings.MAX)
                     }
                 }
             }
@@ -302,7 +299,7 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
 /** Bloc de l'aperçu : toucher passe à la taille suivante que la carte accepte. */
 @Composable
 private fun Block(c: DashCard, z: app.superhealth.CardSize, modifier: Modifier) {
-    Row(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(c.hue().container(1.3f))
+    Row(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(Mf.colors.chip)
         .clickable(enabled = c.sizes.size > 1) {
             val next = c.sizes[(c.sizes.indexOf(z) + 1) % c.sizes.size]
             SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to next.name)) }
@@ -310,8 +307,16 @@ private fun Block(c: DashCard, z: app.superhealth.CardSize, modifier: Modifier) 
         Icon(c.icon(), null, Modifier.size(16.dp), tint = c.hue())
         if (z.span > 1) {
             Spacer(Modifier.width(6.dp))
-            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, color = c.hue().onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+    }
+}
+
+/** Icône de la carte dans un carré arrondi de sa couleur, comme les listes de réglages. */
+@Composable
+private fun CardGlyph(c: DashCard) {
+    Box(Modifier.padding(end = 14.dp).size(26.dp), contentAlignment = Alignment.Center) {
+        Icon(c.icon(), null, Modifier.size(21.dp), tint = c.hue())
     }
 }
 

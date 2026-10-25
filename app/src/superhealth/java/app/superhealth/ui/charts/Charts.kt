@@ -370,7 +370,7 @@ fun SignedBarChart(
 fun WaterfallChart(start: Double, steps: List<Double>, remaining: Double, toward: (Double) -> Boolean, modifier: Modifier = Modifier, height: Dp = 160.dp) {
     val good = Mf.colors.accent
     val bad = Mf.colors.textTertiary
-    val base = Mf.colors.strong
+    val base = Mf.colors.text
     Canvas(modifier.fillMaxWidth().height(height)) {
         val total = max(abs(start), 0.1)
         val n = steps.size + 2

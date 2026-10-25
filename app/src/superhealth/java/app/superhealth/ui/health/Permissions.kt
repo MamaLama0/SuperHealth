@@ -150,7 +150,7 @@ fun PermissionsScreen(vm: SuperViewModel, nav: NavHostController) {
         val restrictedMissing = Perm.entries.any { it.restricted && state[it] == false }
         if (Build.VERSION.SDK_INT >= 33 && restrictedMissing && (restricted || blocked)) RestrictedGuide { settings.launch(appDetails(ctx)) }
 
-        SectionLabel(tr("Montre"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Montre"), Modifier.padding(start = 0.dp))
         GroupCard {
             Perm.entries.forEachIndexed { i, p ->
                 if (i > 0) RowDivider()

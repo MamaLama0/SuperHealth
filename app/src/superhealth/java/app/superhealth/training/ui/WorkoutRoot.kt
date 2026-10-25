@@ -1,5 +1,6 @@
 package app.superhealth.training.ui
 
+import androidx.compose.ui.draw.shadow
 import app.superhealth.ui.openTab
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -59,7 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import app.superhealth.ui.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -138,15 +139,20 @@ fun handleTrainingRoute(vm: AppViewModel, nav: NavHostController, r: String) {
 fun ActiveSessionBar(name: String, start: Long, onOpen: () -> Unit) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(1000); now = System.currentTimeMillis() } }
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).clip(RoundedCornerShape(16.dp)).background(Mf.colors.strong)
-        .clickable(onClick = onOpen).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Rounded.PlayArrow, null, tint = Mf.colors.onStrong)
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text(tr("Entraînement en cours"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.onStrong.copy(alpha = 0.7f))
-            Text(name, style = MaterialTheme.typography.titleSmall, color = Mf.colors.onStrong)
+    // mini-lecteur flottant au-dessus des onglets
+    Row(Modifier.fillMaxWidth().background(Mf.colors.background).padding(start = 16.dp, end = 16.dp, top = 6.dp)
+        .shadow(14.dp, CircleShape, ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.2f), spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.15f))
+        .clip(CircleShape).background(Mf.colors.card).clickable(onClick = onOpen).padding(start = 8.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(38.dp).clip(CircleShape).background(Mf.colors.strong), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.PlayArrow, null, tint = Mf.colors.onStrong)
         }
-        Text(duration((now - start) / 1000), style = MaterialTheme.typography.titleMedium, color = Mf.colors.onStrong)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(tr("Entraînement en cours"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
+        }
+        Text(duration((now - start) / 1000), style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"), color = Mf.colors.accent)
     }
 }
 

@@ -130,7 +130,7 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
     }
 
     DetailScaffold(tr("Sauvegarde"), onBack = { nav.popBackStack() }) {
-        SectionLabel(tr("Code de récupération"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Code de récupération"), Modifier.padding(start = 0.dp))
         MfCard {
             val code = remember { Secrets.backupCode(ctx) }
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -148,7 +148,7 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
 
-        SectionLabel(tr("Sauvegarde automatique"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Sauvegarde automatique"), Modifier.padding(start = 0.dp))
         MfCard {
             ChipChoice(Remote.Kind.entries, Remote.kind(), { tr(it.label) }) { k ->
                 if (k == Remote.Kind.FOLDER && sh.backupFolder == null) pickFolder.launch(null)
@@ -203,7 +203,7 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
 
-        SectionLabel(tr("Fichier"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Fichier"), Modifier.padding(start = 0.dp))
         GroupCard {
             SettingRow(tr("Exporter"), subtitle = tr("Fichier chiffré : nutrition, musculation, montre, réglages"), icon = Icons.Rounded.Backup) {
                 exportFile.launch(Archive.fileName())

@@ -6,10 +6,10 @@
         <item name="android:windowBackground">@color/sh_bg</item>
     </style>
 
-    <!-- Posé sur les thèmes Gadgetbridge (SuperHealthApp.onActivityThemed) : police DM Sans, titres en gras, coins arrondis. -->
+    <!-- Posé sur les thèmes Gadgetbridge (SuperHealthApp.onActivityThemed) : police Google Sans Flex, titres en gras, coins arrondis. -->
     <style name="SuperHealth.GBOverlay" parent="">
-        <item name="android:fontFamily">@font/dm_sans</item>
-        <item name="fontFamily">@font/dm_sans</item>
+        <item name="android:fontFamily">@font/sans_flex</item>
+        <item name="fontFamily">@font/sans_flex</item>
         <item name="android:textViewStyle">@style/SuperHealth.GBText</item>
         <item name="toolbarStyle">@style/SuperHealth.GBToolbar</item>
         <item name="shapeAppearanceSmallComponent">@style/SuperHealth.GBShape</item>
@@ -22,17 +22,17 @@
         <item name="toolbar_bg">?android:attr/colorBackground</item>
     </style>
 
-    <!-- Remplace le style de titre de Gadgetbridge : DM Sans en gras -->
+    <!-- Remplace le style de titre de Gadgetbridge : Google Sans Flex en gras -->
     <style name="TextAppearance.App.ToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textSize">21sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:fontFamily">@font/dm_sans</item>
-        <item name="fontFamily">@font/dm_sans</item>
+        <item name="android:fontFamily">@font/sans_flex</item>
+        <item name="fontFamily">@font/sans_flex</item>
         <item name="android:textColor">?attr/toolbar_title</item>
     </style>
 
     <style name="SuperHealth.GBText" parent="android:Widget.TextView">
-        <item name="android:fontFamily">@font/dm_sans</item>
+        <item name="android:fontFamily">@font/sans_flex</item>
     </style>
 
     <style name="SuperHealth.GBToolbar" parent="Widget.Material3.Toolbar">
@@ -40,8 +40,8 @@
     </style>
 
     <style name="SuperHealth.GBToolbarTitle" parent="TextAppearance.Material3.TitleLarge">
-        <item name="android:fontFamily">@font/dm_sans</item>
-        <item name="fontFamily">@font/dm_sans</item>
+        <item name="android:fontFamily">@font/sans_flex</item>
+        <item name="fontFamily">@font/sans_flex</item>
         <item name="android:textStyle">bold</item>
     </style>
 

@@ -67,7 +67,7 @@ internal fun VersionRow(nav: NavHostController) {
         Updater.State.Idle -> null to null
     }
     val pending = st is Updater.State.Available || st is Updater.State.Downloading || st is Updater.State.Ready
-    SettingRow("SuperHealth " + Updater.installed(ctx), value, icon = Icons.Rounded.SystemUpdate, hue = if (pending) Mf.colors.accent else null, valueColor = color,
+    SettingRow("SuperHealth " + Updater.installed(ctx), value, icon = Icons.Rounded.SystemUpdate, hue = if (pending) Mf.colors.accent else app.superhealth.ui.theme.Base.Grey, valueColor = color,
         onClick = { if (pending) nav.go("update") else if (st !is Updater.State.Checking) scope.launch { Updater.refresh(ctx) } })
 }
 
@@ -127,7 +127,7 @@ fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
 
-        SectionLabel(tr("Options"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Options"), Modifier.padding(start = 0.dp))
         GroupCard {
             SwitchRow(tr("Demander avant de télécharger"), tr("Notification d'abord ; sinon l'APK est prêt à installer"), sh.updateConfirm) { v ->
                 SuperPrefs.update { it.copy(updateConfirm = v) }

@@ -263,7 +263,7 @@ private fun PlanExerciseSheet(
                 onUp?.let { SheetAction(Icons.Rounded.KeyboardArrowUp, tr("Monter"), it) }
                 onDown?.let { SheetAction(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), it) }
             }
-            TextButton(onClick = onRemove, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) { Text(tr("Retirer l'exercice"), color = Color(0xFFE11900)) }
+            TextButton(onClick = onRemove, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) { Text(tr("Retirer l'exercice"), color = app.superhealth.ui.theme.Base.Red) }
         }
     }
 }
@@ -313,7 +313,7 @@ fun CustomWorkoutScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         PillButton(tr("Dupliquer"), Modifier.fillMaxWidth().padding(top = 12.dp), strong = false) {
             vm.saveCustom(w.copy(id = UUID.randomUUID().toString(), name = w.name + tr(" (copie)"))); nav.popBackStack()
         }
-        Text(tr("Supprimer la séance"), Modifier.fillMaxWidth().clickable { confirmDelete = true }.padding(14.dp), color = Color(0xFFE11900),
+        Text(tr("Supprimer la séance"), Modifier.fillMaxWidth().clickable { confirmDelete = true }.padding(14.dp), color = app.superhealth.ui.theme.Base.Red,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
     if (rename) {
@@ -325,7 +325,7 @@ fun CustomWorkoutScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, containerColor = Mf.colors.card,
         title = { Text(tr("Supprimer cette séance ?")) }, text = { Text(tr("Votre historique est conservé.")) },
-        confirmButton = { TextButton(onClick = { confirmDelete = false; vm.deleteCustom(w.id); nav.popBackStack() }) { Text(tr("Supprimer"), color = Color(0xFFE11900)) } },
+        confirmButton = { TextButton(onClick = { confirmDelete = false; vm.deleteCustom(w.id); nav.popBackStack() }) { Text(tr("Supprimer"), color = app.superhealth.ui.theme.Base.Red) } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
 }
 

@@ -1,5 +1,6 @@
 package app.superhealth.ui.health
 
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import app.superhealth.ui.coach.askCoach
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Delete
@@ -162,7 +163,7 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             title = { Text(tr("Supprimer cette activité importée ?")) },
             confirmButton = { androidx.compose.material3.TextButton(onClick = {
                 confirmDelete = false; app.superhealth.bridge.RunImport.delete(id); nav.popBackStack()
-            }) { Text(tr("Supprimer"), color = androidx.compose.ui.graphics.Color(0xFFE5574F)) } },
+            }) { Text(tr("Supprimer"), color = app.superhealth.ui.theme.Base.Red) } },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
         if (detail == null) {
             Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = hue) }
@@ -322,7 +323,7 @@ fun WorkoutMapScreen(nav: NavHostController, id: Long) {
             TrackMap(track, Bridge.kindOf(d.kind.name).hue(), Modifier.fillMaxSize(), interactive = true)
         }
         Box(Modifier.statusBarsPadding().padding(12.dp).size(44.dp).clip(CircleShape).background(Mf.colors.card), contentAlignment = Alignment.Center) {
-            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+            androidx.compose.material3.IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
         }
     }
 }

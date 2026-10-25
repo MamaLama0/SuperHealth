@@ -92,10 +92,10 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
     }
     DetailScaffold(tr("Musculation"), nav) {
         Column {
-            SectionLabel(tr("Expérience"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Expérience"), Modifier.padding(start = 0.dp))
             MfCard { ChipChoice(app.superhealth.training.domain.Experience.entries, s.experience, { it.label.tr() }) { v -> vm.settings { it.copy(experience = v) } } }
 
-            SectionLabel(tr("Salles"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Salles"), Modifier.padding(start = 0.dp))
             GroupCard {
                 st.gyms.forEachIndexed { i, g ->
                     if (i > 0) RowDivider()
@@ -107,7 +107,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SettingRow(tr("Gérer les salles"), icon = Icons.Rounded.Add) { nav.navigate("gyms") }
             }
 
-            SectionLabel(tr("Progression intelligente"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Progression intelligente"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SwitchRow(tr("Appliquer en séance"), tr("Ajuste les séries suivantes"), s.smartProgression) { v -> vm.settings { it.copy(smartProgression = v) } }
                 RowDivider()
@@ -118,7 +118,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SwitchRow(tr("Garder la même charge"), tr("Weight Match"), s.weightMatch) { v -> vm.settings { it.copy(weightMatch = v) } }
             }
 
-            SectionLabel(tr("Échauffements"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Échauffements"), Modifier.padding(start = 0.dp))
             MfCard {
                 ChipChoice(WarmUpMode.entries, s.warmUp, { it.label.tr() }) { v -> vm.settings { it.copy(warmUp = v) } }
                 if (s.warmUp == WarmUpMode.SCHEME) Text(tr("Schéma : ") + s.warmUpScheme.joinToString(" · ") { trf("%1\$s %% × %2\$s", ((it.percent * 100).toInt()), it.reps) },
@@ -130,7 +130,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SwitchRow(tr("Simplifier les disques"), tr("Pas de petits disques à l'échauffement"), s.simplifyWarmUpPlates) { v -> vm.settings { it.copy(simplifyWarmUpPlates = v) } }
             }
 
-            SectionLabel(tr("Minuteur de repos"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Minuteur de repos"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SettingRow(tr("Repos par défaut"), restLabel(s.restDefaultSec)) { vm.settings { it.copy(restDefaultSec = next(it.restDefaultSec, listOf(60, 90, 120, 150, 180, 240))) } }
                 RowDivider()
@@ -141,7 +141,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SwitchRow(tr("Son de fin de repos"), null, s.restSound) { v -> vm.settings { it.copy(restSound = v) } }
             }
 
-            SectionLabel(tr("Données"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Données"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SettingRow(tr("Exporter une sauvegarde"), subtitle = tr("JSON complet"), icon = Icons.Rounded.Download) { export.launch("superhealth-musculation-${LocalDate.now()}.json") }
                 RowDivider()
@@ -165,7 +165,7 @@ fun GymsScreen(vm: AppViewModel, nav: NavHostController) {
                 SettingRow(g.name, if (g.id == st.settings.activeGymId) tr("Active") else null, subtitle = trf("%1\$s équipements", g.equipmentIds.size)) { nav.navigate("gym/${g.id}") }
             }
         }
-        SectionLabel(tr("Nouvelle salle depuis un modèle"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Nouvelle salle depuis un modèle"), Modifier.padding(start = 0.dp))
         GroupCard {
             GymTemplate.entries.forEachIndexed { i, t ->
                 if (i > 0) RowDivider()
@@ -190,7 +190,7 @@ fun GymEditScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         var name by remember { mutableStateOf(g.name) }
         TextInput(tr("Nom"), name, { name = it; vm.saveGym(g.copy(name = it.ifBlank { g.name })) })
         if (st.settings.activeGymId != g.id) PillButton(tr("Utiliser cette salle"), Modifier.fillMaxWidth().padding(vertical = 6.dp)) { vm.settings { it.copy(activeGymId = g.id) } }
-        SectionLabel(tr("Charges"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Charges"), Modifier.padding(start = 0.dp))
         MfCard {
             var bar by remember { mutableStateOf(clean(s.w(g.barWeight))) }
             NumberField(tr("Barre olympique"), bar, { bar = it; it.toNum()?.let { v -> vm.saveGym(g.copy(barWeight = s.toKg(v))) } }, suffix = s.unit.label.tr())
@@ -229,7 +229,7 @@ fun GymEditScreen(vm: AppViewModel, id: String, nav: NavHostController) {
             }
         }
         if (st.gyms.size > 1) Text(tr("Supprimer cette salle"), Modifier.fillMaxWidth().clickable { vm.deleteGym(g.id); nav.popBackStack() }.padding(14.dp),
-            color = Color(0xFFE11900), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            color = app.superhealth.ui.theme.Base.Red, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 

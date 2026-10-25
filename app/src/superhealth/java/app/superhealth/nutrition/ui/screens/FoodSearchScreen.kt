@@ -1,5 +1,6 @@
 package app.superhealth.nutrition.ui.screens
 
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -149,9 +150,9 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+            androidx.compose.material3.IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
             Row(
-                Modifier.weight(1f).height(46.dp).clip(CircleShape).background(Mf.colors.elevated).padding(horizontal = 14.dp),
+                Modifier.weight(1f).height(44.dp).clip(CircleShape).background(Mf.colors.chip).padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Rounded.Search, null, tint = Mf.colors.textSecondary, modifier = Modifier.size(20.dp))
@@ -167,8 +168,8 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                 }
                 if (query.isNotEmpty()) Icon(Icons.Rounded.Close, tr("Effacer"), Modifier.size(20.dp).clickable { query = "" }, tint = Mf.colors.textSecondary)
             }
-            if (s.aiEnabled && !ingredient) IconButton(onClick = { onNav("ai") }) { Icon(Icons.Rounded.AutoAwesome, tr("Décrire avec l'IA")) }
-            IconButton(onClick = { scan() }) { Icon(Icons.Rounded.QrCodeScanner, tr("Scanner")) }
+            if (s.aiEnabled && !ingredient) IconButton(onClick = { onNav("ai") }) { Icon(Icons.Rounded.AutoAwesome, tr("Décrire avec l'IA"), tint = Mf.colors.accent) }
+            IconButton(onClick = { scan() }) { Icon(Icons.Rounded.QrCodeScanner, tr("Scanner"), tint = Mf.colors.accent) }
         }
         notice?.let { n ->
             Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp))

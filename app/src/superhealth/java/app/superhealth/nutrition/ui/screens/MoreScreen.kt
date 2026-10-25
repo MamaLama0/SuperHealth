@@ -146,7 +146,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SettingRow(tr("Mesures et photos"), icon = Icons.Rounded.Straighten) { nav.navigate("body") }
             }
 
-            SectionLabel("IA")
+            app.superhealth.nutrition.ui.components.GroupHeader("IA", Modifier.padding(start = 0.dp))
             GroupCard {
                 SwitchRow(tr("Fonctions IA"), tr("Décrire ou photographier un repas"), s.aiEnabled) { v -> set { it.copy(aiEnabled = v) } }
                 if (s.aiEnabled) {
@@ -157,7 +157,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 }
             }
 
-            SectionLabel(tr("Calculs"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Calculs"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SwitchRow(tr("Ajustement prédictif"), tr("Anticipe un changement d'objectif"), s.predictiveGoalAdjustment) { v ->
                     set { it.copy(predictiveGoalAdjustment = v) }
@@ -167,14 +167,14 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
             }
 
             // bases où sont cherchés les aliments et les codes-barres
-            SectionLabel(tr("Bases d'aliments"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Bases d'aliments"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
                 RowDivider()
                 SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
             }
 
-            SectionLabel(tr("Données"))
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Données"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SettingRow(tr("Exporter une sauvegarde"), subtitle = tr("JSON complet"), icon = Icons.Rounded.Backup) { exportJson.launch("superhealth-nutrition-${stamp}.json") }
                 RowDivider()

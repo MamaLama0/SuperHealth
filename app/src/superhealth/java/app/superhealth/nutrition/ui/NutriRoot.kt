@@ -60,7 +60,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import app.superhealth.ui.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -99,7 +99,6 @@ fun NavGraphBuilder.nutritionGraph(vm: AppViewModel, nav: NavHostController) {
     composable(
         "search/{mode}/{minute}",
         arguments = listOf(navArgument("mode") { type = NavType.IntType }, navArgument("minute") { type = NavType.IntType }),
-        enterTransition = { slideInHorizontally { it } }, popExitTransition = { slideOutHorizontally { it } },
     ) {
         FoodSearchScreen(vm, it.arguments?.getInt("mode") ?: 0, it.arguments?.getInt("minute") ?: -1, onDone = { nav.popBackStack() },
             onNav = { r -> nav.navigate(r) })

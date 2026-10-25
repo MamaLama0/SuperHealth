@@ -46,8 +46,8 @@ import nodomain.freeyourgadget.gadgetbridge.R
 internal object WK {
     val bg = ColorProvider(Color(0xFFFFFFFF), Color(0xFF1C1C1E))
     val chip = ColorProvider(Color(0xFFF1F1F3), Color(0xFF2C2C2E))
-    val text = ColorProvider(Color(0xFF111111), Color(0xFFF2F2F2))
-    val sub = ColorProvider(Color(0xFF6E6E73), Color(0xFFA1A1A6))
+    val text = ColorProvider(Color(0xFF000000), Color(0xFFFFFFFF))
+    val sub = ColorProvider(Color(0xFF8A8A8E), Color(0xFF98989F))
     val track = ColorProvider(Color(0xFFE6E6EA), Color(0xFF3A3A3C))
     val strong = ColorProvider(Color(0xFF111111), Color(0xFFF2F2F2))
     val onStrong = ColorProvider(Color(0xFFFFFFFF), Color(0xFF111111))
@@ -76,7 +76,7 @@ internal object WK {
     }
 
     /** Valeur dans la couleur de sa mesure, lisible sur le fond pastel (comme onContainer dans l'app). */
-    fun on(color: Color) = ColorProvider(androidx.compose.ui.graphics.lerp(color, Color.Black, 0.30f), androidx.compose.ui.graphics.lerp(color, Color.White, 0.25f))
+    fun on(color: Color) = ColorProvider(androidx.compose.ui.graphics.lerp(color, Color.Black, 0.18f), androidx.compose.ui.graphics.lerp(color, Color.White, 0.12f))
     /** Pastille ronde posée sur un fond pastel. */
     val chipOn = ColorProvider(Color(0xD9FFFFFF), Color(0xD91C1C1E))
 
@@ -218,21 +218,21 @@ internal object WK {
 }
 
 /**
- * Fond d'un widget, comme les cartes du tableau de bord : pastel de la famille de la mesure ([hue]), ou carte blanche
- * (sombre la nuit) sans [hue]. Toucher : [action].
+ * Fond d'un widget, comme les cartes du tableau de bord : carte blanche (sombre la nuit), la couleur de la famille
+ * ([hue]) ne teinte que le symbole et la valeur. Toucher : [action].
  */
 @Composable
 internal fun WidgetCard(action: Action, hue: Color?, padding: Dp = 12.dp, horizontal: Alignment.Horizontal = Alignment.Start,
                         content: @Composable androidx.glance.layout.ColumnScope.() -> Unit) {
-    androidx.glance.layout.Column(GlanceModifier.fillMaxSize().background(hue?.let { WK.tint(it) } ?: WK.bg).cornerRadius(WK.RADIUS.dp)
+    androidx.glance.layout.Column(GlanceModifier.fillMaxSize().background(WK.bg).cornerRadius(WK.RADIUS.dp)
         .padding(padding).clickable(action), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = horizontal, content = content)
 }
 
-/** Pastille ronde du symbole, comme dans l'app ([onTint] : sur fond pastel). */
+/** Pastille ronde teintée, symbole dans la couleur, comme dans l'app ([onTint] gardé pour les appels existants). */
 @Composable
 internal fun WidgetChip(icon: Int, color: Color, size: Dp, onTint: Boolean = true) {
-    Box(GlanceModifier.size(size).cornerRadius(size / 2).background(if (onTint) WK.chipOn else WK.tint(color)), contentAlignment = Alignment.Center) {
-        Image(ImageProvider(icon), null, GlanceModifier.size(size * 0.56f), colorFilter = ColorFilter.tint(WK.c(color)))
+    Box(GlanceModifier.size(size).cornerRadius(size / 2).background(WK.tint(color)), contentAlignment = Alignment.Center) {
+        Image(ImageProvider(icon), null, GlanceModifier.size(size * 0.56f), colorFilter = ColorFilter.tint(WK.on(color)))
     }
 }
 
@@ -249,11 +249,10 @@ internal fun WidgetValue(value: String, unit: String?, color: Color, size: Int) 
 @Composable
 internal fun WidgetHeader(icon: Int, color: Color, title: String, trailing: String? = null) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(GlanceModifier.size(22.dp).cornerRadius(11.dp).background(WK.tint(color)), contentAlignment = Alignment.Center) {
-            Image(ImageProvider(icon), null, GlanceModifier.size(14.dp), colorFilter = ColorFilter.tint(WK.c(color)))
-        }
-        Spacer(GlanceModifier.width(6.dp))
-        Text(title, style = TextStyle(color = WK.text, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1,
+        // comme le titre des cartes : symbole et titre dans la couleur de la mesure
+        Image(ImageProvider(icon), null, GlanceModifier.size(15.dp), colorFilter = ColorFilter.tint(WK.on(color)))
+        Spacer(GlanceModifier.width(5.dp))
+        Text(title, style = TextStyle(color = WK.on(color), fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1,
             modifier = GlanceModifier.defaultWeight())
         trailing?.let { Text(it, style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1) }
     }

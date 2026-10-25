@@ -148,21 +148,21 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
             ModuleCard(id, catalog.firstOrNull { it.module.id == id }, installed.firstOrNull { it.id == id }, nav)
         }
 
-        SectionLabel(tr("Options"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Options"), Modifier.padding(start = 0.dp))
         GroupCard {
             SwitchRow(tr("Mises à jour automatiques"), tr("Les plugins installés se mettent à jour seuls, une fois par jour"), sh.modulesAuto) { v ->
                 SuperPrefs.update { it.copy(modulesAuto = v) }
             }
         }
 
-        SectionLabel(tr("Sources non vérifiées"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Sources non vérifiées"), Modifier.padding(start = 0.dp))
         GroupCard {
             sh.moduleSources.forEachIndexed { i, src ->
                 if (i > 0) RowDivider()
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(src, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        errors[src]?.let { Text(trf("Erreur : %1\$s", it), style = MaterialTheme.typography.labelSmall, color = Color(0xFFE5574F)) }
+                        errors[src]?.let { Text(trf("Erreur : %1\$s", it), style = MaterialTheme.typography.labelSmall, color = app.superhealth.ui.theme.Base.Red) }
                     }
                     IconButton(onClick = { SuperPrefs.update { s -> s.copy(moduleSources = s.moduleSources - src) } }) {
                         Icon(Icons.Rounded.Close, tr("Retirer"), tint = Mf.colors.textSecondary)
@@ -239,14 +239,14 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
                     style = MaterialTheme.typography.labelSmall, color = Color(0xFFF2A93B).onContainer(),
                     modifier = Modifier.padding(top = 4.dp).clip(CircleShape).background(Color(0xFFF2A93B).container()).padding(horizontal = 8.dp, vertical = 2.dp))
             }
-            if (inst != null && !busy) Switch(inst.enabled, { Modules.setEnabled(ctx, id, it) }, colors = switchColors())
+            if (inst != null && !busy) app.superhealth.nutrition.ui.components.Toggle(inst.enabled, { Modules.setEnabled(ctx, id, it) })
         }
         if (summary.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text(summary, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         }
         (job as? Modules.Job.Failed)?.let {
-            Text(trf("Échec : %1\$s", it.message), style = MaterialTheme.typography.bodySmall, color = Color(0xFFE5574F), modifier = Modifier.padding(top = 8.dp))
+            Text(trf("Échec : %1\$s", it.message), style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red, modifier = Modifier.padding(top = 8.dp))
         }
         Spacer(Modifier.height(12.dp))
         when {
@@ -272,7 +272,7 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
         onDismissRequest = { confirmRemove = false }, containerColor = Mf.colors.card,
         title = { Text(trf("Désinstaller %1\$s ?", name)) },
         text = { Text(tr("Son contenu est supprimé du téléphone. Vos données (séances, journal…) ne sont pas touchées : tout revient en le réinstallant.")) },
-        confirmButton = { TextButton(onClick = { confirmRemove = false; Modules.uninstall(ctx, id) }) { Text(tr("Désinstaller"), color = Color(0xFFE5574F)) } },
+        confirmButton = { TextButton(onClick = { confirmRemove = false; Modules.uninstall(ctx, id) }) { Text(tr("Désinstaller"), color = app.superhealth.ui.theme.Base.Red) } },
         dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text(tr("Annuler"), color = Mf.colors.text) } },
     )
 }
@@ -349,6 +349,3 @@ internal fun ModuleBadge(kind: String, hue: Color, job: Modules.Job?, size: Dp, 
             tint = if (showCheck) Color.White else hue)
     }
 }
-
-@Composable
-private fun switchColors() = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = Mf.colors.accent, checkedThumbColor = Color.White)

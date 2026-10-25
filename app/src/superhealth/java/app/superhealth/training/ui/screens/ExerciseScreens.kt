@@ -1,5 +1,6 @@
 package app.superhealth.training.ui.screens
 
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Add
 import app.superhealth.training.ui.tr
@@ -127,7 +128,7 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+            androidx.compose.material3.IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
             Row(Modifier.weight(1f).height(46.dp).clip(CircleShape).background(Mf.colors.elevated).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Search, null, tint = Mf.colors.textSecondary, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))

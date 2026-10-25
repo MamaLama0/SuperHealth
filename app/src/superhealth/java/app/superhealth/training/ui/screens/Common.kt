@@ -38,12 +38,7 @@ fun DetailScaffold(
     actions: @Composable RowScope.() -> Unit = {}, content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onBack?.invoke() ?: nav?.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
-            Text(tr(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-            actions()
-        }
+        app.superhealth.nutrition.ui.components.NavBar(tr(title), { onBack?.invoke() ?: nav?.popBackStack() }, actions = actions)
         val m = Modifier.fillMaxSize().padding(horizontal = 16.dp).navigationBarsPadding()
         Column(if (scroll) m.verticalScroll(rememberScrollState()) else m) {
             content()

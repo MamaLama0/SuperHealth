@@ -69,24 +69,26 @@ fun Staggered(index: Int, content: @Composable () -> Unit) {
 /** Grande tuile de choix animée (sélection : bordure, fond, rebond). */
 @Composable
 fun OptionTile(title: String, subtitle: String?, selected: Boolean, icon: ImageVector? = null, leading: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
-    val border by animateColorAsState(if (selected) WorkoutBlue else Color.Transparent, label = "b")
-    val bg by animateColorAsState(if (selected) WorkoutBlue.copy(alpha = 0.10f) else Mf.colors.card, label = "bg")
-    val scale by animateFloatAsState(if (selected) 1f else 0.98f, spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "s")
+    // même tuile que le questionnaire d'accueil : carte neutre, bouton radio à droite
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 5.dp).scale(scale).clip(RoundedCornerShape(18.dp)).background(bg)
-            .border(2.dp, border, RoundedCornerShape(18.dp)).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(18.dp)).background(Mf.colors.card)
+            .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null) { leading(); Spacer(Modifier.width(14.dp)) }
         else if (icon != null) {
-            Icon(icon, null, tint = if (selected) WorkoutBlue else Mf.colors.textSecondary, modifier = Modifier.size(26.dp))
+            Icon(icon, null, tint = if (selected) Mf.colors.accent else Mf.colors.textSecondary, modifier = Modifier.size(26.dp))
             Spacer(Modifier.width(14.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(tr(title), style = MaterialTheme.typography.titleMedium)
             if (!subtitle.isNullOrBlank()) Text(tr(subtitle), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
-        if (selected) Icon(Icons.Rounded.CheckCircle, null, tint = WorkoutBlue, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(10.dp))
+        androidx.compose.animation.Crossfade(selected, label = "check") { on ->
+            if (on) Box(Modifier.size(22.dp).border(2.dp, Mf.colors.accent, CircleShape).padding(5.dp).clip(CircleShape).background(Mf.colors.accent))
+            else Box(Modifier.size(22.dp).border(2.dp, Mf.colors.textSecondary, CircleShape))
+        }
     }
 }
 

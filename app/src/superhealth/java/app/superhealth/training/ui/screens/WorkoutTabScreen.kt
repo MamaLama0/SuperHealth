@@ -1,5 +1,6 @@
 package app.superhealth.training.ui.screens
 
+import app.superhealth.ui.theme.WorkoutBlue
 import androidx.compose.foundation.border
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
@@ -84,7 +85,10 @@ fun WorkoutTabScreen(
     val active = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
     var create by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Activités"), actions = { IconButton(onClick = { nav.navigate("history") }) { Icon(Icons.Rounded.History, tr("Historique")) } })
+        ScreenTitle(tr("Activités"), actions = {
+            app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate("history") }
+            app.superhealth.nutrition.ui.components.SettingsAvatar { nav.navigate("settings") }
+        })
         Column(Modifier.padding(horizontal = 16.dp)) {
             top()
             SectionLabel(tr("Musculation"))
@@ -97,13 +101,10 @@ fun WorkoutTabScreen(
             if (active != null) ActiveProgramCard(active, db!!, nav, onSkip = { askSkip = true },
                 onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") })
             else MfCard(onClick = { nav.navigate("wizard") }) {
-                // Pas de programme actif : illustration animée (assets Rive de l'APK)
-                Box(Modifier.fillMaxWidth().padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
-                    app.superhealth.training.ui.components.RiveAsset("mf_rocket_launcher_v2", Modifier.size(150.dp).clip(RoundedCornerShape(30.dp)))
-                }
+                // Pas de programme actif : invitation à en générer un
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(52.dp).clip(CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White)
+                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).background(WorkoutBlue), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(26.dp))
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
@@ -133,7 +134,7 @@ fun WorkoutTabScreen(
                     }
                     st.customWorkouts.forEachIndexed { i, w ->
                         if (i > 0 || library.isNotEmpty()) RowDivider()
-                        SettingRow(w.name, trf("%1\$s exercices", w.exercises.size), subtitle = tr("Séance perso"), icon = Icons.Rounded.FitnessCenter) {
+                        SettingRow(w.name, trf("%1\$s exercices", w.exercises.size), subtitle = tr("Séance perso"), icon = Icons.Rounded.FitnessCenter, hue = app.superhealth.ui.theme.Base.Grey) {
                             nav.navigate("custom/${w.id}")
                         }
                     }
@@ -166,7 +167,9 @@ fun WorkoutTabScreen(
 @Composable
 private fun ProgramRow(p: Program, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(ProgramColors[p.color % ProgramColors.size]))
+        Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(ProgramColors[p.color % ProgramColors.size]), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.FitnessCenter, null, Modifier.size(18.dp), tint = Color.White)
+        }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(p.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)

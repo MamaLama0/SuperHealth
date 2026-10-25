@@ -63,8 +63,8 @@ import kotlin.math.roundToInt
 private object W {
     val bg = ColorProvider(Color(0xFFFFFFFF), Color(0xFF1C1C1E))
     val chip = ColorProvider(Color(0xFFF1F1F3), Color(0xFF2C2C2E))
-    val text = ColorProvider(Color(0xFF111111), Color(0xFFF2F2F2))
-    val sub = ColorProvider(Color(0xFF6E6E73), Color(0xFFA1A1A6))
+    val text = ColorProvider(Color(0xFF000000), Color(0xFFFFFFFF))
+    val sub = ColorProvider(Color(0xFF8A8A8E), Color(0xFF98989F))
     val track = ColorProvider(Color(0xFFE6E6EA), Color(0xFF3A3A3C))
     fun c(color: Color) = ColorProvider(color, color)
 }

@@ -139,7 +139,7 @@ fun MealPlanCard(day: Long, entries: List<FoodEntryEntity>, target: Macros?, ene
             if (plan.provider == "spoonacular") Text(tr("Recettes : spoonacular"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary,
                 modifier = Modifier.padding(top = 6.dp).clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://spoonacular.com/food-api"))) })
         }
-        error?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = Color(0xFFE5574F), modifier = Modifier.padding(top = 8.dp)) }
+        error?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red, modifier = Modifier.padding(top = 8.dp)) }
     }
 }
 

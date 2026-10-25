@@ -1,5 +1,8 @@
 package app.superhealth.training.ui.screens
 
+import androidx.compose.material.icons.rounded.CheckCircle
+import app.superhealth.ui.theme.container
+import androidx.compose.ui.draw.shadow
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import androidx.compose.animation.AnimatedVisibility
@@ -141,7 +144,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.roundToInt
 
-internal val Danger = Color(0xFFE11900)
+internal val Danger = app.superhealth.ui.theme.Base.Red
 
 /**
  * Séance en cours, sur le modèle de WorkoutSessionView de MacroFactor Workouts :
@@ -625,9 +628,9 @@ private fun SetCard(
             if (!warm) RirField(set.rir, set.target?.rir, Modifier.weight(0.75f)) { onChange(set.copy(rir = it)) }
             val scale by animateFloatAsState(if (set.done) 1f else 0.92f, spring(dampingRatio = 0.45f), label = "check")
             Box(Modifier.padding(start = 6.dp).size(44.dp).scale(scale).clip(CircleShape)
-                .background(if (set.done) WorkoutBlue else if (current) Mf.colors.strong else Mf.colors.chip).clickable(onClick = onToggle),
+                .background(if (set.done) WorkoutBlue else if (current) WorkoutBlue.container(1.6f) else Mf.colors.chip).clickable(onClick = onToggle),
                 contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Check, tr("Valider"), tint = if (set.done) Color.White else if (current) Mf.colors.onStrong else Mf.colors.textTertiary, modifier = Modifier.size(24.dp))
+                Icon(Icons.Rounded.Check, tr("Valider"), tint = if (set.done) Color.White else if (current) WorkoutBlue else Mf.colors.textTertiary, modifier = Modifier.size(24.dp))
             }
         }
         // répétitions partielles (après l'échec, amplitude réduite) : comptées à part
@@ -728,7 +731,7 @@ private fun RirSheet(current: Int?, onDismiss: () -> Unit, onPick: (Int) -> Unit
             )
             rows.forEach { (v, label) ->
                 val sel = v == current
-                val heat = Color(0xFFE11900).copy(alpha = (0.85f - v * 0.15f).coerceAtLeast(0.1f))
+                val heat = app.superhealth.ui.theme.Base.Red.copy(alpha = (0.85f - v * 0.15f).coerceAtLeast(0.1f))
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(14.dp))
                     .background(if (sel) WorkoutBlue.copy(alpha = 0.12f) else Mf.colors.card).clickable { onPick(v) }.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -753,7 +756,9 @@ private fun RirSheet(current: Int?, onDismiss: () -> Unit, onPick: (Int) -> Unit
 private fun EndPage(s: Session, onAdd: () -> Unit, onFinish: () -> Unit) {
     val left = s.exercises.sumOf { ex -> ex.sets.count { !it.done && it.type != SetType.WARMUP } }
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        app.superhealth.training.ui.components.RiveAsset("mf_planet_flag", Modifier.size(180.dp))
+        val allDone = left == 0 && s.exercises.isNotEmpty()
+        Icon(if (allDone) Icons.Rounded.CheckCircle else Icons.Rounded.Flag, null, Modifier.size(64.dp),
+            tint = if (allDone) app.superhealth.ui.theme.Base.Green else Mf.colors.textTertiary)
         Spacer(Modifier.height(16.dp))
         Text(if (left == 0 && s.exercises.isNotEmpty()) tr("Tout est fait !") else tr("Fin de la séance"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(if (left > 0) trf("%1\$s série(s) restante(s)", left) else tr("Ajoutez un exercice ou terminez."), color = Mf.colors.textSecondary)
@@ -775,20 +780,25 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
     val next = (s.exercises.indices.drop(s.current) + s.exercises.indices.take(s.current)).firstNotNullOfOrNull { i ->
         s.exercises[i].sets.firstOrNull { !it.done }?.let { i to it }
     }
-    Column(Modifier.fillMaxWidth().padding(12.dp).navigationBarsPadding().clip(RoundedCornerShape(26.dp)).background(Mf.colors.strong).padding(14.dp)) {
+    // carte flottante : fond surélevé, minuteur en grands chiffres, anneau d'accent
+    val bg = if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card
+    Column(Modifier.fillMaxWidth().padding(12.dp).navigationBarsPadding()
+        .shadow(20.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.3f), spotColor = Color.Black.copy(alpha = 0.2f))
+        .clip(RoundedCornerShape(28.dp)).background(bg).padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            val accent = Mf.colors.accent
             Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-                val track = Mf.colors.onStrong.copy(alpha = 0.18f)
+                val track = Mf.colors.chip
                 Canvas(Modifier.size(64.dp)) {
                     drawArc(track, 0f, 360f, false, style = Stroke(5.dp.toPx()))
-                    drawArc(WorkoutBlue, -90f, 360f * anim, false, style = Stroke(5.dp.toPx(), cap = StrokeCap.Round))
+                    drawArc(accent, -90f, 360f * anim, false, style = Stroke(5.dp.toPx(), cap = StrokeCap.Round))
                 }
-                Icon(Icons.Rounded.Timer, null, tint = Mf.colors.onStrong, modifier = Modifier.size(22.dp))
+                Icon(Icons.Rounded.Timer, null, tint = accent, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(tr("Repos"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.onStrong.copy(alpha = 0.7f))
-                Text(duration(left), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Mf.colors.onStrong)
+                Text(tr("Repos"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
+                Text(duration(left), style = MaterialTheme.typography.displaySmall, fontSize = 34.sp, color = Mf.colors.text)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Row {
@@ -802,18 +812,18 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
         next?.let { (i, set) ->
             val e = exercise(s.exercises[i].exerciseId)
             Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Mf.colors.onStrong.copy(alpha = 0.08f)).padding(8.dp),
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (Mf.colors.dark) Color(0xFF3A3A3C) else Mf.colors.chip).padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 AsyncAsset(e?.thumbnail(), Modifier.size(34.dp).clip(CircleShape), fallback = e?.name ?: "?", sample = 2)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(tr("Ensuite"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.onStrong.copy(alpha = 0.6f))
-                    Text(e?.name ?: "", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.onStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tr("Ensuite"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                    Text(e?.name ?: "", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 val wgt = set.weight ?: set.autoWeight
                 val reps = set.reps ?: set.autoReps
                 Text(listOfNotNull(wgt?.let { "${clean(settings.w(it))} ${settings.unit.label.tr()}" }, reps?.let { trf("× %1\$s", it) }).joinToString(" "),
-                    style = MaterialTheme.typography.titleSmall, color = Mf.colors.onStrong)
+                    style = MaterialTheme.typography.titleSmall, color = Mf.colors.text)
             }
         }
     }
@@ -828,8 +838,8 @@ private fun RestButtonSmall(t: String, onClick: () -> Unit) {
 
 @Composable
 private fun RestButton(t: String, onClick: () -> Unit) {
-    Text(t, Modifier.padding(start = 6.dp).clip(CircleShape).background(Mf.colors.onStrong.copy(alpha = 0.15f)).clickable(onClick = onClick)
-        .padding(horizontal = 12.dp, vertical = 7.dp), color = Mf.colors.onStrong, style = MaterialTheme.typography.labelLarge)
+    Text(t, Modifier.padding(start = 6.dp).clip(CircleShape).background(Mf.colors.accent.copy(alpha = 0.16f)).clickable(onClick = onClick)
+        .padding(horizontal = 12.dp, vertical = 7.dp), color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
 }
 
 // ----- Feuilles -----

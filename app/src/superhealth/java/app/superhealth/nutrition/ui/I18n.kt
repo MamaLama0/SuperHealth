@@ -15,8 +15,8 @@ object Lang {
 
 private val reverse: Map<String, String> by lazy { EnStrings.map.entries.associate { (k, v) -> v to k } }
 
-/** Traduit un libellé source (français). Idempotent : un libellé déjà traduit est rendu tel quel, ou ramené au français. */
-fun tr(s: String): String = if (Lang.english) EnStrings.map[s] ?: s else reverse[s] ?: s
+/** Traduit un libellé source (français) ; à défaut, avec le dictionnaire commun de l'app. Idempotent : un libellé déjà traduit est rendu tel quel, ou ramené au français. */
+fun tr(s: String): String = if (Lang.english) EnStrings.map[s] ?: app.superhealth.ui.tr(s) else reverse[s] ?: app.superhealth.ui.tr(s)
 
 /** Libellé avec arguments : le gabarit source utilise %1$s, %2$s… */
 fun trf(fmt: String, vararg args: Any?): String = String.format(Lang.locale, tr(fmt), *args)

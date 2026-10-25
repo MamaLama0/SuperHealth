@@ -1,5 +1,6 @@
 package app.superhealth.ui.coach
 
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -230,7 +231,7 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+            androidx.compose.material3.IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
             CoachAvatar(30.dp)
             Spacer(Modifier.width(10.dp))
             Text(tr("Coach"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
@@ -244,7 +245,7 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
             item(key = "intro") { Intro(ready, sh.coachMemory.size, nav) }
             items(chat, key = { it.time.toString() + it.role }) { m -> Bubble(m) }
             if (thinking) item(key = "thinking") { Thinking() }
-            error?.let { e -> item(key = "error") { Text(e, style = MaterialTheme.typography.bodySmall, color = Color(0xFFE5574F)) } }
+            error?.let { e -> item(key = "error") { Text(e, style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red) } }
             proposal?.let { f ->
                 item(key = "remember") {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CoachHue.container()).padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),

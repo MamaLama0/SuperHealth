@@ -97,7 +97,7 @@ fun DashboardScreen(vm: AppViewModel, nav: NavHostController) {
     val thisWeek = st.history.filter { !localDate(it.startTime).isBefore(weekStart) }
     val sets = Analytics.setsByMuscle(thisWeek, db)
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Tableau de bord"))
+        ScreenTitle(tr("Tableau de bord"), onBack = { nav.popBackStack() })
         Column(Modifier.padding(horizontal = 16.dp)) {
             MfCard {
                 Text(tr("Cette semaine"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
@@ -222,7 +222,7 @@ fun LevelsScreen(vm: AppViewModel, nav: NavHostController) {
     val since = System.currentTimeMillis() - weeks * 7L * 86_400_000
     val sets = Analytics.setsByMuscle(st.history.filter { it.startTime >= since }, db).mapValues { it.value / weeks }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Niveaux"), subtitle = tr("Séries de travail par muscle et par semaine"))
+        ScreenTitle(tr("Niveaux"), subtitle = tr("Séries de travail par muscle et par semaine"), onBack = { nav.popBackStack() })
         Column(Modifier.padding(horizontal = 16.dp)) {
             ChipChoice(listOf(1, 4, 12), weeks, { if (it == 1) tr("7 derniers jours") else trf("Moyenne %1\$s semaines", it) }) { weeks = it }
             Spacer(Modifier.height(10.dp))
@@ -279,10 +279,6 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
         WorkoutSummary(vm, w, tr("Séance terminée"), onClose, onEdit = { nav.navigate("workoutedit/${w.id}") },
             onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(w.id); onClose() })
-        // Confettis de fin de séance, une seule fois
-        var confetti by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
-        LaunchedEffect(Unit) { if (confetti) { kotlinx.coroutines.delay(4500); confetti = false } }
-        if (confetti) app.superhealth.training.ui.components.Confetti(Modifier.fillMaxSize())
     }
     if (longAsked) LongWorkoutDialog(w, onKeep = { longAsked = false; vm.saveWorkout(w.copy(durationSec = MAX_WORKOUT_SEC)) },
         onEstimate = { longAsked = false; vm.saveWorkout(w.copy(durationSec = it)) }, onEdit = { longAsked = false; editDuration = true })
@@ -326,10 +322,8 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
     val before = st.history.filter { it.startTime < w.startTime }
     val records = Analytics.newRecords(w, before, db)
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, tr("Fermer")) }
-            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreHoriz, tr("Options de la séance")) }
+        app.superhealth.nutrition.ui.components.NavBar(title, onClose, backIcon = Icons.Rounded.Close) {
+            app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.MoreHoriz, tr("Options de la séance")) { menu = true }
         }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 96.dp)) {
             BodyMap(intensity(sets, max), st.settings.sex, Modifier.fillMaxWidth().height(320.dp))

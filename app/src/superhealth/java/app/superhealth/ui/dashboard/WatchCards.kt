@@ -119,17 +119,17 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
 
 // ---- Couleurs ------------------------------------------------------------------------------
 
-private val Red = Color(0xFFE5484D)
-private val Yellow = Color(0xFFF2B33D)
-private val Green = Color(0xFF2FBF71)
+private val Red = app.superhealth.ui.theme.Base.Red
+private val Yellow = app.superhealth.ui.theme.Base.Yellow
+private val Green = app.superhealth.ui.theme.Base.Green
 internal fun chargeColor(score: Int) = when (Scores.band(score)) { 0 -> Red; 1 -> Yellow; else -> Green }
-private val EffortBlue = Color(0xFF3F8CFF)
+private val EffortBlue = app.superhealth.ui.theme.Base.Blue
 
 private fun stageColor(k: ActivityKind) = when (k) {
-    ActivityKind.DEEP_SLEEP -> Color(0xFF4B3FC2)
-    ActivityKind.REM_SLEEP -> Color(0xFF59B4F5)
-    ActivityKind.AWAKE_SLEEP -> Color(0xFFF08A5D)
-    else -> Color(0xFF9B8AF2)
+    ActivityKind.DEEP_SLEEP -> Color(0xFF3634A3)
+    ActivityKind.REM_SLEEP -> Color(0xFF5AC8FA)
+    ActivityKind.AWAKE_SLEEP -> Color(0xFFFF7F66)
+    else -> Color(0xFF0A84FF)
 }
 
 private val zoneColors = listOf(Color(0xFFB8BEC8), Color(0xFF7FB9F0), Color(0xFF3FBF8F), Color(0xFFF2C14E), Color(0xFFF08A3E), Color(0xFFE5484D))

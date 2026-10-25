@@ -1,5 +1,6 @@
 package app.superhealth.nutrition.ui.screens
 
+import androidx.compose.foundation.layout.Box
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import androidx.compose.foundation.background
@@ -171,10 +172,9 @@ fun StrategySummaryCard(an: Analytics, s: Settings, onClick: () -> Unit) {
     val t = an.targetFor(an.today)
     MfCard(onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AssetImage(
-                goalIllustration(g?.type ?: GoalType.MAINTENANCE),
-                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)),
-            )
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(app.superhealth.ui.theme.HealthHues.Body), contentAlignment = Alignment.Center) {
+                Icon(goalIcon(g?.type ?: GoalType.MAINTENANCE), null, Modifier.size(26.dp), tint = androidx.compose.ui.graphics.Color.White)
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(

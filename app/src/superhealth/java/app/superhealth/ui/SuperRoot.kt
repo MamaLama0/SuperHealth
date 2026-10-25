@@ -1,5 +1,20 @@
 package app.superhealth.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -72,7 +87,6 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -106,14 +120,13 @@ import androidx.compose.foundation.layout.width
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
 /**
- * Quatre onglets de part et d'autre du « + » (comme MacroFactor) :
- * tableau de bord, journal alimentaire | activités (musculation + cardio), réglages.
+ * Trois onglets : tableau de bord, journal alimentaire, activités (musculation + cardio). Le « + » termine la barre, sous
+ * le pouce ; les réglages, rarement ouverts, passent par l'avatar en haut de l'accueil.
  */
 private val tabs = listOf(
     Tab("home", "Accueil", Icons.Rounded.GridView),
     Tab("log", "Journal", Icons.Rounded.RestaurantMenu),
     Tab("activities", "Activités", Icons.AutoMirrored.Rounded.DirectionsRun),
-    Tab("settings", "Réglages", Icons.Rounded.Settings),
 )
 
 private fun isTabRoute(route: String?) = tabs.any { it.route == route }
@@ -163,10 +176,11 @@ fun SuperRoot(vm: SuperViewModel) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background)) {
         NavHost(
             nav, startDestination = "home", modifier = Modifier.weight(1f),
-            enterTransition = { if (isTabRoute(targetState.destination.route)) fadeIn() else slideInHorizontally { it / 3 } + fadeIn() },
-            exitTransition = { fadeOut() },
-            popEnterTransition = { fadeIn() },
-            popExitTransition = { if (isTabRoute(initialState.destination.route)) fadeOut() else slideOutHorizontally { it / 3 } + fadeOut() },
+            // Axe partagé horizontal de Material : glissement court et fondu ; les onglets se croisent en fondu.
+            enterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeIn(tween(160)) else slideInHorizontally(push) { it / 5 } + fadeIn(tween(220, 60)) },
+            exitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeOut(tween(120)) else slideOutHorizontally(push) { -it / 5 } + fadeOut(tween(120)) },
+            popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeIn(tween(160)) else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
+            popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeOut(tween(120)) else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
@@ -202,6 +216,11 @@ fun SuperRoot(vm: SuperViewModel) {
             nutritionGraph(vm.nutrition, nav)
             trainingGraph(vm.training, nav)
         }
+        if (isTab) Box(Modifier.fillMaxWidth().height(0.dp)) {
+            // fondu au-dessus de la barre flottante : le contenu s'efface au lieu d'être coupé net
+            Box(Modifier.fillMaxWidth().height(22.dp).offset(y = (-22).dp)
+                .background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background))))
+        }
         if (isTab && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
         if (isTab) BottomBar(current, onTab = { route -> nav.openTab(route) }, onPlus = {
             // Un seul raccourci choisi : le « + » l'ouvre directement.
@@ -231,39 +250,45 @@ fun SuperRoot(vm: SuperViewModel) {
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
 }
 
+/** Courbe « emphasized decelerate » de Material. */
+private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
+
+/**
+ * Barre de navigation flottante : quatre onglets (pastille teintée derrière l'icône active, comme Material 3) et, à côté,
+ * le « + » en bouton d'action carré arrondi.
+ */
 @Composable
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
-    Column(Modifier.fillMaxWidth().background(Mf.colors.card).navigationBarsPadding()) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Mf.colors.divider))
-        Row(Modifier.fillMaxWidth().height(66.dp), verticalAlignment = Alignment.CenterVertically) {
-            tabs.take(2).forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
-            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Box(
-                    Modifier.size(46.dp).clip(CircleShape).background(Mf.colors.strong).clickable(onClick = onPlus),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(28.dp)) }
-            }
-            tabs.drop(2).forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
+    Row(Modifier.fillMaxWidth().background(Mf.colors.background).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).height(68.dp).shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
+            .clip(RoundedCornerShape(26.dp)).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).padding(horizontal = 4.dp)) {
+            tabs.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
         }
+        Spacer(Modifier.width(10.dp))
+        Box(
+            Modifier.size(64.dp).shadow(10.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
+                .clip(RoundedCornerShape(20.dp)).background(Mf.colors.strong).clickable(onClick = onPlus),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(30.dp)) }
     }
 }
 
 @Composable
 private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val color = if (selected) Mf.colors.text else Mf.colors.textSecondary
+    val accent = Mf.colors.accent
+    val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
     Column(
-        modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick).padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
-        // Onglet actif : pastille teintée de la couleur d'accent derrière l'icône (comme Google Health).
-        val accent = Mf.colors.accent
-        Box(Modifier.width(56.dp).height(30.dp).clip(CircleShape).background(if (selected) accent.container() else androidx.compose.ui.graphics.Color.Transparent),
+        Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent),
             contentAlignment = Alignment.Center) {
-            Icon(tab.icon, tr(tab.label), tint = if (selected) accent.onContainer() else color, modifier = Modifier.size(22.dp))
+            Icon(tab.icon, tr(tab.label), tint = if (selected) accent.onContainer() else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
         }
-        Spacer(Modifier.height(2.dp))
-        Text(tr(tab.label), fontSize = 10.sp, color = color, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(3.dp))
+        Text(tr(tab.label), fontSize = 11.sp, color = if (selected) Mf.colors.text else Mf.colors.textSecondary,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -313,12 +338,10 @@ private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> U
         containerColor = Mf.colors.background, dragHandle = null) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Ajouter"), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                Box(Modifier.padding(end = 8.dp).size(36.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onEdit), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Tune, tr("Personnaliser"), Modifier.size(20.dp))
-                }
-                Box(Modifier.size(36.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Close, tr("Fermer"), Modifier.size(20.dp))
+                Text(tr("Ajouter"), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Tune, tr("Personnaliser"), onClick = onEdit)
+                    app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Close, tr("Fermer"), onClick = onDismiss)
                 }
             }
             app.superhealth.DashCard.Section.entries.forEach { section ->
@@ -327,7 +350,11 @@ private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> U
                     app.superhealth.DashCard.Section.NUTRITION -> "Nutrition"
                     app.superhealth.DashCard.Section.TRAINING -> "Entraînement"
                     app.superhealth.DashCard.Section.HEALTH -> "Santé"
-                }), actions, onAction)
+                }), when (section) {
+                    app.superhealth.DashCard.Section.NUTRITION -> app.superhealth.ui.theme.Base.Green
+                    app.superhealth.DashCard.Section.TRAINING -> app.superhealth.ui.theme.WorkoutBlue
+                    app.superhealth.DashCard.Section.HEALTH -> app.superhealth.ui.theme.HealthHues.Heart
+                }, actions, onAction)
             }
             if (chosen.isEmpty()) Text(tr("Aucun raccourci : touchez l'icône de réglage pour en choisir."), style = MaterialTheme.typography.bodyMedium,
                 color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 16.dp))
@@ -337,25 +364,28 @@ private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> U
 }
 
 @Composable
-private fun ActionGroup(title: String, actions: List<QuickAction>, onAction: (String) -> Unit) {
-    Text(title, style = MaterialTheme.typography.titleMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, top = 18.dp, bottom = 8.dp))
+private fun ActionGroup(title: String, hue: Color, actions: List<QuickAction>, onAction: (String) -> Unit) {
+    app.superhealth.nutrition.ui.components.GroupHeader(title, Modifier.padding(top = 4.dp))
     actions.chunked(3).forEachIndexed { i, row ->
         if (i > 0) Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            row.forEach { a -> ActionTile(a, Modifier.weight(1f)) { onAction(a.action) } }
+            row.forEach { a -> ActionTile(a, hue, Modifier.weight(1f)) { onAction(a.action) } }
             repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
         }
     }
 }
 
+/** Raccourci : symbole à la couleur du module, libellé dessous. */
 @Composable
-private fun ActionTile(a: QuickAction, modifier: Modifier, onClick: () -> Unit) {
+private fun ActionTile(a: QuickAction, hue: Color, modifier: Modifier, onClick: () -> Unit) {
     Column(
-        modifier.height(104.dp).clip(RoundedCornerShape(16.dp)).background(Mf.colors.card).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 10.dp),
+        modifier.height(108.dp).clip(RoundedCornerShape(20.dp)).background(Mf.colors.card).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
-        Icon(a.icon, null, Modifier.size(26.dp))
-        Spacer(Modifier.height(8.dp))
+        Box(Modifier.size(42.dp).clip(CircleShape).background(hue.container(1.3f)), contentAlignment = Alignment.Center) {
+            Icon(a.icon, null, Modifier.size(22.dp), tint = hue.onContainer())
+        }
+        Spacer(Modifier.height(9.dp))
         Text(tr(a.label), style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
             lineHeight = 16.sp)
     }

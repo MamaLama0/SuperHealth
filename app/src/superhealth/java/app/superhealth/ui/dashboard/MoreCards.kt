@@ -212,7 +212,7 @@ private fun HabitColumn(icon: ImageVector, label: String, streak: Int, unit: Str
 internal fun BalanceCard(c: DashCard, an: Analytics, s: NutritionSettings, modifier: Modifier, nav: NavHostController) {
     val days = remember(an) { Balance.days(an.days, an::tdeeAt, an.today) }
     val avg = Balance.average(days)
-    val surplus = Color(0xFFF59E0B); val deficit = c.hue()
+    val surplus = app.superhealth.ui.theme.Base.Orange; val deficit = c.hue()
     Tile(c, tr("Bilan énergétique"), modifier, onClick = { nav.go("expenditure") }) {
         Value(avg?.let { (if (it > 0) "+" else if (it < 0) "−" else "") + formatNumber(abs(s.energyValue(it))) } ?: "—",
             trf("%1\$s / jour", tr(s.energyUnit.label)), color = c.hue().onContainer())
@@ -239,7 +239,7 @@ internal fun NextWorkoutCard(c: DashCard, size: app.superhealth.CardSize, vm: Su
         // bandeau : nom de la séance et départ d'une touche
         val name = session?.name ?: day?.takeIf { !it.isRest }?.name
         Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius))
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(c.hue().container(1.35f), c.hue().container(0.8f))))
+            .background(Mf.colors.card)
             .cardClick { if (session != null) nav.go("session") else tab("activities") }.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(c.icon(), null, Modifier.size(22.dp), tint = c.hue())
@@ -403,7 +403,7 @@ internal fun LiftsCard(c: DashCard, vm: SuperViewModel, modifier: Modifier, nav:
                 Spacer(Modifier.width(8.dp))
                 Text(change?.let { (if (it >= 0) "+" else "") + formatNumber(it, 1) + " %" } ?: "—", Modifier.width(56.dp),
                     style = MaterialTheme.typography.labelLarge, textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                    color = when { change == null -> Mf.colors.textSecondary; change >= 0 -> Color(0xFF2EA043); else -> Color(0xFFE5484D) })
+                    color = when { change == null -> Mf.colors.textSecondary; change >= 0 -> app.superhealth.ui.theme.Base.Green; else -> app.superhealth.ui.theme.Base.Red })
             }
         }
     }

@@ -226,10 +226,10 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
 @Composable
 internal fun CompactBubble(c: DashCard, d: CompactData, modifier: Modifier) {
     val hue = c.hue()
-    val track = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.5f else 0.85f)
+    val track = Mf.colors.chip
     val prog = d.progress
     Column(modifier.square().clip(RoundedCornerShape(CardRadius))
-        .background(Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f)))).cardClick(d.onClick).padding(8.dp),
+        .background(Mf.colors.card).cardClick(d.onClick).padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
@@ -291,7 +291,7 @@ internal fun MiniChart(d: CompactData, hue: androidx.compose.ui.graphics.Color, 
 @Composable
 private fun ProgressDisc(d: CompactData, c: DashCard, modifier: Modifier, small: Boolean = false) {
     val hue = c.hue()
-    val track = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.5f else 0.85f)
+    val track = Mf.colors.chip
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val dd = size.minDimension
@@ -310,7 +310,7 @@ private fun ProgressDisc(d: CompactData, c: DashCard, modifier: Modifier, small:
 private fun TintedBox(c: DashCard, modifier: Modifier, onClick: () -> Unit, padding: androidx.compose.ui.unit.Dp = 12.dp,
                       content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     val hue = c.hue()
-    Column(modifier.clip(RoundedCornerShape(CardRadius)).background(Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f))))
+    Column(modifier.clip(RoundedCornerShape(CardRadius)).background(Mf.colors.card)
         .cardClick(onClick).padding(padding), content = content)
 }
 
@@ -323,7 +323,7 @@ internal fun CompactMedium(c: DashCard, d: CompactData, modifier: Modifier) {
     val hue = c.hue()
     TintedBox(c, modifier.fillMaxWidth(), d.onClick, padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(30.dp).clip(CircleShape).background(Mf.colors.card.copy(alpha = 0.85f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(30.dp).clip(CircleShape).background(hue.container(1.2f)), contentAlignment = Alignment.Center) {
                 Icon(c.icon(), null, Modifier.size(17.dp), tint = hue)
             }
             Spacer(Modifier.weight(1f))
@@ -351,7 +351,7 @@ internal fun CompactStrip(c: DashCard, d: CompactData, modifier: Modifier) {
     val hue = c.hue()
     TintedBox(c, modifier.fillMaxWidth(), d.onClick, padding = 10.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(Mf.colors.card.copy(alpha = 0.85f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(34.dp).clip(CircleShape).background(hue.container(1.2f)), contentAlignment = Alignment.Center) {
                 Icon(c.icon(), null, Modifier.size(19.dp), tint = hue)
             }
             Spacer(Modifier.width(10.dp))

@@ -1,5 +1,7 @@
 package app.superhealth.training.ui.screens
 
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.AutoAwesome
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import androidx.compose.animation.togetherWith
@@ -130,7 +132,7 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (step == 0) exit = true else step-- }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+            androidx.compose.material3.IconButton(onClick = { if (step == 0) exit = true else step-- }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
             LinearProgressIndicator(progress = { (step + 1f) / (last + 1) }, Modifier.weight(1f).height(4.dp).clip(CircleShape), color = WorkoutBlue, trackColor = Mf.colors.chip)
             IconButton(onClick = { exit = true }) { Icon(Icons.Rounded.Close, tr("Quitter")) }
         }
@@ -140,11 +142,6 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
                 (androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(280)) { -dir * it / 4 } + androidx.compose.animation.fadeOut())
         }) { step ->
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-            WIZARD_ART[step]?.let { art ->
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    app.superhealth.training.ui.components.RiveAsset(art, Modifier.size(130.dp).clip(RoundedCornerShape(28.dp)))
-                }
-            }
             when (step) {
                 0 -> { Q(tr("Quel est votre objectif principal ?")); Goal.entries.forEach { g -> Choice(g.label.tr(), g.description.tr(), goal == g) { goal = g } } }
                 1 -> {
@@ -177,7 +174,7 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
                             Spacer(Modifier.width(10.dp))
                             Text(g.label.tr(), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                             Round(Icons.Rounded.Remove, small = true) { if (v > -1 && (v > 0 || down < 5)) focus[g] = v - 1 }
-                            Text(when { v > 0 -> "+${v}"; v < 0 -> "${v}"; else -> "0" }, Modifier.width(34.dp), color = when { v > 0 -> WorkoutBlue; v < 0 -> Color(0xFFE11900); else -> Mf.colors.textSecondary },
+                            Text(when { v > 0 -> "+${v}"; v < 0 -> "${v}"; else -> "0" }, Modifier.width(34.dp), color = when { v > 0 -> WorkoutBlue; v < 0 -> app.superhealth.ui.theme.Base.Red; else -> Mf.colors.textSecondary },
                                 style = MaterialTheme.typography.titleSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Round(Icons.Rounded.Add, small = true) { if (v < 2 && (v < 0 || up < 5)) focus[g] = v + 1 }
                         }
@@ -210,7 +207,7 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
     }
     if (exit) AlertDialog(onDismissRequest = { exit = false }, containerColor = Mf.colors.card,
         title = { Text(tr("Quitter l'assistant ?")) }, text = { Text(tr("Les réglages saisis seront perdus.")) },
-        confirmButton = { TextButton(onClick = { nav.popBackStack() }) { Text(tr("Quitter"), color = Color(0xFFE11900)) } },
+        confirmButton = { TextButton(onClick = { nav.popBackStack() }) { Text(tr("Quitter"), color = app.superhealth.ui.theme.Base.Red) } },
         dismissButton = { TextButton(onClick = { exit = false }) { Text(tr("Rester"), color = Mf.colors.text) } })
 }
 
@@ -219,12 +216,6 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
 @Composable
 private fun Choice(title: String, sub: String?, selected: Boolean, onClick: () -> Unit) =
     app.superhealth.training.ui.components.OptionTile(title, sub, selected, onClick = onClick)
-
-/** Illustration animée (assets Rive de l'APK) en tête de chaque question de l'assistant. */
-private val WIZARD_ART = mapOf(
-    0 to "mf_planet_flag", 1 to "mf_rocket_launcher_v2", 2 to "mf_space_station_v2", 3 to "mf_cockpit_view", 4 to "mf_flying_rocket",
-    6 to "mf_rover", 7 to "mf_landing_module", 8 to "mf_hologram_planet", 9 to "mf_flag_1",
-)
 
 @Composable
 internal fun Round(icon: androidx.compose.ui.graphics.vector.ImageVector, small: Boolean = false, onClick: () -> Unit) {
@@ -239,8 +230,8 @@ private fun Generating(onDone: () -> Unit) {
     var done by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { while (done < GEN_STEPS.size) { delay(480); done++ }; delay(400); onDone() }
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            app.superhealth.training.ui.components.RiveAsset("mf_liftoff", Modifier.size(200.dp))
+        Box(Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)).background(WorkoutBlue), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(36.dp), tint = androidx.compose.ui.graphics.Color.White)
         }
         Spacer(Modifier.height(16.dp))
         Text(tr("Génération de votre programme selon les dernières données scientifiques"), style = MaterialTheme.typography.headlineSmall)
@@ -372,7 +363,7 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
             vm.saveProgram(p.copy(id = UUID.randomUUID().toString(), name = p.name + tr(" (copie)"), cycleIndex = 0, dayIndex = 0, doneDayIds = emptyList())); nav.popBackStack()
         }
         PillButton(if (p.archived) tr("Sortir de l'archive") else tr("Archiver"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) { save(p.copy(archived = !p.archived)) }
-        Text(tr("Supprimer le programme"), Modifier.fillMaxWidth().clickable { confirm = "delete" }.padding(14.dp), color = Color(0xFFE11900),
+        Text(tr("Supprimer le programme"), Modifier.fillMaxWidth().clickable { confirm = "delete" }.padding(14.dp), color = app.superhealth.ui.theme.Base.Red,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
     confirm?.let { c ->
@@ -435,16 +426,16 @@ fun ProgramDayScreen(vm: AppViewModel, pid: String, dayIndex: Int, nav: NavHostC
                 if (st.session == null) vm.startProgramDay(p, dayIndex, cycle); nav.navigate("session")
             }
             Text(tr("Transformer en jour de repos"), Modifier.fillMaxWidth().clickable { confirmRest = true }.padding(14.dp),
-                color = Color(0xFFE11900), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                color = app.superhealth.ui.theme.Base.Red, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
         if (p.days.size > 1) Text(tr("Supprimer ce jour"), Modifier.fillMaxWidth().clickable {
             nav.popBackStack()
             vm.saveProgram(ProgramEdit.removeDay(p, dayIndex))
-        }.padding(14.dp), color = Color(0xFFE11900), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }.padding(14.dp), color = app.superhealth.ui.theme.Base.Red, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
     if (confirmRest) AlertDialog(onDismissRequest = { confirmRest = false }, containerColor = Mf.colors.card,
         title = { Text(tr("Transformer en jour de repos ?")) }, text = { Text(tr("Les exercices de ce jour seront retirés.")) },
-        confirmButton = { TextButton(onClick = { confirmRest = false; setDay(d.copy(exercises = emptyList(), name = tr("Repos"))) }) { Text(tr("Confirmer"), color = Color(0xFFE11900)) } },
+        confirmButton = { TextButton(onClick = { confirmRest = false; setDay(d.copy(exercises = emptyList(), name = tr("Repos"))) }) { Text(tr("Confirmer"), color = app.superhealth.ui.theme.Base.Red) } },
         dismissButton = { TextButton(onClick = { confirmRest = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
     if (rename) {
         var n by remember { mutableStateOf(d.name) }

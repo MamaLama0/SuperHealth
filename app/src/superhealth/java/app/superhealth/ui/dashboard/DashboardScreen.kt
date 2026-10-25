@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -175,15 +176,15 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS, DashCard.MUSCLE_SETS, DashCard.LIFTS -> WorkoutBlue
     DashCard.INSIGHTS -> HealthHues.Mind
     DashCard.CORRELATION -> HealthHues.Respiration
-    DashCard.CHARGE -> androidx.compose.ui.graphics.Color(0xFF2FBF71)
-    DashCard.EFFORT -> androidx.compose.ui.graphics.Color(0xFF3F8CFF)
+    DashCard.CHARGE -> app.superhealth.ui.theme.Base.Green
+    DashCard.EFFORT -> app.superhealth.ui.theme.Base.Blue
     DashCard.SLEEP_STAGES -> HealthHues.Sleep
     DashCard.HRV_STATUS -> HealthHues.Heart
     DashCard.STRESS_DAY -> HealthHues.Mind
     DashCard.HR_ZONES -> HealthHues.Fitness
     DashCard.LOAD -> WorkoutBlue
     DashCard.DAY_TIMELINE -> HealthHues.Activity
-    DashCard.COACH -> androidx.compose.ui.graphics.Color(0xFF8E7CF0)
+    DashCard.COACH -> app.superhealth.ui.coach.CoachHue
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -339,18 +340,18 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
         contentPadding = PaddingValues(bottom = 24.dp)) {
         item(key = "header") {
             // En-tête : salutation et date, réglages du tableau de bord, avatar (profil).
-            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 10.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
                     Text(longToday(), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
                     Text(name?.let { trf("Bonjour %1\$s", it) } ?: tr("Aujourd'hui"), style = MaterialTheme.typography.headlineLarge,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                // module Coach : son étincelle en tête, à portée de pouce
-                if (modules.any { it.kind == app.superhealth.modules.Modules.COACH && it.enabled })
-                    IconButton(onClick = { nav.go("coach") }) { Icon(Icons.Rounded.AutoAwesome, tr("Coach"), tint = app.superhealth.ui.coach.CoachHue) }
-                IconButton(onClick = { nav.go("dash/edit") }) { Icon(Icons.Rounded.Tune, tr("Personnaliser"), tint = Mf.colors.textSecondary) }
-                Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.accent).clickable { nav.go("profile") }, contentAlignment = Alignment.Center) {
-                    Text((name ?: "?").take(1).uppercase(app.superhealth.ui.Lang.locale), style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // module Coach : son étincelle en tête, à portée de pouce
+                    if (modules.any { it.kind == app.superhealth.modules.Modules.COACH && it.enabled })
+                        app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.AutoAwesome, tr("Coach"), tint = app.superhealth.ui.coach.CoachHue) { nav.go("coach") }
+                    app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Tune, tr("Personnaliser")) { nav.go("dash/edit") }
+                    app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
                 }
             }
         }
@@ -412,14 +413,14 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     androidx.compose.animation.AnimatedVisibility(sh.weighPrompt && !weighed && sh.weighSkipDay != today,
         enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
         exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()) {
-        Row(Modifier.padding(top = 2.dp, bottom = 6.dp).fillMaxWidth().clip(CircleShape).background(hue.container())
-            .clickable { sheet = true }.padding(start = 6.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconChip(Icons.Rounded.MonitorWeight, hue, 30.dp, onTint = true)
-            Spacer(Modifier.width(10.dp))
-            Text(tr("Pesée du jour"), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = hue.onContainer(), maxLines = 1)
+        Row(Modifier.padding(top = 2.dp, bottom = 6.dp).fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(Mf.colors.card)
+            .clickable { sheet = true }.padding(start = 12.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconChip(Icons.Rounded.MonitorWeight, hue, 30.dp)
+            Spacer(Modifier.width(12.dp))
+            Text(tr("Pesée du jour"), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1)
             Box(Modifier.size(34.dp).clip(CircleShape).clickable { app.superhealth.SuperPrefs.update { it.copy(weighSkipDay = today) } },
                 contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.KeyboardArrowUp, tr("Masquer jusqu'à demain"), tint = hue.onContainer())
+                Icon(Icons.Rounded.KeyboardArrowUp, tr("Masquer jusqu'à demain"), tint = Mf.colors.textTertiary)
             }
         }
     }
@@ -459,7 +460,7 @@ internal fun focusItems(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
                 add(Triple(Icons.Rounded.FitnessCenter, WorkoutBlue, trf("Séance : %1\$s", day.name) to { tab("activities") }))
         }
         if (sh.dashboard.any { it.watch } && !(sh.watchModule && devices.isNotEmpty()) && !sh.healthConnect)
-            add(Triple(Icons.Rounded.Watch, HealthHues.Heart, tr("Associez une montre ou Health Connect") to { tab("settings") }))
+            add(Triple(Icons.Rounded.Watch, HealthHues.Heart, tr("Associez une montre ou Health Connect") to { nav.go("settings") }))
     }
 }
 
@@ -564,17 +565,19 @@ internal fun SizeGlyph(z: app.superhealth.CardSize, color: Color, grid: Color) {
     }
 }
 
+/** Pastille ronde teintée de sa couleur, symbole dans la couleur (comme Google Santé). */
 @Composable
 private fun IconChip(icon: ImageVector, hue: Color, size: androidx.compose.ui.unit.Dp = 30.dp, onTint: Boolean = false) {
-    Box(Modifier.size(size).clip(CircleShape).background(if (onTint) Mf.colors.card.copy(alpha = 0.85f) else hue.container()), contentAlignment = Alignment.Center) {
-        Icon(icon, null, Modifier.size(size * 0.56f), tint = hue)
+    Box(Modifier.size(size).clip(CircleShape).background(hue.container(1.2f)), contentAlignment = Alignment.Center) {
+        Icon(icon, null, Modifier.size(size * 0.58f), tint = hue.onContainer())
     }
 }
 
 /**
- * Carte du tableau de bord : pastille d'icône colorée et titre, puis le contenu. [tinted] : fond pastel de la famille
- * (cartes demi-largeur, à la manière des tuiles de Google Health). Le contenu de [bottom] est poussé en bas de la carte,
- * pour aligner les graphiques de deux cartes voisines.
+ * Carte du tableau de bord : pastille ronde de la famille et titre, détail gris et chevron à droite, puis le contenu
+ * sur fond neutre. [tinted] est gardé pour les appels existants mais ne teinte plus
+ * le fond (une seule famille de cartes dans toute l'app). Le contenu de [bottom] est poussé en bas de la carte, pour
+ * aligner les graphiques de deux cartes voisines.
  */
 @Composable
 internal fun Tile(
@@ -585,16 +588,16 @@ internal fun Tile(
     val hue = c.hue()
     Column(
         modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius))
-            .background(if (tinted) Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f))) else SolidColor(Mf.colors.card))
+            .background(Mf.colors.card)
             .cardClick(onClick).padding(padding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconChip(c.icon(), hue, onTint = tinted)
+            IconChip(c.icon(), hue, 26.dp)
             Spacer(Modifier.width(8.dp))
-            Text(title, style = MaterialTheme.typography.titleSmall, color = if (tinted) hue.onContainer() else Mf.colors.text,
+            Text(title, style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            trailing?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1) }
-            if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = if (tinted) hue.onContainer().copy(alpha = 0.6f) else Mf.colors.textTertiary)
+            trailing?.let { Text(it, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Normal, color = Mf.colors.textSecondary, maxLines = 1) }
+            if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(20.dp), tint = Mf.colors.textTertiary)
         }
         Spacer(Modifier.height(10.dp))
         content()
@@ -615,17 +618,19 @@ internal fun Modifier.cardClick(onClick: (() -> Unit)?): Modifier {
     else this.then(Modifier.combinedClickable(onClick = onClick ?: {}, onLongClick = long))
 }
 
-/** Fond des pistes (barres, anneaux) posées sur une carte teintée. */
+/** Fond des pistes (barres, anneaux) posées sur une carte. */
 @Composable
-internal fun softTrack(): Color = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.45f else 0.7f)
+internal fun softTrack(): Color = Mf.colors.chip
 
 /** Grande valeur et son unité. */
 @Composable
 internal fun Value(value: String, unit: String? = null, color: Color = Mf.colors.text, big: Boolean = false) {
+    // valeur en gras, unité grise plus petite sur la même ligne de base (comme « 72 BPM » dans Santé)
     Row(verticalAlignment = Alignment.Bottom) {
-        Text(value, style = if (big) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium, color = color, maxLines = 1)
-        if (!unit.isNullOrBlank()) Text(" $unit", style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
-            modifier = Modifier.padding(bottom = if (big) 6.dp else 4.dp), maxLines = 1)
+        Text(value, style = if (big) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium, color = color, maxLines = 1,
+            modifier = Modifier.alignByBaseline())
+        if (!unit.isNullOrBlank()) Text(" $unit", style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary, maxLines = 1,
+            modifier = Modifier.alignByBaseline())
     }
 }
 

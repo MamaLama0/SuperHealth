@@ -70,34 +70,18 @@ import kotlin.math.roundToInt
 
 val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
 
-/** Carte blanche (clair) / #1E1E1E (sombre), coins 16 dp, sans ombre. */
+/** Carte (composant partagé de l'app). */
 @Composable
-fun MfCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(16.dp), content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
-        content = content,
-    )
-}
+fun MfCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(16.dp), content: @Composable ColumnScope.() -> Unit) =
+    app.superhealth.nutrition.ui.components.MfCard(modifier, onClick, padding, content)
 
 @Composable
-fun ScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
-    Row(modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(tr(title), style = MaterialTheme.typography.headlineMedium)
-            subtitle?.let { Text(tr(it), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary) }
-        }
-        actions()
-    }
-}
+fun ScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? = null, onBack: (() -> Unit)? = null,
+                actions: @Composable RowScope.() -> Unit = {}) =
+    app.superhealth.nutrition.ui.components.ScreenTitle(tr(title), modifier, subtitle?.let(::tr), onBack, actions)
 
 @Composable
-fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) {
-    Row(modifier.fillMaxWidth().padding(start = 4.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(tr(text), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        trailing()
-    }
-}
+fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) = app.superhealth.nutrition.ui.components.SectionLabel(tr(text), modifier, trailing)
 
 /** Icône d'aliment MacroFactor associée au nom ; pastille neutre si aucune ne correspond. */
 @Composable
@@ -130,125 +114,40 @@ fun Ring(fraction: Float, color: Color, size: Dp, stroke: Dp = 4.dp, track: Colo
 
 private fun ratio(v: Double, t: Double?) = if (t == null || t <= 0) 0f else (v / t).toFloat()
 
-/** Ligne « 🔥 583 / 2025 · P 22 / 98 · L 23 / 67 · G 84 / 256 » avec barres colorées, comme l'en-tête du journal MacroFactor. */
 @Composable
-fun SettingRow(title: String, value: String? = null, subtitle: String? = null, icon: ImageVector? = null, danger: Boolean = false, onClick: (() -> Unit)? = null) {
-    Row(
-        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        icon?.let {
-            Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
-                Icon(it, null, Modifier.size(18.dp), tint = if (danger) MaterialTheme.colorScheme.error else Mf.colors.text)
-            }
-            Spacer(Modifier.width(14.dp))
-        }
-        Column(Modifier.weight(1f)) {
-            Text(tr(title), style = MaterialTheme.typography.bodyLarge, color = if (danger) MaterialTheme.colorScheme.error else Mf.colors.text)
-            subtitle?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
-        }
-        value?.let { Text(tr(it), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, textAlign = TextAlign.End,
-            maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp).widthIn(max = 150.dp)) }
-        if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
-    }
-}
+fun SettingRow(title: String, value: String? = null, subtitle: String? = null, icon: ImageVector? = null, danger: Boolean = false,
+               hue: Color? = null, onClick: (() -> Unit)? = null) =
+    app.superhealth.nutrition.ui.components.SettingRow(tr(title), value?.let(::tr), subtitle?.let(::tr), icon, danger, hue, onClick = onClick)
 
 @Composable
-fun SwitchRow(title: String, subtitle: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(tr(title), style = MaterialTheme.typography.bodyLarge)
-            subtitle?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
-        }
-        Switch(checked, onChange, colors = SwitchDefaults.colors(checkedTrackColor = Mf.colors.accent, checkedThumbColor = Color.White, uncheckedBorderColor = Color.Transparent, uncheckedTrackColor = Mf.colors.chip))
-    }
-}
+fun SwitchRow(title: String, subtitle: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) = app.superhealth.nutrition.ui.components.SwitchRow(tr(title), subtitle?.let(::tr), checked, onChange)
 
 @Composable
-fun RowDivider() = Box(Modifier.padding(start = 16.dp).fillMaxWidth().height(1.dp).background(Mf.colors.divider))
+fun RowDivider() = app.superhealth.nutrition.ui.components.RowDivider()
 
 /** Groupe de lignes dans une carte (réglages). */
 @Composable
-fun GroupCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card), content = content)
-}
-
-/** Bouton pilule : « fort » (noir/blanc) ou neutre (gris). */
-@Composable
-fun PillButton(text: String, modifier: Modifier = Modifier, strong: Boolean = true, enabled: Boolean = true, icon: ImageVector? = null, onClick: () -> Unit) {
-    val bg = if (strong) Mf.colors.strong else Mf.colors.chip
-    val fg = if (strong) Mf.colors.onStrong else Mf.colors.text
-    Row(
-        modifier.clip(CircleShape).background(if (enabled) bg else bg.copy(alpha = 0.35f)).clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 13.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-    ) {
-        icon?.let { Icon(it, null, Modifier.size(18.dp), tint = fg); Spacer(Modifier.width(8.dp)) }
-        Text(tr(text), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = fg,
-            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-    }
-}
-
-/** Choix exclusif sous forme de pastilles. */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier: Modifier = Modifier, onSelect: (T) -> Unit) {
-    // Pastilles renvoyées à la ligne plutôt que défilantes : tout reste visible, quelle que soit la langue.
-    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { o ->
-            val sel = o == selected
-            Text(
-                tr(label(o)),
-                Modifier.clip(CircleShape).background(if (sel) Mf.colors.strong else Mf.colors.chip).clickable { onSelect(o) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.labelLarge, color = if (sel) Mf.colors.onStrong else Mf.colors.text,
-            )
-        }
-    }
-}
-
-/** Champ numérique sobre : libellé au-dessus, fond gris arrondi, suffixe d'unité. */
-@Composable
-fun NumberField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, suffix: String? = null, keyboard: KeyboardType = KeyboardType.Decimal) {
-    Column(modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(tr(label), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Mf.colors.chip).padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BasicTextField(
-                value, onChange, Modifier.weight(1f), singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Mf.colors.text),
-                keyboardOptions = KeyboardOptions(keyboardType = keyboard), cursorBrush = SolidColor(Mf.colors.accent),
-            )
-            suffix?.let { Text(tr(it), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary) }
-        }
-    }
-}
+fun GroupCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) = app.superhealth.nutrition.ui.components.GroupCard(modifier, content)
 
 @Composable
-fun TextInput(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, placeholder: String = "") {
-    Column(modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(tr(label), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Mf.colors.chip).padding(horizontal = 14.dp, vertical = 12.dp)) {
-            if (value.isEmpty()) Text(tr(placeholder), style = MaterialTheme.typography.bodyLarge, color = Mf.colors.textTertiary)
-            BasicTextField(value, onChange, Modifier.fillMaxWidth(), singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Mf.colors.text), cursorBrush = SolidColor(Mf.colors.accent))
-        }
-    }
-}
+fun PillButton(text: String, modifier: Modifier = Modifier, strong: Boolean = true, enabled: Boolean = true, icon: ImageVector? = null, onClick: () -> Unit) =
+    app.superhealth.nutrition.ui.components.PillButton(tr(text), modifier, strong, enabled, icon, onClick)
 
-/** Grande valeur + libellé (statistiques des cartes). */
 @Composable
-fun BigStat(value: String, label: String, modifier: Modifier = Modifier, unit: String? = null, color: Color = Mf.colors.text) {
-    Column(modifier) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(value, style = MaterialTheme.typography.headlineMedium, color = color)
-            unit?.let { Text(" ${it}", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 3.dp)) }
-        }
-        Text(tr(label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-    }
-}
+fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier: Modifier = Modifier, onSelect: (T) -> Unit) =
+    app.superhealth.nutrition.ui.components.ChipChoice(options, selected, { tr(label(it)) }, modifier, onSelect)
+
+@Composable
+fun NumberField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, suffix: String? = null, keyboard: KeyboardType = KeyboardType.Decimal) =
+    app.superhealth.nutrition.ui.components.NumberField(tr(label), value, onChange, modifier, suffix?.let(::tr), keyboard)
+
+@Composable
+fun TextInput(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, placeholder: String = "") =
+    app.superhealth.nutrition.ui.components.TextInput(tr(label), value, onChange, modifier, tr(placeholder))
+
+@Composable
+fun BigStat(value: String, label: String, modifier: Modifier = Modifier, unit: String? = null, color: Color = Mf.colors.text) =
+    app.superhealth.nutrition.ui.components.BigStat(value, tr(label), modifier, unit, color)
 
 /** Pastille de pourcentage colorée (fiche aliment). */
 @Composable

@@ -1,5 +1,18 @@
 package app.superhealth.ui.onboarding
 
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.draw.shadow
+import app.superhealth.ui.theme.WorkoutBlue
+import app.superhealth.ui.theme.HealthHues
+import app.superhealth.ui.theme.Base
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.VerticalAlignBottom
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
+import androidx.compose.material.icons.rounded.Straighten
+import androidx.compose.material.icons.rounded.Cake
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedContent
@@ -189,14 +202,26 @@ private enum class WatchChoice(val label: String, val description: String) {
     NONE("Non, pas de montre", "Le module montre est désactivé (réactivable dans Réglages)"),
 }
 
-/** Illustration spatiale (thème « Lune », tools/moon_recolor.sh) associée à chaque étape. */
-private fun Step.image() = "illustrations/illustration_" + when (this) {
-    Step.WELCOME -> 1; Step.NAME -> 6; Step.SEX -> 7; Step.BIRTH -> 10; Step.HEIGHT -> 14; Step.WEIGHT -> 23; Step.BODY_FAT -> 15
-    Step.ACTIVITY -> 4; Step.HISTORY -> 5; Step.HEALTH -> 24; Step.GOAL -> 17; Step.TARGET -> 22; Step.PACE -> 26; Step.TRAINING -> 9
-    Step.PROTEIN -> 16; Step.DIET -> 3; Step.FLOOR -> 13; Step.DISTRIBUTION -> 25; Step.GENERATING -> 28; Step.RESULT -> 2
-    Step.EXPERIENCE -> 11; Step.GYM -> 12; Step.WATCH -> 19
-    Step.PROGRAM -> 8; Step.LIFT_GOAL -> 18; Step.DAYS -> 20; Step.DURATION -> 21
-} + ".webp"
+/** Symbole et couleur de chaque étape, posés au-dessus du titre. */
+private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
+    Step.WELCOME, Step.NAME, Step.SEX -> Icons.Rounded.Person to Base.Blue
+    Step.BIRTH -> Icons.Rounded.Cake to Base.Pink
+    Step.HEIGHT -> Icons.Rounded.Straighten to HealthHues.Body
+    Step.WEIGHT, Step.BODY_FAT, Step.HISTORY -> Icons.Rounded.MonitorWeight to HealthHues.Body
+    Step.ACTIVITY -> Icons.AutoMirrored.Rounded.DirectionsWalk to HealthHues.Activity
+    Step.HEALTH -> Icons.Rounded.Favorite to HealthHues.Heart
+    Step.GOAL, Step.TARGET -> Icons.Rounded.Flag to HealthHues.Body
+    Step.PACE -> Icons.Rounded.Speed to HealthHues.Body
+    Step.TRAINING, Step.EXPERIENCE, Step.GYM, Step.PROGRAM -> Icons.Rounded.FitnessCenter to WorkoutBlue
+    Step.LIFT_GOAL -> Icons.AutoMirrored.Rounded.TrendingUp to WorkoutBlue
+    Step.DAYS -> Icons.Rounded.CalendarMonth to WorkoutBlue
+    Step.DURATION -> Icons.Rounded.Timer to WorkoutBlue
+    Step.PROTEIN, Step.DIET -> Icons.Rounded.Restaurant to Base.Green
+    Step.FLOOR -> Icons.Rounded.VerticalAlignBottom to Base.Green
+    Step.DISTRIBUTION -> Icons.Rounded.CalendarMonth to Base.Green
+    Step.WATCH -> Icons.Rounded.Watch to HealthHues.Respiration
+    Step.GENERATING, Step.RESULT -> Icons.Rounded.CheckCircle to Base.Green
+}
 
 
 /**
@@ -404,9 +429,9 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, tr("Fermer")) }
             Text(tr("Simulation · rien n'est enregistré"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
         }
-        Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showBar) {
-                IconButton(onClick = { back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+                androidx.compose.material3.IconButton(onClick = { back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
                 // Une barre par partie du questionnaire, remplie au fil des étapes de cette partie.
                 Row(Modifier.weight(1f).padding(end = 20.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     SECTIONS.indices.forEach { sec ->
@@ -419,8 +444,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                         val frac by animateFloatAsState(target, tween(500, easing = FastOutSlowInEasing), label = "progress")
                         Column(Modifier.weight(1f)) {
-                            Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Mf.colors.chip)) {
-                                Box(Modifier.fillMaxWidth(frac.coerceIn(0f, 1f)).height(6.dp).clip(CircleShape).background(Mf.colors.accent))
+                            Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(Mf.colors.chip)) {
+                                Box(Modifier.fillMaxWidth(frac.coerceIn(0f, 1f)).height(4.dp).clip(CircleShape).background(Mf.colors.accent))
                             }
                             Text(tr(SECTIONS[sec]), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 color = if (step.section == sec) Mf.colors.text else Mf.colors.textTertiary, modifier = Modifier.padding(top = 3.dp))
@@ -430,7 +455,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             } else if (step == Step.WELCOME) {
                 androidx.compose.material3.TextButton(onClick = { skip() }) { Text(tr("Passer"), color = Mf.colors.textSecondary) }
                 Spacer(Modifier.weight(1f))
-                ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { if (it == Language.FR) "FR" else "EN" }) { l ->
+                ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { if (it == Language.FR) "FR" else "EN" },
+                    Modifier.width(112.dp)) { l ->
                     vm.repo.prefs.setSettings(settings.copy(language = l)); Lang.apply(l.name)
                 }
                 Spacer(Modifier.width(12.dp))
@@ -710,37 +736,53 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     }
 }
 
-/** Accueil : promesse et fonctions (pre-onboarding de MacroFactor). */
+/** Accueil : icône de l'app, titre, fonctions en liste à symboles colorés. */
 @Composable
 private fun Welcome() {
-    Spacer(Modifier.height(8.dp))
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Floating("illustrations/illustration_1.webp", 200) }
     Spacer(Modifier.height(20.dp))
-    Text("SuperHealth", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-    Spacer(Modifier.height(6.dp))
-    Text(tr("Nutrition, musculation et santé, au même endroit."), style = MaterialTheme.typography.titleMedium,
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AppIcon(96) }
+    Spacer(Modifier.height(22.dp))
+    Text(tr("Bienvenue dans SuperHealth"), style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp, lineHeight = 40.sp,
+        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+    Spacer(Modifier.height(8.dp))
+    Text(tr("Nutrition, musculation et santé, au même endroit."), style = MaterialTheme.typography.bodyLarge,
         color = Mf.colors.textSecondary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(28.dp))
     listOf(
-        Icons.Rounded.Insights to tr("Un coaching calé sur votre métabolisme"),
-        Icons.Rounded.Bolt to tr("La saisie d'aliments la plus rapide"),
-        Icons.Rounded.MonitorWeight to tr("La vraie tendance de votre poids"),
-        Icons.Rounded.AutoFixHigh to tr("Des programmes de musculation qui progressent avec vous"),
-        Icons.Rounded.Favorite to tr("Votre montre : pas, cœur, sommeil et activités"),
-        Icons.Rounded.BarChart to tr("Un tableau de bord qui réunit tout"),
-        Icons.Rounded.Lock to tr("Sans compte ni pub : tout reste sur le téléphone"),
-    ).forEachIndexed { i, (icon, text) -> Staggered(i) { Feature(icon, text) } }
+        Triple(Icons.Rounded.Insights, Base.Green, tr("Un coaching calé sur votre métabolisme")),
+        Triple(Icons.Rounded.Bolt, Base.Orange, tr("La saisie d'aliments la plus rapide")),
+        Triple(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("La vraie tendance de votre poids")),
+        Triple(Icons.Rounded.AutoFixHigh, WorkoutBlue, tr("Des programmes de musculation qui progressent avec vous")),
+        Triple(Icons.Rounded.Favorite, HealthHues.Heart, tr("Votre montre : pas, cœur, sommeil et activités")),
+        Triple(Icons.Rounded.BarChart, HealthHues.Respiration, tr("Un tableau de bord qui réunit tout")),
+        Triple(Icons.Rounded.Lock, Base.Grey, tr("Sans compte ni pub : tout reste sur le téléphone")),
+    ).forEachIndexed { i, (icon, hue, text) -> Staggered(i) { Feature(icon, text, hue) } }
+}
+
+/** Icône de l'app (cœur rose sur fond blanc), ronde comme sur le lanceur, avec une ombre douce. */
+@Composable
+private fun AppIcon(sizeDp: Int) {
+    Box(Modifier.size(sizeDp.dp).shadow(10.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.2f))
+        .clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+        // le premier plan adaptatif fait 108 dp pour 72 dp visibles
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground), null,
+            Modifier.requiredSize((sizeDp * 1.5f).dp))
+    }
 }
 
 @Composable
 private fun Page(step: Step, title: String, subtitle: String?, content: @Composable ColumnScope.() -> Unit) {
-    Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
-        Floating(step.image(), 130)
+    val (icon, hue) = step.symbol()
+    Spacer(Modifier.height(8.dp))
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Icon(icon, null, Modifier.size(52.dp), tint = hue)
     }
-    Spacer(Modifier.height(18.dp))
-    Text(tr(title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-    if (subtitle != null) Text(tr(subtitle), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp))
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(14.dp))
+    Text(tr(title), style = MaterialTheme.typography.headlineMedium, fontSize = 28.sp, lineHeight = 33.sp, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth())
+    if (subtitle != null) Text(tr(subtitle), style = MaterialTheme.typography.bodyLarge, color = Mf.colors.textSecondary, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+    Spacer(Modifier.height(22.dp))
     Column(content = content)
     Spacer(Modifier.height(12.dp))
 }
@@ -766,13 +808,13 @@ private fun Staggered(index: Int, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun Feature(icon: ImageVector, text: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(36.dp).clip(CircleShape).background(Mf.colors.accent.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Mf.colors.accent, modifier = Modifier.size(20.dp))
+private fun Feature(icon: ImageVector, text: String, hue: Color = Mf.colors.accent) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = hue, modifier = Modifier.size(30.dp))
         }
-        Spacer(Modifier.width(14.dp))
-        Text(tr(text), style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.width(16.dp))
+        Text(tr(text), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -785,12 +827,10 @@ private fun <T> Options(
     items.forEachIndexed { i, item ->
         Staggered(i) {
             val sel = item == selected
-            val border by animateColorAsState(if (sel) Mf.colors.accent else Color.Transparent, label = "b")
-            val bg by animateColorAsState(if (sel) Mf.colors.accent.copy(alpha = 0.12f) else Mf.colors.card, label = "bg")
-            val scale by animateFloatAsState(if (sel) 1f else 0.98f, spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "s")
+            // carte d'option avec bouton radio
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 5.dp).scale(scale).clip(RoundedCornerShape(18.dp)).background(bg)
-                    .border(2.dp, border, RoundedCornerShape(18.dp)).clickable { onPick(item) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(18.dp)).background(Mf.colors.card)
+                    .clickable { onPick(item) }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (icon != null) {
@@ -801,7 +841,11 @@ private fun <T> Options(
                     Text(tr(label(item)), style = MaterialTheme.typography.titleMedium)
                     description?.let { Text(tr(it(item)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
                 }
-                if (sel) Icon(Icons.Rounded.CheckCircle, null, tint = Mf.colors.accent, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(10.dp))
+                androidx.compose.animation.Crossfade(sel, label = "check") { on ->
+                    if (on) Box(Modifier.size(22.dp).border(2.dp, Mf.colors.accent, CircleShape).padding(5.dp).clip(CircleShape).background(Mf.colors.accent))
+                    else Box(Modifier.size(22.dp).border(2.dp, Mf.colors.textSecondary, CircleShape))
+                }
             }
         }
     }
@@ -889,18 +933,25 @@ private fun Generating(onDone: () -> Unit) {
         delay(250); onDone()
     }
     Column(Modifier.fillMaxWidth().padding(top = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        val t = rememberInfiniteTransition(label = "rocket")
-        val y by t.animateFloat(-10f, 10f, infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "ry")
-        Box(Modifier.graphicsLayer { translationY = y }) { AssetImage("illustrations/illustration_28.webp", Modifier.size(200.dp).clip(RoundedCornerShape(40.dp))) }
+        // anneau qui se remplit (comme les anneaux d'Activité), coche verte à la fin
+        val accent = Mf.colors.accent
+        val track = Mf.colors.chip
+        Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Canvas(Modifier.size(150.dp)) {
+                val w = 14.dp.toPx()
+                drawArc(track, 0f, 360f, false, topLeft = androidx.compose.ui.geometry.Offset(w / 2, w / 2),
+                    size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w), style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+                drawArc(accent, -90f, 360f * progress.value, false, topLeft = androidx.compose.ui.geometry.Offset(w / 2, w / 2),
+                    size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            }
+            Text("${(progress.value * 100).roundToInt()} %", style = MaterialTheme.typography.displaySmall)
+        }
         Spacer(Modifier.height(36.dp))
         AnimatedContent(i, label = "msg", transitionSpec = {
             (slideInVertically { it / 2 } + fadeIn()) togetherWith (slideOutVertically { -it / 2 } + fadeOut())
         }) { k ->
             Text(tr(messages[k]), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        }
-        Spacer(Modifier.height(24.dp))
-        Box(Modifier.fillMaxWidth(0.7f).height(6.dp).clip(CircleShape).background(Mf.colors.chip)) {
-            Box(Modifier.fillMaxWidth(progress.value).height(6.dp).clip(CircleShape).background(Mf.colors.accent))
         }
     }
 }
@@ -910,11 +961,13 @@ private fun Generating(onDone: () -> Unit) {
 private fun Result(tdee: Double, ci: app.superhealth.nutrition.domain.CheckIn, s: app.superhealth.nutrition.domain.Settings, p: app.superhealth.nutrition.domain.Program) {
     val a = remember { Animatable(0f) }
     LaunchedEffect(Unit) { a.animateTo(1f, tween(1100, easing = FastOutSlowInEasing)) }
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Floating(Step.RESULT.image(), 120) }
+    Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.CheckCircle, null, Modifier.size(64.dp).graphicsLayer { scaleX = 0.6f + 0.4f * a.value; scaleY = 0.6f + 0.4f * a.value }, tint = Base.Green)
+    }
+    Spacer(Modifier.height(14.dp))
+    Text(tr("Votre programme est prêt"), style = MaterialTheme.typography.headlineMedium, fontSize = 28.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     Spacer(Modifier.height(16.dp))
-    Text(tr("Votre programme est prêt"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-    Spacer(Modifier.height(16.dp))
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Mf.colors.card).padding(20.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card).padding(20.dp)) {
         Text(tr("Cible moyenne"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
         Text(s.energy(ci.kcal * a.value), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
