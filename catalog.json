@@ -8,8 +8,8 @@
       "color": "#8E7CF0",
       "name": "Coach IA",
       "nameEn": "AI Coach",
-      "summary": "Un coach qui répond à partir de tes repas, de ton poids, de tes séances et de ta montre : point du jour, analyse des séances, questions libres. Utilise ta clé IA.",
-      "summaryEn": "A coach that answers from your meals, weight, workouts and watch: daily brief, workout analysis, free questions. Uses your AI key."
+      "summary": "Un coach qui répond à partir de tes repas, de ton poids, de tes séances et de ta montre : point du jour, bilan de la semaine, analyse des séances, questions libres. Utilise ta clé IA.",
+      "summaryEn": "A coach that answers from your meals, weight, workouts and watch: daily brief, weekly review, workout analysis, free questions. Uses your AI key."
     },
     {
       "id": "meals",
@@ -18,8 +18,8 @@
       "color": "#F2994A",
       "name": "Repas",
       "nameEn": "Meal planner",
-      "summary": "Propose les repas qui restent pour finir la journée pile sur tes cibles, en haut du journal. Recettes Spoonacular (clé gratuite) ou repas composés par ton IA avec la base d'aliments.",
-      "summaryEn": "Suggests the meals left to finish the day right on your targets, at the top of the food log. Spoonacular recipes (free key) or meals built by your AI from the food database."
+      "summary": "Propose les repas qui restent pour finir la journée pile sur tes cibles, en haut du journal : recettes Spoonacular (clé gratuite), repas composés par ton IA, ou portions calculées pour les aliments que tu choisis.",
+      "summaryEn": "Suggests the meals left to finish the day right on your targets, at the top of the food log: Spoonacular recipes (free key), meals built by your AI, or portions worked out for the foods you pick."
     }
   ]
 }
