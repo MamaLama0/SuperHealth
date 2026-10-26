@@ -38,6 +38,9 @@ interface HealthSource {
     /** Demande les autorisations de lecture et d'écriture ; vrai si la demande a pu être faite. */
     suspend fun requestAuthorization(): Boolean
 
+    /** Pourquoi la dernière demande d'autorisation a échoué (message du système), null sinon. */
+    val authError: String? get() = null
+
     /** La source sait fournir cette mesure. */
     fun supports(metric: Metric): Boolean
 

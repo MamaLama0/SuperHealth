@@ -105,7 +105,7 @@ fun App() {
         if (onboarded) setAppIcon(if (s.accent == app.superhealth.nutrition.domain.AccentColor.PINK) null
             else "AppIcon-" + s.accent.name.lowercase().replaceFirstChar { it.uppercase() })
     }
-    SuperTheme(s.themeMode, s.accent) {
+    SuperTheme(s.themeMode, s.accent, s.textSize) {
         Box(Modifier.fillMaxSize().background(Mf.colors.background)) {
             SuperRoot(vm)
             PlatformDialogHost()

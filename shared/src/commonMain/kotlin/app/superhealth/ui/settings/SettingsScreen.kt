@@ -270,6 +270,13 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         Spacer(Modifier.height(12.dp))
         MfCard {
+            Label(tr("Taille du texte"))
+            ChipChoice(app.superhealth.nutrition.domain.TextSize.entries, s.textSize, { tr(it.label) }) { t -> set { it.copy(textSize = t) } }
+            Spacer(Modifier.height(14.dp))
+            Text(tr("Aperçu : 2 140 kcal, 150 g de protéines."), style = MaterialTheme.typography.bodyLarge, color = Mf.colors.textSecondary)
+        }
+        Spacer(Modifier.height(12.dp))
+        MfCard {
             Label(tr("Langue"))
             ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { it.label }) { l -> set { it.copy(language = l) } }
         }

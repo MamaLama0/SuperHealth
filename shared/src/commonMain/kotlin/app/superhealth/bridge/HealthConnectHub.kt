@@ -36,10 +36,24 @@ object HealthConnectHub {
 
     /** Affiche la demande d'autorisation de Santé, puis active l'échange. */
     suspend fun request(): Boolean {
-        val ok = runCatching { HealthSources.current.requestAuthorization() }.getOrDefault(false)
+        val src = HealthSources.current
+        val ok = runCatching { src.requestAuthorization() }.getOrDefault(false)
         if (ok) SuperPrefs.update { it.copy(healthConnect = true) }
+        else {
+            // le refus silencieux laissait croire que rien ne se passait : on dit pourquoi, ici et dans les réglages
+            val why = failure(src.authError)
+            SuperPrefs.update { it.copy(lastHcSummary = why) }
+            Toast.makeText(appContext, why, Toast.LENGTH_LONG).show()
+        }
         HealthRepository.invalidate()
         return ok
+    }
+
+    /** Message de l'échec : l'app installée sans le droit HealthKit est le cas courant des installations hors App Store. */
+    private fun failure(error: String?): String = when {
+        error == null -> tr("Apple Santé n'a pas répondu")
+        "entitlement" in error.lowercase() -> tr("Installée sans le droit Apple Santé : réinstallez l'app avec un outil qui garde HealthKit.") + " (" + error + ")"
+        else -> tr("Apple Santé a refusé la demande") + " : " + error
     }
 
     data class Result(val readDays: Int, val weightsIn: Int, val sessionsIn: Int, val written: Int, val error: String? = null) {

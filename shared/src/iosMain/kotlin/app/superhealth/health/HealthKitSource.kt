@@ -184,13 +184,29 @@ object HealthKitSource : HealthSource {
         HKQuantityTypeIdentifierDietaryFiber, HKQuantityTypeIdentifierDietaryWater,
     )
 
-    override suspend fun requestAuthorization(): Boolean = suspendCancellableCoroutine { c ->
-        if (!available) { c.resume(false); return@suspendCancellableCoroutine }
+    override var authError: String? = null
+        private set
+
+    override suspend fun requestAuthorization(): Boolean {
+        if (!available) { authError = "HealthKit indisponible sur cet appareil"; return false }
         val read = readIds.mapNotNull { HKQuantityType.quantityTypeForIdentifier(it) }.toSet<Any>() +
             setOf(sleepType, HKObjectType.workoutType(), HKSeriesType.workoutRouteType(), HKObjectType.activitySummaryType(),
                 HKObjectType.electrocardiogramType()) + categoryIds.mapNotNull { HKCategoryType.categoryTypeForIdentifier(it) }
         val write = writeIds.mapNotNull { HKQuantityType.quantityTypeForIdentifier(it) }.toSet<Any>() + setOf(HKObjectType.workoutType())
-        store.requestAuthorizationToShareTypes(write, read) { ok, _ -> c.resume(ok) }
+        if (authorize(write, read)) return true
+        // une version d'iOS qui refuse un des types demandés fait échouer toute la demande : on retente l'essentiel
+        if (authError?.contains("entitlement", ignoreCase = true) == true) return false
+        val core = listOf(HKQuantityTypeIdentifierStepCount, HKQuantityTypeIdentifierActiveEnergyBurned, HKQuantityTypeIdentifierHeartRate,
+            HKQuantityTypeIdentifierRestingHeartRate, HKQuantityTypeIdentifierHeartRateVariabilitySDNN, HKQuantityTypeIdentifierBodyMass)
+            .mapNotNull { HKQuantityType.quantityTypeForIdentifier(it) }.toSet<Any>() + setOf(sleepType, HKObjectType.workoutType())
+        return authorize(writeIds.take(2).mapNotNull { HKQuantityType.quantityTypeForIdentifier(it) }.toSet(), core)
+    }
+
+    private suspend fun authorize(write: Set<Any>, read: Set<Any>): Boolean = suspendCancellableCoroutine { c ->
+        store.requestAuthorizationToShareTypes(write, read) { ok, error ->
+            authError = if (ok) null else error?.let { "${it.localizedDescription} [${it.domain} ${it.code}]" } ?: "refus sans message"
+            c.resume(ok)
+        }
     }
 
     override fun supports(metric: Metric): Boolean = available && when (metric) {

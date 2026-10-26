@@ -8,6 +8,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
@@ -71,9 +72,17 @@ val LocalContext = staticCompositionLocalOf { appContext }
 
 // ---- SharedPreferences --------------------------------------------------------------------------
 
-/** Préférences clé/valeur gardées en JSON dans le dossier de l'app (une écriture par apply()). */
+/** Préférences clé/valeur gardées en JSON dans le dossier de l'app ; apply() écrit en arrière-plan (la dernière version l'emporte). */
 class SharedPreferences private constructor(private val file: File) {
     private val values: MutableMap<String, Any?> = load()
+    private val pending = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.CONFLATED)
+
+    init {
+        // écriture hors du fil principal : l'interface ne s'arrête plus à chaque réglage touché
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO).launch {
+            for (text in pending) runCatching { file.writeText(text) }
+        }
+    }
 
     companion object {
         private val opened = mutableMapOf<String, SharedPreferences>()
@@ -98,7 +107,7 @@ class SharedPreferences private constructor(private val file: File) {
         else -> runCatching { v.jsonArray.map { (it as JsonPrimitive).content }.toSet() }.getOrNull()
     }
 
-    private fun save() {
+    private fun encode(): String {
         val obj = JsonObject(values.mapValues { (_, v) ->
             when (v) {
                 null -> kotlinx.serialization.json.JsonNull
@@ -109,7 +118,7 @@ class SharedPreferences private constructor(private val file: File) {
                 else -> JsonPrimitive(v.toString())
             }
         })
-        file.writeText(obj.toString())
+        return obj.toString()
     }
 
     fun getString(key: String, def: String?): String? = synchronized(this) { values[key] as? String ?: def }
@@ -136,12 +145,18 @@ class SharedPreferences private constructor(private val file: File) {
         fun putStringSet(k: String, v: Set<String>?) = apply { changes[k] = v }
         fun remove(k: String) = apply { removed += k }
         fun clear() = apply { clear = true }
-        fun apply() { commit() }
-        fun commit(): Boolean = synchronized(this@SharedPreferences) {
+        fun apply() { pending.trySend(merge()) }
+        fun commit(): Boolean {
+            val text = merge()
+            pending.trySend(text) // une écriture d'apply() encore en file ne repasse pas après celle-ci
+            return runCatching { file.writeText(text) }.isSuccess
+        }
+
+        private fun merge(): String = synchronized(this@SharedPreferences) {
             if (clear) values.clear()
             removed.forEach { values.remove(it) }
             changes.forEach { (k, v) -> if (v == null) values.remove(k) else values[k] = v }
-            runCatching { save() }.isSuccess
+            encode()
         }
     }
 }
