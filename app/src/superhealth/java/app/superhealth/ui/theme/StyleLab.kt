@@ -87,7 +87,8 @@ fun CardTone(hue: Color, rich: Boolean = false, night: Boolean = false, content:
     // noir neutre légèrement froid, comme les anneaux, où leurs couleurs vives ressortent par contraste.
     val warm = FloatArray(3).also { android.graphics.Color.colorToHSV(android.graphics.Color.argb(255, (hue.red * 255).toInt(), (hue.green * 255).toInt(), (hue.blue * 255).toInt()), it) }[0]
         .let { it < 70f || it >= 320f }
-    val onNight = (night && style in setOf(StyleLab.Cards.GRADIENT, StyleLab.Cards.STRONG, StyleLab.Cards.FULL)) || (rich && warm && style == StyleLab.Cards.FULL)
+    // les anneaux sur noir seulement en « Plein » : sur les autres styles ils suivent la carte (pistes posées sur son fond)
+    val onNight = style == StyleLab.Cards.FULL && (night || (rich && warm))
     val (top, bottom) = if (onNight) Color(0xFF1A1D24) to Color(0xFF101217) else when (style) {
         StyleLab.Cards.NEUTRAL, StyleLab.Cards.VIVID, StyleLab.Cards.OUTLINE -> base.card to base.card
         StyleLab.Cards.SOFT -> mix(if (d) 0.20f else 0.13f).let { it to it }

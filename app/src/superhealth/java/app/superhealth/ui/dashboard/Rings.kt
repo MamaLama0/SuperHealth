@@ -79,12 +79,18 @@ object Rings {
     fun shade(c: Color, k: Float = 0.72f) = Color(c.red * k, c.green * k, c.blue * k, c.alpha)
 }
 
+/** Piste d'un anneau : sa couleur éclaircie (clair) ou en ton profond (sombre), indépendante du fond de la carte. */
+internal fun trackOf(c: Color, dark: Boolean): Color =
+    if (dark) androidx.compose.ui.graphics.lerp(Color(0xFF121317), c, 0.3f) else androidx.compose.ui.graphics.lerp(Color.White, c, 0.24f)
+
 /** Les anneaux emboîtés, remplis une fois à l'ouverture (pas d'animation en boucle). */
 @Composable
 fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifier, track: Color, icons: Boolean = true) {
     val n = rings.size.coerceAtLeast(1)
-    val stroke = size * (0.30f / n)
-    val gap = stroke * 0.12f
+    // anneaux épais mais séparés : l'écart laisse voir le fond entre deux pistes (lecture nette, comme Apple Fitness)
+    val stroke = size * (0.28f / n)
+    val gap = stroke * 0.2f
+    val dark = app.superhealth.ui.theme.Mf.colors.dark
     val anims = rings.map { r ->
         val a = remember(r.kind) { Animatable(0f) }
         LaunchedEffect(r.progress) { a.animateTo(r.progress, tween(1100, easing = FastOutSlowInEasing)) }
@@ -98,12 +104,15 @@ fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifi
                 val tl = Offset(inset, inset)
                 val box = Size(this.size.width - inset * 2, this.size.height - inset * 2)
                 val c = r.kind.color
-                drawArc(c.copy(alpha = 0.2f).compositeOver(track), 0f, 360f, false, tl, box, style = Stroke(s))
+                // piste : la couleur de l'anneau seule (jamais mélangée au fond : une teinte complémentaire la rendrait grise)
+                drawArc(trackOf(c, dark), 0f, 360f, false, tl, box, style = Stroke(s))
                 val p = anims[i].value
                 if (p <= 0.001f) return@forEachIndexed
                 rotate(-90f) {
                     val first = (p.coerceAtMost(1f)) * 360f
-                    drawArc(Brush.sweepGradient(listOf(Rings.shade(c), c, c)), 0f, first, false, tl, box, style = Stroke(s, cap = StrokeCap.Round))
+                    // dégradé le long de l'arc seulement (du départ à la pointe), pas sur tout le cercle
+                    val f = (first / 360f).coerceIn(0.01f, 1f)
+                    drawArc(Brush.sweepGradient(0f to Rings.shade(c, 0.82f), f to c, 1f to c), 0f, first, false, tl, box, style = Stroke(s, cap = StrokeCap.Round))
                     if (p > 1f) {
                         // second tour : la pointe porte une ombre pour se détacher du premier
                         val end = (p - 1f) * 360f
@@ -120,7 +129,9 @@ fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifi
         if (icons) rings.forEachIndexed { i, r ->
             // le symbole seul identifie la mesure (carte demi sans libellés) : assez grand et contrasté
             val y = stroke * 0.5f + (stroke + gap) * i - stroke * 0.4f
-            Icon(r.kind.icon, null, Modifier.offset(y = y).size(stroke * 0.8f), tint = Color.Black.copy(alpha = 0.85f))
+            // sur l'arc coloré : symbole sombre ; anneau encore vide : symbole dans sa couleur, lisible sur la piste
+            val filled = r.progress > 0.02f
+            Icon(r.kind.icon, null, Modifier.offset(y = y).size(stroke * 0.72f), tint = if (filled) Color.Black.copy(alpha = 0.8f) else r.kind.color)
         }
     }
 }

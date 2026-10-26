@@ -126,9 +126,13 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (rings.size > 3) 2.dp else 8.dp)) {
                     rings.forEach { r ->
-                        Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                            color = r.kind.color.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) })
+                        // valeur dans sa couleur et pourcentage de l'objectif dessous : on sait où l'on en est sans libellé
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) }) {
+                            Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                                color = r.kind.color.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (rings.size <= 3) Text(if (r.value == null) "–" else "${(r.progress * 100).toInt()} %",
+                                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, maxLines = 1)
+                        }
                     }
                 }
             }
