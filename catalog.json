@@ -20,6 +20,16 @@
       "nameEn": "Meal planner",
       "summary": "Propose les repas qui restent pour finir la journée pile sur tes cibles, en haut du journal : recettes Spoonacular (clé gratuite), repas composés par ton IA, ou portions calculées pour les aliments que tu choisis.",
       "summaryEn": "Suggests the meals left to finish the day right on your targets, at the top of the food log: Spoonacular recipes (free key), meals built by your AI, or portions worked out for the foods you pick."
+    },
+    {
+      "id": "meds",
+      "kind": "meds",
+      "minApp": "1.7.5",
+      "color": "#3FA7D6",
+      "name": "Rappel médication",
+      "nameEn": "Medication reminder",
+      "summary": "Tes médicaments et compléments à heure fixe : une notification au bon moment, « Pris » en un geste, et ce qui reste à prendre dans « À faire ».",
+      "summaryEn": "Your medication and supplements on schedule: a notification at the right time, “Taken” in one tap, and what's left in the To-do card."
     }
   ]
 }

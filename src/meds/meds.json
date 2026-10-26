@@ -1,0 +1,21 @@
+{
+  "version": "1",
+  "times": [
+    { "name": { "fr": "Réveil", "en": "Wake-up" }, "minute": 450 },
+    { "name": { "fr": "Matin", "en": "Morning" }, "minute": 480 },
+    { "name": { "fr": "Midi", "en": "Noon" }, "minute": 720 },
+    { "name": { "fr": "Soir", "en": "Evening" }, "minute": 1140 },
+    { "name": { "fr": "Coucher", "en": "Bedtime" }, "minute": 1350 }
+  ],
+  "forms": [
+    { "fr": "comprimé", "en": "tablet" },
+    { "fr": "gélule", "en": "capsule" },
+    { "fr": "gouttes", "en": "drops" },
+    { "fr": "sachet", "en": "sachet" },
+    { "fr": "cuillère", "en": "spoon" },
+    { "fr": "inhalation", "en": "puff" },
+    { "fr": "injection", "en": "injection" },
+    { "fr": "application", "en": "application" }
+  ],
+  "snoozeMinutes": 15
+}

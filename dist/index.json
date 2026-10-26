@@ -28,6 +28,20 @@
       "size": 1341,
       "sha256": "c9159ca5dc5c0b88fc7fb9ff958e91f87c5b981f895155870b73efb7546d5fe6",
       "url": "meals-1.0.0.zip"
+    },
+    {
+      "id": "meds",
+      "kind": "meds",
+      "minApp": "1.7.5",
+      "color": "#3FA7D6",
+      "name": "Rappel médication",
+      "nameEn": "Medication reminder",
+      "summary": "Tes médicaments et compléments à heure fixe : une notification au bon moment, « Pris » en un geste, et ce qui reste à prendre dans « À faire ».",
+      "summaryEn": "Your medication and supplements on schedule: a notification at the right time, “Taken” in one tap, and what's left in the To-do card.",
+      "version": "1.0.0",
+      "size": 544,
+      "sha256": "52ee2162cacf4dc63392fea23c69fb0b366b69be50ec5f170e51b82cf8ebd7fc",
+      "url": "meds-1.0.0.zip"
     }
   ]
 }
