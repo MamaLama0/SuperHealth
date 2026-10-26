@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import WidgetKit
+import ActivityKit
 import Shared
 
 // Les noms Kotlin exportés (URL, Date, Context…) peuvent masquer ceux de Foundation et SwiftUI : ils sont qualifiés ici.
@@ -54,7 +55,7 @@ final class SwiftHooks: NSObject, NativeHooks {
 @available(iOS 16.2, *)
 final class WorkoutActivityController {
     static let shared = WorkoutActivityController()
-    private var activity: Activity<WorkoutAttributes>?
+    private var activity: ActivityKit.Activity<WorkoutAttributes>?
     private var last: SessionPayload?
 
     func update(json: String?) {
@@ -63,18 +64,18 @@ final class WorkoutActivityController {
         }
         if state == last { return }
         last = state
-        let content = ActivityContent(state: state, staleDate: nil)
-        if let a = activity ?? Activity<WorkoutAttributes>.activities.first {
+        let content = ActivityKit.ActivityContent(state: state, staleDate: nil)
+        if let a = activity ?? ActivityKit.Activity<WorkoutAttributes>.activities.first {
             activity = a
             Task { await a.update(content) }
-        } else if ActivityAuthorizationInfo().areActivitiesEnabled {
-            activity = try? Activity.request(attributes: WorkoutAttributes(name: state.title), content: content)
+        } else if ActivityKit.ActivityAuthorizationInfo().areActivitiesEnabled {
+            activity = try? ActivityKit.Activity<WorkoutAttributes>.request(attributes: WorkoutAttributes(name: state.title), content: content)
         }
     }
 
     private func end() {
         last = nil
-        let all = Activity<WorkoutAttributes>.activities
+        let all = ActivityKit.Activity<WorkoutAttributes>.activities
         activity = nil
         Task { for a in all { await a.end(nil, dismissalPolicy: .immediate) } }
     }
