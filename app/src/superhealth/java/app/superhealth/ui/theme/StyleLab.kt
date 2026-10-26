@@ -82,8 +82,13 @@ fun CardTone(hue: Color, rich: Boolean = false, night: Boolean = false, content:
     val d = base.dark
     fun mix(f: Float) = lerp(base.card, hue, f)
     // anneaux : sur les styles colorés, fond presque noir à peine teinté (comme Apple Fitness) pour que chaque anneau ressorte
-    val onNight = night && style in setOf(StyleLab.Cards.GRADIENT, StyleLab.Cards.STRONG, StyleLab.Cards.FULL)
-    val (top, bottom) = if (onNight) lerp(Color(0xFF15171C), hue, 0.14f) to lerp(Color(0xFF101114), hue, 0.05f) else when (style) {
+    // Théorie des couleurs : une teinte chaude (rouge, orange, jaune) assombrie vers le noir tourne au brun ; une teinte froide
+    // (bleu, vert, violet) donne un ton profond (marine, forêt, indigo). Les cartes multicolores chaudes passent donc sur un
+    // noir neutre légèrement froid, comme les anneaux, où leurs couleurs vives ressortent par contraste.
+    val warm = FloatArray(3).also { android.graphics.Color.colorToHSV(android.graphics.Color.argb(255, (hue.red * 255).toInt(), (hue.green * 255).toInt(), (hue.blue * 255).toInt()), it) }[0]
+        .let { it < 70f || it >= 320f }
+    val onNight = (night && style in setOf(StyleLab.Cards.GRADIENT, StyleLab.Cards.STRONG, StyleLab.Cards.FULL)) || (rich && warm && style == StyleLab.Cards.FULL)
+    val (top, bottom) = if (onNight) Color(0xFF1A1D24) to Color(0xFF101217) else when (style) {
         StyleLab.Cards.NEUTRAL, StyleLab.Cards.VIVID, StyleLab.Cards.OUTLINE -> base.card to base.card
         StyleLab.Cards.SOFT -> mix(if (d) 0.20f else 0.13f).let { it to it }
         StyleLab.Cards.GRADIENT -> mix(if (d) 0.46f else 0.36f) to mix(if (d) 0.16f else 0.10f)
