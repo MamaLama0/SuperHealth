@@ -57,6 +57,15 @@ interface HealthSource {
     /** Pesées enregistrées par d'autres apps (balance connectée…) : horodatage, kg, masse grasse %. */
     suspend fun weights(fromMs: Long, toMs: Long): List<Triple<Long, Double, Double?>>
 
+    /** Anneaux d'activité du jour (Apple : Bouger, M'entraîner, Me lever) avec les objectifs réglés sur la montre. */
+    suspend fun activitySummary(date: LocalDate): ActivitySummary? = null
+
+    /** Alertes cardiaques de la montre (pouls élevé ou bas, rythme irrégulier) et ECG enregistrés. */
+    suspend fun heartEvents(fromMs: Long, toMs: Long): List<HeartEvent> = emptyList()
+
+    /** Nouvelles mesures de pouls dès qu'elles arrivent (null : pas de suivi en direct). */
+    fun liveHeart(): kotlinx.coroutines.flow.Flow<Point>? = null
+
     // Écriture vers la plateforme (une donnée réécrite remplace la précédente : même identifiant de synchro).
     suspend fun writeWeight(epochDay: Long, kg: Double, fatPct: Double?) = Unit
     suspend fun writeNutrition(epochDay: Long, kcal: Double, protein: Double, fat: Double, carbs: Double, fiber: Double) = Unit
@@ -64,6 +73,20 @@ interface HealthSource {
     suspend fun writeWorkout(id: String, startMs: Long, endMs: Long, title: String, kcal: Double?) = Unit
     suspend fun writeWater(id: Long, timestampMs: Long, ml: Double) = Unit
 }
+
+/** Anneaux Apple : calories actives (Bouger), minutes d'exercice (M'entraîner), heures debout (Me lever). */
+data class ActivitySummary(
+    val move: Double, val moveGoal: Double,
+    val exercise: Double, val exerciseGoal: Double,
+    val stand: Double, val standGoal: Double,
+)
+
+enum class HeartEventKind(val label: String) {
+    HIGH("Pouls élevé"), LOW("Pouls bas"), IRREGULAR("Rythme irrégulier"), ECG("ECG"),
+}
+
+/** Alerte ou ECG : [detail] = classement de l'ECG (rythme sinusal, fibrillation auriculaire, non concluant…). */
+data class HeartEvent(val timeMs: Long, val kind: HeartEventKind, val bpm: Int? = null, val detail: String? = null, val alert: Boolean = false)
 
 object HealthSources {
     var current: HealthSource = NoHealthSource

@@ -14,7 +14,7 @@ object Routes {
         // écrans de lecture ouverts par le widget Insights
         "nutrition", "macros", "t/insights",
         // notification de mise à jour
-        "coach", "modules",
+        "coach", "modules", "h/apple", "h/heart",
         // notification du rappel médication
         "meds",
     )

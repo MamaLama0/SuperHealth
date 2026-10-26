@@ -53,7 +53,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** Module Coach IA : le bilan des 7 derniers jours. */
     COACH_WEEK("Ma semaine", Section.HEALTH),
     /** Mesures corporelles et photos de progression (paliers de l'objectif). */
-    BODY("Mesures et photos", Section.NUTRITION);
+    BODY("Mesures et photos", Section.NUTRITION),
+    /** iOS : signes vitaux de la nuit comparés à la plage habituelle (comme l'app Signes vitaux de l'Apple Watch). */
+    NIGHT_VITALS("Signes vitaux de la nuit", Section.HEALTH, watch = true);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -85,7 +87,7 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
     DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE,
-    DashCard.COACH, DashCard.COACH_WEEK)
+    DashCard.COACH, DashCard.COACH_WEEK, DashCard.NIGHT_VITALS)
 
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
@@ -211,7 +213,7 @@ data class SuperSettings(
     /** Taille de chaque carte (nom de [DashCard] → nom de [CardSize]) ; absente : taille par défaut. */
     val dashSizes: Map<String, String> = emptyMap(),
     /** Mesures des anneaux du jour, de l'extérieur vers l'intérieur (noms de Rings.Kind). */
-    val rings: List<String> = listOf("STEPS", "CARDIO", "KCAL"),
+    val rings: List<String> = listOf("MOVE", "EXERCISE", "KCAL"),
     /** Anneaux du jour déjà placés au-dessus des constantes (migration unique). */
     val ringsAdded: Boolean = false,
     /** Cartes reprises de MacroFactor (habitudes, bilan, prochaine séance…) déjà proposées (migration unique). */
@@ -261,6 +263,8 @@ data class SuperSettings(
     val photoGoalStart: Long = -1,
     /** Carte « Corps » déjà ajoutée au tableau de bord (migration unique). */
     val bodyCardAdded: Boolean = false,
+    /** iOS : carte « Signes vitaux de la nuit » déjà placée sous les constantes (migration unique). */
+    val appleCardsAdded: Boolean = false,
     /** Parties de l'app activées (noms de [Feature]). */
     val features: Set<String> = Feature.entries.map { it.name }.toSet(),
     /** Labo de style (version test) : cartes du tableau de bord en clair et en sombre, séance de musculation. Noms des enums de ui.theme.StyleLab. */
@@ -276,6 +280,7 @@ data class SuperSettings(
 
 /** Mesures que la carte Constantes peut afficher (montre ou Health Connect). */
 val VITAL_CHOICES = listOf("RESTING_HR", "HEART_RATE", "RESPIRATORY_RATE", "BODY_ENERGY", "STRESS", "SPO2", "HRV", "SLEEP", "SLEEP_SCORE",
+    "WALKING_HR", "HR_RECOVERY", "BREATHING_DISTURBANCES", "DAYLIGHT", "STAND_HOURS", "NOISE",
     "READINESS", "VO2MAX", "TEMPERATURE", "STEPS")
 
 val SuperSettings.vitalMetrics: List<app.superhealth.health.data.Metric>
@@ -359,6 +364,12 @@ object SuperPrefs {
             val at = cards.indexOf(DashCard.COACH)
             if (at >= 0 && DashCard.COACH_WEEK !in cards) cards.add(at + 1, DashCard.COACH_WEEK)
             s.copy(dashboard = cards, coachWeekAdded = true)
+        }
+        // iOS : signes vitaux de la nuit juste sous les constantes
+        if (!_settings.value.appleCardsAdded) update { s ->
+            val cards = s.dashboard.toMutableList()
+            if (DashCard.NIGHT_VITALS !in cards) cards.add((cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size, DashCard.NIGHT_VITALS)
+            s.copy(dashboard = cards, appleCardsAdded = true)
         }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }

@@ -224,6 +224,8 @@ fun SuperRoot(vm: SuperViewModel) {
                 MetricScreen(vm, nav, m)
             }
             composable("h/devices") { DevicesScreen(vm, nav) }
+            composable("h/apple") { app.superhealth.ui.health.AppleWatchScreen(vm, nav) }
+            composable("h/heart") { app.superhealth.ui.health.HeartEventsScreen(vm, nav) }
             composable("h/activities") { ActivitiesHistoryScreen(vm, nav) }
             composable("h/performance") { app.superhealth.ui.health.PerformanceScreen(vm, nav) }
             composable("h/workout/{id}", listOf(navArgument("id") { type = NavType.LongType })) {

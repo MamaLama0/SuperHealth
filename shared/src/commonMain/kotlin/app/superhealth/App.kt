@@ -68,6 +68,7 @@ object SuperHealth {
         Bridge.start(appContext)
         vm = SuperViewModel(appContext)
         vm.bind(app.superhealth.nutrition.ui.AppViewModel(NutriApp.repository), app.superhealth.training.ui.AppViewModel(appContext))
+        launchRoute?.let { vm.pendingRoute.value = it; launchRoute = null }
         // tâches périodiques d'Android (WorkManager) : faites au lancement sur iOS
         scope.launch {
             runCatching { app.superhealth.modules.Modules.autoUpdate(appContext) }
@@ -76,9 +77,13 @@ object SuperHealth {
         }
     }
 
-    /** Route ouverte depuis l'extérieur (notification, raccourci). */
+    /** Route demandée avant le démarrage (raccourci de l'icône, widget, notification à froid). */
+    private var launchRoute: String? = null
+
+    /** Route ouverte depuis l'extérieur (notification, raccourci, widget). */
     fun openRoute(route: String?) {
-        app.superhealth.ui.Routes.external(route)?.let { if (started) vm.pendingRoute.value = it }
+        val r = app.superhealth.ui.Routes.external(route) ?: return
+        if (started) vm.pendingRoute.value = r else launchRoute = r
     }
 }
 
@@ -91,7 +96,14 @@ fun App() {
     val dark = s.themeMode.isDark(isSystemInDarkTheme())
     LifecycleResumeEffect(Unit) {
         vm.onResume(appContext)
-        onPauseOrDispose { }
+        // en quittant l'app : widgets à jour (pas, anneaux et signes vitaux relus)
+        onPauseOrDispose { app.superhealth.ui.widget.Widgets.publish() }
+    }
+    // cœur de l'icône dans la couleur d'accent, comme le lanceur Android (iOS demande confirmation par une alerte)
+    val onboarded = SuperPrefs.settings.collectAsState().value.onboarded
+    LaunchedEffect(s.accent, onboarded) {
+        if (onboarded) setAppIcon(if (s.accent == app.superhealth.nutrition.domain.AccentColor.PINK) null
+            else "AppIcon-" + s.accent.name.lowercase().replaceFirstChar { it.uppercase() })
     }
     SuperTheme(s.themeMode, s.accent) {
         Box(Modifier.fillMaxSize().background(Mf.colors.background)) {

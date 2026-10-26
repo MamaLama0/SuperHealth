@@ -112,7 +112,11 @@ object HealthRepository {
         return when (metric) {
             Metric.STEPS, Metric.DISTANCE, Metric.CALORIES, Metric.ACTIVE_MINUTES, Metric.SLEEP, Metric.SLEEP_SCORE,
             Metric.BODY_ENERGY, Metric.STRESS, Metric.SPO2, Metric.VO2MAX, Metric.RESTING_HR, Metric.HRV,
-            Metric.RESPIRATORY_RATE, Metric.TEMPERATURE, Metric.READINESS -> read(metric)?.takeIf { it > 0 || metric == Metric.BODY_ENERGY }
+            Metric.RESPIRATORY_RATE, Metric.TEMPERATURE, Metric.READINESS,
+            Metric.STAND_HOURS, Metric.FLIGHTS, Metric.WALKING_HR, Metric.HR_RECOVERY, Metric.AFIB_BURDEN, Metric.WALKING_STEADINESS,
+            Metric.WALKING_SPEED, Metric.DAYLIGHT, Metric.MINDFUL, Metric.NOISE -> read(metric)?.takeIf { it > 0 || metric == Metric.BODY_ENERGY }
+            // zéro trouble respiratoire est une bonne nouvelle, pas une absence de donnée
+            Metric.BREATHING_DISTURBANCES -> read(metric)
             Metric.CARDIO_WEEK -> cardioWeek(date)?.total?.toDouble()
             Metric.HEART_RATE -> intraday(Metric.HEART_RATE, date).map { it.value }.averageOrNull()
             Metric.RECOVERY -> Scores.chargeOf(context, date)?.score?.toDouble()

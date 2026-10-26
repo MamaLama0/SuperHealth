@@ -2,7 +2,7 @@ name: SuperHealth
 options:
   bundleIdPrefix: app
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "16.2"
   createIntermediateGroups: true
 settings:
   base:
@@ -13,9 +13,10 @@ targets:
   SuperHealth:
     type: application
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "16.2"
     sources:
       - path: SuperHealth
+      - path: Common
       # assets de l'app Android (images d'exercices, aliments, bases JSON, police), copiés tels quels
       - path: ../assets
         type: folder
@@ -27,6 +28,9 @@ targets:
         INFOPLIST_FILE: SuperHealth/Info.plist
         CODE_SIGN_ENTITLEMENTS: SuperHealth/SuperHealth.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # cœur dans chaque couleur d'accent (UIApplication.setAlternateIconName)
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Blue AppIcon-Green AppIcon-Yellow AppIcon-Purple AppIcon-Orange AppIcon-Gray"
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         TARGETED_DEVICE_FAMILY: "1"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
@@ -38,7 +42,12 @@ targets:
           cd "$SRCROOT/.."
           ./gradlew :shared:embedAndSignAppleFrameworkForXcode
     dependencies:
+      - target: SuperHealthWidgets
+        embed: true
       - sdk: HealthKit.framework
+      - sdk: BackgroundTasks.framework
+      - sdk: WidgetKit.framework
+      - sdk: ActivityKit.framework
       - sdk: UIKit.framework
       - sdk: SwiftUI.framework
       - sdk: AVFoundation.framework
@@ -52,6 +61,26 @@ targets:
       - sdk: CoreText.framework
       - sdk: CoreGraphics.framework
       - sdk: QuartzCore.framework
+  SuperHealthWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "16.2"
+    sources:
+      - path: Widgets
+      - path: Common
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.superhealth.widgets
+        PRODUCT_NAME: SuperHealthWidgets
+        INFOPLIST_FILE: Widgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Widgets/Widgets.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: ActivityKit.framework
 schemes:
   SuperHealth:
     build:

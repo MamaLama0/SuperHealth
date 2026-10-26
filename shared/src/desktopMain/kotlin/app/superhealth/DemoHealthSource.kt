@@ -25,7 +25,8 @@ object DemoHealthSource : HealthSource {
 
     override fun supports(metric: Metric) = metric in setOf(Metric.STEPS, Metric.DISTANCE, Metric.CALORIES, Metric.ACTIVE_MINUTES,
         Metric.HEART_RATE, Metric.RESTING_HR, Metric.HRV, Metric.SLEEP, Metric.SPO2, Metric.RESPIRATORY_RATE, Metric.VO2MAX,
-        Metric.TEMPERATURE, Metric.WEIGHT)
+        Metric.TEMPERATURE, Metric.WEIGHT, Metric.STAND_HOURS, Metric.FLIGHTS, Metric.WALKING_HR, Metric.HR_RECOVERY, Metric.WALKING_STEADINESS,
+        Metric.WALKING_SPEED, Metric.DAYLIGHT, Metric.MINDFUL, Metric.NOISE, Metric.BREATHING_DISTURBANCES)
 
     private fun rnd(day: LocalDate, salt: Int) = Random(day.toEpochDay().toInt() * 31 + salt)
 
@@ -45,6 +46,16 @@ object DemoHealthSource : HealthSource {
             Metric.VO2MAX -> 47.0 + (date.toEpochDay() % 30) / 30.0
             Metric.TEMPERATURE -> 35.6 + r.nextDouble() * 0.6
             Metric.WEIGHT -> null
+            Metric.STAND_HOURS -> (8 + r.nextInt(6)) * part
+            Metric.FLIGHTS -> (4 + r.nextInt(12)) * part
+            Metric.WALKING_HR -> 92.0 + r.nextInt(10)
+            Metric.HR_RECOVERY -> if (date.dayOfWeek.value == 3 || date.dayOfWeek.value == 6) 28.0 + r.nextInt(8) else null
+            Metric.WALKING_STEADINESS -> if (date.dayOfWeek.value == 1) 88.0 else null
+            Metric.WALKING_SPEED -> 4.8 + r.nextDouble() * 0.6
+            Metric.DAYLIGHT -> (20 + r.nextInt(90)) * part
+            Metric.MINDFUL -> if (r.nextInt(3) == 0) 5.0 else null
+            Metric.NOISE -> 58.0 + r.nextInt(14)
+            Metric.BREATHING_DISTURBANCES -> 2.0 + r.nextDouble() * 4
             Metric.SLEEP -> HealthRepository.sleepNight(date)?.filter { it.kind != ActivityKind.AWAKE_SLEEP }?.sumOf { it.end - it.start }?.div(60_000.0)
             else -> null
         }
@@ -119,6 +130,14 @@ object DemoHealthSource : HealthSource {
             points.mapNotNull { it.hr }.average().toInt(), points.mapNotNull { it.hr }.max(), 48.0, 47.0, 171.0, 3.6, null, null, null, null,
             null, null, null, emptyList(), null, points, emptyList())
     }
+
+    override suspend fun activitySummary(date: LocalDate) = app.superhealth.health.data.ActivitySummary(
+        move = 412.0, moveGoal = 600.0, exercise = 24.0, exerciseGoal = 30.0, stand = 9.0, standGoal = 12.0)
+
+    override suspend fun heartEvents(fromMs: Long, toMs: Long) = listOf(
+        app.superhealth.health.data.HeartEvent(nowMs() - 3 * 86_400_000L, app.superhealth.health.data.HeartEventKind.ECG, 64, "Rythme sinusal"),
+        app.superhealth.health.data.HeartEvent(nowMs() - 40 * 86_400_000L, app.superhealth.health.data.HeartEventKind.HIGH, 120, alert = true),
+    )
 
     override suspend fun weights(fromMs: Long, toMs: Long): List<Triple<Long, Double, Double?>> = emptyList()
 }

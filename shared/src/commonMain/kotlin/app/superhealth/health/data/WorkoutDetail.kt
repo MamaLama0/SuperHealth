@@ -46,6 +46,11 @@ data class WorkoutDetail(
     val zoneBounds: List<Int>?,
     val points: List<TrackPoint>,
     val laps: List<Lap>,
+    /** Dynamique mesurée par la montre (puissance, foulée, oscillation, contact au sol, cadence…) : libellé → valeur affichée. */
+    val dynamics: List<Pair<String, String>> = emptyList(),
+    /** Effort de la séance sur 10 (Apple Watch, watchOS 11) ; [effortEstimated] : estimé par la montre plutôt que noté. */
+    val effort: Double? = null,
+    val effortEstimated: Boolean = false,
 ) {
     val hasGps: Boolean get() = points.count { it.lat != null } >= 2
     val isSwim: Boolean get() = kind.name.contains("SWIM")

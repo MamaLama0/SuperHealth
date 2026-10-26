@@ -99,6 +99,12 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
                 vm.nutrition.selectedDay.value = an.today; tab("log")
             }
         }
+        DashCard.NIGHT_VITALS -> {
+            val n = app.superhealth.ui.health.nightVitalsState(vm)
+            val out = n?.outliers ?: 0
+            CompactData(when { n == null || n.measured == 0 -> "—"; out == 0 -> tr("Normal"); else -> out.toString() }, null,
+                if (out > 0) tr("Hors de l'habituel") else tr("Signes vitaux"), null) { nav.go("h/apple") }
+        }
         DashCard.WEIGHT -> CompactData(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), tr("Tendance"), null,
             (an.today - 27..an.today).map { d -> an.trendByDay[d]?.let(s::weightValue) }, bars = false) { nav.go("weight") }
         DashCard.EXPENDITURE -> CompactData(s.energyValue(an.currentTdee).roundToInt().toString(), kcal, tr("Dépense"), null,
@@ -397,8 +403,19 @@ internal fun dashRings(names: List<String>, h: HealthSnap, eaten: List<FoodEntry
             Rings.Kind.WATER -> h.today(Metric.HYDRATION)
             Rings.Kind.SLEEP -> h.latest(Metric.SLEEP)?.takeIf { it.first == LocalDate.now() }?.second
             Rings.Kind.CARDIO -> h.cardio?.total?.toDouble()
+            Rings.Kind.MOVE -> h.apple?.move
+            Rings.Kind.EXERCISE -> h.apple?.exercise
+            Rings.Kind.STAND -> h.apple?.stand
         }
-    }, { k -> ringGoal(k, s.stepGoalFor(LocalDate.now()), target.kcal, target.protein, h.cardio?.target) })
+    }, { k ->
+        when (k) {
+            // objectifs réglés dans l'app Forme de l'iPhone
+            Rings.Kind.MOVE -> h.apple?.moveGoal?.takeIf { it > 0 } ?: 500.0
+            Rings.Kind.EXERCISE -> h.apple?.exerciseGoal?.takeIf { it > 0 } ?: 30.0
+            Rings.Kind.STAND -> h.apple?.standGoal?.takeIf { it > 0 } ?: 12.0
+            else -> ringGoal(k, s.stepGoalFor(LocalDate.now()), target.kcal, target.protein, h.cardio?.target)
+        }
+    })
 }
 
 /** Objectif de chaque anneau (commun au tableau de bord et au widget). */
@@ -410,4 +427,7 @@ internal fun ringGoal(k: Rings.Kind, stepGoal: Int, kcal: Double, protein: Doubl
     Rings.Kind.WATER -> HealthRepository.goal(Metric.HYDRATION) ?: 2000.0
     Rings.Kind.SLEEP -> 480.0
     Rings.Kind.CARDIO -> (cardioTarget ?: 150).toDouble()
+    Rings.Kind.MOVE -> 500.0
+    Rings.Kind.EXERCISE -> 30.0
+    Rings.Kind.STAND -> 12.0
 }

@@ -1,5 +1,6 @@
 package app.superhealth.training
 
+import app.superhealth.ui.widget.Widgets as WidgetSnapshots
 import app.superhealth.platform.*
 
 import app.superhealth.platform.Application
@@ -39,6 +40,11 @@ object WorkoutApp {
     fun init(app: Application) {
         Assets.init(app)
         store = Store(app)
+        // Widget « Prochaine séance » : rafraîchi à chaque changement de séance, d'historique ou de programme.
+        scope.launch {
+            store.state.map { Triple(it.session?.copy(current = 0), it.history.size, it.programs) }.distinctUntilChanged().debounce(300)
+                .collect { WidgetSnapshots.publish() }
+        }
         db = combine(baseDb, store.state.map { it.customExercises }.distinctUntilChanged()) { b, c -> b?.withCustom(c) }
             .stateIn(scope, SharingStarted.Eagerly, null)
         scope.launch(Dispatchers.IO) { baseDb.value = ExerciseDb.parse(Assets.text("db/exercises.json") ?: error("base absente")) }

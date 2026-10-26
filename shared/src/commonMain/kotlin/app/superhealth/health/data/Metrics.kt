@@ -5,7 +5,12 @@ import app.superhealth.platform.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
+import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Air
+import androidx.compose.material.icons.rounded.Hearing
+import androidx.compose.material.icons.rounded.Stairs
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.BatteryChargingFull
@@ -95,10 +100,35 @@ enum class Metric(
     BODY_FAT("Masse grasse", "%", Icons.Rounded.Percent, Aggregation.LAST, ChartKind.DOTS, Category.METABOLISM, digits = 1),
     HYDRATION("Hydratation", "ml", Icons.Rounded.WaterDrop, Aggregation.SUM, ChartKind.BARS, Category.NUTRITION, manual = true),
     GLUCOSE("Glycémie", "mg/dl", Icons.Rounded.Bloodtype, Aggregation.AVERAGE, ChartKind.DOTS, Category.VITALS, manual = true),
-    BODY_TEMPERATURE("Température corporelle", "°C", Icons.Rounded.Thermostat, Aggregation.AVERAGE, ChartKind.DOTS, Category.TEMPERATURE, digits = 1, manual = true);
+    BODY_TEMPERATURE("Température corporelle", "°C", Icons.Rounded.Thermostat, Aggregation.AVERAGE, ChartKind.DOTS, Category.TEMPERATURE, digits = 1, manual = true),
+
+    // ---- Apple Watch (iOS) ----------------------------------------------------------------------------------
+    STAND_HOURS("Heures debout", "h", Icons.Rounded.Accessibility, Aggregation.SUM, ChartKind.BARS, Category.FITNESS,
+        about = "Heures où vous vous êtes levé et avez bougé au moins une minute (anneau « Me lever » de l'Apple Watch)."),
+    FLIGHTS("Étages montés", null, Icons.Rounded.Stairs, Aggregation.SUM, ChartKind.BARS, Category.FITNESS),
+    WALKING_HR("FC moyenne à la marche", "bpm", Icons.AutoMirrored.Rounded.DirectionsWalk, Aggregation.AVERAGE, ChartKind.DOTS, Category.HEART,
+        about = "Pouls moyen pendant vos marches de la journée, calculé par l'Apple Watch. Il baisse souvent quand la forme progresse."),
+    HR_RECOVERY("Récupération cardiaque", "bpm", Icons.Rounded.MonitorHeart, Aggregation.LAST, ChartKind.DOTS, Category.HEART,
+        about = "Baisse du pouls une minute après l'arrêt d'un effort intense enregistré avec l'Apple Watch. Plus elle est grande, meilleure est la forme cardiovasculaire."),
+    AFIB_BURDEN("Historique de FA", "%", Icons.Rounded.MonitorHeart, Aggregation.LAST, ChartKind.DOTS, Category.HEART,
+        about = "Part du temps passé en fibrillation auriculaire chaque semaine, estimée par l'Apple Watch (fonction à activer dans Santé, réservée aux personnes diagnostiquées). Ce n'est pas un avis médical."),
+    WALKING_STEADINESS("Stabilité de la marche", "%", Icons.AutoMirrored.Rounded.DirectionsWalk, Aggregation.LAST, ChartKind.DOTS, Category.FITNESS,
+        about = "Équilibre et régularité de votre pas, estimés par l'iPhone porté en poche : au-dessus de 70 %, le risque de chute est faible."),
+    WALKING_SPEED("Vitesse de marche", "km/h", Icons.AutoMirrored.Rounded.DirectionsWalk, Aggregation.AVERAGE, ChartKind.DOTS, Category.FITNESS, digits = 1),
+    DAYLIGHT("Lumière du jour", "min", Icons.Rounded.WbSunny, Aggregation.SUM, ChartKind.BARS, Category.MIND,
+        about = "Temps passé à la lumière du jour, mesuré par le capteur de luminosité de l'Apple Watch. Une à deux heures par jour aident le sommeil et l'humeur."),
+    MINDFUL("Pleine conscience", "min", Icons.Rounded.Spa, Aggregation.SUM, ChartKind.BARS, Category.MIND,
+        about = "Minutes de respiration et de réflexion (app Pleine conscience de l'Apple Watch ou autres apps de méditation)."),
+    NOISE("Bruit ambiant", "dB", Icons.Rounded.Hearing, Aggregation.AVERAGE, ChartKind.DOTS, Category.VITALS,
+        about = "Niveau sonore moyen autour de vous, mesuré par le micro de l'Apple Watch. Au-delà de 80 dB pendant des heures, l'audition peut en souffrir."),
+    BREATHING_DISTURBANCES("Troubles respiratoires", null, Icons.Rounded.Air, Aggregation.AVERAGE, ChartKind.DOTS, Category.RESPIRATION, digits = 1,
+        about = "Micro-interruptions de la respiration pendant le sommeil, par heure, mesurées par l'Apple Watch. Des valeurs hautes et durables peuvent évoquer une apnée du sommeil : parlez-en à un médecin.");
 
     val color: Color get() = category.color
 }
+
+/** Mesures propres à l'Apple Watch (iOS) : elles n'existent pas sur Android. */
+val Metric.appleOnly: Boolean get() = ordinal >= Metric.STAND_HOURS.ordinal
 
 /** Mesures calculées par SuperHealth à partir des autres (voir Scores). */
 val Metric.computed: Boolean get() = this == Metric.RECOVERY || this == Metric.EFFORT || this == Metric.SLEEP_DEBT

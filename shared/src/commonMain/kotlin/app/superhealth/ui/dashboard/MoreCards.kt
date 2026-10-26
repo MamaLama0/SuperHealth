@@ -90,7 +90,9 @@ private fun ringText(r: Rings.Ring, s: NutritionSettings): Pair<String?, String>
     Rings.Kind.WATER -> r.value?.let { formatNumber(it) } to "${formatNumber(r.goal)} ml"
     Rings.Kind.SLEEP -> r.value?.let { app.superhealth.ui.formatValue(app.superhealth.health.data.Metric.SLEEP, it) } to
         app.superhealth.ui.formatValue(app.superhealth.health.data.Metric.SLEEP, r.goal)
-    Rings.Kind.CARDIO -> r.value?.let { formatNumber(it) } to "${formatNumber(r.goal)} min"
+    Rings.Kind.CARDIO, Rings.Kind.EXERCISE -> r.value?.let { formatNumber(it) } to "${formatNumber(r.goal)} min"
+    Rings.Kind.MOVE -> r.value?.let { formatNumber(it) } to "${formatNumber(r.goal)} kcal"
+    Rings.Kind.STAND -> r.value?.let { formatNumber(it) } to "${formatNumber(r.goal)} h"
     else -> r.value?.let { formatNumber(it) } to formatNumber(r.goal)
 }
 
@@ -100,6 +102,9 @@ private fun ringRoute(k: Rings.Kind): String = when (k) {
     Rings.Kind.WATER -> "h/metric/HYDRATION"
     Rings.Kind.SLEEP -> "h/metric/SLEEP"
     Rings.Kind.CARDIO -> "h/metric/CARDIO_WEEK"
+    Rings.Kind.MOVE -> "h/metric/CALORIES"
+    Rings.Kind.EXERCISE -> "h/metric/ACTIVE_MINUTES"
+    Rings.Kind.STAND -> "h/metric/STAND_HOURS"
     Rings.Kind.KCAL, Rings.Kind.PROTEIN -> "log"
 }
 

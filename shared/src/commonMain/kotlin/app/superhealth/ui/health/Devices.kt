@@ -97,6 +97,13 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
             return@DetailScaffold
         }
 
+        if (devices.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            GroupCard {
+                SettingRow(tr("Santé Apple Watch"), subtitle = tr("Signes vitaux de la nuit, cœur, ECG, mobilité, bien-être"),
+                    icon = Icons.Rounded.Watch, hue = app.superhealth.ui.theme.HealthHues.Heart) { nav.navigate("h/apple") }
+            }
+        }
         Row(verticalAlignment = Alignment.Bottom) {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Sources"), Modifier.weight(1f))
             if (syncing) CircularProgressIndicator(Modifier.padding(end = 12.dp, bottom = 6.dp).size(18.dp), strokeWidth = 2.dp, color = Mf.colors.accent)

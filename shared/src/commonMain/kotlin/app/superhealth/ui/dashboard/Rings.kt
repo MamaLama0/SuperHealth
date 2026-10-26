@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Accessibility
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Bolt
@@ -50,11 +53,23 @@ object Rings {
         WATER("Hydratation", Color(0xFF0A84FF), Icons.Rounded.WaterDrop),
         SLEEP("Sommeil", Color(0xFFBF5AF2), Icons.Rounded.Bedtime),
         CARDIO("Minutes cardio", Color(0xFFFFD60A), Icons.Rounded.Favorite),
+        // anneaux de l'Apple Watch, objectifs réglés sur la montre
+        MOVE("Bouger", Color(0xFFFA114F), Icons.Rounded.LocalFireDepartment),
+        EXERCISE("M'entraîner", Color(0xFF92E82A), Icons.AutoMirrored.Rounded.DirectionsRun),
+        STAND("Me lever", Color(0xFF1EEAEF), Icons.Rounded.Accessibility),
+    }
+
+    /** Anneau proposé : sa mesure existe sur cet appareil (Body Battery : Garmin seulement ; anneaux Apple : Apple Santé). */
+    val Kind.available: Boolean get() = when (this) {
+        Kind.ENERGY -> app.superhealth.health.data.HealthRepository.isSupported(app.superhealth.health.data.Metric.BODY_ENERGY)
+        Kind.MOVE, Kind.EXERCISE, Kind.STAND -> app.superhealth.bridge.Watch.devices().isNotEmpty()
+        else -> true
     }
 
     const val MAX = 4
-    // iOS : minutes d'exercice d'Apple à la place de la Body Battery de Garmin (absente d'Apple Santé)
-    val defaults = listOf(Kind.STEPS, Kind.CARDIO, Kind.KCAL)
+    // iOS : Bouger et M'entraîner de l'Apple Watch, puis les calories mangées (la Body Battery de Garmin n'existe pas dans
+    // Santé) ; « Me lever » reste proposé, son cyan est trop proche de celui des calories pour les deux par défaut
+    val defaults = listOf(Kind.MOVE, Kind.EXERCISE, Kind.KCAL)
 
     /** Mesures choisies (noms), dans l'ordre, sans doublon ; les valeurs par défaut si rien de valide. */
     fun kinds(names: List<String>): List<Kind> =

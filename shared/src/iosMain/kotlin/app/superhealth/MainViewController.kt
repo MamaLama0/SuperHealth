@@ -12,5 +12,11 @@ fun MainViewController(): UIViewController {
     return ComposeUIViewController { App() }
 }
 
-/** Ouverture par une notification ou un lien « superhealth://route ». */
+/** Démarrage de l'app (init de l'App Swift) : source de santé et tâches de fond, avant toute interface. */
+fun launch() {
+    HealthSources.current = HealthKitSource
+    app.superhealth.platform.BackgroundRefresh.register()
+}
+
+/** Ouverture par une notification, un widget ou un lien « superhealth://open?route=… ». */
 fun openRoute(route: String?) = SuperHealth.openRoute(route)

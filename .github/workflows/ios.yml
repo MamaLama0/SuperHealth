@@ -51,8 +51,10 @@ jobs:
         run: |
           APP=build/ios/Build/Products/Release-iphoneos/SuperHealth.app
           rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
-          # signature ad hoc avec les droits HealthKit : l'outil de sideload les reprend en re-signant
+          # signature ad hoc avec les droits (HealthKit, groupe d'apps des widgets) : l'outil de sideload les reprend en re-signant
+          codesign -f -s - --entitlements iosApp/Widgets/Widgets.entitlements Payload/SuperHealth.app/PlugIns/SuperHealthWidgets.appex
           codesign -f -s - --entitlements iosApp/SuperHealth/SuperHealth.entitlements Payload/SuperHealth.app
+          codesign -d --entitlements - Payload/SuperHealth.app
           zip -qry SuperHealth.ipa Payload
           ls -lh SuperHealth.ipa
 

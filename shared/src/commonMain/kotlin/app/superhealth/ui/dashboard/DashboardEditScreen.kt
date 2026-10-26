@@ -278,7 +278,7 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
         }
-        val hidden = Rings.Kind.entries - shown.toSet()
+        val hidden = Rings.Kind.entries.filter { with(Rings) { it.available } } - shown.toSet()
         if (hidden.isNotEmpty()) {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Disponibles"), Modifier.padding(start = 0.dp))
             GroupCard {

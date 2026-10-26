@@ -13,6 +13,45 @@ import app.superhealth.health.data.TrackPoint
 import app.superhealth.health.data.Workout
 import app.superhealth.health.data.WorkoutDetail
 import app.superhealth.health.data.WorkoutDetails
+import app.superhealth.health.data.ActivitySummary
+import app.superhealth.health.data.HeartEvent
+import app.superhealth.health.data.HeartEventKind
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import platform.Foundation.NSCalendar
+import platform.Foundation.NSDateComponents
+import platform.HealthKit.HKActivitySummary
+import platform.HealthKit.HKActivitySummaryQuery
+import platform.HealthKit.HKActivitySummaryType
+import platform.HealthKit.HKAnchoredObjectQuery
+import platform.HealthKit.HKCategoryTypeIdentifierAppleStandHour
+import platform.HealthKit.HKCategoryTypeIdentifierHighHeartRateEvent
+import platform.HealthKit.HKCategoryTypeIdentifierIrregularHeartRhythmEvent
+import platform.HealthKit.HKCategoryTypeIdentifierLowHeartRateEvent
+import platform.HealthKit.HKCategoryTypeIdentifierMindfulSession
+import platform.HealthKit.HKCategoryValueAppleStandHourStood
+import platform.HealthKit.HKElectrocardiogram
+import platform.HealthKit.HKElectrocardiogramClassificationAtrialFibrillation
+import platform.HealthKit.HKElectrocardiogramClassificationInconclusiveHighHeartRate
+import platform.HealthKit.HKElectrocardiogramClassificationInconclusiveLowHeartRate
+import platform.HealthKit.HKElectrocardiogramClassificationInconclusiveOther
+import platform.HealthKit.HKElectrocardiogramClassificationInconclusivePoorReading
+import platform.HealthKit.HKElectrocardiogramClassificationSinusRhythm
+import platform.HealthKit.HKMetadataKeyHeartRateEventThreshold
+import platform.HealthKit.HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances
+import platform.HealthKit.HKQuantityTypeIdentifierAppleWalkingSteadiness
+import platform.HealthKit.HKQuantityTypeIdentifierAtrialFibrillationBurden
+import platform.HealthKit.HKQuantityTypeIdentifierEnvironmentalAudioExposure
+import platform.HealthKit.HKQuantityTypeIdentifierFlightsClimbed
+import platform.HealthKit.HKQuantityTypeIdentifierHeartRateRecoveryOneMinute
+import platform.HealthKit.HKQuantityTypeIdentifierTimeInDaylight
+import platform.HealthKit.HKQuantityTypeIdentifierWalkingHeartRateAverage
+import platform.HealthKit.HKQuantityTypeIdentifierWalkingSpeed
+import platform.HealthKit.HKQueryAnchor
+import platform.HealthKit.decibelAWeightedSoundPressureLevelUnit
+import platform.HealthKit.predicateForActivitySummaryWithDateComponents
+import platform.HealthKit.secondUnit
 import kotlin.coroutines.resume
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -125,13 +164,20 @@ object HealthKitSource : HealthSource {
     private val ml: HKUnit get() = HKUnit.literUnitWithMetricPrefix(HKMetricPrefixMilli)
     private val vo2: HKUnit get() = HKUnit.unitFromString("ml/kg*min")
 
-    private val readIds = listOf(
+    private val readIds get() = listOf(
         HKQuantityTypeIdentifierStepCount, HKQuantityTypeIdentifierDistanceWalkingRunning, HKQuantityTypeIdentifierActiveEnergyBurned,
         HKQuantityTypeIdentifierAppleExerciseTime, HKQuantityTypeIdentifierHeartRate, HKQuantityTypeIdentifierRestingHeartRate,
         HKQuantityTypeIdentifierHeartRateVariabilitySDNN, HKQuantityTypeIdentifierOxygenSaturation, HKQuantityTypeIdentifierRespiratoryRate,
         HKQuantityTypeIdentifierVO2Max, HKQuantityTypeIdentifierAppleSleepingWristTemperature, HKQuantityTypeIdentifierBodyMass,
         HKQuantityTypeIdentifierBodyFatPercentage, HKQuantityTypeIdentifierDietaryWater,
-    )
+        // Apple Watch : cœur, mobilité, environnement
+        HKQuantityTypeIdentifierWalkingHeartRateAverage, HKQuantityTypeIdentifierHeartRateRecoveryOneMinute,
+        HKQuantityTypeIdentifierAtrialFibrillationBurden, HKQuantityTypeIdentifierAppleWalkingSteadiness, HKQuantityTypeIdentifierWalkingSpeed,
+        HKQuantityTypeIdentifierFlightsClimbed, HKQuantityTypeIdentifierEnvironmentalAudioExposure,
+    ) + (if (iosAtLeast(17)) listOf(HKQuantityTypeIdentifierTimeInDaylight) else emptyList()) +
+        (if (iosAtLeast(18)) listOf(HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances) else emptyList()) + WorkoutMetrics.readIds
+    private val categoryIds = listOf(HKCategoryTypeIdentifierAppleStandHour, HKCategoryTypeIdentifierMindfulSession,
+        HKCategoryTypeIdentifierHighHeartRateEvent, HKCategoryTypeIdentifierLowHeartRateEvent, HKCategoryTypeIdentifierIrregularHeartRhythmEvent)
     private val writeIds = listOf(
         HKQuantityTypeIdentifierBodyMass, HKQuantityTypeIdentifierBodyFatPercentage, HKQuantityTypeIdentifierDietaryEnergyConsumed,
         HKQuantityTypeIdentifierDietaryProtein, HKQuantityTypeIdentifierDietaryFatTotal, HKQuantityTypeIdentifierDietaryCarbohydrates,
@@ -141,14 +187,19 @@ object HealthKitSource : HealthSource {
     override suspend fun requestAuthorization(): Boolean = suspendCancellableCoroutine { c ->
         if (!available) { c.resume(false); return@suspendCancellableCoroutine }
         val read = readIds.mapNotNull { HKQuantityType.quantityTypeForIdentifier(it) }.toSet<Any>() +
-            setOf(sleepType, HKObjectType.workoutType(), HKSeriesType.workoutRouteType())
+            setOf(sleepType, HKObjectType.workoutType(), HKSeriesType.workoutRouteType(), HKObjectType.activitySummaryType(),
+                HKObjectType.electrocardiogramType()) + categoryIds.mapNotNull { HKCategoryType.categoryTypeForIdentifier(it) }
         val write = writeIds.mapNotNull { HKQuantityType.quantityTypeForIdentifier(it) }.toSet<Any>() + setOf(HKObjectType.workoutType())
         store.requestAuthorizationToShareTypes(write, read) { ok, _ -> c.resume(ok) }
     }
 
     override fun supports(metric: Metric): Boolean = available && when (metric) {
         Metric.STEPS, Metric.DISTANCE, Metric.CALORIES, Metric.ACTIVE_MINUTES, Metric.HEART_RATE, Metric.RESTING_HR, Metric.HRV,
-        Metric.SLEEP, Metric.SPO2, Metric.RESPIRATORY_RATE, Metric.VO2MAX, Metric.TEMPERATURE, Metric.WEIGHT -> true
+        Metric.SLEEP, Metric.SPO2, Metric.RESPIRATORY_RATE, Metric.VO2MAX, Metric.TEMPERATURE, Metric.WEIGHT,
+        Metric.STAND_HOURS, Metric.FLIGHTS, Metric.WALKING_HR, Metric.HR_RECOVERY, Metric.AFIB_BURDEN, Metric.WALKING_STEADINESS,
+        Metric.WALKING_SPEED, Metric.MINDFUL, Metric.NOISE -> true
+        Metric.DAYLIGHT -> iosAtLeast(17)
+        Metric.BREATHING_DISTURBANCES -> iosAtLeast(18)
         // propres à Garmin (Body Battery, stress, disposition, score de sommeil) : absents d'Apple Santé
         else -> false
     }
@@ -198,8 +249,82 @@ object HealthKitSource : HealthSource {
             Metric.VO2MAX -> latest(HKQuantityTypeIdentifierVO2Max, from, to, vo2)
             Metric.WEIGHT -> latest(HKQuantityTypeIdentifierBodyMass, from, to, kg)
             Metric.SLEEP -> HealthRepository.sleepNight(date)?.filter { it.kind != ActivityKind.AWAKE_SLEEP }?.sumOf { it.end - it.start }?.div(60_000.0)
+            Metric.STAND_HOURS -> category(HKCategoryTypeIdentifierAppleStandHour, from, to).count { it.value == HKCategoryValueAppleStandHourStood }.toDouble()
+            Metric.FLIGHTS -> sum(HKQuantityTypeIdentifierFlightsClimbed, from, to, HKUnit.countUnit())
+            Metric.WALKING_HR -> avg(HKQuantityTypeIdentifierWalkingHeartRateAverage, from, to, bpm)
+            Metric.HR_RECOVERY -> latest(HKQuantityTypeIdentifierHeartRateRecoveryOneMinute, from, to, bpm)
+            Metric.AFIB_BURDEN -> latest(HKQuantityTypeIdentifierAtrialFibrillationBurden, from, to, HKUnit.percentUnit())?.times(100)
+            Metric.WALKING_STEADINESS -> latest(HKQuantityTypeIdentifierAppleWalkingSteadiness, from, to, HKUnit.percentUnit())?.times(100)
+            Metric.WALKING_SPEED -> avg(HKQuantityTypeIdentifierWalkingSpeed, from, to, HKUnit.meterUnit().unitDividedByUnit(HKUnit.secondUnit()))?.times(3.6)
+            Metric.DAYLIGHT -> if (iosAtLeast(17)) sum(HKQuantityTypeIdentifierTimeInDaylight, from, to, HKUnit.minuteUnit()) else null
+            Metric.MINDFUL -> category(HKCategoryTypeIdentifierMindfulSession, from, to).sumOf { it.endDate.ms() - it.startDate.ms() } / 60_000.0
+            Metric.NOISE -> avg(HKQuantityTypeIdentifierEnvironmentalAudioExposure, from, to, HKUnit.decibelAWeightedSoundPressureLevelUnit())
+            Metric.BREATHING_DISTURBANCES -> if (iosAtLeast(18)) latest(HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances, from, to, HKUnit.countUnit()) else null
             else -> null
         }
+    }
+
+    private suspend fun category(id: String?, from: Long, to: Long): List<HKCategorySample> =
+        HKCategoryType.categoryTypeForIdentifier(id)?.let { t -> samples(t, range(from, to)).filterIsInstance<HKCategorySample>() }.orEmpty()
+
+    // ---- Anneaux, alertes cardiaques, ECG, pouls en direct --------------------------------------------------------
+
+    override suspend fun activitySummary(date: LocalDate): ActivitySummary? = suspendCancellableCoroutine { c ->
+        val comps = NSDateComponents().apply {
+            year = date.year.toLong(); month = date.monthValue.toLong(); day = date.dayOfMonth.toLong()
+            calendar = NSCalendar.currentCalendar
+        }
+        val query = HKActivitySummaryQuery(HKQuery.predicateForActivitySummaryWithDateComponents(comps)) { _, list, _ ->
+            val a = list?.firstOrNull() as? HKActivitySummary
+            c.resume(a?.let {
+                ActivitySummary(
+                    move = it.activeEnergyBurned.doubleValueForUnit(HKUnit.kilocalorieUnit()),
+                    moveGoal = it.activeEnergyBurnedGoal.doubleValueForUnit(HKUnit.kilocalorieUnit()),
+                    exercise = it.appleExerciseTime.doubleValueForUnit(HKUnit.minuteUnit()),
+                    exerciseGoal = it.appleExerciseTimeGoal.doubleValueForUnit(HKUnit.minuteUnit()),
+                    stand = it.appleStandHours.doubleValueForUnit(HKUnit.countUnit()),
+                    standGoal = it.appleStandHoursGoal.doubleValueForUnit(HKUnit.countUnit()),
+                )
+            })
+        }
+        store.executeQuery(query)
+        c.invokeOnCancellation { store.stopQuery(query) }
+    }
+
+    override suspend fun heartEvents(fromMs: Long, toMs: Long): List<HeartEvent> {
+        val alerts = listOf(HKCategoryTypeIdentifierHighHeartRateEvent to HeartEventKind.HIGH, HKCategoryTypeIdentifierLowHeartRateEvent to HeartEventKind.LOW,
+            HKCategoryTypeIdentifierIrregularHeartRhythmEvent to HeartEventKind.IRREGULAR).flatMap { (id, kind) ->
+            category(id, fromMs, toMs).map { e ->
+                val threshold = (e.metadata?.get(HKMetadataKeyHeartRateEventThreshold) as? HKQuantity)?.doubleValueForUnit(bpm)?.toInt()
+                HeartEvent(e.startDate.ms(), kind, threshold, alert = true)
+            }
+        }
+        val ecgs = samples(HKObjectType.electrocardiogramType(), range(fromMs, toMs)).filterIsInstance<HKElectrocardiogram>().map { e ->
+            val label = when (e.classification) {
+                HKElectrocardiogramClassificationSinusRhythm -> "Rythme sinusal"
+                HKElectrocardiogramClassificationAtrialFibrillation -> "Fibrillation auriculaire"
+                HKElectrocardiogramClassificationInconclusiveLowHeartRate -> "Non concluant (pouls bas)"
+                HKElectrocardiogramClassificationInconclusiveHighHeartRate -> "Non concluant (pouls élevé)"
+                HKElectrocardiogramClassificationInconclusivePoorReading -> "Non concluant (mauvais enregistrement)"
+                HKElectrocardiogramClassificationInconclusiveOther -> "Non concluant"
+                else -> "Non classé"
+            }
+            HeartEvent(e.startDate.ms(), HeartEventKind.ECG, e.averageHeartRate?.doubleValueForUnit(bpm)?.toInt(), label,
+                alert = e.classification == HKElectrocardiogramClassificationAtrialFibrillation)
+        }
+        return (alerts + ecgs).sortedByDescending { it.timeMs }
+    }
+
+    /** Pouls des 10 dernières minutes puis chaque nouvelle mesure (pendant une séance, la montre en envoie toutes les secondes). */
+    override fun liveHeart(): Flow<Point> = callbackFlow {
+        val type = q(HKQuantityTypeIdentifierHeartRate)
+        val predicate = HKQuery.predicateForSamplesWithStartDate(date(nowMs() - 600_000L), null, 0u)
+        fun emit(list: List<*>?) = list.orEmpty().filterIsInstance<HKQuantitySample>().sortedBy { it.startDate.ms() }
+            .forEach { trySend(Point(it.startDate.ms(), it.quantity.doubleValueForUnit(bpm))) }
+        val query = HKAnchoredObjectQuery(type, predicate, null as HKQueryAnchor?, HKObjectQueryNoLimit) { _, added, _, _, _ -> emit(added) }
+        query.setUpdateHandler { _, added, _, _, _ -> emit(added) }
+        store.executeQuery(query)
+        awaitClose { store.stopQuery(query) }
     }
 
     override suspend fun samples(metric: Metric, fromMs: Long, toMs: Long): List<Point> {
@@ -305,6 +430,7 @@ object HealthKitSource : HealthSource {
         points.forEach { p -> p.alt?.let { a -> val r = ref; if (r == null) ref = a else if (a - r > 2) { up += a - r; ref = a } else if (r - a > 2) { down += r - a; ref = a } } }
         val kind = kindOf(w.workoutActivityType)
         val hrs = hr.map { it.second }
+        val effort = runCatching { WorkoutMetrics.effort(store, w, t0, t1) }.getOrNull()
         return WorkoutDetail(
             id = id, name = app.superhealth.bridge.Bridge.kindLabel(app.superhealth.bridge.Bridge.kindOf(kind.name).name), kind = kind,
             start = t0, end = t1, deviceName = w.sourceRevision.source.name, activeSec = w.duration,
@@ -312,6 +438,8 @@ object HealthKitSource : HealthSource {
             ascentM = up.takeIf { it > 0 }, descentM = down.takeIf { it > 0 }, avgCadence = null,
             maxSpeedMps = points.mapNotNull { it.speed }.maxOrNull(), steps = null, aerobicTe = null, anaerobicTe = null, recoverySec = null,
             poolLengthM = null, swolf = null, strokes = null, predictions = emptyList(), zoneBounds = null, points = points, laps = kmLaps(points),
+            dynamics = runCatching { WorkoutMetrics.dynamics(store, w, kind.name.let { "RUN" in it || it == "TREADMILL" }, "CYCL" in kind.name) }.getOrDefault(emptyList()),
+            effort = effort?.first, effortEstimated = effort?.second ?: false,
         )
     }
 

@@ -96,9 +96,11 @@ object HealthConnectHub {
     }
 }
 
-/** Pouls en direct : la montre n'est pas pilotée par l'app sur iOS (Apple Watch gérée par watchOS). */
+/** Pouls en direct : chaque mesure dès qu'Apple Santé la reçoit (pendant une séance, la montre en envoie chaque seconde). */
 object LiveHeart {
     data class Sample(val timeMs: Long, val bpm: Int?)
-    fun available(): Boolean = false
-    val samples: kotlinx.coroutines.flow.Flow<Sample> = kotlinx.coroutines.flow.emptyFlow()
+    fun available(): Boolean = Watch.enabled && Watch.devices().isNotEmpty() && HealthSources.current.supports(Metric.HEART_RATE)
+    val samples: kotlinx.coroutines.flow.Flow<Sample> = kotlinx.coroutines.flow.flow {
+        HealthSources.current.liveHeart()?.collect { emit(Sample(it.timestampMs, it.value.toInt())) }
+    }
 }

@@ -240,6 +240,32 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             }
         }
 
+        detail.effort?.let { e ->
+            SectionLabel(tr("Effort"))
+            MfCard {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(formatNumber(e, if (e % 1.0 == 0.0) 0 else 1), style = MaterialTheme.typography.headlineMedium, color = hue.onContainer())
+                    Text(" / 10", style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary)
+                    Spacer(Modifier.weight(1f))
+                    Text(tr(when { e < 4 -> "Facile"; e < 7 -> "Modéré"; e < 9 -> "Difficile"; else -> "Maximal" }), style = MaterialTheme.typography.titleSmall)
+                }
+                Spacer(Modifier.height(8.dp))
+                app.superhealth.nutrition.ui.components.ProgressBar((e / 10).toFloat(), hue, height = 8.dp)
+                if (detail.effortEstimated) Text(tr("Estimé par la montre"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+                    modifier = Modifier.padding(top = 6.dp))
+            }
+        }
+
+        if (detail.dynamics.isNotEmpty()) {
+            SectionLabel(tr(if (detail.usesPace) "Dynamique de course" else "Mesures de la montre"))
+            MfCard {
+                detail.dynamics.chunked(3).forEachIndexed { i, row ->
+                    if (i > 0) Spacer(Modifier.height(12.dp))
+                    Row { row.forEach { (l, v) -> Small(v, tr(l), Modifier.weight(1f)) }; repeat(3 - row.size) { Spacer(Modifier.weight(1f)) } }
+                }
+            }
+        }
+
         if (detail.points.size >= 10) Charts(detail)
         Zones(detail)
 

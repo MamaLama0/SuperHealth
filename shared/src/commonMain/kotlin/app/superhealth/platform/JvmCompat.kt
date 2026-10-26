@@ -78,5 +78,22 @@ fun parseColor(s: String): androidx.compose.ui.graphics.Color {
     }
 }
 
-/** Widgets de l'écran d'accueil (WidgetKit) : rechargés quand l'app change de style ou de données. */
-expect fun refreshWidgets()
+/** Widgets de l'écran d'accueil (WidgetKit) : instantané recalculé quand l'app change de style ou de données. */
+fun refreshWidgets() = app.superhealth.ui.widget.Widgets.publish()
+
+/** Écrit l'instantané des widgets là où l'extension le lit (groupe d'apps sur iOS) et recharge les widgets. */
+expect fun writeWidgetSnapshot(json: String)
+
+/** Séance en cours hors de l'app (Live Activity sur iOS : écran verrouillé et Dynamic Island) ; null la termine. */
+expect fun showSessionActivity(s: SessionActivity?)
+
+@kotlinx.serialization.Serializable
+data class SessionActivity(
+    val title: String, val line: String, val load: String, val done: Int, val total: Int,
+    /** Début de la séance, pauses déduites (chronomètre) ; fin du repos en cours ; en pause. */
+    val startMs: Long, val restEndMs: Long?, val paused: Boolean,
+    val restLabel: String, val pausedLabel: String,
+)
+
+/** Icône de l'app dans la couleur d'accent (null : l'icône rose d'origine). */
+expect fun setAppIcon(name: String?)

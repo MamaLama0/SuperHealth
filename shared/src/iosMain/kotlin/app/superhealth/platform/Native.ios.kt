@@ -15,6 +15,9 @@ import platform.Foundation.NSBundle
 import platform.Foundation.NSDate
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Security.SecRandomCopyBytes
+import platform.UIKit.alternateIconName
+import platform.UIKit.setAlternateIconName
+import platform.UIKit.supportsAlternateIcons
 import platform.Security.kSecRandomDefault
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
@@ -104,8 +107,42 @@ actual fun playBeep() = AudioServicesPlaySystemSound(1057u)
 
 actual fun keepScreenOn(on: Boolean) { platform.UIKit.UIApplication.sharedApplication.idleTimerDisabled = on }
 
-/** Les widgets WidgetKit (extension à venir) relisent le groupe d'apps ; rien à faire tant qu'ils n'existent pas. */
-actual fun refreshWidgets() = Unit
+/** Groupe d'apps partagé avec l'extension des widgets. */
+const val APP_GROUP = "group.app.superhealth"
+
+actual fun writeWidgetSnapshot(json: String) {
+    val dir = platform.Foundation.NSFileManager.defaultManager.containerURLForSecurityApplicationGroupIdentifier(APP_GROUP)?.path
+        ?: return
+    File(dir, "widget.json").writeText(json)
+    platform.darwin.dispatch_async(platform.darwin.dispatch_get_main_queue()) { NativeBridge.hooks?.reloadWidgets() }
+}
+
+private val activityJson = kotlinx.serialization.json.Json { encodeDefaults = true }
+
+actual fun showSessionActivity(s: SessionActivity?) {
+    val text = s?.let { activityJson.encodeToString(SessionActivity.serializer(), it) }
+    platform.darwin.dispatch_async(platform.darwin.dispatch_get_main_queue()) { NativeBridge.hooks?.updateWorkoutActivity(text) }
+}
+
+actual fun setAppIcon(name: String?) {
+    val app = platform.UIKit.UIApplication.sharedApplication
+    if (!app.supportsAlternateIcons || app.alternateIconName == name) return
+    platform.darwin.dispatch_async(platform.darwin.dispatch_get_main_queue()) { app.setAlternateIconName(name, null) }
+}
+
+/**
+ * Fonctions iOS écrites en Swift (WidgetKit et ActivityKit n'existent qu'en Swift) : l'app Swift les fournit au démarrage
+ * (`NativeBridge.shared.hooks = SwiftHooks()`).
+ */
+interface NativeHooks {
+    fun reloadWidgets()
+    /** JSON d'une [SessionActivity], ou null pour terminer la Live Activity. */
+    fun updateWorkoutActivity(json: String?)
+}
+
+object NativeBridge {
+    var hooks: NativeHooks? = null
+}
 
 actual fun setWindowAppearance(dark: Boolean?) {
     val style = when (dark) {

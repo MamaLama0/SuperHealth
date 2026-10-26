@@ -35,6 +35,8 @@ actual fun deviceIdentifier(): String? = "preview-" + java.lang.System.getProper
 
 actual fun keepScreenOn(on: Boolean) = Unit
 
-actual fun refreshWidgets() = Unit
+actual fun writeWidgetSnapshot(json: String) { File(appDataDir(), "widget.json").writeText(json) }
+actual fun showSessionActivity(s: SessionActivity?) = Unit
+actual fun setAppIcon(name: String?) = Unit
 
 actual fun setWindowAppearance(dark: Boolean?) = Unit

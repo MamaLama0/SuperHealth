@@ -40,6 +40,51 @@
 	<true/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>search/0/-1</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Rechercher un aliment</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>magnifyingglass</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>search/1/-1</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Scanner un code-barres</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>barcode.viewfinder</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>training:startnext</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Séance du programme</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>dumbbell.fill</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>weight</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Pesée</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>scalemass.fill</string>
+		</dict>
+	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>app.superhealth.refresh</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSHealthShareUsageDescription</key>

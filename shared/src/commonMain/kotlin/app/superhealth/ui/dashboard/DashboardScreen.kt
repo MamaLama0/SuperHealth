@@ -186,6 +186,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.FOCUS -> HealthHues.Body
     DashCard.HABITS -> HealthHues.Body
     DashCard.BODY -> HealthHues.Body
+    DashCard.NIGHT_VITALS -> HealthHues.Sleep
     DashCard.BALANCE -> HealthHues.Respiration
     DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS, DashCard.MUSCLE_SETS, DashCard.LIFTS -> WorkoutBlue
     DashCard.INSIGHTS -> HealthHues.Mind
@@ -225,6 +226,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.FOCUS -> Icons.Rounded.EventAvailable
     DashCard.HABITS -> Icons.Rounded.EventAvailable
     DashCard.BODY -> Icons.Rounded.Straighten
+    DashCard.NIGHT_VITALS -> Icons.Rounded.Bedtime
     DashCard.BALANCE -> Icons.Rounded.Balance
     DashCard.NEXT_WORKOUT -> Icons.Rounded.PlayArrow
     DashCard.TRAINING_TRENDS -> Icons.Rounded.Insights
@@ -253,8 +255,10 @@ internal class HealthSnap(
     val activities: List<Bridge.Activity> = emptyList(),
     val perf: app.superhealth.health.data.Performance.Snapshot? = null,
     val watch: WatchSnap = WatchSnap(),
+    /** Anneaux de l'Apple Watch du jour (calories actives, minutes d'exercice, heures debout et leurs objectifs). */
+    val apple: app.superhealth.health.data.ActivitySummary? = null,
 ) {
-    fun with(w: WatchSnap) = HealthSnap(series, cardio, energy, heartToday, activities, perf, w)
+    fun with(w: WatchSnap) = HealthSnap(series, cardio, energy, heartToday, activities, perf, w, apple)
     fun latest(m: Metric): Pair<LocalDate, Double>? = series[m]?.lastOrNull { it.second != null }?.let { it.first to it.second!! }
     fun today(m: Metric): Double? = series[m]?.lastOrNull()?.takeIf { it.first == LocalDate.now() }?.second
 }
@@ -320,7 +324,11 @@ private suspend fun loadHealth(ctx: Context, cards: List<DashCard>): HealthSnap 
         val perf = if (DashCard.RUNNING in cards || DashCard.RECOVERY in cards) runCatching { app.superhealth.health.data.Performance.snapshot(ctx) }.getOrNull() else null
         val heart2 = if (heart.isEmpty() && DashCard.DAY_TIMELINE in cards && HealthRepository.isSupported(Metric.HEART_RATE))
             runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else heart
-        HealthSnap(series.mapValues { it.value.awaitAll() }, cardio, energy, heart2, acts, perf)
+        val ringKinds = Rings.kinds(app.superhealth.SuperPrefs.settings.value.rings)
+        val wantApple = DashCard.RINGS in cards && ringKinds.any { it == Rings.Kind.MOVE || it == Rings.Kind.EXERCISE || it == Rings.Kind.STAND }
+        val apple = if (wantApple && app.superhealth.bridge.Watch.devices().isNotEmpty())
+            runCatching { app.superhealth.health.data.HealthSources.current.activitySummary(today) }.getOrNull() else null
+        HealthSnap(series.mapValues { it.value.awaitAll() }, cardio, energy, heart2, acts, perf, apple = apple)
 }
 
 @Composable
@@ -795,6 +803,12 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         }
         DashCard.HABITS -> HabitsCard(c, vm, an, modifier, nav)
         DashCard.BODY -> BodyCard(c, vm, an, modifier, nav)
+        DashCard.NIGHT_VITALS -> {
+            val night = app.superhealth.ui.health.nightVitalsState(vm)
+            Tile(c, tr("Signes vitaux de la nuit"), modifier, trailing = night?.let { app.superhealth.ui.relativeDay(it.date) }, onClick = { nav.go("h/apple") }) {
+                app.superhealth.ui.health.NightVitalsBody(night, onMetric = null, compact = true)
+            }
+        }
         DashCard.FOCUS -> FocusCard(c, vm, an, h, modifier, nav, tab)
         DashCard.BALANCE -> BalanceCard(c, an, s, modifier, nav)
         DashCard.NEXT_WORKOUT -> NextWorkoutCard(c, size, vm, modifier, nav, tab)
