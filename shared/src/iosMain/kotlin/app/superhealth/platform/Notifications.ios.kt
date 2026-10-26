@@ -18,7 +18,7 @@ import platform.darwin.NSObject
  * Notifications locales : bandeau et son même app ouverte (fin du repos), boutons « Pris » / « Plus tard » du rappel
  * médication, ouverture de l'écran concerné au toucher.
  */
-private object NotificationDelegate : NSObject(), UNUserNotificationCenterDelegateProtocol {
+private class NotificationDelegate : NSObject(), UNUserNotificationCenterDelegateProtocol {
     override fun userNotificationCenter(center: UNUserNotificationCenter, willPresentNotification: UNNotification,
                                         withCompletionHandler: (UNNotificationPresentationOptions) -> Unit) {
         val id = willPresentNotification.request.identifier
@@ -42,9 +42,12 @@ private object NotificationDelegate : NSObject(), UNUserNotificationCenterDelega
     }
 }
 
+/** Le centre de notifications ne garde qu'une référence faible au délégué : il est gardé en vie ici. */
+private val notificationDelegate by lazy { NotificationDelegate() }
+
 fun installNotificationDelegate() {
     val c = UNUserNotificationCenter.currentNotificationCenter()
-    c.delegate = NotificationDelegate
+    c.delegate = notificationDelegate
     val taken = UNNotificationAction.actionWithIdentifier(app.superhealth.meds.Meds.ACTION_TAKEN, app.superhealth.ui.tr("Pris"), UNNotificationActionOptionNone)
     val later = UNNotificationAction.actionWithIdentifier(app.superhealth.meds.Meds.ACTION_SNOOZE, app.superhealth.ui.tr("Plus tard"), UNNotificationActionOptionNone)
     val meds = UNNotificationCategory.categoryWithIdentifier("meds", listOf(taken, later), emptyList<String>(), UNNotificationCategoryOptionNone)
