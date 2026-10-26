@@ -91,6 +91,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable enum class ThemeMode(val label: String) { SYSTEM("Système"), LIGHT("Clair"), DARK("Sombre") }
 
+/** Taille du texte de toute l'app, multipliée à celle choisie dans les réglages du téléphone. */
+@Serializable enum class TextSize(val label: String, val scale: Float) { SMALL("Petite", 0.9f), NORMAL("Normale", 1f), LARGE("Grande", 1.12f), XLARGE("Très grande", 1.25f) }
+
 /** Couleurs d'accent proposées par MacroFactor (enum ThemeColor observé : pink, blue, green, yellow, purple, orange, gray). */
 @Serializable enum class AccentColor(val label: String) {
     BLUE("Bleu"), PINK("Rose"), GREEN("Vert"), YELLOW("Jaune"), PURPLE("Violet"), ORANGE("Orange"), GRAY("Gris")
@@ -170,6 +173,7 @@ data class Settings(
     val stepGoalDays: List<Int> = emptyList(),
     val predictionStyle: PredictionStyle = PredictionStyle.WEIGHT_DATA,
     val accent: AccentColor = AccentColor.BLUE,
+    val textSize: TextSize = TextSize.NORMAL,
     /** Cibles de micronutriments personnalisées (MicroGoalType.custom) ; absent = référence automatique. */
     val microTargets: Map<String, Double> = emptyMap(),
 )

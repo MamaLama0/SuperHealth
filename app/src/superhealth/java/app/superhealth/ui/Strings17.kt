@@ -110,5 +110,8 @@ object Strings17 {
         "Heures" to "Times", "Autre heure" to "Other time", "Jours" to "Days",
         "C'est l'heure" to "It's time",
         "%1\$s prises à faire" to "%1\$s doses to take",
+        // taille du texte
+        "Taille du texte" to "Text size", "Petite" to "Small", "Très grande" to "Extra large",
+        "Aperçu : 2 140 kcal, 150 g de protéines." to "Preview: 2,140 kcal, 150 g of protein.",
     )
 }

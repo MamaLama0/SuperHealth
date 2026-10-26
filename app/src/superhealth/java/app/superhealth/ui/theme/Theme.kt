@@ -19,9 +19,12 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.superhealth.nutrition.domain.AccentColor
+import app.superhealth.nutrition.domain.TextSize
 import app.superhealth.nutrition.domain.ThemeMode
 import nodomain.freeyourgadget.gadgetbridge.R
 
@@ -192,7 +195,8 @@ private val shapes = androidx.compose.material3.Shapes(
 )
 
 @Composable
-fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentColor.BLUE, content: @Composable () -> Unit) {
+fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentColor.BLUE, textSize: TextSize = TextSize.NORMAL,
+               content: @Composable () -> Unit) {
     val dark = mode.isDark(isSystemInDarkTheme())
     val acc = accent.color()
     val mf = if (dark) darkMf(acc) else lightMf(acc)
@@ -214,7 +218,10 @@ fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentC
         outline = Color(0xFF747880), outlineVariant = mf.divider, error = Base.Red, primaryContainer = mf.elevated,
         onPrimaryContainer = mf.text, secondaryContainer = mf.elevated, onSecondaryContainer = mf.text,
     )
-    CompositionLocalProvider(LocalMf provides mf) {
+    // taille du texte : multiplie l'échelle du système, donc aussi les tailles fixées à la main hors typographie
+    val density = LocalDensity.current
+    val scaled = if (textSize == TextSize.NORMAL) density else Density(density.density, density.fontScale * textSize.scale)
+    CompositionLocalProvider(LocalMf provides mf, LocalDensity provides scaled) {
         MaterialTheme(colorScheme = scheme, typography = typography(), shapes = shapes) {
             CompositionLocalProvider(LocalContentColor provides mf.text, content = content)
         }

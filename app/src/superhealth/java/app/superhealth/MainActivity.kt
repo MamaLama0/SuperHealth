@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
                 val style = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
             }
-            SuperTheme(s.themeMode, s.accent) { SuperRoot(vm) }
+            SuperTheme(s.themeMode, s.accent, s.textSize) { SuperRoot(vm) }
         }
     }
 
