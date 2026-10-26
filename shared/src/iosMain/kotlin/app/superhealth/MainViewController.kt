@@ -6,10 +6,12 @@ import app.superhealth.health.HealthKitSource
 import platform.UIKit.UIViewController
 
 /** Contrôleur racine appelé par l'app Swift (iosApp/ContentView.swift). */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 fun MainViewController(): UIViewController {
     HealthSources.current = HealthKitSource
     app.superhealth.platform.installNotificationDelegate()
-    return ComposeUIViewController { App() }
+    // rendu sur un fil à part : le fil principal ne fait plus que la composition et la mise en page
+    return ComposeUIViewController(configure = { parallelRendering = true }) { App() }
 }
 
 /** Démarrage de l'app (init de l'App Swift) : source de santé et tâches de fond, avant toute interface. */

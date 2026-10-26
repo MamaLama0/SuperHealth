@@ -12,6 +12,7 @@ import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSLocale
 import platform.Foundation.NSRecursiveLock
+import kotlin.native.identityHashCode
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
@@ -84,11 +85,17 @@ actual fun deviceDescription(): String = UIDevice.currentDevice.model + " · iOS
 
 actual fun systemLanguage(): String = (NSLocale.preferredLanguages.firstOrNull() as? String)?.take(2) ?: "fr"
 
-val globalLock = NSRecursiveLock()
+// Un verrou par objet (réparti sur 64 verrous selon l'identité) : avec un seul verrou global, l'interface attendait
+// chaque bloc synchronized d'un autre fil (lecture de la base suisse, journaux, caches d'images…).
+val stripedLocks = Array(64) { NSRecursiveLock() }
+
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+fun lockOf(o: Any): NSRecursiveLock = stripedLocks[o.identityHashCode() and 63]
 
 actual inline fun <T> synchronized(lock: Any, block: () -> T): T {
-    globalLock.lock()
-    try { return block() } finally { globalLock.unlock() }
+    val l = lockOf(lock)
+    l.lock()
+    try { return block() } finally { l.unlock() }
 }
 
 fun NSData.toByteArray(): ByteArray {

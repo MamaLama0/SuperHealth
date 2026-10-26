@@ -271,7 +271,7 @@ class SyncMap<K, V> : MutableMap<K, V> {
     fun putIfAbsent(key: K, value: V): V? = synchronized(this) { m[key] ?: run { m[key] = value; null } }
 }
 
-/** Verrou réentrant global pour les anciens blocs synchronized(…) de la JVM. */
+/** Verrou réentrant de l'objet pour les anciens blocs synchronized(…) de la JVM. */
 expect inline fun <T> synchronized(lock: Any, block: () -> T): T
 
 /** Messages courts en bas de l'écran (remplace Toast). */
