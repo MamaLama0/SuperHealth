@@ -1,18 +1,36 @@
-# SuperHealth iOS
+# SuperHealth
 
-Portage iOS de SuperHealth (app Android) en **Compose Multiplatform** : même interface, mêmes algorithmes, même code Kotlin.
+Nutrition, musculation et santé dans une seule app, sans compte ni cloud : vos données restent sur le téléphone.
 
-- `shared/` : tout le code de l'app (commonMain), le branchement iOS (iosMain : HealthKit, notifications, trousseau,
-  sélecteurs de fichiers et de photos, lecteur de codes-barres) et l'aperçu ordinateur (desktopMain).
-- `iosApp/` : hôte Swift minimal et projet XcodeGen (`project.yml`).
-- `assets/` : assets de l'app Android, embarqués tels quels.
+## Fonctionnalités
 
-Sur iOS, Apple Santé remplace le moteur Gadgetbridge et Health Connect : l'Apple Watch (ou une autre montre dont l'app
-partage avec Santé) fournit pas, cœur, VFC, sommeil par phases et séances.
+- **Nutrition** : journal (recherche, code-barres, description ou photo analysée par IA, recettes), calories et macros
+  ajustées chaque semaine à votre dépense réelle, tendance du poids, objectif avec un rythme choisi, mesures et photos
+  de progression.
+- **Musculation** : programmes générés selon vos objectifs, vos disponibilités et votre salle ; séances guidées avec
+  charges et répétitions calculées, échauffements et minuteur de repos ; progression, records, muscles travaillés.
+- **Santé et activités** : montre connectée (pas, cœur, sommeil, VFC, SpO₂…), scores de récupération, d'effort et
+  dette de sommeil, courses avec tracé, zones cardiaques et splits, import GPX, TCX et FIT.
+- **Tableau de bord** à composer : cartes en quatre tailles, anneaux du jour, constantes, constats et corrélations.
+- **Plugins** : coach IA, planificateur de repas, rappels de médicaments.
+- **Widgets**, sauvegardes chiffrées (fichier ou WebDAV), français et anglais.
 
-## Construire
+## Android
 
-- ipa non signée : GitHub Actions (`.github/workflows/ios.yml`), à installer avec SideStore, AltStore ou Sideloadly.
+APK dans les [versions](https://github.com/MamaLama0/SuperHealth/releases/latest).
+
+## iOS (expérimental)
+
+Build **expérimental**, pas encore testé sur iPhone : même interface et mêmes fonctions qu'Android. Les données de la
+montre viennent de la santé de l'iPhone (Apple Watch), avec en plus les anneaux d'activité, les signes vitaux de la
+nuit, les alertes cardiaques et ECG, la dynamique de course et la séance en cours sur l'écran verrouillé.
+
+L'`.ipa` n'est pas signée : installez-la avec un outil de sideload, qui la signe avec votre identifiant Apple.
+Elle est publiée dans les versions marquées « iOS » ; le code est sur la branche [`ios`](https://github.com/MamaLama0/SuperHealth/tree/ios).
+
+### Construire l'app iOS
+
+- GitHub Actions (`.github/workflows/ios.yml`) produit `SuperHealth.ipa` et une version pour le simulateur.
 - Sur un Mac : `cd iosApp && xcodegen generate && open SuperHealth.xcodeproj`.
-- Sous Linux : `./gradlew :shared:compileKotlinIosArm64` (vérifie le code iOS), `./gradlew :shared:desktopTest`,
-  captures au format iPhone : `./gradlew :shared:screenshots -Pshots="$PWD/screenshots @onboarded home=home log=log"`.
+- Sous Linux : `./gradlew :shared:compileKotlinIosArm64` vérifie le code iOS, `./gradlew :shared:desktopTest` lance les
+  tests et `./gradlew :shared:screenshots` rend des captures au format iPhone.

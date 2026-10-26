@@ -1,9 +1,9 @@
 name: iOS
 
-# .ipa non signée (à signer à l'installation par SideStore, AltStore ou Sideloadly) et .app pour le simulateur.
+# .ipa non signée (signée à l'installation par un outil de sideload) et .app pour le simulateur.
 on:
   push:
-    branches: [ main ]
+    branches: [ ios ]
     tags: [ 'ios-v*' ]
   pull_request:
   workflow_dispatch:
@@ -76,6 +76,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/ios-v')
         uses: softprops/action-gh-release@v2
         with:
+          # pré-version : la « dernière version » reste l'APK Android (lue par la mise à jour intégrée)
+          prerelease: true
+          make_latest: false
+          name: SuperHealth iOS ${{ github.ref_name }} (expérimental)
           files: |
             SuperHealth.ipa
             SuperHealth-simulator.zip
