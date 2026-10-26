@@ -83,6 +83,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
+import app.superhealth.has
 import app.superhealth.bridge.HealthConnectHub
 import app.superhealth.nutrition.data.AppJson
 import app.superhealth.nutrition.data.Backup
@@ -165,12 +166,19 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             Group(tr("Fonctions")) {
-                SettingRow(tr("Nutrition"), icon = Icons.Rounded.Restaurant, hue = HealthHues.Mind) { nav.go("n/settings") }
+                // chaque partie se coupe d'un geste (onglets, cartes et « + » suivent) ; toucher la ligne ouvre ses réglages
+                fun toggle(f: app.superhealth.Feature, on: Boolean) = SuperPrefs.update { it.copy(features = if (on) it.features + f.name else it.features - f.name) }
+                IconSwitchRow(tr("Nutrition"), if (sh.has(app.superhealth.Feature.NUTRITION)) tr("Journal, calories, poids") else tr("Désactivée"),
+                    Icons.Rounded.Restaurant, HealthHues.Mind, sh.has(app.superhealth.Feature.NUTRITION), onClick = { nav.go("n/settings") }) { toggle(app.superhealth.Feature.NUTRITION, it) }
                 RowDivider(56.dp)
-                SettingRow(tr("Musculation"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) { nav.go("t/settings") }
+                IconSwitchRow(tr("Musculation"), if (sh.has(app.superhealth.Feature.TRAINING)) tr("Programmes et séances") else tr("Désactivée"),
+                    Icons.Rounded.FitnessCenter, HealthHues.Fitness, sh.has(app.superhealth.Feature.TRAINING), onClick = { nav.go("t/settings") }) { toggle(app.superhealth.Feature.TRAINING, it) }
                 RowDivider(56.dp)
-                IconSwitchRow(tr("Montre"), if (sh.watchModule) trf("%1\$s appareil(s)", devices.size) else tr("Désactivée"), Icons.Rounded.Watch, HealthHues.Respiration,
-                    sh.watchModule, onClick = { nav.go("h/devices") }) { vm.setWatchModule(it) }
+                // activités et montre : couper la partie coupe aussi le module montre (connexions Bluetooth)
+                IconSwitchRow(tr("Activités et montre"), if (!sh.has(app.superhealth.Feature.HEALTH)) tr("Désactivée") else if (sh.watchModule) trf("%1\$s appareil(s)", devices.size) else tr("Montre désactivée"),
+                    Icons.Rounded.Watch, HealthHues.Respiration, sh.has(app.superhealth.Feature.HEALTH), onClick = { nav.go("h/devices") }) { on ->
+                    toggle(app.superhealth.Feature.HEALTH, on); vm.setWatchModule(on)
+                }
                 RowDivider(56.dp)
                 ModulesRow(nav)
             }
@@ -270,6 +278,13 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
         MfCard {
             Label(tr("Langue"))
             ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { it.label }) { l -> set { it.copy(language = l) } }
+        }
+        Spacer(Modifier.height(12.dp))
+        // style des cartes (du plus neutre au plus vibrant, en clair et en sombre) et de la musculation
+        app.superhealth.nutrition.ui.components.GroupCard {
+            SettingRow(tr("Style"), subtitle = tr("Cartes et musculation, en clair et en sombre"), icon = Icons.Rounded.Palette, hue = Mf.colors.accent) {
+                nav.go("settings/style")
+            }
         }
         Spacer(Modifier.height(24.dp))
     }

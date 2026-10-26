@@ -80,6 +80,34 @@ internal object WK {
     /** Pastille ronde posée sur un fond pastel. */
     val chipOn = ColorProvider(Color(0xD9FFFFFF), Color(0xD91C1C1E))
 
+    /** Variante de cartes du labo de style, en clair et en sombre (comme le tableau de bord). */
+    private fun style(dark: Boolean) = app.superhealth.SuperPrefs.settings.value.let { if (dark) it.styleCardsDark else it.styleCardsLight }
+    /** Part de la couleur dans le fond du widget ; « Plein » reste lisible en « Vif » (texte du widget non inversé). */
+    private fun tintOf(dark: Boolean) = when (style(dark)) {
+        "SOFT" -> if (dark) 0.20f else 0.13f
+        "GRADIENT" -> if (dark) 0.32f else 0.24f
+        "STRONG", "FULL" -> if (dark) 0.44f else 0.34f
+        else -> 0f
+    }
+    private val night = Color(0xFF1C1C1E)
+
+    /** Fond d'un widget de la famille [hue], selon la variante choisie. */
+    fun cardBg(hue: Color?): androidx.glance.unit.ColorProvider = if (hue == null) bg else ColorProvider(
+        androidx.compose.ui.graphics.lerp(Color.White, hue, tintOf(false)), androidx.compose.ui.graphics.lerp(night, hue, tintOf(true)))
+
+    /** Pastille : pleine pour « Pastille pleine », blanche translucide sur fond teinté, pastel sinon. */
+    fun chipBg(color: Color): androidx.glance.unit.ColorProvider {
+        fun one(dark: Boolean): Color = when {
+            style(dark) == "VIVID" -> color
+            tintOf(dark) > 0f -> if (dark) Color(0xD91C1C1E) else Color(0xD9FFFFFF)
+            else -> androidx.compose.ui.graphics.lerp(if (dark) night else Color.White, color, if (dark) 0.27f else 0.17f)
+        }
+        return ColorProvider(one(false), one(true))
+    }
+    fun chipInk(color: Color): androidx.glance.unit.ColorProvider = ColorProvider(
+        if (style(false) == "VIVID") Color.White else androidx.compose.ui.graphics.lerp(color, Color.Black, 0.18f),
+        if (style(true) == "VIVID") Color.White else androidx.compose.ui.graphics.lerp(color, Color.White, 0.12f))
+
     /** Ouvre l'app sur [route] (filtrée par Routes.external). */
     fun open(ctx: Context, route: String): Action =
         actionStartActivity(Intent(ctx, MainActivity::class.java)
@@ -224,15 +252,15 @@ internal object WK {
 @Composable
 internal fun WidgetCard(action: Action, hue: Color?, padding: Dp = 12.dp, horizontal: Alignment.Horizontal = Alignment.Start,
                         content: @Composable androidx.glance.layout.ColumnScope.() -> Unit) {
-    androidx.glance.layout.Column(GlanceModifier.fillMaxSize().background(WK.bg).cornerRadius(WK.RADIUS.dp)
+    androidx.glance.layout.Column(GlanceModifier.fillMaxSize().background(WK.cardBg(hue)).cornerRadius(WK.RADIUS.dp)
         .padding(padding).clickable(action), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = horizontal, content = content)
 }
 
 /** Pastille ronde teintée, symbole dans la couleur, comme dans l'app ([onTint] gardé pour les appels existants). */
 @Composable
 internal fun WidgetChip(icon: Int, color: Color, size: Dp, onTint: Boolean = true) {
-    Box(GlanceModifier.size(size).cornerRadius(size / 2).background(WK.tint(color)), contentAlignment = Alignment.Center) {
-        Image(ImageProvider(icon), null, GlanceModifier.size(size * 0.56f), colorFilter = ColorFilter.tint(WK.on(color)))
+    Box(GlanceModifier.size(size).cornerRadius(size / 2).background(WK.chipBg(color)), contentAlignment = Alignment.Center) {
+        Image(ImageProvider(icon), null, GlanceModifier.size(size * 0.56f), colorFilter = ColorFilter.tint(WK.chipInk(color)))
     }
 }
 

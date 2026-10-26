@@ -55,6 +55,10 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         val ctx = applicationContext
         lifecycleScope.launch { runCatching { app.superhealth.ui.widget.DayWidgets.refresh(ctx) } }
+        // cœur de l'icône dans la couleur d'accent : changé seulement en quittant l'app (désactiver l'alias de lancement
+        // pendant l'utilisation fermait la tâche)
+        if (!isChangingConfigurations && app.superhealth.SuperPrefs.settings.value.onboarded)
+            runCatching { app.superhealth.ui.LauncherIcon.apply(ctx, vm.nutrition.settings.value.accent) }
     }
 
     override fun onResume() {

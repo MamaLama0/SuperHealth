@@ -196,7 +196,7 @@ private fun hourlyStress(pts: List<Point>): List<Double?> {
 @Composable
 internal fun ChargeCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavHostController) {
     val score = w.charge?.score
-    val col = score?.let(::chargeColor) ?: c.hue()
+    val col = score?.let(::chargeColor) ?: c.ink()
     Tile(c, tr("Charge"), modifier, onClick = { nav.go("h/metric/RECOVERY") }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Gauge(score?.div(100f), col, Modifier.size(112.dp)) {
@@ -289,7 +289,7 @@ internal fun SleepStagesCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav:
         val total = night.sumOf { it.end - it.start }.toDouble()
         val asleep = night.filter { it.kind != ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60_000.0
         Row(verticalAlignment = Alignment.Bottom) {
-            Value(formatDuration(asleep), color = c.hue().onContainer())
+            Value(formatDuration(asleep), color = c.ink().onContainer())
             Spacer(Modifier.weight(1f))
             w.debt?.let { d -> Sub(if (d <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(d))) }
         }
@@ -343,12 +343,12 @@ internal fun HrvStatusCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: N
     Tile(c, tr("Variabilité cardiaque"), modifier, onClick = { nav.go("h/metric/HRV") }, bottom = {
         if (pts.size >= 2) {
             val band = base?.let { b -> pts.map { Triple(it.first as Number, b.mean - 1.253 * b.spread, b.mean + 1.253 * b.spread) } }
-            LineChart(listOf(Series(pts.map { it.first to it.second }, c.hue(), dots = true),
-                Series(pts.windowed(7, partialWindows = true).map { win -> win.last().first to win.map { it.second }.average() }, c.hue(), band = band)),
+            LineChart(listOf(Series(pts.map { it.first to it.second }, c.ink(), dots = true),
+                Series(pts.windowed(7, partialWindows = true).map { win -> win.last().first to win.map { it.second }.average() }, c.ink(), band = band)),
                 height = 64.dp, showAxis = false)
         }
     }) {
-        Value(last?.let { formatNumber(it) } ?: "—", "ms", color = c.hue().onContainer())
+        Value(last?.let { formatNumber(it) } ?: "—", "ms", color = c.ink().onContainer())
         Sub(when {
             base == null || week == null -> week?.let { trf("Moy. 7 j %1\$s ms", formatNumber(it)) }
             week > base.mean + 1.253 * base.spread -> tr("Au-dessus de votre référence")
@@ -376,7 +376,7 @@ internal fun StressDayCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: N
             }
         }
     }) {
-        Value(avg?.let { formatNumber(it) } ?: "—", "/ 100", color = c.hue().onContainer())
+        Value(avg?.let { formatNumber(it) } ?: "—", "/ 100", color = c.ink().onContainer())
         val rest = w.stress.count { it.value < 26 }
         Sub(if (w.stress.isEmpty()) null else trf("Au repos %1\$s %%", (100.0 * rest / w.stress.size).roundToInt()))
     }
@@ -417,11 +417,11 @@ internal fun LoadCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavHos
         val pts = w.efforts.withIndex().mapNotNull { (i, v) -> v?.let { i to it } }
         val acute = w.efforts.indices.map { i -> i to w.efforts.subList(maxOf(0, i - 6), i + 1).map { it ?: 0.0 }.average() }
         val chronic = w.efforts.indices.map { i -> i to w.efforts.subList(0, i + 1).map { it ?: 0.0 }.average() }
-        if (pts.size >= 2) LineChart(listOf(Series(chronic, Mf.colors.textSecondary, dashed = true), Series(pts, c.hue(), dots = true), Series(acute, c.hue())),
+        if (pts.size >= 2) LineChart(listOf(Series(chronic, Mf.colors.textSecondary, dashed = true), Series(pts, c.ink(), dots = true), Series(acute, c.ink())),
             height = 56.dp, showAxis = false)
     }) {
         val ratio = l?.let { it.first / it.second.coerceAtLeast(1.0) }
-        Value(ratio?.let { formatNumber(it, 2) } ?: "—", color = c.hue().onContainer())
+        Value(ratio?.let { formatNumber(it, 2) } ?: "—", color = c.ink().onContainer())
         Sub(when {
             ratio == null -> tr("Deux semaines de pouls suffisent")
             ratio > 1.5 -> tr("Hausse brutale")

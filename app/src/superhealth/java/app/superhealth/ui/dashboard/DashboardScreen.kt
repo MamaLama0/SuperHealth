@@ -1,5 +1,8 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.feature
+import app.superhealth.has
+
 import app.superhealth.available
 import app.superhealth.nutrition.domain.stepGoalFor
 import androidx.compose.foundation.background
@@ -75,6 +78,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.material.icons.rounded.Straighten
+import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -139,6 +144,7 @@ import app.superhealth.ui.theme.CardRadius
 import app.superhealth.ui.theme.CarbsColor
 import app.superhealth.ui.theme.FatColor
 import app.superhealth.ui.theme.HealthHues
+import app.superhealth.ui.theme.dashCardBackground
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.ProteinColor
 import app.superhealth.ui.theme.WorkoutBlue
@@ -154,6 +160,10 @@ import kotlinx.coroutines.awaitAll
 import kotlin.math.roundToInt
 
 /** Couleur et icône de chaque carte (pastille d'en-tête, fond des cartes teintées). */
+/** Couleur des tracés et valeurs d'une carte : sa famille, ou le blanc d'une carte « Plein » (voir CardTone). */
+@Composable
+internal fun DashCard.ink(): Color = app.superhealth.ui.theme.LocalCardInk.current ?: hue()
+
 internal fun DashCard.hue(): Color = when (this) {
     DashCard.CALORIES -> CaloriesColor
     DashCard.WEIGHT -> app.superhealth.ui.theme.Base.Pink
@@ -173,6 +183,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.RINGS -> Rings.Kind.STEPS.color
     DashCard.FOCUS -> HealthHues.Body
     DashCard.HABITS -> HealthHues.Body
+    DashCard.BODY -> HealthHues.Body
     DashCard.BALANCE -> HealthHues.Respiration
     DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS, DashCard.MUSCLE_SETS, DashCard.LIFTS -> WorkoutBlue
     DashCard.INSIGHTS -> HealthHues.Mind
@@ -211,6 +222,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.RINGS -> Icons.Rounded.DonutLarge
     DashCard.FOCUS -> Icons.Rounded.EventAvailable
     DashCard.HABITS -> Icons.Rounded.EventAvailable
+    DashCard.BODY -> Icons.Rounded.Straighten
     DashCard.BALANCE -> Icons.Rounded.Balance
     DashCard.NEXT_WORKOUT -> Icons.Rounded.PlayArrow
     DashCard.TRAINING_TRENDS -> Icons.Rounded.Insights
@@ -316,7 +328,8 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val a by vm.nutrition.analytics.collectAsState()
     val refresh by vm.refresh.collectAsState()
     val devices by vm.devices.collectAsState()
-    val cards = sh.dashboard
+    // parties de l'app coupées : leurs cartes ne s'affichent pas (elles restent dans la liste, pour revenir à la réactivation)
+    val cards = sh.dashboard.filter { c -> c.feature()?.let { sh.has(it) } ?: true }
 
     val base by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size, sh.vitals, sh.rings) {
         // Lectures de la base de la montre hors du thread principal (elles faisaient saccader l'écran à chaque retour).
@@ -415,7 +428,8 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     androidx.compose.animation.AnimatedVisibility(sh.weighPrompt && !weighed && sh.weighSkipDay != today,
         enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
         exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()) {
-        Row(Modifier.padding(top = 2.dp, bottom = 6.dp).fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(Mf.colors.card)
+        app.superhealth.ui.theme.CardTone(hue) {
+        Row(Modifier.padding(top = 2.dp, bottom = 6.dp).fillMaxWidth().clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue)
             .clickable { sheet = true }.padding(start = 12.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             IconChip(Icons.Rounded.MonitorWeight, hue, 30.dp)
             Spacer(Modifier.width(12.dp))
@@ -424,6 +438,7 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.KeyboardArrowUp, tr("Masquer jusqu'à demain"), tint = Mf.colors.textTertiary)
             }
+        }
         }
     }
     if (sheet) app.superhealth.nutrition.ui.screens.WeighInSheet(null, s, profile.sex, onDismiss = { sheet = false }, onDelete = null) { w ->
@@ -446,6 +461,17 @@ internal fun focusItems(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     val st by vm.training.state.collectAsState()
     return buildList {
         if (an.checkInState == CheckInState.NOW) add(Triple(Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in disponible") to { nav.go("checkin") }))
+        // rappel médication : prises dont l'heure est passée, pas encore cochées
+        val medsTaken by app.superhealth.meds.Meds.taken.collectAsState()
+        if (medsTaken.isNotEmpty() || app.superhealth.meds.Meds.meds.value.isNotEmpty()) app.superhealth.meds.Meds.late().takeIf { it.isNotEmpty() }?.let { late ->
+            add(Triple(Icons.Rounded.Medication, app.superhealth.ui.meds.MedsHue,
+                (if (late.size == 1) late[0].med.name else trf("%1\$s prises à faire", late.size)) to { nav.go("meds") }))
+        }
+        // photo de progression : au départ, puis à chaque palier de l'objectif (25, 50, 75, 100 %)
+        val photos by remember { vm.nutrition.repo.body.photosFlow() }.collectAsState(initial = emptyList())
+        app.superhealth.nutrition.domain.PhotoMilestones.due(an, photos)?.let { m ->
+            add(Triple(Icons.Rounded.Straighten, HealthHues.Body, (if (m == 0) tr("Photo de départ") else trf("%1\$s %% de votre objectif : photo", m)) to { nav.go("body") }))
+        }
         if (an.days.lastOrNull()?.weightKg == null) add(Triple(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("Pesée du jour") to { nav.go("weight") }))
         val target = an.targetFor(an.today).macros.protein
         val p = target - eaten.sumOf { it.macros().protein }
@@ -570,8 +596,9 @@ internal fun SizeGlyph(z: app.superhealth.CardSize, color: Color, grid: Color) {
 /** Pastille ronde teintée de sa couleur, symbole dans la couleur (comme Google Santé). */
 @Composable
 private fun IconChip(icon: ImageVector, hue: Color, size: androidx.compose.ui.unit.Dp = 30.dp, onTint: Boolean = false) {
-    Box(Modifier.size(size).clip(CircleShape).background(hue.container(1.2f)), contentAlignment = Alignment.Center) {
-        Icon(icon, null, Modifier.size(size * 0.58f), tint = hue.onContainer())
+    val (bg, tint) = app.superhealth.ui.theme.dashChipColors(hue)
+    Box(Modifier.size(size).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
+        Icon(icon, null, Modifier.size(size * 0.58f), tint = tint)
     }
 }
 
@@ -587,10 +614,10 @@ internal fun Tile(
     onClick: (() -> Unit)?, padding: PaddingValues = PaddingValues(14.dp),
     bottom: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit,
 ) {
-    val hue = c.hue()
+    val hue = c.ink()
     Column(
         modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius))
-            .background(Mf.colors.card)
+            .dashCardBackground(hue)
             .cardClick(onClick).padding(padding),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -641,8 +668,19 @@ internal fun Sub(text: String?) {
     text?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
 }
 
+/** Cartes aux couleurs multiples (séries, muscles, phases) : en « Plein », fond profond pour que ces couleurs restent lisibles. */
+private val richCards = setOf(DashCard.RINGS, DashCard.MUSCLES, DashCard.MUSCLE_SETS, DashCard.ACTIVITIES, DashCard.VITALS, DashCard.SLEEP_STAGES,
+    DashCard.HR_ZONES, DashCard.DAY_TIMELINE, DashCard.MACROS, DashCard.CALORIES, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.BALANCE,
+    DashCard.FOCUS, DashCard.LOAD, DashCard.CHARGE, DashCard.ENERGY)
+
+/** Une carte dans son ton (labo de style) : fond et couleurs de la carte suivent la variante choisie. */
 @Composable
 private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, modifier: Modifier, tab: (String) -> Unit) {
+    app.superhealth.ui.theme.CardTone(c.hue(), rich = c in richCards, night = c == DashCard.RINGS) { CardBody(c, size, vm, nav, h, modifier, tab) }
+}
+
+@Composable
+private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, modifier: Modifier, tab: (String) -> Unit) {
     val an = vm.nutrition.analytics.collectAsState().value ?: return
     val s by vm.nutrition.settings.collectAsState()
     // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
@@ -700,11 +738,11 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val week = an.trend.takeLast(8)
             Tile(c, tr("Tendance du poids"), modifier, onClick = { nav.go("weight") }, bottom = {
                 LineChart(listOf(
-                    Series(pts.filter { it.scale != null }.map { it.epochDay to s.weightValue(it.scale!!) }, c.hue().copy(alpha = 0.45f), dots = true),
-                    Series(pts.map { it.epochDay to s.weightValue(it.trend) }, c.hue()),
+                    Series(pts.filter { it.scale != null }.map { it.epochDay to s.weightValue(it.scale!!) }, c.ink().copy(alpha = 0.45f), dots = true),
+                    Series(pts.map { it.epochDay to s.weightValue(it.trend) }, c.ink()),
                 ), height = 56.dp, showAxis = false)
             }) {
-                Value(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), color = c.hue().onContainer())
+                Value(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), color = c.ink().onContainer())
                 Sub(if (week.size >= 2) signed(s.weightValue(week.last().trend - week.first().trend), 2) + tr(" / sem.") else tr("Ajoutez des pesées"))
             }
         }
@@ -712,9 +750,9 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val pts = an.expenditure.takeLast(28)
             val first = pts.firstOrNull()?.tdee
             Tile(c, tr("Dépense"), modifier, onClick = { nav.go("expenditure") }, bottom = {
-                LineChart(listOf(Series(pts.map { it.epochDay to s.energyValue(it.tdee) }, c.hue())), height = 56.dp, showAxis = false)
+                LineChart(listOf(Series(pts.map { it.epochDay to s.energyValue(it.tdee) }, c.ink())), height = 56.dp, showAxis = false)
             }) {
-                Value(s.energyValue(an.currentTdee).roundToInt().toString(), tr(s.energyUnit.label), color = c.hue().onContainer())
+                Value(s.energyValue(an.currentTdee).roundToInt().toString(), tr(s.energyUnit.label), color = c.ink().onContainer())
                 Sub(when (an.expenditure.lastOrNull()?.status) {
                     Expenditure.Status.HOLDING -> tr("En pause (données insuffisantes)")
                     Expenditure.Status.INITIAL, null -> tr("Estimation initiale")
@@ -727,9 +765,9 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val byDay = an.days.associateBy { it.epochDay }
             val avg = days.mapNotNull { byDay[it]?.intakeKcal }.takeIf { it.isNotEmpty() }?.average()
             Tile(c, tr("Apports des 7 derniers jours"), modifier, onClick = { nav.go("nutrition") }) {
-                Value(avg?.let { s.energyValue(it).roundToInt().toString() } ?: "—", trf("%1\$s / jour en moyenne", tr(s.energyUnit.label)), color = c.hue().onContainer())
+                Value(avg?.let { s.energyValue(it).roundToInt().toString() } ?: "—", trf("%1\$s / jour en moyenne", tr(s.energyUnit.label)), color = c.ink().onContainer())
                 Spacer(Modifier.height(12.dp))
-                BarChart(days.map { byDay[it]?.intakeKcal?.let(s::energyValue) }, days.map { s.energyValue(an.targetFor(it).macros.kcal) }, c.hue(),
+                BarChart(days.map { byDay[it]?.intakeKcal?.let(s::energyValue) }, days.map { s.energyValue(an.targetFor(it).macros.kcal) }, c.ink(),
                     height = 90.dp, labels = days.map { dayLetter(LocalDate.ofEpochDay(it)) })
             }
         }
@@ -754,6 +792,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             RingsCard(c, size, dashRings(sh.rings, h, todayEntries, an, s), s, modifier, nav, tab)
         }
         DashCard.HABITS -> HabitsCard(c, vm, an, modifier, nav)
+        DashCard.BODY -> BodyCard(c, vm, an, modifier, nav)
         DashCard.FOCUS -> FocusCard(c, vm, an, h, modifier, nav, tab)
         DashCard.BALANCE -> BalanceCard(c, an, s, modifier, nav)
         DashCard.NEXT_WORKOUT -> NextWorkoutCard(c, size, vm, modifier, nav, tab)
@@ -777,12 +816,12 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val today = h.today(Metric.STEPS)
             val goal = s.stepGoalFor(LocalDate.now())
             Tile(c, tr("Pas"), modifier, onClick = { nav.go("h/metric/STEPS") }, bottom = {
-                BarChart(series.map { it.second }, series.map { s.stepGoalFor(it.first).takeIf { g -> g > 0 }?.toDouble() }, c.hue(), height = 34.dp, track = softTrack(), dimBelowGoal = true,
+                BarChart(series.map { it.second }, series.map { s.stepGoalFor(it.first).takeIf { g -> g > 0 }?.toDouble() }, c.ink(), height = 34.dp, track = softTrack(), dimBelowGoal = true,
                     labels = series.map { dayLetter(it.first) })
             }) {
-                Value(today?.let { formatNumber(it) } ?: "—", color = c.hue().onContainer())
+                Value(today?.let { formatNumber(it) } ?: "—", color = c.ink().onContainer())
                 Sub(if (goal > 0) trf("Objectif %1\$s", formatNumber(goal.toDouble())) else null)
-                if (goal > 0) { Spacer(Modifier.height(6.dp)); ProgressBar(((today ?: 0.0) / goal).toFloat(), c.hue(), height = 6.dp, track = softTrack()) }
+                if (goal > 0) { Spacer(Modifier.height(6.dp)); ProgressBar(((today ?: 0.0) / goal).toFloat(), c.ink(), height = 6.dp, track = softTrack()) }
             }
         }
         DashCard.HEART -> HeartCard(c, h, nav, modifier)
@@ -791,18 +830,18 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val cur = weeks.lastOrNull()
             Tile(c, tr("Course à pied"), modifier, onClick = { nav.go("h/performance") }) {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Value(cur?.let { formatNumber(it.runKm, 1) } ?: "—", "km", color = c.hue().onContainer(), big = true)
+                    Value(cur?.let { formatNumber(it.runKm, 1) } ?: "—", "km", color = c.ink().onContainer(), big = true)
                     Spacer(Modifier.weight(1f))
                     h.perf?.records?.firstOrNull { it.label == "5 km" }?.let { r ->
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(app.superhealth.ui.health.clock(r.sec), style = MaterialTheme.typography.titleMedium, color = c.hue().onContainer())
+                            Text(app.superhealth.ui.health.clock(r.sec), style = MaterialTheme.typography.titleMedium, color = c.ink().onContainer())
                             Text(tr("Record 5 km"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                         }
                     }
                 }
                 Sub(trf("Cette semaine · %1\$s séance(s)", cur?.sessions ?: 0))
                 Spacer(Modifier.height(12.dp))
-                BarChart(weeks.map { it.runKm.takeIf { k -> k > 0 } }, weeks.map { null }, c.hue(), height = 64.dp, track = softTrack(),
+                BarChart(weeks.map { it.runKm.takeIf { k -> k > 0 } }, weeks.map { null }, c.ink(), height = 64.dp, track = softTrack(),
                     labels = weeks.map { "${it.start.dayOfMonth}/${it.start.monthValue}" })
             }
         }
@@ -818,9 +857,9 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val series = h.series[Metric.SLEEP].orEmpty()
             val last = h.latest(Metric.SLEEP)
             Tile(c, tr("Sommeil"), modifier, onClick = { nav.go("h/metric/SLEEP") }, bottom = {
-                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.hue(), height = 34.dp, track = softTrack(), dimBelowGoal = true, labels = series.map { dayLetter(it.first) })
+                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.ink(), height = 34.dp, track = softTrack(), dimBelowGoal = true, labels = series.map { dayLetter(it.first) })
             }) {
-                Value(last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", color = c.hue().onContainer())
+                Value(last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", color = c.ink().onContainer())
                 Sub(series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatValue(Metric.SLEEP, it.average())) })
             }
         }
@@ -828,7 +867,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             val cw = h.cardio
             Tile(c, tr("Minutes cardio"), modifier, onClick = { nav.go("h/metric/CARDIO_WEEK") }) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Ring(cw?.progress ?: 0f, c.hue(), 92.dp, stroke = 9.dp, track = softTrack()) {
+                    Ring(cw?.progress ?: 0f, c.ink(), 92.dp, stroke = 9.dp, track = softTrack()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(cw?.total?.toString() ?: "—", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text("/ ${cw?.target ?: 150}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
@@ -846,9 +885,9 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             Tile(c, tr(main.label), modifier, onClick = { nav.go("h/metric/${main.name}") }, bottom = {
                 val pts = if (h.energy.size >= 2) h.energy.map { it.timestampMs / 60000 to it.value }
                     else h.series[main].orEmpty().mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }
-                LineChart(listOf(Series(pts, c.hue())), height = 48.dp, showAxis = false)
+                LineChart(listOf(Series(pts, c.ink())), height = 48.dp, showAxis = false)
             }) {
-                Value((if (main == Metric.BODY_ENERGY) energy else stress)?.second?.let { formatNumber(it) } ?: "—", "/ 100", color = c.hue().onContainer())
+                Value((if (main == Metric.BODY_ENERGY) energy else stress)?.second?.let { formatNumber(it) } ?: "—", "/ 100", color = c.ink().onContainer())
                 Sub(if (energy != null && stress != null) trf("Stress %1\$s", formatNumber(stress.second)) else null)
             }
         }
@@ -858,14 +897,14 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             Tile(c, tr("Hydratation"), modifier, onClick = { nav.go("h/metric/HYDRATION") }, bottom = {
                 Row(Modifier.fillMaxWidth().clip(CircleShape).background(Mf.colors.card).clickable { vm.log(Metric.HYDRATION, 250.0) }.padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Add, null, Modifier.size(16.dp), tint = c.hue())
-                    Text("250 ml", style = MaterialTheme.typography.labelLarge, maxLines = 1, color = c.hue().onContainer())
+                    Icon(Icons.Rounded.Add, null, Modifier.size(16.dp), tint = c.ink())
+                    Text("250 ml", style = MaterialTheme.typography.labelLarge, maxLines = 1, color = c.ink().onContainer())
                 }
             }) {
-                Value(formatNumber(today), "ml", color = c.hue().onContainer())
+                Value(formatNumber(today), "ml", color = c.ink().onContainer())
                 Sub(trf("Objectif %1\$s ml", formatNumber(goal)))
                 Spacer(Modifier.height(8.dp))
-                ProgressBar((today / goal).toFloat(), c.hue(), height = 6.dp, track = softTrack())
+                ProgressBar((today / goal).toFloat(), c.ink(), height = 6.dp, track = softTrack())
             }
         }
         DashCard.VITALS -> {
@@ -908,7 +947,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
             // petit et moyen : la silhouette seule, sans texte
             if (size != app.superhealth.CardSize.L) {
                 Box(modifier.then(if (size == app.superhealth.CardSize.S) Modifier.square() else Modifier.height(190.dp)).clip(RoundedCornerShape(CardRadius))
-                    .background(Mf.colors.card).cardClick { nav.go("levels") }.padding(8.dp), contentAlignment = Alignment.Center) {
+                    .dashCardBackground().cardClick { nav.go("levels") }.padding(8.dp), contentAlignment = Alignment.Center) {
                     BodyMap(intensity(sets, TrainingAnalytics.SETS_HIGH), st.settings.sex, Modifier.fillMaxSize())
                 }
                 return
@@ -941,7 +980,7 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
  */
 @Composable
 private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifier: Modifier) {
-    val hue = c.hue()
+    val hue = c.ink()
     var live by remember { mutableStateOf(false) }
     val livePts = remember { mutableStateListOf<Pair<Long, Double>>() }
     val canLive = remember(h) { LiveHeart.available() }

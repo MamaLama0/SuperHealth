@@ -75,7 +75,7 @@ object Coach {
 
     @Serializable data class Msg(val role: String, val text: String, val time: Long = System.currentTimeMillis())
 
-    @Serializable data class Brief(val day: Long, val headline: String, val points: List<String>)
+    @Serializable data class Brief(val day: Long, val headline: String, val points: List<String>, val at: Long = 0)
 
     class CoachException(message: String) : Exception(message)
 
@@ -291,13 +291,27 @@ object Coach {
 
     /** Pose une question (avec les 12 derniers messages) ; la réponse est ajoutée à la conversation. */
     suspend fun ask(ctx: Context, question: String): Msg {
+        saveChat(chat.value + Msg("user", question.trim()))
+        return answer(ctx)
+    }
+
+    /** Répond au dernier message de l'utilisateur (après une erreur, ou pour une autre réponse). */
+    suspend fun answer(ctx: Context): Msg {
         val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
-        val user = Msg("user", question.trim())
-        saveChat(chat.value + user)
         val history = chat.value.takeLast(12)
+        if (history.lastOrNull()?.role != "user") throw CoachException(app.superhealth.ui.tr("Pas de question à laquelle répondre."))
         val answer = complete(p, system(p, context(ctx)), history)
         return Msg("assistant", answer).also { saveChat(chat.value + it) }
     }
+
+    /** Autre réponse à la dernière question : la dernière réponse est retirée puis redemandée. */
+    suspend fun regenerate(ctx: Context): Msg {
+        if (chat.value.lastOrNull()?.role == "assistant") saveChat(chat.value.dropLast(1))
+        return answer(ctx)
+    }
+
+    /** Retire la dernière question restée sans réponse (pour la modifier). */
+    fun dropPendingQuestion(): String? = chat.value.lastOrNull()?.takeIf { it.role == "user" }?.also { saveChat(chat.value.dropLast(1)) }?.text
 
     /** Point du jour (comme le Daily Outlook de WHOOP) : préparé une fois par jour, gardé jusqu'au lendemain. */
     suspend fun makeBrief(ctx: Context): Brief {
@@ -307,7 +321,7 @@ object Coach {
         val head = lines.firstOrNull { !it.startsWith("•") && !it.startsWith("-") && !it.startsWith("*") }?.trim('*', '#', ' ') ?: ""
         val points = lines.filter { it.startsWith("•") || it.startsWith("-") || (it.startsWith("*") && !it.startsWith("**")) }
             .map { it.trimStart('•', '-', '*', ' ') }.take(3)
-        val b = Brief(LocalDate.now().toEpochDay(), head.ifEmpty { points.firstOrNull() ?: raw.take(80) }, points)
+        val b = Brief(LocalDate.now().toEpochDay(), head.ifEmpty { points.firstOrNull() ?: raw.take(80) }, points, System.currentTimeMillis())
         brief.value = b
         runCatching { File(dir, "brief.json").writeText(json.encodeToString(Brief.serializer(), b)) }
         return b

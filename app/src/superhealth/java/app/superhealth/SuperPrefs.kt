@@ -49,7 +49,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** Module Coach IA : le point du jour. */
     COACH("Coach", Section.HEALTH),
     /** Module Coach IA : le bilan des 7 derniers jours. */
-    COACH_WEEK("Ma semaine", Section.HEALTH);
+    COACH_WEEK("Ma semaine", Section.HEALTH),
+    /** Mesures corporelles et photos de progression (paliers de l'objectif). */
+    BODY("Mesures et photos", Section.NUTRITION);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -150,6 +152,34 @@ enum class PlusAction(val label: String, val section: DashCard.Section) {
     }
 }
 
+/**
+ * Grandes parties de l'app, chacune désactivable (questionnaire d'accueil, Réglages > Fonctions) : une partie coupée quitte
+ * les onglets, le tableau de bord et le « + », sans effacer ses données.
+ */
+enum class Feature(val label: String, val summary: String) {
+    NUTRITION("Nutrition", "Journal, calories adaptatives, tendance du poids"),
+    TRAINING("Musculation", "Programmes, séances guidées, progression"),
+    HEALTH("Activités et montre", "Course, pas, cœur, sommeil, Health Connect"),
+}
+
+fun SuperSettings.has(f: Feature) = f.name in features
+
+/** Partie de l'app d'une carte ; null : toujours proposée (anneaux, à faire, constats, coach…). */
+fun DashCard.feature(): Feature? = when (this) {
+    DashCard.CALORIES, DashCard.WEIGHT, DashCard.INTAKE, DashCard.EXPENDITURE, DashCard.MACROS, DashCard.STRATEGY,
+    DashCard.HABITS, DashCard.BALANCE -> Feature.NUTRITION
+    DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS, DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS,
+    DashCard.MUSCLE_SETS, DashCard.LIFTS -> Feature.TRAINING
+    DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE -> Feature.HEALTH
+    else -> if (watch) Feature.HEALTH else null
+}
+
+fun PlusAction.feature(): Feature? = when (section) {
+    DashCard.Section.NUTRITION -> Feature.NUTRITION
+    DashCard.Section.TRAINING -> Feature.TRAINING
+    else -> if (this == PlusAction.SYNC) Feature.HEALTH else null
+}
+
 /** Liste de cartes gardée en noms : une carte retirée ou ajoutée par une autre version ne fait pas perdre les réglages. */
 object DashCardList : kotlinx.serialization.KSerializer<List<DashCard>> {
     private val names = kotlinx.serialization.builtins.ListSerializer(kotlinx.serialization.serializer<String>())
@@ -222,6 +252,21 @@ data class SuperSettings(
     val coachBrief: Boolean = true,
     /** Planificateur de repas : aliments à éviter (texte libre, transmis au fournisseur). */
     val mealsExclude: String = "",
+    /** Mesures corporelles suivies (codes de BodyMetric), comme le choix des mesures visibles de MacroFactor. */
+    val bodyMetrics: List<String> = listOf("w", "h", "c", "b", "lb", "rb", "lt", "rt"),
+    /** Photos de progression : paliers de l'objectif déjà photographiés ou écartés (0, 25, 50, 75, 100 %), pour l'objectif commencé le [photoGoalStart]. */
+    val photoMilestones: List<Int> = emptyList(),
+    val photoGoalStart: Long = -1,
+    /** Carte « Corps » déjà ajoutée au tableau de bord (migration unique). */
+    val bodyCardAdded: Boolean = false,
+    /** Parties de l'app activées (noms de [Feature]). */
+    val features: Set<String> = Feature.entries.map { it.name }.toSet(),
+    /** Labo de style (version test) : cartes du tableau de bord en clair et en sombre, séance de musculation. Noms des enums de ui.theme.StyleLab. */
+    val styleCardsLight: String = "NEUTRAL",
+    val styleCardsDark: String = "NEUTRAL",
+    val styleWorkoutColor: String = "BLUE",
+    val styleHero: String = "LARGE",
+    val styleSets: String = "CARDS",
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,
@@ -235,6 +280,7 @@ val SuperSettings.vitalMetrics: List<app.superhealth.health.data.Metric>
     get() = vitals.mapNotNull { n -> app.superhealth.health.data.Metric.entries.firstOrNull { it.name == n } }
 
 val SuperSettings.plusActions: List<PlusAction> get() = plus.mapNotNull { n -> PlusAction.entries.firstOrNull { it.name == n } }
+    .filter { a -> a.feature()?.let { has(it) } ?: true }
 
 /** Données lues dans Health Connect (autres apps) quand la montre n'est pas gérée par SuperHealth. */
 @Serializable
@@ -284,6 +330,12 @@ object SuperPrefs {
         // Anneaux du jour : ajoutés une fois, juste au-dessus des constantes.
         if (!_settings.value.ringsAdded) update { it.copy(dashboard = withRings(it.dashboard), ringsAdded = true) }
         // Nouvelles cartes MacroFactor : ajoutées une fois en fin de tableau de bord (retirables dans Personnaliser).
+        // 1.7.5 : mesures et photos de nouveau visibles, en carte du tableau de bord (après « À faire »)
+        if (!_settings.value.bodyCardAdded) update { s ->
+            val i = s.dashboard.indexOf(DashCard.FOCUS)
+            s.copy(dashboard = if (DashCard.BODY in s.dashboard) s.dashboard else s.dashboard.toMutableList().apply { add(if (i >= 0) i + 1 else size, DashCard.BODY) },
+                bodyCardAdded = true)
+        }
         if (!_settings.value.mfCardsAdded) update { it.copy(dashboard = (it.dashboard + DashCard.newMacroFactorCards).distinct(), mfCardsAdded = true) }
         // Insights sous les anneaux (ou en tête), corrélations en fin de tableau de bord.
         if (!_settings.value.insightsAdded) update { s ->

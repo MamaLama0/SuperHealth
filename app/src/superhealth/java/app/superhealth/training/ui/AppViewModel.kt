@@ -155,6 +155,44 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Charge suivante ou précédente réalisable avec le matériel de la salle (disques, pas des haltères ou de la machine). */
+    fun nudgeWeight(exIndex: Int, setIndex: Int, up: Boolean) {
+        val e = engine ?: return
+        val sess = state.value.session ?: return
+        val ex = sess.exercises.getOrNull(exIndex) ?: return
+        val set = ex.sets.getOrNull(setIndex) ?: return
+        val cur = set.weight ?: set.autoWeight ?: 0.0
+        val ladder = e.ladderFor(ex.exerciseId, gym(sess.gymId))
+        val next = (if (up) ladder.above(cur) else ladder.below(cur)) ?: return
+        setWeight(exIndex, setIndex, next)
+    }
+
+    /**
+     * Échauffements demandés en séance : ceux du réglage (intelligents, sinon le schéma en % de la charge de travail),
+     * à la place des échauffements pas encore faits ; une série d'échauffement vide quand aucune charge n'est connue.
+     */
+    fun addWarmUps(exIndex: Int) {
+        val e = engine ?: return
+        update { s ->
+            val sess = s.session ?: return@update s
+            val ex = sess.exercises.getOrNull(exIndex) ?: return@update s
+            val exercise = db.value?.exercise(ex.exerciseId)
+            val work = ex.sets.firstOrNull { it.type != SetType.WARMUP }
+            val weight = work?.weight ?: work?.autoWeight
+            val ladder = e.ladderFor(ex.exerciseId, gym(sess.gymId))
+            val oneRm = if (exercise?.usesWeight == true) app.superhealth.training.domain.Progression.currentOneRm(e.lastSets(ex.exerciseId, s.history), exercise.upperBody) else null
+            val smart = s.settings.warmUp == app.superhealth.training.domain.WarmUpMode.SMART
+            // demandés à la main : les muscles déjà travaillés ne les suppriment pas
+            var warm = if (smart) e.warmUps(exercise, weight, oneRm, s.settings, ladder, emptySet()) else emptyList()
+            if (warm.isEmpty()) warm = e.warmUps(exercise, weight, oneRm, s.settings.copy(warmUp = app.superhealth.training.domain.WarmUpMode.SCHEME), ladder, emptySet())
+            if (warm.isEmpty()) warm = listOf(app.superhealth.training.domain.SetLog(UUID.randomUUID().toString(), SetType.WARMUP))
+            val kept = ex.sets.filter { it.done || it.type != SetType.WARMUP }
+            val doneWarm = kept.takeWhile { it.type == SetType.WARMUP }
+            val sets = doneWarm + warm + kept.drop(doneWarm.size)
+            s.copy(session = sess.copy(exercises = sess.exercises.toMutableList().also { it[exIndex] = ex.copy(sets = sets) }))
+        }
+    }
+
     /** Valide / dévalide une série ; lance le minuteur de repos et la progression en séance. */
     fun toggleSet(exIndex: Int, setIndex: Int) {
         val e = engine ?: return

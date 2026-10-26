@@ -95,6 +95,8 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
     var query by remember { mutableStateOf("") }
     var group by remember { mutableStateOf<MuscleGroup?>(null) }
     var gymOnly by remember { mutableStateOf(mode != Picker.BROWSE) }
+    /** Salle bondée : remplaçants sur un autre matériel que l'exercice remplacé (machine prise, banc occupé…). */
+    var busy by remember { mutableStateOf(false) }
     val chosen = remember { mutableStateListOf<String>() }
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     // clavier ouvert à la première entrée seulement (pas au retour de la fiche ou de la création d'exercice)
@@ -114,8 +116,10 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
     // Exercices disponibles dans la salle : calculés une fois, pas à chaque lettre tapée.
     val available = remember(db, gym?.equipmentIds) { gym?.let { g -> db.exercises.filter { db.isAvailable(it, g.equipmentIds) } } }
     // Filtrage et tri hors du fil principal ; la saisie reste fluide pendant la recherche.
-    val list by androidx.compose.runtime.produceState(emptyList<Exercise>(), query, group, gymOnly, db, swapOf, available) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+    val list by androidx.compose.runtime.produceState(emptyList<Exercise>(), query, group, gymOnly, db, swapOf, available, busy) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val taken = if (busy && swapOf != null) db.resistanceEquipment(swapOf, gym?.equipmentIds).map { it.id }.toSet() else emptySet()
         val base = (if (gymOnly && available != null) available else db.exercises).filter { e -> group == null || group!!.key in e.primaryGroups }
+            .filter { e -> taken.isEmpty() || db.resistanceEquipment(e, gym?.equipmentIds).none { it.id in taken } }
         val found = db.search(query, base)
         if (swapOf != null && query.isBlank()) {
             // remplacements intelligents : même schéma de mouvement et mêmes muscles principaux d'abord
@@ -154,6 +158,7 @@ fun ExercisePickerScreen(vm: AppViewModel, mode: String, target: String, nav: Na
         }
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Chip(if (gymOnly) tr("Ma salle ✓") else tr("Ma salle"), gymOnly) { gymOnly = !gymOnly }
+            if (swapOf != null) Chip(if (busy) tr("Salle bondée ✓") else tr("Salle bondée"), busy) { busy = !busy }
             Chip(tr("Tous"), group == null) { group = null }
             MuscleGroup.entries.forEach { g -> Chip(g.label.tr(), group == g) { group = if (group == g) null else g } }
         }

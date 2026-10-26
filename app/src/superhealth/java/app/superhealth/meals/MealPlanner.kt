@@ -79,9 +79,14 @@ object MealPlanner {
         val url: String? = null,
         val image: String? = null,
         val logged: Boolean = false,
+        /** Portion choisie avant l'ajout au journal (×1 : celle calculée pour la cible). */
+        val portion: Double = 1.0,
+        /** Lignes du journal créées par l'ajout (pour l'annuler). */
+        val entryIds: List<Long> = emptyList(),
     ) {
-        val macros: Macros get() = perServing?.let { val k = servings ?: 1.0; Macros(it[0] * k, it[1] * k, it[2] * k, it[3] * k) }
-            ?: ingredients.fold(Macros.ZERO) { a, i -> a + Macros(i.kcal, i.protein, i.fat, i.carbs) }
+        val macros: Macros get() = (perServing?.let { val k = servings ?: 1.0; Macros(it[0] * k, it[1] * k, it[2] * k, it[3] * k) }
+            ?: ingredients.fold(Macros.ZERO) { a, i -> a + Macros(i.kcal, i.protein, i.fat, i.carbs) }).let {
+                Macros(it.kcal * portion, it.protein * portion, it.fat * portion, it.carbs * portion) }
     }
 
     @Serializable data class Plan(val day: Long, val provider: String, val meals: List<Meal>, val createdAt: Long = System.currentTimeMillis())
@@ -145,6 +150,30 @@ object MealPlanner {
         return plan
     }
 
+    /**
+     * Autre idée pour un seul repas : même cible (sa part de ce qui reste), les autres repas prévus ne bougent pas.
+     * L'IA reçoit les plats déjà proposés pour en choisir un autre.
+     */
+    suspend fun regenerate(ctx: Context, day: Long, slot: Int, target: Macros, logged: List<FoodEntryEntity>): Meal {
+        val c = content() ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
+        val p = plans.value[day] ?: throw PlanException(tr("Aucun repas prévu."))
+        val goal = slotGoal(target, logged, slot)?.takeIf { it.kcal >= 80 } ?: throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
+        val avoid = p.meals.map { it.title }
+        val meal = (if (p.provider == "spoonacular" && hasSpoonacular(ctx)) {
+            val mainShare = c.slots.take(3).sumOf { it.share }
+            spoonacular(ctx, mapOf(slot to goal), goal.kcal / c.slots[slot].share * mainShare)
+        } else ai(ctx.applicationContext, c, mapOf(slot to goal), logged, avoid)).firstOrNull() ?: throw PlanException(tr("Réponse du modèle illisible."))
+        val cur = plans.value[day] ?: p
+        save(plans.value + (day to cur.copy(meals = (cur.meals.filter { it.slot != slot } + meal).sortedBy { it.slot })))
+        return meal
+    }
+
+    /** Change la portion d'un repas pas encore ajouté (×0,5 à ×2). */
+    fun setPortion(day: Long, slot: Int, portion: Double) {
+        val p = plans.value[day] ?: return
+        save(plans.value + (day to p.copy(meals = p.meals.map { if (it.slot == slot && !it.logged) it.copy(portion = portion.coerceIn(0.5, 2.0)) else it })))
+    }
+
     /** Ce qui reste des cibles du jour (jamais négatif). */
     fun left(target: Macros, logged: List<FoodEntryEntity>): Macros {
         val eaten = logged.fold(Macros.ZERO) { a, e -> a + Macros(e.kcal, e.protein, e.fat, e.carbs) }
@@ -193,7 +222,7 @@ object MealPlanner {
 
     // ---- Fournisseur IA ---------------------------------------------------------------------------------------
 
-    private suspend fun ai(ctxApp: Context, c: Content, goals: Map<Int, Macros>, logged: List<FoodEntryEntity>): List<Meal> {
+    private suspend fun ai(ctxApp: Context, c: Content, goals: Map<Int, Macros>, logged: List<FoodEntryEntity>, avoid: List<String> = emptyList()): List<Meal> {
         val cfg = NutriApp.repository.prefs.ai.value
         if (!cfg.ready) throw PlanException(tr("Ajoutez une clé Spoonacular (gratuite) ou configurez l'IA (Nutrition > Intelligence artificielle)."))
         val program = NutriApp.repository.prefs.program.value
@@ -209,7 +238,8 @@ object MealPlanner {
             .replace("{diet}", diet)
             .replace("{exclude}", SuperPrefs.settings.value.mealsExclude.ifBlank { "nothing" })
             .replace("{eaten}", logged.joinToString(", ") { it.name }.ifBlank { "nothing yet" })
-            .replace("{language}", if (Lang.english) "English" else "French")
+            .replace("{language}", if (Lang.english) "English" else "French") +
+            (if (avoid.isNotEmpty()) "\nPropose a different dish than: " + avoid.joinToString("; ") + "." else "")
         val raw = AiFood.chat(cfg, c.system.replace("{language}", if (Lang.english) "English" else "French"), user, null, c.temperature, c.maxTokens)
         // slot | dish | ingredient | weight_g | kcal | protein_g | fat_g | carbs_g | fiber_g | search_query
         data class Row(val slot: Int, val dish: String, val item: AiFood.Item)
@@ -308,21 +338,31 @@ object MealPlanner {
 
     // ---- Journal -------------------------------------------------------------------------------------------
 
-    /** Ajoute le repas au journal du jour, à l'heure de son créneau (ou maintenant si l'heure est passée). */
+    /** Ajoute le repas au journal du jour, à l'heure de son créneau (ou maintenant si l'heure est passée), à la portion choisie. */
     suspend fun log(day: Long, meal: Meal, minute: Int) {
         val repo = NutriApp.repository
         val c = content()
         val at = c?.slots?.getOrNull(meal.slot)?.minute ?: minute
-        if (meal.perServing != null) {
+        val k = meal.portion
+        val ids = if (meal.perServing != null) {
             val m = meal.macros
-            repo.entries.insert(FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at,
-                name = meal.title + " (" + app.superhealth.ui.formatNumber(meal.servings ?: 1.0, 2) + " " + tr("portion") + ")",
-                kcal = m.kcal, protein = m.protein, fat = m.fat, carbs = m.carbs))
-        } else meal.ingredients.forEach { i ->
-            repo.entries.insert(FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at, foodId = i.foodId, name = i.name, grams = i.grams,
-                kcal = i.kcal, protein = i.protein, fat = i.fat, carbs = i.carbs, fiber = i.fiber))
+            listOf(repo.entries.insert(FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at,
+                name = meal.title + " (" + app.superhealth.ui.formatNumber((meal.servings ?: 1.0) * k, 2) + " " + tr("portion") + ")",
+                kcal = m.kcal, protein = m.protein, fat = m.fat, carbs = m.carbs)))
+        } else meal.ingredients.map { i ->
             i.foodId?.let { repo.foods.markUsed(it) }
+            repo.entries.insert(FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at, foodId = i.foodId, name = i.name,
+                grams = (i.grams * k / 5).roundToInt().coerceAtLeast(1) * 5.0,
+                kcal = i.kcal * k, protein = i.protein * k, fat = i.fat * k, carbs = i.carbs * k, fiber = i.fiber * k))
         }
-        plans.value[day]?.let { p -> save(plans.value + (day to p.copy(meals = p.meals.map { if (it == meal) it.copy(logged = true) else it }))) }
+        plans.value[day]?.let { p -> save(plans.value + (day to p.copy(meals = p.meals.map { if (it.slot == meal.slot) it.copy(logged = true, entryIds = ids) else it }))) }
+    }
+
+    /** Annule l'ajout d'un repas : ses lignes quittent le journal, le repas redevient prévu. */
+    suspend fun unlog(day: Long, slot: Int) {
+        val p = plans.value[day] ?: return
+        val m = p.meals.firstOrNull { it.slot == slot && it.logged } ?: return
+        m.entryIds.forEach { NutriApp.repository.entries.delete(it) }
+        save(plans.value + (day to p.copy(meals = p.meals.map { if (it.slot == slot) it.copy(logged = false, entryIds = emptyList()) else it })))
     }
 }

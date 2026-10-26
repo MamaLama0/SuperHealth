@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.ExperimentalTextApi
@@ -47,13 +48,13 @@ val FatColor = Base.Yellow
 val CarbsColor = Base.Green
 
 /** Couleur de l'entraînement (séries, muscles travaillés). */
-val WorkoutBlue = Base.Blue
+val WorkoutBlue: Color get() = StyleLab.workoutColor
 /** Corps (#DCDCDC) et muscles au repos (#EEEEEE) des silhouettes assets/body. */
 val BodyGrey = Color(0xFFDCDCDC)
 val MuscleIdle = Color(0xFFEEEEEE)
 
 /** Couleurs des programmes. */
-val ProgramColors = listOf(WorkoutBlue, Base.Red, Base.Green, Base.Orange, Base.Purple, Base.Pink, Base.Yellow, Base.Grey)
+val ProgramColors = ProgramPalette
 
 /** Familles de mesures santé, à la manière de Google Santé (une couleur par famille). */
 object HealthHues {
@@ -73,8 +74,11 @@ fun Color.container(strength: Float = 1f): Color =
 
 /** Texte coloré posé sur une carte : la couleur elle-même, assombrie en clair et éclaircie en sombre pour le contraste. */
 @Composable
-fun Color.onContainer(): Color = if (Mf.colors.dark) androidx.compose.ui.graphics.lerp(this, Color.White, 0.12f)
-    else androidx.compose.ui.graphics.lerp(this, Color.Black, 0.18f)
+fun Color.onContainer(): Color {
+    val boost = LocalInkBoost.current
+    return if (Mf.colors.dark) androidx.compose.ui.graphics.lerp(this, Color.White, 0.12f + boost)
+    else androidx.compose.ui.graphics.lerp(this, Color.Black, 0.18f + boost)
+}
 
 /** Rayon des cartes et des listes groupées (Material 3 : grand). */
 val CardRadius = 24.dp
@@ -192,6 +196,9 @@ fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentC
     val dark = mode.isDark(isSystemInDarkTheme())
     val acc = accent.color()
     val mf = if (dark) darkMf(acc) else lightMf(acc)
+    // labo de style : couleur de l'entraînement (bleu, accent ou programme), suivie par WorkoutBlue
+    val labWorkout = app.superhealth.SuperPrefs.settings.collectAsState().value.styleWorkoutColor
+    androidx.compose.runtime.SideEffect { if (labWorkout.isNotEmpty()) StyleLab.workoutColor = StyleLab.resolveWorkout(acc) }
     val scheme = if (dark) darkColorScheme(
         primary = mf.strong, onPrimary = mf.onStrong, secondary = acc, onSecondary = Color.White,
         background = mf.background, onBackground = mf.text, surface = mf.card, onSurface = mf.text,

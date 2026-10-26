@@ -36,7 +36,8 @@ object Modules {
     /** Moteurs présents dans cette version de l'app (un module d'un autre type demande une mise à jour). */
     const val COACH = "coach"
     const val MEALS = "meals"
-    val engines = setOf(COACH, MEALS)
+    const val MEDS = "meds"
+    val engines = setOf(COACH, MEALS, MEDS)
 
     @Serializable
     data class Module(
@@ -54,6 +55,9 @@ object Modules {
         val minApp: String = "0",
         /** Couleur d'accent de la fiche (#RRGGBB). */
         val color: String? = null,
+        /** Nouveautés de cette version (affichées avant une mise à jour). */
+        val changelog: String? = null,
+        val changelogEn: String? = null,
     )
 
     @Serializable
@@ -94,6 +98,8 @@ object Modules {
     val catalog = MutableStateFlow<List<Entry>>(emptyList())
     val sourceErrors = MutableStateFlow<Map<String, String>>(emptyMap())
     val loading = MutableStateFlow(false)
+    /** Dernière lecture réussie du catalogue (ms), 0 : pas encore lu depuis le lancement. */
+    val lastRefresh = MutableStateFlow(0L)
     /** Téléchargement en cours ou terminé, par id de module (pour l'animation de la fiche). */
     val jobs = MutableStateFlow<Map<String, Job>>(emptyMap())
 
@@ -146,6 +152,7 @@ object Modules {
         // un module vérifié l'emporte sur une copie du même id venue d'une source non vérifiée
         catalog.value = out.groupBy { it.module.id }.map { (_, l) -> l.firstOrNull { it.verified } ?: l.first() }
         sourceErrors.value = errors
+        if (out.isNotEmpty() || errors.isEmpty()) lastRefresh.value = System.currentTimeMillis()
         loading.value = false
     }
 
@@ -161,6 +168,12 @@ object Modules {
 
     /** Mise à jour disponible pour un module installé. */
     fun update(i: Installed): Entry? = catalog.value.firstOrNull { it.module.id == i.id && it.source == i.source && newer(it.module.version, i.version) }
+
+    /** Mises à jour installables (compatibles) des modules installés. */
+    fun updates(ctx: Context): List<Entry> = _installed.value.mapNotNull { update(it) }.filter { compatible(ctx, it.module) }
+
+    /** Place occupée sur le téléphone par le contenu d'un module (octets). */
+    fun diskSize(id: String): Long = if (!::root.isInitialized) 0 else File(root, id).walkBottomUp().filter { it.isFile }.sumOf { it.length() }
 
     fun compatible(ctx: Context, m: Module) = m.kind in engines && !app.superhealth.update.Updater.newer(m.minApp, app.superhealth.update.Updater.installed(ctx))
 
@@ -273,6 +286,7 @@ object Modules {
                 }
             }
             MEALS -> app.superhealth.meals.MealPlanner.invalidate()
+            MEDS -> { app.superhealth.meds.Meds.invalidate(); app.superhealth.meds.Meds.schedule(ctx) }
         }
     }
 
@@ -280,6 +294,6 @@ object Modules {
     suspend fun autoUpdate(ctx: Context) {
         if (!SuperPrefs.settings.value.modulesAuto || _installed.value.isEmpty()) return
         refresh()
-        _installed.value.mapNotNull { update(it) }.filter { compatible(ctx, it.module) }.forEach { install(ctx, it) }
+        updates(ctx).forEach { install(ctx, it) }
     }
 }

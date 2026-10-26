@@ -37,6 +37,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.horizontalScroll
@@ -119,6 +120,11 @@ import nodomain.freeyourgadget.gadgetbridge.activities.PermissionsActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.discovery.DiscoveryActivityV2
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
 import androidx.compose.material.icons.rounded.Watch
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.AddAPhoto
+import app.superhealth.ui.theme.color
 import androidx.compose.material.icons.rounded.Apartment
 import androidx.compose.material.icons.rounded.Warehouse
 import androidx.compose.material.icons.rounded.Store
@@ -186,9 +192,10 @@ import kotlin.math.roundToInt
  * puis génération animée du programme nutrition et, au choix, du programme de musculation.
  */
 private enum class Step(val section: Int) {
-    WELCOME(0), NAME(0), SEX(0), BIRTH(0), HEIGHT(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
-    GOAL(1), TARGET(1), PACE(1), PROTEIN(1), DIET(1), FLOOR(1), DISTRIBUTION(1),
-    TRAINING(2), EXPERIENCE(2), GYM(2), PROGRAM(2), LIFT_GOAL(2), DAYS(2), DURATION(2),
+    // le plus court possible : une page par décision, les parties non choisies (USES) sont sautées
+    WELCOME(0), USES(0), NAME(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
+    GOAL(1), TARGET(1), PACE(1), PREFS(1),
+    TRAINING(2), EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
     WATCH(3), HEALTH(3),
     GENERATING(4), RESULT(4),
 }
@@ -204,21 +211,18 @@ private enum class WatchChoice(val label: String, val description: String) {
 
 /** Symbole et couleur de chaque étape, posés au-dessus du titre. */
 private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
-    Step.WELCOME, Step.NAME, Step.SEX -> Icons.Rounded.Person to Base.Blue
-    Step.BIRTH -> Icons.Rounded.Cake to Base.Pink
-    Step.HEIGHT -> Icons.Rounded.Straighten to HealthHues.Body
+    Step.WELCOME, Step.NAME -> Icons.Rounded.Person to Base.Blue
+    Step.USES -> Icons.Rounded.Tune to Base.Blue
+    Step.BODY -> Icons.Rounded.Straighten to HealthHues.Body
     Step.WEIGHT, Step.BODY_FAT, Step.HISTORY -> Icons.Rounded.MonitorWeight to HealthHues.Body
     Step.ACTIVITY -> Icons.AutoMirrored.Rounded.DirectionsWalk to HealthHues.Activity
     Step.HEALTH -> Icons.Rounded.Favorite to HealthHues.Heart
     Step.GOAL, Step.TARGET -> Icons.Rounded.Flag to HealthHues.Body
     Step.PACE -> Icons.Rounded.Speed to HealthHues.Body
-    Step.TRAINING, Step.EXPERIENCE, Step.GYM, Step.PROGRAM -> Icons.Rounded.FitnessCenter to WorkoutBlue
+    Step.TRAINING, Step.EXPERIENCE, Step.GYM -> Icons.Rounded.FitnessCenter to WorkoutBlue
     Step.LIFT_GOAL -> Icons.AutoMirrored.Rounded.TrendingUp to WorkoutBlue
-    Step.DAYS -> Icons.Rounded.CalendarMonth to WorkoutBlue
-    Step.DURATION -> Icons.Rounded.Timer to WorkoutBlue
-    Step.PROTEIN, Step.DIET -> Icons.Rounded.Restaurant to Base.Green
-    Step.FLOOR -> Icons.Rounded.VerticalAlignBottom to Base.Green
-    Step.DISTRIBUTION -> Icons.Rounded.CalendarMonth to Base.Green
+    Step.RHYTHM -> Icons.Rounded.CalendarMonth to WorkoutBlue
+    Step.PREFS -> Icons.Rounded.Restaurant to Base.Green
     Step.WATCH -> Icons.Rounded.Watch to HealthHues.Respiration
     Step.GENERATING, Step.RESULT -> Icons.Rounded.CheckCircle to Base.Green
 }
@@ -281,20 +285,31 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var liftMinutes by rememberSaveable { mutableIntStateOf(50) }
     var watch by rememberSaveable { mutableStateOf(WatchChoice.LATER) }
     var paired by rememberSaveable { mutableStateOf(GBApplication.app().deviceManager.devices.isNotEmpty()) }
-    val lifts = training == Training.STRENGTH || training == Training.BOTH
+    // parties de l'app voulues (noms de app.superhealth.Feature) : décident des questions posées
+    val shs by SuperPrefs.settings.collectAsState()
+    var uses by rememberSaveable { mutableStateOf(shs.features.toList()) }
+    val wantsNutrition = mode == OnboardingMode.NUTRITION_SIM || (mode == OnboardingMode.FULL && app.superhealth.Feature.NUTRITION.name in uses)
+    val wantsHealth = mode == OnboardingMode.FULL && app.superhealth.Feature.HEALTH.name in uses
+    val lifts = when (mode) {
+        OnboardingMode.FULL -> app.superhealth.Feature.TRAINING.name in uses
+        OnboardingMode.TRAINING_SIM -> true
+        OnboardingMode.NUTRITION_SIM -> training == Training.STRENGTH || training == Training.BOTH
+    }
 
     val healthAvailable = remember { HealthConnectHub.status(ctx) == HealthConnectHub.Status.AVAILABLE }
     val steps = Step.entries.filter {
         when (mode) {
-            OnboardingMode.NUTRITION_SIM -> if (it.section == 2 && it != Step.TRAINING || it.section == 3 || it == Step.WELCOME || it == Step.NAME) return@filter false
-            OnboardingMode.TRAINING_SIM -> if (it !in setOf(Step.SEX, Step.EXPERIENCE, Step.GYM, Step.LIFT_GOAL, Step.DAYS, Step.DURATION, Step.GENERATING, Step.RESULT)) return@filter false
+            OnboardingMode.NUTRITION_SIM -> if (it.section == 2 && it != Step.TRAINING || it.section == 3 || it == Step.WELCOME || it == Step.NAME || it == Step.USES) return@filter false
+            OnboardingMode.TRAINING_SIM -> if (it !in setOf(Step.BODY, Step.EXPERIENCE, Step.GYM, Step.LIFT_GOAL, Step.RHYTHM, Step.GENERATING, Step.RESULT)) return@filter false
             OnboardingMode.FULL -> {}
         }
         when (it) {
-            Step.HEALTH -> healthAvailable
-            Step.TARGET, Step.PACE -> goal != GoalType.MAINTENANCE
-            Step.EXPERIENCE, Step.GYM, Step.PROGRAM -> lifts
-            Step.LIFT_GOAL, Step.DAYS, Step.DURATION -> lifts && wantProgram
+            Step.HEALTH -> healthAvailable && (wantsHealth || mode != OnboardingMode.FULL)
+            Step.WATCH -> wantsHealth || mode != OnboardingMode.FULL
+            Step.HISTORY, Step.GOAL, Step.PREFS, Step.TRAINING -> wantsNutrition
+            Step.TARGET, Step.PACE -> wantsNutrition && goal != GoalType.MAINTENANCE
+            Step.EXPERIENCE, Step.GYM, Step.LIFT_GOAL -> lifts
+            Step.RHYTHM -> lifts && wantProgram
             else -> true
         }
     }
@@ -380,6 +395,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     }
 
     fun finish(program: Boolean) {
+        if (!wantsNutrition) goal = GoalType.MAINTENANCE
         val s = settings.copy(weightUnit = unit, healthConnect = health,
             language = if (Lang.english) Language.EN else Language.FR)
         val p = draftProgram(); val g = draftGoal()
@@ -400,8 +416,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             if (p != null) t.saveProgram(p.copy(gymId = myGym.id), activate = true)
             else svm.pendingRoute.value = "training:wizard" // base d'exercices pas encore prête : l'assistant prend le relais
         }
-        Watch.setEnabled(watch != WatchChoice.NONE)
-        SuperPrefs.update { it.copy(onboarded = true, healthConnect = health) }
+        Watch.setEnabled(wantsHealth && watch != WatchChoice.NONE)
+        SuperPrefs.update { it.copy(onboarded = true, healthConnect = health, features = uses.toSet()) }
         vm.launch {
             weighIns.upsert(WeighInEntity(today, weightKg, bodyFat?.toDouble()))
             saveCheckIn(ci)
@@ -434,7 +450,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                 androidx.compose.material3.IconButton(onClick = { back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
                 // Une barre par partie du questionnaire, remplie au fil des étapes de cette partie.
                 Row(Modifier.weight(1f).padding(end = 20.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SECTIONS.indices.forEach { sec ->
+                    SECTIONS.indices.filter { sec -> steps.any { it.section == sec && it != Step.WELCOME } }.forEach { sec ->
                         val inSec = steps.filter { it.section == sec && it != Step.WELCOME }
                         val pos = inSec.indexOf(step)
                         val target = when {
@@ -469,8 +485,32 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         }) { st ->
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
                 when (st) {
-                    Step.WELCOME -> Welcome()
-                    Step.NAME -> Page(st, tr("Comment vous appelez-vous ?"), tr("Votre prénom, pour vous saluer et l'afficher sur votre montre.")) {
+                    Step.WELCOME -> Welcome(settings.accent)
+                    Step.USES -> Page(st, tr("Que voulez-vous suivre ?"), tr("Le reste se masque. Tout se réactive dans Réglages > Fonctions.")) {
+                        app.superhealth.Feature.entries.forEachIndexed { i, f ->
+                            Staggered(i) {
+                                val on = f.name in uses
+                                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(18.dp))
+                                    .background(if (on) Mf.colors.accent.copy(alpha = 0.12f) else Mf.colors.card)
+                                    .clickable { uses = if (on) uses - f.name else uses + f.name }.padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(when (f) {
+                                        app.superhealth.Feature.NUTRITION -> Icons.Rounded.Restaurant
+                                        app.superhealth.Feature.TRAINING -> Icons.Rounded.FitnessCenter
+                                        app.superhealth.Feature.HEALTH -> Icons.Rounded.Watch
+                                    }, null, tint = if (on) Mf.colors.accent else Mf.colors.textSecondary, modifier = Modifier.size(26.dp))
+                                    Spacer(Modifier.width(14.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(tr(f.label), style = MaterialTheme.typography.titleMedium)
+                                        Text(tr(f.summary), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                                    }
+                                    Icon(if (on) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked, null,
+                                        tint = if (on) Mf.colors.accent else Mf.colors.textTertiary)
+                                }
+                            }
+                        }
+                    }
+                    Step.NAME -> Page(st, tr("Faisons connaissance"), tr("Votre prénom et votre couleur : elle teinte l'app et le cœur de son icône.")) {
                         OutlinedTextField(name, { name = it.take(24) }, Modifier.fillMaxWidth(), singleLine = true,
                             placeholder = { Text(tr("Prénom"), color = Mf.colors.textTertiary) },
                             leadingIcon = { Icon(Icons.Rounded.Person, null, tint = Mf.colors.textSecondary) },
@@ -478,17 +518,39 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                             colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Mf.colors.card, unfocusedContainerColor = Mf.colors.card,
                                 focusedBorderColor = Mf.colors.accent, unfocusedBorderColor = Color.Transparent))
+                        Spacer(Modifier.height(20.dp))
+                        // couleur d'accent, appliquée tout de suite ; l'icône de l'app suit (cœur de la même couleur)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            AppIcon(64, settings.accent)
+                            Spacer(Modifier.width(16.dp))
+                            androidx.compose.foundation.layout.FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                app.superhealth.nutrition.domain.AccentColor.entries.forEach { c ->
+                                    val sel = c == settings.accent
+                                    Box(Modifier.size(38.dp).border(if (sel) 2.5.dp else 0.dp, if (sel) c.color() else Color.Transparent, CircleShape).padding(4.dp)
+                                        .clip(CircleShape).background(c.color()).clickable { vm.repo.prefs.setSettings(settings.copy(accent = c)) })
+                                }
+                            }
+                        }
                     }
-                    Step.SEX -> Page(st, tr("Quel est votre sexe ?"), tr("Il sert à estimer votre métabolisme de base.")) {
-                        Options(listOf(Sex.MALE, Sex.FEMALE), sex, { if (it == Sex.MALE) tr("Homme") else tr("Femme") }) { sex = it }
-                    }
-                    Step.BIRTH -> Page(st, tr("Quelle est votre année de naissance ?"), null) {
-                        val years = (LocalDate.now().year - 13 downTo 1930).toList()
-                        Wheel(years.map { it.toString() }, years.indexOf(birthYear).coerceAtLeast(0)) { birthYear = years[it] }
-                    }
-                    Step.HEIGHT -> Page(st, tr("Quelle est votre taille ?"), null) {
-                        val hs = (120..220).toList()
-                        Wheel(hs.map { trf("%1\$s cm", it) }, hs.indexOf(heightCm).coerceAtLeast(0)) { heightCm = hs[it] }
+                    Step.BODY -> Page(st, tr("Votre corps"), tr("Pour estimer votre métabolisme de base.")) {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            ChipChoice(listOf(Sex.MALE, Sex.FEMALE), sex, { if (it == Sex.MALE) tr("Homme") else tr("Femme") }) { sex = it }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        // année de naissance et taille côte à côte : une seule page
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                SmallLabel(tr("Naissance"))
+                                val years = (LocalDate.now().year - 13 downTo 1930).toList()
+                                Wheel(years.map { it.toString() }, years.indexOf(birthYear).coerceAtLeast(0), height = 190) { birthYear = years[it] }
+                            }
+                            Column(Modifier.weight(1f)) {
+                                SmallLabel(tr("Taille"))
+                                val hs = (120..220).toList()
+                                Wheel(hs.map { trf("%1\$s cm", it) }, hs.indexOf(heightCm).coerceAtLeast(0), height = 190) { heightCm = hs[it] }
+                            }
+                        }
                     }
                     Step.WEIGHT -> Page(st, tr("Quel est votre poids actuel ?"), tr("Le matin, à jeun, c'est l'idéal.")) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -606,21 +668,19 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             GymTemplate.BLANK -> Icons.Rounded.CropFree
                         } }) { gym = it }
                     }
-                    Step.PROGRAM -> Page(st, tr("Voulez-vous un programme de musculation ?"), tr("Selon votre niveau, votre salle et votre emploi du temps.")) {
-                        Options(listOf(true, false), wantProgram, { if (it) tr("Oui, créez-le pour moi") else tr("Non, je m'entraîne à ma façon") },
-                            { if (it) tr("Séances, exercices, séries et progression") else tr("Vous pourrez en créer un plus tard dans Activités") },
-                            icon = { if (it) Icons.Rounded.AutoFixHigh else Icons.Rounded.FitnessCenter }) { wantProgram = it }
+                    Step.LIFT_GOAL -> Page(st, tr("Un programme fait pour vous ?"), tr("Séances, séries et progression selon votre niveau et votre salle.")) {
+                        // null : pas de programme, l'utilisateur s'entraîne à sa façon
+                        Options(app.superhealth.training.domain.Goal.entries + listOf(null), if (wantProgram) liftGoal else null,
+                            { it?.let { g -> tr(g.label) } ?: tr("Non, je m'entraîne à ma façon") },
+                            { it?.let { g -> tr(g.description) } ?: tr("Vous pourrez en créer un plus tard dans Activités") }) { g ->
+                            wantProgram = g != null; if (g != null) liftGoal = g
+                        }
                     }
-                    Step.LIFT_GOAL -> Page(st, tr("Quel est votre objectif principal ?"), null) {
-                        Options(app.superhealth.training.domain.Goal.entries, liftGoal, { tr(it.label) }, { tr(it.description) }) { liftGoal = it }
-                    }
-                    Step.DAYS -> Page(st, tr("Combien de séances par semaine ?"), tr("La structure (full body, haut/bas, push/pull/legs…) en découle.")) {
-                        Wheel((1..7).map { trf("%1\$s par semaine", it) }, liftDays - 1) { liftDays = it + 1 }
-                    }
-                    Step.DURATION -> Page(st, tr("Combien de temps par séance ?"), null) {
-                        Options(listOf(30, 50, 70, 90), liftMinutes, { when (it) {
-                            30 -> tr("20 à 40 minutes"); 50 -> tr("40 à 60 minutes"); 70 -> tr("60 à 80 minutes"); else -> tr("80 à 100 minutes")
-                        } }, icon = { Icons.Rounded.Timer }) { liftMinutes = it }
+                    Step.RHYTHM -> Page(st, tr("Votre rythme"), tr("La structure (full body, haut/bas, push/pull/legs…) en découle.")) {
+                        SmallLabel(tr("Séances par semaine"))
+                        ChipChoice((2..6).toList(), liftDays.coerceIn(2, 6), { it.toString() }) { liftDays = it }
+                        SmallLabel(tr("Durée d'une séance"))
+                        ChipChoice(listOf(30, 50, 70, 90), liftMinutes, { when (it) { 30 -> "30′"; 50 -> "50′"; 70 -> "70′"; else -> "90′" } }) { liftMinutes = it }
                     }
                     Step.WATCH -> Page(st, tr("Avez-vous une montre connectée ?"), tr("Pas, fréquence cardiaque, sommeil et séances, sans compte ni cloud.")) {
                         Options(WatchChoice.entries, watch, { it.label }, { it.description }, icon = { when (it) {
@@ -638,42 +698,11 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
                         }
                     }
-                    Step.PROTEIN -> Page(st, tr("Quelle quantité de protéines préférez-vous ?"), null) {
-                        Options(ProteinPreference.entries, protein, { it.label.tr() }, { when (it) {
-                            ProteinPreference.LOW -> tr("Bas de la fourchette optimale")
-                            ProteinPreference.MODERATE -> tr("Milieu de la fourchette optimale")
-                            ProteinPreference.HIGH -> tr("Haut de la fourchette optimale")
-                            ProteinPreference.EXTRA -> tr("Apport maximal recommandé")
-                        } }) { protein = it }
-                    }
-                    Step.DIET -> Page(st, tr("Quelle diète préférez-vous ?"), null) {
+                    Step.PREFS -> Page(st, tr("Vos préférences"), tr("Plancher calorique et répartition : réglables plus tard dans Stratégie.")) {
+                        SmallLabel(tr("Protéines"))
+                        ChipChoice(ProteinPreference.entries, protein, { it.label.tr() }) { protein = it }
+                        SmallLabel(tr("Diète"))
                         Options(DietPreference.entries, diet, { it.label.tr() }, { it.description.tr() }) { diet = it }
-                    }
-                    Step.FLOOR -> Page(st, tr("Quel plancher calorique ?"), tr("Vos cibles ne descendront jamais en dessous.")) {
-                        Options(CalorieFloor.entries, floor, { it.label.tr() }, { when (it) {
-                            CalorieFloor.STANDARD -> tr("Recommandé")
-                            CalorieFloor.LOW -> tr("Plus bas, à surveiller")
-                            CalorieFloor.NONE -> tr("Aucun (avec prudence)")
-                        } }) { floor = it }
-                    }
-                    Step.DISTRIBUTION -> Page(st, tr("Comment répartir vos calories ?"), tr("Sur la semaine.")) {
-                        Options(listOf(false, true), shift, { if (it) tr("Jours plus élevés") else tr("Répartition égale") },
-                            { if (it) tr("Plus de calories certains jours") else tr("Même cible chaque jour") }) { shift = it }
-                        if (shift) {
-                            SmallLabel(tr("Jours plus élevés"))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                (1..7).forEach { d ->
-                                    val sel = d in highDays
-                                    val bg by animateColorAsState(if (sel) Mf.colors.accent else Mf.colors.card, label = "day")
-                                    Box(Modifier.size(42.dp).clip(CircleShape).background(bg).clickable {
-                                        highDays = if (sel) highDays - d else highDays + d
-                                    }, contentAlignment = Alignment.Center) {
-                                        Text(java.time.DayOfWeek.of(d).getDisplayName(java.time.format.TextStyle.NARROW, Lang.locale),
-                                            color = if (sel) Color.White else Mf.colors.text, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                            }
-                        }
                     }
                     Step.GENERATING -> Generating { next() }
                     Step.RESULT -> if (mode == OnboardingMode.TRAINING_SIM) {
@@ -683,20 +712,29 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         if (liftProgram != null) LiftProgramCard(liftProgram, liftMinutes)
                         else Text(tr("La base d'exercices se charge encore : réessayez dans un instant."), color = Mf.colors.textSecondary)
                     } else {
-                        val (tdee, ci) = remember { draftCheckIn() }
-                        Result(tdee, ci, settings, draftProgram())
+                        if (wantsNutrition) {
+                            val (tdee, ci) = remember { draftCheckIn() }
+                            Result(tdee, ci, settings, draftProgram())
+                        } else {
+                            Spacer(Modifier.height(16.dp))
+                            Text(tr("Tout est prêt"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        }
                         if (sim) return@Column
                         Spacer(Modifier.height(12.dp))
-                        Text(tr("Et aussi"), style = MaterialTheme.typography.titleMedium)
+                        Text(if (wantsNutrition) tr("Et aussi") else tr("Votre SuperHealth"), style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         val liftProgram = remember { draftLiftProgram() }
                         if (liftProgram != null) LiftProgramCard(liftProgram, liftMinutes)
                         else if (lifts) Feature(Icons.Rounded.FitnessCenter, trf("Musculation : %1\$s, %2\$s", gym.label.let(::tr).lowercase(Lang.locale), experience.label.let(::tr).lowercase(Lang.locale)))
-                        Feature(Icons.Rounded.Watch, when (watch) {
-                            WatchChoice.NONE -> tr("Module montre désactivé")
-                            else -> if (paired) tr("Montre associée") else tr("Montre à associer dans Réglages")
-                        })
-                        Feature(Icons.Rounded.Favorite, if (health) tr("Health Connect connecté") else tr("Health Connect : à connecter dans Réglages"))
+                        if (wantsHealth) {
+                            Feature(Icons.Rounded.Watch, when (watch) {
+                                WatchChoice.NONE -> tr("Module montre désactivé")
+                                else -> if (paired) tr("Montre associée") else tr("Montre à associer dans Réglages")
+                            })
+                            Feature(Icons.Rounded.Favorite, if (health) tr("Health Connect connecté") else tr("Health Connect : à connecter dans Réglages"))
+                        }
+                        Feature(Icons.Rounded.Dashboard, tr("Tableau de bord : appui long sur une carte pour la régler"))
+                        if (wantsNutrition) Feature(Icons.Rounded.AddAPhoto, tr("Photo de départ proposée sur l'accueil, puis à chaque palier de l'objectif"))
                     }
                 }
             }
@@ -738,34 +776,41 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
 
 /** Accueil : icône de l'app, titre, fonctions en liste à symboles colorés. */
 @Composable
-private fun Welcome() {
+private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor) {
     Spacer(Modifier.height(20.dp))
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AppIcon(96) }
-    Spacer(Modifier.height(22.dp))
-    Text(tr("Bienvenue dans SuperHealth"), style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp, lineHeight = 40.sp,
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AppIcon(88, accent) }
+    Spacer(Modifier.height(18.dp))
+    Text(tr("Bienvenue dans SuperHealth"), style = MaterialTheme.typography.headlineLarge, fontSize = 32.sp, lineHeight = 38.sp,
         modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-    Spacer(Modifier.height(8.dp))
-    Text(tr("Nutrition, musculation et santé, au même endroit."), style = MaterialTheme.typography.bodyLarge,
+    Spacer(Modifier.height(6.dp))
+    Text(tr("Nutrition, musculation et montre, dans une seule app. Environ 2 minutes de questions."), style = MaterialTheme.typography.bodyLarge,
         color = Mf.colors.textSecondary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-    Spacer(Modifier.height(28.dp))
+    Spacer(Modifier.height(22.dp))
+    // ce qui distingue SuperHealth, en quatre lignes
     listOf(
-        Triple(Icons.Rounded.Insights, Base.Green, tr("Un coaching calé sur votre métabolisme")),
-        Triple(Icons.Rounded.Bolt, Base.Orange, tr("La saisie d'aliments la plus rapide")),
-        Triple(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("La vraie tendance de votre poids")),
-        Triple(Icons.Rounded.AutoFixHigh, WorkoutBlue, tr("Des programmes de musculation qui progressent avec vous")),
-        Triple(Icons.Rounded.Favorite, HealthHues.Heart, tr("Votre montre : pas, cœur, sommeil et activités")),
-        Triple(Icons.Rounded.BarChart, HealthHues.Respiration, tr("Un tableau de bord qui réunit tout")),
-        Triple(Icons.Rounded.Lock, Base.Grey, tr("Sans compte ni pub : tout reste sur le téléphone")),
+        Triple(Icons.Rounded.Insights, Base.Green, tr("Des calories qui s'ajustent à votre métabolisme réel, chaque semaine")),
+        Triple(Icons.Rounded.AutoFixHigh, WorkoutBlue, tr("Des séances qui calculent vos charges et progressent seules")),
+        Triple(Icons.Rounded.Watch, HealthHues.Heart, tr("Votre montre (Garmin, Amazfit…) sans compte ni cloud")),
+        Triple(Icons.Rounded.Lock, Base.Grey, tr("Tout reste sur le téléphone : pas de compte, pas de pub")),
     ).forEachIndexed { i, (icon, hue, text) -> Staggered(i) { Feature(icon, text, hue) } }
 }
 
-/** Icône de l'app (cœur rose sur fond blanc), ronde comme sur le lanceur, avec une ombre douce. */
+/** Icône de l'app (cœur de la couleur d'accent sur fond blanc), ronde comme sur le lanceur, avec une ombre douce. */
 @Composable
-private fun AppIcon(sizeDp: Int) {
+private fun AppIcon(sizeDp: Int, accent: app.superhealth.nutrition.domain.AccentColor) {
+    val res = when (accent) {
+        app.superhealth.nutrition.domain.AccentColor.PINK -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground
+        app.superhealth.nutrition.domain.AccentColor.BLUE -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_blue
+        app.superhealth.nutrition.domain.AccentColor.GREEN -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_green
+        app.superhealth.nutrition.domain.AccentColor.YELLOW -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_yellow
+        app.superhealth.nutrition.domain.AccentColor.PURPLE -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_purple
+        app.superhealth.nutrition.domain.AccentColor.ORANGE -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_orange
+        app.superhealth.nutrition.domain.AccentColor.GRAY -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_gray
+    }
     Box(Modifier.size(sizeDp.dp).shadow(10.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.2f))
         .clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
         // le premier plan adaptatif fait 108 dp pour 72 dp visibles
-        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground), null,
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(res), null,
             Modifier.requiredSize((sizeDp * 1.5f).dp))
     }
 }
@@ -1017,14 +1062,21 @@ private fun MacroStat(label: String, g: Double, color: Color, modifier: Modifier
 @Composable
 fun BodyFatPicker(sex: Sex, selected: Double?, onPick: (Int) -> Unit) {
     val steps = if (sex == Sex.MALE) listOf(6, 10, 15, 20, 25, 30, 35, 40) else listOf(15, 20, 25, 30, 35, 40, 45, 50)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        steps.forEach { pct ->
-            val sel = selected?.let { abs(it - pct) < 0.5 } == true
-            val bg by animateColorAsState(if (sel) Mf.colors.accent.copy(alpha = 0.25f) else Mf.colors.card, label = "bf")
-            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(bg).clickable { onPick(pct) }.padding(6.dp)) {
-                AssetImage("bodyfat/${if (sex == Sex.MALE) "m" else "f"}_${pct}pct.webp", Modifier.size(width = 64.dp, height = 80.dp))
-                Text("${pct} %", style = MaterialTheme.typography.labelMedium)
+    // grille 4 × 2 sans défilement : tout se voit d'un coup (le défilement horizontal se battait avec le glissement des pages)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        steps.chunked(4).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { pct ->
+                    val sel = selected?.let { abs(it - pct) < 0.5 } == true
+                    val bg by animateColorAsState(if (sel) Mf.colors.accent.copy(alpha = 0.25f) else Mf.colors.card, label = "bf")
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(bg)
+                            .border(if (sel) 2.dp else 0.dp, if (sel) Mf.colors.accent else Color.Transparent, RoundedCornerShape(14.dp))
+                            .clickable { onPick(pct) }.padding(vertical = 6.dp)) {
+                        AssetImage("bodyfat/${if (sex == Sex.MALE) "m" else "f"}_${pct}pct.webp", Modifier.fillMaxWidth().aspectRatio(0.8f))
+                        Text("${pct} %", style = MaterialTheme.typography.labelMedium, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium)
+                    }
+                }
             }
         }
     }

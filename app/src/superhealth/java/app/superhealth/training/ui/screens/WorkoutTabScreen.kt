@@ -78,6 +78,8 @@ import app.superhealth.training.ui.volume
 fun WorkoutTabScreen(
     vm: AppViewModel, nav: NavHostController,
     top: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
+    /** Musculation activée (Réglages > Fonctions) ; [cardioFirst] : les activités de la montre passent devant (sportif d'endurance). */
+    strength: Boolean = true, cardioFirst: Boolean = false,
     others: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
 ) {
     val st by vm.state.collectAsState()
@@ -86,11 +88,13 @@ fun WorkoutTabScreen(
     var create by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         ScreenTitle(tr("Activités"), actions = {
-            app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate("history") }
+            if (strength) app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate("history") }
             app.superhealth.nutrition.ui.components.SettingsAvatar { nav.navigate("settings") }
         })
         Column(Modifier.padding(horizontal = 16.dp)) {
             top()
+            if (cardioFirst || !strength) others()
+            if (strength) {
             SectionLabel(tr("Musculation"))
             WeekStrip(st.history, st.settings) { nav.navigate("t/insights") }
             var askSkip by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -98,7 +102,7 @@ fun WorkoutTabScreen(
                 title = { Text(tr("Passer cette séance ?")) }, text = { Text(tr("Elle est retirée du cycle en cours ; la suivante devient la prochaine.")) },
                 confirmButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false; vm.skipNext() }) { Text(tr("Passer"), color = Mf.colors.accent) } },
                 dismissButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
-            if (active != null) ActiveProgramCard(active, db!!, nav, onSkip = { askSkip = true },
+            if (active != null) ActiveProgramCard(active, db!!, nav, resume = st.session != null, onSkip = { askSkip = true },
                 onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") })
             else MfCard(onClick = { nav.navigate("wizard") }) {
                 // Pas de programme actif : invitation à en générer un
@@ -116,7 +120,7 @@ fun WorkoutTabScreen(
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PillButton(tr("Séance vide"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Bolt) {
+                if (st.session == null) PillButton(tr("Séance vide"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Bolt) {
                     if (st.session == null) vm.startEmpty(); nav.navigate("session")
                 }
                 // Programme généré ou manuel, ou séance perso (sans l'algorithme de génération).
@@ -140,7 +144,9 @@ fun WorkoutTabScreen(
                     }
                 }
             }
-            others()
+            }
+            if (strength && !cardioFirst) others()
+            if (!strength) { Spacer(Modifier.height(24.dp)); return@Column }
 
             val archived = st.programs.filter { it.archived }
             if (archived.isNotEmpty()) {
@@ -181,7 +187,7 @@ private fun ProgramRow(p: Program, onClick: () -> Unit) {
 
 /** Programme actif : cycle en cours, jours du cycle, prochaine séance (WorkoutProgramExpandableCard). */
 @Composable
-private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController, onSkip: () -> Unit, onStart: (Int) -> Unit) {
+private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController, resume: Boolean, onSkip: () -> Unit, onStart: (Int) -> Unit) {
     val color = ProgramColors[p.color % ProgramColors.size]
     MfCard(padding = PaddingValues(0.dp)) {
         Box(Modifier.fillMaxWidth().height(6.dp).background(color))
@@ -221,8 +227,9 @@ private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController
                 Spacer(Modifier.height(14.dp))
                 NextDay(next, p, db)
                 Spacer(Modifier.height(12.dp))
-                PillButton(trf("Commencer %1\$s", next.name), Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow) { onStart(p.dayIndex) }
-                Text(tr("Passer cette séance"), Modifier.fillMaxWidth().clip(CircleShape).clickable(onClick = onSkip).padding(10.dp),
+                // une séance est déjà en cours : le bouton y ramène au lieu d'en promettre une nouvelle
+                PillButton(if (resume) tr("Reprendre la séance") else trf("Commencer %1\$s", next.name), Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow) { onStart(p.dayIndex) }
+                if (!resume) Text(tr("Passer cette séance"), Modifier.fillMaxWidth().clip(CircleShape).clickable(onClick = onSkip).padding(10.dp),
                     style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             } else if (p.cycleIndex >= p.numCycles) {
                 Text(tr("Programme terminé ! Lancez un nouveau bloc ou activez un autre programme."), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))

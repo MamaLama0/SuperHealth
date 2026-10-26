@@ -36,6 +36,10 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Visibility
@@ -94,6 +98,7 @@ import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.timeOf
 import app.superhealth.ui.tr
 import kotlinx.coroutines.launch
+import app.superhealth.ui.theme.dashCardBackground
 
 /** Violet du coach : la même teinte que sa carte et son module. */
 internal val CoachHue = Color(0xFF8E7CF0)
@@ -143,13 +148,13 @@ fun CoachCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifie
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val today = brief?.takeIf { Coach.briefIsToday() }
-    LaunchedEffect(sh.coachBrief) {
-        if (sh.coachBrief && !Coach.briefIsToday() && Coach.ready() && !busy) {
-            busy = true
-            runCatching { Coach.makeBrief(ctx) }.onFailure { error = it.message }
-            busy = false
-        }
+    val scope = rememberCoroutineScope()
+    fun refresh() {
+        if (busy || !Coach.ready()) return
+        busy = true; error = null
+        scope.launch { runCatching { Coach.makeBrief(ctx) }.onFailure { error = it.message }; busy = false }
     }
+    LaunchedEffect(sh.coachBrief) { if (sh.coachBrief && !Coach.briefIsToday()) refresh() }
     val open: () -> Unit = { nav.go("coach") }
     val headline = today?.headline ?: when {
         busy -> tr("Le coach prépare le point du jour…")
@@ -157,7 +162,7 @@ fun CoachCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifie
         error != null -> tr("Point du jour indisponible")
         else -> tr("Une question sur ta journée ?")
     }
-    val box = modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(Brush.verticalGradient(listOf(CoachHue.container(1.35f), CoachHue.container(0.8f))))
+    val box = modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).then(Modifier.dashCardBackground())
         .cardClick(open)
     when (size) {
         CardSize.S -> Box(box.square().padding(10.dp), contentAlignment = Alignment.Center) { CoachAvatar(46.dp) }
@@ -171,7 +176,7 @@ fun CoachCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifie
             Spacer(Modifier.width(10.dp))
             Text(headline, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = CoachHue.onContainer(), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        CardSize.L -> Tile(c, tr("Coach"), modifier, trailing = today?.let { tr("Point du jour") }, onClick = open) {
+        CardSize.L -> Tile(c, tr("Coach"), modifier, trailing = today?.let { b -> if (b.at > 0) timeOf(b.at) else tr("Point du jour") }, onClick = open) {
             Text(headline, style = MaterialTheme.typography.titleMedium, color = CoachHue.onContainer())
             today?.points?.forEach { p ->
                 Row(Modifier.padding(top = 6.dp)) {
@@ -181,9 +186,14 @@ fun CoachCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifie
                 }
             }
             val sugg = Coach.prompts()?.suggestions.orEmpty().take(2)
-            if (Coach.ready() && sugg.isNotEmpty()) {
+            if (Coach.ready()) {
                 Spacer(Modifier.height(10.dp))
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // nouveau point du jour (données de la journée qui ont changé)
+                    Box(Modifier.size(34.dp).clip(CircleShape).background(Mf.colors.card.copy(alpha = 0.85f)).clickable(enabled = !busy) { refresh() },
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Refresh, tr("Actualiser le point du jour"), Modifier.size(18.dp), tint = CoachHue.onContainer().copy(alpha = if (busy) 0.4f else 1f))
+                    }
                     sugg.forEach { s -> SuggestionChip(s.text) { nav.askCoach(s.text) } }
                 }
             }
@@ -214,20 +224,33 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
     var proposal by remember { mutableStateOf<String?>(null) }
     var showContext by remember { mutableStateOf<String?>(null) }
     var settings by remember { mutableStateOf(false) }
+    var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val list = rememberLazyListState()
     val ready = Coach.ready()
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
 
-    fun send(q: String) {
-        if (q.isBlank() || thinking) return
-        input = ""; error = null; proposal = null; thinking = true
-        scope.launch {
-            runCatching { Coach.ask(ctx, q) }.onSuccess { proposal = Coach.split(it.text).second?.takeIf { f -> sh.coachMemory.none { m -> m.equals(f, true) } } }
-                .onFailure { error = it.message }
-            thinking = false
+    /** Lance une demande au modèle (question, nouvel essai, autre réponse) ; annulable. */
+    fun run(call: suspend () -> Coach.Msg) {
+        if (thinking) return
+        error = null; proposal = null; thinking = true
+        job = scope.launch {
+            try {
+                val m = call()
+                proposal = Coach.split(m.text).second?.takeIf { f -> sh.coachMemory.none { x -> x.equals(f, true) } }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) { error = e.message ?: e.javaClass.simpleName
+            } finally { thinking = false; job = null }
         }
     }
+    fun send(q: String) {
+        if (q.isBlank() || thinking) return
+        input = ""
+        run { Coach.ask(ctx, q) }
+    }
+    fun stop() { job?.cancel(); job = null; thinking = false }
     LaunchedEffect(Unit) { CoachRequest.pending.value?.let { q -> CoachRequest.pending.value = null; if (ready) send(q) else input = q } }
-    LaunchedEffect(chat.size, thinking) { val n = chat.size + (if (thinking) 1 else 0); if (n > 0) list.animateScrollToItem(n) }
+    // séparateurs de jour, erreur et proposition : on descend jusqu'au dernier élément réel de la liste
+    LaunchedEffect(chat.size, thinking, error) { kotlinx.coroutines.yield(); val n = list.layoutInfo.totalItemsCount; if (n > 1) list.animateScrollToItem(n - 1) }
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -243,9 +266,28 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item(key = "intro") { Intro(ready, sh.coachMemory.size, nav) }
-            items(chat, key = { it.time.toString() + it.role }) { m -> Bubble(m) }
-            if (thinking) item(key = "thinking") { Thinking() }
-            error?.let { e -> item(key = "error") { Text(e, style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red) } }
+            chat.forEachIndexed { i, m ->
+                // séparateur de jour quand la conversation change de date
+                val day = java.time.Instant.ofEpochMilli(m.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                val prevDay = chat.getOrNull(i - 1)?.let { java.time.Instant.ofEpochMilli(it.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
+                if (day != prevDay) item(key = "day$day") { DaySeparator(day) }
+                item(key = m.time.toString() + m.role) {
+                    val last = i == chat.lastIndex
+                    Bubble(m, onCopy = { clipboard.setText(AnnotatedString(if (m.role == "user") m.text else Coach.split(m.text).first)) },
+                        onRegenerate = if (last && m.role == "assistant" && ready && !thinking) ({ run { Coach.regenerate(ctx) } }) else null,
+                        onEdit = if (last && m.role == "user" && !thinking) ({ Coach.dropPendingQuestion()?.let { input = it }; error = null }) else null)
+                }
+            }
+            if (thinking) item(key = "thinking") { Thinking(onStop = { stop() }) }
+            error?.let { e -> item(key = "error") {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(app.superhealth.ui.theme.Base.Red.container())
+                    .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(e, style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red.onContainer(), modifier = Modifier.weight(1f))
+                    if (chat.lastOrNull()?.role == "user") androidx.compose.material3.TextButton(onClick = { run { Coach.answer(ctx) } }) {
+                        Text(tr("Réessayer"), color = app.superhealth.ui.theme.Base.Red.onContainer())
+                    }
+                }
+            } }
             proposal?.let { f ->
                 item(key = "remember") {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CoachHue.container()).padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
@@ -273,7 +315,10 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
             Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(Mf.colors.card).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 if (input.isEmpty()) Text(if (ready) tr("Demande au coach…") else tr("Configurez d'abord l'IA"), color = Mf.colors.textTertiary)
                 BasicTextField(input, { input = it }, enabled = ready, textStyle = MaterialTheme.typography.bodyLarge.copy(color = Mf.colors.text),
-                    cursorBrush = SolidColor(CoachHue), maxLines = 5, modifier = Modifier.fillMaxWidth())
+                    cursorBrush = SolidColor(CoachHue), maxLines = 5, modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send,
+                        capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { send(input) }))
             }
             Spacer(Modifier.width(8.dp))
             Box(Modifier.size(48.dp).clip(CircleShape).background(if (input.isNotBlank() && !thinking) CoachHue else Mf.colors.chip)
@@ -314,23 +359,50 @@ private fun Intro(ready: Boolean, memories: Int, nav: NavHostController) {
 }
 
 @Composable
-private fun Bubble(m: Coach.Msg) {
+private fun DaySeparator(day: java.time.LocalDate) {
+    val today = java.time.LocalDate.now()
+    val label = when (day) {
+        today -> tr("Aujourd'hui")
+        today.minusDays(1) -> tr("Hier")
+        else -> day.format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.ui.Lang.locale)).replaceFirstChar { it.uppercase() }
+    }
+    Text(label, Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        style = MaterialTheme.typography.labelMedium, color = Mf.colors.textTertiary)
+}
+
+/** Bulle ; appui long : copier, et sur le dernier message, autre réponse ou modifier la question. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun Bubble(m: Coach.Msg, onCopy: () -> Unit, onRegenerate: (() -> Unit)?, onEdit: (() -> Unit)?) {
     val mine = m.role == "user"
     val text = if (mine) m.text else Coach.split(m.text).first
+    var menu by remember { mutableStateOf(false) }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
         if (!mine) { CoachAvatar(26.dp); Spacer(Modifier.width(8.dp)) }
+        Box {
+        androidx.compose.material3.DropdownMenu(menu, { menu = false }, containerColor = Mf.colors.card) {
+            androidx.compose.material3.DropdownMenuItem({ Text(tr("Copier")) }, leadingIcon = { Icon(Icons.Rounded.ContentCopy, null) }, onClick = { menu = false; onCopy() })
+            onRegenerate?.let { f -> androidx.compose.material3.DropdownMenuItem({ Text(tr("Autre réponse")) }, leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
+                onClick = { menu = false; f() }) }
+            onEdit?.let { f -> androidx.compose.material3.DropdownMenuItem({ Text(tr("Modifier")) }, leadingIcon = { Icon(Icons.Rounded.Edit, null) },
+                onClick = { menu = false; f() }) }
+        }
         Column(Modifier.widthIn(max = 300.dp).clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = if (mine) 20.dp else 6.dp, bottomEnd = if (mine) 6.dp else 20.dp))
-            .background(if (mine) Mf.colors.strong else Mf.colors.card).padding(horizontal = 14.dp, vertical = 10.dp)) {
+            .background(if (mine) Mf.colors.strong else Mf.colors.card)
+            .combinedClickable(onClick = {}, onLongClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); menu = true })
+            .padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text(if (mine) AnnotatedString(text) else rich(text), style = MaterialTheme.typography.bodyMedium, color = if (mine) Mf.colors.onStrong else Mf.colors.text)
             Text(timeOf(m.time), style = MaterialTheme.typography.labelSmall, color = (if (mine) Mf.colors.onStrong else Mf.colors.textTertiary).copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.End).padding(top = 2.dp))
+        }
         }
     }
 }
 
 /** Le coach écrit : trois points qui s'éclairent tour à tour (seulement pendant l'attente). */
 @Composable
-private fun Thinking() {
+private fun Thinking(onStop: () -> Unit) {
     val t = remember { Animatable(0f) }
     LaunchedEffect(Unit) { while (true) { t.snapTo(0f); t.animateTo(3f, tween(1200)) } }
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -343,6 +415,9 @@ private fun Thinking() {
                 Box(Modifier.size(7.dp).clip(CircleShape).background(CoachHue).alpha(if (on) 1f else 0.35f))
             }
         }
+        Spacer(Modifier.width(6.dp))
+        Text(tr("Arrêter"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary,
+            modifier = Modifier.clip(CircleShape).clickable(onClick = onStop).padding(horizontal = 10.dp, vertical = 8.dp))
     }
 }
 
@@ -388,7 +463,13 @@ private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
                 PillButton(tr("Fournisseur et clé"), Modifier.fillMaxWidth(), strong = false) { onDismiss(); nav.go("aisettings") }
             }
             Spacer(Modifier.height(14.dp))
-            PillButton(tr("Effacer la conversation"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Refresh) { Coach.clearChat(); onDismiss() }
+            var confirmClear by remember { mutableStateOf(false) }
+            PillButton(tr("Effacer la conversation"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.DeleteOutline) { confirmClear = true }
+            if (confirmClear) androidx.compose.material3.AlertDialog(onDismissRequest = { confirmClear = false }, containerColor = Mf.colors.card,
+                title = { Text(tr("Effacer la conversation ?")) }, text = { Text(tr("Ce qu'il retient est gardé.")) },
+                confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmClear = false; Coach.clearChat(); onDismiss() }) {
+                    Text(tr("Effacer"), color = app.superhealth.ui.theme.Base.Red) } },
+                dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmClear = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
         }
     }
 }

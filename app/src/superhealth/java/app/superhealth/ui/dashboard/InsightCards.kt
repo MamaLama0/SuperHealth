@@ -1,5 +1,6 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.ui.theme.dashCardBackground
 import app.superhealth.ui.charts.smooth
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -91,8 +92,8 @@ internal fun InsightsCard(c: DashCard, size: CardSize, vm: SuperViewModel, s: Nu
     if (size != CardSize.L) {
         // moyen et bandeau : le constat le plus marquant seul, sans titre (le symbole et la couleur suffisent)
         val i = list.orEmpty().firstOrNull()
-        val hue = i?.source?.color ?: c.hue()
-        Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        val hue = i?.source?.color ?: c.ink()
+        Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
             .cardClick(i?.let { { nav.go(it.route) } }).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(34.dp).clip(CircleShape).background(hue.container()), contentAlignment = Alignment.Center) {
                 Icon(i?.icon ?: c.icon(), null, Modifier.size(19.dp), tint = hue)
@@ -187,7 +188,7 @@ internal fun CorrelationCard(c: DashCard, size: CardSize, vm: SuperViewModel, s:
             Text(rText, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 color = if (r?.significant == true) Mf.colors.text else Mf.colors.textSecondary, maxLines = 1)
         }
-        val box = modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card).cardClick(null)
+        val box = modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground().cardClick(null)
         when (size) {
             CardSize.S -> Column(box.square().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 pair(); Spacer(Modifier.weight(1f)); rLabel(); Spacer(Modifier.weight(1f))

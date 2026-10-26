@@ -2,4 +2,6 @@
 <!-- Photo temporaire pour l'analyse IA (cache/ai). -->
 <paths>
     <cache-path name="ai" path="ai/" />
+    <!-- Photo de progression prise avec l'appareil photo, avant redimensionnement (cache/camera). -->
+    <cache-path name="camera" path="camera/" />
 </paths>

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RestaurantMenu
+import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -83,6 +84,7 @@ import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.Lang
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.go
+import app.superhealth.ui.openTab
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
@@ -94,20 +96,27 @@ import kotlinx.coroutines.launch
 
 /** Couleur et symbole d'un module (sa couleur d'index si elle est donnée). */
 internal fun moduleHue(kind: String, color: String?): Color = color?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
-    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); Modules.MEALS -> Color(0xFFF2994A); else -> Color(0xFF6B9BF2) }
+    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); Modules.MEALS -> Color(0xFFF2994A); Modules.MEDS -> Color(0xFF3FA7D6); else -> Color(0xFF6B9BF2) }
 
 internal fun moduleIcon(kind: String): ImageVector = when (kind) {
     Modules.COACH -> Icons.Rounded.AutoAwesome
     Modules.MEALS -> Icons.Rounded.RestaurantMenu
+    Modules.MEDS -> Icons.Rounded.Medication
     else -> Icons.Rounded.Extension
 }
 
 /** Ligne des réglages vers le catalogue de modules. */
 @Composable
 internal fun ModulesRow(nav: NavHostController) {
+    val ctx = LocalContext.current
     val installed by Modules.installed.collectAsState()
-    SettingRow(tr("Plugins"), subtitle = if (installed.isEmpty()) tr("Coach IA, repas…")
-        else installed.joinToString(" · ") { it.name }, icon = Icons.Rounded.Extension, hue = app.superhealth.ui.theme.HealthHues.Sleep) { nav.go("modules") }
+    val catalog by Modules.catalog.collectAsState()
+    val updates = remember(installed, catalog) { Modules.updates(ctx).size }
+    SettingRow(tr("Plugins"), subtitle = when {
+        updates > 0 -> trf(if (updates > 1) "%1\$s mises à jour disponibles" else "%1\$s mise à jour disponible", updates)
+        installed.isEmpty() -> tr("Coach IA, repas, médication…")
+        else -> installed.joinToString(" · ") { it.name }
+    }, icon = Icons.Rounded.Extension, hue = app.superhealth.ui.theme.HealthHues.Sleep) { nav.go("modules") }
 }
 
 /**
@@ -123,7 +132,10 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
     val installed by Modules.installed.collectAsState()
     val errors by Modules.sourceErrors.collectAsState()
     val loading by Modules.loading.collectAsState()
+    val checked by Modules.lastRefresh.collectAsState()
+    val jobs by Modules.jobs.collectAsState()
     LaunchedEffect(sh.moduleSources) { Modules.refresh() }
+    val updates = remember(installed, catalog) { Modules.updates(ctx) }
     var adding by remember { mutableStateOf(false) }
 
     DetailScaffold(tr("Plugins"), onBack = { nav.popBackStack() }, action = {
@@ -131,6 +143,18 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
     }) {
         Text(tr("Ajoutez des fonctions à SuperHealth. Un plugin n'apporte que du contenu (images, textes, consignes), jamais de code."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        Text(when {
+            loading -> tr("Recherche de mises à jour…")
+            checked > 0 -> trf("Vérifié à %1\$s", app.superhealth.ui.timeOf(checked))
+            else -> ""
+        }, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textTertiary, modifier = Modifier.padding(horizontal = 4.dp))
+        // plusieurs plugins à mettre à jour : un seul geste
+        val pending = updates.filter { jobs[it.module.id] !is Modules.Job.Downloading && jobs[it.module.id] != Modules.Job.Installing }
+        AnimatedVisibility(pending.size > 1, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            PillButton(trf("Tout mettre à jour (%1\$s)", pending.size), Modifier.fillMaxWidth().padding(top = 10.dp), icon = Icons.Rounded.Refresh) {
+                scope.launch { pending.forEach { Modules.install(ctx, it) } }
+            }
+        }
 
         // installés d'abord (même hors ligne), puis ce que proposent les sources
         val ids = (installed.map { it.id } + catalog.map { it.module.id }).distinct()
@@ -230,9 +254,13 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
                 Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val facts = listOfNotNull(
                     (inst?.version ?: m?.version)?.let { "v$it" },
-                    m?.size?.takeIf { it > 0 }?.let { if (it < 1_048_576) trf("%1\$s Ko", app.superhealth.ui.formatNumber(it / 1024.0))
+                    m?.size?.takeIf { it > 0 && inst == null }?.let { if (it < 1_048_576) trf("%1\$s Ko", app.superhealth.ui.formatNumber(it / 1024.0))
                         else trf("%1\$s Mo", app.superhealth.ui.formatNumber(it / 1_048_576.0, 1)) },
                     if (inst != null && !inst.enabled) tr("désactivé") else null,
+                    // installé : place occupée sur le téléphone plutôt que la taille de l'archive
+                    inst?.let { remember(it.version) { Modules.diskSize(id) } }?.takeIf { it > 0 }?.let { b ->
+                        if (b < 1_048_576) trf("%1\$s Ko", app.superhealth.ui.formatNumber(b / 1024.0)) else trf("%1\$s Mo", app.superhealth.ui.formatNumber(b / 1_048_576.0, 1))
+                    },
                 )
                 Text(facts.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1)
                 if ((entry != null && !entry.verified) || (inst != null && !inst.verified)) Text(tr("Source non vérifiée"),
@@ -246,7 +274,17 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
             Text(summary, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         }
         (job as? Modules.Job.Failed)?.let {
-            Text(trf("Échec : %1\$s", it.message), style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red, modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(trf("Échec : %1\$s", it.message), style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red, modifier = Modifier.weight(1f))
+                (update ?: entry)?.let { e -> TextButton(onClick = { scope.launch { Modules.install(ctx, e) } }) { Text(tr("Réessayer"), color = hue.onContainer()) } }
+            }
+        }
+        // nouveautés de la version proposée
+        val notes = update?.module?.let { (if (Lang.english) it.changelogEn else null) ?: it.changelog }
+        if (notes != null && !busy) Column(Modifier.padding(top = 10.dp).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .background(hue.container()).padding(12.dp)) {
+            Text(trf("Nouveautés v%1\$s", update.module.version), style = MaterialTheme.typography.labelLarge, color = hue.onContainer())
+            Text(notes, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
         }
         Spacer(Modifier.height(12.dp))
         when {
@@ -259,7 +297,11 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
                 color = Mf.colors.textSecondary)
             inst == null && entry != null -> PillButton(tr("Installer"), Modifier.fillMaxWidth()) { install() }
             inst != null -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (update != null) PillButton(trf("Mettre à jour (v%1\$s)", update.module.version), Modifier.weight(1f)) { scope.launch { Modules.install(ctx, update) } }
+                when {
+                    update != null && Modules.compatible(ctx, update.module) ->
+                        PillButton(trf("Mettre à jour (v%1\$s)", update.module.version), Modifier.weight(1f)) { scope.launch { Modules.install(ctx, update) } }
+                    inst.enabled -> PillButton(tr("Ouvrir"), Modifier.weight(1f)) { openModule(kind, nav) }
+                }
                 PillButton(tr("Désinstaller"), Modifier.weight(1f), strong = false) { confirmRemove = true }
             }
         }
@@ -277,12 +319,19 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
     )
 }
 
+/** Écran principal d'un plugin. */
+private fun openModule(kind: String, nav: NavHostController) {
+    when (kind) {
+        Modules.COACH -> nav.go("coach")
+        Modules.MEALS -> nav.openTab("log")
+        Modules.MEDS -> nav.go("meds")
+    }
+}
+
 @Composable
 private fun ModuleOptions(kind: String, nav: NavHostController) {
     when (kind) {
         Modules.COACH -> {
-            RowDivider()
-            SettingRow(tr("Ouvrir le coach"), subtitle = tr("Ton, mémoire, point du jour")) { nav.go("coach") }
             RowDivider()
             SettingRow(tr("Fournisseur IA"), subtitle = tr("Clé et modèle, partagés avec la nutrition")) { nav.go("aisettings") }
         }

@@ -1,5 +1,6 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.ui.theme.dashCardBackground
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -109,12 +110,12 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
                        nav: NavHostController, tab: (String) -> Unit) {
     fun open(k: Rings.Kind) { ringRoute(k).let { if (it == "log") tab("log") else nav.go(it) } }
     when (size) {
-        app.superhealth.CardSize.S -> Box(modifier.square().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        app.superhealth.CardSize.S -> Box(modifier.square().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
             .cardClick { nav.go("rings/edit") }.padding(10.dp), contentAlignment = Alignment.Center) {
             ActivityRings(rings, 92.dp, track = Mf.colors.background, icons = false)
         }
         // Demi : l'anneau d'abord, chaque mesure reconnue au symbole posé sur son rayon ; en face, la valeur seule, dans sa couleur.
-        app.superhealth.CardSize.M -> Box(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        app.superhealth.CardSize.M -> Box(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
             .cardClick { nav.go("rings/edit") }.padding(10.dp), contentAlignment = Alignment.Center) {
             // largeur calculée sans BoxWithConstraints : la rangée mesure ses cartes en hauteur intrinsèque
             val screen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
@@ -133,7 +134,7 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
             }
         }
         // Bandeau : petits anneaux, puis chaque valeur (symbole et couleur de son anneau) sur une ligne.
-        app.superhealth.CardSize.W -> Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        app.superhealth.CardSize.W -> Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
             .cardClick { nav.go("rings/edit") }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             ActivityRings(rings, 52.dp, track = Mf.colors.background, icons = false)
             Spacer(Modifier.width(12.dp))
@@ -178,8 +179,8 @@ internal fun HabitsCard(c: DashCard, vm: SuperViewModel, an: Analytics, modifier
     val trained = remember(st.history) { st.history.map { localDate(it.startTime).toEpochDay() }.toSet() }
     Tile(c, tr("Habitudes"), modifier, tinted = false, onClick = { nav.go("habits") }) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HabitColumn(Icons.Rounded.LocalFireDepartment, tr("Journal"), Habits.streak(logged, an.today).current, tr("j."), logged, an.today, c.hue(), Modifier.weight(1f))
-            HabitColumn(Icons.Rounded.MonitorWeight, tr("Pesées"), Habits.streak(weighed, an.today).current, tr("j."), weighed, an.today, c.hue(), Modifier.weight(1f))
+            HabitColumn(Icons.Rounded.LocalFireDepartment, tr("Journal"), Habits.streak(logged, an.today).current, tr("j."), logged, an.today, c.ink(), Modifier.weight(1f))
+            HabitColumn(Icons.Rounded.MonitorWeight, tr("Pesées"), Habits.streak(weighed, an.today).current, tr("j."), weighed, an.today, c.ink(), Modifier.weight(1f))
             HabitColumn(Icons.Rounded.FitnessCenter, tr("Entraînement"), Habits.weekStreak(trained, an.today), tr("sem."), trained, an.today, WorkoutBlue, Modifier.weight(1f))
         }
     }
@@ -212,10 +213,10 @@ private fun HabitColumn(icon: ImageVector, label: String, streak: Int, unit: Str
 internal fun BalanceCard(c: DashCard, an: Analytics, s: NutritionSettings, modifier: Modifier, nav: NavHostController) {
     val days = remember(an) { Balance.days(an.days, an::tdeeAt, an.today) }
     val avg = Balance.average(days)
-    val surplus = app.superhealth.ui.theme.Base.Orange; val deficit = c.hue()
+    val surplus = app.superhealth.ui.theme.Base.Orange; val deficit = c.ink()
     Tile(c, tr("Bilan énergétique"), modifier, onClick = { nav.go("expenditure") }) {
         Value(avg?.let { (if (it > 0) "+" else if (it < 0) "−" else "") + formatNumber(abs(s.energyValue(it))) } ?: "—",
-            trf("%1\$s / jour", tr(s.energyUnit.label)), color = c.hue().onContainer())
+            trf("%1\$s / jour", tr(s.energyUnit.label)), color = c.ink().onContainer())
         Sub(when {
             avg == null -> tr("Journalisez vos repas pour voir votre bilan")
             avg < 0 -> tr("Déficit moyen sur 7 jours")
@@ -239,10 +240,10 @@ internal fun NextWorkoutCard(c: DashCard, size: app.superhealth.CardSize, vm: Su
         // bandeau : nom de la séance et départ d'une touche
         val name = session?.name ?: day?.takeIf { !it.isRest }?.name
         Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius))
-            .background(Mf.colors.card)
+            .dashCardBackground()
             .cardClick { if (session != null) nav.go("session") else tab("activities") }.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Icon(c.icon(), null, Modifier.size(22.dp), tint = c.hue())
+            Icon(c.icon(), null, Modifier.size(22.dp), tint = c.ink())
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(name ?: day?.name ?: tr("Aucun programme actif"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1,
@@ -319,10 +320,10 @@ internal fun TrendsCard(c: DashCard, vm: SuperViewModel, modifier: Modifier, nav
         }
         Spacer(Modifier.height(10.dp))
         val prev = values.dropLast(1).filter { it > 0 }
-        Value(fmt(values.last()), color = c.hue().onContainer())
+        Value(fmt(values.last()), color = c.ink().onContainer())
         Sub(prev.takeIf { it.isNotEmpty() }?.average()?.let { trf("Cette semaine · moyenne %1\$s", fmt(it)) } ?: tr("Cette semaine"))
         Spacer(Modifier.height(10.dp))
-        BarChart(values.map { it.takeIf { v -> v > 0 } }, values.map { null }, c.hue(), height = 70.dp, track = softTrack(),
+        BarChart(values.map { it.takeIf { v -> v > 0 } }, values.map { null }, c.ink(), height = 70.dp, track = softTrack(),
             labels = weeks.map { "${it.start.dayOfMonth}/${it.start.monthValue}" })
         if (db != null && top.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
@@ -360,9 +361,9 @@ internal fun MuscleSetsCard(c: DashCard, vm: SuperViewModel, modifier: Modifier,
                     // bande des repères 8–16 séries
                     Box(Modifier.fillMaxHeight().width(w).clip(CircleShape).background(Mf.colors.chip))
                     Box(Modifier.padding(start = w * (TrainingAnalytics.SETS_LOW / scale).toFloat()).fillMaxHeight()
-                        .width(w * ((TrainingAnalytics.SETS_HIGH - TrainingAnalytics.SETS_LOW) / scale).toFloat()).background(c.hue().copy(alpha = 0.18f)))
+                        .width(w * ((TrainingAnalytics.SETS_HIGH - TrainingAnalytics.SETS_LOW) / scale).toFloat()).background(c.ink().copy(alpha = 0.18f)))
                     Box(Modifier.fillMaxHeight().width(w * (v / scale).toFloat().coerceIn(0.03f, 1f)).clip(CircleShape)
-                        .background(if (v >= TrainingAnalytics.SETS_LOW) c.hue() else c.hue().copy(alpha = 0.55f)))
+                        .background(if (v >= TrainingAnalytics.SETS_LOW) c.ink() else c.ink().copy(alpha = 0.55f)))
                 }
                 Text(formatNumber(v, 1), Modifier.width(40.dp), style = MaterialTheme.typography.labelLarge,
                     textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 1)
@@ -398,7 +399,7 @@ internal fun LiftsCard(c: DashCard, vm: SuperViewModel, modifier: Modifier, nav:
                     Text(st.settings.estimate(pts.last().e1rm), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
                 Box(Modifier.width(72.dp)) {
-                    if (pts.size >= 2) LineChart(listOf(Series(pts.map { it.time / 60_000 to it.e1rm }, c.hue())), height = 28.dp, showAxis = false)
+                    if (pts.size >= 2) LineChart(listOf(Series(pts.map { it.time / 60_000 to it.e1rm }, c.ink())), height = 28.dp, showAxis = false)
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(change?.let { (if (it >= 0) "+" else "") + formatNumber(it, 1) + " %" } ?: "—", Modifier.width(56.dp),

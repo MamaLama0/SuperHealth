@@ -193,6 +193,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     val bests = remember(st.history, db) { bestE1rms(st.history, db!!) }
     val scope = rememberCoroutineScope()
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     val count = s.exercises.size + 1 // dernière page : ajouter des exercices / terminer
     val pager = rememberPagerState(initialPage = s.current.coerceIn(0, count - 1)) { count }
@@ -213,6 +214,8 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
                         onToggle = { si ->
                             focus.clearFocus()
                             val wasDone = ex.sets[si].done
+                            haptic.performHapticFeedback(if (wasDone) androidx.compose.ui.hapticfeedback.HapticFeedbackType.SegmentTick
+                                else androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm)
                             vm.toggleSet(page, si)
                             if (!wasDone) vm.state.value.session?.let { ns ->
                                 if (ns.exercises.isNotEmpty() && ns.exercises.all { e -> e.sets.all { it.done } }) allDonePrompt = true
@@ -226,10 +229,17 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
         // la carte reste composée pendant l'animation de sortie : on garde la dernière fin de repos connue
         var shownRest by remember { mutableLongStateOf(0L) }
         if (rest != null) shownRest = rest
+        // repos réduit en pastille (pour voir les séries) ; chaque nouveau repos s'affiche en grand
+        var restMini by remember { mutableStateOf(false) }
+        LaunchedEffect(rest) { restMini = false }
         Ticking(clock) { now ->
-            AnimatedVisibility(rest != null && rest > now, Modifier.align(Alignment.BottomCenter),
+            AnimatedVisibility(rest != null && rest > now && !restMini, Modifier.align(Alignment.BottomCenter),
                 enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
-                RestCard(s, shownRest, now, st.settings, db!!::exercise, vm)
+                RestCard(s, shownRest, now, st.settings, db!!::exercise, vm, onCollapse = { restMini = true })
+            }
+            AnimatedVisibility(rest != null && rest > now && restMini, Modifier.align(Alignment.BottomEnd),
+                enter = fadeIn() + androidx.compose.animation.scaleIn(), exit = fadeOut() + androidx.compose.animation.scaleOut()) {
+                RestPill(s, shownRest, now) { restMini = false }
             }
         }
     }
@@ -427,12 +437,10 @@ private fun ExercisePage(
         // Actions de l'exercice (workout_exercise_builder)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionChip(Icons.Rounded.Info, tr("Info")) { nav.navigate("exercise/${ex.exerciseId}") }
-            ActionChip(Icons.Rounded.LocalFireDepartment, tr("Échauffement")) {
-                edit { it.copy(sets = listOf(SetLog(UUID.randomUUID().toString(), SetType.WARMUP)) + it.sets) }
-            }
+            // les plus utilisés en salle d'abord
             ActionChip(Icons.Rounded.Timer, trf("Repos %1\$s", (restLabel(ex.restSec))), onClick = onRest)
-            ActionChip(Icons.Rounded.Flag, tr("Objectifs"), onClick = onTargets)
+            // échauffements calculés (réglage d'échauffement) depuis la charge de travail
+            if (ex.sets.none { it.type == SetType.WARMUP && !it.done }) ActionChip(Icons.Rounded.LocalFireDepartment, tr("Échauffement")) { vm.addWarmUps(index) }
             ActionChip(Icons.Rounded.SwapHoriz, tr("Remplacer")) { nav.navigate("picker/${Picker.SWAP}?target=${index}") }
             // superset, puis triset en reliant aussi l'exercice suivant
             // depuis n'importe quel membre du groupe : on relie le dernier du groupe à l'exercice qui le suit
@@ -442,7 +450,9 @@ private fun ExercisePage(
                 ActionChip(Icons.Rounded.Link, if (!inSuperset) tr("Superset") else if (groupSize == 2) tr("Triset") else tr("Lier au suivant")) { vm.linkNext(groupEnd) }
             if (inSuperset) ActionChip(Icons.Rounded.LinkOff, tr("Détacher"), active = true) { vm.unlink(index) }
             ActionChip(Icons.Rounded.FitnessCenter, tr("Calculateur")) { onPlates(ex.sets.firstOrNull { !it.done && it.type != SetType.WARMUP }?.let { it.weight ?: it.autoWeight } ?: 0.0) }
+            ActionChip(Icons.Rounded.Flag, tr("Objectifs"), onClick = onTargets)
             ActionChip(Icons.Rounded.StickyNote2, tr("Note"), onClick = onNote)
+            ActionChip(Icons.Rounded.Info, tr("Info")) { nav.navigate("exercise/${ex.exerciseId}") }
             Box {
                 ActionChip(Icons.Rounded.MoreHoriz, tr("Plus")) { more = true }
                 DropdownMenu(more, { more = false }, containerColor = Mf.colors.card) {
@@ -501,7 +511,7 @@ private fun ExercisePage(
                             if (ns.weight != set.weight && ns.copy(weight = set.weight) == set) vm.setWeight(index, si, ns.weight)
                             else edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns }) }
                         },
-                        onToggle = { expanded.remove(set.id); onToggle(si) }, onPlates = onPlates,
+                        onToggle = { expanded.remove(set.id); onToggle(si) }, onPlates = onPlates, onNudge = { up -> vm.nudgeWeight(index, si, up) },
                         onType = { t -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = set.copy(type = t) }) } },
                         onDelete = { edit { it.copy(sets = it.sets.filterIndexed { j, _ -> j != si }) } })
                 }
@@ -532,7 +542,28 @@ private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, group
     val angles = e?.images.orEmpty()
     var angle by remember(e?.id) { mutableIntStateOf(0) }
     val path = angles.getOrNull(angle)?.let { "ex/${e!!.id}_${it}.webp" } ?: e?.thumbnail()
-    Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(230.dp).clip(RoundedCornerShape(24.dp))
+    val heroStyle = app.superhealth.ui.theme.StyleLab.hero()
+    if (heroStyle == app.superhealth.ui.theme.StyleLab.Hero.NONE) {
+        // labo de style : en-tête sans photo, vignette ronde et nom
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onInfo).padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            AsyncAsset(e?.thumbnail(), Modifier.size(56.dp).clip(CircleShape).background(Mf.colors.chip), fallback = e?.name ?: "?", sample = 2)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(e?.name ?: tr("Exercice inconnu"), style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (e != null) Text(e.muscleGroups.joinToString(" · ") { it.label.tr() }, color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodySmall)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${index + 1} / ${count}", style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
+                if (groupSize > 0) Text(app.superhealth.training.domain.Supersets.label(groupSize).tr() + (supersetLetter?.let { " $it" } ?: ""),
+                    Modifier.padding(top = 4.dp).clip(CircleShape).background(WorkoutBlue).padding(horizontal = 8.dp, vertical = 2.dp),
+                    color = Color.White, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        return
+    }
+    val heroHeight = if (heroStyle == app.superhealth.ui.theme.StyleLab.Hero.COMPACT) 150.dp else 230.dp
+    Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(heroHeight).clip(RoundedCornerShape(24.dp))
         .background(Mf.colors.chip)
         .clickable { if (angles.size > 1) angle = (angle + 1) % angles.size else onInfo() }) {
         if (path != null && angles.isNotEmpty()) AsyncAsset(path, Modifier.fillMaxSize(), fallback = e?.name ?: "?")
@@ -593,22 +624,29 @@ private fun TargetLine(ex: SessionExercise, settings: Settings) {
 @Composable
 private fun SetCard(
     settings: Settings, set: SetLog, label: String, prev: SetLog?, usesWeight: Boolean, current: Boolean, showTarget: Boolean = false,
-    onChange: (SetLog) -> Unit, onToggle: () -> Unit, onPlates: (Double) -> Unit, onType: (SetType) -> Unit, onDelete: () -> Unit,
+    onChange: (SetLog) -> Unit, onToggle: () -> Unit, onPlates: (Double) -> Unit, onNudge: (Boolean) -> Unit, onType: (SetType) -> Unit, onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     var partials by remember { mutableStateOf(set.partialReps > 0) }
     val warm = set.type == SetType.WARMUP
-    val border by animateColorAsState(if (current) WorkoutBlue else Color.Transparent, label = "border")
+    val look = app.superhealth.ui.theme.StyleLab.sets()
+    val rows = look == app.superhealth.ui.theme.StyleLab.Sets.ROWS
+    // contrastées : la série en cours est pleine, dans la couleur de l'entraînement
+    val bold = look == app.superhealth.ui.theme.StyleLab.Sets.BOLD && current
+    val border by animateColorAsState(if (current && !rows && !bold) WorkoutBlue else Color.Transparent, label = "border")
     val alpha by animateFloatAsState(if (current || set.done) 1f else 0.6f, label = "alpha")
-    Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Mf.colors.card)
-        .border(if (current) 2.dp else 0.dp, border, RoundedCornerShape(18.dp)).padding(horizontal = 10.dp, vertical = if (current) 14.dp else 10.dp)
+    val shape = RoundedCornerShape(if (rows) 14.dp else 18.dp)
+    val bg = when { bold -> WorkoutBlue; rows && current -> WorkoutBlue.container(); rows -> Color.Transparent; else -> Mf.colors.card }
+    Column(Modifier.padding(horizontal = 12.dp, vertical = if (rows) 1.dp else 4.dp).fillMaxWidth().clip(shape).background(bg)
+        .border(if (current && !rows && !bold) 2.dp else 0.dp, border, shape)
+        .padding(horizontal = 10.dp, vertical = if (rows) 6.dp else if (current) 14.dp else 10.dp)
         .graphicsLayer { this.alpha = alpha }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box {
-                Box(Modifier.size(34.dp).clip(CircleShape).background(if (warm) Mf.colors.chip else if (current) WorkoutBlue.copy(alpha = 0.14f) else Mf.colors.chip)
+                Box(Modifier.size(34.dp).clip(CircleShape).background(if (bold) Color.White.copy(alpha = 0.22f) else if (warm) Mf.colors.chip else if (current) WorkoutBlue.copy(alpha = 0.14f) else Mf.colors.chip)
                     .combinedClickable(onClick = { menu = true }, onLongClick = { menu = true }), contentAlignment = Alignment.Center) {
                     Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
-                        color = if (warm) Mf.colors.textSecondary else if (current) WorkoutBlue else Mf.colors.text)
+                        color = if (bold) Color.White else if (warm) Mf.colors.textSecondary else if (current) WorkoutBlue else Mf.colors.text)
                 }
                 DropdownMenu(menu, { menu = false }, containerColor = Mf.colors.card) {
                     SetType.entries.forEach { t -> DropdownMenuItem({ Text(t.label.tr()) }, onClick = { menu = false; onType(t) }) }
@@ -620,7 +658,7 @@ private fun SetCard(
             }
             Spacer(Modifier.width(8.dp))
             if (usesWeight) BigField(set.weight?.let { clean(settings.w(it)) } ?: "", set.autoWeight?.let { clean(settings.w(it)) }, settings.unit.label.tr(),
-                Modifier.weight(1.2f), onLongPress = { onPlates(set.weight ?: set.autoWeight ?: 0.0) }) { onChange(set.copy(weight = it.toNum()?.let { v -> settings.toKg(v) })) }
+                Modifier.weight(1.2f), onLongPress = { onPlates(set.weight ?: set.autoWeight ?: 0.0) }, next = true) { onChange(set.copy(weight = it.toNum()?.let { v -> settings.toKg(v) })) }
             else Text(tr("Poids du corps"), Modifier.weight(1.2f), textAlign = TextAlign.Center, color = Mf.colors.textTertiary, style = MaterialTheme.typography.bodySmall)
             BigField(set.reps?.toString() ?: "", set.autoReps?.toString() ?: set.target?.let { "${it.minReps}-${it.maxReps}" }, "reps", Modifier.weight(1f)) {
                 onChange(set.copy(reps = it.toNum()?.roundToInt()))
@@ -628,10 +666,24 @@ private fun SetCard(
             if (!warm) RirField(set.rir, set.target?.rir, Modifier.weight(0.75f)) { onChange(set.copy(rir = it)) }
             val scale by animateFloatAsState(if (set.done) 1f else 0.92f, spring(dampingRatio = 0.45f), label = "check")
             Box(Modifier.padding(start = 6.dp).size(44.dp).scale(scale).clip(CircleShape)
-                .background(if (set.done) WorkoutBlue else if (current) WorkoutBlue.container(1.6f) else Mf.colors.chip).clickable(onClick = onToggle),
+                .background(if (bold) Color.White else if (set.done) WorkoutBlue else if (current) WorkoutBlue.container(1.6f) else Mf.colors.chip).clickable(onClick = onToggle),
                 contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Check, tr("Valider"), tint = if (set.done) Color.White else if (current) WorkoutBlue else Mf.colors.textTertiary, modifier = Modifier.size(24.dp))
+                Icon(Icons.Rounded.Check, tr("Valider"), tint = if (set.done && !bold) Color.White else if (current) WorkoutBlue else Mf.colors.textTertiary, modifier = Modifier.size(24.dp))
             }
+        }
+        // série en cours : ajuster sans clavier (charge au pas du matériel, répétitions une à une)
+        if (current && !set.done) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.width(42.dp))
+            if (usesWeight) Row(Modifier.weight(1.2f), horizontalArrangement = Arrangement.SpaceEvenly) {
+                NudgeButton("−", bold) { onNudge(false) }; NudgeButton("+", bold) { onNudge(true) }
+            } else Spacer(Modifier.weight(1.2f))
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
+                val reps = set.reps ?: set.autoReps ?: set.target?.minReps ?: 0
+                NudgeButton("−", bold) { onChange(set.copy(reps = (reps - 1).coerceAtLeast(0))) }
+                NudgeButton("+", bold) { onChange(set.copy(reps = reps + 1)) }
+            }
+            if (!warm) Spacer(Modifier.weight(0.75f))
+            Spacer(Modifier.width(50.dp))
         }
         // répétitions partielles (après l'échec, amplitude réduite) : comptées à part
         if ((partials || set.rir == 0) && !warm) Row(Modifier.padding(start = 42.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -685,18 +737,29 @@ private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeigh
     }
 }
 
-/** Champ numérique large ; la valeur de la progression intelligente sert d'indication. */
+@Composable
+private fun NudgeButton(t: String, onBold: Boolean = false, onClick: () -> Unit) {
+    Box(Modifier.size(width = 40.dp, height = 30.dp).clip(CircleShape).background(if (onBold) Color.White.copy(alpha = 0.22f) else WorkoutBlue.copy(alpha = 0.12f)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center) { Text(t, style = MaterialTheme.typography.titleMedium, color = if (onBold) Color.White else WorkoutBlue, fontWeight = FontWeight.SemiBold) }
+}
+
+/** Champ numérique large ; la valeur de la progression intelligente sert d'indication. [next] : la touche du clavier passe au champ suivant. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BigField(value: String, hint: String?, unit: String, modifier: Modifier, onLongPress: (() -> Unit)? = null, onChange: (String) -> Unit) {
+private fun BigField(value: String, hint: String?, unit: String, modifier: Modifier, onLongPress: (() -> Unit)? = null, next: Boolean = false, onChange: (String) -> Unit) {
     var text by remember(value) { mutableStateOf(value) }
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Column(modifier.padding(horizontal = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(Mf.colors.background)
             .let { if (onLongPress != null) it.combinedClickable(onClick = {}, onLongClick = onLongPress) else it }, contentAlignment = Alignment.Center) {
             if (text.isEmpty() && hint != null) Text(hint, color = Mf.colors.textTertiary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             BasicTextField(text, { text = it; onChange(it) }, Modifier.fillMaxWidth().padding(horizontal = 4.dp), singleLine = true,
                 textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Mf.colors.text, textAlign = TextAlign.Center),
-                cursorBrush = SolidColor(Mf.colors.accent), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                cursorBrush = SolidColor(Mf.colors.accent),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal,
+                    imeAction = if (next) androidx.compose.ui.text.input.ImeAction.Next else androidx.compose.ui.text.input.ImeAction.Done),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    onNext = { focus.moveFocus(androidx.compose.ui.focus.FocusDirection.Next) }, onDone = { focus.clearFocus() }))
         }
         Text(unit, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
     }
@@ -772,7 +835,7 @@ private fun EndPage(s: Session, onAdd: () -> Unit, onFinish: () -> Unit) {
 // ----- Minuteur de repos -----
 
 @Composable
-private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, exercise: (String) -> Exercise?, vm: AppViewModel) {
+private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, exercise: (String) -> Exercise?, vm: AppViewModel, onCollapse: () -> Unit) {
     val left = ((endsAt - now) / 1000).coerceAtLeast(0)
     val frac = if (s.restDuration > 0) left.toFloat() / s.restDuration else 0f
     val anim by animateFloatAsState(frac, tween(500), label = "rest")
@@ -787,6 +850,8 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
         .clip(RoundedCornerShape(28.dp)).background(bg).padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             val accent = Mf.colors.accent
+            // toucher le minuteur : réduire la carte en pastille
+            Row(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).clickable(onClick = onCollapse), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
                 val track = Mf.colors.chip
                 Canvas(Modifier.size(64.dp)) {
@@ -799,6 +864,8 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
             Column(Modifier.weight(1f)) {
                 Text(tr("Repos"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
                 Text(duration(left), style = MaterialTheme.typography.displaySmall, fontSize = 34.sp, color = Mf.colors.text)
+            }
+            Icon(Icons.Rounded.KeyboardArrowDown, tr("Réduire"), tint = Mf.colors.textTertiary, modifier = Modifier.padding(end = 4.dp))
             }
             Column(horizontalAlignment = Alignment.End) {
                 Row {
@@ -826,6 +893,27 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
                     style = MaterialTheme.typography.titleSmall, color = Mf.colors.text)
             }
         }
+    }
+}
+
+/** Repos réduit : anneau et temps restant, en bas à droite ; toucher le rouvre. */
+@Composable
+private fun RestPill(s: Session, endsAt: Long, now: Long, onExpand: () -> Unit) {
+    val left = ((endsAt - now) / 1000).coerceAtLeast(0)
+    val frac = if (s.restDuration > 0) left.toFloat() / s.restDuration else 0f
+    val anim by animateFloatAsState(frac, tween(500), label = "restpill")
+    val accent = Mf.colors.accent
+    val track = Mf.colors.chip
+    Row(Modifier.padding(16.dp).navigationBarsPadding()
+        .shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.2f))
+        .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).clickable(onClick = onExpand)
+        .padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(30.dp)) {
+            drawArc(track, 0f, 360f, false, style = Stroke(3.5.dp.toPx()))
+            drawArc(accent, -90f, 360f * anim, false, style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round))
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(duration(left), style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"), color = Mf.colors.text)
     }
 }
 

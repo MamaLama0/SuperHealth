@@ -83,6 +83,7 @@ import java.time.LocalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /** Teinte du plugin (comme sa fiche dans Réglages > Plugins). */
 val MealsHue = Color(0xFFF2994A)
@@ -107,6 +108,8 @@ fun MealPlanCard(day: Long, entries: List<FoodEntryEntity>, target: Macros?, ene
     var open by remember(day) { mutableStateOf<Int?>(null) }
     var compose by remember(day) { mutableStateOf(false) }
     var note by remember(day) { mutableStateOf<String?>(null) }
+    /** Repas en cours de remplacement (« Autre idée »). */
+    var swapping by remember(day) { mutableStateOf<Int?>(null) }
     fun propose() {
         if (target == null) return
         busy = true; error = null
@@ -139,12 +142,32 @@ fun MealPlanCard(day: Long, entries: List<FoodEntryEntity>, target: Macros?, ene
             PillButton(tr("Avec mes aliments"), Modifier.fillMaxWidth(), strong = false, enabled = !busy && target != null,
                 icon = Icons.Rounded.Kitchen) { compose = true }
         } else {
+            // ce que le plan apporte face à ce qui reste à manger
+            target?.let { t ->
+                val planned = plan.meals.filter { !it.logged }.sumOf { it.macros.kcal }
+                val left = MealPlanner.left(t, entries).kcal
+                if (planned > 0) Text(trf("Prévu %1\$s · reste %2\$s", energy(planned), energy(left)), style = MaterialTheme.typography.bodySmall,
+                    color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp))
+            }
+            val now = { LocalTime.now().let { it.hour * 60 + it.minute } }
             plan.meals.forEachIndexed { i, m ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Mf.colors.divider))
-                MealRow(m, open == i, energy, onToggle = { open = if (open == i) null else i }) {
-                    val now = LocalTime.now().let { it.hour * 60 + it.minute }
-                    scope.launch { MealPlanner.log(day, m, now) }
+                MealRow(m, open == i, energy, swapping = swapping == m.slot, onToggle = { open = if (open == i) null else i },
+                    onPortion = { f -> MealPlanner.setPortion(day, m.slot, f) },
+                    onSwap = if (target != null && !m.logged && swapping == null) ({
+                        swapping = m.slot; error = null
+                        scope.launch {
+                            runCatching { MealPlanner.regenerate(ctx, day, m.slot, target, entries) }.onFailure { error = it.message ?: it.javaClass.simpleName }
+                            swapping = null
+                        }
+                    }) else null,
+                    onUnlog = if (m.logged && m.entryIds.isNotEmpty()) ({ scope.launch { MealPlanner.unlog(day, m.slot) } }) else null) {
+                    scope.launch { MealPlanner.log(day, m, now()) }
                 }
+            }
+            val todo = plan.meals.filter { !it.logged }
+            if (todo.size > 1) PillButton(tr("Tout ajouter au journal"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false, icon = Icons.Rounded.Add) {
+                scope.launch { todo.forEach { MealPlanner.log(day, it, now()) } }
             }
             Text(tr("Composer avec mes aliments"), style = MaterialTheme.typography.labelLarge, color = MealsHue.onContainer(),
                 modifier = Modifier.padding(top = 6.dp).clip(CircleShape).clickable(enabled = target != null) { compose = true }.padding(vertical = 6.dp))
@@ -253,7 +276,8 @@ private fun ComposeSheet(entries: List<FoodEntryEntity>, target: Macros, energy:
 }
 
 @Composable
-private fun MealRow(m: MealPlanner.Meal, open: Boolean, energy: (Double) -> String, onToggle: () -> Unit, onLog: () -> Unit) {
+private fun MealRow(m: MealPlanner.Meal, open: Boolean, energy: (Double) -> String, swapping: Boolean, onToggle: () -> Unit,
+                    onPortion: (Double) -> Unit, onSwap: (() -> Unit)?, onUnlog: (() -> Unit)?, onLog: () -> Unit) {
     val ctx = LocalContext.current
     val mm = m.macros
     val slot = MealPlanner.content()?.slots?.getOrNull(m.slot)?.name?.text ?: ""
@@ -262,26 +286,49 @@ private fun MealRow(m: MealPlanner.Meal, open: Boolean, energy: (Double) -> Stri
             Column(Modifier.weight(1f)) {
                 Text(listOfNotNull(slot, m.minutes?.let { trf("%1\$s min", it) }).joinToString(" · "),
                     style = MaterialTheme.typography.labelMedium, color = MealsHue.onContainer())
-                Text(m.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = if (open) 3 else 1, overflow = TextOverflow.Ellipsis)
+                Text(if (swapping) tr("Nouvelle idée…") else m.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                    maxLines = if (open) 3 else 1, overflow = TextOverflow.Ellipsis, color = if (swapping) Mf.colors.textTertiary else Mf.colors.text)
                 Text(energy(mm.kcal) + " · " + trf("P %1\$s · L %2\$s · G %3\$s", formatNumber(mm.protein), formatNumber(mm.fat), formatNumber(mm.carbs)),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             }
             Spacer(Modifier.width(8.dp))
+            // ajouté : toucher la coche retire le repas du journal
             Box(Modifier.size(36.dp).clip(CircleShape).background(if (m.logged) MealsHue else MealsHue.container())
-                .clickable(enabled = !m.logged, onClick = onLog), contentAlignment = Alignment.Center) {
-                Icon(if (m.logged) Icons.Rounded.Check else Icons.Rounded.Add, if (m.logged) tr("Ajouté") else tr("Ajouter au journal"),
+                .clickable(enabled = !swapping && (!m.logged || onUnlog != null), onClick = if (m.logged) onUnlog ?: {} else onLog), contentAlignment = Alignment.Center) {
+                Icon(if (m.logged) Icons.Rounded.Check else Icons.Rounded.Add, if (m.logged) tr("Retirer du journal") else tr("Ajouter au journal"),
                     Modifier.size(20.dp), tint = if (m.logged) Color.White else MealsHue)
             }
         }
         AnimatedVisibility(open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Column(Modifier.padding(top = 8.dp)) {
                 m.image?.let { url -> RecipePhoto(url) }
-                m.servings?.let { Text(trf("%1\$s portion(s)", formatNumber(it, 2)), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 4.dp)) }
+                m.servings?.let { Text(trf("%1\$s portion(s)", formatNumber(it * m.portion, 2)), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 4.dp)) }
                 m.ingredients.forEach { i ->
                     Row(Modifier.padding(vertical = 2.dp)) {
                         Box(Modifier.padding(top = 7.dp).size(5.dp).clip(CircleShape).background(MealsHue))
                         Spacer(Modifier.width(8.dp))
-                        Text((if (i.grams > 0) trf("%1\$s g ", formatNumber(i.grams)) else "") + i.name, style = MaterialTheme.typography.bodySmall)
+                        val g = (i.grams * m.portion / 5).roundToInt() * 5.0
+                        Text((if (i.grams > 0) trf("%1\$s g ", formatNumber(g)) else "") + i.name, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (!m.logged) {
+                    // portion : plus ou moins faim que prévu
+                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        listOf(0.5, 0.75, 1.0, 1.25, 1.5).forEach { f ->
+                            val sel = kotlin.math.abs(m.portion - f) < 0.01
+                            Text(if (f == 1.0) "×1" else "×" + formatNumber(f, 2), style = MaterialTheme.typography.labelLarge,
+                                color = if (sel) Color.White else MealsHue.onContainer(),
+                                modifier = Modifier.clip(CircleShape).background(if (sel) MealsHue else MealsHue.container()).clickable { onPortion(f) }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp))
+                        }
+                    }
+                    onSwap?.let { f ->
+                        Row(Modifier.padding(top = 6.dp).clip(CircleShape).clickable(onClick = f).padding(vertical = 6.dp, horizontal = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp), tint = MealsHue.onContainer())
+                            Spacer(Modifier.width(6.dp))
+                            Text(tr("Autre idée pour ce repas"), style = MaterialTheme.typography.labelLarge, color = MealsHue.onContainer())
+                        }
                     }
                 }
                 m.url?.let { url ->

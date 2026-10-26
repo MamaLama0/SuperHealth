@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import app.superhealth.plusActions
+import app.superhealth.has
 import app.superhealth.PlusAction
 import androidx.compose.material.icons.rounded.LocalDrink
 import androidx.compose.material.icons.rounded.Tune
@@ -131,6 +132,15 @@ private val tabs = listOf(
 
 private fun isTabRoute(route: String?) = tabs.any { it.route == route }
 
+/** Onglets des parties activées : Journal avec la nutrition, Activités avec la musculation ou les activités. */
+private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
+    when (it.route) {
+        "log" -> s.has(app.superhealth.Feature.NUTRITION)
+        "activities" -> s.has(app.superhealth.Feature.TRAINING) || s.has(app.superhealth.Feature.HEALTH)
+        else -> true
+    }
+}
+
 @Composable
 fun SuperRoot(vm: SuperViewModel) {
     val sh by vm.settings.collectAsState()
@@ -184,16 +194,26 @@ fun SuperRoot(vm: SuperViewModel) {
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
-            composable("activities") { WorkoutTabScreen(vm.training, nav) { OtherActivities(vm, nav) } }
+            composable("activities") {
+                // onglet adapté aux parties choisies : musculation, activités de la montre, ou l'endurance d'abord
+                val f by app.superhealth.SuperPrefs.settings.collectAsState()
+                val endurance = vm.nutrition.program.collectAsState().value.training == app.superhealth.nutrition.domain.Training.CARDIO
+                WorkoutTabScreen(vm.training, nav, strength = f.has(app.superhealth.Feature.TRAINING),
+                    cardioFirst = endurance && f.has(app.superhealth.Feature.HEALTH)) {
+                    if (f.has(app.superhealth.Feature.HEALTH)) OtherActivities(vm, nav)
+                }
+            }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
             composable("backup") { app.superhealth.ui.settings.BackupScreen(vm, nav) }
             composable("update") { app.superhealth.ui.settings.UpdateScreen(vm, nav) }
             composable("settings/look") { app.superhealth.ui.settings.LookSettingsScreen(vm, nav) }
+            composable("settings/style") { app.superhealth.ui.settings.StyleLabScreen(vm, nav) }
             composable("settings/units") { app.superhealth.ui.settings.UnitsSettingsScreen(vm, nav) }
             composable("settings/hc") { app.superhealth.ui.settings.HealthConnectSettingsScreen(vm, nav) }
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
+            composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
@@ -261,9 +281,13 @@ private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f,
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     Row(Modifier.fillMaxWidth().background(Mf.colors.background).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f).height(68.dp).shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
+        val shown = visibleTabs(app.superhealth.SuperPrefs.settings.collectAsState().value)
+        // moins d'onglets (parties coupées) : barre plus courte, gardée près du « + » sous le pouce
+        if (shown.size < tabs.size) Spacer(Modifier.weight(1f))
+        Row((if (shown.size < tabs.size) Modifier.width((100 * shown.size + 8).dp) else Modifier.weight(1f)).height(68.dp)
+            .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
             .clip(RoundedCornerShape(26.dp)).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).padding(horizontal = 4.dp)) {
-            tabs.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
+            shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
         }
         Spacer(Modifier.width(10.dp))
         Box(

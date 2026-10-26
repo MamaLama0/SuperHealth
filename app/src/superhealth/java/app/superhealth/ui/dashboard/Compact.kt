@@ -1,5 +1,7 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.ui.theme.dashCardBackground
+import app.superhealth.ui.theme.dashChipColors
 import app.superhealth.nutrition.domain.stepGoalFor
 import app.superhealth.ui.charts.ChartStyle
 import app.superhealth.ui.charts.smooth
@@ -26,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -174,6 +177,16 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
             }
             CompactData(n.toString(), null, tr("Records (30 j)"), null) { nav.go("t/insights") }
         }
+        DashCard.BODY -> {
+            // tour de taille (la mesure la plus parlante), ou la première mesure suivie qui a des valeurs
+            val metrics by remember { vm.nutrition.repo.body.metricsFlow() }.collectAsState(initial = emptyList())
+            val codes = listOf("w") + app.superhealth.SuperPrefs.settings.value.bodyMetrics
+            val code = codes.firstOrNull { k -> metrics.any { it.metric == k } }
+            val l = metrics.filter { it.metric == code }
+            CompactData(l.lastOrNull()?.value?.let { formatNumber(it, 1) } ?: "—", "cm",
+                app.superhealth.nutrition.domain.BodyMetric.of(code ?: "w")?.label?.let(::tr) ?: tr("Mesures"), null,
+                l.takeLast(8).map { it.value }, bars = false) { nav.go("body") }
+        }
         DashCard.STRATEGY -> CompactData(formatNumber(s.energyValue(an.targetFor(an.today).macros.kcal)), kcal, tr("Objectif"), null) { nav.go("strategy") }
         DashCard.FOCUS -> {
             val items = focusItems(vm, an, h, nav, tab)
@@ -225,11 +238,11 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
  */
 @Composable
 internal fun CompactBubble(c: DashCard, d: CompactData, modifier: Modifier) {
-    val hue = c.hue()
+    val hue = c.ink()
     val track = Mf.colors.chip
     val prog = d.progress
     Column(modifier.square().clip(RoundedCornerShape(CardRadius))
-        .background(Mf.colors.card).cardClick(d.onClick).padding(8.dp),
+        .dashCardBackground(hue).cardClick(d.onClick).padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
@@ -290,7 +303,7 @@ internal fun MiniChart(d: CompactData, hue: androidx.compose.ui.graphics.Color, 
 /** Anneau de progression seul, valeur au centre (bulles et cartes hautes). */
 @Composable
 private fun ProgressDisc(d: CompactData, c: DashCard, modifier: Modifier, small: Boolean = false) {
-    val hue = c.hue()
+    val hue = c.ink()
     val track = Mf.colors.chip
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -309,8 +322,8 @@ private fun ProgressDisc(d: CompactData, c: DashCard, modifier: Modifier, small:
 @Composable
 private fun TintedBox(c: DashCard, modifier: Modifier, onClick: () -> Unit, padding: androidx.compose.ui.unit.Dp = 12.dp,
                       content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    val hue = c.hue()
-    Column(modifier.clip(RoundedCornerShape(CardRadius)).background(Mf.colors.card)
+    val hue = c.ink()
+    Column(modifier.clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue)
         .cardClick(onClick).padding(padding), content = content)
 }
 
@@ -320,11 +333,12 @@ private fun TintedBox(c: DashCard, modifier: Modifier, onClick: () -> Unit, padd
  */
 @Composable
 internal fun CompactMedium(c: DashCard, d: CompactData, modifier: Modifier) {
-    val hue = c.hue()
+    val hue = c.ink()
     TintedBox(c, modifier.fillMaxWidth(), d.onClick, padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(30.dp).clip(CircleShape).background(hue.container(1.2f)), contentAlignment = Alignment.Center) {
-                Icon(c.icon(), null, Modifier.size(17.dp), tint = hue)
+            val (chipBg, chipTint) = dashChipColors(hue)
+            Box(Modifier.size(30.dp).clip(CircleShape).background(chipBg), contentAlignment = Alignment.Center) {
+                Icon(c.icon(), null, Modifier.size(17.dp), tint = chipTint)
             }
             Spacer(Modifier.weight(1f))
             d.progress?.takeIf { d.history.count { it != null } >= 2 }?.let { ProgressDisc(d.copy(value = ""), c, Modifier.size(30.dp)) }
@@ -348,11 +362,12 @@ internal fun CompactMedium(c: DashCard, d: CompactData, modifier: Modifier) {
 /** Bandeau (toute la largeur, une ligne) : symbole, valeur, et graphique ou barre d'objectif à droite. */
 @Composable
 internal fun CompactStrip(c: DashCard, d: CompactData, modifier: Modifier) {
-    val hue = c.hue()
+    val hue = c.ink()
     TintedBox(c, modifier.fillMaxWidth(), d.onClick, padding = 10.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(hue.container(1.2f)), contentAlignment = Alignment.Center) {
-                Icon(c.icon(), null, Modifier.size(19.dp), tint = hue)
+            val (chipBg, chipTint) = dashChipColors(hue)
+            Box(Modifier.size(34.dp).clip(CircleShape).background(chipBg), contentAlignment = Alignment.Center) {
+                Icon(c.icon(), null, Modifier.size(19.dp), tint = chipTint)
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
