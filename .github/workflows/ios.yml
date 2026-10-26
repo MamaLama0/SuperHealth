@@ -1,0 +1,79 @@
+name: iOS
+
+# .ipa non signée (à signer à l'installation par SideStore, AltStore ou Sideloadly) et .app pour le simulateur.
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'ios-v*' ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: Projet Xcode (XcodeGen)
+        run: |
+          brew install xcodegen
+          cd iosApp && xcodegen generate
+
+      - name: Vérification du code commun (aperçu ordinateur)
+        run: ./gradlew :shared:compileKotlinDesktop --no-configuration-cache
+
+      - name: Build iPhone (Release, non signé)
+        run: |
+          xcodebuild -project iosApp/SuperHealth.xcodeproj -scheme SuperHealth -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      - name: Paquet .ipa
+        run: |
+          APP=build/ios/Build/Products/Release-iphoneos/SuperHealth.app
+          rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
+          # signature ad hoc avec les droits HealthKit : l'outil de sideload les reprend en re-signant
+          codesign -f -s - --entitlements iosApp/SuperHealth/SuperHealth.entitlements Payload/SuperHealth.app
+          zip -qry SuperHealth.ipa Payload
+          ls -lh SuperHealth.ipa
+
+      - name: Build simulateur (Debug, Apple Silicon)
+        run: |
+          xcodebuild -project iosApp/SuperHealth.xcodeproj -scheme SuperHealth -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/sim \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
+          cd build/sim/Build/Products/Debug-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/SuperHealth-simulator.zip" SuperHealth.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SuperHealth-ios
+          path: |
+            SuperHealth.ipa
+            SuperHealth-simulator.zip
+
+      - name: Version publiée
+        if: startsWith(github.ref, 'refs/tags/ios-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            SuperHealth.ipa
+            SuperHealth-simulator.zip

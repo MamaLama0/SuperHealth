@@ -1,0 +1,16 @@
+.gradle/
+build/
+shared/build/
+.kotlin/
+local.properties
+*.iml
+.idea/
+iosApp/SuperHealth.xcodeproj/
+iosApp/build/
+Payload/
+*.ipa
+build.log
+build-desktop.log
+build-m*.png
+screenshots/
+xcuserdata/
