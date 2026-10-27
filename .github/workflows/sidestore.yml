@@ -34,9 +34,9 @@ jobs:
           REF="${{ github.event.inputs.ref }}"
           [ -n "$REF" ] || REF=$(gh api repos/SideStore/SideStore/releases/latest -q .tag_name)
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "tag=sidestore-healthkit-$REF" >> "$GITHUB_OUTPUT"
+          echo "tag=sidestore-healthkit-$REF-anisette" >> "$GITHUB_OUTPUT"
           # compilation hebdomadaire : rien à faire si cette version est déjà publiée
-          if [ "${{ github.event_name }}" = "schedule" ] && gh release view "sidestore-healthkit-$REF" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if [ "${{ github.event_name }}" = "schedule" ] && gh release view "sidestore-healthkit-$REF-anisette" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
           echo "SideStore $REF"
@@ -68,6 +68,22 @@ jobs:
         run: |
           python3 patcher/patch_healthkit.py ss
           git -C ss/Dependencies/SideSign diff
+
+      - name: Correctif connexion Apple (-80045 / -80046)
+        if: steps.v.outputs.skip != 'true'
+        working-directory: ss
+        run: |
+          # depuis le 22/10/2026 Apple refuse l'anisette envoyée avec l'identité intégrée de SideStore : chaque serveur
+          # anisette donne désormais la sienne (/v3/client_info), serveur Mac par défaut, anisette sur l'appareil coupée.
+          # Correctif de https://github.com/mariohurtado1402/SideStore (commit 15218d18), adapté à la version stable.
+          if git apply --check ../patcher/anisette_80046.patch; then
+            git apply ../patcher/anisette_80046.patch
+          elif git apply --reverse --check ../patcher/anisette_80046.patch; then
+            echo "correctif déjà inclus dans cette version de SideStore"
+          else
+            echo "::error::anisette_80046.patch ne s'applique plus à SideStore ${{ steps.v.outputs.ref }}"; exit 1
+          fi
+          git diff --stat
 
       - name: Numéro de version officiel
         if: steps.v.outputs.skip != 'true'
@@ -113,12 +129,13 @@ jobs:
         with:
           tag_name: ${{ steps.v.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: SideStore ${{ steps.v.outputs.ref }} + HealthKit (pour SuperHealth iOS)
+          name: SideStore ${{ steps.v.outputs.ref }} + HealthKit + correctif -80045 (pour SuperHealth iOS)
           prerelease: true
           make_latest: false
           body: |
-            SideStore ${{ steps.v.outputs.ref }} compilé tel quel, avec un seul changement : HealthKit autorisé pour les
-            identifiants Apple gratuits (voir patch_healthkit.py sur la branche sidestore). Sert à installer SuperHealth
+            SideStore ${{ steps.v.outputs.ref }} compilé tel quel, avec deux changements : HealthKit autorisé pour les
+            identifiants Apple gratuits (patch_healthkit.py) et le correctif de connexion Apple -80045 / -80046
+            (anisette_80046.patch), tous deux sur la branche sidestore. Sert à installer SuperHealth
             iOS avec l'accès à Apple Santé. Même numéro de version que l'ipa officielle : ${{ env.VERSION }}.
             Licence AGPL-3.0, code d'origine : https://github.com/SideStore/SideStore
           files: SideStore-HealthKit.ipa

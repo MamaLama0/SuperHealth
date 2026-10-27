@@ -13,7 +13,16 @@ de 6 lignes, [`patch_healthkit.py`](patch_healthkit.py) :
 - la capacité HealthKit (`HK421J6T7P`) est activée sur l'identifiant d'app créé pour SuperHealth ;
 - les droits `com.apple.developer.healthkit` et `com.apple.developer.healthkit.access` sont gardés à la signature.
 
-Rien d'autre ne change. L'idée vient de [kenantan32/sidestore-healthkit](https://github.com/kenantan32/sidestore-healthkit).
+L'idée vient de [kenantan32/sidestore-healthkit](https://github.com/kenantan32/sidestore-healthkit).
+
+Second changement, [`anisette_80046.patch`](anisette_80046.patch) : depuis le 22 octobre 2026, Apple refuse la
+connexion de SideStore (« -80045 » / « -80046 » dans Réglages > Compte). Le correctif de
+[mariohurtado1402/SideStore](https://github.com/mariohurtado1402/SideStore/commit/15218d18cd68d5259f138b6e040b3b505c6c4289)
+(adapté à la version stable) envoie l'identité de chaque serveur anisette au lieu de celle intégrée, utilise un
+serveur Mac par défaut (`new.ani.sidestore.io`) et coupe l'anisette sur l'appareil. Il est sauté automatiquement le
+jour où SideStore l'inclut.
+
+Rien d'autre ne change.
 
 ## Télécharger
 
@@ -35,4 +44,4 @@ et SuperHealth perdrait Apple Santé au renouvellement suivant. Pour une nouvell
 
 SideStore est sous licence [AGPL-3.0](https://github.com/SideStore/SideStore/blob/develop/LICENSE) ; cette version
 modifiée aussi. Son code source complet = SideStore à la version indiquée dans le nom de la pré-version +
-`patch_healthkit.py`.
+`patch_healthkit.py` + `anisette_80046.patch`.
