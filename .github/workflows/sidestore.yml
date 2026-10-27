@@ -2,13 +2,17 @@ name: SideStore HealthKit
 
 # SideStore officiel + patch HealthKit (patch_healthkit.py) → SideStore-HealthKit.ipa, publiée en pré-version
 # (la « dernière version » du dépôt reste l'APK Android, lue par la mise à jour intégrée).
+# Version suivie : la « latest » de SideStore sur GitHub, celle qu'iloader installe avec « SideStore (Stable) ».
 on:
   push:
     branches: [ sidestore ]
+  schedule:
+    - cron: '0 6 * * 1'   # chaque lundi : nouvelle version de SideStore → nouvelle compilation
   workflow_dispatch:
-
-env:
-  SIDESTORE_REF: 0.7.0-alpha
+    inputs:
+      ref:
+        description: Version de SideStore (tag) ; vide = la dernière stable
+        required: false
 
 permissions:
   contents: write
@@ -18,53 +22,80 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 90
     steps:
+      - name: Version de SideStore
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REF="${{ github.event.inputs.ref }}"
+          [ -n "$REF" ] || REF=$(gh api repos/SideStore/SideStore/releases/latest -q .tag_name)
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "tag=sidestore-healthkit-$REF" >> "$GITHUB_OUTPUT"
+          # compilation hebdomadaire : rien à faire si cette version est déjà publiée
+          if [ "${{ github.event_name }}" = "schedule" ] && gh release view "sidestore-healthkit-$REF" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "SideStore $REF"
+
       - uses: actions/checkout@v4
+        if: steps.v.outputs.skip != 'true'
         with:
           path: patcher
 
-      - name: SideStore ${{ env.SIDESTORE_REF }}
+      - name: SideStore ${{ steps.v.outputs.ref }}
+        if: steps.v.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: SideStore/SideStore
-          ref: ${{ env.SIDESTORE_REF }}
+          ref: ${{ steps.v.outputs.ref }}
           submodules: recursive
           path: ss
 
-      - run: brew install ldid xcbeautify
+      - if: steps.v.outputs.skip != 'true'
+        run: brew install ldid xcbeautify
 
-      - uses: maxim-lobanov/setup-xcode@v1.6.0
+      - if: steps.v.outputs.skip != 'true'
+        uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
           xcode-version: "26.4"
 
       - name: Patch HealthKit
+        if: steps.v.outputs.skip != 'true'
         run: |
           python3 patcher/patch_healthkit.py ss
           git -C ss/Dependencies/SideSign diff
 
       - name: Build
+        if: steps.v.outputs.skip != 'true'
         working-directory: ss
         run: python3 scripts/ci/workflow.py build
 
       - name: Paquet
+        if: steps.v.outputs.skip != 'true'
         run: |
           mv ss/SideStore.ipa SideStore-HealthKit.ipa
+          # la capacité HealthKit doit être dans le binaire, sinon le patch n'a servi à rien
+          unzip -q -o SideStore-HealthKit.ipa -d check
+          grep -q -a HK421J6T7P check/Payload/SideStore.app/SideStore
           ls -lh SideStore-HealthKit.ipa
 
-      - uses: actions/upload-artifact@v4
+      - if: steps.v.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
         with:
           name: SideStore-HealthKit
           path: SideStore-HealthKit.ipa
 
       - name: Pré-version
+        if: steps.v.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: sidestore-healthkit-${{ env.SIDESTORE_REF }}
+          tag_name: ${{ steps.v.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: SideStore ${{ env.SIDESTORE_REF }} + HealthKit (pour SuperHealth iOS)
+          name: SideStore ${{ steps.v.outputs.ref }} + HealthKit (pour SuperHealth iOS)
           prerelease: true
           make_latest: false
           body: |
-            SideStore ${{ env.SIDESTORE_REF }} compilé tel quel, avec un seul changement : HealthKit autorisé pour les
+            SideStore ${{ steps.v.outputs.ref }} compilé tel quel, avec un seul changement : HealthKit autorisé pour les
             identifiants Apple gratuits (voir patch_healthkit.py sur la branche sidestore). Sert à installer SuperHealth
             iOS avec l'accès à Apple Santé. Licence AGPL-3.0, code d'origine : https://github.com/SideStore/SideStore
           files: SideStore-HealthKit.ipa
