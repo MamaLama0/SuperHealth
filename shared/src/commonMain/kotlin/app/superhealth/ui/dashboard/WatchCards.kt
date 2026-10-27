@@ -73,6 +73,8 @@ internal class WatchSnap(
     val zones: IntArray? = null,
     val night: List<HealthRepository.SleepPhase>? = null,
     val debt: Double? = null,
+    /** Score de sommeil de la nuit, quand la montre le calcule. */
+    val sleepScore: Double? = null,
     val hrv: List<Pair<LocalDate, Double?>> = emptyList(),
     val stress: List<Point> = emptyList(),
     val hourly: List<Point> = emptyList(),
@@ -109,6 +111,7 @@ internal suspend fun loadWatch(ctx: Context, cards: List<DashCard>): WatchSnap =
     val zones = async { if (has(DashCard.HR_ZONES)) runCatching { Scores.zonesOf(ctx, today) }.getOrNull() else null }
     val night = async { if (has(DashCard.SLEEP_STAGES)) HealthRepository.sleepNight(today) else null }
     val debt = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Scores.sleepDebtOf(ctx, today) }.getOrNull() else null }
+    val score = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, today) }.getOrNull() else null }
     val hrv = async {
         if (has(DashCard.HRV_STATUS)) (29L downTo 0L).map { today.minusDays(it) }.map { d -> async { d to runCatching { Bridge.healthValue(ctx, Metric.HRV, d) }.getOrNull() } }.awaitAll()
         else emptyList()
@@ -116,7 +119,7 @@ internal suspend fun loadWatch(ctx: Context, cards: List<DashCard>): WatchSnap =
     val stress = async { if (has(DashCard.STRESS_DAY)) runCatching { HealthRepository.intraday(Metric.STRESS, today) }.getOrDefault(emptyList()) else emptyList() }
     val hourly = async { if (has(DashCard.DAY_TIMELINE)) runCatching { Bridge.hourlySteps(ctx, today) }.getOrDefault(emptyList()) else emptyList() }
     val ef = efforts.await()
-    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), hrv.await(), stress.await(), hourly.await())
+    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), score.await(), hrv.await(), stress.await(), hourly.await())
 }
 
 // ---- Couleurs ------------------------------------------------------------------------------
@@ -292,6 +295,7 @@ internal fun SleepStagesCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav:
         val asleep = night.filter { it.kind != ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60_000.0
         Row(verticalAlignment = Alignment.Bottom) {
             Value(formatDuration(asleep), color = c.ink().onContainer())
+            w.sleepScore?.let { Sub(" · " + trf("Score %1\$s", it.roundToInt())) }
             Spacer(Modifier.weight(1f))
             w.debt?.let { d -> Sub(if (d <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(d))) }
         }

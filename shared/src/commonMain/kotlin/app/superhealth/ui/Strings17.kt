@@ -119,5 +119,8 @@ object Strings17 {
         "Apple Santé n'a pas répondu" to "Apple Health did not respond",
         "Installée sans le droit Apple Santé : réinstallez l'app avec un outil qui garde HealthKit." to "Installed without the Apple Health entitlement: reinstall the app with a tool that keeps HealthKit.",
         "Apple Santé a refusé la demande" to "Apple Health refused the request",
+        // source des mesures (1.7.8)
+        "Bague" to "Ring", "Bracelet" to "Band", "Ceinture cardio" to "Chest strap", "Balance" to "Scale",
+        "Saisie" to "Logged", "Appareil" to "Device", "Score %1\$s" to "Score %1\$s",
     )
 }

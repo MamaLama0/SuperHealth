@@ -3,6 +3,8 @@ package app.superhealth.health
 import app.superhealth.platform.*
 
 import app.superhealth.health.data.ActivityKind
+import app.superhealth.health.data.DataSource
+import app.superhealth.health.data.SourceKind
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.HealthSource
 import app.superhealth.health.data.Lap
@@ -355,10 +357,24 @@ object HealthKitSource : HealthSource {
         }
     }
 
+    private val stagedValues = setOf(HKCategoryValueSleepAnalysisAsleepCore, HKCategoryValueSleepAnalysisAsleepDeep, HKCategoryValueSleepAnalysisAsleepREM)
+
+    /**
+     * Sommeil d'une seule source : une nuit écrite par plusieurs (Apple Watch, Garmin Connect, iPhone…) ne compte qu'une
+     * fois. On garde la source aux phases détaillées, sinon celle qui a le plus de sommeil.
+     */
+    private suspend fun sleepSamples(fromMs: Long, toMs: Long): List<HKCategorySample> =
+        samples(sleepType, HKQuery.predicateForSamplesWithStartDate(date(fromMs), date(toMs), 0u)).filterIsInstance<HKCategorySample>()
+            .groupBy { it.sourceRevision.source.bundleIdentifier }.values
+            .maxWithOrNull(compareBy<List<HKCategorySample>>({ l -> l.any { it.value in stagedValues } }, { l ->
+                l.filter { it.value != HKCategoryValueSleepAnalysisInBed && it.value != HKCategoryValueSleepAnalysisAwake }
+                    .sumOf { it.endDate.ms() - it.startDate.ms() }
+            })).orEmpty()
+
     override suspend fun sleep(fromMs: Long, toMs: Long): List<HealthRepository.SleepPhase> {
-        val all = samples(sleepType, HKQuery.predicateForSamplesWithStartDate(date(fromMs), date(toMs), 0u)).filterIsInstance<HKCategorySample>()
+        val all = sleepSamples(fromMs, toMs)
         // phases détaillées (Apple Watch) si elles existent ; sinon « endormi » / « au lit » (autres apps, iPhone seul)
-        val staged = all.filter { it.value in setOf(HKCategoryValueSleepAnalysisAsleepCore, HKCategoryValueSleepAnalysisAsleepDeep, HKCategoryValueSleepAnalysisAsleepREM) }
+        val staged = all.filter { it.value in stagedValues }
         val use = if (staged.isNotEmpty()) all.filter { it.value != HKCategoryValueSleepAnalysisInBed && it.value != HKCategoryValueSleepAnalysisAsleepUnspecified }
             else all.filter { it.value != HKCategoryValueSleepAnalysisInBed }.ifEmpty { all }
         return use.map { s ->
@@ -371,6 +387,54 @@ object HealthKitSource : HealthSource {
             }
             HealthRepository.SleepPhase(kind, s.startDate.ms(), s.endDate.ms())
         }.distinctBy { Triple(it.kind, it.start, it.end) }
+    }
+
+    // ---- Source des mesures ----------------------------------------------------------------------------------------
+
+    private fun typeOf(metric: Metric): String? = when (metric) {
+        Metric.STEPS -> HKQuantityTypeIdentifierStepCount
+        Metric.DISTANCE -> HKQuantityTypeIdentifierDistanceWalkingRunning
+        Metric.CALORIES -> HKQuantityTypeIdentifierActiveEnergyBurned
+        Metric.ACTIVE_MINUTES -> HKQuantityTypeIdentifierAppleExerciseTime
+        Metric.HEART_RATE -> HKQuantityTypeIdentifierHeartRate
+        Metric.RESTING_HR -> HKQuantityTypeIdentifierRestingHeartRate
+        Metric.HRV -> HKQuantityTypeIdentifierHeartRateVariabilitySDNN
+        Metric.RESPIRATORY_RATE -> HKQuantityTypeIdentifierRespiratoryRate
+        Metric.SPO2 -> HKQuantityTypeIdentifierOxygenSaturation
+        Metric.TEMPERATURE -> HKQuantityTypeIdentifierAppleSleepingWristTemperature
+        Metric.VO2MAX -> HKQuantityTypeIdentifierVO2Max
+        Metric.WEIGHT -> HKQuantityTypeIdentifierBodyMass
+        Metric.FLIGHTS -> HKQuantityTypeIdentifierFlightsClimbed
+        Metric.WALKING_HR -> HKQuantityTypeIdentifierWalkingHeartRateAverage
+        Metric.HR_RECOVERY -> HKQuantityTypeIdentifierHeartRateRecoveryOneMinute
+        Metric.WALKING_SPEED -> HKQuantityTypeIdentifierWalkingSpeed
+        Metric.NOISE -> HKQuantityTypeIdentifierEnvironmentalAudioExposure
+        else -> null
+    }
+
+    override suspend fun source(metric: Metric, date: LocalDate): DataSource? {
+        val from = HealthRepository.startMs(date)
+        val to = HealthRepository.endMs(date)
+        val sample: HKSample? = if (metric == Metric.SLEEP) sleepSamples(from - 18 * 3_600_000L, to).maxByOrNull { it.endDate.ms() }
+            else typeOf(metric)?.let { HKQuantityType.quantityTypeForIdentifier(it) }?.let { samples(it, range(from, to), 1u, newestFirst = true).firstOrNull() }
+        return sample?.let(::sourceOf)
+    }
+
+    /** Apple Watch / iPhone (données d'Apple : nom de l'appareil), sinon l'appli qui a écrit la donnée et son appareil. */
+    private fun sourceOf(s: HKSample): DataSource {
+        val rev = s.sourceRevision
+        val bundle = rev.source.bundleIdentifier
+        val product = rev.productType.orEmpty()
+        if (bundle.startsWith("com.apple")) {
+            val kind = when {
+                product.startsWith("Watch") || s.device?.model == "Watch" -> SourceKind.WATCH
+                product.startsWith("iPhone") || product.startsWith("iPad") -> SourceKind.PHONE
+                else -> SourceKind.OTHER
+            }
+            return DataSource(kind, rev.source.name)
+        }
+        val device = s.device?.let { d -> d.name?.takeIf { it.isNotBlank() } ?: listOfNotNull(d.manufacturer, d.model).joinToString(" ").takeIf { it.isNotBlank() } }
+        return DataSource.fromApp(bundle, DataSource.appName(bundle) ?: rev.source.name, null, device)
     }
 
     // ---- Séances -------------------------------------------------------------------------------------------------

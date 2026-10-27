@@ -140,6 +140,13 @@ object Bridge {
         }
     }
 
+    /** D'où vient [metric] le jour [date] : l'appareil ou l'appli qui l'a écrit dans Apple Santé, ou la saisie. */
+    suspend fun dataSource(metric: Metric, date: LocalDate): app.superhealth.health.data.DataSource? {
+        if (metric.manual) return app.superhealth.health.data.DataSource(app.superhealth.health.data.SourceKind.MANUAL)
+        if (Watch.enabled && HealthRepository.isSupported(metric)) HealthRepository.sourceOf(metric, date)?.let { return it }
+        return SuperPrefs.hc.value.origins[metric.name]
+    }
+
     /** Une mesure est-elle disponible (montre qui la mesure, ou données Health Connect récentes) ? */
     fun hasSource(metric: Metric): Boolean {
         if (metric.manual) return true

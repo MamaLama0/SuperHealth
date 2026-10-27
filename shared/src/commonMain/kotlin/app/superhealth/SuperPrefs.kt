@@ -303,6 +303,8 @@ data class HcCache(
      * Fusionnés heure par heure avec ceux de la montre (voir Bridge.steps).
      */
     val stepsHourly: Map<Long, Double> = emptyMap(),
+    /** Source de la donnée la plus récente de chaque mesure (nom de [app.superhealth.health.data.Metric]) : appli et type d'appareil. */
+    val origins: Map<String, app.superhealth.health.data.DataSource> = emptyMap(),
 )
 
 /** Séance d'exercice enregistrée par une autre app (course, marche, vélo…). */

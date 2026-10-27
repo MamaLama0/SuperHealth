@@ -50,6 +50,9 @@ interface HealthSource {
     /** Mesures brutes horodatées entre [fromMs] et [toMs] (pouls, pas, SpO2…). */
     suspend fun samples(metric: Metric, fromMs: Long, toMs: Long): List<Point>
 
+    /** Appareil et appli qui ont fourni [metric] le jour [date] (donnée la plus récente du jour). */
+    suspend fun source(metric: Metric, date: LocalDate): DataSource? = null
+
     /** Phases de sommeil qui se terminent entre [fromMs] et [toMs]. */
     suspend fun sleep(fromMs: Long, toMs: Long): List<HealthRepository.SleepPhase>
 

@@ -183,6 +183,10 @@ object HealthRepository {
      * Nuit qui se termine le jour [date] (la plus longue s'il y en a plusieurs), phase par phase ; null sans nuit enregistrée.
      * Les phases à moins d'une heure d'écart appartiennent à la même nuit.
      */
+    /** Appareil et appli qui fournissent [metric] le jour [date]. */
+    suspend fun sourceOf(metric: Metric, date: LocalDate): DataSource? =
+        if (devices().isEmpty()) null else runCatching { source.source(metric, date) }.getOrNull()
+
     suspend fun sleepNight(date: LocalDate): List<SleepPhase>? = runCatching {
         if (devices().isEmpty() || !source.supports(Metric.SLEEP)) return@runCatching null
         val phases = source.sleep(startMs(date) - 18 * 3_600_000L, endMs(date)).sortedBy { it.start }
