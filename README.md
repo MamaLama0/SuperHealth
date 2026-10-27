@@ -34,4 +34,5 @@ et SuperHealth perdrait Apple Santé au renouvellement suivant. Pour une nouvell
 ## Licence
 
 SideStore est sous licence [AGPL-3.0](https://github.com/SideStore/SideStore/blob/develop/LICENSE) ; cette version
-modifiée aussi. Son code source complet = SideStore `0.7.0-alpha` + `patch_healthkit.py`.
+modifiée aussi. Son code source complet = SideStore à la version indiquée dans le nom de la pré-version +
+`patch_healthkit.py`.
