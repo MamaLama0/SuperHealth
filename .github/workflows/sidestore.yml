@@ -69,6 +69,22 @@ jobs:
           python3 patcher/patch_healthkit.py ss
           git -C ss/Dependencies/SideSign diff
 
+      - name: Numéro de version officiel
+        if: steps.v.outputs.skip != 'true'
+        working-directory: ss
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # l'ipa officielle porte la version normalisée de son canal (ex. 0.7.0-20260911.328+6032424a), pas le
+          # MARKETING_VERSION du dépôt (0.7.0) : sans ce numéro, SideStore ne reconnaît pas sa propre version dans
+          # la source officielle et se croit pas à jour
+          gh release download "${{ steps.v.outputs.ref }}" --repo SideStore/SideStore --pattern SideStore.ipa --dir ../official
+          unzip -q -o ../official/SideStore.ipa 'Payload/SideStore.app/Info.plist' -d ../official
+          V=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ../official/Payload/SideStore.app/Info.plist)
+          python3 scripts/ci/workflow.py set-marketing-version "$V"
+          grep MARKETING_VERSION Build.xcconfig
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+
       - name: Build
         if: steps.v.outputs.skip != 'true'
         working-directory: ss
@@ -81,6 +97,8 @@ jobs:
           # la capacité HealthKit doit être dans le binaire, sinon le patch n'a servi à rien
           unzip -q -o SideStore-HealthKit.ipa -d check
           grep -q -a HK421J6T7P check/Payload/SideStore.app/SideStore
+          # et le même numéro de version que l'ipa officielle
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' check/Payload/SideStore.app/Info.plist)" = "$VERSION"
           ls -lh SideStore-HealthKit.ipa
 
       - if: steps.v.outputs.skip != 'true'
@@ -101,5 +119,6 @@ jobs:
           body: |
             SideStore ${{ steps.v.outputs.ref }} compilé tel quel, avec un seul changement : HealthKit autorisé pour les
             identifiants Apple gratuits (voir patch_healthkit.py sur la branche sidestore). Sert à installer SuperHealth
-            iOS avec l'accès à Apple Santé. Licence AGPL-3.0, code d'origine : https://github.com/SideStore/SideStore
+            iOS avec l'accès à Apple Santé. Même numéro de version que l'ipa officielle : ${{ env.VERSION }}.
+            Licence AGPL-3.0, code d'origine : https://github.com/SideStore/SideStore
           files: SideStore-HealthKit.ipa
