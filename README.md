@@ -29,7 +29,128 @@ L'`.ipa` n'est pas signée : il faut l'installer avec un outil de sideload, qui 
 Elle est publiée dans les [versions](https://github.com/MamaLama0/SuperHealth/releases) marquées « iOS » ; le code est
 sur la branche [`ios`](https://github.com/MamaLama0/SuperHealth/tree/ios).
 
-### Installer sur iPhone avec Sideloadly
+### Quelle méthode ?
+
+| | SideStore + HealthKit | Sideloadly |
+| --- | --- | --- |
+| Apple Santé (pas, cœur, sommeil, Apple Watch…) | **Oui** | Non |
+| Identifiant Apple gratuit | Oui | Oui |
+| Renouvellement tous les 7 jours | Depuis l'iPhone, sans ordinateur | Depuis l'ordinateur |
+| Ordinateur | Windows, Mac ou Linux, une seule fois | Windows ou Mac, à chaque renouvellement |
+
+Avec un identifiant Apple gratuit, **Sideloadly retire le droit HealthKit** en signant l'app (les droits personnalisés
+y sont réservés au compte développeur payant) : SuperHealth s'installe mais affiche « Installée sans le droit Apple
+Santé ». Apple autorise pourtant HealthKit aux comptes gratuits ; la branche
+[`sidestore`](https://github.com/MamaLama0/SuperHealth/tree/sidestore) fournit donc **SideStore avec HealthKit
+autorisé** (SideStore officiel + un patch de 6 lignes). C'est la méthode à suivre pour avoir Apple Santé.
+
+### Installer sur iPhone avec SideStore (Apple Santé)
+
+[SideStore](https://sidestore.io) est un magasin d'apps installé sur l'iPhone : il signe les apps avec votre
+identifiant Apple et les renouvelle lui-même, sans ordinateur après la première installation. On l'installe une fois
+avec [iloader](https://iloader.app) depuis un ordinateur.
+
+#### Ce qu'il faut
+
+- Un iPhone sous iOS 16.2 ou plus récent, avec un code de verrouillage.
+- Un ordinateur pour la première installation seulement : **Windows 8 ou plus récent (64 bits)**, **macOS 10.13 ou
+  plus récent** ou **Linux** à jour.
+- Un câble USB et une connexion **Wi-Fi** (les données mobiles ne suffisent pas pour SideStore).
+- Un identifiant Apple (gratuit suffit). Les apps restent valables **7 jours** et SideStore les renouvelle.
+- Deux fichiers à télécharger sur l'iPhone (app Fichiers) ou sur l'ordinateur :
+  - `SideStore-HealthKit.ipa` : pré-version [« SideStore + HealthKit »](https://github.com/MamaLama0/SuperHealth/releases/tag/sidestore-healthkit-0.7.0-alpha) ;
+  - `SuperHealth.ipa` : dernière version marquée « iOS » dans les [versions](https://github.com/MamaLama0/SuperHealth/releases).
+
+#### 0. Si SuperHealth est déjà installé avec Sideloadly
+
+L'app installée par Sideloadly n'a pas Apple Santé et ne pourra pas être remplacée par celle de SideStore (signature
+différente) :
+
+1. Dans SuperHealth : rond de votre initiale > **Sauvegarde** > **Exporter**, enregistrez le fichier dans Fichiers et
+   notez le **code de récupération** affiché.
+2. Supprimez SuperHealth (appui long sur l'icône > Supprimer l'app). Cela libère aussi une des 3 places d'app.
+3. Si le SideStore officiel est déjà installé, supprimez-le aussi : la version HealthKit le remplace.
+
+#### 1. Préparer l'iPhone : LocalDevVPN
+
+1. Installez **LocalDevVPN** depuis l'[App Store](https://apps.apple.com/app/localdevvpn/id6755608044).
+2. Ouvrez-la, touchez **Connect**, puis **Autoriser** pour la configuration VPN et entrez le code de l'iPhone.
+3. Ce VPN local doit être **connecté chaque fois que SideStore installe, met à jour ou renouvelle une app**. Il ne
+   fait pas sortir vos données de l'iPhone.
+
+#### 2. Préparer l'ordinateur : iloader
+
+- **Windows** : installez iTunes (Microsoft Store ou site d'Apple ; à défaut, l'app « Appareils Apple »), puis
+  iloader en [MSI](https://github.com/nab138/iloader/releases/latest/download/iloader-windows-x64.msi).
+- **Mac** : installez iloader depuis le [DMG](https://github.com/nab138/iloader/releases/latest/download/iloader-darwin-universal.dmg).
+- **Linux** : installez `usbmuxd` avec le gestionnaire de paquets, puis iloader en
+  [DEB](https://github.com/nab138/iloader/releases/latest/download/iloader-linux-amd64.deb),
+  [RPM](https://github.com/nab138/iloader/releases/latest/download/iloader-linux-x86_64.rpm) ou
+  [AppImage](https://github.com/nab138/iloader/releases/latest/download/iloader-linux-amd64.AppImage)
+  (`chmod +x` puis lancez-la). Si l'iPhone n'apparaît pas : arrêtez le service `usbmuxd` et lancez
+  `sudo usbmuxd -v -f` dans un autre terminal.
+
+#### 3. Installer SideStore + HealthKit avec iloader
+
+1. Branchez l'iPhone en USB, déverrouillez-le, touchez **Se fier à cet ordinateur** et entrez le code.
+2. Ouvrez iloader et connectez-vous avec votre **identifiant Apple** (mot de passe sensible à la casse, puis code de
+   double authentification). Le mot de passe part uniquement vers Apple.
+3. Choisissez votre iPhone.
+4. Choisissez **Import IPA** (et non « Install SideStore (Stable) », qui installe la version sans HealthKit) et
+   sélectionnez `SideStore-HealthKit.ipa`. Attendez la fin de l'installation.
+5. Toujours dans iloader, ouvrez la gestion des **fichiers d'appairage** (pairing files) et installez-en un pour
+   **SideStore** : c'est ce qui permet à SideStore d'installer des apps sans ordinateur ensuite.
+
+#### 4. Autoriser SideStore sur l'iPhone
+
+1. **Faire confiance au profil** : Réglages > Général > **VPN et gestion de l'appareil** > section « App de
+   développeur » > votre identifiant Apple > **Faire confiance à …** > **Faire confiance**.
+2. **Mode développeur** (une seule fois) : Réglages > Confidentialité et sécurité > tout en bas **Mode développeur** >
+   activer. L'iPhone redémarre ; au réveil, confirmez **Activer** et entrez le code.
+3. Ouvrez **LocalDevVPN** > **Connect**.
+4. Ouvrez **SideStore** et connectez-vous avec le **même identifiant Apple** que dans iloader.
+5. Onglet **My Apps** : touchez le compteur **7 DAYS** à côté de SideStore pour le renouveler une première fois ; s'il
+   propose de révoquer ou de créer un certificat, répondez **Yes** / **Refresh Now**. SideStore revient à l'écran
+   d'accueil avec une notification : c'est normal, rouvrez-le.
+
+#### 5. Installer SuperHealth depuis SideStore
+
+1. LocalDevVPN connecté, ouvrez SideStore > **My Apps** > bouton **+** en haut à gauche.
+2. Choisissez `SuperHealth.ipa` dans Fichiers (téléchargez-la d'abord depuis Safari : elle va dans Téléchargements).
+3. Attendez la fin de l'installation : SideStore crée l'identifiant d'app **avec la capacité HealthKit** et garde le
+   droit Apple Santé à la signature.
+4. Ouvrez SuperHealth. Si vous aviez une sauvegarde (étape 0) : rond de votre initiale > **Sauvegarde** >
+   **Restaurer un fichier**, puis entrez le code de récupération.
+
+#### 6. Connecter Apple Santé
+
+1. Pendant l'accueil, touchez **Connecter** (ou plus tard : rond de votre initiale en haut à droite > Apple Santé >
+   activez l'interrupteur), puis **Tout activer** dans la fenêtre de Santé et **Autoriser**.
+2. Vérifiez : Réglages de l'iPhone > Santé > Accès aux données et appareils > **SuperHealth** doit apparaître.
+3. Avec une Apple Watch, rien d'autre à faire : elle écrit dans Santé. Pour une autre montre (Garmin, Polar,
+   Withings…), activez le partage vers Apple Santé dans son app.
+
+Si « Installée sans le droit Apple Santé » s'affiche encore : vérifiez que SuperHealth a bien été installée **depuis
+SideStore + HealthKit** (pas Sideloadly, pas le SideStore officiel), supprimez-la et réinstallez-la depuis SideStore.
+
+#### Renouvellement et mises à jour
+
+- **Tous les 7 jours** : LocalDevVPN connecté, SideStore > My Apps > **Refresh All** (ou le compteur de chaque app).
+  Faites-le avant l'expiration ; une app expirée ne s'ouvre plus, mais **ses données restent** et un renouvellement
+  la relance.
+- **Mise à jour de SuperHealth** : SideStore > My Apps > **+** > nouvelle `SuperHealth.ipa`, **sans supprimer**
+  l'ancienne : les données sont conservées.
+- **Fichier d'appairage expiré** (après une mise à jour d'iOS, une réinitialisation ou parfois sans raison) :
+  SideStore n'arrive plus à installer ; refaites l'étape 3.5 avec iloader.
+- **Limites d'un identifiant gratuit** : 3 apps à la fois (SideStore en compte une, SuperHealth une) et 10
+  identifiants d'app tous les 7 jours (SuperHealth en utilise 2 : l'app et ses widgets).
+
+Aide : [documentation de SideStore](https://docs.sidestore.io) et sa FAQ.
+
+### Installer avec Sideloadly (sans Apple Santé)
+
+> Avec un identifiant Apple gratuit, Sideloadly retire le droit HealthKit : l'app fonctionne, mais **sans Apple
+> Santé** (pas de pas, cœur, sommeil ni Apple Watch). Pour Apple Santé, suivez la méthode SideStore ci-dessus.
 
 [Sideloadly](https://sideloadly.io/#features) installe une `.ipa` depuis un ordinateur Windows ou Mac, avec un
 identifiant Apple gratuit (pas besoin du programme développeur payant).
@@ -87,18 +208,6 @@ identifiant Apple gratuit (pas besoin du programme développeur payant).
 2. **Faire confiance au profil** : Réglages > Général > **VPN et gestion de l'appareil** > touchez votre adresse
    e-mail > **Faire confiance**.
 3. Ouvrez SuperHealth.
-
-#### 5. Connecter Apple Santé
-
-1. Pendant l'accueil, touchez **Connecter** (ou plus tard : rond de votre initiale en haut à droite > Apple Santé >
-   activez l'interrupteur), puis **Tout activer** dans la fenêtre de Santé et **Autoriser**.
-2. Pour revoir les accès : Réglages de l'iPhone > Santé > Accès aux données et appareils > SuperHealth.
-3. Avec une Apple Watch, rien d'autre à faire : elle écrit dans Santé. Pour une autre montre (Garmin, Polar,
-   Withings…), activez le partage vers Apple Santé dans son app.
-
-Si un message dit que l'app a été **installée sans le droit Apple Santé**, le compte qui a signé l'app n'a pas reçu la
-fonction HealthKit : réinstallez avec Sideloadly en mode **Apple ID Sideload** (pas « Ad-hoc ») ; si le message
-revient avec un identifiant Apple gratuit, seul un compte développeur payant permet Apple Santé.
 
 #### Renouvellement (identifiant gratuit : tous les 7 jours)
 
