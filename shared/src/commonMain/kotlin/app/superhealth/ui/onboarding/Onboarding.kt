@@ -189,7 +189,7 @@ private enum class Step(val section: Int) {
     WELCOME(0), USES(0), NAME(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
     GOAL(1), TARGET(1), PACE(1), PREFS(1),
     TRAINING(2), EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
-    WATCH(3), HEALTH(3),
+    WATCH(3), HEALTH(3), AI(3),
     GENERATING(4), RESULT(4),
 }
 
@@ -217,6 +217,7 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
     Step.RHYTHM -> Icons.Rounded.CalendarMonth to WorkoutBlue
     Step.PREFS -> Icons.Rounded.Restaurant to Base.Green
     Step.WATCH -> Icons.Rounded.Watch to HealthHues.Respiration
+    Step.AI -> Icons.Rounded.AutoAwesome to app.superhealth.ui.coach.CoachHue
     Step.GENERATING, Step.RESULT -> Icons.Rounded.CheckCircle to Base.Green
 }
 
@@ -299,6 +300,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         when (it) {
             Step.HEALTH -> healthAvailable && (wantsHealth || mode != OnboardingMode.FULL)
             Step.WATCH -> wantsHealth || mode != OnboardingMode.FULL
+            // IA offerte : proposée à l'accueil quand le build l'embarque (sinon rien à proposer sans clé)
+            Step.AI -> mode == OnboardingMode.FULL && app.superhealth.nutrition.data.AiGift.available
             Step.HISTORY, Step.GOAL, Step.PREFS, Step.TRAINING -> wantsNutrition
             Step.TARGET, Step.PACE -> wantsNutrition && goal != GoalType.MAINTENANCE
             Step.EXPERIENCE, Step.GYM, Step.LIFT_GOAL -> lifts
@@ -584,6 +587,17 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                                 HealthConnectHub.Status.NEEDS_UPDATE, HealthConnectHub.Status.UNAVAILABLE -> Toast.makeText(ctx, tr("Apple Santé n'est pas disponible sur ce téléphone"),
                                     Toast.LENGTH_LONG).show()
                             }
+                        }
+                    }
+                    Step.AI -> Page(st, tr("Activer l'IA offerte ?"), tr("Gratuite, sans clé.")) {
+                        val ai by vm.repo.prefs.ai.collectAsState()
+                        val on = ai.provider == app.superhealth.nutrition.data.AiProvider.OFFERED
+                        Feature(Icons.Rounded.PhotoCamera, tr("Une photo du repas suffit pour le noter"))
+                        Feature(Icons.Rounded.AutoAwesome, tr("Un coach qui connaît vos données"))
+                        Feature(Icons.Rounded.Restaurant, tr("Des repas composés selon vos objectifs"))
+                        Spacer(Modifier.height(16.dp))
+                        PillButton(tr(if (on) "Activée" else "Activer"), Modifier.fillMaxWidth(), icon = if (on) Icons.Rounded.CheckCircle else null) {
+                            vm.repo.prefs.setAi(if (on) app.superhealth.nutrition.data.AiConfig() else ai.copy(provider = app.superhealth.nutrition.data.AiProvider.OFFERED))
                         }
                     }
                     Step.GOAL -> Page(st, tr("Quel est votre objectif ?"), null) {

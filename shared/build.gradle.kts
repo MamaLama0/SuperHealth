@@ -1,4 +1,41 @@
+import java.security.MessageDigest
+import java.util.Random
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+// IA offerte par SuperHealth : adresse, modèle et clé lus HORS du dépôt (~/.gradle/gradle.properties : superhealthAiUrl,
+// superhealthAiModel, superhealthAiKey ; ou variables SUPERHEALTH_AI_URL / _MODEL / _KEY, secrets de la CI) et écrits
+// masqués (XOR) dans une source générée : jamais en clair dans le dépôt ni dans l'app. Sans clé : option absente.
+val aiGiftValues = listOf("url", "model", "key").associateWith { k ->
+    ((findProperty("superhealthAi" + k.replaceFirstChar { it.uppercase() }) as String?)
+        ?: System.getenv("SUPERHEALTH_AI_" + k.uppercase()) ?: "").trim()
+}
+val generateAiGift = tasks.register("generateAiGift") {
+    val dir = layout.buildDirectory.dir("generated/sources/aigift")
+    val values = aiGiftValues
+    inputs.property("digest", MessageDigest.getInstance("SHA-256")
+        .digest(values.values.joinToString("\n").toByteArray()).joinToString("") { "%02x".format(it) })
+    outputs.dir(dir)
+    doLast {
+        val rnd = Random(values.values.joinToString("\n").hashCode() * 31L + 7)
+        fun enc(v: String): String {
+            val pad = v.indices.map { rnd.nextInt(0xFFFF) }
+            val data = v.indices.map { v[it].code xor pad[it] }
+            return "d(intArrayOf(${data.joinToString(", ")}), intArrayOf(${pad.joinToString(", ")}))"
+        }
+        val out = dir.get().file("app/superhealth/nutrition/data/AiGiftValues.kt").asFile
+        out.parentFile.mkdirs()
+        out.writeText("""package app.superhealth.nutrition.data
+
+/** Généré à la compilation (tâche generateAiGift) : IA offerte, valeurs masquées. Ne pas modifier. */
+internal object AiGiftValues {
+    val url: String get() = ${enc(values.getValue("url"))}
+    val model: String get() = ${enc(values.getValue("model"))}
+    val key: String get() = ${enc(values.getValue("key"))}
+    private fun d(a: IntArray, p: IntArray): String = CharArray(a.size) { (a[it] xor p[it]).toChar() }.concatToString()
+}
+""")
+    }
+}
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -40,6 +77,7 @@ kotlin {
     }
 
     sourceSets {
+        commonMain { kotlin.srcDir(generateAiGift) }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)

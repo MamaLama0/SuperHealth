@@ -22,9 +22,13 @@ import app.superhealth.platform.Base64
 /** Fournisseurs compatibles avec l'API Chat Completions d'OpenAI. */
 @Serializable
 enum class AiProvider(val label: String, val baseUrl: String, val defaultModel: String, val keyHelp: String) {
+    /** Offerte par SuperHealth : adresse, modèle et clé intégrés à la compilation (voir [AiGift]). */
+    OFFERED("IA offerte", "", "", "Sans clé à créer."),
+    GEMINI("Google AI Studio", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-flash-lite-latest",
+        "Clé gratuite sur aistudio.google.com."),
     OPENROUTER("OpenRouter", "https://openrouter.ai/api/v1", "google/gemini-3.1-flash-lite",
         "Clé sur openrouter.ai."),
-    CUSTOM("Autre (compatible OpenAI)", "", "", "URL de base se terminant avant /chat/completions (ex. Ollama, Groq…)."),
+    CUSTOM("Autre (compatible OpenAI)", "", "", "URL avant /chat/completions (Ollama, Groq…)."),
 }
 
 /** Réglages IA, stockés à part des réglages (jamais inclus dans la sauvegarde JSON). */
@@ -35,9 +39,26 @@ data class AiConfig(
     val model: String = "",
     val baseUrl: String = "",
 ) {
-    val effectiveModel get() = model.ifBlank { provider.defaultModel }
-    val effectiveUrl get() = (if (provider == AiProvider.CUSTOM) baseUrl else baseUrl.ifBlank { provider.baseUrl }).trimEnd('/')
-    val ready get() = apiKey.isNotBlank() && effectiveModel.isNotBlank() && effectiveUrl.isNotBlank()
+    private val offered get() = provider == AiProvider.OFFERED
+    val effectiveModel get() = if (offered) AiGift.model else model.ifBlank { provider.defaultModel }
+    val effectiveUrl get() = (if (offered) AiGift.url else if (provider == AiProvider.CUSTOM) baseUrl else baseUrl.ifBlank { provider.baseUrl }).trimEnd('/')
+    val effectiveKey get() = if (offered) AiGift.key else apiKey.trim()
+    val ready get() = effectiveKey.isNotBlank() && effectiveModel.isNotBlank() && effectiveUrl.isNotBlank()
+    /** Les modèles GPT-5 (IA offerte) refusent « max_tokens ». */
+    val maxTokensParam get() = if (offered) "max_completion_tokens" else "max_tokens"
+
+    /** Avant chaque appel : l'IA offerte a un quota quotidien par téléphone. */
+}
+
+/**
+ * IA offerte par l'auteur de SuperHealth (son abonnement) : présente seulement dans les builds qui embarquent sa clé
+ * (générée masquée à la compilation, jamais dans le dépôt). Quota quotidien par téléphone pour garder le coût raisonnable.
+ */
+object AiGift {
+    val available: Boolean get() = runCatching { AiGiftValues.key.isNotEmpty() && AiGiftValues.url.isNotEmpty() }.getOrDefault(false)
+    internal val url get() = AiGiftValues.url
+    internal val model get() = AiGiftValues.model
+    internal val key get() = AiGiftValues.key
 }
 
 /**
@@ -279,13 +300,13 @@ object AiFood {
         val body = buildJsonObject {
             put("model", cfg.effectiveModel)
             put("temperature", temperature)
-            maxTokens?.let { put("max_tokens", it) }
+            maxTokens?.let { put(cfg.maxTokensParam, it) }
             putJsonArray("messages") {
-                addJsonObject { put("role", "system"); put("content", system) }
+                addJsonObject { put("role", "system"); put("content", Anon.name(system)) }
                 addJsonObject {
                     put("role", "user")
                     putJsonArray("content") {
-                        addJsonObject { put("type", "text"); put("text", user) }
+                        addJsonObject { put("type", "text"); put("text", Anon.typed(user)) }
                         if (imageJpeg != null) addJsonObject {
                             put("type", "image_url")
                             putJsonObject("image_url") { put("url", "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(imageJpeg)) }
@@ -299,7 +320,7 @@ object AiFood {
         val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"; doOutput = true; connectTimeout = 15000; readTimeout = 90000
             setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Authorization", "Bearer ${cfg.apiKey.trim()}")
+            setRequestProperty("Authorization", "Bearer ${cfg.effectiveKey}")
             if (cfg.provider == AiProvider.OPENROUTER) { setRequestProperty("X-Title", "La Bouffe") }
         }
         try {
@@ -312,7 +333,7 @@ object AiFood {
                 throw AiException("Erreur $code${msg?.let { " : $it" } ?: ""}")
             }
             val root = json.parseToJsonElement(text).jsonObject
-            root["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
+            root["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull?.let(Anon::restore)
                 ?: throw AiException("Pas de réponse texte du modèle.")
         } finally { conn.disconnect() }
     }

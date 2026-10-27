@@ -1,42 +1,44 @@
 # SuperHealth
 
-Nutrition, musculation et santé dans une seule app, sans compte ni cloud : vos données restent sur le téléphone.
+Nutrition, musculation et santé dans une app gratuite, sans compte : vos données restent sur le téléphone.
+
+## Installer
+
+**Android** : téléchargez l'APK dans les [versions](https://github.com/MamaLama0/SuperHealth/releases/latest) et
+ouvrez-le. Les mises à jour sont automatiques.
+
+**iPhone** (expérimental) : installation par SideStore, avec un ordinateur la première fois seulement.
+
+1. iPhone : installez **LocalDevVPN** (App Store), touchez **Connect**.
+2. Ordinateur : avec **iloader**, installez `SideStore-HealthKit.ipa` sur l'iPhone branché.
+3. iPhone : autorisez SideStore dans les Réglages, connectez-vous.
+4. SideStore : **+** > `SuperHealth.ipa`, puis connectez Apple Santé.
+
+Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](#installer-sur-iphone).
 
 ## Fonctionnalités
 
-- **Nutrition** : journal (recherche, code-barres, description ou photo analysée par IA, recettes), calories et macros
-  ajustées chaque semaine à votre dépense réelle, tendance du poids, objectif avec un rythme choisi, mesures et photos
-  de progression.
-- **Musculation** : programmes générés selon vos objectifs, vos disponibilités et votre salle ; séances guidées avec
-  charges et répétitions calculées, échauffements et minuteur de repos ; progression, records, muscles travaillés.
-- **Santé et activités** : montre connectée (pas, cœur, sommeil, VFC, SpO₂…), scores de récupération, d'effort et
-  dette de sommeil, courses avec tracé, zones cardiaques et splits, import GPX, TCX et FIT.
-- **Tableau de bord** à composer : cartes en quatre tailles, anneaux du jour, constantes, constats et corrélations.
-- **Plugins** : coach IA, planificateur de repas, rappels de médicaments.
-- **Widgets**, sauvegardes chiffrées (fichier ou WebDAV), français et anglais.
+- **Nutrition** : journal (code-barres, photo ou description analysée par IA, recettes), calories ajustées chaque
+  semaine, tendance du poids.
+- **Musculation** : programmes générés, séances guidées, progression et records.
+- **Santé** : montre (pas, cœur, sommeil, VFC…), scores de sommeil, récupération et effort, courses avec tracé.
+  Sur Android, une Garmin se connecte sans Garmin Connect (météo et GPS rapide inclus).
+- **IA offerte** sans clé, ou la vôtre.
+- **Tableau de bord**, widgets, sauvegardes chiffrées, français et anglais.
 
-## Android
+## Vie privée
 
-APK dans les [versions](https://github.com/MamaLama0/SuperHealth/releases/latest).
+Pas de compte ni de serveur. L'IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
 
-## iOS (expérimental)
+## iOS en détail
 
-Build **expérimental** : même interface et mêmes fonctions qu'Android. Les données de la montre viennent d'Apple Santé
-(Apple Watch, ou toute montre qui y écrit), avec en plus les anneaux d'activité, les signes vitaux de la nuit, les
-alertes cardiaques et ECG, la dynamique de course et la séance en cours sur l'écran verrouillé. Le code est sur la
-branche [`ios`](https://github.com/MamaLama0/SuperHealth/tree/ios).
+Données via Apple Santé (Apple Watch ou toute montre qui y écrit). Code sur la branche
+[`ios`](https://github.com/MamaLama0/SuperHealth/tree/ios).
 
 ### Installer sur iPhone
 
-SuperHealth n'est pas sur l'App Store : on l'installe avec **[SideStore](https://sidestore.io)**, un magasin d'apps
-qui signe les apps avec votre identifiant Apple (gratuit) et les renouvelle lui-même depuis l'iPhone. L'ordinateur ne
-sert qu'à la première installation de SideStore.
-
-Il faut **la version « SideStore + HealthKit »** fournie ici, pas le SideStore officiel : avec un identifiant Apple
-gratuit, le SideStore officiel (comme Sideloadly ou AltStore) retire le droit HealthKit en signant l'app, et
-SuperHealth affiche alors « Installée sans le droit Apple Santé ». Apple autorise pourtant HealthKit aux comptes
-gratuits ; la version de la branche [`sidestore`](https://github.com/MamaLama0/SuperHealth/tree/sidestore) est le
-SideStore officiel avec ce seul oubli corrigé (6 lignes, code public).
+Utilisez **la version « SideStore + HealthKit »** fournie ici : le SideStore officiel retire l'accès à Apple Santé.
+Elle inclut aussi le correctif des erreurs de connexion -80045 / -80046 ([code](https://github.com/MamaLama0/SuperHealth/tree/sidestore)).
 
 #### Ce qu'il faut
 
@@ -45,7 +47,7 @@ SideStore officiel avec ce seul oubli corrigé (6 lignes, code public).
   récent, ou Linux à jour.
 - Un **câble USB** et le **Wi-Fi** sur l'iPhone.
 - Un **identifiant Apple** (un compte gratuit suffit ; ce n'est pas forcément celui de l'iPhone).
-- Les deux fichiers de la dernière version iOS, [`ios-v1.7.6`](https://github.com/MamaLama0/SuperHealth/releases/tag/ios-v1.7.6)
+- Les deux fichiers de la dernière version iOS, [`ios-v1.7.8`](https://github.com/MamaLama0/SuperHealth/releases/tag/ios-v1.7.8)
   (ou une `ios-v…` plus récente dans les [versions](https://github.com/MamaLama0/SuperHealth/releases)) :
   - `SideStore-HealthKit.ipa` : à télécharger **sur l'ordinateur** ;
   - `SuperHealth.ipa` : à télécharger **sur l'iPhone**, avec Safari (elle va dans Fichiers > Téléchargements).
@@ -159,7 +161,7 @@ mais **ses données restent**, et un renouvellement la relance.
 | SuperHealth n'apparaît pas dans Santé > Accès aux données | Même cause : réinstallez depuis SideStore + HealthKit, puis rouvrez Apple Santé dans SuperHealth. |
 | « No Wi-Fi or VPN connection » / échec de connexion AFC | Wi-Fi et LocalDevVPN connectés, bloqueurs DNS désactivés, réessayez ; sinon redémarrez SideStore puis LocalDevVPN ; sinon replacez le fichier d'appairage (ligne suivante). |
 | SideStore n'installe plus rien (après une mise à jour d'iOS, une réinitialisation, ou sans raison) | Le fichier d'appairage a expiré. Dans iloader, iPhone branché : **Delete Stored Pairing**, sélectionnez l'iPhone et touchez **Se fier**, puis **Manage Pairing File** > **Place** à droite de SideStore. |
-| « Failed to Sign In … (-80045) » ou (-80046) | Depuis fin octobre 2026, Apple refuse l'« Anisette » calculée sur l'iPhone. Dans SideStore > Réglages > **User Customizations** : désactivez **On-Device Anisette** ; dans **Anisette Servers**, choisissez **SideStore (New)** et désactivez **Enable Auto Rotation** ; dans **Anisette Client Configuration** > **Remote Server Sync**, touchez **Fetch** puis **Save as Overrides** ; revenez et touchez **Reset adi.pb**. Reconnectez-vous une seule fois et patientez (des essais répétés font bloquer le compte quelques heures par Apple). |
+| « Failed to Sign In … (-80045) » ou (-80046) | Depuis fin octobre 2026, Apple refuse l'ancienne façon de se connecter de SideStore. La `SideStore-HealthKit.ipa` de la version `ios-v1.7.8` ou plus récente contient le correctif : réinstallez-la avec iloader (Import IPA), sans supprimer SideStore, puis reconnectez-vous **une seule fois** et patientez (des essais répétés font bloquer le compte quelques heures par Apple). Avec une version plus ancienne, à la main : SideStore > Réglages > **User Customizations** : désactivez **On-Device Anisette** ; dans **Anisette Servers**, choisissez **SideStore (New)** et désactivez **Enable Auto Rotation** ; dans **Anisette Client Configuration** > **Remote Server Sync**, touchez **Fetch** puis **Save as Overrides** ; revenez et touchez **Reset adi.pb**. |
 | Erreur à la connexion dans SideStore | Souvent le serveur « Anisette » indisponible : réessayez plus tard ou changez « Anisette URL » dans les réglages de SideStore. |
 | L'installation reste bloquée en cours de route | Redémarrez SideStore ; sinon videz le cache (réglages de SideStore), redémarrez l'iPhone, replacez le fichier d'appairage, et en dernier recours réinstallez SideStore avec iloader. |
 | Une app ne s'ouvre plus | Elle a expiré (7 jours) : SideStore > My Apps > touchez son compteur pour la renouveler. Vos données sont intactes. |

@@ -11,6 +11,7 @@ import app.superhealth.insights.text
 import app.superhealth.modules.Modules
 import app.superhealth.nutrition.NutriApp
 import app.superhealth.nutrition.data.AiConfig
+import app.superhealth.nutrition.data.Anon
 import app.superhealth.nutrition.data.AiFood
 import app.superhealth.nutrition.data.Net
 import app.superhealth.nutrition.domain.Sex
@@ -143,7 +144,7 @@ object Coach {
             buildString {
                 appendLine("## Profile")
                 val age = today.year - p.birthYear
-                appendLine(listOfNotNull(app.superhealth.ui.userName()?.let { "Name: $it" }, if (p.sex == Sex.MALE) "male" else "female", "$age y",
+                appendLine(listOf(if (p.sex == Sex.MALE) "male" else "female", "$age y",
                     "${p.heightCm.roundToInt()} cm").joinToString(", "))
                 an.currentTrendKg?.let { t ->
                     val past = an.trendByDay.filterKeys { it <= today.toEpochDay() - 14 }.maxByOrNull { it.key }?.value
@@ -234,7 +235,7 @@ object Coach {
     private fun config(): AiConfig {
         val cfg = NutriApp.repository.prefs.ai.value
         val m = SuperPrefs.settings.value.coachModel.trim()
-        return if (m.isNotEmpty()) cfg.copy(model = m) else cfg
+        return if (m.isNotEmpty() && cfg.provider != app.superhealth.nutrition.data.AiProvider.OFFERED) cfg.copy(model = m) else cfg
     }
 
     fun ready(): Boolean = config().ready && prompts() != null
@@ -245,7 +246,7 @@ object Coach {
             .replace("{tone}", p.tones[tone.name] ?: tone.label)
             .replace("{language}", if (Lang.english) "English" else "French")
             .replace("{date}", LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.ENGLISH)))
-            .replace("{name}", app.superhealth.ui.userName() ?: if (Lang.english) "the user" else "l'utilisateur") +
+            .replace("{name}", if (Lang.english) "the user" else "l'utilisateur") +
             "\n\n# Data snapshot\n" + context
     }
 
@@ -256,10 +257,11 @@ object Coach {
         val body = buildJsonObject {
             put("model", cfg.effectiveModel)
             put("temperature", p.temperature)
-            put("max_tokens", p.maxTokens)
+            put(cfg.maxTokensParam, p.maxTokens)
             putJsonArray("messages") {
-                addJsonObject { put("role", "system"); put("content", system) }
-                messages.forEach { m -> addJsonObject { put("role", m.role); put("content", m.text) } }
+                addJsonObject { put("role", "system"); put("content", Anon.name(system)) }
+                // rien d'identifiant : ni nom (même tapé dans une question), ni e-mail, ni téléphone
+                messages.forEach { m -> addJsonObject { put("role", m.role); put("content", if (m.role == "user") Anon.typed(m.text) else Anon.name(m.text)) } }
             }
         }
         val endpoint = cfg.effectiveUrl + "/chat/completions"
@@ -267,7 +269,7 @@ object Coach {
         val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"; doOutput = true; connectTimeout = 15000; readTimeout = 90000
             setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Authorization", "Bearer ${cfg.apiKey.trim()}")
+            setRequestProperty("Authorization", "Bearer ${cfg.effectiveKey}")
             setRequestProperty("X-Title", "SuperHealth Coach")
         }
         try {
@@ -279,7 +281,7 @@ object Coach {
                 throw CoachException("Erreur $code${msg?.let { " : $it" } ?: ""}")
             }
             json.parseToJsonElement(text).jsonObject["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonObject?.get("content")
-                ?.jsonPrimitive?.contentOrNull?.trim() ?: throw CoachException(app.superhealth.ui.tr("Pas de réponse du modèle."))
+                ?.jsonPrimitive?.contentOrNull?.trim()?.let(Anon::restore) ?: throw CoachException(app.superhealth.ui.tr("Pas de réponse du modèle."))
         } finally { conn.disconnect() }
     }
 
