@@ -1,0 +1,70 @@
+name: SideStore HealthKit
+
+# SideStore officiel + patch HealthKit (patch_healthkit.py) → SideStore-HealthKit.ipa, publiée en pré-version
+# (la « dernière version » du dépôt reste l'APK Android, lue par la mise à jour intégrée).
+on:
+  push:
+    branches: [ sidestore ]
+  workflow_dispatch:
+
+env:
+  SIDESTORE_REF: 0.7.0-alpha
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: patcher
+
+      - name: SideStore ${{ env.SIDESTORE_REF }}
+        uses: actions/checkout@v4
+        with:
+          repository: SideStore/SideStore
+          ref: ${{ env.SIDESTORE_REF }}
+          submodules: recursive
+          path: ss
+
+      - run: brew install ldid xcbeautify
+
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: "26.4"
+
+      - name: Patch HealthKit
+        run: |
+          python3 patcher/patch_healthkit.py ss
+          git -C ss/Dependencies/SideSign diff
+
+      - name: Build
+        working-directory: ss
+        run: python3 scripts/ci/workflow.py build
+
+      - name: Paquet
+        run: |
+          mv ss/SideStore.ipa SideStore-HealthKit.ipa
+          ls -lh SideStore-HealthKit.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SideStore-HealthKit
+          path: SideStore-HealthKit.ipa
+
+      - name: Pré-version
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sidestore-healthkit-${{ env.SIDESTORE_REF }}
+          target_commitish: ${{ github.sha }}
+          name: SideStore ${{ env.SIDESTORE_REF }} + HealthKit (pour SuperHealth iOS)
+          prerelease: true
+          make_latest: false
+          body: |
+            SideStore ${{ env.SIDESTORE_REF }} compilé tel quel, avec un seul changement : HealthKit autorisé pour les
+            identifiants Apple gratuits (voir patch_healthkit.py sur la branche sidestore). Sert à installer SuperHealth
+            iOS avec l'accès à Apple Santé. Licence AGPL-3.0, code d'origine : https://github.com/SideStore/SideStore
+          files: SideStore-HealthKit.ipa
