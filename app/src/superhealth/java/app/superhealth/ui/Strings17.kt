@@ -113,5 +113,28 @@ object Strings17 {
         // taille du texte
         "Taille du texte" to "Text size", "Petite" to "Small", "Très grande" to "Extra large",
         "Aperçu : 2 140 kcal, 150 g de protéines." to "Preview: 2,140 kcal, 150 g of protein.",
+        // montre avec son app officielle, association
+        "Oui, avec son app" to "Yes, with its own app",
+        "Garmin Connect, Zepp… restent installées : données via Health Connect" to "Garmin Connect, Zepp… stay installed: data via Health Connect",
+        "Dans l'app de la montre, activez le partage vers Health Connect ; l'étape suivante le connecte ici." to
+            "In the watch's app, turn on sharing to Health Connect; the next step connects it here.",
+        "Montre lue par Health Connect" to "Watch read through Health Connect",
+        "%1\$s est installé" to "%1\$s is installed",
+        "Une montre ne se connecte qu'à une seule app. Pour garder %1\$s, laissez-le gérer la montre et activez son partage vers Health Connect : SuperHealth lira pas, cœur, sommeil et séances. Pour associer ici, dissociez d'abord la montre dans %1\$s." to
+            "A watch connects to only one app. To keep %1\$s, let it manage the watch and turn on its sharing to Health Connect: SuperHealth will read steps, heart rate, sleep and workouts. To pair here, first unpair the watch in %1\$s.",
+        "Utiliser Health Connect" to "Use Health Connect",
+        "Associer quand même" to "Pair anyway",
+        "Autorisez « Appareils à proximité » et « Position » dans Autorisations." to "Allow “Nearby devices” and “Location” in Permissions.",
+        "Sans Bluetooth, la montre ne peut pas être trouvée." to "Without Bluetooth, the watch can't be found.",
+        "Connexion qui tourne en boucle ? %1\$s garde la montre : dissociez-la dans %1\$s, ou gardez %1\$s et passez par Health Connect." to
+            "Connection stuck in a loop? %1\$s keeps the watch: unpair it in %1\$s, or keep %1\$s and use Health Connect.",
+        "Autorisation refusée : accordez-la dans Infos de l'appli > Autorisations." to "Permission denied: grant it in App info > Permissions.",
+        "⋮ en haut à droite > Autoriser les paramètres restreints" to "⋮ at the top right > Allow restricted settings",
+        "Installée depuis un APK : Android bloque notifications, SMS et superposition tant que vous ne les débloquez pas." to
+            "Installed from an APK: Android blocks notifications, SMS and overlay until you unlock them.",
+        "Touchez Débloquer, puis OK sur « Paramètre restreint »" to "Tap Unlock, then OK on “Restricted setting”",
+        "Infos de l'appli s'ouvre : touchez ⋮ en haut à droite" to "App info opens: tap ⋮ at the top right",
+        "« Autoriser les paramètres restreints », puis confirmez" to "“Allow restricted settings”, then confirm",
+        "Débloquer" to "Unlock", "Recommencer" to "Start over",
     )
 }

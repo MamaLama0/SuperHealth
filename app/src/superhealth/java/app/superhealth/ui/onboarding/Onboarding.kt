@@ -109,15 +109,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
 import android.content.Intent
-import androidx.activity.result.contract.ActivityResultContracts
 import app.superhealth.SuperPrefs
 import app.superhealth.bridge.HealthConnectHub
 import app.superhealth.bridge.Watch
 import app.superhealth.training.ui.GymTemplate
 import app.superhealth.ui.SuperViewModel
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.activities.PermissionsActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.discovery.DiscoveryActivityV2
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material.icons.rounded.Tune
@@ -205,6 +202,7 @@ private val SECTIONS = listOf("Vous", "Objectif", "Entraînement", "Connexions")
 /** Choix pour la montre : l'associer maintenant, plus tard, ou désactiver le module LocalHealth. */
 private enum class WatchChoice(val label: String, val description: String) {
     PAIR("Oui, l'associer maintenant", "Recherche Bluetooth de votre montre ou bracelet"),
+    APP("Oui, avec son app", "Garmin Connect, Zepp… restent installées : données via Health Connect"),
     LATER("Oui, plus tard", "Le module montre reste actif, à associer dans Réglages"),
     NONE("Non, pas de montre", "Le module montre est désactivé (réactivable dans Réglages)"),
 }
@@ -283,7 +281,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var liftGoal by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Goal.HYPERTROPHY) }
     var liftDays by rememberSaveable { mutableIntStateOf(3) }
     var liftMinutes by rememberSaveable { mutableIntStateOf(50) }
-    var watch by rememberSaveable { mutableStateOf(WatchChoice.LATER) }
+    // app officielle de la montre déjà installée (Garmin Connect…) : la garder et passer par Health Connect
+    var watch by rememberSaveable { mutableStateOf(if (app.superhealth.ui.health.installedVendorApp(ctx) != null) WatchChoice.APP else WatchChoice.LATER) }
     var paired by rememberSaveable { mutableStateOf(GBApplication.app().deviceManager.devices.isNotEmpty()) }
     // parties de l'app voulues (noms de app.superhealth.Feature) : décident des questions posées
     val shs by SuperPrefs.settings.collectAsState()
@@ -416,7 +415,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             if (p != null) t.saveProgram(p.copy(gymId = myGym.id), activate = true)
             else svm.pendingRoute.value = "training:wizard" // base d'exercices pas encore prête : l'assistant prend le relais
         }
-        Watch.setEnabled(wantsHealth && watch != WatchChoice.NONE)
+        // avec l'app officielle, le module Bluetooth reste coupé : il se disputerait la montre avec elle
+        Watch.setEnabled(wantsHealth && (watch == WatchChoice.PAIR || watch == WatchChoice.LATER))
         SuperPrefs.update { it.copy(onboarded = true, healthConnect = health, features = uses.toSet()) }
         vm.launch {
             weighIns.upsert(WeighInEntity(today, weightKg, bodyFat?.toDouble()))
@@ -426,13 +426,10 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         if (health) svm.syncNow(ctx)
     }
 
-    // Montre : autorisations Bluetooth de Gadgetbridge, puis recherche et association.
-    val pairWatch = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        paired = GBApplication.app().deviceManager.devices.isNotEmpty()
-    }
-    val askWatchPermissions = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        pairWatch.launch(Intent(ctx, DiscoveryActivityV2::class.java))
-    }
+    // Montre : autorisations Bluetooth seules, puis recherche et association (ou Health Connect si son app reste).
+    val pairWatch = app.superhealth.ui.health.rememberPairing(
+        onDone = { paired = GBApplication.app().deviceManager.devices.isNotEmpty() },
+        onUseHealthConnect = { watch = WatchChoice.APP })
 
     val askHealth = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { g ->
         health = g.isNotEmpty(); if (health) next()
@@ -684,18 +681,22 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     }
                     Step.WATCH -> Page(st, tr("Avez-vous une montre connectée ?"), tr("Pas, fréquence cardiaque, sommeil et séances, sans compte ni cloud.")) {
                         Options(WatchChoice.entries, watch, { it.label }, { it.description }, icon = { when (it) {
-                            WatchChoice.PAIR -> Icons.Rounded.Bluetooth; WatchChoice.LATER -> Icons.Rounded.Watch; WatchChoice.NONE -> Icons.Rounded.Close
+                            WatchChoice.PAIR -> Icons.Rounded.Bluetooth; WatchChoice.APP -> Icons.Rounded.Favorite
+                            WatchChoice.LATER -> Icons.Rounded.Watch; WatchChoice.NONE -> Icons.Rounded.Close
                         } }) { watch = it }
                         if (watch == WatchChoice.PAIR) {
                             Spacer(Modifier.height(12.dp))
                             PillButton(if (paired) tr("Montre associée") else tr("Rechercher ma montre"), Modifier.fillMaxWidth(),
                                 icon = if (paired) Icons.Rounded.CheckCircle else Icons.Rounded.Bluetooth) {
                                 if (!Watch.enabled) Watch.setEnabled(true)
-                                runCatching { askWatchPermissions.launch(Intent(ctx, PermissionsActivity::class.java)) }
-                                    .onFailure { runCatching { pairWatch.launch(Intent(ctx, DiscoveryActivityV2::class.java)) } }
+                                pairWatch()
                             }
                             Text(tr("Compatible avec les montres prises en charge par Gadgetbridge (Garmin, Amazfit, Xiaomi, Huawei, Pebble…)."),
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
+                        }
+                        if (watch == WatchChoice.APP) {
+                            Text(tr("Dans l'app de la montre, activez le partage vers Health Connect ; l'étape suivante le connecte ici."),
+                                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 12.dp))
                         }
                     }
                     Step.PREFS -> Page(st, tr("Vos préférences"), tr("Plancher calorique et répartition : réglables plus tard dans Stratégie.")) {
@@ -729,6 +730,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         if (wantsHealth) {
                             Feature(Icons.Rounded.Watch, when (watch) {
                                 WatchChoice.NONE -> tr("Module montre désactivé")
+                                WatchChoice.APP -> tr("Montre lue par Health Connect")
                                 else -> if (paired) tr("Montre associée") else tr("Montre à associer dans Réglages")
                             })
                             Feature(Icons.Rounded.Favorite, if (health) tr("Health Connect connecté") else tr("Health Connect : à connecter dans Réglages"))

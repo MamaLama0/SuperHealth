@@ -1,8 +1,6 @@
 package app.superhealth.ui.health
 
 import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,10 +67,8 @@ import app.superhealth.ui.trf
 import nodomain.freeyourgadget.gadgetbridge.activities.AboutUserPreferencesActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2
 import nodomain.freeyourgadget.gadgetbridge.activities.DataManagementActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.PermissionsActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.discovery.DiscoveryActivityV2
 import nodomain.freeyourgadget.gadgetbridge.activities.preferences.HealthConnectPreferencesActivity
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 
@@ -82,10 +78,12 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
     val sh by vm.settings.collectAsState()
     val devices by vm.devices.collectAsState()
-    val discover = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.bump() }
-    val permissions = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        discover.launch(Intent(ctx, DiscoveryActivityV2::class.java))
-    }
+    val pair = rememberPairing(onDone = {
+        vm.bump()
+        // montre associée : les autorisations facultatives (notifications, SMS, appels…) dans la foulée
+        if (nodomain.freeyourgadget.gadgetbridge.GBApplication.app().deviceManager.devices.isNotEmpty() && missingWatchPermissions(ctx) > 0)
+            nav.navigate("h/permissions")
+    }, onUseHealthConnect = { nav.navigate("settings/hc") })
     DetailScaffold(tr("Montre et appareils"), onBack = { nav.popBackStack() }) {
         GroupCard {
             SwitchRow(tr("Module montre (LocalHealth)"), tr("Connexion Bluetooth aux montres, bracelets et balances"), sh.watchModule) { vm.setWatchModule(it) }
@@ -110,9 +108,15 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
             if (devices.isNotEmpty()) RowDivider()
-            SettingRow(tr("Associer un appareil"), icon = Icons.Rounded.Add) { permissions.launch(Intent(ctx, PermissionsActivity::class.java)) }
+            SettingRow(tr("Associer un appareil"), icon = Icons.Rounded.Add) { pair() }
         }
-        if (devices.isNotEmpty()) {
+        val vendor = remember { installedVendorApp(ctx) }
+        if (vendor != null && devices.isNotEmpty()) {
+            Text(trf("Connexion qui tourne en boucle ? %1\$s garde la montre : dissociez-la dans %1\$s, ou gardez %1\$s et passez par Health Connect.", vendor),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp).clickable { nav.navigate("settings/hc") })
+        }
+        run {
             Spacer(Modifier.height(10.dp))
             GroupCard {
                 val missing = remember(devices) { missingWatchPermissions(ctx) }

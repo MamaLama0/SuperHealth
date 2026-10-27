@@ -5,12 +5,14 @@ import android.app.AppOpsManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -51,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -101,11 +104,20 @@ private fun granted(ctx: Context, p: Perm): Boolean = when (p) {
  */
 fun restrictedSettings(ctx: Context): Boolean {
     if (Build.VERSION.SDK_INT < 33) return false
-    return runCatching {
-        val ops = ctx.getSystemService(AppOpsManager::class.java)
-        ops.unsafeCheckOpNoThrow("android:access_restricted_settings", Process.myUid(), ctx.packageName) != AppOpsManager.MODE_ALLOWED
-    }.getOrDefault(false)
+    val ops = ctx.getSystemService(AppOpsManager::class.java)
+    // Android 13-14 : l'état se lit directement ; Android 15+ refuse (SecurityException) → on s'en tient à la source
+    runCatching { ops.unsafeCheckOpNoThrow("android:access_restricted_settings", Process.myUid(), ctx.packageName) }.getOrNull()?.let { mode ->
+        if (mode != AppOpsManager.MODE_DEFAULT) return mode == AppOpsManager.MODE_ERRORED
+    }
+    // APK ouvert depuis un fichier (navigateur, gestionnaire de fichiers) : restreint tant que l'utilisateur n'a pas fait
+    // « Autoriser les paramètres restreints » (noté au retour d'Infos de l'appli, effacé si Android refuse encore)
+    val source = runCatching { ctx.packageManager.getInstallSourceInfo(ctx.packageName).packageSource }.getOrDefault(PackageInstaller.PACKAGE_SOURCE_UNSPECIFIED)
+    return (source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE || source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE) && !unlockedFlag(ctx)
 }
+
+private fun unlockedFlag(ctx: Context) = ctx.getSharedPreferences("superhealth_perms", Context.MODE_PRIVATE).getBoolean("restricted_unlocked", false)
+private fun setUnlockedFlag(ctx: Context, on: Boolean) =
+    ctx.getSharedPreferences("superhealth_perms", Context.MODE_PRIVATE).edit().putBoolean("restricted_unlocked", on).apply()
 
 fun missingWatchPermissions(ctx: Context): Int = Perm.entries.count { !granted(ctx, it) }
 
@@ -115,26 +127,51 @@ private fun appDetails(ctx: Context) = Intent(Settings.ACTION_APPLICATION_DETAIL
 fun PermissionsScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
+    // 0 : rien, 1 : réglage restreint ouvert (Android affiche « Paramètre restreint »), 2 : Infos de l'appli ouvert
+    var unlock by remember { mutableIntStateOf(0) }
     // Les autorisations changent dans les réglages système : relues au retour dans l'app.
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
-        val o = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) tick++ }
+        val o = LifecycleEventObserver { _, e ->
+            if (e != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
+            tick++
+            // 2e temps du déblocage : la fenêtre « Paramètre restreint » a été vue, le menu ⋮ existe maintenant
+            if (unlock == 1 && restrictedSettings(ctx)) {
+                unlock = 2
+                Toast.makeText(ctx, tr("⋮ en haut à droite > Autoriser les paramètres restreints"), Toast.LENGTH_LONG).show()
+                runCatching { ctx.startActivity(appDetails(ctx)) }
+            } else if (unlock == 2) { unlock = 0; setUnlockedFlag(ctx, true); tick++ }
+        }
         owner.lifecycle.addObserver(o)
         onDispose { owner.lifecycle.removeObserver(o) }
     }
-    // Refus sans boîte de dialogue = paramètre restreint : le guide passe en tête.
+    // Refus sans boîte de dialogue : paramètre restreint (SMS) → le guide passe en tête ; sinon refus définitif
+    // (deux refus, ou « Ne plus demander ») → seul Infos de l'appli > Autorisations peut encore l'accorder.
     var blocked by remember { mutableStateOf(false) }
+    var asked by remember { mutableStateOf<Perm?>(null) }
+    var silent by remember { mutableStateOf(false) }
     val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
         tick++
-        if (res.values.any { !it } && Build.VERSION.SDK_INT >= 33) blocked = true
+        val refused = res.filterValues { !it }.keys
+        if (refused.isEmpty()) return@rememberLauncherForActivityResult
+        // autorisation restreinte refusée sans boîte de dialogue : toujours verrouillée, le guide revient
+        if (asked?.restricted == true && Build.VERSION.SDK_INT >= 33 && (silent || restrictedSettings(ctx))) { setUnlockedFlag(ctx, false); blocked = true }
+        else if (silent) {
+            Toast.makeText(ctx, tr("Autorisation refusée : accordez-la dans Infos de l'appli > Autorisations."), Toast.LENGTH_LONG).show()
+            runCatching { ctx.startActivity(appDetails(ctx)) }
+        }
     }
     val settings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { tick++ }
+    fun launch(perms: Array<String>) { silent = willBeSilent(ctx, perms.toList()); request.launch(perms) }
 
     fun ask(p: Perm) {
+        asked = p
+        // réglage encore verrouillé : Android va afficher « Paramètre restreint », au retour on enchaîne sur Infos de l'appli
+        if (p.restricted && Build.VERSION.SDK_INT >= 33 && restrictedSettings(ctx)) unlock = 1
         when (p) {
-            Perm.NOTIFY -> if (Build.VERSION.SDK_INT >= 33) request.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-            Perm.SMS -> request.launch(SMS_PERMS)
-            Perm.CALLS -> request.launch(CALL_PERMS)
+            Perm.NOTIFY -> if (Build.VERSION.SDK_INT >= 33) launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            Perm.SMS -> launch(SMS_PERMS)
+            Perm.CALLS -> launch(CALL_PERMS)
             Perm.LISTENER -> settings.launch(
                 if (Build.VERSION.SDK_INT >= 30) Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
                     .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, ComponentName(ctx, NotificationListener::class.java).flattenToString())
@@ -148,7 +185,14 @@ fun PermissionsScreen(vm: SuperViewModel, nav: NavHostController) {
         val state = remember(tick) { Perm.entries.associateWith { granted(ctx, it) } }
         val restricted = remember(tick) { restrictedSettings(ctx) }
         val restrictedMissing = Perm.entries.any { it.restricted && state[it] == false }
-        if (Build.VERSION.SDK_INT >= 33 && restrictedMissing && (restricted || blocked)) RestrictedGuide { settings.launch(appDetails(ctx)) }
+        if (Build.VERSION.SDK_INT >= 33 && restrictedMissing && (restricted || blocked)) RestrictedGuide(unlock == 2) {
+            // 1er temps : ouvrir un réglage restreint ; Android refuse avec sa fenêtre, ce qui fait apparaître le menu ⋮
+            unlock = 1
+            val listener = if (Build.VERSION.SDK_INT >= 30) Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+                .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, ComponentName(ctx, NotificationListener::class.java).flattenToString())
+                else Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            runCatching { ctx.startActivity(listener) }.onFailure { unlock = 2; runCatching { ctx.startActivity(appDetails(ctx)) } }
+        }
 
         app.superhealth.nutrition.ui.components.GroupHeader(tr("Montre"), Modifier.padding(start = 0.dp))
         GroupCard {
@@ -167,7 +211,7 @@ fun PermissionsScreen(vm: SuperViewModel, nav: NavHostController) {
 }
 
 @Composable
-private fun RestrictedGuide(onOpen: () -> Unit) {
+private fun RestrictedGuide(inAppInfo: Boolean, onUnlock: () -> Unit) {
     val hue = HealthHues.Mind
     Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(hue.container()).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -176,13 +220,13 @@ private fun RestrictedGuide(onOpen: () -> Unit) {
             Text(tr("Paramètres restreints par Android"), style = MaterialTheme.typography.titleMedium, color = hue.onContainer())
         }
         Spacer(Modifier.height(8.dp))
-        Text(tr("Installée depuis un APK : Android bloque notifications, SMS et superposition tant que vous ne les autorisez pas."),
+        Text(tr("Installée depuis un APK : Android bloque notifications, SMS et superposition tant que vous ne les débloquez pas."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.text)
         Spacer(Modifier.height(8.dp))
         listOf(
-            "Ouvrez Infos de l'appli (bouton ci-dessous)",
-            "Touchez ⋮ en haut à droite",
-            "Choisissez « Autoriser les paramètres restreints » et confirmez",
+            "Touchez Débloquer, puis OK sur « Paramètre restreint »",
+            "Infos de l'appli s'ouvre : touchez ⋮ en haut à droite",
+            "« Autoriser les paramètres restreints », puis confirmez",
             "Revenez ici et accordez les autorisations",
         ).forEachIndexed { i, step ->
             Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -193,11 +237,8 @@ private fun RestrictedGuide(onOpen: () -> Unit) {
                 Text(tr(step), style = MaterialTheme.typography.bodyMedium)
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(tr("Le menu ⋮ n'apparaît qu'après un premier refus : touchez d'abord l'autorisation ci-dessous."),
-            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         Spacer(Modifier.height(12.dp))
-        PillButton(tr("Ouvrir Infos de l'appli"), Modifier.fillMaxWidth(), onClick = onOpen)
+        PillButton(if (inAppInfo) tr("Recommencer") else tr("Débloquer"), Modifier.fillMaxWidth(), onClick = onUnlock)
     }
 }
 

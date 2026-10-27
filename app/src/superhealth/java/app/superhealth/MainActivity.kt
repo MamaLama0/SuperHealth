@@ -55,14 +55,32 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         val ctx = applicationContext
         lifecycleScope.launch { runCatching { app.superhealth.ui.widget.DayWidgets.refresh(ctx) } }
-        // cœur de l'icône dans la couleur d'accent : changé seulement en quittant l'app (désactiver l'alias de lancement
-        // pendant l'utilisation fermait la tâche)
-        if (!isChangingConfigurations && app.superhealth.SuperPrefs.settings.value.onboarded)
-            runCatching { app.superhealth.ui.LauncherIcon.apply(ctx, vm.nutrition.settings.value.accent) }
+    }
+
+    /**
+     * Cœur de l'icône dans la couleur d'accent : changé seulement quand l'utilisateur quitte l'app (Accueil, Récents).
+     * Désactiver l'alias de lancement ferme la tâche : pas en onStop, qui arrive aussi en ouvrant la recherche de montre,
+     * Health Connect ou les réglages système, alors fermés avec elle.
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Android l'appelle aussi quand l'app ouvre une activité (réglages, recherche de montre…) : pas un départ
+        if (!openingActivity && app.superhealth.SuperPrefs.settings.value.onboarded)
+            runCatching { app.superhealth.ui.LauncherIcon.apply(applicationContext, vm.nutrition.settings.value.accent) }
+    }
+
+    /** Vrai entre l'ouverture d'une activité par l'app et le retour ici. */
+    private var openingActivity = false
+
+    @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        openingActivity = true
+        super.startActivityForResult(intent, requestCode, options)
     }
 
     override fun onResume() {
         super.onResume()
+        openingActivity = false
         vm.onResume(this)
     }
 }
