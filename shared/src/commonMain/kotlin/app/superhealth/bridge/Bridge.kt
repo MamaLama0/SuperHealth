@@ -6,6 +6,7 @@ import app.superhealth.nutrition.domain.stepGoalFor
 import app.superhealth.platform.Context
 import app.superhealth.HcSession
 import app.superhealth.SuperPrefs
+import app.superhealth.health.data.ActivityKind
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.Metric
 import app.superhealth.health.data.Workout
@@ -139,6 +140,21 @@ object Bridge {
             else -> null
         }
     }
+
+    /**
+     * Nuit qui se termine le jour [date], phase par phase : Apple Santé (une seule source par nuit, ses phases si
+     * elle en fournit, sinon une seule phase « endormi »). null sans nuit.
+     */
+    suspend fun sleepNight(date: LocalDate): List<HealthRepository.SleepPhase>? {
+        if (Watch.enabled && HealthRepository.isSupported(Metric.SLEEP)) HealthRepository.sleepNight(date)?.let { return it }
+        return SuperPrefs.hc.value.nights[date.toEpochDay()]
+            ?.mapNotNull { p -> runCatching { ActivityKind.valueOf(p.kind) }.getOrNull()?.let { HealthRepository.SleepPhase(it, p.start, p.end) } }
+            ?.sortedBy { it.start }?.takeIf { it.isNotEmpty() }
+    }
+
+    /** La nuit a-t-elle des phases (léger, profond, paradoxal) ou seulement une durée ? */
+    fun hasStages(night: List<HealthRepository.SleepPhase>): Boolean =
+        night.any { it.kind == ActivityKind.LIGHT_SLEEP || it.kind == ActivityKind.DEEP_SLEEP || it.kind == ActivityKind.REM_SLEEP }
 
     /** D'où vient [metric] le jour [date] : l'appareil ou l'appli qui l'a écrit dans Apple Santé, ou la saisie. */
     suspend fun dataSource(metric: Metric, date: LocalDate): app.superhealth.health.data.DataSource? {

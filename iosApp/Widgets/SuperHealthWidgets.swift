@@ -17,6 +17,8 @@ struct Snapshot: Codable {
     struct Next: Codable { var title: String; var subtitle: String; var action: String; var route: String; var week: [Bool]; var dayLetters: [String]; var progress: Double? }
     struct Vital: Codable { var label: String; var value: String; var status: String }
     struct Vitals: Codable { var title: String; var summary: String; var ok: Bool; var items: [Vital] }
+    struct Phase: Codable { var row: Int; var start: Double; var end: Double; var color: String }
+    struct Night: Codable { var value: String; var fraction: Double; var score: Int?; var times: String; var debt: String?; var staged: Bool; var phases: [Phase] }
 
     var updatedMs: Int64
     var date: String
@@ -29,6 +31,7 @@ struct Snapshot: Codable {
     var vitals: Vitals?
     var steps: String?
     var sleep: String?
+    var night: Night?
 
     func label(_ key: String) -> String { labels[key] ?? key }
 
@@ -52,7 +55,12 @@ struct Snapshot: Codable {
         weight: Weight(value: "78,4", unit: "kg", delta: "−0,35 / sem.", points: [79.6, 79.4, 79.3, 79.1, 79.0, 78.8, 78.7, 78.6, 78.4]),
         vitals: Vitals(title: "Signes vitaux", summary: "Dans votre plage habituelle", ok: true, items: [
             Vital(label: "FC au repos", value: "54 bpm", status: "TYPICAL"), Vital(label: "SpO₂", value: "97 %", status: "TYPICAL")]),
-        steps: "8 432", sleep: "7 h 32")
+        steps: "8 432", sleep: "7 h 32",
+        night: Night(value: "7 h 32", fraction: 0.94, score: nil, times: "23:12 – 07:04", debt: "Aucune dette de sommeil", staged: true, phases: [
+            Phase(row: 2, start: 0, end: 0.12, color: "#9B8AF2"), Phase(row: 3, start: 0.12, end: 0.3, color: "#4B3FC2"),
+            Phase(row: 2, start: 0.3, end: 0.45, color: "#9B8AF2"), Phase(row: 1, start: 0.45, end: 0.55, color: "#59B4F5"),
+            Phase(row: 0, start: 0.55, end: 0.57, color: "#F08A5D"), Phase(row: 2, start: 0.57, end: 0.8, color: "#9B8AF2"),
+            Phase(row: 1, start: 0.8, end: 1, color: "#59B4F5")]))
 }
 
 struct Entry: TimelineEntry {
@@ -399,6 +407,78 @@ struct VitalsWidget: Widget {
     }
 }
 
+// MARK: - Sommeil (comme le widget Android : durée, score, hypnogramme, heures, dette)
+
+let sleepHue = Color(hex: "#7B61D9")
+
+/// Hypnogramme : éveil en haut, profond en bas ; une seule bande quand la source ne mesure pas les phases.
+struct Hypnogram: View {
+    var night: Snapshot.Night
+    var body: some View {
+        GeometryReader { g in
+            let rows: CGFloat = night.staged ? 4 : 1
+            let rowH = g.size.height / rows
+            let bh = rowH * (night.staged ? 0.62 : 0.42)
+            ZStack(alignment: .topLeading) {
+                ForEach(Array(night.phases.enumerated()), id: \.offset) { _, p in
+                    RoundedRectangle(cornerRadius: bh / 2).fill(Color(hex: p.color))
+                        .frame(width: max(2, CGFloat(p.end - p.start) * g.size.width), height: bh)
+                        .offset(x: CGFloat(p.start) * g.size.width, y: rowH * CGFloat(p.row) + (rowH - bh) / 2)
+                }
+            }
+        }
+    }
+}
+
+struct SleepView: View {
+    @Environment(\.widgetFamily) var family
+    var entry: Entry
+    var body: some View {
+        Group {
+            if let n = entry.snap?.night {
+                if family == .systemSmall {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack { Chip(symbol: "bed.double.fill", color: sleepHue); Spacer(); if let s = n.score { Text("\(s)").font(.headline).foregroundStyle(sleepHue) } }
+                        Spacer(minLength: 0)
+                        Text(n.value).font(.system(size: 24, weight: .bold)).foregroundStyle(sleepHue).minimumScaleFactor(0.7).lineLimit(1)
+                        Hypnogram(night: n).frame(height: 26)
+                        Text(n.times).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Chip(symbol: "bed.double.fill", color: sleepHue)
+                            Text(n.value).font(.system(size: 22, weight: .bold)).foregroundStyle(sleepHue)
+                            Spacer()
+                            if let s = n.score {
+                                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                    Text("\(s)").font(.system(size: 20, weight: .bold)).foregroundStyle(sleepHue)
+                                    Text("/ 100").font(.caption2).foregroundStyle(.secondary)
+                                }
+                            } else {
+                                RingView(fraction: n.fraction, color: sleepHue, width: 5).frame(width: 30, height: 30)
+                            }
+                        }
+                        Hypnogram(night: n).frame(maxHeight: .infinity)
+                        Text([n.times, n.debt].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+            } else { Empty() }
+        }
+        .widgetCard()
+        .open("h/metric/SLEEP")
+    }
+}
+
+struct SleepWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "sleep", provider: Provider()) { SleepView(entry: $0) }
+            .configurationDisplayName("Sommeil")
+            .description("Durée de la nuit, phases, heures de coucher et de lever, dette de sommeil.")
+            .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
 // MARK: - Ma journée (vue d'ensemble)
 
 struct DayView: View {
@@ -529,6 +609,7 @@ struct SuperHealthWidgets: WidgetBundle {
         NextWorkoutWidget()
         WeightWidget()
         VitalsWidget()
+        SleepWidget()
         DayWidget()
         WorkoutLiveActivity()
     }

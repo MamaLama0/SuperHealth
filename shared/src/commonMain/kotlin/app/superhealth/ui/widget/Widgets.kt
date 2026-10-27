@@ -3,6 +3,7 @@ package app.superhealth.ui.widget
 import app.superhealth.platform.*
 
 import app.superhealth.SuperPrefs
+import app.superhealth.health.data.ActivityKind
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.HealthSources
 import app.superhealth.health.data.Metric
@@ -42,11 +43,16 @@ object Widgets {
                                   val dayLetters: List<String>, val progress: Double? = null)
     @Serializable data class Vital(val label: String, val value: String, val status: String)
     @Serializable data class Vitals(val title: String, val summary: String, val ok: Boolean, val items: List<Vital>)
+    /** Phase de la nuit pour l'hypnogramme : ligne (0 éveil, 1 paradoxal, 2 léger, 3 profond) et position (0…1 de la nuit). */
+    @Serializable data class Phase(val row: Int, val start: Double, val end: Double, val color: String)
+    /** Nuit : durée, part du besoin, score (null : non calculé par l'appareil), heures, dette, phases si l'appareil les mesure. */
+    @Serializable data class Night(val value: String, val fraction: Double, val score: Int?, val times: String, val debt: String?,
+                                   val staged: Boolean, val phases: List<Phase>)
     @Serializable data class Snapshot(
         val updatedMs: Long, val date: String, val accent: String,
         val labels: Map<String, String>,
         val calories: Calories?, val rings: List<Ring>, val next: Next?, val weight: Weight?, val vitals: Vitals?,
-        val steps: String?, val sleep: String?,
+        val steps: String?, val sleep: String?, val night: Night? = null,
     )
 
     private val json = Json { encodeDefaults = true }
@@ -106,6 +112,7 @@ object Widgets {
         val ctx = appContext
         val steps = runCatching { app.superhealth.bridge.Bridge.steps(ctx, today) }.getOrNull()?.let { formatNumber(it) }
         val sleep = runCatching { HealthRepository.dayValue(ctx, Metric.SLEEP, today) }.getOrNull()?.let { formatDuration(it) }
+        val night = runCatching { night(ctx, today) }.getOrNull()
         val vitals = runCatching { if (app.superhealth.bridge.Watch.devices().isNotEmpty()) NightVitals.of(ctx) else null }.getOrNull()
             ?.takeIf { it.measured > 0 }?.let { n ->
                 Vitals(tr("Signes vitaux"), if (n.outliers == 0) tr("Dans votre plage habituelle") else if (n.outliers == 1) tr("1 mesure hors de l'habituel")
@@ -117,7 +124,27 @@ object Widgets {
             mapOf("app" to "SuperHealth", "calories" to tr("Calories"), "next" to tr("Prochaine séance"), "session" to tr("Séance en cours"),
                 "weight" to tr("Tendance du poids"), "steps" to tr("Pas"), "sleep" to tr("Sommeil"), "rings" to tr("Anneaux du jour"),
                 "open" to tr("Ouvrez l'app pour commencer.")),
-            calories, rings, next(), weight, vitals, steps, sleep)
+            calories, rings, next(), weight, vitals, steps, sleep, night)
+    }
+
+    /** Nuit qui se termine aujourd'hui, comme le widget Sommeil d'Android (phases seulement si la source les mesure). */
+    private suspend fun night(ctx: Context, today: LocalDate): Night? {
+        val n = app.superhealth.bridge.Bridge.sleepNight(today) ?: return null
+        val staged = app.superhealth.bridge.Bridge.hasStages(n)
+        val asleep = n.filter { it.kind != ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60_000.0
+        val t0 = n.first().start; val span = (n.last().end - t0).coerceAtLeast(1).toDouble()
+        val debt = runCatching { app.superhealth.health.data.Scores.sleepDebtOf(ctx, today) }.getOrNull()
+        val score = runCatching { app.superhealth.bridge.Bridge.healthValue(ctx, Metric.SLEEP_SCORE, today) }.getOrNull()?.let { kotlin.math.round(it).toInt() }
+        val phases = n.filter { staged || it.kind != ActivityKind.AWAKE_SLEEP }.map { p ->
+            val (row, color) = when (p.kind) {
+                ActivityKind.AWAKE_SLEEP -> 0 to "#F08A5D"; ActivityKind.REM_SLEEP -> 1 to "#59B4F5"
+                ActivityKind.DEEP_SLEEP -> 3 to "#4B3FC2"; else -> 2 to "#9B8AF2"
+            }
+            Phase(if (staged) row else 0, (p.start - t0) / span, (p.end - t0) / span, color)
+        }
+        return Night(formatDuration(asleep), asleep / app.superhealth.health.data.Scores.sleepNeed(), score,
+            app.superhealth.ui.timeOf(t0) + " – " + app.superhealth.ui.timeOf(n.last().end),
+            debt?.let { if (it <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(it)) }, staged, phases)
     }
 
     /** Prochaine séance (ou séance en cours) et jours entraînés cette semaine, comme le widget Android. */

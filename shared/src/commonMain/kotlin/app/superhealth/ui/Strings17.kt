@@ -122,5 +122,6 @@ object Strings17 {
         // source des mesures (1.7.8)
         "Bague" to "Ring", "Bracelet" to "Band", "Ceinture cardio" to "Chest strap", "Balance" to "Scale",
         "Saisie" to "Logged", "Appareil" to "Device", "Score %1\$s" to "Score %1\$s",
+        "Coucher" to "Bedtime", "Lever" to "Wake-up", "Au lit" to "In bed",
     )
 }
