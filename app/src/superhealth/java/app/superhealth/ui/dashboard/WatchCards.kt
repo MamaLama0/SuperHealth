@@ -71,6 +71,8 @@ internal class WatchSnap(
     val zones: IntArray? = null,
     val night: List<HealthRepository.SleepPhase>? = null,
     val debt: Double? = null,
+    /** Score de sommeil de la nuit, quand la montre le calcule. */
+    val sleepScore: Double? = null,
     val hrv: List<Pair<LocalDate, Double?>> = emptyList(),
     val stress: List<Point> = emptyList(),
     val hourly: List<Point> = emptyList(),
@@ -85,7 +87,7 @@ internal val DashCard.isWatchChart: Boolean get() = this in WATCH_CARDS
 internal fun watchSource(c: DashCard): Boolean = when (c) {
     DashCard.CHARGE, DashCard.HRV_STATUS -> Bridge.hasSource(Metric.HRV)
     DashCard.EFFORT, DashCard.HR_ZONES, DashCard.LOAD -> HealthRepository.isSupported(Metric.HEART_RATE)
-    DashCard.SLEEP_STAGES -> HealthRepository.isSupported(Metric.SLEEP)
+    DashCard.SLEEP_STAGES -> Bridge.hasSource(Metric.SLEEP)
     DashCard.STRESS_DAY -> HealthRepository.isSupported(Metric.STRESS)
     else -> true
 }
@@ -105,8 +107,9 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
         (n - 1 downTo 0L).map { d -> async { runCatching { Scores.effortOf(ctx, today.minusDays(d)) }.getOrNull() } }.awaitAll()
     }
     val zones = async { if (has(DashCard.HR_ZONES)) runCatching { Scores.zonesOf(ctx, today) }.getOrNull() else null }
-    val night = async { if (has(DashCard.SLEEP_STAGES)) HealthRepository.sleepNight(today) else null }
+    val night = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Bridge.sleepNight(today) }.getOrNull() else null }
     val debt = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Scores.sleepDebtOf(ctx, today) }.getOrNull() else null }
+    val score = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, today) }.getOrNull() else null }
     val hrv = async {
         if (has(DashCard.HRV_STATUS)) (29L downTo 0L).map { today.minusDays(it) }.map { d -> async { d to runCatching { Bridge.healthValue(ctx, Metric.HRV, d) }.getOrNull() } }.awaitAll()
         else emptyList()
@@ -114,7 +117,7 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
     val stress = async { if (has(DashCard.STRESS_DAY)) runCatching { HealthRepository.intraday(Metric.STRESS, today) }.getOrDefault(emptyList()) else emptyList() }
     val hourly = async { if (has(DashCard.DAY_TIMELINE)) runCatching { Bridge.hourlySteps(ctx, today) }.getOrDefault(emptyList()) else emptyList() }
     val ef = efforts.await()
-    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), hrv.await(), stress.await(), hourly.await())
+    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), score.await(), hrv.await(), stress.await(), hourly.await())
 }
 
 // ---- Couleurs ------------------------------------------------------------------------------
@@ -290,13 +293,23 @@ internal fun SleepStagesCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav:
         val asleep = night.filter { it.kind != ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60_000.0
         Row(verticalAlignment = Alignment.Bottom) {
             Value(formatDuration(asleep), color = c.ink().onContainer())
+            w.sleepScore?.let { Sub(" · " + trf("Score %1\$s", it.roundToInt())) }
             Spacer(Modifier.weight(1f))
             w.debt?.let { d -> Sub(if (d <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(d))) }
         }
         Spacer(Modifier.height(10.dp))
         Hypnogram(night, Modifier.fillMaxWidth().height(86.dp))
         Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        // Appli qui ne note que la durée (pas de phases) : coucher, lever et temps au lit plutôt que des phases vides.
+        if (!Bridge.hasStages(night)) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            listOf(tr("Coucher") to timeOf(night.first().start), tr("Lever") to timeOf(night.last().end),
+                tr("Au lit") to formatDuration((night.last().end - night.first().start) / 60_000.0)).forEach { (l, v) ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(l, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1)
+                    Text(v, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                }
+            }
+        } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf(ActivityKind.AWAKE_SLEEP to "Éveil", ActivityKind.REM_SLEEP to "Paradoxal", ActivityKind.LIGHT_SLEEP to "Léger", ActivityKind.DEEP_SLEEP to "Profond").forEach { (k, l) ->
                 val ms = night.filter { it.kind == k || (k == ActivityKind.LIGHT_SLEEP && it.kind == ActivityKind.SLEEP_ANY) }.sumOf { it.end - it.start }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -319,15 +332,17 @@ private fun Hypnogram(night: List<HealthRepository.SleepPhase>, modifier: Modifi
     val grid = Mf.colors.divider
     Canvas(modifier) {
         val t0 = night.first().start; val t1 = night.last().end
-        val levels = 4
+        // sans phases : une seule bande « endormi », les réveils en creux
+        val staged = Bridge.hasStages(night)
+        val levels = if (staged) 4 else 1
         val rowH = size.height / levels
         for (k in 0 until levels) drawLine(grid, Offset(0f, rowH * (k + 0.5f)), Offset(size.width, rowH * (k + 0.5f)), ChartStyle.grid.toPx(), pathEffect = ChartStyle.dash(this))
-        fun row(k: ActivityKind) = when (k) { ActivityKind.AWAKE_SLEEP -> 0; ActivityKind.REM_SLEEP -> 1; ActivityKind.DEEP_SLEEP -> 3; else -> 2 }
-        night.forEach { p ->
+        fun row(k: ActivityKind) = if (!staged) 0 else when (k) { ActivityKind.AWAKE_SLEEP -> 0; ActivityKind.REM_SLEEP -> 1; ActivityKind.DEEP_SLEEP -> 3; else -> 2 }
+        night.filter { staged || it.kind != ActivityKind.AWAKE_SLEEP }.forEach { p ->
             val x0 = size.width * (p.start - t0) / (t1 - t0).toFloat()
             val x1 = size.width * (p.end - t0) / (t1 - t0).toFloat()
             val r = row(p.kind)
-            val h = rowH * 0.62f
+            val h = if (staged) rowH * 0.62f else rowH * 0.42f
             drawRoundRect(stageColor(p.kind), Offset(x0, rowH * r + (rowH - h) / 2), Size((x1 - x0).coerceAtLeast(2f), h), CornerRadius(h / 2))
         }
     }

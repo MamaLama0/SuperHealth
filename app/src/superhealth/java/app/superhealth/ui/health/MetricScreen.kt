@@ -43,6 +43,7 @@ import androidx.navigation.NavHostController
 import app.superhealth.bridge.Bridge
 import app.superhealth.health.data.Aggregation
 import app.superhealth.health.data.ChartKind
+import app.superhealth.health.data.DataSource
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.ManualLog
 import app.superhealth.health.data.ManualLogStore
@@ -59,6 +60,7 @@ import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.Lang
 import app.superhealth.ui.SuperViewModel
+import app.superhealth.ui.go
 import app.superhealth.ui.dayLetter
 import app.superhealth.ui.formatValue
 import app.superhealth.ui.formatWithUnit
@@ -117,6 +119,22 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             if (metric == Metric.STEPS) Bridge.hourlySteps(ctx, p.from) else HealthRepository.intraday(metric, p.from)
         }.getOrDefault(emptyList()) else emptyList()
     }
+    // Source du dernier jour mesuré de la période (la montre, ou l'appli qui l'a écrit dans Health Connect).
+    val lastDay = days.lastOrNull { it.second != null }?.first
+    val source by produceState<DataSource?>(null, metric, lastDay, refresh) {
+        value = lastDay?.let { runCatching { Bridge.dataSource(metric, it) }.getOrNull() }
+    }
+    // Sommeil : le score de chaque nuit de la période, quand une montre le calcule.
+    val scores by produceState(emptyList<Pair<LocalDate, Double>>(), metric, span, offset, refresh) {
+        value = if (metric == Metric.SLEEP && Bridge.hasSource(Metric.SLEEP_SCORE)) coroutineScope {
+            generateSequence(p.from) { it.plusDays(1) }.takeWhile { !it.isAfter(minOf(p.to, today)) }.toList()
+                .map { d -> async(Dispatchers.IO) { runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, d) }.getOrNull()?.let { d to it } } }
+                .awaitAll().filterNotNull()
+        } else emptyList()
+    }
+    val scoreSource by produceState<DataSource?>(null, scores.lastOrNull()?.first, refresh) {
+        value = scores.lastOrNull()?.first?.let { runCatching { Bridge.dataSource(Metric.SLEEP_SCORE, it) }.getOrNull() }
+    }
     val logs by produceState(emptyList<ManualLog>(), metric, span, offset, refresh) {
         value = if (metric.manual) ManualLogStore.get(ctx).query(metric, HealthRepository.startMs(p.from), HealthRepository.endMs(p.to)) else emptyList()
     }
@@ -155,6 +173,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                     Text(" $it", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
                 }
             }
+            if (total != null) source?.let { SourceLine(it) }
             Spacer(Modifier.height(14.dp))
             val color = metric.color
             when {
@@ -198,6 +217,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             }
         }
 
+        if (scores.isNotEmpty()) SleepScoreCard(scores, span, scoreSource) { nav.go("h/metric/SLEEP_SCORE") }
         if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
 
         if (metric.manual) {
@@ -287,5 +307,35 @@ private fun LiveHeartCard() {
             HeartChart(pts.filter { it.first >= now - window }, Metric.HEART_RATE.color, height = 150.dp, from = now - window, to = now,
                 gapMs = 60_000L, live = true)
         }
+    }
+}
+
+/** « ⌚ Montre · Forerunner 165 · Garmin Connect » : type d'appareil et nom de la source d'une mesure. */
+@Composable
+internal fun SourceLine(src: DataSource, modifier: Modifier = Modifier) {
+    Row(modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(src.kind.icon, null, Modifier.size(14.dp), tint = Mf.colors.textSecondary)
+        Spacer(Modifier.width(6.dp))
+        Text((listOf(tr(src.kind.label)) + src.parts()).joinToString(" · "), style = MaterialTheme.typography.bodySmall,
+            color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Score de sommeil calculé par la montre : nuit la plus récente de la période, moyenne et appareil qui l'a calculé. */
+@Composable
+private fun SleepScoreCard(scores: List<Pair<LocalDate, Double>>, span: Span, src: DataSource?, onClick: () -> Unit) {
+    SectionLabel(tr("Score de sommeil"))
+    MfCard(onClick = onClick) {
+        val (day, last) = scores.last()
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(formatValue(Metric.SLEEP_SCORE, last), style = MaterialTheme.typography.displaySmall, color = Metric.SLEEP_SCORE.color, maxLines = 1)
+            Text(" / 100", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
+            Spacer(Modifier.weight(1f))
+            if (span != Span.DAY && scores.size >= 2)
+                Text(trf("Moy. %1\$s", formatValue(Metric.SLEEP_SCORE, scores.map { it.second }.average())),
+                    style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
+        }
+        if (span != Span.DAY) Text(relativeDay(day), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        src?.let { SourceLine(it) }
     }
 }

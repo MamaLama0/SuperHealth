@@ -24,9 +24,12 @@ import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Percentage
 import androidx.health.connect.client.units.Volume
 import app.superhealth.HcCache
+import app.superhealth.HcPhase
 import app.superhealth.HcSession
 import app.superhealth.SuperPrefs
+import app.superhealth.health.data.DataSource
 import app.superhealth.health.data.HealthRepository
+import app.superhealth.health.data.SourceKind
 import app.superhealth.health.data.ManualLogStore
 import app.superhealth.health.data.Metric
 import app.superhealth.nutrition.NutriApp
@@ -126,7 +129,7 @@ object HealthConnectHub {
                 repo.weighIns.upsertAll(news); weightsIn = news.size
             }
             // Constantes et séances d'autres apps : servent quand la montre n'est pas gérée par SuperHealth.
-            SuperPrefs.setHc(readHealth(client, granted, range, me, zone))
+            SuperPrefs.setHc(readHealth(client, granted, range, me, zone, ctx.packageManager))
             sessionsIn = SuperPrefs.hc.value.sessions.size
 
             // Écriture : pesées, total nutritionnel du jour, séances de musculation, hydratation (clientRecordId stable → remplacement).
@@ -201,29 +204,42 @@ object HealthConnectHub {
         return result
     }
 
-    private suspend fun readHealth(client: HealthConnectClient, granted: Set<String>, range: TimeRangeFilter, me: String, zone: ZoneId): HcCache {
+    private suspend fun readHealth(client: HealthConnectClient, granted: Set<String>, range: TimeRangeFilter, me: String, zone: ZoneId,
+                                   pm: android.content.pm.PackageManager): HcCache {
         fun Instant.day() = atZone(zone).toLocalDate().toEpochDay()
         fun <T> List<T>.avgBy(day: (T) -> Long, v: (T) -> Double) = groupBy(day).mapValues { (_, l) -> l.map(v).average() }
         val prev = SuperPrefs.hc.value
+        val origins = prev.origins.toMutableMap()
+        /** Retient la source de l'enregistrement le plus récent de [metric]. */
+        fun <R : androidx.health.connect.client.records.Record> List<R>.noteOrigin(metric: Metric, time: (R) -> Instant): List<R> = also { rs ->
+            rs.maxByOrNull(time)?.let { origins[metric.name] = sourceOf(it.metadata, pm) }
+        }
         val hr = if (read(HeartRateRecord::class) in granted)
             client.readRecords(ReadRecordsRequest(HeartRateRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .flatMap { r -> r.samples.map { it.time.day() to it.beatsPerMinute.toDouble() } }.avgBy({ it.first }, { it.second })
+                .noteOrigin(Metric.HEART_RATE) { it.endTime }.flatMap { r -> r.samples.map { it.time.day() to it.beatsPerMinute.toDouble() } }.avgBy({ it.first }, { it.second })
         else prev.heartRate
         val resting = if (read(RestingHeartRateRecord::class) in granted)
             client.readRecords(ReadRecordsRequest(RestingHeartRateRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .avgBy({ it.time.day() }, { it.beatsPerMinute.toDouble() })
+                .noteOrigin(Metric.RESTING_HR) { it.time }.avgBy({ it.time.day() }, { it.beatsPerMinute.toDouble() })
         else prev.restingHr
-        val sleep = if (read(SleepSessionRecord::class) in granted)
+        val sleepRecords = if (read(SleepSessionRecord::class) in granted)
             client.readRecords(ReadRecordsRequest(SleepSessionRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .groupBy { it.endTime.day() }.mapValues { (_, l) -> l.sumOf { (it.endTime.toEpochMilli() - it.startTime.toEpochMilli()) / 60000.0 } }
-        else prev.sleepMin
+                .noteOrigin(Metric.SLEEP) { it.endTime }
+        else null
+        // Une même nuit écrite par deux applis (montre + téléphone…) ne compte qu'une fois : par jour, l'appli qui a le plus
+        // de sommeil ; les siestes d'une même appli s'additionnent. Avec des phases, l'éveil ne compte pas comme du sommeil.
+        val nights = sleepRecords?.groupBy { it.endTime.day() }?.mapValues { (_, l) ->
+            l.groupBy { it.metadata.dataOrigin.packageName }.values.map { rs -> rs.flatMap(::phasesOf).sortedBy { it.start } }
+                .maxBy { ps -> ps.asleepMin() }
+        } ?: prev.nights
+        val sleep = if (sleepRecords != null) nights.mapValues { (_, ps) -> ps.asleepMin() }.filterValues { it > 0 } else prev.sleepMin
         val hrv = if (read(HeartRateVariabilityRmssdRecord::class) in granted)
             client.readRecords(ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .avgBy({ it.time.day() }, { it.heartRateVariabilityMillis })
+                .noteOrigin(Metric.HRV) { it.time }.avgBy({ it.time.day() }, { it.heartRateVariabilityMillis })
         else prev.hrv
         val spo2 = if (read(OxygenSaturationRecord::class) in granted)
             client.readRecords(ReadRecordsRequest(OxygenSaturationRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .avgBy({ it.time.day() }, { it.percentage.value })
+                .noteOrigin(Metric.SPO2) { it.time }.avgBy({ it.time.day() }, { it.percentage.value })
         else prev.spo2
         val sessions = if (read(ExerciseSessionRecord::class) in granted)
             client.readRecords(ReadRecordsRequest(ExerciseSessionRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
@@ -231,7 +247,41 @@ object HealthConnectHub {
         else prev.sessions
         val steps = if (read(StepsRecord::class) in granted) runCatching { stepsHourly(client, range, me) }.getOrDefault(prev.stepsHourly)
         else prev.stepsHourly
-        return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps)
+        return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps, origins, nights)
+    }
+
+    /** Phases d'une session de sommeil ; sans phases (appli qui ne note que la durée), une seule phase « endormi ». */
+    private fun phasesOf(r: SleepSessionRecord): List<HcPhase> =
+        r.stages.map { s ->
+            val kind = when (s.stage) {
+                SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> "AWAKE_SLEEP"
+                SleepSessionRecord.STAGE_TYPE_LIGHT -> "LIGHT_SLEEP"
+                SleepSessionRecord.STAGE_TYPE_DEEP -> "DEEP_SLEEP"
+                SleepSessionRecord.STAGE_TYPE_REM -> "REM_SLEEP"
+                else -> "SLEEP_ANY"
+            }
+            HcPhase(kind, s.startTime.toEpochMilli(), s.endTime.toEpochMilli())
+        }.ifEmpty { listOf(HcPhase("SLEEP_ANY", r.startTime.toEpochMilli(), r.endTime.toEpochMilli())) }
+
+    private fun List<HcPhase>.asleepMin(): Double = filter { it.kind != "AWAKE_SLEEP" }.sumOf { it.end - it.start } / 60000.0
+
+    /** Appli d'origine et type d'appareil d'un enregistrement (déclaré par l'appli, sinon celui qu'elle utilise d'habitude). */
+    private fun sourceOf(m: Metadata, pm: android.content.pm.PackageManager): DataSource {
+        val d = m.device
+        val kind = when (d?.type) {
+            Device.TYPE_WATCH -> SourceKind.WATCH
+            Device.TYPE_FITNESS_BAND -> SourceKind.BAND
+            Device.TYPE_RING -> SourceKind.RING
+            Device.TYPE_CHEST_STRAP -> SourceKind.CHEST
+            Device.TYPE_SCALE -> SourceKind.SCALE
+            Device.TYPE_PHONE -> SourceKind.PHONE
+            else -> null
+        }
+        val model = listOfNotNull(d?.manufacturer, d?.model).joinToString(" ").takeIf { it.isNotBlank() }
+        val pkg = m.dataOrigin.packageName
+        val label = DataSource.appName(pkg)
+            ?: runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrNull()
+        return DataSource.fromApp(pkg, label, kind, model)
     }
 
     /**

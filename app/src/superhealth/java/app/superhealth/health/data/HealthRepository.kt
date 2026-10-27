@@ -25,6 +25,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCoordinator
 import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummaryDao
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
@@ -41,7 +42,6 @@ import nodomain.freeyourgadget.gadgetbridge.widgets.impl.BodyEnergyWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.CaloriesActiveWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.DistanceWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.PaiWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepScoreWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.Spo2Widget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.StepsWidget
@@ -128,9 +128,11 @@ object HealthRepository {
     }
 
     /** True when a paired device can record [metric], or it is logged by hand. */
-    fun isSupported(metric: Metric): Boolean = metric.manual || devices().any { d ->
+    fun isSupported(metric: Metric): Boolean = metric.manual || devices().any { supports(it, metric) }
+
+    private fun supports(d: GBDevice, metric: Metric): Boolean {
         val c = d.deviceCoordinator
-        when (metric) {
+        return when (metric) {
             Metric.STEPS, Metric.DISTANCE, Metric.ACTIVE_MINUTES -> c.supportsStepCounter(d)
             Metric.CALORIES -> c.supportsActiveCalories(d)
             Metric.CARDIO_WEEK -> c.supportsPai(d)
@@ -178,7 +180,7 @@ object HealthRepository {
             Metric.ACTIVE_MINUTES -> widget(ActiveTimeWidget, query)?.total?.toDouble()?.takeIf { it > 0 }
             Metric.CARDIO_WEEK -> cardioWeek(date)?.total?.toDouble()
             Metric.SLEEP -> widget(SleepWidget, query)?.total?.toDouble()?.takeIf { it > 0 }
-            Metric.SLEEP_SCORE -> widget(SleepScoreWidget, query)?.value?.toDouble()?.takeIf { it > 0 }
+            Metric.SLEEP_SCORE -> sleepScore(date)?.first
             Metric.BODY_ENERGY -> widget(BodyEnergyWidget, query)?.value?.toDouble()?.takeIf { it >= 0 }
             Metric.STRESS -> widget(StressSimpleWidget, query)?.value?.toDouble()?.takeIf { it > 0 }
             Metric.SPO2 -> widget(Spo2Widget, query)?.spo2?.toDouble()?.takeIf { it > 0 }
@@ -279,6 +281,35 @@ object HealthRepository {
                 ?.stages?.map { SleepPhase(it.kind, it.startTime, it.endTime) }
         }
     }.getOrNull()
+
+    /**
+     * Score de sommeil du jour [date] et montre qui l'a calculé (dernier score horodaté ce jour-là, comme Gadgetbridge ;
+     * le widget « dernier score connu » reprenait celui d'une nuit précédente les jours sans score).
+     */
+    suspend fun sleepScore(date: LocalDate): Pair<Double, GBDevice>? = runCatching {
+        db { db ->
+            devices().filter { it.deviceCoordinator.supportsSleepScore(it) }.mapNotNull { d ->
+                runCatching { d.deviceCoordinator.getSleepScoreProvider(d, db.daoSession)?.getAllSamples(startMs(date), endMs(date) - 1) }
+                    .getOrNull()?.filter { it.sleepScore in 1..100 }?.maxByOrNull { it.timestamp }?.let { it to d }
+            }.maxByOrNull { it.first.timestamp }?.let { (s, d) -> s.sleepScore.toDouble() to d }
+        }
+    }.getOrNull()
+
+    /** Type et nom d'une montre gérée par SuperHealth. */
+    fun sourceOf(d: GBDevice): DataSource = DataSource(when (runCatching { d.deviceCoordinator.getDeviceKind(d) }.getOrNull()) {
+        DeviceCoordinator.DeviceKind.WATCH -> SourceKind.WATCH
+        DeviceCoordinator.DeviceKind.FITNESS_BAND -> SourceKind.BAND
+        DeviceCoordinator.DeviceKind.RING -> SourceKind.RING
+        DeviceCoordinator.DeviceKind.CHEST_STRAP -> SourceKind.CHEST
+        DeviceCoordinator.DeviceKind.SCALE -> SourceKind.SCALE
+        DeviceCoordinator.DeviceKind.PHONE -> SourceKind.PHONE
+        else -> SourceKind.OTHER
+    }, d.aliasOrName)
+
+    /** Montre qui fournit [metric] le jour [date] (celle du score pour le sommeil, sinon la première qui la mesure). */
+    suspend fun sourceOf(metric: Metric, date: LocalDate): DataSource? =
+        if (metric == Metric.SLEEP_SCORE) sleepScore(date)?.second?.let(::sourceOf)
+        else devices().firstOrNull { supports(it, metric) }?.let(::sourceOf)
 
     /** Pouls minute par minute (horodatage en s, bpm) du jour, toutes montres confondues : base de l'Effort et des zones. */
     suspend fun minuteHeart(date: LocalDate): List<Pair<Long, Int>> = withContext(Dispatchers.IO) {

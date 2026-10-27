@@ -16,6 +16,7 @@ import app.superhealth.nutrition.domain.Settings
 import app.superhealth.training.WorkoutApp
 import app.superhealth.ui.Lang
 import java.time.LocalDate
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -146,6 +147,28 @@ object Bridge {
             Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT -> HealthRepository.dayValue(ctx, metric, date)
             else -> null
         }
+    }
+
+    /**
+     * Nuit qui se termine le jour [date], phase par phase : la montre gérée ici, sinon l'appli qui l'a écrite dans
+     * Health Connect (ses phases si elle en fournit, sinon une seule phase « endormi »). null sans nuit.
+     */
+    suspend fun sleepNight(date: LocalDate): List<HealthRepository.SleepPhase>? {
+        if (Watch.enabled && HealthRepository.isSupported(Metric.SLEEP)) HealthRepository.sleepNight(date)?.let { return it }
+        return SuperPrefs.hc.value.nights[date.toEpochDay()]
+            ?.mapNotNull { p -> runCatching { ActivityKind.valueOf(p.kind) }.getOrNull()?.let { HealthRepository.SleepPhase(it, p.start, p.end) } }
+            ?.sortedBy { it.start }?.takeIf { it.isNotEmpty() }
+    }
+
+    /** La nuit a-t-elle des phases (léger, profond, paradoxal) ou seulement une durée ? */
+    fun hasStages(night: List<HealthRepository.SleepPhase>): Boolean =
+        night.any { it.kind == ActivityKind.LIGHT_SLEEP || it.kind == ActivityKind.DEEP_SLEEP || it.kind == ActivityKind.REM_SLEEP }
+
+    /** D'où vient [metric] le jour [date] : la montre gérée ici, sinon l'appli qui l'a écrite dans Health Connect, ou la saisie. */
+    suspend fun dataSource(metric: Metric, date: LocalDate): app.superhealth.health.data.DataSource? {
+        if (metric.manual) return app.superhealth.health.data.DataSource(app.superhealth.health.data.SourceKind.MANUAL)
+        if (Watch.enabled && HealthRepository.isSupported(metric)) HealthRepository.sourceOf(metric, date)?.let { return it }
+        return SuperPrefs.hc.value.origins[metric.name]
     }
 
     /** Une mesure est-elle disponible (montre qui la mesure, ou données Health Connect récentes) ? */

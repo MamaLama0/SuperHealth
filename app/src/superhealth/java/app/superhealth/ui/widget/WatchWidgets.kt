@@ -39,6 +39,8 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.superhealth.SuperPrefs
+import app.superhealth.bridge.Bridge
+import app.superhealth.health.data.Metric
 import app.superhealth.health.data.HealthRepository
 import app.superhealth.health.data.Scores
 import app.superhealth.ui.dashboard.chargeColor
@@ -47,6 +49,7 @@ import app.superhealth.ui.formatNumber
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
+import kotlin.math.roundToInt
 import java.time.LocalDate
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
@@ -128,10 +131,12 @@ private fun hypnogram(night: List<HealthRepository.SleepPhase>, w: Int, h: Int):
     if (night.isEmpty()) return bmp
     val c = android.graphics.Canvas(bmp)
     val t0 = night.first().start; val t1 = night.last().end
-    val row = h / 4f; val bh = row * 0.62f
+    // sans phases (appli qui ne note que la durée) : une seule bande, les réveils en creux
+    val staged = Bridge.hasStages(night)
+    val row = if (staged) h / 4f else h.toFloat(); val bh = row * (if (staged) 0.62f else 0.42f)
     val p = Paint(Paint.ANTI_ALIAS_FLAG)
-    night.forEach { s ->
-        val r = when (s.kind) { ActivityKind.AWAKE_SLEEP -> 0; ActivityKind.REM_SLEEP -> 1; ActivityKind.DEEP_SLEEP -> 3; else -> 2 }
+    night.filter { staged || it.kind != ActivityKind.AWAKE_SLEEP }.forEach { s ->
+        val r = if (!staged) 0 else when (s.kind) { ActivityKind.AWAKE_SLEEP -> 0; ActivityKind.REM_SLEEP -> 1; ActivityKind.DEEP_SLEEP -> 3; else -> 2 }
         p.color = when (s.kind) {
             ActivityKind.DEEP_SLEEP -> 0xFF4B3FC2.toInt(); ActivityKind.REM_SLEEP -> 0xFF59B4F5.toInt(); ActivityKind.AWAKE_SLEEP -> 0xFFF08A5D.toInt(); else -> 0xFF9B8AF2.toInt()
         }
@@ -141,13 +146,18 @@ private fun hypnogram(night: List<HealthRepository.SleepPhase>, w: Int, h: Int):
     return bmp
 }
 
-/** Sommeil de la nuit : durée, heures, hypnogramme, dette. */
+/**
+ * Sommeil de la nuit : durée, score (montre qui le calcule), hypnogramme (phases si l'appareil les mesure), heures et
+ * dette. Montre gérée ici ou appli via Health Connect.
+ */
 class SleepWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WK.ALL)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val night = HealthRepository.sleepNight(LocalDate.now()).orEmpty()
-        val debt = runCatching { Scores.sleepDebtOf(context, LocalDate.now()) }.getOrNull()
+        val today = LocalDate.now()
+        val night = runCatching { Bridge.sleepNight(today) }.getOrNull().orEmpty()
+        val debt = runCatching { Scores.sleepDebtOf(context, today) }.getOrNull()
+        val score = runCatching { Bridge.healthValue(context, Metric.SLEEP_SCORE, today) }.getOrNull()?.roundToInt()
         val asleep = night.filter { it.kind != ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60_000.0
         val hypno = hypnogram(night, WK.px(context, 240.dp), WK.px(context, 50.dp))
         val ring = WK.ring((asleep / Scores.sleepNeed()).toFloat(), HealthHues.Sleep, WK.px(context, 72.dp))
@@ -164,13 +174,17 @@ class SleepWidget : GlanceAppWidget() {
                     }
                     WK.Size.STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                         WidgetChip(R.drawable.ic_w_moon, hue, 30.dp); Spacer(GlanceModifier.width(8.dp))
-                        WidgetValue(v, null, hue, 18); Spacer(GlanceModifier.width(10.dp))
+                        WidgetValue(v, score?.let { "· $it" }, hue, 18); Spacer(GlanceModifier.width(10.dp))
                         Image(ImageProvider(hypno), null, GlanceModifier.defaultWeight().height(30.dp))
                     }
                     else -> {
                         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             WidgetChip(R.drawable.ic_w_moon, hue, 28.dp); Spacer(GlanceModifier.width(8.dp))
                             WidgetValue(v, null, hue, 20)
+                            if (score != null) {
+                                Spacer(GlanceModifier.defaultWeight())
+                                WidgetValue("$score", "/ 100", hue, if (size == WK.Size.LARGE) 20 else 16)
+                            }
                         }
                         Spacer(GlanceModifier.defaultWeight())
                         if (night.isNotEmpty()) Image(ImageProvider(hypno), null, GlanceModifier.fillMaxWidth().height(if (size == WK.Size.LARGE) 50.dp else 34.dp))

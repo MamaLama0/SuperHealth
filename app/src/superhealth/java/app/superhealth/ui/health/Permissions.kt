@@ -112,12 +112,16 @@ fun restrictedSettings(ctx: Context): Boolean {
     // APK ouvert depuis un fichier (navigateur, gestionnaire de fichiers) : restreint tant que l'utilisateur n'a pas fait
     // « Autoriser les paramètres restreints » (noté au retour d'Infos de l'appli, effacé si Android refuse encore)
     val source = runCatching { ctx.packageManager.getInstallSourceInfo(ctx.packageName).packageSource }.getOrDefault(PackageInstaller.PACKAGE_SOURCE_UNSPECIFIED)
-    return (source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE || source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE) && !unlockedFlag(ctx)
+    return (source == PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE || source == PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE) &&
+        !unlockedFlag(ctx) && !anyRestrictedGranted(ctx)
 }
 
 private fun unlockedFlag(ctx: Context) = ctx.getSharedPreferences("superhealth_perms", Context.MODE_PRIVATE).getBoolean("restricted_unlocked", false)
 private fun setUnlockedFlag(ctx: Context, on: Boolean) =
     ctx.getSharedPreferences("superhealth_perms", Context.MODE_PRIVATE).edit().putBoolean("restricted_unlocked", on).apply()
+
+/** Un réglage restreint accordé prouve que l'app est débloquée (Android débloque tous ses réglages restreints d'un coup). */
+private fun anyRestrictedGranted(ctx: Context) = Perm.entries.any { it.restricted && granted(ctx, it) }
 
 fun missingWatchPermissions(ctx: Context): Int = Perm.entries.count { !granted(ctx, it) }
 
@@ -135,8 +139,11 @@ fun PermissionsScreen(vm: SuperViewModel, nav: NavHostController) {
         val o = LifecycleEventObserver { _, e ->
             if (e != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
             tick++
+            // réglage restreint accordé : Android ne bloque plus rien pour l'app
+            if (unlock == 1 && anyRestrictedGranted(ctx)) { unlock = 0; setUnlockedFlag(ctx, true) }
             // 2e temps du déblocage : la fenêtre « Paramètre restreint » a été vue, le menu ⋮ existe maintenant
-            if (unlock == 1 && restrictedSettings(ctx)) {
+            // (même si la source d'installation ne dit plus « APK » : une mise à jour par l'app garde le blocage d'Android)
+            else if (unlock == 1) {
                 unlock = 2
                 Toast.makeText(ctx, tr("⋮ en haut à droite > Autoriser les paramètres restreints"), Toast.LENGTH_LONG).show()
                 runCatching { ctx.startActivity(appDetails(ctx)) }
@@ -161,7 +168,15 @@ fun PermissionsScreen(vm: SuperViewModel, nav: NavHostController) {
             runCatching { ctx.startActivity(appDetails(ctx)) }
         }
     }
-    val settings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { tick++ }
+    val settings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        tick++
+        val p = asked ?: return@rememberLauncherForActivityResult
+        if (!p.restricted || Build.VERSION.SDK_INT < 33) return@rememberLauncherForActivityResult
+        // Le déblocage noté au retour d'Infos de l'appli n'est qu'une supposition : un réglage restreint encore refusé
+        // (fenêtre « Paramètre restreint » d'Android) le contredit → le guide revient.
+        if (anyRestrictedGranted(ctx)) setUnlockedFlag(ctx, true)
+        else if (unlock == 0 && !granted(ctx, p)) { setUnlockedFlag(ctx, false); blocked = true }
+    }
     fun launch(perms: Array<String>) { silent = willBeSilent(ctx, perms.toList()); request.launch(perms) }
 
     fun ask(p: Perm) {

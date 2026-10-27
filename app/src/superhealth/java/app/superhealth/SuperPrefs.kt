@@ -296,7 +296,15 @@ data class HcCache(
      * Fusionnés heure par heure avec ceux de la montre (voir Bridge.steps).
      */
     val stepsHourly: Map<Long, Double> = emptyMap(),
+    /** Source de la donnée la plus récente de chaque mesure (nom de [app.superhealth.health.data.Metric]) : appli et type d'appareil. */
+    val origins: Map<String, app.superhealth.health.data.DataSource> = emptyMap(),
+    /** Nuit de chaque jour (jour du réveil → phases) écrite par l'appli retenue pour ce jour-là. */
+    val nights: Map<Long, List<HcPhase>> = emptyMap(),
 )
+
+/** Phase de sommeil lue dans Health Connect : type (nom d'ActivityKind : DEEP_SLEEP, SLEEP_ANY…), début et fin en ms. */
+@Serializable
+data class HcPhase(val kind: String, val start: Long, val end: Long)
 
 /** Séance d'exercice enregistrée par une autre app (course, marche, vélo…). */
 @Serializable

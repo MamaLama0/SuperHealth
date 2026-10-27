@@ -136,5 +136,9 @@ object Strings17 {
         "Infos de l'appli s'ouvre : touchez ⋮ en haut à droite" to "App info opens: tap ⋮ at the top right",
         "« Autoriser les paramètres restreints », puis confirmez" to "“Allow restricted settings”, then confirm",
         "Débloquer" to "Unlock", "Recommencer" to "Start over",
+        // source des mesures (1.7.8)
+        "Bague" to "Ring", "Bracelet" to "Band", "Ceinture cardio" to "Chest strap", "Balance" to "Scale",
+        "Saisie" to "Logged", "Appareil" to "Device", "Score %1\$s" to "Score %1\$s",
+        "Coucher" to "Bedtime", "Lever" to "Wake-up", "Au lit" to "In bed",
     )
 }
