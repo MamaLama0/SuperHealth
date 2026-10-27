@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import app.superhealth.nutrition.data.AiConfig
+import app.superhealth.nutrition.data.AiGift
 import app.superhealth.nutrition.data.AiFood
 import app.superhealth.nutrition.data.AiProvider
 import app.superhealth.nutrition.data.FoodEntryEntity
@@ -164,7 +165,7 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit, on
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(tr("Clé API requise"), style = MaterialTheme.typography.titleMedium)
-                    Text(tr("Ajoutez une clé API (OpenRouter ou un fournisseur compatible OpenAI)."), style = MaterialTheme.typography.bodySmall,
+                    Text(if (AiGift.available) tr("IA offerte ou votre clé.") else tr("Ajoutez une clé API (OpenRouter ou un fournisseur compatible OpenAI)."), style = MaterialTheme.typography.bodySmall,
                         color = Mf.colors.textSecondary)
                 }
             }
@@ -298,7 +299,13 @@ private fun PlateItem(r: PlateRow, s: app.superhealth.nutrition.domain.Settings,
     }
 }
 
-private fun presetLabel(id: String) = when (id.substringBefore('/')) {
+private fun presetLabel(id: String) = when (id) {
+    "gemini-flash-lite-latest" -> "Flash-Lite"
+    "gemini-flash-latest" -> "Flash"
+    else -> openRouterLabel(id)
+}
+
+private fun openRouterLabel(id: String) = when (id.substringBefore('/')) {
     "deepseek" -> "DeepSeek"
     "z-ai" -> "GLM"
     "google" -> "Gemini 3.1 Flash"
@@ -315,17 +322,23 @@ fun AiSettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
     DetailScaffold(tr("Intelligence artificielle"), onBack) {
         MfCard {
             Text(tr("Fournisseur"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
-            ChipChoice(AiProvider.entries, c.provider, { it.label.tr() }) { c = c.copy(provider = it, model = "", baseUrl = "") }
+            ChipChoice(AiProvider.entries.filter { it != AiProvider.OFFERED || AiGift.available }, c.provider, { it.label.tr() }) {
+                c = c.copy(provider = it, model = "", baseUrl = "")
+            }
             Text(tr(c.provider.keyHelp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
-            TextInput(tr("Clé API"), c.apiKey, { c = c.copy(apiKey = it.trim()) }, placeholder = tr("Collez votre clé"))
-            TextInput(tr("Modèle"), c.model, { c = c.copy(model = it.trim()) }, placeholder = c.provider.defaultModel.ifBlank { tr("nom du modèle") })
+            // IA offerte : rien à saisir (clé et modèle fournis)
+            if (c.provider != AiProvider.OFFERED) {
+                TextInput(tr("Clé API"), c.apiKey, { c = c.copy(apiKey = it.trim()) }, placeholder = tr("Collez votre clé"))
+                TextInput(tr("Modèle"), c.model, { c = c.copy(model = it.trim()) }, placeholder = c.provider.defaultModel.ifBlank { tr("nom du modèle") })
+            }
             val presets = when (c.provider) {
+                AiProvider.GEMINI -> listOf("gemini-flash-lite-latest", "gemini-flash-latest")
                 AiProvider.OPENROUTER -> listOf("deepseek/deepseek-v4.1-flash", "z-ai/glm-5.3-flash", "google/gemini-3.1-flash-lite")
-                AiProvider.CUSTOM -> emptyList()
+                AiProvider.OFFERED, AiProvider.CUSTOM -> emptyList()
             }
             if (presets.isNotEmpty()) ChipChoice(presets, c.effectiveModel, { presetLabel(it) }) { c = c.copy(model = it) }
             if (c.provider == AiProvider.CUSTOM) TextInput(tr("URL de base"), c.baseUrl, { c = c.copy(baseUrl = it.trim()) }, placeholder = "https://…/v1")
-            Text(tr("Le modèle doit accepter les images pour les photos."),
+            if (c.provider != AiProvider.OFFERED) Text(tr("Le modèle doit accepter les images pour les photos."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         }
         Spacer(Modifier.height(12.dp))
@@ -339,7 +352,7 @@ fun AiSettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
             }
         }
         test?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(12.dp)) }
-        Text(tr("La clé reste sur le téléphone. Seuls le texte et la photo sont envoyés."),
+        Text(tr("Envoyé sans votre nom, e-mail, téléphone ni position."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(8.dp))
         Spacer(Modifier.height(24.dp))
     }

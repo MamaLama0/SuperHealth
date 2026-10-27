@@ -211,6 +211,9 @@ android {
     }
 
     sourceSets {
+        superhealth {
+            kotlin.srcDirs += "build/generated/sources/aigift"
+        }
         main {
             java.srcDirs += "build/generated/sources/gbdao"
             java.srcDirs += "build/generated/sources/fit"
@@ -469,3 +472,35 @@ kaitai {
     javaPackage = "nodomain.freeyourgadget.gadgetbridge.kaitai"
     readWrite = true
 }
+
+// IA offerte par SuperHealth : adresse, modèle et clé lus HORS du dépôt (~/.gradle/gradle.properties : superhealthAiUrl,
+// superhealthAiModel, superhealthAiKey ; ou variables SUPERHEALTH_AI_URL / _MODEL / _KEY) et écrits masqués (XOR avec un
+// masque tiré de la clé) dans une source générée : jamais en clair dans le dépôt ni dans l'APK. Sans clé : option absente.
+def aiGiftValues = ["url": "SUPERHEALTH_AI_URL", "model": "SUPERHEALTH_AI_MODEL", "key": "SUPERHEALTH_AI_KEY"].collectEntries { k, env ->
+    [k, (project.findProperty("superhealthAi" + k.capitalize()) ?: System.getenv(env) ?: "").toString().trim()]
+}
+def generateAiGift = tasks.register("generateAiGift") {
+    def out = file("build/generated/sources/aigift/app/superhealth/nutrition/data/AiGiftValues.kt")
+    inputs.property("digest", aiGiftValues.values().join("\n").digest("SHA-256"))
+    outputs.file(out)
+    doLast {
+        def rnd = new Random(aiGiftValues.values().join("\n").hashCode() * 31L + 7)
+        def enc = { String v ->
+            def pad = (0..<v.length()).collect { rnd.nextInt(0xFFFF) }
+            def data = (0..<v.length()).collect { ((int) v.charAt(it)) ^ pad[it] }
+            "d(intArrayOf(${data.join(", ")}), intArrayOf(${pad.join(", ")}))"
+        }
+        out.parentFile.mkdirs()
+        out.text = """package app.superhealth.nutrition.data
+
+/** Généré à la compilation (tâche generateAiGift) : IA offerte, valeurs masquées. Ne pas modifier. */
+internal object AiGiftValues {
+    val url: String get() = ${enc(aiGiftValues.url)}
+    val model: String get() = ${enc(aiGiftValues.model)}
+    val key: String get() = ${enc(aiGiftValues.key)}
+    private fun d(a: IntArray, p: IntArray): String = CharArray(a.size) { (a[it] xor p[it]).toChar() }.concatToString()
+}
+"""
+    }
+}
+tasks.named("preBuild") { dependsOn generateAiGift }

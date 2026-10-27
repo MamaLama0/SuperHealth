@@ -46,6 +46,7 @@ class Prefs(context: Context) {
     fun setGoals(g: List<Goal>) { val v = g.sortedBy { it.startDay }; _goals.value = v; write("goals", ListSerializer(Goal.serializer()), v) }
     fun setCheckIns(c: List<CheckIn>) { val v = c.sortedBy { it.day }; _checkIns.value = v; write("checkins", ListSerializer(CheckIn.serializer()), v) }
 
+
     private fun <T> read(key: String, ser: KSerializer<T>): T? =
         sp.getString(key, null)?.let { runCatching { AppJson.decodeFromString(ser, it) }.getOrNull() }
 

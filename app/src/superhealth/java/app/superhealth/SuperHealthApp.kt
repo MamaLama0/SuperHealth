@@ -20,6 +20,7 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.bridge.RunImport.init(this)
         app.superhealth.meals.MealPlanner.init(this)
         app.superhealth.meds.Meds.init(this)
+        app.superhealth.bridge.WatchOnline.install(this)
         // Module montre désactivé : le moteur reste chargé (base de données) mais ne se connecte à rien.
         if (!SuperPrefs.settings.value.watchModule) {
             getPrefs().preferences.edit().putBoolean(GBPrefs.AUTO_CONNECT_BLUETOOTH, false).apply()

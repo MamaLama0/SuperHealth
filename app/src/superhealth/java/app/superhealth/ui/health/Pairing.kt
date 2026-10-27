@@ -106,7 +106,7 @@ fun rememberPairing(onDone: () -> Unit, onUseHealthConnect: () -> Unit): () -> U
     vendor?.let { app ->
         AlertDialog(onDismissRequest = { vendor = null }, containerColor = Mf.colors.card,
             title = { Text(trf("%1\$s est installé", app)) },
-            text = { Text(trf("Une montre ne se connecte qu'à une seule app. Pour garder %1\$s, laissez-le gérer la montre et activez son partage vers Health Connect : SuperHealth lira pas, cœur, sommeil et séances. Pour associer ici, dissociez d'abord la montre dans %1\$s.", app)) },
+            text = { Text(trf("%1\$s gère déjà la montre : activez son partage vers Health Connect, ou dissociez-la dans %1\$s.", app)) },
             confirmButton = { TextButton(onClick = { vendor = null; onUseHealthConnect() }) { Text(tr("Utiliser Health Connect"), color = Mf.colors.accent) } },
             dismissButton = { TextButton(onClick = { vendor = null; pair() }) { Text(tr("Associer quand même"), color = Mf.colors.text) } })
     }

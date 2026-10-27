@@ -1,29 +1,36 @@
 # SuperHealth
 
-Nutrition, musculation et santé dans une seule app, sans compte ni cloud : vos données restent sur le téléphone.
+Nutrition, musculation et santé dans une app gratuite, sans compte : vos données restent sur le téléphone.
+
+## Installer
+
+**Android** : téléchargez l'APK dans les [versions](https://github.com/MamaLama0/SuperHealth/releases/latest) et
+ouvrez-le. Les mises à jour sont automatiques.
+
+**iPhone** (expérimental) : installation par SideStore, avec un ordinateur la première fois seulement.
+
+1. iPhone : installez **LocalDevVPN** (App Store), touchez **Connect**.
+2. Ordinateur : avec **iloader**, installez `SideStore-HealthKit.ipa` sur l'iPhone branché.
+3. iPhone : autorisez SideStore dans les Réglages, connectez-vous.
+4. SideStore : **+** > `SuperHealth.ipa`, puis connectez Apple Santé.
+
+Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](https://github.com/MamaLama0/SuperHealth/tree/ios#installer-sur-iphone).
 
 ## Fonctionnalités
 
-- **Nutrition** : journal (recherche, code-barres, description ou photo analysée par IA, recettes), calories et macros
-  ajustées chaque semaine à votre dépense réelle, tendance du poids, objectif avec un rythme choisi, mesures et photos
-  de progression.
-- **Musculation** : programmes générés selon vos objectifs, vos disponibilités et votre salle ; séances guidées avec
-  charges et répétitions calculées, échauffements et minuteur de repos ; progression, records, muscles travaillés.
-- **Santé et activités** : montre connectée (pas, cœur, sommeil, VFC, SpO₂…), scores de récupération, d'effort et
-  dette de sommeil, courses avec tracé, zones cardiaques et splits, import GPX, TCX et FIT.
-- **Tableau de bord** à composer : cartes en quatre tailles, anneaux du jour, constantes, constats et corrélations.
-- **Plugins** : coach IA, planificateur de repas, rappels de médicaments.
-- **Widgets**, sauvegardes chiffrées (fichier ou WebDAV), français et anglais.
+- **Nutrition** : journal (code-barres, photo ou description analysée par IA, recettes), calories ajustées chaque
+  semaine, tendance du poids.
+- **Musculation** : programmes générés, séances guidées, progression et records.
+- **Santé** : montre (pas, cœur, sommeil, VFC…), scores de sommeil, récupération et effort, courses avec tracé.
+  Sur Android, une Garmin se connecte sans Garmin Connect (météo et GPS rapide inclus).
+- **IA offerte** sans clé, ou la vôtre.
+- **Tableau de bord**, widgets, sauvegardes chiffrées, français et anglais.
 
-## Android
+## Vie privée
 
-APK dans les [versions](https://github.com/MamaLama0/SuperHealth/releases/latest).
+Pas de compte ni de serveur. L'IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
 
-## iOS (expérimental)
+## iOS en détail
 
-Build **expérimental**, pas encore testé sur iPhone : même interface et mêmes fonctions qu'Android. Les données de la
-montre viennent de la santé de l'iPhone (Apple Watch), avec en plus les anneaux d'activité, les signes vitaux de la
-nuit, les alertes cardiaques et ECG, la dynamique de course et la séance en cours sur l'écran verrouillé.
-
-L'`.ipa` n'est pas signée : installez-la avec un outil de sideload, qui la signe avec votre identifiant Apple.
-Elle est publiée dans les versions marquées « iOS » ; le code est sur la branche [`ios`](https://github.com/MamaLama0/SuperHealth/tree/ios).
+Données via Apple Santé (Apple Watch ou toute montre qui y écrit). Code sur la branche
+[`ios`](https://github.com/MamaLama0/SuperHealth/tree/ios).

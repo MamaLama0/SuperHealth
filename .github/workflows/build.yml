@@ -13,6 +13,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # IA offerte : valeurs injectées depuis les secrets du dépôt (absentes du code, masquées dans l'app)
+      SUPERHEALTH_AI_URL: ${{ secrets.SUPERHEALTH_AI_URL }}
+      SUPERHEALTH_AI_MODEL: ${{ secrets.SUPERHEALTH_AI_MODEL }}
+      SUPERHEALTH_AI_KEY: ${{ secrets.SUPERHEALTH_AI_KEY }}
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4

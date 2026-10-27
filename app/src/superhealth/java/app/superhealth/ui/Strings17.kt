@@ -116,12 +116,12 @@ object Strings17 {
         // montre avec son app officielle, association
         "Oui, avec son app" to "Yes, with its own app",
         "Garmin Connect, Zepp… restent installées : données via Health Connect" to "Garmin Connect, Zepp… stay installed: data via Health Connect",
-        "Dans l'app de la montre, activez le partage vers Health Connect ; l'étape suivante le connecte ici." to
-            "In the watch's app, turn on sharing to Health Connect; the next step connects it here.",
+        "Activez le partage vers Health Connect dans l'app de la montre." to
+            "Turn on sharing to Health Connect in the watch's app.",
         "Montre lue par Health Connect" to "Watch read through Health Connect",
         "%1\$s est installé" to "%1\$s is installed",
-        "Une montre ne se connecte qu'à une seule app. Pour garder %1\$s, laissez-le gérer la montre et activez son partage vers Health Connect : SuperHealth lira pas, cœur, sommeil et séances. Pour associer ici, dissociez d'abord la montre dans %1\$s." to
-            "A watch connects to only one app. To keep %1\$s, let it manage the watch and turn on its sharing to Health Connect: SuperHealth will read steps, heart rate, sleep and workouts. To pair here, first unpair the watch in %1\$s.",
+        "%1\$s gère déjà la montre : activez son partage vers Health Connect, ou dissociez-la dans %1\$s." to
+            "%1\$s already manages the watch: turn on its sharing to Health Connect, or unpair it in %1\$s.",
         "Utiliser Health Connect" to "Use Health Connect",
         "Associer quand même" to "Pair anyway",
         "Autorisez « Appareils à proximité » et « Position » dans Autorisations." to "Allow “Nearby devices” and “Location” in Permissions.",
@@ -130,8 +130,8 @@ object Strings17 {
             "Connection stuck in a loop? %1\$s keeps the watch: unpair it in %1\$s, or keep %1\$s and use Health Connect.",
         "Autorisation refusée : accordez-la dans Infos de l'appli > Autorisations." to "Permission denied: grant it in App info > Permissions.",
         "⋮ en haut à droite > Autoriser les paramètres restreints" to "⋮ at the top right > Allow restricted settings",
-        "Installée depuis un APK : Android bloque notifications, SMS et superposition tant que vous ne les débloquez pas." to
-            "Installed from an APK: Android blocks notifications, SMS and overlay until you unlock them.",
+        "Android bloque ces autorisations pour les apps installées par APK." to
+            "Android blocks these permissions for apps installed from an APK.",
         "Touchez Débloquer, puis OK sur « Paramètre restreint »" to "Tap Unlock, then OK on “Restricted setting”",
         "Infos de l'appli s'ouvre : touchez ⋮ en haut à droite" to "App info opens: tap ⋮ at the top right",
         "« Autoriser les paramètres restreints », puis confirmez" to "“Allow restricted settings”, then confirm",
@@ -140,5 +140,27 @@ object Strings17 {
         "Bague" to "Ring", "Bracelet" to "Band", "Ceinture cardio" to "Chest strap", "Balance" to "Scale",
         "Saisie" to "Logged", "Appareil" to "Device", "Score %1\$s" to "Score %1\$s",
         "Coucher" to "Bedtime", "Lever" to "Wake-up", "Au lit" to "In bed",
+        // IA offerte et Google AI Studio (1.7.8)
+        "IA offerte" to "Free AI", "Google AI Studio" to "Google AI Studio",
+        "Activer l'IA offerte ?" to "Turn on the free AI?",
+        "Une photo du repas suffit pour le noter" to "A photo of the meal is enough to log it",
+        "Un coach qui connaît vos données" to "A coach who knows your data",
+        "Des repas composés selon vos objectifs" to "Meals built around your goals",
+        "Activée" to "On",
+        "Ensoleillé" to "Sunny",
+        "Éclaircies" to "Partly cloudy",
+        "Couvert" to "Overcast",
+        "Brouillard" to "Fog",
+        "Bruine" to "Drizzle",
+        "Pluie" to "Rain",
+        "Neige" to "Snow",
+        "Orage" to "Thunderstorm",
+        "Météo" to "Weather",
+        "Sans clé à créer." to "No key needed.",
+        "Clé gratuite sur aistudio.google.com." to "Free key at aistudio.google.com.",
+        "URL avant /chat/completions (Ollama, Groq…)." to "URL before /chat/completions (Ollama, Groq…).",
+        "Envoyé sans votre nom, e-mail, téléphone ni position." to "Sent without your name, email, phone or location.",
+        "IA offerte ou votre clé." to "Free AI or your own key.",
+        "Gratuite, sans clé." to "Free, no key.",
     )
 }

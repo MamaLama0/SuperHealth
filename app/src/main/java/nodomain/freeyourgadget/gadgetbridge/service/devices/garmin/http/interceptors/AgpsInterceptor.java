@@ -67,20 +67,13 @@ public class AgpsInterceptor implements HttpInterceptor {
         saveKnownUrl(request.getUrl());
 
         try {
-            final DocumentFile agpsFile = deviceSupport.getAgpsFile(request.getUrl());
-            if (agpsFile == null) {
-                LOG.warn("File with AGPS data for {} does not exist.", request.getUrl());
-                return null;
-            }
-            try (InputStream agpsIn = deviceSupport.getContext().getContentResolver().openInputStream(agpsFile.getUri())) {
-                if (agpsIn == null) {
-                    LOG.error("Failed to open input stream for agps file {}", agpsFile.getUri());
+            {
+                final byte[] rawBytes = readAgps(request.getUrl());
+                if (rawBytes == null) {
                     return null;
                 }
-
                 final GarminHttpResponse response = new GarminHttpResponse();
 
-                final byte[] rawBytes = FileUtils.readAll(agpsIn, 1024 * 1024); // 1MB, they're usually ~60KB
                 final String fileHash = GB.hexdump(CheckSums.md5(rawBytes)).toLowerCase(Locale.ROOT);
                 final String etag = "\"" + fileHash + "\"";
                 response.getHeaders().put("etag", etag);
@@ -121,7 +114,7 @@ public class AgpsInterceptor implements HttpInterceptor {
                     return null;
                 }
 
-                LOG.info("Sending new AGPS data (length: {}) to the device from {}", rawBytes.length, agpsFile.getUri());
+                LOG.info("Sending new AGPS data (length: {}) to the device for {}", rawBytes.length, request.getUrl());
 
                 if (request.getHeaders().containsKey("accept")) {
                     response.getHeaders().put("Content-Type", request.getHeaders().get("accept"));
@@ -140,6 +133,29 @@ public class AgpsInterceptor implements HttpInterceptor {
             reportError(request.getUrl());
             return null;
         }
+    }
+
+    /** Fichier choisi dans le dossier AGPS ; sinon téléchargé par l'app hôte (SuperHealth), comme Garmin Connect. */
+    @Nullable
+    private byte[] readAgps(final String url) throws IOException {
+        final DocumentFile agpsFile = deviceSupport.getAgpsFile(url);
+        if (agpsFile != null) {
+            try (InputStream agpsIn = deviceSupport.getContext().getContentResolver().openInputStream(agpsFile.getUri())) {
+                if (agpsIn != null) {
+                    return FileUtils.readAll(agpsIn, 1024 * 1024); // 1MB, they're usually ~60KB
+                }
+                LOG.error("Failed to open input stream for agps file {}", agpsFile.getUri());
+            }
+        }
+        final kotlin.jvm.functions.Function1<? super String, byte[]> online = OnlineFallback.agps;
+        if (online != null) {
+            final byte[] fetched = OnlineFallback.fetch(() -> online.invoke(url));
+            if (fetched != null) {
+                return fetched;
+            }
+        }
+        LOG.warn("File with AGPS data for {} does not exist.", url);
+        return null;
     }
 
     public void saveKnownUrl(final String url) {

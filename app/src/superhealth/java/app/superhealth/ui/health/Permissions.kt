@@ -235,7 +235,7 @@ private fun RestrictedGuide(inAppInfo: Boolean, onUnlock: () -> Unit) {
             Text(tr("Paramètres restreints par Android"), style = MaterialTheme.typography.titleMedium, color = hue.onContainer())
         }
         Spacer(Modifier.height(8.dp))
-        Text(tr("Installée depuis un APK : Android bloque notifications, SMS et superposition tant que vous ne les débloquez pas."),
+        Text(tr("Android bloque ces autorisations pour les apps installées par APK."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.text)
         Spacer(Modifier.height(8.dp))
         listOf(

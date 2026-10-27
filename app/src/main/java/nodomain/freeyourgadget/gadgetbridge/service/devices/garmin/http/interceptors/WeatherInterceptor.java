@@ -75,7 +75,19 @@ public class WeatherInterceptor implements HttpInterceptor {
         final String path = request.getPath();
         final Map<String, String> query = request.getQuery();
 
-        final WeatherSpec weatherSpec = Weather.getWeatherSpec();
+        WeatherSpec weatherSpec = Weather.getWeatherSpec();
+
+        // Pas d'appli météo (ou météo de plus d'une heure) : l'app hôte la récupère pour la position de la montre.
+        final kotlin.jvm.functions.Function2<? super Float, ? super Float, WeatherSpec> online = OnlineFallback.weather;
+        if (online != null && (weatherSpec == null || System.currentTimeMillis() / 1000L - weatherSpec.getTimestamp() > 3600)) {
+            final float lat = getQueryNum(query, "lat", 0).floatValue();
+            final float lon = getQueryNum(query, "lon", 0).floatValue();
+            final WeatherSpec fetched = OnlineFallback.fetch(() -> online.invoke(lat, lon));
+            if (fetched != null) {
+                Weather.INSTANCE.setWeatherSpec(java.util.Collections.singletonList(fetched));
+                weatherSpec = fetched;
+            }
+        }
 
         if (weatherSpec == null) {
             LOG.warn("No weather in weather instance");
