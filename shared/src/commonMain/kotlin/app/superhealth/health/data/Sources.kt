@@ -46,6 +46,8 @@ data class DataSource(val kind: SourceKind, val device: String? = null, val app:
             "com.ouraring.oura" to ("Oura" to SourceKind.RING),
             "com.whoop.android" to ("WHOOP" to SourceKind.BAND),
             "com.whoop.iphone" to ("WHOOP" to SourceKind.BAND),
+            "com.noop.whoop" to ("NOOP" to SourceKind.BAND),
+            "com.noopapp.noop" to ("NOOP" to SourceKind.BAND),
             "com.withings.wiscale2" to ("Withings" to SourceKind.SCALE),
             "com.withings.wiScaleNG" to ("Withings" to SourceKind.SCALE),
             "fi.polar.polarflow" to ("Polar Flow" to SourceKind.WATCH),

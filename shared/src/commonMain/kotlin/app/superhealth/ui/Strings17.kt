@@ -145,5 +145,14 @@ object Strings17 {
         "Envoyé sans votre nom, e-mail, téléphone ni position." to "Sent without your name, email, phone or location.",
         "IA offerte ou votre clé." to "Free AI or your own key.",
         "Gratuite, sans clé." to "Free, no key.",
+        // 1.7.9 : scores
+        "Âge de forme" to "Fitness age",
+        "ans" to "yrs",
+        "L'âge d'une personne moyenne qui aurait votre forme cardio, d'après votre pouls au repos et votre Effort de la semaine (modèle de l'étude HUNT, Nes 2011). Calculé chaque samedi, à ±5 ans près : suivez sa tendance."
+            to "The age of an average person with your cardio fitness, from your resting heart rate and your week's Effort (HUNT study model, Nes 2011). Computed every Saturday, within ±5 years: follow its trend.",
+        "%1\$s ans de moins" to "%1\$s yrs younger",
+        "%1\$s ans de plus" to "%1\$s yrs older",
+        "Votre âge" to "Your age",
+        "sans VFC" to "no HRV",
     )
 }

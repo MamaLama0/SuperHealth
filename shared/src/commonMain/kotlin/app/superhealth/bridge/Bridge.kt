@@ -123,6 +123,9 @@ object Bridge {
         return maxOf(merged, watchTotal ?: 0.0).takeIf { it > 0 }
     }
 
+    /** Pouls minute par minute (s, bpm) du jour. */
+    suspend fun minuteHeart(date: LocalDate): List<Pair<Long, Int>> = HealthRepository.minuteHeart(date)
+
     /** Valeur santé du jour : montre gérée par SuperHealth, sinon dernière lecture Health Connect. */
     suspend fun healthValue(ctx: Context, metric: Metric, date: LocalDate): Double? {
         if (metric == Metric.STEPS) return steps(ctx, date)
@@ -136,7 +139,10 @@ object Bridge {
             Metric.SLEEP -> hc.sleepMin[d]
             Metric.HRV -> hc.hrv[d]
             Metric.SPO2 -> hc.spo2[d]
-            Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT -> HealthRepository.dayValue(ctx, metric, date)
+            // pas de score de la montre : Repos calculé d'après les phases de la nuit
+            Metric.SLEEP_SCORE -> app.superhealth.health.data.Scores.restOf(ctx, date)
+            Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT, Metric.EFFORT,
+            Metric.FITNESS_AGE -> HealthRepository.dayValue(ctx, metric, date)
             else -> null
         }
     }
@@ -175,8 +181,10 @@ object Bridge {
             Metric.SLEEP -> hc.sleepMin.isNotEmpty()
             Metric.HRV -> hc.hrv.isNotEmpty()
             Metric.SPO2 -> hc.spo2.isNotEmpty()
-            Metric.RECOVERY -> hc.hrv.isNotEmpty()
+            Metric.RECOVERY -> hc.hrv.isNotEmpty() || hc.restingHr.isNotEmpty()
+            Metric.FITNESS_AGE -> hc.restingHr.isNotEmpty() || (Watch.enabled && HealthRepository.isSupported(Metric.RESTING_HR))
             Metric.SLEEP_DEBT -> hc.sleepMin.isNotEmpty()
+            Metric.SLEEP_SCORE -> Watch.enabled && HealthRepository.isSupported(Metric.SLEEP)
             else -> false
         }
     }

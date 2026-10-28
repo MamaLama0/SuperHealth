@@ -279,7 +279,7 @@ data class SuperSettings(
 )
 
 /** Mesures que la carte Constantes peut afficher (montre ou Health Connect). */
-val VITAL_CHOICES = listOf("RESTING_HR", "HEART_RATE", "RESPIRATORY_RATE", "BODY_ENERGY", "STRESS", "SPO2", "HRV", "SLEEP", "SLEEP_SCORE",
+val VITAL_CHOICES = listOf("RESTING_HR", "HEART_RATE", "RESPIRATORY_RATE", "BODY_ENERGY", "STRESS", "SPO2", "HRV", "SLEEP", "SLEEP_SCORE", "FITNESS_AGE",
     "WALKING_HR", "HR_RECOVERY", "BREATHING_DISTURBANCES", "DAYLIGHT", "STAND_HOURS", "NOISE",
     "READINESS", "VO2MAX", "TEMPERATURE", "STEPS")
 

@@ -206,7 +206,7 @@ internal fun ChargeCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavH
         Row(verticalAlignment = Alignment.CenterVertically) {
             Gauge(score?.div(100f), col, Modifier.size(112.dp)) {
                 Text(score?.let { "$it" } ?: "—", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = col)
-                Text(if (score == null) tr("Calibrage") else "%", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                Text(if (score == null) tr("Calibrage") else if (w.charge?.withoutHrv == true) tr("sans VFC") else "%", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -219,7 +219,7 @@ internal fun ChargeCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavH
                             style = MaterialTheme.typography.labelLarge)
                     }
                 }
-                if (d.isEmpty()) Text(tr("Quatre nuits avec la VFC suffisent pour la calculer."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                if (d.isEmpty()) Text(tr("Quatre nuits de pouls au repos suffisent pour la calculer."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             }
         }
         if (w.chargeHistory.count { it != null } >= 2) {

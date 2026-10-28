@@ -85,7 +85,8 @@ object HealthRepository {
 
     /** True when the health source can record [metric], or it is logged by hand. */
     fun isSupported(metric: Metric): Boolean = metric.manual || (devices().isNotEmpty() && when (metric) {
-        Metric.RECOVERY -> source.supports(Metric.HRV)
+        Metric.RECOVERY -> source.supports(Metric.HRV) || source.supports(Metric.RESTING_HR)
+        Metric.FITNESS_AGE -> source.supports(Metric.RESTING_HR)
         Metric.EFFORT -> source.supports(Metric.HEART_RATE)
         Metric.SLEEP_DEBT -> source.supports(Metric.SLEEP)
         Metric.CARDIO_WEEK -> source.supports(Metric.ACTIVE_MINUTES)
@@ -122,6 +123,7 @@ object HealthRepository {
             Metric.RECOVERY -> Scores.chargeOf(context, date)?.score?.toDouble()
             Metric.EFFORT -> Scores.effortOf(context, date)
             Metric.SLEEP_DEBT -> Scores.sleepDebtOf(context, date)
+            Metric.FITNESS_AGE -> Scores.fitnessAgeOf(context, date)
             Metric.WEIGHT -> manual.query(metric, from, to).firstOrNull()?.value ?: read(Metric.WEIGHT)
             Metric.HYDRATION -> manual.query(metric, from, to).sumOf { it.value }.takeIf { it > 0 }
             Metric.BODY_FAT, Metric.GLUCOSE, Metric.BODY_TEMPERATURE -> {

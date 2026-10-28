@@ -16,7 +16,7 @@ actual fun inflateRaw(data: ByteArray, size: Int): ByteArray {
 
 actual fun secureRandomBytes(n: Int): ByteArray = ByteArray(n).also { java.security.SecureRandom().nextBytes(it) }
 
-actual fun appVersion(): String = "1.7.8"
+actual fun appVersion(): String = "1.7.9"
 
 actual fun scheduleNotification(id: String, title: String, body: String, atMs: Long, sound: Boolean, category: String?) {
     println("notification $id à $atMs : $title — $body")
