@@ -65,7 +65,9 @@ import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.timeIntervalSince1970
 import platform.HealthKit.HKCategorySample
 import platform.HealthKit.HKCategoryType
+import platform.HealthKit.HKCategoryTypeIdentifierMenstrualFlow
 import platform.HealthKit.HKCategoryTypeIdentifierSleepAnalysis
+import platform.HealthKit.HKCategoryValueMenstrualFlowNone
 import platform.HealthKit.HKCategoryValueSleepAnalysisAsleepCore
 import platform.HealthKit.HKCategoryValueSleepAnalysisAsleepDeep
 import platform.HealthKit.HKCategoryValueSleepAnalysisAsleepREM
@@ -393,6 +395,19 @@ object HealthKitSource : HealthSource {
         return samples(q(id), range(fromMs, toMs)).filterIsInstance<HKQuantitySample>().map {
             Point(it.startDate.ms(), it.quantity.doubleValueForUnit(unit) * scale)
         }
+    }
+
+    private val flowType: HKCategoryType get() = HKCategoryType.categoryTypeForIdentifier(HKCategoryTypeIdentifierMenstrualFlow)!!
+
+    override suspend fun requestCycleAuthorization(): Boolean = available && authorize(emptySet(), setOf(flowType))
+
+    /** Jours de règles (flux noté, « aucun » exclu) : Apple Santé ne dit pas si la lecture est refusée, on lit simplement rien. */
+    override suspend fun periodDays(fromMs: Long, toMs: Long): Set<Long>? {
+        if (!available) return null
+        val zone = ZoneId.systemDefault()
+        return samples(flowType, range(fromMs, toMs)).filterIsInstance<HKCategorySample>()
+            .filter { it.value != HKCategoryValueMenstrualFlowNone }
+            .map { Instant.ofEpochMilli(it.startDate.ms()).atZone(zone).toLocalDate().toEpochDay() }.toSet()
     }
 
     private val stagedValues = setOf(HKCategoryValueSleepAnalysisAsleepCore, HKCategoryValueSleepAnalysisAsleepDeep, HKCategoryValueSleepAnalysisAsleepREM)

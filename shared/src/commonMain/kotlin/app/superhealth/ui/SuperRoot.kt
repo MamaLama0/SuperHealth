@@ -59,6 +59,9 @@ import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.RestaurantMenu
+import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Straighten
@@ -132,7 +135,12 @@ private val tabs = listOf(
     Tab("activities", "Activités", Icons.AutoMirrored.Rounded.DirectionsRun),
 )
 
-private fun isTabRoute(route: String?) = tabs.any { it.route == route }
+/** Réglages en onglet : « + » au milieu avec un nombre impair d'onglets, pour une barre symétrique. */
+private val settingsTab = Tab("settings", "Réglages", Icons.Rounded.Settings)
+
+fun settingsIsTab(s: app.superhealth.SuperSettings) = s.plusSide == "CENTER" && visibleTabs(s).size % 2 == 1
+
+private fun isTabRoute(route: String?) = tabs.any { it.route == route } || (route == "settings" && settingsIsTab(app.superhealth.SuperPrefs.settings.value))
 
 /** Onglets des parties activées : Journal avec la nutrition, Activités avec la musculation ou les activités. */
 private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
@@ -215,6 +223,11 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }
+            composable("journal") { app.superhealth.ui.wellbeing.JournalScreen(vm, nav) }
+            composable("form") { app.superhealth.ui.wellbeing.FormScreen(vm, nav) }
+            composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }
+            composable("breathe") { app.superhealth.ui.wellbeing.BreatheScreen(nav) }
+            composable("settings/reminders") { app.superhealth.ui.wellbeing.RemindersScreen(vm, nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
@@ -282,7 +295,7 @@ private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f,
 @Composable
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
-    val shown = visibleTabs(sh)
+    val shown = visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it }
     val pill = Modifier.height(68.dp)
         .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
         .clip(RoundedCornerShape(26.dp)).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).padding(horizontal = 4.dp)
@@ -291,7 +304,7 @@ private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> U
         when (sh.plusSide) {
             // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
             "CENTER" -> Row(pill.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                val left = shown.take((shown.size + 1) / 2)
+                val left = shown.take(shown.size / 2)
                 Row(Modifier.weight(1f).fillMaxHeight()) { left.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
                 PlusButton(56.dp, onPlus)
                 Row(Modifier.weight(1f).fillMaxHeight()) { (shown - left.toSet()).forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
@@ -368,6 +381,9 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
         PlusAction.WATER -> QuickAction("Verre d'eau (250 ml)", Icons.Rounded.LocalDrink, "water")
         PlusAction.VITALS -> QuickAction("Hydratation et constantes", Icons.Rounded.WaterDrop, "log_health")
         PlusAction.BODY -> QuickAction("Mesures", Icons.Rounded.Straighten, "body")
+        PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "journal")
+        PlusAction.PERIOD -> QuickAction("Règles", Icons.Rounded.CalendarMonth, "cycle")
+        PlusAction.BREATHE -> QuickAction("Respirer", Icons.Rounded.Air, "breathe")
         PlusAction.SYNC -> if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null
     }
 }

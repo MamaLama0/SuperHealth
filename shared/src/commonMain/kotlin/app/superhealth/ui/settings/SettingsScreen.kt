@@ -26,6 +26,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.SentimentSatisfied
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
@@ -128,7 +131,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     val name = remember(nameTick) { app.superhealth.ui.userName() }
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Réglages"), onBack = { nav.popBackStack() })
+        // onglet de la barre (« + » au milieu) : pas de retour
+        ScreenTitle(tr("Réglages"), onBack = if (app.superhealth.ui.settingsIsTab(sh)) null else ({ nav.popBackStack() }))
         Column(Modifier.padding(horizontal = 16.dp)) {
             // Profil : la seule source de sexe, âge, taille et poids pour la nutrition, la musculation et la montre.
             MfCard(onClick = { nav.go("profile") }) {
@@ -172,6 +176,23 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 IconSwitchRow(tr("Activités et montre"), if (!sh.has(app.superhealth.Feature.HEALTH)) tr("Désactivée") else if (sh.watchModule) trf("%1\$s appareil(s)", devices.size) else tr("Montre désactivée"),
                     Icons.Rounded.Watch, HealthHues.Respiration, sh.has(app.superhealth.Feature.HEALTH), onClick = { nav.go("h/devices") }) { on ->
                     toggle(app.superhealth.Feature.HEALTH, on); vm.setWatchModule(on)
+                }
+                RowDivider(56.dp)
+                IconSwitchRow(tr("Journal du moral"), if (sh.has(app.superhealth.Feature.JOURNAL)) tr("Humeur et habitudes") else tr("Désactivé"),
+                    Icons.Rounded.SentimentSatisfied, HealthHues.Mind, sh.has(app.superhealth.Feature.JOURNAL), onClick = { nav.go("journal") }) {
+                    toggle(app.superhealth.Feature.JOURNAL, it)
+                }
+                RowDivider(56.dp)
+                IconSwitchRow(tr("Cycle menstruel"), if (sh.has(app.superhealth.Feature.CYCLE)) tr("Règles et phases") else tr("Désactivé"),
+                    Icons.Rounded.CalendarMonth, app.superhealth.ui.wellbeing.CycleHue, sh.has(app.superhealth.Feature.CYCLE), onClick = { nav.go("cycle") }) { on ->
+                    toggle(app.superhealth.Feature.CYCLE, on)
+                    // la carte arrive avec la fonction (retirable ensuite dans Cartes)
+                    if (on) SuperPrefs.update { s -> if (app.superhealth.DashCard.CYCLE in s.dashboard) s else s.copy(dashboard = s.dashboard + app.superhealth.DashCard.CYCLE,
+                        plus = (s.plus + app.superhealth.PlusAction.PERIOD.name).distinct()) }
+                }
+                RowDivider(56.dp)
+                SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Sleep) {
+                    nav.go("settings/reminders")
                 }
                 RowDivider(56.dp)
                 ModulesRow(nav)

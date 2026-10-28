@@ -3,6 +3,8 @@ package app.superhealth.ui.dashboard
 import app.superhealth.platform.*
 
 import app.superhealth.available
+import app.superhealth.feature
+import app.superhealth.has
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -125,7 +127,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
         }
 
         DashCard.Section.entries.forEach { section ->
-            val hidden = DashCard.entries.filter { it.section == section && it !in shown && it.available }
+            val hidden = DashCard.entries.filter { it.section == section && it !in shown && it.available && (it.feature()?.let { f -> sh.has(f) } ?: true) }
             if (hidden.isEmpty()) return@forEach
             app.superhealth.nutrition.ui.components.GroupHeader(tr(section.label), Modifier.padding(start = 0.dp))
             GroupCard {
@@ -235,7 +237,7 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         DashCard.Section.entries.forEach { section ->
-            val hidden = PlusAction.entries.filter { it.section == section && it !in shown }
+            val hidden = PlusAction.entries.filter { it.section == section && it !in shown && (it.feature()?.let { f -> sh.has(f) } ?: true) }
             if (hidden.isEmpty()) return@forEach
             app.superhealth.nutrition.ui.components.GroupHeader(tr(section.label), Modifier.padding(start = 0.dp))
             GroupCard {

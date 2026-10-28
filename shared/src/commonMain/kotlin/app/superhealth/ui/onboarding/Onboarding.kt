@@ -8,6 +8,8 @@ import app.superhealth.ui.theme.WorkoutBlue
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Base
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.SentimentSatisfied
 import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Speed
@@ -486,6 +488,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                                         app.superhealth.Feature.NUTRITION -> Icons.Rounded.Restaurant
                                         app.superhealth.Feature.TRAINING -> Icons.Rounded.FitnessCenter
                                         app.superhealth.Feature.HEALTH -> Icons.Rounded.Watch
+                                        app.superhealth.Feature.JOURNAL -> Icons.Rounded.SentimentSatisfied
+                                        app.superhealth.Feature.CYCLE -> Icons.Rounded.CalendarMonth
                                     }, null, tint = if (on) Mf.colors.accent else Mf.colors.textSecondary, modifier = Modifier.size(26.dp))
                                     Spacer(Modifier.width(14.dp))
                                     Column(Modifier.weight(1f)) {

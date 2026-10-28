@@ -63,6 +63,8 @@ object SuperHealth {
         app.superhealth.bridge.RunImport.init(appContext)
         app.superhealth.meals.MealPlanner.init(appContext)
         app.superhealth.meds.Meds.init(appContext)
+        app.superhealth.wellbeing.Journal.init(appContext)
+        app.superhealth.wellbeing.Cycle.init(appContext)
         NutriApp.init(appContext)
         WorkoutApp.init(appContext)
         Bridge.start(appContext)
@@ -96,6 +98,8 @@ fun App() {
     val dark = s.themeMode.isDark(isSystemInDarkTheme())
     LifecycleResumeEffect(Unit) {
         vm.onResume(appContext)
+        // rappels du jour devenus inutiles retirés, 7 jours suivants reprogrammés
+        app.superhealth.wellbeing.Reminders.schedule(appContext)
         // en quittant l'app : widgets à jour (pas, anneaux et signes vitaux relus)
         onPauseOrDispose { app.superhealth.ui.widget.Widgets.publish() }
     }

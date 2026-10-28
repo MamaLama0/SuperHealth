@@ -78,6 +78,12 @@ interface HealthSource {
     /** Nouvelles mesures de pouls dès qu'elles arrivent (null : pas de suivi en direct). */
     fun liveHeart(): kotlinx.coroutines.flow.Flow<Point>? = null
 
+    /** Autorisation à part pour les règles (demandée depuis l'écran Cycle seulement). */
+    suspend fun requestCycleAuthorization(): Boolean = false
+
+    /** Jours de règles notés par d'autres apps entre [fromMs] et [toMs] (null : non disponible). */
+    suspend fun periodDays(fromMs: Long, toMs: Long): Set<Long>? = null
+
     // Écriture vers la plateforme (une donnée réécrite remplace la précédente : même identifiant de synchro).
     suspend fun writeWeight(epochDay: Long, kg: Double, fatPct: Double?) = Unit
     suspend fun writeNutrition(epochDay: Long, kcal: Double, protein: Double, fat: Double, carbs: Double, fiber: Double) = Unit

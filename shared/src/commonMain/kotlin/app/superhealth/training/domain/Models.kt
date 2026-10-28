@@ -198,6 +198,8 @@ data class Session(
     val pausedAt: Long? = null,
     /** Exercice affiché (page du PageView de séance). */
     val current: Int = 0,
+    /** Forme du jour appliquée : +1 série (pousser) ou −1 (alléger) ; le programme n'est pas modifié pour autant. */
+    val adjust: Int = 0,
 ) {
     /** Durée effective en secondes, pauses déduites. */
     fun elapsedSec(now: Long): Long = ((now - startTime - pausedMs - (pausedAt?.let { now - it } ?: 0)) / 1000).coerceAtLeast(0)

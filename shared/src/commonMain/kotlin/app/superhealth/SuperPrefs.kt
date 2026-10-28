@@ -55,7 +55,15 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** Mesures corporelles et photos de progression (paliers de l'objectif). */
     BODY("Mesures et photos", Section.NUTRITION),
     /** iOS : signes vitaux de la nuit comparés à la plage habituelle (comme l'app Signes vitaux de l'Apple Watch). */
-    NIGHT_VITALS("Signes vitaux de la nuit", Section.HEALTH, watch = true);
+    NIGHT_VITALS("Signes vitaux de la nuit", Section.HEALTH, watch = true),
+    /** 1.8 : pousser ou se reposer aujourd'hui (Charge, sommeil, charge d'entraînement et moral recoupés). */
+    FORM("Forme du jour", Section.HEALTH),
+    /** 1.8 : journal du moral et ce qui influence la récupération. */
+    JOURNAL("Journal du moral", Section.HEALTH),
+    /** 1.8 : coucher conseillé (besoin, dette, heure de réveil habituelle). */
+    BEDTIME("Coucher conseillé", Section.HEALTH, watch = true),
+    /** 1.8 : suivi du cycle. */
+    CYCLE("Cycle", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -87,7 +95,7 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
     DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE,
-    DashCard.COACH, DashCard.COACH_WEEK, DashCard.NIGHT_VITALS)
+    DashCard.COACH, DashCard.COACH_WEEK, DashCard.NIGHT_VITALS, DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE)
 
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
@@ -149,10 +157,14 @@ enum class PlusAction(val label: String, val section: DashCard.Section) {
     BODY("Mesures", DashCard.Section.HEALTH),
     SYNC("Synchroniser", DashCard.Section.HEALTH),
     /** Module Coach IA. */
-    COACH("Demander au coach", DashCard.Section.HEALTH);
+    COACH("Demander au coach", DashCard.Section.HEALTH),
+    /** 1.8 */
+    MOOD("Noter mon moral", DashCard.Section.HEALTH),
+    PERIOD("Règles", DashCard.Section.HEALTH),
+    BREATHE("Respirer", DashCard.Section.HEALTH);
 
     companion object {
-        val defaults = listOf(SEARCH, SCAN, QUICK, AI, RECIPES, CUSTOM_FOOD, WORKOUT, EMPTY, EXERCISES, WEIGHT, VITALS, BODY, SYNC, COACH)
+        val defaults = listOf(SEARCH, SCAN, QUICK, AI, RECIPES, CUSTOM_FOOD, WORKOUT, EMPTY, EXERCISES, WEIGHT, VITALS, BODY, SYNC, COACH, MOOD, PERIOD, BREATHE)
     }
 }
 
@@ -164,6 +176,8 @@ enum class Feature(val label: String, val summary: String) {
     NUTRITION("Nutrition", "Journal, calories adaptatives, tendance du poids"),
     TRAINING("Musculation", "Programmes, séances guidées, progression"),
     HEALTH("Activités et montre", "Course, pas, cœur, sommeil, Apple Santé"),
+    JOURNAL("Journal du moral", "Humeur du jour, habitudes et leur effet sur la récupération"),
+    CYCLE("Cycle menstruel", "Règles, phases et prochaines dates estimées"),
 }
 
 fun SuperSettings.has(f: Feature) = f.name in features
@@ -174,11 +188,13 @@ fun DashCard.feature(): Feature? = when (this) {
     DashCard.HABITS, DashCard.BALANCE -> Feature.NUTRITION
     DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS, DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS,
     DashCard.MUSCLE_SETS, DashCard.LIFTS -> Feature.TRAINING
-    DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE -> Feature.HEALTH
+    DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE, DashCard.FORM -> Feature.HEALTH
+    DashCard.JOURNAL -> Feature.JOURNAL
+    DashCard.CYCLE -> Feature.CYCLE
     else -> if (watch) Feature.HEALTH else null
 }
 
-fun PlusAction.feature(): Feature? = when (section) {
+fun PlusAction.feature(): Feature? = if (this == PlusAction.MOOD) Feature.JOURNAL else if (this == PlusAction.PERIOD) Feature.CYCLE else when (section) {
     DashCard.Section.NUTRITION -> Feature.NUTRITION
     DashCard.Section.TRAINING -> Feature.TRAINING
     else -> if (this == PlusAction.SYNC) Feature.HEALTH else null
@@ -208,6 +224,17 @@ data class SuperSettings(
     val plus: List<String> = PlusAction.defaults.map { it.name },
     /** Place du « + » dans la barre du bas : LEFT (gaucher), CENTER ou RIGHT (sous le pouce droit). */
     val plusSide: String = "RIGHT",
+    /** 1.8 : rappels (minute du jour, −1 : coupé) et coucher conseillé. */
+    val remindWeigh: Int = -1,
+    val remindLog: Int = -1,
+    val remindJournal: Int = -1,
+    val remindBedtime: Boolean = false,
+    /** Habitudes proposées dans le journal du moral (noms de wellbeing.Journal.Tag). */
+    val journalTags: List<String> = app.superhealth.wellbeing.Journal.Tag.entries.map { it.name },
+    /** 1.8 : journal du moral, forme du jour et coucher conseillé déjà proposés (migration unique). */
+    val wellbeingAdded: Boolean = false,
+    /** Règles lues dans Apple Santé (autorisation à part, demandée depuis l'écran Cycle). */
+    val cycleSync: Boolean = false,
     /** Mesures de la carte Constantes (pièce maîtresse du tableau de bord), noms de [app.superhealth.health.data.Metric]. */
     val vitals: List<String> = listOf("RESTING_HR", "RESPIRATORY_RATE", "HRV"),
     /** Constantes déjà placées en tête du tableau de bord (migration unique). */
@@ -268,7 +295,7 @@ data class SuperSettings(
     /** iOS : carte « Signes vitaux de la nuit » déjà placée sous les constantes (migration unique). */
     val appleCardsAdded: Boolean = false,
     /** Parties de l'app activées (noms de [Feature]). */
-    val features: Set<String> = Feature.entries.map { it.name }.toSet(),
+    val features: Set<String> = Feature.entries.filter { it != Feature.CYCLE }.map { it.name }.toSet(),
     /** Labo de style (version test) : cartes du tableau de bord en clair et en sombre, séance de musculation. Noms des enums de ui.theme.StyleLab. */
     val styleCardsLight: String = "NEUTRAL",
     val styleCardsDark: String = "NEUTRAL",
@@ -380,6 +407,14 @@ object SuperPrefs {
             val cards = s.dashboard.toMutableList()
             if (DashCard.NIGHT_VITALS !in cards) cards.add((cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size, DashCard.NIGHT_VITALS)
             s.copy(dashboard = cards, appleCardsAdded = true)
+        }
+        // 1.8 : journal du moral activé une fois ; forme du jour en tête, journal et coucher conseillé juste après
+        if (!_settings.value.wellbeingAdded) update { s ->
+            val cards = s.dashboard.toMutableList()
+            val at = (cards.indexOf(DashCard.RINGS) + 1).coerceAtLeast(0)
+            listOf(DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME).filter { it !in cards }.reversed().forEach { cards.add(at, it) }
+            s.copy(dashboard = cards, features = s.features + Feature.JOURNAL.name, wellbeingAdded = true,
+                plus = (s.plus + listOf(PlusAction.MOOD.name, PlusAction.BREATHE.name)).distinct())
         }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }

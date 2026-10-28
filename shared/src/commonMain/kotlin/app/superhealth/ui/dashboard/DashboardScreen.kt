@@ -51,6 +51,9 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Favorite
@@ -200,6 +203,10 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.LOAD -> WorkoutBlue
     DashCard.DAY_TIMELINE -> HealthHues.Activity
     DashCard.COACH, DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachHue
+    DashCard.FORM -> HealthHues.Activity
+    DashCard.JOURNAL -> HealthHues.Mind
+    DashCard.BEDTIME -> HealthHues.Sleep
+    DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleHue
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -244,6 +251,10 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.DAY_TIMELINE -> Icons.Rounded.Timeline
     DashCard.COACH -> Icons.Rounded.AutoAwesome
     DashCard.COACH_WEEK -> Icons.Rounded.DateRange
+    DashCard.FORM -> Icons.Rounded.Speed
+    DashCard.JOURNAL -> Icons.Rounded.SentimentSatisfied
+    DashCard.BEDTIME -> Icons.Rounded.Bedtime
+    DashCard.CYCLE -> Icons.Rounded.CalendarMonth
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -697,7 +708,8 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     // Petit, moyen et bandeau : versions à regarder d'un coup d'œil, communes à toutes les cartes qui ont une valeur ;
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
-        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK -> true
+        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK,
+        DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -827,6 +839,10 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.DAY_TIMELINE -> DayTimelineCard(c, h, h.watch, modifier, nav)
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachWeekCard(c, size, vm, modifier, nav)
+        DashCard.FORM -> app.superhealth.ui.wellbeing.FormCard(c, size, vm, modifier, nav)
+        DashCard.JOURNAL -> app.superhealth.ui.wellbeing.JournalCard(c, size, vm, modifier, nav)
+        DashCard.BEDTIME -> app.superhealth.ui.wellbeing.BedtimeCard(c, size, modifier, nav)
+        DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleCard(c, size, modifier, nav)
         DashCard.STEPS -> {
             val series = h.series[Metric.STEPS].orEmpty()
             val today = h.today(Metric.STEPS)

@@ -335,7 +335,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val sess = s0.session ?: return
         val program = s0.programs.firstOrNull { it.id == sess.programId }
         val day = program?.days?.firstOrNull { it.id == sess.dayId }
-        planChange.value = if (program != null && day != null) PlanDiff.compute(day, sess).takeUnless { it.isEmpty }?.let { PlanChange(program.id, day, sess, it) } else null
+        planChange.value = if (program != null && day != null && sess.adjust == 0) PlanDiff.compute(day, sess).takeUnless { it.isEmpty }?.let { PlanChange(program.id, day, sess, it) } else null
         val w = e.finish(sess, System.currentTimeMillis(), gym(sess.gymId), program?.name, logAll)
         update { s ->
             val programs = if (program != null) s.programs.map { if (it.id == program.id) e.advance(it, sess.dayId) else it } else s.programs

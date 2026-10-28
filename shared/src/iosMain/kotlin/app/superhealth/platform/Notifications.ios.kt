@@ -34,6 +34,7 @@ private class NotificationDelegate : NSObject(), UNUserNotificationCenterDelegat
             app.superhealth.meds.Meds.ACTION_TAKEN, app.superhealth.meds.Meds.ACTION_SNOOZE -> app.superhealth.meds.Meds.onAction(appContext, id, action)
             else -> app.superhealth.SuperHealth.openRoute(when {
                 id.startsWith("med|") -> "meds"
+                id.startsWith("rem|") -> app.superhealth.wellbeing.Reminders.route(id)
                 id == "rest" -> "training:session"
                 else -> null
             })

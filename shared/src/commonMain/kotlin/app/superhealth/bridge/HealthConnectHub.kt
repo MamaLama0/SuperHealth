@@ -102,6 +102,9 @@ object HealthConnectHub {
             ManualLogStore.get(ctx).query(Metric.HYDRATION, fromMs, System.currentTimeMillis() + 1).forEach { l ->
                 src.writeWater(l.id, l.timestampMs, l.value); written++
             }
+            // règles notées par d'autres apps (les 30 jours relus remplacent l'import précédent sur cette fenêtre)
+            if (SuperPrefs.settings.value.cycleSync) runCatching { src.periodDays(fromMs, toMs) }.getOrNull()
+                ?.let { app.superhealth.wellbeing.Cycle.mergeSynced(from.toEpochDay(), it) }
             HealthRepository.invalidate()
             Result(WINDOW_DAYS.toInt(), weightsIn, sessionsIn, written)
         }.getOrElse { Result(0, weightsIn, sessionsIn, written, it.message ?: it::class.simpleName) }
