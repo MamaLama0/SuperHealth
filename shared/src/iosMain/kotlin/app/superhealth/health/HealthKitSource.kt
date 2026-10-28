@@ -114,6 +114,7 @@ import platform.HealthKit.HKStatistics
 import platform.HealthKit.HKStatisticsOptionCumulativeSum
 import platform.HealthKit.HKStatisticsOptionDiscreteAverage
 import platform.HealthKit.HKStatisticsQuery
+import platform.HealthKit.HKStatisticsCollectionQuery
 import platform.HealthKit.HKUnit
 import platform.HealthKit.HKWorkout
 import platform.HealthKit.HKWorkoutActivityTypeCycling
@@ -280,6 +281,43 @@ object HealthKitSource : HealthSource {
             Metric.BREATHING_DISTURBANCES -> if (iosAtLeast(18)) latest(HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances, from, to, HKUnit.countUnit()) else null
             else -> null
         }
+    }
+
+    /** Une statistique par jour local sur toute la période (HKStatisticsCollectionQuery), comme l'app Santé pour ses graphiques. */
+    override suspend fun dailyRange(metric: Metric, from: LocalDate, toInclusive: LocalDate): Map<LocalDate, Double>? {
+        data class Q(val id: String?, val sum: Boolean, val unit: HKUnit, val k: Double = 1.0)
+        val spec = when (metric) {
+            Metric.STEPS -> Q(HKQuantityTypeIdentifierStepCount, true, HKUnit.countUnit())
+            Metric.DISTANCE -> Q(HKQuantityTypeIdentifierDistanceWalkingRunning, true, HKUnit.meterUnit(), 0.001)
+            Metric.CALORIES -> Q(HKQuantityTypeIdentifierActiveEnergyBurned, true, HKUnit.kilocalorieUnit())
+            Metric.ACTIVE_MINUTES -> Q(HKQuantityTypeIdentifierAppleExerciseTime, true, HKUnit.minuteUnit())
+            Metric.RESTING_HR -> Q(HKQuantityTypeIdentifierRestingHeartRate, false, bpm)
+            Metric.HRV -> Q(HKQuantityTypeIdentifierHeartRateVariabilitySDNN, false, ms)
+            Metric.RESPIRATORY_RATE -> Q(HKQuantityTypeIdentifierRespiratoryRate, false, bpm)
+            Metric.SPO2 -> Q(HKQuantityTypeIdentifierOxygenSaturation, false, HKUnit.percentUnit(), 100.0)
+            Metric.TEMPERATURE -> Q(HKQuantityTypeIdentifierAppleSleepingWristTemperature, false, HKUnit.degreeCelsiusUnit())
+            Metric.FLIGHTS -> Q(HKQuantityTypeIdentifierFlightsClimbed, true, HKUnit.countUnit())
+            Metric.WALKING_HR -> Q(HKQuantityTypeIdentifierWalkingHeartRateAverage, false, bpm)
+            Metric.WALKING_SPEED -> Q(HKQuantityTypeIdentifierWalkingSpeed, false, HKUnit.meterUnit().unitDividedByUnit(HKUnit.secondUnit()), 3.6)
+            Metric.DAYLIGHT -> if (iosAtLeast(17)) Q(HKQuantityTypeIdentifierTimeInDaylight, true, HKUnit.minuteUnit()) else return null
+            Metric.NOISE -> Q(HKQuantityTypeIdentifierEnvironmentalAudioExposure, false, HKUnit.decibelAWeightedSoundPressureLevelUnit())
+            else -> return null
+        }
+        val type = q(spec.id)
+        val start = date(HealthRepository.startMs(from))
+        val end = date(HealthRepository.endMs(toInclusive))
+        val stats = suspendCancellableCoroutine<List<HKStatistics>?> { c ->
+            val query = HKStatisticsCollectionQuery(type, HKQuery.predicateForSamplesWithStartDate(start, end, HKQueryOptionStrictStartDate),
+                if (spec.sum) HKStatisticsOptionCumulativeSum else HKStatisticsOptionDiscreteAverage, start, NSDateComponents().apply { day = 1 })
+            query.initialResultsHandler = { _, collection, _ -> c.resume(collection?.statistics()?.filterIsInstance<HKStatistics>()) }
+            store.executeQuery(query)
+            c.invokeOnCancellation { store.stopQuery(query) }
+        } ?: return null
+        val zone = ZoneId.systemDefault()
+        return stats.mapNotNull { st ->
+            val v = (if (spec.sum) st.sumQuantity() else st.averageQuantity())?.doubleValueForUnit(spec.unit) ?: return@mapNotNull null
+            Instant.ofEpochMilli(st.startDate.ms()).atZone(zone).toLocalDate() to v * spec.k
+        }.toMap()
     }
 
     private suspend fun category(id: String?, from: Long, to: Long): List<HKCategorySample> =

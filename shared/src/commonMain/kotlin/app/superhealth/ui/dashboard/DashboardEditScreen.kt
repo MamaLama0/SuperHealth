@@ -206,6 +206,12 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
     DetailScaffold(tr("Bouton +"), onBack = { nav.popBackStack() }, action = {
         TextButton(onClick = { set(PlusAction.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
     }) {
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Position"), Modifier.padding(start = 0.dp))
+        val sides = listOf("LEFT", "CENTER", "RIGHT")
+        app.superhealth.nutrition.ui.components.Segmented(listOf(tr("Gauche"), tr("Milieu"), tr("Droite")), sides.indexOf(sh.plusSide).let { if (it < 0) 2 else it }) { i ->
+            SuperPrefs.update { it.copy(plusSide = sides[i]) }
+        }
+        Spacer(Modifier.height(12.dp))
         Text(tr("Raccourcis du bouton + et leur ordre. Un seul : le + l'ouvre directement."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         app.superhealth.nutrition.ui.components.GroupHeader(tr("Affichés"), Modifier.padding(start = 0.dp))

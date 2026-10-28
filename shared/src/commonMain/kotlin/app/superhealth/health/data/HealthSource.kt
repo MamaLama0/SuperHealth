@@ -47,6 +47,12 @@ interface HealthSource {
     /** Valeur du jour : total (pas, distance, calories, minutes actives), moyenne (pouls au repos, VFC…) ou dernière (VO2 max, poids). */
     suspend fun daily(metric: Metric, date: LocalDate): Double?
 
+    /**
+     * Valeurs de [daily] pour chaque jour de [from] à [toInclusive] en une seule requête (graphiques mois, année) ; null :
+     * la source ne sait pas, [daily] est alors appelée jour par jour. Un jour absent de la table n'a pas de valeur.
+     */
+    suspend fun dailyRange(metric: Metric, from: LocalDate, toInclusive: LocalDate): Map<LocalDate, Double>? = null
+
     /** Mesures brutes horodatées entre [fromMs] et [toMs] (pouls, pas, SpO2…). */
     suspend fun samples(metric: Metric, fromMs: Long, toMs: Long): List<Point>
 

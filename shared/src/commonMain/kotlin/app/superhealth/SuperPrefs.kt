@@ -206,6 +206,8 @@ data class SuperSettings(
     val dashboard: List<DashCard> = DashCard.defaults,
     /** Raccourcis du « + » (noms de [PlusAction], gardés en texte : une valeur retirée plus tard n'efface pas les réglages). */
     val plus: List<String> = PlusAction.defaults.map { it.name },
+    /** Place du « + » dans la barre du bas : LEFT (gaucher), CENTER ou RIGHT (sous le pouce droit). */
+    val plusSide: String = "RIGHT",
     /** Mesures de la carte Constantes (pièce maîtresse du tableau de bord), noms de [app.superhealth.health.data.Metric]. */
     val vitals: List<String> = listOf("RESTING_HR", "RESPIRATORY_RATE", "HRV"),
     /** Constantes déjà placées en tête du tableau de bord (migration unique). */

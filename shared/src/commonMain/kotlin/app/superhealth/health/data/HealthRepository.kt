@@ -9,6 +9,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 data class Workout(
@@ -99,6 +100,11 @@ object HealthRepository {
         val key = metric to date
         val cacheable = date.isBefore(LocalDate.now())
         if (cacheable) cache[key]?.let { return it.takeUnless { v -> v.isNaN() } }
+        // jour passé manquant : les 60 jours d'avant d'un coup (les scores relisent leurs références jour par jour)
+        if (cacheable && metric in direct) {
+            prefetch(metric, date.minusDays(59), date)
+            cache[key]?.let { return it.takeUnless { v -> v.isNaN() } }
+        }
         // les scores calculés relisent d'autres mesures : hors du sémaphore (sinon ils pourraient s'y bloquer entre eux)
         val v = if (metric.computed) computeDayValue(context, metric, date) else dbPermits.withPermit { computeDayValue(context, metric, date) }
         if (cacheable) cache[key] = v ?: NONE
@@ -140,6 +146,7 @@ object HealthRepository {
                 return Instant.ofEpochMilli(it.timestampMs).atZone(zone).toLocalDate() to it.value
             }
         }
+        prefetch(metric, date.minusDays(lookbackDays - 1), date)
         for (i in 0L until lookbackDays) {
             val d = date.minusDays(i)
             dayValue(context, metric, d)?.let { return d to it }
@@ -149,10 +156,37 @@ object HealthRepository {
 
     suspend fun series(context: Context, metric: Metric, from: LocalDate, toInclusive: LocalDate): List<Pair<LocalDate, Double?>> =
         coroutineScope {
+            prefetch(metric, from, toInclusive)
             generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(toInclusive) }.toList()
                 .map { d -> async(Dispatchers.IO) { d to dayValue(context, metric, d) } }
                 .awaitAll()
         }
+
+    /** Mesures lues telles quelles chez la source (voir [computeDayValue]) : la lecture groupée donne la même valeur. */
+    private val direct = setOf(Metric.STEPS, Metric.DISTANCE, Metric.CALORIES, Metric.ACTIVE_MINUTES, Metric.RESTING_HR, Metric.HRV,
+        Metric.RESPIRATORY_RATE, Metric.SPO2, Metric.TEMPERATURE, Metric.FLIGHTS, Metric.WALKING_HR, Metric.WALKING_SPEED, Metric.DAYLIGHT,
+        Metric.NOISE)
+
+    private val prefetching = kotlinx.coroutines.sync.Mutex()
+    /** Mesures que la source ne sait pas lire par période : jour par jour, sans redemander. */
+    private val noRange = mutableSetOf<Metric>()
+
+    /**
+     * Jours passés pas encore en cache lus en une requête ([HealthSource.dailyRange]) : un graphique sur un an faisait 365
+     * requêtes HealthKit.
+     */
+    private suspend fun prefetch(metric: Metric, from: LocalDate, toInclusive: LocalDate) {
+        if (metric !in direct || metric in noRange || devices().isEmpty() || !source.supports(metric)) return
+        prefetching.withLock { prefetchLocked(metric, from, toInclusive) }
+    }
+
+    private suspend fun prefetchLocked(metric: Metric, from: LocalDate, toInclusive: LocalDate) {
+        val last = minOf(toInclusive, LocalDate.now().minusDays(1))
+        val missing = generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(last) }.filter { cache[metric to it] == null }.toList()
+        if (missing.size < 3) return
+        val values = safe { source.dailyRange(metric, missing.first(), missing.last()) } ?: run { noRange += metric; return }
+        missing.forEach { d -> cache[metric to d] = values[d]?.takeIf { it > 0 } ?: NONE }
+    }
 
     // ---- Intraday ---------------------------------------------------------------------------
 

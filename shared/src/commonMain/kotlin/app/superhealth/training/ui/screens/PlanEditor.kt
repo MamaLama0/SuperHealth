@@ -296,7 +296,10 @@ internal fun PlanStepper(title: String, value: Int, min: Int, max: Int, step: In
 fun CustomWorkoutScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     val st by vm.state.collectAsState()
     val db = vm.db.collectAsState().value ?: return
-    val w = st.customWorkouts.firstOrNull { it.id == id } ?: run { LaunchedEffect(Unit) { nav.popBackStack() }; return }
+    val w = st.customWorkouts.firstOrNull { it.id == id } ?: run {
+        // supprimé : l'écran se retire s'il est encore en haut (le bouton Supprimer a déjà dépilé ; deux retours vidaient la pile)
+        LaunchedEffect(Unit) { if (nav.currentBackStackEntry?.destination?.route == "custom/{id}") nav.popBackStack() }; return
+    }
     var rename by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     DetailScaffold(w.name, nav, actions = { TextButton(onClick = { rename = true }) { Text(tr("Renommer"), color = Mf.colors.accent) } }) {
