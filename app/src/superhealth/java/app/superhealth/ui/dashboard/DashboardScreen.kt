@@ -313,11 +313,11 @@ private suspend fun loadHealth(ctx: android.content.Context, cards: List<DashCar
         val wantCardio = DashCard.CARDIO in cards || (DashCard.RINGS in cards && Rings.Kind.CARDIO in Rings.kinds(app.superhealth.SuperPrefs.settings.value.rings))
         val cardio = if (wantCardio && Bridge.hasSource(Metric.CARDIO_WEEK)) runCatching { HealthRepository.cardioWeek(today) }.getOrNull() else null
         val energy = if (DashCard.ENERGY in cards && Bridge.hasSource(Metric.BODY_ENERGY)) runCatching { HealthRepository.intraday(Metric.BODY_ENERGY, today) }.getOrDefault(emptyList()) else emptyList()
-        val heart = if (DashCard.HEART in cards && HealthRepository.isSupported(Metric.HEART_RATE)) runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else emptyList()
+        val heart = if (DashCard.HEART in cards && Bridge.hasSource(Metric.HEART_RATE)) runCatching { Bridge.heartPoints(today) }.getOrDefault(emptyList()) else emptyList()
         val acts = if (DashCard.ACTIVITIES in cards) runCatching { Bridge.activities(0L).take(4) }.getOrDefault(emptyList()) else emptyList()
         val perf = if (DashCard.RUNNING in cards || DashCard.RECOVERY in cards) runCatching { app.superhealth.health.data.Performance.snapshot(ctx) }.getOrNull() else null
-        val heart2 = if (heart.isEmpty() && DashCard.DAY_TIMELINE in cards && HealthRepository.isSupported(Metric.HEART_RATE))
-            runCatching { HealthRepository.intraday(Metric.HEART_RATE, today) }.getOrDefault(emptyList()) else heart
+        val heart2 = if (heart.isEmpty() && DashCard.DAY_TIMELINE in cards && Bridge.hasSource(Metric.HEART_RATE))
+            runCatching { Bridge.heartPoints(today) }.getOrDefault(emptyList()) else heart
         HealthSnap(series.mapValues { it.value.awaitAll() }, cardio, energy, heart2, acts, perf)
 }
 

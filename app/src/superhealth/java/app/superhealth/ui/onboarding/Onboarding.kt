@@ -202,7 +202,7 @@ private val SECTIONS = listOf("Vous", "Objectif", "Entraînement", "Connexions")
 /** Choix pour la montre : l'associer maintenant, plus tard, ou désactiver le module LocalHealth. */
 private enum class WatchChoice(val label: String, val description: String) {
     PAIR("Oui, l'associer maintenant", "Recherche Bluetooth de votre montre ou bracelet"),
-    APP("Oui, avec son app", "Garmin Connect, Zepp… restent installées : données via Health Connect"),
+    APP("Oui, avec son app", "Garmin Connect, NOOP, Zepp… restent installées : données via Health Connect"),
     LATER("Oui, plus tard", "Le module montre reste actif, à associer dans Réglages"),
     NONE("Non, pas de montre", "Le module montre est désactivé (réactivable dans Réglages)"),
 }

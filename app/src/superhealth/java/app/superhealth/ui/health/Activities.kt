@@ -89,7 +89,7 @@ fun Bridge.Kind.icon(): ImageVector = when (this) {
 /** Ligne d'activité commune (musculation, montre, Health Connect), avec la FC moyenne de la montre quand elle existe. */
 @Composable
 fun ActivityRow(a: Bridge.Activity, horizontal: androidx.compose.ui.unit.Dp = 16.dp, chip: androidx.compose.ui.graphics.Color? = null, onClick: () -> Unit) {
-    val hr by produceState<Int?>(null, a.key) { value = runCatching { Bridge.averageHeartRate(a.start, a.end) }.getOrNull() }
+    val hr by produceState<Int?>(null, a.key) { value = a.hc?.avgHr ?: runCatching { Bridge.averageHeartRate(a.start, a.end) }.getOrNull() }
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = horizontal, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         val tint = a.kind.hue()
         Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(chip ?: tint.container()), contentAlignment = Alignment.Center) {
@@ -115,6 +115,7 @@ fun openActivity(ctx: Context, nav: NavHostController, a: Bridge.Activity) {
         a.gymId != null -> nav.navigate("workoutdetail/${a.gymId}")
         a.watch != null -> nav.navigate("h/workout/${a.watch.id}")
         a.run != null -> nav.navigate("h/workout/${a.run.id}")
+        a.hc != null -> nav.navigate("h/workout/${app.superhealth.bridge.HcWorkouts.idOf(a.hc)}")
         else -> Toast.makeText(ctx, app.superhealth.ui.trf("Activité enregistrée par %1\$s", a.hc?.app ?: "Health Connect"), Toast.LENGTH_SHORT).show()
     }
 }

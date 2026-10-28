@@ -44,6 +44,8 @@ private val VENDOR_APPS = linkedMapOf(
     "com.stt.android.suunto" to "Suunto",
     "com.yf.smart.coros.dist" to "COROS",
     "com.withings.wiscale2" to "Withings",
+    "com.whoop.android" to "WHOOP",
+    "com.noop.whoop" to "NOOP",
 )
 
 fun installedVendorApp(ctx: Context): String? = VENDOR_APPS.entries.firstOrNull { (pkg, _) ->

@@ -18,6 +18,7 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.modules.Modules.init(this)
         app.superhealth.coach.Coach.init(this)
         app.superhealth.bridge.RunImport.init(this)
+        app.superhealth.bridge.HcHeart.init(this)
         app.superhealth.meals.MealPlanner.init(this)
         app.superhealth.meds.Meds.init(this)
         app.superhealth.bridge.WatchOnline.install(this)

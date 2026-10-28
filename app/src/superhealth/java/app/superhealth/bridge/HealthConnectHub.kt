@@ -3,7 +3,11 @@ package app.superhealth.bridge
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
@@ -17,6 +21,7 @@ import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Energy
@@ -48,7 +53,8 @@ import kotlin.reflect.KClass
 
 /**
  * Health Connect pour toute l'app (regroupe les intégrations de La Bouffe, La Salle et LocalHealth) :
- * - lit les pas, pesées, masse grasse, fréquence cardiaque, sommeil, VFC, SpO₂ et séances des autres apps ;
+ * - lit les pas, pesées, masse grasse, fréquence cardiaque (minute par minute), sommeil, VFC, respiration, SpO₂, VO₂ max,
+ *   distance, calories actives et séances (distance, calories, pouls) des autres apps : Garmin Connect, NOOP (WHOOP)… ;
  * - écrit les pesées, le total nutritionnel du jour, les séances de musculation et l'hydratation.
  * Les données de la montre sont exportées par Gadgetbridge lui-même (Réglages > Montre > Health Connect).
  * Health Connect est un stockage local d'Android : rien ne sort du téléphone.
@@ -61,6 +67,7 @@ object HealthConnectHub {
         read(StepsRecord::class), read(WeightRecord::class), read(BodyFatRecord::class),
         read(HeartRateRecord::class), read(RestingHeartRateRecord::class), read(SleepSessionRecord::class),
         read(HeartRateVariabilityRmssdRecord::class), read(OxygenSaturationRecord::class), read(ExerciseSessionRecord::class),
+        read(RespiratoryRateRecord::class), read(DistanceRecord::class), read(ActiveCaloriesBurnedRecord::class), read(Vo2MaxRecord::class),
         write(WeightRecord::class), write(BodyFatRecord::class), write(NutritionRecord::class),
         write(ExerciseSessionRecord::class), write(HydrationRecord::class),
     )
@@ -204,6 +211,19 @@ object HealthConnectHub {
         return result
     }
 
+    /** Tous les enregistrements de [type] sur [range] (toutes les pages : une seule page en compte 1000 au plus). */
+    private suspend fun <T : androidx.health.connect.client.records.Record> readAll(client: HealthConnectClient, type: KClass<T>,
+                                                                                    range: TimeRangeFilter): List<T> {
+        val out = ArrayList<T>()
+        var token: String? = null
+        do {
+            val res = client.readRecords(ReadRecordsRequest(type, range, pageSize = 5000, pageToken = token))
+            out += res.records
+            token = res.pageToken
+        } while (token != null)
+        return out
+    }
+
     private suspend fun readHealth(client: HealthConnectClient, granted: Set<String>, range: TimeRangeFilter, me: String, zone: ZoneId,
                                    pm: android.content.pm.PackageManager): HcCache {
         fun Instant.day() = atZone(zone).toLocalDate().toEpochDay()
@@ -214,18 +234,19 @@ object HealthConnectHub {
         fun <R : androidx.health.connect.client.records.Record> List<R>.noteOrigin(metric: Metric, time: (R) -> Instant): List<R> = also { rs ->
             rs.maxByOrNull(time)?.let { origins[metric.name] = sourceOf(it.metadata, pm) }
         }
-        val hr = if (read(HeartRateRecord::class) in granted)
-            client.readRecords(ReadRecordsRequest(HeartRateRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .noteOrigin(Metric.HEART_RATE) { it.endTime }.flatMap { r -> r.samples.map { it.time.day() to it.beatsPerMinute.toDouble() } }.avgBy({ it.first }, { it.second })
-        else prev.heartRate
-        val resting = if (read(RestingHeartRateRecord::class) in granted)
-            client.readRecords(ReadRecordsRequest(RestingHeartRateRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .noteOrigin(Metric.RESTING_HR) { it.time }.avgBy({ it.time.day() }, { it.beatsPerMinute.toDouble() })
-        else prev.restingHr
-        val sleepRecords = if (read(SleepSessionRecord::class) in granted)
-            client.readRecords(ReadRecordsRequest(SleepSessionRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .noteOrigin(Metric.SLEEP) { it.endTime }
-        else null
+        suspend fun <R : androidx.health.connect.client.records.Record> others(type: KClass<R>): List<R>? =
+            if (read(type) in granted) readAll(client, type, range).filter { it.metadata.dataOrigin.packageName != me } else null
+        // Pouls : moyenne du jour, et minute par minute dans des fichiers (Effort, zones, courbe du jour).
+        val hrSamples = others(HeartRateRecord::class)?.noteOrigin(Metric.HEART_RATE) { it.endTime }
+            ?.flatMap { r -> r.samples.map { it.time.toEpochMilli() to it.beatsPerMinute } }
+        val hr = hrSamples?.let { s ->
+            val minutes = HcHeart.byMinute(s, zone)
+            HcHeart.store(minutes)
+            minutes.mapValues { (_, l) -> l.map { it.second.toDouble() }.average() }
+        } ?: prev.heartRate
+        val resting = others(RestingHeartRateRecord::class)?.noteOrigin(Metric.RESTING_HR) { it.time }
+            ?.avgBy({ it.time.day() }, { it.beatsPerMinute.toDouble() }) ?: prev.restingHr
+        val sleepRecords = others(SleepSessionRecord::class)?.noteOrigin(Metric.SLEEP) { it.endTime }
         // Une même nuit écrite par deux applis (montre + téléphone…) ne compte qu'une fois : par jour, l'appli qui a le plus
         // de sommeil ; les siestes d'une même appli s'additionnent. Avec des phases, l'éveil ne compte pas comme du sommeil.
         val nights = sleepRecords?.groupBy { it.endTime.day() }?.mapValues { (_, l) ->
@@ -233,21 +254,45 @@ object HealthConnectHub {
                 .maxBy { ps -> ps.asleepMin() }
         } ?: prev.nights
         val sleep = if (sleepRecords != null) nights.mapValues { (_, ps) -> ps.asleepMin() }.filterValues { it > 0 } else prev.sleepMin
-        val hrv = if (read(HeartRateVariabilityRmssdRecord::class) in granted)
-            client.readRecords(ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .noteOrigin(Metric.HRV) { it.time }.avgBy({ it.time.day() }, { it.heartRateVariabilityMillis })
-        else prev.hrv
-        val spo2 = if (read(OxygenSaturationRecord::class) in granted)
-            client.readRecords(ReadRecordsRequest(OxygenSaturationRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .noteOrigin(Metric.SPO2) { it.time }.avgBy({ it.time.day() }, { it.percentage.value })
-        else prev.spo2
-        val sessions = if (read(ExerciseSessionRecord::class) in granted)
-            client.readRecords(ReadRecordsRequest(ExerciseSessionRecord::class, range)).records.filter { it.metadata.dataOrigin.packageName != me }
-                .map { HcSession(it.metadata.id, it.exerciseType, it.title, it.startTime.toEpochMilli(), it.endTime.toEpochMilli(), it.metadata.dataOrigin.packageName) }
-        else prev.sessions
+        val hrv = others(HeartRateVariabilityRmssdRecord::class)?.noteOrigin(Metric.HRV) { it.time }
+            ?.avgBy({ it.time.day() }, { it.heartRateVariabilityMillis }) ?: prev.hrv
+        val spo2 = others(OxygenSaturationRecord::class)?.noteOrigin(Metric.SPO2) { it.time }
+            ?.avgBy({ it.time.day() }, { it.percentage.value }) ?: prev.spo2
+        // Respiration de la nuit : jour du réveil, comme le sommeil.
+        val resp = others(RespiratoryRateRecord::class)?.noteOrigin(Metric.RESPIRATORY_RATE) { it.time }
+            ?.filter { it.rate in 4.0..40.0 }?.avgBy({ it.time.day() }, { it.rate }) ?: prev.resp
+        val vo2 = others(Vo2MaxRecord::class)?.noteOrigin(Metric.VO2MAX) { it.time }
+            ?.filter { it.vo2MillilitersPerMinuteKilogram in 10.0..95.0 }?.avgBy({ it.time.day() }, { it.vo2MillilitersPerMinuteKilogram }) ?: prev.vo2max
+        // Distance et calories actives : agrégats par jour (Health Connect dédoublonne les sources).
+        suspend fun daily(type: KClass<out androidx.health.connect.client.records.Record>, metric: androidx.health.connect.client.aggregate.AggregateMetric<*>,
+                          value: (Any) -> Double): Map<Long, Double>? = if (read(type) !in granted) null else runCatching {
+            val today = LocalDate.now()
+            client.aggregateGroupByPeriod(AggregateGroupByPeriodRequest(
+                metrics = setOf(metric),
+                timeRangeFilter = TimeRangeFilter.between(today.minusDays(WINDOW_DAYS).atStartOfDay(), today.plusDays(1).atStartOfDay()),
+                timeRangeSlicer = Period.ofDays(1),
+            )).mapNotNull { r -> r.result[metric]?.let { r.startTime.toLocalDate().toEpochDay() to value(it) } }.toMap().filterValues { it > 0 }
+        }.getOrNull()
+        val distance = daily(DistanceRecord::class, DistanceRecord.DISTANCE_TOTAL) { (it as androidx.health.connect.client.units.Length).inKilometers } ?: prev.distanceKm
+        val kcal = daily(ActiveCaloriesBurnedRecord::class, ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL) { (it as Energy).inKilocalories } ?: prev.activeKcal
+        if (distance.isNotEmpty()) others(DistanceRecord::class)?.noteOrigin(Metric.DISTANCE) { it.endTime }
+        // Séances : distance et calories de l'appli qui les a écrites, pouls d'après les minutes lues ci-dessus.
+        val sessions = others(ExerciseSessionRecord::class)?.map { r ->
+            val sr = TimeRangeFilter.between(r.startTime, r.endTime)
+            val origin = setOf(r.metadata.dataOrigin)
+            val agg = runCatching {
+                client.aggregate(AggregateRequest(setOf(DistanceRecord.DISTANCE_TOTAL, ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), sr, origin))
+            }.getOrNull()
+            val bpm = hrSamples?.filter { it.first in r.startTime.toEpochMilli()..r.endTime.toEpochMilli() && it.second in 30..230 }?.map { it.second }
+            HcSession(r.metadata.id, r.exerciseType, r.title, r.startTime.toEpochMilli(), r.endTime.toEpochMilli(), r.metadata.dataOrigin.packageName,
+                distanceM = agg?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters?.takeIf { it > 0 },
+                kcal = agg?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories?.takeIf { it > 0 },
+                avgHr = bpm?.takeIf { it.isNotEmpty() }?.average()?.toInt(), maxHr = bpm?.maxOrNull()?.toInt())
+        } ?: prev.sessions
         val steps = if (read(StepsRecord::class) in granted) runCatching { stepsHourly(client, range, me) }.getOrDefault(prev.stepsHourly)
         else prev.stepsHourly
-        return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps, origins, nights)
+        return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps, origins, nights,
+            resp, distance, kcal, vo2)
     }
 
     /** Phases d'une session de sommeil ; sans phases (appli qui ne note que la durée), une seule phase « endormi ». */

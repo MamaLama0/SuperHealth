@@ -67,7 +67,10 @@ object Performance {
             if (missing.isNotEmpty()) runCatching { file(ctx).writeText(json.encodeToString(ser, m)) }
             m.values.sortedByDescending { it.start }
         }
-        compute(cache)
+        // Séances d'autres apps (Garmin Connect, NOOP…) via Health Connect, quand la montre ne les a pas déjà.
+        val hc = app.superhealth.SuperPrefs.hc.value.sessions.filter { s -> cache.none { it.start < s.end && s.start < it.end } }
+            .mapNotNull { s -> app.superhealth.bridge.HcWorkouts.detail(app.superhealth.bridge.HcWorkouts.idOf(s))?.let(::entry) }
+        compute((cache + hc).sortedByDescending { it.start })
     }
 
     private fun entry(w: WorkoutDetail): Entry {

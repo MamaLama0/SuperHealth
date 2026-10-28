@@ -144,9 +144,31 @@ object Bridge {
             Metric.SLEEP -> hc.sleepMin[d]
             Metric.HRV -> hc.hrv[d]
             Metric.SPO2 -> hc.spo2[d]
-            Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT -> HealthRepository.dayValue(ctx, metric, date)
+            Metric.RESPIRATORY_RATE -> hc.resp[d]
+            Metric.VO2MAX -> hc.vo2max[d]
+            Metric.DISTANCE -> hc.distanceKm[d]
+            Metric.CALORIES -> hc.activeKcal[d]
+            // pas de score de la montre : Repos calculé d'après les phases de la nuit
+            Metric.SLEEP_SCORE -> app.superhealth.health.data.Scores.restOf(ctx, date)
+            Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT, Metric.EFFORT,
+            Metric.FITNESS_AGE -> HealthRepository.dayValue(ctx, metric, date)
             else -> null
         }
+    }
+
+    /** Pouls minute par minute (s, bpm) du jour : montre gérée ici, sinon Health Connect (Garmin Connect, NOOP…). */
+    suspend fun minuteHeart(date: LocalDate): List<Pair<Long, Int>> {
+        if (Watch.enabled && HealthRepository.isSupported(Metric.HEART_RATE))
+            HealthRepository.minuteHeart(date).takeIf { it.isNotEmpty() }?.let { return it }
+        return HcHeart.minutes(date)
+    }
+
+    /** Courbe de pouls du jour (moyennes par 10 min) : montre gérée ici, sinon Health Connect. */
+    suspend fun heartPoints(date: LocalDate): List<app.superhealth.health.data.Point> {
+        if (Watch.enabled && HealthRepository.isSupported(Metric.HEART_RATE))
+            HealthRepository.intraday(Metric.HEART_RATE, date).takeIf { it.isNotEmpty() }?.let { return it }
+        return HcHeart.minutes(date).groupBy({ it.first * 1000 / 600_000 * 600_000 }, { it.second })
+            .map { (t, v) -> app.superhealth.health.data.Point(t, v.average()) }.sortedBy { it.timestampMs }
     }
 
     /**
@@ -183,8 +205,16 @@ object Bridge {
             Metric.SLEEP -> hc.sleepMin.isNotEmpty()
             Metric.HRV -> hc.hrv.isNotEmpty()
             Metric.SPO2 -> hc.spo2.isNotEmpty()
-            Metric.RECOVERY -> hc.hrv.isNotEmpty()
+            Metric.RESPIRATORY_RATE -> hc.resp.isNotEmpty()
+            Metric.VO2MAX -> hc.vo2max.isNotEmpty()
+            Metric.DISTANCE -> hc.distanceKm.isNotEmpty()
+            Metric.CALORIES -> hc.activeKcal.isNotEmpty()
+            Metric.RECOVERY -> hc.hrv.isNotEmpty() || hc.restingHr.isNotEmpty()
+            Metric.EFFORT -> hc.heartRate.isNotEmpty()
+            Metric.FITNESS_AGE -> hc.restingHr.isNotEmpty() || (Watch.enabled && HealthRepository.isSupported(Metric.RESTING_HR))
             Metric.SLEEP_DEBT -> hc.sleepMin.isNotEmpty()
+            Metric.SLEEP_SCORE -> (Watch.enabled && HealthRepository.isSupported(Metric.SLEEP)) ||
+                hc.nights.values.any { n -> n.any { it.kind == "DEEP_SLEEP" || it.kind == "REM_SLEEP" || it.kind == "LIGHT_SLEEP" } }
             else -> false
         }
     }
@@ -200,7 +230,7 @@ object Bridge {
         val gymId: String? = null, val watch: Workout? = null, val hc: HcSession? = null, val run: RunImport.Run? = null,
     ) {
         val minutes: Long get() = (end - start) / 60000
-        val distanceM: Double? get() = watch?.distanceM ?: run?.distanceM
+        val distanceM: Double? get() = watch?.distanceM ?: run?.distanceM ?: hc?.distanceM
     }
 
     suspend fun activities(fromMs: Long, toMs: Long = System.currentTimeMillis()): List<Activity> {
@@ -233,6 +263,8 @@ object Bridge {
         else -> Kind.OTHER
     }
 
+    fun hcKindOf(type: Int): Kind = hcKind(type)
+
     private fun hcKind(type: Int): Kind = when (type) {
         androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
         androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> Kind.RUN
@@ -255,13 +287,13 @@ object Bridge {
         Kind.YOGA -> "Yoga"; Kind.STRENGTH -> "Musculation"; Kind.OTHER -> "Activité"
     }
 
-    /** Fréquence cardiaque moyenne de la montre pendant une séance (musculation comprise). */
+    /** Fréquence cardiaque moyenne pendant une séance (musculation comprise) : montre gérée ici, sinon Health Connect. */
     suspend fun averageHeartRate(start: Long, end: Long): Int? {
-        if (!Watch.enabled || !HealthRepository.isSupported(Metric.HEART_RATE)) return null
+        if (!(Watch.enabled && HealthRepository.isSupported(Metric.HEART_RATE)) && SuperPrefs.hc.value.heartRate.isEmpty()) return null
         val zone = java.time.ZoneId.systemDefault()
         val days = generateSequence(java.time.Instant.ofEpochMilli(start).atZone(zone).toLocalDate()) { it.plusDays(1) }
             .takeWhile { !it.isAfter(java.time.Instant.ofEpochMilli(end).atZone(zone).toLocalDate()) }.toList()
-        val pts = days.flatMap { HealthRepository.intraday(Metric.HEART_RATE, it) }.filter { it.timestampMs in start..end }
-        return pts.takeIf { it.isNotEmpty() }?.map { it.value }?.average()?.roundToInt()
+        val pts = days.flatMap { minuteHeart(it) }.filter { it.first * 1000 in start..end }
+        return pts.takeIf { it.isNotEmpty() }?.map { it.second }?.average()?.roundToInt()
     }
 }

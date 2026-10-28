@@ -84,11 +84,13 @@ enum class Metric(
     VO2MAX("VO₂ max", null, Icons.Rounded.Whatshot, Aggregation.LAST, ChartKind.DOTS, Category.FITNESS, digits = 1),
     TEMPERATURE("Température cutanée", "°C", Icons.Rounded.Thermostat, Aggregation.AVERAGE, ChartKind.DOTS, Category.TEMPERATURE, digits = 1),
     RECOVERY("Charge", "%", Icons.Rounded.BatteryChargingFull, Aggregation.LAST, ChartKind.DOTS, Category.VITALS,
-        about = "Récupération du matin (0–100) : votre VFC de la nuit comparée à votre propre référence, avec le pouls au repos, le sommeil, la respiration et la température. Méthodes publiées reprises par NOOP ; pas le score officiel de WHOOP."),
+        about = "Récupération du matin (0–100) : votre VFC de la nuit comparée à votre propre référence, avec le pouls au repos, le sommeil, la respiration et la température. Méthodes publiées reprises par NOOP ; pas le score officiel de WHOOP. Sans VFC, elle repose sur le pouls au repos et le sommeil."),
     EFFORT("Effort", null, Icons.Rounded.Whatshot, Aggregation.LAST, ChartKind.BARS, Category.FITNESS,
         about = "Charge cardiovasculaire de la journée (0–100) : le temps passé dans chaque zone de réserve cardiaque (Karvonen, Edwards), sur une échelle logarithmique où 100 reste exceptionnel."),
     SLEEP_DEBT("Dette de sommeil", null, Icons.Rounded.Bedtime, Aggregation.LAST, ChartKind.BARS, Category.SLEEP,
         about = "Ce qu'il faut ajouter à votre besoin de sommeil cette nuit : 55 % de ce qui a manqué la veille, reporté de nuit en nuit sur deux semaines. Dormir plus que le besoin ne crée pas d'avance."),
+    FITNESS_AGE("Âge de forme", "ans", Icons.Rounded.Speed, Aggregation.LAST, ChartKind.DOTS, Category.FITNESS,
+        about = "L'âge d'une personne moyenne qui aurait votre forme cardio, d'après votre pouls au repos et votre Effort de la semaine (modèle de l'étude HUNT, Nes 2011). Calculé chaque samedi, à ±5 ans près : suivez sa tendance."),
     WEIGHT("Poids", "kg", Icons.Rounded.MonitorWeight, Aggregation.LAST, ChartKind.DOTS, Category.METABOLISM, digits = 1),
     BODY_FAT("Masse grasse", "%", Icons.Rounded.Percent, Aggregation.LAST, ChartKind.DOTS, Category.METABOLISM, digits = 1),
     HYDRATION("Hydratation", "ml", Icons.Rounded.WaterDrop, Aggregation.SUM, ChartKind.BARS, Category.NUTRITION, manual = true),
@@ -99,7 +101,7 @@ enum class Metric(
 }
 
 /** Mesures calculées par SuperHealth à partir des autres (voir Scores). */
-val Metric.computed: Boolean get() = this == Metric.RECOVERY || this == Metric.EFFORT || this == Metric.SLEEP_DEBT
+val Metric.computed: Boolean get() = this == Metric.RECOVERY || this == Metric.EFFORT || this == Metric.SLEEP_DEBT || this == Metric.FITNESS_AGE
 
 /** Mesures saisies à la main (feuille « Enregistrer ») ; le poids passe par la pesée du module nutrition. */
 val LOGGABLE_METRICS = listOf(Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE)

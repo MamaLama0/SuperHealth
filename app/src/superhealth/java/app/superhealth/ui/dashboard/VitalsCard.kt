@@ -119,6 +119,7 @@ private fun Metric.ringRange(): ClosedFloatingPointRange<Double> = when (this) {
     Metric.TEMPERATURE -> 30.0..38.0
     Metric.STEPS -> 0.0..10_000.0
     Metric.SLEEP -> 0.0..480.0
+    Metric.FITNESS_AGE -> 20.0..80.0
     else -> 0.0..100.0
 }
 
@@ -229,6 +230,15 @@ private fun status(m: Metric, v: Double?, pts: List<Double>, female: Boolean): P
         else -> tr("À recharger") to true
     }
     if (m == Metric.SPO2) return if (v >= 95) tr("Normal") to false else tr("Bas") to true
+    if (m == Metric.FITNESS_AGE) {
+        val age = java.time.LocalDate.now().year - app.superhealth.nutrition.NutriApp.repository.prefs.profile.value.birthYear
+        val d = kotlin.math.round(age - v).toInt()
+        return when {
+            d >= 1 -> app.superhealth.ui.trf("%1\$s ans de moins", d) to true
+            d <= -1 -> app.superhealth.ui.trf("%1\$s ans de plus", -d) to false
+            else -> tr("Votre âge") to false
+        }
+    }
     if (pts.size < 5) return null
     val mean = pts.average()
     val sd = sqrt(pts.sumOf { (it - mean) * (it - mean) } / pts.size).coerceAtLeast(mean * 0.02)

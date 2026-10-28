@@ -273,7 +273,7 @@ data class SuperSettings(
 )
 
 /** Mesures que la carte Constantes peut afficher (montre ou Health Connect). */
-val VITAL_CHOICES = listOf("RESTING_HR", "HEART_RATE", "RESPIRATORY_RATE", "BODY_ENERGY", "STRESS", "SPO2", "HRV", "SLEEP", "SLEEP_SCORE",
+val VITAL_CHOICES = listOf("RESTING_HR", "HEART_RATE", "RESPIRATORY_RATE", "BODY_ENERGY", "STRESS", "SPO2", "HRV", "SLEEP", "SLEEP_SCORE", "FITNESS_AGE",
     "READINESS", "VO2MAX", "TEMPERATURE", "STEPS")
 
 val SuperSettings.vitalMetrics: List<app.superhealth.health.data.Metric>
@@ -300,6 +300,10 @@ data class HcCache(
     val origins: Map<String, app.superhealth.health.data.DataSource> = emptyMap(),
     /** Nuit de chaque jour (jour du réveil → phases) écrite par l'appli retenue pour ce jour-là. */
     val nights: Map<Long, List<HcPhase>> = emptyMap(),
+    val resp: Map<Long, Double> = emptyMap(),
+    val distanceKm: Map<Long, Double> = emptyMap(),
+    val activeKcal: Map<Long, Double> = emptyMap(),
+    val vo2max: Map<Long, Double> = emptyMap(),
 )
 
 /** Phase de sommeil lue dans Health Connect : type (nom d'ActivityKind : DEEP_SLEEP, SLEEP_ANY…), début et fin en ms. */
@@ -308,7 +312,8 @@ data class HcPhase(val kind: String, val start: Long, val end: Long)
 
 /** Séance d'exercice enregistrée par une autre app (course, marche, vélo…). */
 @Serializable
-data class HcSession(val id: String, val type: Int, val title: String?, val start: Long, val end: Long, val app: String)
+data class HcSession(val id: String, val type: Int, val title: String?, val start: Long, val end: Long, val app: String,
+                     val distanceM: Double? = null, val kcal: Double? = null, val avgHr: Int? = null, val maxHr: Int? = null)
 
 private val SuperJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; coerceInputValues = true }
 

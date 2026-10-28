@@ -148,9 +148,10 @@ object HealthRepository {
             Metric.RESPIRATORY_RATE -> c.supportsRespiratoryRate(d)
             Metric.VO2MAX -> c.supportsVO2Max(d)
             Metric.TEMPERATURE -> c.supportsTemperatureMeasurement(d)
-            Metric.RECOVERY -> c.supportsHrvMeasurement(d)
+            Metric.RECOVERY -> c.supportsHrvMeasurement(d) || c.supportsHeartRateRestingMeasurement(d)
             Metric.EFFORT -> c.supportsHeartRateMeasurement(d)
             Metric.SLEEP_DEBT -> c.supportsSleepMeasurement(d)
+            Metric.FITNESS_AGE -> c.supportsHeartRateRestingMeasurement(d)
             else -> false
         }
     }
@@ -198,6 +199,7 @@ object HealthRepository {
             Metric.RECOVERY -> Scores.chargeOf(context, date)?.score?.toDouble()
             Metric.EFFORT -> Scores.effortOf(context, date)
             Metric.SLEEP_DEBT -> Scores.sleepDebtOf(context, date)
+            Metric.FITNESS_AGE -> Scores.fitnessAgeOf(context, date)
             Metric.WEIGHT -> manual.query(metric, from, to).firstOrNull()?.value
                 ?: samples(from, to) { d, s -> d.deviceCoordinator.getWeightSampleProvider(d, s) }
                     .map { it.weightKg.toDouble() }.lastOrNull { it > 0 }
