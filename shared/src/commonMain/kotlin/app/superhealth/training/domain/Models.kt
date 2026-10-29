@@ -218,6 +218,8 @@ data class Workout(
     val cycleIndex: Int? = null,
     val note: String = "",
     val dayId: String? = null,
+    /** Effort ressenti de la séance (échelle CR-10, 1–10) : sa charge ressentie entre dans l'Effort du jour. */
+    val rpe: Int? = null,
 )
 
 // ----- Salles et réglages -----

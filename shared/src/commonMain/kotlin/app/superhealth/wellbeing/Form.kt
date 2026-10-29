@@ -145,6 +145,21 @@ object Form {
         else -> Verdict.NORMAL
     }
 
+    /**
+     * Effort à viser aujourd'hui (comme l'objectif d'effort que WHOOP tire de la récupération), dans l'échelle de l'Effort :
+     * charge chronique (moyenne des zones × minutes des 28 jours d'avant, au moins 14 mesurés) multipliée selon le conseil —
+     * pousser 1,1 à 1,4, comme prévu 0,8 à 1,1, alléger 0,4 à 0,7, repos 0 à 0,3 — puis ramenée à l'Effort 0–100. Au-dessus
+     * de 1 la charge monte doucement (rapport aigu / chronique tenu sous 1,3 en une semaine). Règle SuperHealth.
+     */
+    fun effortRange(v: Verdict, past: List<Double?>): Pair<Double, Double>? {
+        val days = past.takeLast(28)
+        if (days.count { it != null } < 14) return null
+        val chronic = days.map { e -> e?.let { exp(it * kotlin.math.ln(Scores.STRAIN_D) / 100) - 1 } ?: 0.0 }.average()
+        if (chronic <= 0) return null
+        val (lo, hi) = when (v) { Verdict.PUSH -> 1.1 to 1.4; Verdict.NORMAL -> 0.8 to 1.1; Verdict.EASY -> 0.4 to 0.7; Verdict.REST -> 0.0 to 0.3 }
+        return Scores.effortFromTrimp(chronic * lo) to Scores.effortFromTrimp(chronic * hi)
+    }
+
     /** Fatigue d'entraînement : charge aiguë au-dessus de 1,3 fois la chronique ; sinon d'autre origine (sommeil, stress, maladie). */
     fun cause(acwr: Double, x: Map<Model.Term, Double>): Cause =
         if (acwr > 1.3 || (x[Model.Term.LOAD] ?: 0.0) < -1) Cause.TRAINING else Cause.OTHER

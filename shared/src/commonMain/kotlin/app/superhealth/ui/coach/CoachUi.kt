@@ -455,6 +455,16 @@ private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
                 TextInput(tr("Ajouter"), fact, { fact = it.take(160) }, placeholder = tr("Ex. : genou gauche fragile"))
                 if (fact.isNotBlank()) PillButton(tr("Retenir"), Modifier.fillMaxWidth(), strong = false) { Coach.remember(fact); fact = "" }
             }
+            SectionLabel(tr("Données envoyées"))
+            MfCard(padding = PaddingValues(0.dp)) {
+                Coach.Share.entries.forEach { c ->
+                    SwitchRow(tr(c.label), null, c.name !in sh.coachHidden) { on ->
+                        SuperPrefs.update { it.copy(coachHidden = if (on) it.coachHidden - c.name else it.coachHidden + c.name) }
+                    }
+                }
+            }
+            Text(tr("Humeur, journal du moral et cycle ne sont jamais envoyés. Le détail : « Ce que voit le coach », en haut."), style = MaterialTheme.typography.bodySmall,
+                color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
             SectionLabel(tr("Modèle"))
             MfCard {
                 TextInput(tr("Modèle du coach (vide : celui de l'IA)"), sh.coachModel, { v -> SuperPrefs.update { it.copy(coachModel = v.trim()) } },

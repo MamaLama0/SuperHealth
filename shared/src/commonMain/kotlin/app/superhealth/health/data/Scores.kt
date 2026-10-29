@@ -83,7 +83,9 @@ object Scores {
      * [hrv] : VFC de la semaine contre votre zone normale (null : pas assez d'historique, VFC de la nuit seule) ;
      * [luteal] : non null quand les références viennent de la même phase du cycle (lutéale ou non).
      */
-    data class Charge(val score: Int, val nights: Int, val drivers: Map<String, Double>, val hrv: HrvTrend? = null, val luteal: Boolean? = null) {
+    /** [hrvSource] : appareil de la VFC, renseigné quand des nuits d'un autre appareil ont été écartées de la référence. */
+    data class Charge(val score: Int, val nights: Int, val drivers: Map<String, Double>, val hrv: HrvTrend? = null, val luteal: Boolean? = null,
+                      val hrvSource: String? = null) {
         /** Calculée sans VFC (montre ou appli qui n'en mesure pas) : pouls au repos, sommeil, respiration, température. */
         val withoutHrv: Boolean get() = "hrv" !in drivers
     }
@@ -206,6 +208,16 @@ object Scores {
      */
     fun effort(samples: List<Pair<Long, Int>>, rest: Double, max: Double): Double? {
         if (max <= rest) return null
+        val (trimp, covered) = trimp(samples, rest, max)
+        if (covered < 60) return null
+        return effortFromTrimp(trimp)
+    }
+
+    fun effortFromTrimp(trimp: Double): Double = 100 * ln(trimp + 1) / ln(STRAIN_D)
+
+    /** Zones × minutes (Edwards) et minutes couvertes par le pouls. */
+    fun trimp(samples: List<Pair<Long, Int>>, rest: Double, max: Double): Pair<Double, Double> {
+        if (max <= rest) return 0.0 to 0.0
         val s = samples.sortedBy { it.first }
         var covered = 0.0; var trimp = 0.0
         for (i in s.indices) {
@@ -215,9 +227,16 @@ object Scores {
             val zone = when { pct >= 90 -> 5; pct >= 80 -> 4; pct >= 70 -> 3; pct >= 60 -> 2; pct >= 50 -> 1; else -> 0 }
             trimp += zone * dt
         }
-        if (covered < 60) return null
-        return 100 * ln(trimp + 1) / ln(STRAIN_D)
+        return trimp to covered
     }
+
+    /**
+     * Charge ressentie d'une séance (Foster et al. 2001, session-RPE) : effort ressenti sur l'échelle CR-10 × minutes. Elle
+     * suit les zones cardiaques d'Edwards (r ≈ 0,75–0,90 dans l'étude) ; ramenée aux 5 zones de l'Effort par RPE / 2
+     * (règle SuperHealth). Elle ne compte qu'au-delà de ce que le pouls a déjà mesuré pendant la séance : la musculation, où
+     * le pouls reste bas, pèse enfin dans l'Effort, sans compter deux fois une séance suivie au cardio.
+     */
+    fun perceivedTrimp(rpe: Int, minutes: Double): Double = rpe.coerceIn(0, 10) / 2.0 * minutes.coerceAtLeast(0.0)
 
     /** Minutes passées dans chaque zone de réserve cardiaque (0 = sous 50 %, 1..5), même découpage que l'Effort. */
     fun zones(samples: List<Pair<Long, Int>>, rest: Double, max: Double): IntArray {
@@ -271,8 +290,17 @@ object Scores {
     suspend fun effortOf(ctx: Context, date: LocalDate): Double? {
         if (date.isBefore(LocalDate.now())) effortCache[date]?.let { return it.takeUnless { v -> v.isNaN() } }
         val hr = heart(date)
-        val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: hr.map { it.second.toDouble() }.sorted().let { s -> s.getOrNull(s.size / 10) } ?: return null
-        val v = effort(hr, rest, hrMax(age(), hr.map { it.second }))
+        val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: hr.map { it.second.toDouble() }.sorted().let { s -> s.getOrNull(s.size / 10) }
+        val max = hrMax(age(), hr.map { it.second })
+        val (hrTrimp, covered) = if (rest != null) trimp(hr, rest, max) else 0.0 to 0.0
+        // séances notées (effort ressenti) : leur charge ressentie, au-delà de ce que le pouls a mesuré pendant la séance
+        val from = HealthRepository.startMs(date); val to = HealthRepository.endMs(date)
+        val extra = app.superhealth.training.WorkoutApp.store.state.value.history.filter { it.startTime in from until to && it.rpe != null }.sumOf { w ->
+            val end = w.startTime + w.durationSec * 1000
+            val inside = if (rest != null) trimp(hr.filter { it.first * 1000 in w.startTime until end }, rest, max).first else 0.0
+            maxOf(0.0, perceivedTrimp(w.rpe!!, w.durationSec / 60.0) - inside)
+        }
+        val v = if (covered < 60 && extra <= 0) null else effortFromTrimp(hrTrimp + extra)
         if (date.isBefore(LocalDate.now())) effortCache[date] = v ?: Double.NaN
         return v
     }
@@ -299,7 +327,7 @@ object Scores {
         if (!Bridge.hasSource(Metric.HRV) && !Bridge.hasSource(Metric.RESTING_HR)) return List(days) { null }
         val need = sleepHabits(ctx).needMin
         val dates = ((days + 66).toLong() downTo 0L).map { date.minusDays(it) }
-        val nights = dates.map { night(ctx, it, need) }
+        val nights = sameHrvSource(dates, dates.map { night(ctx, it, need) }, hrvSource(ctx, date)).first
         val ph = phases(dates)
         return (67 until dates.size).map { i -> charge(nights.subList(i - 67, i), nights[i], ph?.subList(i - 67, i + 1)) }
     }
@@ -309,10 +337,39 @@ object Scores {
         if (!Bridge.hasSource(Metric.HRV) && !Bridge.hasSource(Metric.RESTING_HR)) return null
         val need = sleepHabits(ctx).needMin
         val dates = (67L downTo 0L).map { date.minusDays(it) }
-        val nights = dates.map { night(ctx, it, need) }
-        val c = charge(nights.dropLast(1), nights.last(), phases(dates))
+        val src = hrvSource(ctx, date)
+        val nights = sameHrvSource(dates, dates.map { night(ctx, it, need) }, src)
+        val c = charge(nights.first.dropLast(1), nights.first.last(), phases(dates))?.copy(hrvSource = src.takeIf { nights.second })
         if (date.isBefore(LocalDate.now())) chargeCache[date] = c
         return c
+    }
+
+    /**
+     * VFC liée à la montre qui la mesure : chaque marque a sa méthode (VFC de nuit en RMSSD chez Garmin, Polar ou Huami,
+     * mesures ponctuelles en SDNN sur l'Apple Watch), et les valeurs ne se comparent pas d'un appareil à l'autre. La source
+     * de chaque jour est notée ; les nuits d'une autre source sortent de la référence de VFC (pouls, sommeil, respiration
+     * et température restent comparés à toutes les nuits). Les jours d'avant le premier relevé comptent comme la source
+     * actuelle. Seconde valeur : vrai si des nuits d'une autre source ont été écartées.
+     */
+    private fun sameHrvSource(dates: List<LocalDate>, nights: List<Night>, src: String?): Pair<List<Night>, Boolean> {
+        if (src == null) return nights to false
+        val log = app.superhealth.SuperPrefs.settings.value.hrvSources
+        var dropped = false
+        return nights.mapIndexed { i, n ->
+            val k = log[dates[i].toEpochDay()]
+            if (k != null && k != src && n.hrv != null) { dropped = true; n.copy(hrv = null) } else n
+        } to dropped
+    }
+
+    /** Source de la VFC du jour (appareil, sinon appli) ; notée pour aujourd'hui (120 derniers jours gardés). */
+    private suspend fun hrvSource(ctx: Context, date: LocalDate): String? {
+        val d = runCatching { Bridge.dataSource(Metric.HRV, date) }.getOrNull() ?: return null
+        val key = d.device ?: d.app ?: return null
+        val day = date.toEpochDay()
+        if (date == LocalDate.now() && Bridge.healthValue(ctx, Metric.HRV, date) != null &&
+            app.superhealth.SuperPrefs.settings.value.hrvSources[day] != key)
+            app.superhealth.SuperPrefs.update { s -> s.copy(hrvSources = (s.hrvSources + (day to key)).filterKeys { it > day - 120 }) }
+        return key
     }
 
     /** Phase lutéale ou non de chaque jour, quand le suivi du cycle est activé et connaît la durée de vos cycles. */
@@ -410,6 +467,46 @@ object Scores {
         score >= 75 -> RestWord.RESTFUL
         score >= 55 -> RestWord.FAIR
         else -> RestWord.RESTLESS
+    }
+
+    /**
+     * La nuit comparée à vos habitudes (comme Polar compare chaque partie du sommeil à votre moyenne) : durée endormi,
+     * efficacité, part réparatrice (profond + paradoxal) et temps éveillé, contre les 28 nuits précédentes (au moins 14).
+     * Habituel = médiane ± 1 écart robuste (écart absolu médian × 1,4826), avec un écart minimal par partie ; au-delà,
+     * −1 (en dessous) ou +1 (au-dessus).
+     */
+    enum class SleepPart { DURATION, EFFICIENCY, RESTORATIVE, AWAKE }
+
+    data class NightParts(val asleepMin: Double, val efficiency: Double, val restorative: Double?, val awakeMin: Double) {
+        fun of(p: SleepPart): Double? = when (p) {
+            SleepPart.DURATION -> asleepMin; SleepPart.EFFICIENCY -> efficiency; SleepPart.RESTORATIVE -> restorative; SleepPart.AWAKE -> awakeMin
+        }
+    }
+
+    private fun minSpread(p: SleepPart) = when (p) { SleepPart.DURATION -> 20.0; SleepPart.EFFICIENCY -> 0.03; SleepPart.RESTORATIVE -> 0.04; SleepPart.AWAKE -> 10.0 }
+
+    fun compareToUsual(last: NightParts, history: List<NightParts>): Map<SleepPart, Int>? {
+        if (history.size < 14) return null
+        return SleepPart.entries.mapNotNull { p ->
+            val v = last.of(p) ?: return@mapNotNull null
+            val xs = history.mapNotNull { it.of(p) }.sorted().takeIf { it.size >= 14 } ?: return@mapNotNull null
+            val med = xs[xs.size / 2]
+            val sd = maxOf(minSpread(p), xs.map { abs(it - med) }.sorted()[xs.size / 2] * 1.4826)
+            p to when { v < med - sd -> -1; v > med + sd -> 1; else -> 0 }
+        }.toMap()
+    }
+
+    /** Parties de la nuit qui se termine le jour [date] ; part réparatrice seulement avec des phases. */
+    suspend fun nightParts(date: LocalDate): NightParts? {
+        val n = Bridge.sleepNight(date)?.takeIf { it.isNotEmpty() } ?: return null
+        fun minutes(k: ActivityKind) = n.filter { it.kind == k }.sumOf { it.end - it.start } / 60000.0
+        val awake = minutes(ActivityKind.AWAKE_SLEEP)
+        val asleep = n.sumOf { it.end - it.start } / 60000.0 - awake
+        val inBed = (n.maxOf { it.end } - n.minOf { it.start }) / 60000.0
+        if (asleep < 120 || inBed <= 0) return null
+        val restorative = if (Bridge.hasStages(n)) (minutes(ActivityKind.DEEP_SLEEP) +
+            minutes(ActivityKind.REM_SLEEP)) / asleep else null
+        return NightParts(asleep, (asleep / inBed).coerceIn(0.0, 1.0), restorative, (inBed - asleep).coerceAtLeast(0.0))
     }
 
     /** Besoin de sommeil personnel (min) et régularité (SRI des 2 dernières semaines ramené à 0–1), relus une fois par jour. */

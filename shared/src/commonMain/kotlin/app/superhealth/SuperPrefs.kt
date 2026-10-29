@@ -231,6 +231,11 @@ data class SuperSettings(
     val remindBedtime: Boolean = false,
     /** Ressenti du matin demandé avant d'afficher Charge, Forme et sommeil. */
     val morningCheck: Boolean = false,
+    /** 2.0 : sommeil, chacun désactivable — fenêtre d'endormissement (Coucher conseillé), nuit comparée à vos habitudes. */
+    val sleepGate: Boolean = true,
+    val sleepCompare: Boolean = true,
+    /** 2.0 : appareil de la VFC de chaque jour (epochDay → nom), pour ne comparer la VFC qu'aux nuits du même appareil. */
+    val hrvSources: Map<Long, String> = emptyMap(),
     /** Habitudes proposées dans le journal du moral (noms de wellbeing.Journal.Tag). */
     val journalTags: List<String> = app.superhealth.wellbeing.Journal.Tag.entries.map { it.name },
     /** 1.8 : journal du moral, forme du jour et coucher conseillé déjà proposés (migration unique). */
@@ -283,6 +288,8 @@ data class SuperSettings(
     /** Coach IA : ton (nom de coach.Coach.Tone), ce qu'il doit retenir (écrit ou validé par l'utilisateur), modèle dédié (vide : celui de l'IA). */
     val coachTone: String = "WARM",
     val coachMemory: List<String> = emptyList(),
+    /** 2.0 : catégories que le coach ne reçoit pas (noms de coach.Coach.Share). */
+    val coachHidden: Set<String> = emptySet(),
     val coachModel: String = "",
     val coachBrief: Boolean = true,
     /** Planificateur de repas : aliments à éviter (texte libre, transmis au fournisseur). */

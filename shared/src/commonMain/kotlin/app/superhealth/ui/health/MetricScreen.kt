@@ -221,7 +221,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
         }
 
         if (scores.isNotEmpty()) SleepScoreCard(scores, span, scoreSource) { nav.go("h/metric/SLEEP_SCORE") }
-        if (metric == Metric.SLEEP) SriRow()
+        if (metric == Metric.SLEEP) { UsualNight(); SriRow() }
         if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
 
         if (metric.manual) {
@@ -345,6 +345,34 @@ private fun SleepScoreCard(scores: List<Pair<LocalDate, Double>>, span: Span, sr
         val watch by produceState<Double?>(null, day) { value = runCatching { Bridge.watchSleepScore(ctx, day) }.getOrNull() }
         watch?.let { Text(trf("Score de la montre : %1\$s", it.roundToInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
         src?.let { SourceLine(it) }
+    }
+}
+
+/** La dernière nuit, partie par partie, face à vos habitudes (désactivable dans Réglages > Sommeil). */
+@Composable
+private fun UsualNight() {
+    val sh by app.superhealth.SuperPrefs.settings.collectAsState()
+    if (!sh.sleepCompare) return
+    val cmp by produceState<Map<app.superhealth.health.data.Scores.SleepPart, Int>?>(null) {
+        value = runCatching {
+            val S = app.superhealth.health.data.Scores
+            val today = LocalDate.now()
+            val last = S.nightParts(today) ?: return@runCatching null
+            S.compareToUsual(last, (28L downTo 1L).mapNotNull { S.nightParts(today.minusDays(it)) })
+        }.getOrNull()
+    }
+    val c = cmp?.takeIf { it.isNotEmpty() } ?: return
+    SectionLabel(tr("Par rapport à vos habitudes"))
+    app.superhealth.nutrition.ui.components.GroupCard {
+        c.forEach { (p, v) ->
+            val (name, low, high) = when (p) {
+                app.superhealth.health.data.Scores.SleepPart.DURATION -> Triple("Durée", "Plus courte", "Plus longue")
+                app.superhealth.health.data.Scores.SleepPart.EFFICIENCY -> Triple("Efficacité", "Plus basse", "Plus haute")
+                app.superhealth.health.data.Scores.SleepPart.RESTORATIVE -> Triple("Sommeil réparateur", "Moins", "Plus")
+                app.superhealth.health.data.Scores.SleepPart.AWAKE -> Triple("Éveils", "Moins", "Plus")
+            }
+            app.superhealth.nutrition.ui.components.SettingRow(tr(name), value = tr(when (v) { -1 -> low; 1 -> high; else -> "Habituelle" }))
+        }
     }
 }
 

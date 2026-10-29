@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.SentimentSatisfied
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Backup
@@ -203,6 +204,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
                 }
                 RowDivider(56.dp)
+                SettingRow(tr("Sommeil"), subtitle = tr("Fenêtre d'endormissement, comparaison aux habitudes"), icon = Icons.Rounded.Bedtime, hue = HealthHues.Sleep) {
+                    nav.go("settings/sleep")
+                }
+                RowDivider(56.dp)
                 SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Sleep) {
                     nav.go("settings/reminders")
                 }
@@ -329,6 +334,23 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Réglages > Sommeil : les ajouts de la 2.0, chacun désactivable. */
+@Composable
+fun SleepSettingsScreen(nav: NavHostController) {
+    val sh by SuperPrefs.settings.collectAsState()
+    DetailScaffold(tr("Sommeil"), onBack = { nav.popBackStack() }) {
+        app.superhealth.nutrition.ui.components.GroupCard {
+            app.superhealth.nutrition.ui.components.SwitchRow(tr("Fenêtre d'endormissement"), tr("Sur le Coucher conseillé : l'heure où vous vous endormez le mieux"), sh.sleepGate) { v ->
+                SuperPrefs.update { it.copy(sleepGate = v) }
+            }
+            RowDivider(16.dp)
+            app.superhealth.nutrition.ui.components.SwitchRow(tr("Comparaison aux habitudes"), tr("Sur l'écran Sommeil : durée, efficacité, sommeil réparateur et éveils"), sh.sleepCompare) { v ->
+                SuperPrefs.update { it.copy(sleepCompare = v) }
+            }
+        }
     }
 }
 

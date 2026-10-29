@@ -106,7 +106,8 @@ internal suspend fun loadWatch(ctx: Context, cards: List<DashCard>): WatchSnap =
         else emptyList()
     }
     val efforts = async {
-        val n = if (has(DashCard.LOAD)) 28L else if (has(DashCard.EFFORT)) 7L else 0L
+        // 28 jours d'avant + aujourd'hui : charge chronique (Charge d'entraînement, Effort à viser)
+        val n = if (has(DashCard.LOAD) || has(DashCard.EFFORT)) 29L else 0L
         (n - 1 downTo 0L).map { d -> async { runCatching { Scores.effortOf(ctx, today.minusDays(d)) }.getOrNull() } }.awaitAll()
     }
     val zones = async { if (has(DashCard.HR_ZONES)) runCatching { Scores.zonesOf(ctx, today) }.getOrNull() else null }
@@ -226,6 +227,8 @@ internal fun ChargeCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavH
                 val note = listOfNotNull(
                     w.charge?.hrv?.let { when (it.zone) { -1 -> tr("VFC 7 j sous votre zone"); 1 -> tr("VFC 7 j au-dessus de votre zone"); else -> tr("VFC 7 j dans votre zone") } },
                     w.charge?.luteal?.let { if (it) tr("comparée à votre phase lutéale") else tr("comparée à votre phase folliculaire") },
+                    // montre changée : la VFC n'est comparée qu'aux nuits du même appareil
+                    w.charge?.hrvSource?.let { trf("VFC comparée aux nuits de %1\$s", it) },
                 ).joinToString(" · ")
                 if (note.isNotEmpty()) Text(note, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2)
             }
@@ -251,6 +254,13 @@ internal fun EffortCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavH
                 val days = (6L downTo 0L).map { LocalDate.now().minusDays(it) }
                 BarChart(w.efforts.takeLast(7), emptyList(), EffortBlue, height = 70.dp, track = softTrack(), labels = days.map { dayLetter(it) })
             }
+        }
+        // Effort à viser selon la Forme du jour (seulement quand la Forme a un conseil complet)
+        val form = app.superhealth.ui.wellbeing.rememberForm() as? app.superhealth.wellbeing.Form.Advice
+        form?.let { a -> app.superhealth.wellbeing.Form.effortRange(a.verdict, w.efforts.dropLast(1)) }?.let { (lo, hi) ->
+            Spacer(Modifier.height(8.dp))
+            Text(trf("À viser aujourd'hui : %1\$s–%2\$s, selon votre forme", formatNumber(lo), formatNumber(hi)),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
     }
 }

@@ -50,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.onContainer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -343,6 +345,7 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
                 Text(tr("Note de séance"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
                 Text(w.note, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
             }
+            RpeCard(w) { r -> vm.saveWorkout(w.copy(rpe = r)); app.superhealth.health.data.Scores.invalidate() }
             SectionLabel(tr("Détails de la séance"))
             GroupCard {
                 Detail(Icons.Rounded.FitnessCenter, tr("Volume"), st.settings.volume(w.exercises.sumOf { Analytics.volume(it.sets) }))
@@ -369,6 +372,35 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
                 }
             }
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/** Échelle CR-10 (Borg, utilisée par la session-RPE de Foster) : les repères nommés. */
+private val RPE_WORDS = mapOf(1 to "Très facile", 2 to "Facile", 3 to "Modéré", 4 to "Un peu dur", 5 to "Dur", 7 to "Très dur", 9 to "Presque maximal", 10 to "Maximal")
+
+/** Effort ressenti de la séance, une touche : sa charge ressentie (effort × minutes) entre dans l'Effort du jour. */
+@Composable
+private fun RpeCard(w: Workout, onPick: (Int) -> Unit) {
+    MfCard(Modifier.padding(top = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Effort ressenti"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            w.rpe?.let { r -> Text(tr(RPE_WORDS[r] ?: RPE_WORDS.filterKeys { it < r }.maxBy { it.key }.value), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            (1..10).forEach { n ->
+                val on = w.rpe == n
+                Box(Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(10.dp)).background(if (on) Mf.colors.accent.container(1.4f) else Mf.colors.chip)
+                    .clickable { onPick(n) }, contentAlignment = Alignment.Center) {
+                    Text("$n", style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.accent.onContainer() else Mf.colors.text)
+                }
+            }
+        }
+        w.rpe?.let { r ->
+            Spacer(Modifier.height(8.dp))
+            Text(trf("Charge ressentie : %1\$s × %2\$s min = %3\$s", r, w.durationSec / 60, r * (w.durationSec / 60)),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
     }
 }

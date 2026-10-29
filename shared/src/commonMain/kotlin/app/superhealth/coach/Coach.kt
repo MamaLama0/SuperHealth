@@ -118,8 +118,23 @@ object Coach {
     /**
      * Ce que voit le coach : profil, objectif et cibles de l'app, 14 derniers jours (journal, poids tendance, pas, sommeil,
      * cœur, récupération), séances et courses, programme, constats de l'app et mémoire. Seules des valeurs, pas d'identité
-     * (le prénom seulement s'il est renseigné).
+     * (le prénom seulement s'il est renseigné). Chaque catégorie se coupe ([Share]) ; humeur, journal du moral et cycle ne
+     * sont jamais envoyés.
      */
+    /** Ce que l'on accepte d'envoyer au coach (Réglages du coach > Données envoyées) ; tout est envoyé au départ. */
+    enum class Share(val label: String) {
+        PROFILE("Profil : sexe, âge, taille"),
+        WEIGHT("Poids et objectif"),
+        FOOD("Repas et cibles"),
+        HEALTH("Sommeil, pas, cœur, récupération"),
+        TRAINING("Musculation"),
+        ACTIVITIES("Autres activités"),
+        INSIGHTS("Constats de l'appli"),
+        MEMORY("Ce qu'il retient"),
+    }
+
+    private fun shares(s: Share) = s.name !in SuperPrefs.settings.value.coachHidden
+
     suspend fun context(ctx: Context, today: LocalDate = LocalDate.now()): String = withContext(Dispatchers.Default) {
         coroutineScope {
             val repo = NutriApp.repository
@@ -142,71 +157,88 @@ object Coach {
             val sh = SuperPrefs.settings.value
 
             buildString {
-                appendLine("## Profile")
-                val age = today.year - p.birthYear
-                appendLine(listOf(if (p.sex == Sex.MALE) "male" else "female", "$age y",
-                    "${p.heightCm.roundToInt()} cm").joinToString(", "))
-                an.currentTrendKg?.let { t ->
-                    val past = an.trendByDay.filterKeys { it <= today.toEpochDay() - 14 }.maxByOrNull { it.key }?.value
-                    appendLine("Trend weight: ${n(t, 1)} kg" + (past?.let { " (${if (t - it >= 0) "+" else ""}${n(t - it, 1)} kg over 14 days)" } ?: ""))
+                if (shares(Share.PROFILE) || shares(Share.WEIGHT)) appendLine("## Profile")
+                if (shares(Share.PROFILE)) {
+                    val age = today.year - p.birthYear
+                    appendLine(listOf(if (p.sex == Sex.MALE) "male" else "female", "$age y",
+                        "${p.heightCm.roundToInt()} cm").joinToString(", "))
                 }
-                an.currentGoal?.let { g ->
-                    appendLine("Goal: ${g.type.name.lowercase()}" + (if (g.ratePctPerWeek > 0) " at ${n(g.ratePctPerWeek, 2)} % body weight/week" else "") +
-                        (g.targetWeightKg?.let { ", target ${n(it, 1)} kg" } ?: ""))
+                if (shares(Share.WEIGHT)) {
+                    an.currentTrendKg?.let { t ->
+                        val past = an.trendByDay.filterKeys { it <= today.toEpochDay() - 14 }.maxByOrNull { it.key }?.value
+                        appendLine("Trend weight: ${n(t, 1)} kg" + (past?.let { " (${if (t - it >= 0) "+" else ""}${n(t - it, 1)} kg over 14 days)" } ?: ""))
+                    }
+                    an.currentGoal?.let { g ->
+                        appendLine("Goal: ${g.type.name.lowercase()}" + (if (g.ratePctPerWeek > 0) " at ${n(g.ratePctPerWeek, 2)} % body weight/week" else "") +
+                            (g.targetWeightKg?.let { ", target ${n(it, 1)} kg" } ?: ""))
+                    }
                 }
-                val t = an.targetFor(today.toEpochDay()).macros
-                appendLine("App-computed expenditure (TDEE): ${n(an.currentTdee)} kcal/day")
-                appendLine("Today's targets: ${n(t.kcal)} kcal, protein ${n(t.protein)} g, fat ${n(t.fat)} g, carbs ${n(t.carbs)} g")
-                val todayFood = eaten[today.toEpochDay()].orEmpty()
-                if (todayFood.isNotEmpty()) appendLine("Eaten so far today: ${n(todayFood.sumOf { it.kcal })} kcal, protein ${n(todayFood.sumOf { it.protein })} g, " +
-                    "fat ${n(todayFood.sumOf { it.fat })} g, carbs ${n(todayFood.sumOf { it.carbs })} g (${todayFood.size} items)")
-                else appendLine("Nothing logged yet today.")
-
-                appendLine()
-                appendLine("## Last 14 days (oldest first; '-' = no data)")
-                appendLine("date | kcal eaten/target | protein g | scale kg | trend kg | steps | sleep h | resting HR | HRV ms | recovery % | effort")
-                generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.forEach { d ->
-                    val e = d.toEpochDay()
-                    val dd = byDay[e]
-                    val food = eaten[e].orEmpty()
-                    val tg = an.targetFor(e).macros
-                    fun v(m: Metric, f: (Double) -> String) = values[m]?.get(d)?.let(f) ?: "-"
-                    val cells = listOf(
-                        if (food.isEmpty()) "- / ${n(tg.kcal)}" else "${n(food.sumOf { it.kcal })} / ${n(tg.kcal)}",
-                        if (food.isEmpty()) "-" else n(food.sumOf { it.protein }),
-                        dd?.weightKg?.let { n(it, 1) } ?: "-",
-                        an.trendByDay[e]?.let { n(it, 1) } ?: "-",
-                        v(Metric.STEPS) { n(it) }, v(Metric.SLEEP) { n(it / 60, 1) }, v(Metric.RESTING_HR) { n(it) }, v(Metric.HRV) { n(it) },
-                        v(Metric.RECOVERY) { n(it) }, v(Metric.EFFORT) { n(it) },
-                    )
-                    // jour sans aucune donnée : une ligne courte (moins de texte envoyé, même information)
-                    appendLine(d.format(dayFmt) + " | " + if (cells.drop(1).all { it == "-" } && cells[0].startsWith("-")) "no data" else cells.joinToString(" | "))
+                if (shares(Share.FOOD)) {
+                    val t = an.targetFor(today.toEpochDay()).macros
+                    appendLine("App-computed expenditure (TDEE): ${n(an.currentTdee)} kcal/day")
+                    appendLine("Today's targets: ${n(t.kcal)} kcal, protein ${n(t.protein)} g, fat ${n(t.fat)} g, carbs ${n(t.carbs)} g")
+                    val todayFood = eaten[today.toEpochDay()].orEmpty()
+                    if (todayFood.isNotEmpty()) appendLine("Eaten so far today: ${n(todayFood.sumOf { it.kcal })} kcal, protein ${n(todayFood.sumOf { it.protein })} g, " +
+                        "fat ${n(todayFood.sumOf { it.fat })} g, carbs ${n(todayFood.sumOf { it.carbs })} g (${todayFood.size} items)")
+                    else appendLine("Nothing logged yet today.")
                 }
 
-                appendLine()
-                appendLine("## Strength training (last 14 days)")
-                val prog = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
-                if (prog != null) {
-                    val next = prog.days.getOrNull(prog.dayIndex)
-                    appendLine("Active program: ${prog.name} (${prog.days.size} days/cycle, week ${prog.cycleIndex + 1} of ${prog.numCycles})" +
-                        (next?.let { ", next session: ${if (it.isRest) "rest day" else it.name}" } ?: ""))
-                } else appendLine("No active program.")
-                val history = st.history.sortedBy { it.startTime }
-                val recent = history.filter { it.startTime >= fromMs }
-                if (recent.isEmpty()) appendLine("No strength session logged.")
-                recent.forEach { w ->
-                    val before = history.filter { it.startTime < w.startTime }
-                    val prs = db?.let { TrainingAnalytics.newRecords(w, before, it).size } ?: 0
-                    val top = w.exercises.mapNotNull { ex ->
-                        val name = db?.exercise(ex.exerciseId)?.name ?: return@mapNotNull null
-                        val best = ex.sets.filter { it.done && it.weight != null && it.reps != null }.maxByOrNull { it.weight!! } ?: return@mapNotNull null
-                        "$name ${n(best.weight!!, 1)} kg×${best.reps}" + (best.rir?.let { " @RIR $it" } ?: "")
-                    }.take(4)
-                    appendLine("- ${TrainingAnalytics.day(w.startTime).format(dayFmt)}: ${w.name}, ${w.durationSec / 60} min, " +
-                        "volume ${n(w.exercises.sumOf { TrainingAnalytics.volume(it.sets) })} kg, ${w.exercises.sumOf { e -> e.sets.count { it.done } }} sets" +
-                        (if (prs > 0) ", $prs new records" else "") + (if (top.isNotEmpty()) ". Top sets: ${top.joinToString("; ")}" else ""))
+                // colonnes des catégories partagées seulement
+                val cols = buildList<Pair<String, (LocalDate) -> String>> {
+                    fun v(m: Metric, d: LocalDate, f: (Double) -> String) = values[m]?.get(d)?.let(f) ?: "-"
+                    if (shares(Share.FOOD)) {
+                        add("kcal eaten/target" to { d -> val food = eaten[d.toEpochDay()].orEmpty(); val tg = an.targetFor(d.toEpochDay()).macros
+                            if (food.isEmpty()) "- / ${n(tg.kcal)}" else "${n(food.sumOf { it.kcal })} / ${n(tg.kcal)}" })
+                        add("protein g" to { d -> eaten[d.toEpochDay()].orEmpty().takeIf { it.isNotEmpty() }?.let { f -> n(f.sumOf { it.protein }) } ?: "-" })
+                    }
+                    if (shares(Share.WEIGHT)) {
+                        add("scale kg" to { d -> byDay[d.toEpochDay()]?.weightKg?.let { n(it, 1) } ?: "-" })
+                        add("trend kg" to { d -> an.trendByDay[d.toEpochDay()]?.let { n(it, 1) } ?: "-" })
+                    }
+                    if (shares(Share.HEALTH)) {
+                        add("steps" to { d -> v(Metric.STEPS, d) { n(it) } }); add("sleep h" to { d -> v(Metric.SLEEP, d) { n(it / 60, 1) } })
+                        add("resting HR" to { d -> v(Metric.RESTING_HR, d) { n(it) } }); add("HRV ms" to { d -> v(Metric.HRV, d) { n(it) } })
+                        add("recovery %" to { d -> v(Metric.RECOVERY, d) { n(it) } }); add("effort" to { d -> v(Metric.EFFORT, d) { n(it) } })
+                    }
                 }
-                val cardio = acts.filter { it.source != Bridge.Source.GYM }
+                if (cols.isNotEmpty()) {
+                    appendLine()
+                    appendLine("## Last 14 days (oldest first; '-' = no data)")
+                    appendLine("date | " + cols.joinToString(" | ") { it.first })
+                    generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.forEach { d ->
+                        val cells = cols.map { it.second(d) }
+                        // jour sans aucune donnée : une ligne courte (moins de texte envoyé, même information)
+                        appendLine(d.format(dayFmt) + " | " + if (cells.all { it == "-" || it.startsWith("- /") }) "no data" else cells.joinToString(" | "))
+                    }
+                }
+
+                if (shares(Share.TRAINING)) {
+                    appendLine()
+                    appendLine("## Strength training (last 14 days)")
+                    val prog = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
+                    if (prog != null) {
+                        val next = prog.days.getOrNull(prog.dayIndex)
+                        appendLine("Active program: ${prog.name} (${prog.days.size} days/cycle, week ${prog.cycleIndex + 1} of ${prog.numCycles})" +
+                            (next?.let { ", next session: ${if (it.isRest) "rest day" else it.name}" } ?: ""))
+                    } else appendLine("No active program.")
+                    val history = st.history.sortedBy { it.startTime }
+                    val recent = history.filter { it.startTime >= fromMs }
+                    if (recent.isEmpty()) appendLine("No strength session logged.")
+                    recent.forEach { w ->
+                        val before = history.filter { it.startTime < w.startTime }
+                        val prs = db?.let { TrainingAnalytics.newRecords(w, before, it).size } ?: 0
+                        val top = w.exercises.mapNotNull { ex ->
+                            val name = db?.exercise(ex.exerciseId)?.name ?: return@mapNotNull null
+                            val best = ex.sets.filter { it.done && it.weight != null && it.reps != null }.maxByOrNull { it.weight!! } ?: return@mapNotNull null
+                            "$name ${n(best.weight!!, 1)} kg×${best.reps}" + (best.rir?.let { " @RIR $it" } ?: "")
+                        }.take(4)
+                        appendLine("- ${TrainingAnalytics.day(w.startTime).format(dayFmt)}: ${w.name}, ${w.durationSec / 60} min, " +
+                            "volume ${n(w.exercises.sumOf { TrainingAnalytics.volume(it.sets) })} kg, ${w.exercises.sumOf { e -> e.sets.count { it.done } }} sets" +
+                            (w.rpe?.let { ", perceived effort $it/10" } ?: "") +
+                            (if (prs > 0) ", $prs new records" else "") + (if (top.isNotEmpty()) ". Top sets: ${top.joinToString("; ")}" else ""))
+                    }
+                }
+                val cardio = if (shares(Share.ACTIVITIES)) acts.filter { it.source != Bridge.Source.GYM } else emptyList()
                 if (cardio.isNotEmpty()) {
                     appendLine()
                     appendLine("## Cardio and other activities (watch / Apple Santé)")
@@ -216,16 +248,17 @@ object Coach {
                         appendLine("- ${TrainingAnalytics.day(a.start).format(dayFmt)}: ${a.title} (${a.kind.name.lowercase()}), ${a.minutes} min$km$kcal")
                     }
                 }
-                if (insights.isNotEmpty()) {
+                if (insights.isNotEmpty() && shares(Share.INSIGHTS)) {
                     appendLine()
                     appendLine("## Patterns already detected by the app")
                     insights.forEach { appendLine("- $it") }
                 }
-                if (sh.coachMemory.isNotEmpty()) {
+                if (sh.coachMemory.isNotEmpty() && shares(Share.MEMORY)) {
                     appendLine()
                     appendLine("## Memory (facts the user asked you to remember)")
                     sh.coachMemory.forEach { appendLine("- $it") }
                 }
+                if (isBlank()) appendLine("The user chose not to share any data; answer from the conversation only.")
             }.trim()
         }
     }

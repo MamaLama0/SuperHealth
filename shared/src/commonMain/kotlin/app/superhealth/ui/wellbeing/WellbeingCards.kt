@@ -313,6 +313,14 @@ fun BedtimeCard(c: DashCard, size: CardSize, modifier: Modifier, nav: NavHostCon
                 (if (p.debtMin >= 10) trf(" + dette %1\$s", hm(p.debtMin)) else ""),
                 style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
             Text(trf("Endormi %1\$s %% du temps au lit", (p.efficiency * 100).toInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            val sh by SuperPrefs.settings.collectAsState()
+            if (sh.sleepGate) p.gate?.let { g ->
+                Spacer(Modifier.height(6.dp))
+                Text(trf("Fenêtre d'endormissement %1\$s – %2\$s", Bedtime.clock(g.first), Bedtime.clock(g.second)),
+                    style = MaterialTheme.typography.bodyMedium, color = c.hueInk())
+                if (p.tooEarly) Text(tr("Bien avant votre fenêtre : avancez plutôt de 15 min par soir."),
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            }
         }
     }
 }
