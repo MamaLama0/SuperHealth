@@ -22,6 +22,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,93 +59,103 @@ import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 
-/** Personnalisation : quelles cartes, dans quel ordre. Les cartes « montre » s'affichent dès qu'une source existe. */
+/**
+ * Personnalisation, en un seul panneau : l'aperçu de la grille est l'outil. Toucher un bloc le sélectionne, une petite
+ * barre dessous règle sa taille, le déplace ou le retire ; les cartes masquées s'ajoutent d'une touche (pastilles).
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
     val sh by vm.settings.collectAsState()
     val shown = sh.dashboard
     fun set(list: List<DashCard>) = SuperPrefs.update { it.copy(dashboard = list) }
+    var selected by remember { mutableStateOf<DashCard?>(null) }
+    var reorder by remember { mutableStateOf(false) }
+    if (reorder) app.superhealth.training.ui.components.ReorderSheet(shown.map { it.name to null }, shown.map { null },
+        onMove = { from, to -> set(with(app.superhealth.training.domain.ProgramEdit) { SuperPrefs.settings.value.dashboard.moved(from, to) }) },
+        onDismiss = { reorder = false }, title = tr("Ordre des cartes"), names = shown.map { tr(it.label) })
     DetailScaffold(tr("Personnaliser"), onBack = { nav.popBackStack() }, action = {
-        TextButton(onClick = { set(DashCard.defaults) }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
+        TextButton(onClick = { set(DashCard.defaults); selected = null }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
     }) {
-        Text(tr("Choisissez vos cartes, leur taille et leur ordre."), style = MaterialTheme.typography.bodyMedium,
-            color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-
-        GridPreview(shown, sh)
-        // Accès direct au choix des constantes de la carte principale.
-        GroupCard {
-            Row(Modifier.fillMaxWidth().clickable { nav.navigate("vitals/edit") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(tr("Constantes affichées"), style = MaterialTheme.typography.bodyLarge)
-                    Text(sh.vitals.joinToString(" · ") { n -> tr(app.superhealth.health.data.Metric.entries.firstOrNull { it.name == n }?.label ?: n) },
-                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-                Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.graphicsLayer(rotationZ = -90f), tint = Mf.colors.textTertiary)
-            }
-        }
-        GroupCard {
-            Row(Modifier.fillMaxWidth().clickable { nav.navigate("rings/edit") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(tr("Anneaux du jour"), style = MaterialTheme.typography.bodyLarge)
-                    Text(app.superhealth.ui.dashboard.Rings.kinds(sh.rings).joinToString(" · ") { tr(it.label) },
-                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-                Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.graphicsLayer(rotationZ = -90f), tint = Mf.colors.textTertiary)
-            }
-        }
-        var reorder by remember { mutableStateOf(false) }
-        if (reorder) app.superhealth.training.ui.components.ReorderSheet(shown.map { it.name to null }, shown.map { null },
-            onMove = { from, to -> set(with(app.superhealth.training.domain.ProgramEdit) { SuperPrefs.settings.value.dashboard.moved(from, to) }) },
-            onDismiss = { reorder = false }, title = tr("Ordre des cartes"), names = shown.map { tr(it.label) })
-        SectionLabel(tr("Affichées")) {
+        SectionLabel(tr("Tableau de bord")) {
             if (shown.size > 1) Text(tr("Réorganiser"), Modifier.clickable { reorder = true }, color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
         }
         if (shown.isEmpty()) Text(tr("Aucune carte affichée"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
-        else GroupCard {
-            shown.forEachIndexed { i, c ->
-                if (i > 0) RowDivider(56.dp)
-                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CardGlyph(c)
-                    Column(Modifier.weight(1f)) {
-                        Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        // taille : bulle, demi-largeur, pleine largeur (celles que la carte accepte)
-                        @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-                        if (c.sizes.size > 1) androidx.compose.foundation.layout.FlowRow(Modifier.padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            c.sizes.forEach { z ->
-                                val on = sh.sizeOf(c) == z
-                                Text(z.title, style = MaterialTheme.typography.labelMedium, maxLines = 1,
-                                    color = if (on) Mf.colors.onStrong else Mf.colors.text,
-                                    modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.strong else Mf.colors.chip)
-                                        .clickable { SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }
-                                        .padding(horizontal = 10.dp, vertical = 4.dp))
-                            }
-                        } else Text(tr(c.section.label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-                    }
-                    app.superhealth.nutrition.ui.components.Toggle(true, { set(shown - c) }, Modifier.padding(end = 8.dp))
-                }
-            }
+        GridPreview(shown, sh, selected?.takeIf { it in shown }) { c -> selected = if (selected == c) null else c }
+        selected?.takeIf { it in shown }?.let { c ->
+            CardToolbar(c, sh, onMove = { d ->
+                val i = shown.indexOf(c); val j = (i + d).coerceIn(0, shown.lastIndex)
+                if (i != j) set(shown.toMutableList().apply { add(j, removeAt(i)) })
+            }, onRemove = { set(shown - c); selected = null })
         }
-
-        DashCard.Section.entries.forEach { section ->
-            val hidden = DashCard.entries.filter { it.section == section && it !in shown && it.available && (it.feature()?.let { f -> sh.has(f) } ?: true) }
-            if (hidden.isEmpty()) return@forEach
-            app.superhealth.nutrition.ui.components.GroupHeader(tr(section.label), Modifier.padding(start = 0.dp))
-            GroupCard {
-                hidden.forEachIndexed { i, c ->
-                    if (i > 0) RowDivider(56.dp)
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                        CardGlyph(c)
-                        Column(Modifier.weight(1f)) {
-                            Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (c.watch) Text(tr("Montre ou Health Connect"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-                        }
-                        app.superhealth.nutrition.ui.components.Toggle(false, { set(shown + c) })
-                    }
-                }
+        // réglages du contenu des deux cartes qui en ont, côte à côte
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ContentLink(tr("Constantes"), DashCard.VITALS, Modifier.weight(1f)) { nav.navigate("vitals/edit") }
+            ContentLink(tr("Anneaux"), DashCard.RINGS, Modifier.weight(1f)) { nav.navigate("rings/edit") }
+        }
+        // cartes masquées : une pastille par carte, regroupées par partie ; une touche l'ajoute à la fin
+        val sections = DashCard.Section.entries.map { section ->
+            section to DashCard.entries.filter { it.section == section && it !in shown && it.available && (it.feature()?.let { f -> sh.has(f) } ?: true) }
+        }.filter { it.second.isNotEmpty() }
+        if (sections.isNotEmpty()) SectionLabel(tr("Ajouter"))
+        sections.forEach { (section, hidden) ->
+            Text(tr(section.label), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 6.dp))
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                hidden.forEach { c -> AddPill(c) { set(shown + c); selected = c } }
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Barre de la carte sélectionnée : taille, déplacer avant / après, retirer. */
+@Composable
+private fun CardToolbar(c: DashCard, sh: app.superhealth.SuperSettings, onMove: (Int) -> Unit, onRemove: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(Mf.colors.card)
+        .padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(c.icon(), null, Modifier.size(18.dp), tint = c.hue())
+            Spacer(Modifier.width(8.dp))
+            Text(tr(c.label), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            IconButton(onClick = { onMove(-1) }) { Icon(Icons.Rounded.KeyboardArrowUp, tr("Avant"), tint = Mf.colors.text) }
+            IconButton(onClick = { onMove(1) }) { Icon(Icons.Rounded.KeyboardArrowDown, tr("Après"), tint = Mf.colors.text) }
+            IconButton(onClick = onRemove) { Icon(Icons.Rounded.Close, tr("Retirer"), tint = Mf.colors.textSecondary) }
+        }
+        if (c.sizes.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            c.sizes.forEach { z ->
+                val on = sh.sizeOf(c) == z
+                Text(z.title, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                    color = if (on) Mf.colors.onStrong else Mf.colors.text,
+                    modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.strong else Mf.colors.chip)
+                        .clickable { SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }
+                        .padding(horizontal = 12.dp, vertical = 5.dp))
+            }
+        }
+    }
+}
+
+/** Pastille d'une carte masquée : symbole, nom, « + ». */
+@Composable
+private fun AddPill(c: DashCard, onClick: () -> Unit) {
+    Row(Modifier.clip(CircleShape).background(Mf.colors.card).clickable(onClick = onClick).padding(start = 10.dp, end = 12.dp, top = 7.dp, bottom = 7.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(c.icon(), null, Modifier.size(15.dp), tint = c.hue())
+        Spacer(Modifier.width(6.dp))
+        Text(tr(c.label), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        Spacer(Modifier.width(4.dp))
+        Icon(Icons.Rounded.Add, null, Modifier.size(14.dp), tint = Mf.colors.textTertiary)
+    }
+}
+
+/** Lien vers le réglage du contenu d'une carte (constantes, anneaux), en petite tuile. */
+@Composable
+private fun ContentLink(title: String, c: DashCard, modifier: Modifier, onClick: () -> Unit) {
+    Row(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).background(Mf.colors.card).clickable(onClick = onClick)
+        .padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(c.icon(), null, Modifier.size(18.dp), tint = c.hue())
+        Spacer(Modifier.width(8.dp))
+        Text(title, style = MaterialTheme.typography.labelLarge, maxLines = 1, modifier = Modifier.weight(1f))
+        Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.size(18.dp).graphicsLayer(rotationZ = -90f), tint = Mf.colors.textTertiary)
     }
 }
 
@@ -305,35 +318,27 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
 }
 
 
-/** Bloc de l'aperçu : toucher passe à la taille suivante que la carte accepte. */
+/** Bloc de l'aperçu : toucher le sélectionne (sa barre de réglage s'ouvre dessous). */
 @Composable
-private fun Block(c: DashCard, z: app.superhealth.CardSize, modifier: Modifier) {
-    Row(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(Mf.colors.chip)
-        .clickable(enabled = c.sizes.size > 1) {
-            val next = c.sizes[(c.sizes.indexOf(z) + 1) % c.sizes.size]
-            SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to next.name)) }
-        }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun Block(c: DashCard, z: app.superhealth.CardSize, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Row(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+        .background(if (selected) c.hue().container(1.6f) else Mf.colors.chip)
+        .then(if (selected) Modifier.border(1.5.dp, c.hue(), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)) else Modifier)
+        .clickable(onClick = onClick).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(c.icon(), null, Modifier.size(16.dp), tint = c.hue())
         if (z.span > 1) {
             Spacer(Modifier.width(6.dp))
-            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = if (selected) c.hue().onContainer() else Mf.colors.text)
         }
     }
 }
 
-/** Icône de la carte dans un carré arrondi de sa couleur, comme les listes de réglages. */
+/** Aperçu de la grille (3 blocs par rangée), tel que le tableau de bord la range. */
 @Composable
-private fun CardGlyph(c: DashCard) {
-    Box(Modifier.padding(end = 14.dp).size(26.dp), contentAlignment = Alignment.Center) {
-        Icon(c.icon(), null, Modifier.size(21.dp), tint = c.hue())
-    }
-}
-
-/** Aperçu de la grille (3 blocs par rangée), tel que le tableau de bord la range ; toucher un bloc change sa taille. */
-@Composable
-private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings) {
+private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings, selected: DashCard?, onSelect: (DashCard) -> Unit) {
     if (cards.isEmpty()) return
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(Mf.colors.card).padding(10.dp),
+    Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(Mf.colors.card).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
         app.superhealth.packRows(cards) { sh.sizeOf(it).span }.forEach { row ->
             val used = row.sumOf { sh.sizeOf(it).span }
@@ -343,12 +348,11 @@ private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings
                     val z = sh.sizeOf(c)
                     val w = if (used == app.superhealth.GRID || squares || z == app.superhealth.CardSize.S) z.span.toFloat()
                         else z.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
-                    Block(c, z, Modifier.weight(w).height(if (z == app.superhealth.CardSize.W) 26.dp else 40.dp))
+                    Block(c, z, c == selected, Modifier.weight(w).height(if (z == app.superhealth.CardSize.W) 28.dp else 40.dp)) { onSelect(c) }
                 }
                 if (squares && used < app.superhealth.GRID) Spacer(Modifier.weight((app.superhealth.GRID - used).toFloat()))
             }
         }
-        Text(tr("Touchez un bloc pour changer sa taille ; appui long sur une carte du tableau de bord pour la régler."),
-            style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+        if (selected == null) Text(tr("Touchez une carte pour la régler."), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
     }
 }

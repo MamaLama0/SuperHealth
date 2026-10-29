@@ -143,6 +143,8 @@ object OpenFoodFacts {
             sugars100 = n.num("sugars_100g") ?: 0.0,
             satFat100 = n.num("saturated-fat_100g") ?: 0.0,
             sodiumMg100 = (n.num("sodium_100g") ?: 0.0) * 1000,
+            // 2.2 : vitamines, minéraux, caféine, alcool… (avant, seuls les macros étaient gardés)
+            microsJson = Micros.encode(Micros.OFF.mapNotNull { (key, to) -> n.num("${key}_100g")?.takeIf { it > 0 }?.let { to.first to it * to.second } }.toMap()),
             source = "off",
         )
     }

@@ -240,6 +240,8 @@ data class CheckIn(
     val days: List<DayTarget> = emptyList(),
     /** Plancher effectif (dynamique) au moment du check-in. */
     val floorKcal: Double = 0.0,
+    /** Cible retenue par l'âge (Senior.Reason : CAPPED, NOT_OBESE) ; null = aucune limite d'âge. */
+    val ageLimit: String? = null,
 ) {
     /** Cible du jour de semaine [dow] (1 = lundi). */
     fun forDayOfWeek(dow: Int): DayTarget = days.getOrNull(dow - 1) ?: DayTarget(kcal, protein, fat, carbs)

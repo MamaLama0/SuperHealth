@@ -167,7 +167,16 @@ fun SuperRoot(vm: SuperViewModel) {
 
     // Fin de séance de musculation : écran « séance terminée ».
     val completed by vm.training.completed.collectAsState()
-    LaunchedEffect(completed) { if (completed != null) nav.navigate("complete") { popUpTo("activities"); launchSingleTop = true } }
+    // L'écran de séance est retiré de la pile : un retour depuis le résumé ne retombe jamais sur une séance vide (écran blanc
+    // quand la séance avait été ouverte depuis l'accueil, au relancement de l'app ou par un widget, hors de l'onglet Activités).
+    LaunchedEffect(completed) {
+        if (completed == null || nav.currentBackStackEntry?.destination?.route == "complete") return@LaunchedEffect
+        val stack = nav.currentBackStack.value.map { it.destination.route }
+        nav.navigate("complete") {
+            if ("activities" in stack) popUpTo("activities") else if ("session" in stack) popUpTo("session") { inclusive = true }
+            launchSingleTop = true
+        }
+    }
     // Une séance en cours : l'application s'ouvre directement dessus (une fois par processus).
     LaunchedEffect(Unit) {
         if (!vm.training.resumedOnLaunch) {

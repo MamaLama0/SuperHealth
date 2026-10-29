@@ -170,6 +170,10 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
             item(key = "mealplan") {
                 app.superhealth.ui.meals.MealPlanCard(day, entries, target, { s.energy(it) }, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp))
             }
+            // 2.2 : vitamines, minéraux, caféine… du jour, repliés par défaut
+            if (entries.isNotEmpty()) item(key = "nutrients") {
+                DayNutrients(entries, s, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp), nav) { nav.navigate("nutrients") }
+            }
             if (selection.isNotEmpty()) item {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.strong)
                     .padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

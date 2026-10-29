@@ -104,7 +104,8 @@ data class Analytics(
     /** Ce que donnerait un check-in calculé ce jour-là. */
     fun provisionalCheckIn(day: Long): CheckIn {
         val w = trendByDay[day] ?: currentTrendKg ?: DEFAULT_WEIGHT
-        return Targets.checkIn(day, tdeeAt(day), w, lbmAt(day), program, goalAt(day), profile.heightCm)
+        return Targets.checkIn(day, tdeeAt(day), w, lbmAt(day), program, goalAt(day), profile.heightCm,
+            java.time.LocalDate.ofEpochDay(day).year - profile.birthYear, profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE)
     }
 
     /** Prochain check-in : prochain jour de check-in choisi, strictement après le dernier check-in (ou le début du programme). */
@@ -158,12 +159,18 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             FoodEntryEntity(
                 epochDay = day, meal = mealFor(minute), minuteOfDay = minute, foodId = food.id.takeIf { it != 0L }, name = food.name,
                 grams = grams, kcal = food.kcal100 * f, protein = food.protein100 * f, fat = food.fat100 * f, carbs = food.carbs100 * f,
-                fiber = food.fiber100 * f, microsJson = Micros.scale(food.microsJson, f),
+                fiber = food.fiber100 * f,
+                microsJson = Micros.encode(Micros.of(food.microsJson, food.name, food.sugars100, food.satFat100, food.sodiumMg100).mapValues { it.value * f }),
             )
         )
         if (food.id != 0L) foods.markUsed(food.id)
         return id
     }
+
+    /** Aliment estimé (coach) : quantité facultative, valeurs déjà pour la portion. */
+    suspend fun logEstimated(day: Long, minute: Int, name: String, grams: Double?, m: Macros): Long =
+        entries.insert(FoodEntryEntity(epochDay = day, meal = mealFor(minute), minuteOfDay = minute, name = name, grams = grams,
+            kcal = m.kcal, protein = m.protein, fat = m.fat, carbs = m.carbs))
 
     suspend fun quickAdd(day: Long, minute: Int, name: String, m: Macros): Long =
         entries.insert(FoodEntryEntity(epochDay = day, meal = mealFor(minute), minuteOfDay = minute, name = name,

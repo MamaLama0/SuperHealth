@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.DataUsage
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Hotel
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -211,6 +212,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleHue
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY -> HealthHues.Sleep
     DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS -> HealthHues.Heart
+    DashCard.SCORES -> HealthHues.Sleep
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -263,6 +265,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.NIGHT_HEART -> Icons.Rounded.FavoriteBorder
     DashCard.NIGHT_VITALS -> Icons.Rounded.NightsStay
     DashCard.VITALS_TRENDS -> Icons.AutoMirrored.Rounded.ShowChart
+    DashCard.SCORES -> Icons.Rounded.DataUsage
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -502,6 +505,10 @@ internal fun focusItems(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
             add(Triple(Icons.Rounded.Straighten, HealthHues.Body, (if (m == 0) tr("Photo de départ") else trf("%1\$s %% de votre objectif : photo", m)) to { nav.go("body") }))
         }
         if (an.days.lastOrNull()?.weightKg == null) add(Triple(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("Pesée du jour") to { nav.go("weight") }))
+        // dès 60 ans, hors objectif de perte : perte de poids involontaire > 5 % en 6 mois (critère GLIM de dénutrition)
+        app.superhealth.nutrition.domain.Senior.unintendedLossPct(LocalDate.now().year - an.profile.birthYear, an.currentGoal?.type, an.trendByDay, an.today)?.let { pct ->
+            add(Triple(Icons.Rounded.MonitorWeight, HealthHues.Heart, trf("−%1\$s %% en 6 mois sans le vouloir : à signaler à votre médecin", pct.roundToInt()) to { nav.go("weight") }))
+        }
         val target = an.targetFor(an.today).macros.protein
         val p = target - eaten.sumOf { it.macros().protein }
         if (target > 0 && p > 1) add(Triple(Icons.Rounded.Restaurant, ProteinColor, trf("%1\$s g de protéines", p.roundToInt()) to { tab("log") }))
@@ -725,7 +732,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
         DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK,
-        DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE -> true
+        DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE, DashCard.VITALS, DashCard.VITALS_TRENDS, DashCard.SCORES -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -851,7 +858,8 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.SLEEP_QUALITY -> SleepQualityCard(c, h.watch, modifier, nav)
         DashCard.NIGHT_HEART -> NightHeartCard(c, h.watch, modifier, nav)
         DashCard.NIGHT_VITALS -> NightVitalsCard(c, h.watch, modifier, nav)
-        DashCard.VITALS_TRENDS -> VitalsTrendsCard(c, h.watch, modifier, nav)
+        DashCard.SCORES -> ScoresCard(c, size, h.watch, modifier, nav)
+        DashCard.VITALS_TRENDS -> if (size == app.superhealth.CardSize.L) VitalsTrendsCard(c, h.watch, modifier, nav) else TrendsCompact(c, size, h.watch.trends, modifier, nav)
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachWeekCard(c, size, vm, modifier, nav)
         DashCard.FORM -> app.superhealth.ui.wellbeing.FormCard(c, size, vm, modifier, nav)
@@ -948,6 +956,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.VITALS -> {
             // Les mesures choisies dont une source existe (montre ou Health Connect) ; touche l'en-tête pour les choisir.
             val tiles = VITALS.filter { Bridge.hasSource(it) }
+            if (size != app.superhealth.CardSize.L) { VitalsCompact(c, size, tiles, { h.latest(it)?.second }, modifier, nav); return }
             Tile(c, tr("Constantes"), modifier, onClick = { nav.go("h/vitals") }, tinted = false) {
                 if (tiles.isEmpty()) Text(tr("Vos constantes apparaîtront après une nuit avec la montre."), style = MaterialTheme.typography.bodyMedium,
                     color = Mf.colors.textSecondary)

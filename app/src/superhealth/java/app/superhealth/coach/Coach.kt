@@ -78,7 +78,9 @@ object Coach {
         val maxTokens: Int = 700,
     )
 
-    @Serializable data class Msg(val role: String, val text: String, val time: Long = System.currentTimeMillis())
+    /** [actions] : propositions du coach (programme, repas, écran) ; [used] : outils consultés pour répondre. */
+    @Serializable data class Msg(val role: String, val text: String, val time: Long = System.currentTimeMillis(),
+                                 val actions: List<CoachTools.Action> = emptyList(), val used: List<String> = emptyList())
 
     @Serializable data class Brief(val day: Long, val headline: String, val points: List<String>, val at: Long = 0)
 
@@ -202,6 +204,16 @@ object Coach {
                     val age = today.year - p.birthYear
                     appendLine(listOf(if (p.sex == Sex.MALE) "male" else "female", "$age y",
                         "${p.heightCm.roundToInt()} cm").joinToString(", "))
+                    // 2.2 : à partir de 60 ans, le coach connaît les règles d'âge appliquées par l'app (Senior)
+                    val band = app.superhealth.nutrition.domain.Senior.band(age)
+                    if (band != app.superhealth.nutrition.domain.Senior.Band.ADULT) {
+                        val r = app.superhealth.nutrition.domain.Senior.rules(band)
+                        appendLine("Age rules applied by the app (ESPEN 2022, EASO 2025, GLIM 2019): advised BMI zone ${r.zone.start}-${r.zone.endInclusive}, " +
+                            "weight loss only if BMI ≥ ${r.loseFromBmi}, deficit ≤ ${r.maxDeficit?.toInt()} kcal/day, at most ${((r.maxLoss ?: 0.0) * 100).toInt()} % of start weight per goal, " +
+                            "target never below BMI ${r.floorBmi}" + (r.minIntake?.let { ", intake ≥ ${it.toInt()} kcal" } ?: "") +
+                            ", protein ≥ 1.0 g/kg adjusted weight (1.2 when losing after 65), ≥ 25 g protein per meal" +
+                            ". Never suggest a bigger deficit or a lower target; favour resistance training, protein, vitamin D and calcium.")
+                    }
                 }
                 if (shares(Share.WEIGHT)) {
                     an.currentTrendKg?.let { t ->
@@ -331,22 +343,78 @@ object Coach {
             "\n\n# Data snapshot\n" + context
     }
 
-    /** Appel Chat Completions (même fournisseur que l'IA de la nutrition), conversation complète. */
-    private suspend fun complete(p: Prompts, system: String, messages: List<Msg>): String = withContext(Dispatchers.IO) {
+    /** Fournisseur sans appel de fonctions (refus de « tools ») : on ne les renvoie plus pendant cette session. */
+    @Volatile private var toolsOff = false
+
+    /** Appel Chat Completions (même fournisseur que l'IA de la nutrition), conversation complète, sans outils. */
+    private suspend fun complete(p: Prompts, system: String, messages: List<Msg>): String = converse(null, p, system, messages, tools = false).text
+
+    private class Reply(val text: String, val actions: List<CoachTools.Action>, val used: List<String>)
+
+    /**
+     * Conversation avec outils : tant que le modèle demande des outils (6 tours au plus), ils s'exécutent sur le téléphone
+     * et leurs résultats lui sont renvoyés ; les propositions s'accumulent sous la réponse finale.
+     */
+    private suspend fun converse(ctx: Context?, p: Prompts, system: String, messages: List<Msg>, tools: Boolean): Reply = withContext(Dispatchers.IO) {
         val cfg = config()
         if (!cfg.ready) throw CoachException(app.superhealth.ui.tr("Configurez d'abord une clé API (Nutrition > Intelligence artificielle)."))
-        val body = buildJsonObject {
-            put("model", cfg.effectiveModel)
-            put("temperature", p.temperature)
-            put(cfg.maxTokensParam, p.maxTokens)
-            putJsonArray("messages") {
-                addJsonObject { put("role", "system"); put("content", Anon.name(system)) }
-                // rien d'identifiant : ni nom (même tapé dans une question), ni e-mail, ni téléphone
-                messages.forEach { m -> addJsonObject { put("role", m.role); put("content", if (m.role == "user") Anon.typed(m.text) else Anon.name(m.text)) } }
-            }
-        }
         val endpoint = cfg.effectiveUrl + "/chat/completions"
         if (!Net.canSendSecret(endpoint)) throw CoachException(app.superhealth.ui.tr("Adresse refusée : HTTPS requis (HTTP seulement vers le réseau local)."))
+        val useTools = tools && ctx != null && !toolsOff
+        val convo = mutableListOf<kotlinx.serialization.json.JsonElement>()
+        convo += buildJsonObject { put("role", "system"); put("content", Anon.name(system + if (useTools) CoachTools.GUIDE else "")) }
+        // rien d'identifiant : ni nom (même tapé dans une question), ni e-mail, ni téléphone
+        messages.forEach { m -> convo += buildJsonObject { put("role", m.role); put("content", if (m.role == "user") Anon.typed(m.text) else Anon.name(m.text)) } }
+        val actions = mutableListOf<CoachTools.Action>()
+        val used = linkedSetOf<String>()
+        var withTools = useTools
+        repeat(7) { round ->
+            val body = buildJsonObject {
+                put("model", cfg.effectiveModel)
+                put("temperature", p.temperature)
+                put(cfg.maxTokensParam, p.maxTokens)
+                put("messages", kotlinx.serialization.json.JsonArray(convo))
+                // dernier tour : plus d'outils, le modèle doit conclure
+                if (withTools && round < 6) { put("tools", CoachTools.definitions()); put("tool_choice", "auto") }
+            }
+            val (code, text) = post(cfg, endpoint, body.toString())
+            if (code !in 200..299) {
+                // fournisseur qui refuse les outils : même question sans eux
+                if (withTools && round == 0 && code in listOf(400, 404, 422)) { toolsOff = true; withTools = false; return@repeat }
+                val msg = runCatching { json.parseToJsonElement(text).jsonObject["error"]?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull }.getOrNull()
+                throw CoachException("Erreur $code${msg?.let { " : $it" } ?: ""}")
+            }
+            val message = json.parseToJsonElement(text).jsonObject["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonObject
+                ?: throw CoachException(app.superhealth.ui.tr("Pas de réponse du modèle."))
+            val calls = (message["tool_calls"] as? kotlinx.serialization.json.JsonArray).orEmpty()
+            if (calls.isEmpty() || !withTools) {
+                val answer = message["content"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }?.let(Anon::restore)
+                    ?: throw CoachException(app.superhealth.ui.tr("Pas de réponse du modèle."))
+                return@withContext Reply(answer, actions, used.toList())
+            }
+            convo += buildJsonObject {
+                put("role", "assistant")
+                put("content", message["content"] ?: kotlinx.serialization.json.JsonNull)
+                put("tool_calls", kotlinx.serialization.json.JsonArray(calls))
+            }
+            calls.forEach { c ->
+                val call = c.jsonObject
+                val fn = call["function"]?.jsonObject
+                val name = fn?.get("name")?.jsonPrimitive?.contentOrNull.orEmpty()
+                val args = runCatching { json.parseToJsonElement(fn?.get("arguments")?.jsonPrimitive?.contentOrNull ?: "{}").jsonObject }
+                    .getOrDefault(kotlinx.serialization.json.JsonObject(emptyMap()))
+                val out = CoachTools.run(ctx!!, name, args)
+                out.action?.let { actions += it }
+                CoachTools.label(name)?.let { used += it }
+                convo += buildJsonObject {
+                    put("role", "tool"); put("tool_call_id", call["id"]?.jsonPrimitive?.contentOrNull.orEmpty()); put("content", Anon.name(out.result))
+                }
+            }
+        }
+        throw CoachException(app.superhealth.ui.tr("Pas de réponse du modèle."))
+    }
+
+    private fun post(cfg: AiConfig, endpoint: String, body: String): Pair<Int, String> {
         val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"; doOutput = true; connectTimeout = 15000; readTimeout = 90000
             setRequestProperty("Content-Type", "application/json")
@@ -354,15 +422,9 @@ object Coach {
             setRequestProperty("X-Title", "SuperHealth Coach")
         }
         try {
-            conn.outputStream.use { it.write(body.toString().toByteArray()) }
+            conn.outputStream.use { it.write(body.toByteArray()) }
             val code = conn.responseCode
-            val text = (if (code in 200..299) conn.inputStream else conn.errorStream)?.use { Net.readCapped(it) }.orEmpty()
-            if (code !in 200..299) {
-                val msg = runCatching { json.parseToJsonElement(text).jsonObject["error"]?.jsonObject?.get("message")?.jsonPrimitive?.contentOrNull }.getOrNull()
-                throw CoachException("Erreur $code${msg?.let { " : $it" } ?: ""}")
-            }
-            json.parseToJsonElement(text).jsonObject["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonObject?.get("content")
-                ?.jsonPrimitive?.contentOrNull?.trim()?.let(Anon::restore) ?: throw CoachException(app.superhealth.ui.tr("Pas de réponse du modèle."))
+            return code to (if (code in 200..299) conn.inputStream else conn.errorStream)?.use { Net.readCapped(it) }.orEmpty()
         } finally { conn.disconnect() }
     }
 
@@ -385,8 +447,16 @@ object Coach {
         val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val history = chat.value.takeLast(12)
         if (history.lastOrNull()?.role != "user") throw CoachException(app.superhealth.ui.tr("Pas de question à laquelle répondre."))
-        val answer = complete(p, system(p, context(ctx)), history)
-        return Msg("assistant", answer).also { saveChat(chat.value + it) }
+        val r = converse(ctx, p, system(p, context(ctx)), history, tools = true)
+        return Msg("assistant", r.text, actions = r.actions, used = r.used).also { saveChat(chat.value + it) }
+    }
+
+    /** Proposition appliquée (bouton touché) : marquée faite dans la conversation ; renvoie l'écran à ouvrir. */
+    suspend fun apply(msg: Msg, action: CoachTools.Action): String? {
+        val route = CoachTools.apply(action)
+        if (action.kind != "open") saveChat(chat.value.map { m -> if (m.time == msg.time && m.role == msg.role)
+            m.copy(actions = m.actions.map { if (it == action) it.copy(done = true) else it }) else m })
+        return route
     }
 
     /** Autre réponse à la dernière question : la dernière réponse est retirée puis redemandée. */
@@ -401,7 +471,8 @@ object Coach {
     /** Point du jour (comme le Daily Outlook de WHOOP) : préparé une fois par jour, gardé jusqu'au lendemain. */
     suspend fun makeBrief(ctx: Context): Brief {
         val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
-        val raw = split(complete(p, system(p, context(ctx)), listOf(Msg("user", p.brief)))).first
+        // 2.2 : le point du jour peut aller chercher le détail (repas, nuit, séances) avec les outils de lecture
+        val raw = split(converse(ctx, p, system(p, context(ctx)), listOf(Msg("user", p.brief)), tools = true).text).first
         val lines = raw.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val head = lines.firstOrNull { !it.startsWith("•") && !it.startsWith("-") && !it.startsWith("*") }?.trim('*', '#', ' ') ?: ""
         val points = lines.filter { it.startsWith("•") || it.startsWith("-") || (it.startsWith("*") && !it.startsWith("**")) }

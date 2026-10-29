@@ -278,9 +278,14 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
     // états gardés au retour de l'éditeur (l'écran quitte la composition pendant l'édition)
     var longAsked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(w0.durationSec >= MAX_WORKOUT_SEC) }
     var editDuration by remember { mutableStateOf(false) }
+    // le retour système ferme aussi le résumé : sans cela la séance terminée restait en mémoire et l'écran de séance vide réapparaissait
+    androidx.activity.compose.BackHandler { onClose() }
+    // la feuille « Modifications de séance » attend la fin de l'entrée de l'écran (ouverte pendant la transition, seul son voile gris s'affichait)
+    var sheetReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(700); sheetReady = true }
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
         WorkoutSummary(vm, w, tr("Séance terminée"), onClose, onEdit = { nav.navigate("workoutedit/${w.id}") },
-            onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(w.id); onClose() })
+            onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(w.id); onClose() }, rpeFirst = true, nav = nav)
         // Confettis de fin de séance, une seule fois
         var confetti by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
         LaunchedEffect(Unit) { if (confetti) { kotlinx.coroutines.delay(4500); confetti = false } }
@@ -289,7 +294,7 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
     if (longAsked) LongWorkoutDialog(w, onKeep = { longAsked = false; vm.saveWorkout(w.copy(durationSec = MAX_WORKOUT_SEC)) },
         onEstimate = { longAsked = false; vm.saveWorkout(w.copy(durationSec = it)) }, onEdit = { longAsked = false; editDuration = true })
     if (editDuration) DurationDialog(w.durationSec, estimatedDuration(w), onDismiss = { editDuration = false }) { editDuration = false; vm.saveWorkout(w.copy(durationSec = it)) }
-    else if (!longAsked && change != null && db != null) PlanDiffSheet(vm, db, change!!)
+    else if (sheetReady && !longAsked && change != null && db != null) PlanDiffSheet(vm, db, change!!)
 }
 
 @Composable
@@ -299,7 +304,7 @@ fun WorkoutDetailScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     var editDuration by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         WorkoutSummary(vm, w, w.name, { nav.popBackStack() }, onEdit = { nav.navigate("workoutedit/$id") },
-            onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(id); nav.popBackStack() })
+            onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(id); nav.popBackStack() }, nav = nav)
         // Refaire cette séance (mêmes exercices et séries, charges d'après l'historique).
         app.superhealth.training.ui.components.PillButton(if (st.session == null) tr("Refaire cette séance") else tr("Reprendre la séance en cours"),
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(16.dp), icon = Icons.Rounded.Repeat) {
@@ -310,7 +315,8 @@ fun WorkoutDetailScreen(vm: AppViewModel, id: String, nav: NavHostController) {
 }
 
 @Composable
-private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose: () -> Unit, onEdit: () -> Unit, onDuration: () -> Unit, onDelete: () -> Unit) {
+private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose: () -> Unit, onEdit: () -> Unit, onDuration: () -> Unit, onDelete: () -> Unit, rpeFirst: Boolean = false,
+                           nav: NavHostController? = null) {
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -331,8 +337,11 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
         app.superhealth.nutrition.ui.components.NavBar(title, onClose, backIcon = Icons.Rounded.Close) {
             app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.MoreHoriz, tr("Options de la séance")) { menu = true }
         }
+        val rpe: @Composable () -> Unit = { RpeCard(w) { r -> vm.saveWorkout(w.copy(rpe = r)); app.superhealth.health.data.Scores.invalidate() } }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 96.dp)) {
-            BodyMap(intensity(sets, max), st.settings.sex, Modifier.fillMaxWidth().height(320.dp))
+            // fin de séance : l'effort ressenti en premier, avant la silhouette (il passait sous le pli)
+            if (rpeFirst) rpe()
+            BodyMap(intensity(sets, max), st.settings.sex, Modifier.fillMaxWidth().height(if (rpeFirst) 260.dp else 320.dp))
             if (records.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -343,7 +352,10 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
                 Text(tr("Note de séance"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
                 Text(w.note, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
             }
-            RpeCard(w) { r -> vm.saveWorkout(w.copy(rpe = r)); app.superhealth.health.data.Scores.invalidate() }
+            if (!rpeFirst) rpe()
+            if (nav != null) app.superhealth.ui.coach.CoachChip(tr("Analyser avec le coach"),
+                trf("Analyse ma séance « %1\$s » du %2\$s : progression par rapport aux précédentes, points forts, quoi changer la prochaine fois.", w.name, longDate(w.startTime)),
+                nav, Modifier.padding(top = 12.dp))
             SectionLabel(tr("Détails de la séance"))
             GroupCard {
                 Detail(Icons.Rounded.FitnessCenter, tr("Volume"), st.settings.volume(w.exercises.sumOf { Analytics.volume(it.sets) }))

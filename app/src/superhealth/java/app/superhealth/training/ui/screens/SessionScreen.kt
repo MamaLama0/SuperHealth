@@ -162,7 +162,10 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     // fin de séance : la racine ouvre « Séance terminée » ; sinon (abandon) on revient simplement en arrière
     // séance terminée ailleurs : l'écran se retire, seulement s'il est encore en haut de la pile (après « Abandonner », déjà
     // dépilé, un second retour vidait la pile : page blanche et barre d'onglets en haut)
-    if (s == null || db == null) { LaunchedEffect(Unit) { if (completed == null && nav.currentBackStackEntry?.destination?.route == "session") nav.popBackStack() }; return }
+    if (s == null || db == null) {
+        LaunchedEffect(completed) { if (completed == null && nav.currentBackStackEntry?.destination?.route == "session") nav.popBackStack() }
+        return
+    }
     // Horloge de la séance : lue seulement par la barre du haut et la carte de repos (voir Ticking), pour ne pas
     // recomposer les pages d'exercices deux fois par seconde (saccades au passage d'un exercice à l'autre).
     val clock = remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -442,37 +445,35 @@ private fun ExercisePage(
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 160.dp)) {
         Hero(e, settings, index, s.exercises.size, groupSize,
             ex.supersetGroup?.let { g -> s.exercises.mapNotNull { it.supersetGroup }.distinct().indexOf(g).takeIf { it >= 0 }?.let { 'A' + it } }) { nav.navigate("exercise/${ex.exerciseId}") }
-        // Actions de l'exercice (workout_exercise_builder)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // les plus utilisés en salle d'abord
+        // Actions de l'exercice (workout_exercise_builder) : repos et remplacement à portée de pouce, le reste dans une petite
+        // fenêtre d'options. Plus de rangée glissante : un glissement raté y emmenait à l'exercice voisin.
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
             ActionChip(Icons.Rounded.Timer, trf("Repos %1\$s", (restLabel(ex.restSec))), onClick = onRest)
-            // échauffements calculés (réglage d'échauffement) depuis la charge de travail
-            if (ex.sets.none { it.type == SetType.WARMUP && !it.done }) ActionChip(Icons.Rounded.LocalFireDepartment, tr("Échauffement")) { vm.addWarmUps(index) }
             ActionChip(Icons.Rounded.SwapHoriz, tr("Remplacer")) { nav.navigate("picker/${Picker.SWAP}?target=${index}") }
-            // superset, puis triset en reliant aussi l'exercice suivant
+            Spacer(Modifier.weight(1f))
             // depuis n'importe quel membre du groupe : on relie le dernier du groupe à l'exercice qui le suit
             var groupEnd = index
             while (inSuperset && s.exercises.getOrNull(groupEnd + 1)?.supersetGroup == ex.supersetGroup) groupEnd++
-            if (s.exercises.size > 1 && (!inSuperset || groupEnd < s.exercises.size - 1))
-                ActionChip(Icons.Rounded.Link, if (!inSuperset) tr("Superset") else if (groupSize == 2) tr("Triset") else tr("Lier au suivant")) { vm.linkNext(groupEnd) }
-            if (inSuperset) ActionChip(Icons.Rounded.LinkOff, tr("Détacher"), active = true) { vm.unlink(index) }
-            ActionChip(Icons.Rounded.FitnessCenter, tr("Calculateur")) { onPlates(ex.sets.firstOrNull { !it.done && it.type != SetType.WARMUP }?.let { it.weight ?: it.autoWeight } ?: 0.0) }
-            ActionChip(Icons.Rounded.Flag, tr("Objectifs"), onClick = onTargets)
-            ActionChip(Icons.Rounded.StickyNote2, tr("Note"), onClick = onNote)
-            ActionChip(Icons.Rounded.Info, tr("Info")) { nav.navigate("exercise/${ex.exerciseId}") }
+            val options = buildList {
+                // échauffements calculés (réglage d'échauffement) depuis la charge de travail
+                if (ex.sets.none { it.type == SetType.WARMUP && !it.done }) add(ExOption(Icons.Rounded.LocalFireDepartment, tr("Échauffement")) { vm.addWarmUps(index) })
+                // superset, puis triset en reliant aussi l'exercice suivant
+                if (s.exercises.size > 1 && (!inSuperset || groupEnd < s.exercises.size - 1))
+                    add(ExOption(Icons.Rounded.Link, if (!inSuperset) tr("Superset") else if (groupSize == 2) tr("Triset") else tr("Lier au suivant")) { vm.linkNext(groupEnd) })
+                if (inSuperset) add(ExOption(Icons.Rounded.LinkOff, tr("Détacher"), active = true) { vm.unlink(index) })
+                add(ExOption(Icons.Rounded.Flag, tr("Objectifs"), onClick = onTargets))
+                add(ExOption(Icons.Rounded.StickyNote2, tr("Note"), active = ex.note.isNotBlank(), onClick = onNote))
+                add(ExOption(Icons.Rounded.FitnessCenter, tr("Calculateur")) { onPlates(ex.sets.firstOrNull { !it.done && it.type != SetType.WARMUP }?.let { it.weight ?: it.autoWeight } ?: 0.0) })
+                add(ExOption(Icons.Rounded.Info, tr("Info")) { nav.navigate("exercise/${ex.exerciseId}") })
+                if (s.exercises.size > 1) add(ExOption(Icons.Rounded.SwapVert, tr("Réorganiser"), onClick = onReorder))
+                if (index > 0) add(ExOption(Icons.Rounded.KeyboardArrowUp, tr("Monter")) { vm.moveExercise(index, index - 1) })
+                if (index < s.exercises.size - 1) add(ExOption(Icons.Rounded.KeyboardArrowDown, tr("Descendre")) { vm.moveExercise(index, index + 1) })
+                add(ExOption(Icons.Rounded.DeleteOutline, tr("Retirer"), danger = true) { vm.removeExercise(index) })
+            }
             Box {
-                ActionChip(Icons.Rounded.MoreHoriz, tr("Plus")) { more = true }
-                DropdownMenu(more, { more = false }, containerColor = Mf.colors.card) {
-                    if (s.exercises.size > 1) DropdownMenuItem({ Text(tr("Réorganiser les exercices")) }, leadingIcon = { Icon(Icons.Rounded.SwapVert, null) },
-                        onClick = { more = false; onReorder() })
-                    if (index > 0) DropdownMenuItem({ Text(tr("Monter")) }, leadingIcon = { Icon(Icons.Rounded.KeyboardArrowUp, null) },
-                        onClick = { more = false; vm.moveExercise(index, index - 1) })
-                    if (index < s.exercises.size - 1) DropdownMenuItem({ Text(tr("Descendre")) }, leadingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
-                        onClick = { more = false; vm.moveExercise(index, index + 1) })
-                    DropdownMenuItem({ Text(tr("Retirer de la séance"), color = Danger) }, leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = Danger) },
-                        onClick = { more = false; vm.removeExercise(index) })
-                }
+                OptionsButton(active = inSuperset || ex.note.isNotBlank()) { more = true }
+                ExOptionsMenu(more, options) { more = false }
             }
         }
         if (ex.note.isNotBlank()) Row(Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
@@ -594,6 +595,41 @@ private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, group
             Text(e?.name ?: tr("Exercice inconnu"), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (e != null) Text(e.muscleGroups.joinToString(" · ") { it.label.tr() }, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/** Option secondaire d'un exercice (superset, objectifs, note…), rangée dans la petite fenêtre d'options. */
+private class ExOption(val icon: ImageVector, val label: String, val active: Boolean = false, val danger: Boolean = false, val onClick: () -> Unit)
+
+/** Bouton rond « options » ; un point bleu signale une option en cours (superset, note). */
+@Composable
+private fun OptionsButton(active: Boolean, onClick: () -> Unit) {
+    Box(Modifier.size(36.dp).clip(CircleShape).background(Mf.colors.card).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.Tune, tr("Options de l'exercice"), Modifier.size(18.dp), tint = Mf.colors.text)
+        if (active) Box(Modifier.align(Alignment.TopEnd).padding(7.dp).size(7.dp).clip(CircleShape).background(WorkoutBlue))
+    }
+}
+
+/** Petite fenêtre d'options : une grille de 3 colonnes, icône au-dessus du libellé ; elle se ferme après un choix. */
+@Composable
+private fun ExOptionsMenu(open: Boolean, options: List<ExOption>, onDismiss: () -> Unit) {
+    DropdownMenu(open, onDismiss, containerColor = Mf.colors.card, shape = RoundedCornerShape(20.dp)) {
+        Column(Modifier.padding(horizontal = 8.dp).width(252.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            options.chunked(3).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    row.forEach { o ->
+                        val tint = when { o.danger -> Danger; o.active -> WorkoutBlue; else -> Mf.colors.text }
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(if (o.active) WorkoutBlue.copy(alpha = 0.12f) else Color.Transparent)
+                            .clickable { onDismiss(); o.onClick() }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(o.icon, null, Modifier.size(20.dp), tint = tint)
+                            Spacer(Modifier.height(4.dp))
+                            Text(o.label, style = MaterialTheme.typography.labelSmall, color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
         }
     }
 }

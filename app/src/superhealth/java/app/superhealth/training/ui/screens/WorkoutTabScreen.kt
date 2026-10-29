@@ -131,6 +131,13 @@ fun WorkoutTabScreen(
                 PillButton(tr("Créer"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Add) { create = true }
             }
             if (create) CreateTrainingSheet(vm, nav) { create = false }
+            // 2.2 : le coach construit ou ajuste le programme avec ses outils (exercices de la salle, historique)
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (active == null) app.superhealth.ui.coach.CoachChip(tr("Programme avec le coach"),
+                    tr("Construis-moi un programme de musculation adapté à mon niveau, mon matériel et mes objectifs. Pose-moi d'abord les questions utiles."), nav)
+                else app.superhealth.ui.coach.CoachChip(tr("Ajuster avec le coach"),
+                    trf("Analyse mon programme « %1\$s » et mes dernières séances : que faudrait-il ajuster ?", active.name), nav)
+            }
 
             val library = st.programs.filter { it.id != active?.id && !it.archived }
             if (library.isNotEmpty() || st.customWorkouts.isNotEmpty()) {

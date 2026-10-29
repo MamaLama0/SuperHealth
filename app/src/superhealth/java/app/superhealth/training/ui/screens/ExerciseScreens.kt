@@ -233,6 +233,10 @@ fun ExerciseInfoScreen(vm: AppViewModel, id: String, nav: NavHostController) {
             }
         }
         Spacer(Modifier.height(12.dp))
+        app.superhealth.ui.coach.CoachChip(if (points.isEmpty()) tr("Conseils du coach") else tr("Ma progression"),
+            if (points.isEmpty()) trf("Donne-moi les points clés d'exécution du %1\$s et les erreurs fréquentes.", e.name)
+            else trf("Analyse ma progression au %1\$s (historique complet) : est-ce que je progresse, et comment continuer ?", e.name),
+            nav, Modifier.padding(bottom = 10.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             e.muscleGroups.forEach { Tag(it.label.tr(), true) }
             e.secondaryMuscleGroups.filter { it !in e.muscleGroups }.forEach { Tag(it.label.tr()) }

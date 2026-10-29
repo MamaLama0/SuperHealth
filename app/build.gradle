@@ -190,8 +190,8 @@ android {
             // SuperHealth: La Bouffe (nutrition) + La Salle (musculation) + LocalHealth (montres), interface MacroFactor
             dimension "device_type"
             applicationId "app.superhealth"
-            versionName "2.1"
-            versionCode 17
+            versionName "2.2"
+            versionCode 18
             // Navigation Compose, Room et Health Connect côté nutrition/musculation : Android 8.0 minimum (comme La Bouffe et La Salle)
             minSdk = 26
             // Interface en français et en anglais seulement : les ~70 langues de Gadgetbridge sont retirées (resources.arsc).

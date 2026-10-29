@@ -138,8 +138,8 @@ object Targets {
      * Macros d'une journée. Quand protéines + lipides minimum ne laissent plus les glucides minimum, MacroFactor bascule en
      * cétogène (« we had to switch you over to a ketogenic program ») [INFÉRÉ : seuil exact de bascule].
      */
-    fun macrosFor(kcal: Double, program: Program, goalType: GoalType, lbmKg: Double, heightCm: Double = 175.0): Macros {
-        val proteinG = proteinPerKgLbm(goalType, program.training, program.proteinPreference) * lbmKg
+    fun macrosFor(kcal: Double, program: Program, goalType: GoalType, lbmKg: Double, heightCm: Double = 175.0, minProteinG: Double = 0.0): Macros {
+        val proteinG = max(proteinPerKgLbm(goalType, program.training, program.proteinPreference) * lbmKg, minProteinG)
         val proteinKcal = min(proteinG * 4, kcal)
         val keto = ketoCarbsG(heightCm)
         val m = split(kcal, proteinKcal, program.dietPreference, minFatG(heightCm), keto)
@@ -176,22 +176,26 @@ object Targets {
     }
 
     /** Calcule un check-in (mise à jour hebdomadaire du programme coaché). */
-    fun checkIn(day: Long, tdee: Double, trendKg: Double, lbmKg: Double, program: Program, goal: Goal?, heightCm: Double = 175.0): CheckIn {
+    fun checkIn(day: Long, tdee: Double, trendKg: Double, lbmKg: Double, program: Program, goal: Goal?, heightCm: Double = 175.0,
+                ageYears: Int? = null, female: Boolean = false): CheckIn {
+        // à partir de 60 ans : protéines sur le poids ajusté, déficit borné (Senior)
+        val minP = Senior.proteinFloorG(ageYears, trendKg, heightCm, female, goal?.type == GoalType.CUT)
         val type = goal?.type ?: GoalType.MAINTENANCE
         if (program.style == ProgramStyle.MANUAL) {
             return CheckIn(day, tdee, trendKg, program.manualKcal, program.manualProtein, program.manualFat, program.manualCarbs,
                 type, goal?.ratePctPerWeek ?: 0.0, manual = true)
         }
-        val raw = tdee + dailyEnergyDelta(weeklyRateKg(goal, trendKg))
+        val wanted = tdee + dailyEnergyDelta(weeklyRateKg(goal, trendKg))
+        val (raw, ageLimit) = if (type == GoalType.CUT) Senior.limitCut(ageYears, heightCm, trendKg, tdee, wanted) else wanted to null
         val floorKcal = dynamicFloor(program.calorieFloor, heightCm, lbmKg)
         val kcal = max(raw, floorKcal)
-        val m = macrosFor(kcal, program, type, lbmKg, heightCm)
+        val m = macrosFor(kcal, program, type, lbmKg, heightCm, minP)
         val dist = distribute(kcal, max(floorKcal, dynamicFloor(CalorieFloor.LOW, heightCm, lbmKg)), program.highDays)
         val days = if (!dist.shifted) emptyList() else dist.kcal.map { k ->
-            macrosFor(k, program, type, lbmKg, heightCm).let { DayTarget(k, it.protein, it.fat, it.carbs) }
+            macrosFor(k, program, type, lbmKg, heightCm, minP).let { DayTarget(k, it.protein, it.fat, it.carbs) }
         }
         return CheckIn(day, tdee, trendKg, kcal, m.protein, m.fat, m.carbs, type, goal?.ratePctPerWeek ?: 0.0, raw < floorKcal,
-            days = days, floorKcal = floorKcal)
+            days = days, floorKcal = floorKcal, ageLimit = ageLimit?.name)
     }
 
     // ----- Objectifs : lien taux ↔ date de fin -----
