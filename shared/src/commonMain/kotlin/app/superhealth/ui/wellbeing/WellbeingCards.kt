@@ -68,6 +68,7 @@ import app.superhealth.wellbeing.BodyAlert
 import app.superhealth.wellbeing.Checkin
 import app.superhealth.wellbeing.Cycle
 import app.superhealth.wellbeing.Form
+import kotlin.math.roundToInt
 import app.superhealth.wellbeing.Journal
 import app.superhealth.platform.LocalDate
 
@@ -114,6 +115,34 @@ fun MoodPicker(selected: Int?, modifier: Modifier = Modifier, labels: List<Strin
 
 // ---- Journal du moral -----------------------------------------------------------------------------------------
 
+/**
+ * Jour où l'humeur vient d'être notée depuis la carte : la carte reste le temps de cocher les habitudes, puis s'efface
+ * (bouton OK, ou dès qu'elle quitte l'écran).
+ */
+var moodOpen by mutableStateOf<Long?>(null)
+
+/** Habitudes du jour à cocher ([edit] : choisir celles qui s'affichent). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun JournalTagChips(entry: Journal.Entry, edit: Boolean = false) {
+    val ctx = LocalContext.current
+    val sh by SuperPrefs.settings.collectAsState()
+    val shown = Journal.Tag.entries.filter { edit || it.name in sh.journalTags }
+    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        shown.forEach { t ->
+            val visible = t.name in sh.journalTags
+            val on = if (edit) visible else t.name in entry.tags
+            Text(tr(t.label), style = MaterialTheme.typography.labelLarge,
+                color = if (on) Mf.colors.accent.onContainer() else Mf.colors.textSecondary,
+                modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.accent.container(1.4f) else Mf.colors.chip)
+                    .clickable {
+                        if (edit) SuperPrefs.update { s -> s.copy(journalTags = if (visible) s.journalTags - t.name else s.journalTags + t.name) }
+                        else Journal.toggleTag(ctx, t.name)
+                    }.padding(horizontal = 14.dp, vertical = 8.dp))
+        }
+    }
+}
+
 @Composable
 fun JournalCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifier, nav: NavHostController) {
     val ctx = LocalContext.current
@@ -126,12 +155,15 @@ fun JournalCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modif
         CardSize.S -> CompactBubble(c, d, modifier)
         CardSize.M -> CompactMedium(c, d, modifier)
         CardSize.W -> CompactStrip(c, d, modifier)
-        CardSize.L -> Tile(c, if (today == null) tr("Comment ça va ?") else tr("Moral du jour"), modifier, onClick = open) {
-            MoodPicker(today?.mood) { Journal.setMood(ctx, it) }
-            if (today != null && today.tags.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                Text(today.tags.mapNotNull { n -> Journal.Tag.entries.firstOrNull { it.name == n }?.let { tr(it.label) } }.joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        CardSize.L -> Tile(c, if (today == null) tr("Comment ça va ?") else tr("Quelque chose à noter ?"), modifier, onClick = open) {
+            // l'humeur, puis les habitudes du jour (elles pèsent dans la Forme, l'alerte de la nuit et le coucher)
+            androidx.compose.runtime.DisposableEffect(Unit) { onDispose { moodOpen = null } }
+            MoodPicker(today?.mood) { Journal.setMood(ctx, it); moodOpen = LocalDate.now().toEpochDay() }
+            if (today != null) {
+                Spacer(Modifier.height(10.dp))
+                JournalTagChips(today)
+                Spacer(Modifier.height(10.dp))
+                PillButton(tr("OK"), Modifier.fillMaxWidth(), strong = false) { moodOpen = null }
             }
         }
     }
@@ -169,7 +201,7 @@ fun FormCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifier
     val r = rememberForm()
     val open: () -> Unit = { nav.go("form") }
     val advice = r as? Form.Advice
-    val d = CompactData(advice?.verdict?.short?.let(::tr) ?: "—", null, tr("Forme"), advice?.let { it.score / 100f }, onClick = open)
+    val d = CompactData(advice?.verdict?.short?.let(::tr) ?: "—", null, tr("Forme"), advice?.score?.let { it / 100f }, onClick = open)
     when (size) {
         CardSize.S -> CompactBubble(c, d, modifier)
         CardSize.M -> CompactMedium(c, d, modifier)
@@ -185,19 +217,29 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
     when (r) {
         null -> Text(tr("Calcul…"), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         is Form.Missing -> {
-            Text(tr("Pas de conseil sans données complètes."), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(4.dp))
-            r.what.forEach { k ->
-                Text("• " + when (k) {
-                    Form.Kind.CHARGE -> trf("Charge : %1\$s nuits de référence", Form.MIN_CHARGE_NIGHTS)
-                    Form.Kind.SLEEP -> tr("Sommeil : la nuit dernière et 7 nuits d'historique")
-                    Form.Kind.LOAD -> tr("Entraînement : 14 jours de pouls sur 4 semaines")
-                    Form.Kind.MOOD -> if (!SuperPrefs.settings.value.has(Feature.JOURNAL)) tr("Moral : activez le journal du moral")
-                        else trf("Moral : la note du jour et %1\$s jours notés", Form.MIN_MOOD_DAYS)
-                    else -> ""
-                }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            // une ligne par signal : coché quand il est prêt, sinon où il en est (3 / 14) — plus parlant qu'une liste de règles
+            val journalOn = SuperPrefs.settings.collectAsState().value.has(Feature.JOURNAL)
+            val moodToday = Journal.days.collectAsState().value[LocalDate.now().toEpochDay()] != null
+            Text(tr("Le conseil arrive avec ces 4 signaux"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+            listOf(Form.Kind.CHARGE, Form.Kind.SLEEP, Form.Kind.LOAD, Form.Kind.MOOD).forEach { k ->
+                val ok = k !in r.what
+                val (n, of) = r.have[k] ?: (0 to 0)
+                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(if (ok) Base.Green else Mf.colors.textTertiary))
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr(k.label), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Text(when {
+                        ok -> tr("Prêt")
+                        k == Form.Kind.MOOD && !journalOn -> tr("Journal coupé")
+                        k == Form.Kind.MOOD && n >= of && !moodToday -> tr("À noter")
+                        k == Form.Kind.SLEEP && n >= of -> tr("Nuit manquante")
+                        k == Form.Kind.CHARGE || k == Form.Kind.SLEEP -> trf("%1\$s / %2\$s nuits", n, of)
+                        else -> trf("%1\$s / %2\$s jours", n, of)
+                    }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                }
             }
-            if (Form.Kind.MOOD in r.what && SuperPrefs.settings.value.has(Feature.JOURNAL) && Journal.today() == null) {
+            if (Form.Kind.MOOD in r.what && journalOn && !moodToday) {
                 Spacer(Modifier.height(8.dp))
                 PillButton(tr("Noter mon moral"), strong = false) { nav.go("journal") }
             }
@@ -215,6 +257,12 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
                     Text(tr(sg.kind.label), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     Text(sg.value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
+            }
+            // habitudes d'hier qui pèsent chez vous (constats du journal) : l'explication, pas un signal de plus
+            if (r.habits.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(tr("Hier") + " : " + r.habits.distinctBy { it.tag }.take(2).joinToString(" · ") { impactText(it) },
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.height(10.dp))
             val program = vm.training.activeProgram()?.takeIf { p -> p.days.getOrNull(p.dayIndex)?.isRest == false }
@@ -257,8 +305,9 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
  * série de travail de moins (−1) sur les exercices qui en ont au moins trois. Asymétrique exprès : la Forme pousse plus
  * qu'elle ne retient.
  */
-fun startAdjusted(vm: SuperViewModel, nav: NavHostController, delta: Int) {
-    val t = vm.training
+fun startAdjusted(vm: SuperViewModel, nav: NavHostController, delta: Int) = startAdjusted(vm.training, nav, delta)
+
+fun startAdjusted(t: app.superhealth.training.ui.AppViewModel, nav: NavHostController, delta: Int) {
     if (t.state.value.session == null) {
         val p = t.activeProgram() ?: return
         t.startProgramDay(p, p.dayIndex, p.cycleIndex)
@@ -292,6 +341,18 @@ fun rememberBedtime(): Bedtime.Plan? {
     return p
 }
 
+/** Habitudes notées aujourd'hui dont l'effet sur votre nuit est net chez vous. */
+@Composable
+fun rememberTonightHabits(): List<Journal.Impact> {
+    val ctx = LocalContext.current
+    val journal by Journal.days.collectAsState()
+    var out by remember { mutableStateOf(emptyList<Journal.Impact>()) }
+    LaunchedEffect(journal) {
+        out = runCatching { Journal.weighed(ctx, LocalDate.now(), setOf(Journal.Outcome.SLEEP)) }.getOrDefault(emptyList())
+    }
+    return out
+}
+
 @Composable
 fun BedtimeCard(c: DashCard, size: CardSize, modifier: Modifier, nav: NavHostController) {
     val p = rememberBedtime()
@@ -303,8 +364,8 @@ fun BedtimeCard(c: DashCard, size: CardSize, modifier: Modifier, nav: NavHostCon
         CardSize.W -> CompactStrip(c, d, modifier)
         CardSize.L -> Tile(c, tr("Coucher conseillé"), modifier, onClick = open) {
             if (p == null) {
-                Text(trf("Il faut %1\$s nuits avec heure de coucher et de lever.", Bedtime.MIN_NIGHTS), style = MaterialTheme.typography.bodyMedium,
-                    color = Mf.colors.textSecondary)
+                Text(trf("%1\$s / %2\$s nuits avec heure de coucher et de lever", Bedtime.nightsFound.coerceAtMost(Bedtime.MIN_NIGHTS), Bedtime.MIN_NIGHTS),
+                    style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                 return@Tile
             }
             Text(Bedtime.clock(p.bedMinute), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = c.hueInk())
@@ -320,6 +381,13 @@ fun BedtimeCard(c: DashCard, size: CardSize, modifier: Modifier, nav: NavHostCon
                     style = MaterialTheme.typography.bodyMedium, color = c.hueInk())
                 if (p.tooEarly) Text(tr("Bien avant votre fenêtre : avancez plutôt de 15 min par soir."),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            }
+            // habitudes notées ce soir qui raccourcissent ou allongent nettement vos nuits (constats du journal)
+            val tonight = rememberTonightHabits()
+            if (tonight.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text(tr("Ce soir") + " : " + tonight.take(2).joinToString(" · ") { impactText(it) },
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -445,4 +513,16 @@ fun CheckinCard(c: DashCard, size: CardSize, first: Boolean, modifier: Modifier,
             }
         }
     }
+}
+
+/** « Alcool −9 % de Charge » : effet net d'une habitude chez vous (constat du journal), dans l'unité de la mesure. */
+fun impactText(i: Journal.Impact): String {
+    val d = i.diff.delta
+    val value = when (i.outcome) {
+        Journal.Outcome.FEEL -> String.format(app.superhealth.ui.Lang.locale, "%+.1f", d).replace("-", "−") + " / 5"
+        else -> (if (d.roundToInt() > 0) "+" else "−") + kotlin.math.abs(d.roundToInt()) + if (i.outcome == Journal.Outcome.CHARGE) " %" else " min"
+    }
+    return trf("%1\$s %2\$s (%3\$s)", tr(i.tag.label), value, tr(when (i.outcome) {
+        Journal.Outcome.CHARGE -> "Charge"; Journal.Outcome.SLEEP -> "sommeil"; Journal.Outcome.FEEL -> "ressenti"
+    }))
 }

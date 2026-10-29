@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -107,20 +108,7 @@ fun JournalScreen(vm: SuperViewModel, nav: NavHostController) {
                 Text(tr(if (editTags) "OK" else "Modifier la liste"), color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(end = 8.dp, bottom = 6.dp).clickable { editTags = !editTags })
             }
-            val shown = Journal.Tag.entries.filter { editTags || it.name in sh.journalTags }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                shown.forEach { t ->
-                    val visible = t.name in sh.journalTags
-                    val on = if (editTags) visible else t.name in today.tags
-                    Text(tr(t.label), style = MaterialTheme.typography.labelLarge,
-                        color = if (on) Mf.colors.accent.onContainer() else Mf.colors.textSecondary,
-                        modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.accent.container(1.4f) else Mf.colors.chip)
-                            .clickable {
-                                if (editTags) SuperPrefs.update { s -> s.copy(journalTags = if (visible) s.journalTags - t.name else s.journalTags + t.name) }
-                                else Journal.toggleTag(ctx, t.name)
-                            }.padding(horizontal = 14.dp, vertical = 8.dp))
-                }
-            }
+            JournalTagChips(today, editTags)
         }
 
         GroupHeader(tr("30 derniers jours"))
@@ -182,7 +170,7 @@ fun FormScreen(vm: SuperViewModel, nav: NavHostController) {
     val r = rememberForm()
     DetailScaffold(tr("Forme du jour"), onBack = { nav.popBackStack() }) {
         GroupCard { Column(Modifier.padding(16.dp)) { FormBody(r, vm, nav, compact = false) } }
-        Text(tr("Score adaptatif : VFC, pouls au repos, Repos, entraînement (7 j / 28 j), moral et ressenti, comparés à votre normale. Dès 30 matins de ressenti, les poids s'ajustent à vous. Sans Charge, sommeil, entraînement et moral, aucun conseil."),
+        Text(tr("Score adaptatif : VFC, pouls au repos, Repos, entraînement (7 j / 28 j), moral et ressenti, comparés à votre normale. Dès 30 matins de ressenti, les poids s'ajustent à vous. « Malade » noté au journal impose le repos."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
     }
 }
@@ -356,14 +344,20 @@ fun RemindersScreen(vm: SuperViewModel, nav: NavHostController) {
     }
     @Composable
     fun TimeRow(title: String, minute: Int, default: Int, onSet: (Int) -> Unit) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) {
-                SettingRow(title, value = if (minute >= 0) Bedtime.clock(minute) else tr("Coupé")) {
-                    val m = if (minute >= 0) minute else default
-                    TimePickerDialog(ctx, { _, h, mi -> onSet(h * 60 + mi) }, m / 60, m % 60, true).show()
-                }
+        // comme les autres interrupteurs : le sous-titre dit l'heure ; toucher la ligne choisit l'heure (et active le rappel)
+        fun pick() {
+            val m = if (minute >= 0) minute else default
+            TimePickerDialog(ctx, { _, h, mi -> onSet(h * 60 + mi) }, m / 60, m % 60, true).show()
+        }
+        Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clickable { pick() }.padding(start = 16.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge)
+                Text(if (minute >= 0) trf("Chaque jour à %1\$s", Bedtime.clock(minute)) else tr("Coupé"), style = MaterialTheme.typography.bodySmall,
+                    color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 1.dp))
             }
-            Toggle(minute >= 0, { on -> onSet(if (on) default else -1) }, Modifier.padding(end = 12.dp))
+            Spacer(Modifier.width(10.dp))
+            Toggle(minute >= 0, { on -> onSet(if (on) default else -1) })
         }
     }
     DetailScaffold(tr("Rappels"), onBack = { nav.popBackStack() }) {

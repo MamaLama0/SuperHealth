@@ -30,7 +30,7 @@ object Journal {
         SCREENS("Écrans au lit", true),
         STRESS("Journée stressante", false),
         SICK("Malade", false),
-        TRAVEL("Voyage", false),
+        TRAVEL("En voyage", false),
         NAP("Sieste", false),
         OUTSIDE("Dehors à la lumière", false),
         MEDITATION("Méditation", true),
@@ -56,6 +56,8 @@ object Journal {
     fun set(ctx: Context, day: Long, e: Entry?) {
         days.value = if (e == null) days.value - day else days.value + (day to e)
         impactsCache = null
+        // les habitudes entrent dans l'alerte des signes de la nuit (alcool, stress, voyage, maladie)
+        BodyAlert.invalidate()
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), Store(days.value))) }
         Reminders.schedule(ctx)
     }
@@ -68,6 +70,17 @@ object Journal {
     fun toggleTag(ctx: Context, tag: String, day: Long = LocalDate.now().toEpochDay()) {
         val old = days.value[day] ?: return
         set(ctx, day, old.copy(tags = if (tag in old.tags) old.tags - tag else old.tags + tag))
+    }
+
+    /** [tag] noté le jour [day] ou l'un des [back] jours d'avant. */
+    fun tagged(tag: Tag, day: LocalDate, back: Int = 1): Boolean =
+        (0..back).any { days.value[day.minusDays(it.toLong()).toEpochDay()]?.tags?.contains(tag.name) == true }
+
+    /** Habitudes notées le jour [day] dont l'effet sur [outcomes] est net chez vous (constats ci-dessous), la plus forte d'abord. */
+    suspend fun weighed(ctx: Context, day: LocalDate, outcomes: Set<Outcome>): List<Impact> {
+        val tags = days.value[day.toEpochDay()]?.tags.orEmpty()
+        if (tags.isEmpty()) return emptyList()
+        return findings(ctx).impacts.filter { it.tag.name in tags && it.outcome in outcomes }
     }
 
     /** Humeur moyenne des [n] derniers jours notés avant [day], et leur nombre. */

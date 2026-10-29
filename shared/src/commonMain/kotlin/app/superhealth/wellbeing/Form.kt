@@ -35,6 +35,11 @@ import app.superhealth.platform.LocalDate
  * (voir [Model]). Les poids de départ suivent la littérature ; dès [Model.MIN_DAYS] matins de ressenti, ceux des mesures
  * s'ajustent à ce qui prédit le mieux votre propre ressenti. Fatigue : attribuée à l'entraînement quand la charge
  * récente est haute, à autre chose sinon (même distinction que Polar Recovery Pro, fatigue d'entraînement ou d'autre origine).
+ *
+ * Journal (règle SuperHealth) : « Malade » noté hier ou aujourd'hui impose le repos, même sans les quatre signaux — on ne
+ * s'entraîne pas fort malade, quelles que soient les mesures. « Journée stressante » précise l'origine d'une fatigue sans
+ * lien avec l'entraînement. Les habitudes d'hier dont l'effet sur votre Charge ou votre ressenti est net chez vous (constats
+ * du journal) sont montrées comme explication, sans compter une seconde fois : la Charge en tient déjà compte.
  */
 object Form {
     enum class Verdict(val label: String, val short: String) {
@@ -47,7 +52,7 @@ object Form {
     enum class Kind(val label: String) {
         CHARGE("Charge"), SLEEP("Sommeil"), LOAD("Entraînement"), MOOD("Moral"),
         /** Facultatifs : n'apparaissent que s'ils ont quelque chose à dire. */
-        TREND("VFC sur 3 semaines"), BODY("Signes de la nuit"), FEEL("Ressenti"),
+        TREND("VFC sur 3 semaines"), BODY("Signes de la nuit"), FEEL("Ressenti"), SICK("Malade"),
     }
 
     /** Un signal : sa valeur lisible et son sens (−1 fatigue, 0 neutre, +1 prêt). */
@@ -55,13 +60,20 @@ object Form {
 
     /** [body] : alerte des signes de la nuit, affichée même sans conseil complet. */
     sealed interface Result { val body: BodyAlert.Status? }
-    /** [score] : Forme adaptative 0–100 ; [learned] : matins de ressenti appris (0 : poids de départ) ; [cause] : origine de la fatigue. */
+    /**
+     * [score] : Forme adaptative 0–100 (null : repos imposé par la maladie, sans score) ; [learned] : matins de ressenti appris
+     * (0 : poids de départ) ; [cause] : origine de la fatigue ; [habits] : habitudes d'hier qui pèsent nettement chez vous.
+     */
     data class Advice(val verdict: Verdict, val signals: List<Signal>, override val body: BodyAlert.Status?,
-                      val score: Int = 50, val learned: Int = 0, val cause: Cause? = null) : Result
+                      val score: Int? = 50, val learned: Int = 0, val cause: Cause? = null,
+                      val habits: List<Journal.Impact> = emptyList()) : Result
 
-    enum class Cause(val label: String) { TRAINING("Fatigue liée à l'entraînement"), OTHER("Fatigue sans lien avec l'entraînement") }
-    /** Ce qui manque encore pour conseiller (aucun conseil partiel). */
-    data class Missing(val what: List<Kind>, override val body: BodyAlert.Status?) : Result
+    enum class Cause(val label: String) {
+        TRAINING("Fatigue liée à l'entraînement"), OTHER("Fatigue sans lien avec l'entraînement"), STRESS("Fatigue liée au stress"),
+        SICK("Malade : laissez le corps guérir"),
+    }
+    /** Ce qui manque encore pour conseiller (aucun conseil partiel) ; [have] : où en est chaque signal (fait / requis). */
+    data class Missing(val what: List<Kind>, override val body: BodyAlert.Status?, val have: Map<Kind, Pair<Int, Int>> = emptyMap()) : Result
 
     /** Nuits de référence de la Charge avant de s'y fier pour pousser. */
     const val MIN_CHARGE_NIGHTS = 14
@@ -93,7 +105,20 @@ object Form {
         if (entry == null || base == null) missing += Kind.MOOD
 
         val body = runCatching { BodyAlert.today(ctx) }.getOrNull()
-        if (missing.isNotEmpty()) return@withContext Missing(missing, body)
+        val sick = journalOn && Journal.tagged(Journal.Tag.SICK, today)
+        val habits = if (journalOn) runCatching {
+            Journal.weighed(ctx, today.minusDays(1), setOf(Journal.Outcome.CHARGE, Journal.Outcome.FEEL))
+        }.getOrDefault(emptyList()) else emptyList()
+        if (missing.isNotEmpty()) {
+            if (sick) return@withContext Advice(Verdict.REST, listOf(Signal(Kind.SICK, "!", -1)), body, null, cause = Cause.SICK, habits = habits)
+            val have = mapOf(
+                Kind.CHARGE to ((runCatching { Scores.chargeOf(ctx, today) }.getOrNull()?.nights ?: 0).coerceAtMost(MIN_CHARGE_NIGHTS) to MIN_CHARGE_NIGHTS),
+                Kind.SLEEP to (nights.coerceAtMost(Scores.NEED_MIN_NIGHTS) to Scores.NEED_MIN_NIGHTS),
+                Kind.LOAD to (efforts.count { it != null }.coerceAtMost(14) to 14),
+                Kind.MOOD to ((Journal.moodBaseline(today.toEpochDay())?.second ?: 0).coerceAtMost(MIN_MOOD_DAYS) to MIN_MOOD_DAYS),
+            )
+            return@withContext Missing(missing, body, have)
+        }
 
         val signals = ArrayList<Signal>()
         signals += Signal(Kind.CHARGE, "${charge!!.score} %", when (Scores.band(charge.score)) { 2 -> 1; 0 -> -1; else -> 0 })
@@ -124,17 +149,23 @@ object Form {
         }
         // une alerte des signes de la nuit impose le repos ; à surveiller, elle s'affiche sans compter
         if (body?.level == BodyAlert.Level.ALERT) signals += Signal(Kind.BODY, "!", -1)
+        if (sick) signals += Signal(Kind.SICK, "!", -1)
 
         val feel = Checkin.today()
         val x = Model.features(charge, acwr, mood, base!!.first)
         val weights = runCatching { Model.weights(ctx, today) }.getOrNull() ?: (Model.PRIOR to 0)
         val score = Model.score(x, feel?.let { (it.sleep + it.energy) / 2.0 }, weights.first)
-        val v = verdict(score, signals, acwr, charge.hrv?.overreaching == true, body?.level == BodyAlert.Level.ALERT)
-        Advice(v, signals, body, score, weights.second, if (v == Verdict.EASY || v == Verdict.REST) cause(acwr, x) else null)
+        val v = verdict(score, signals, acwr, charge.hrv?.overreaching == true, body?.level == BodyAlert.Level.ALERT || sick)
+        val why = when {
+            sick -> Cause.SICK
+            v != Verdict.EASY && v != Verdict.REST -> null
+            else -> cause(acwr, x).let { c -> if (c == Cause.OTHER && journalOn && Journal.tagged(Journal.Tag.STRESS, today)) Cause.STRESS else c }
+        }
+        Advice(v, signals, body, score, weights.second, why, habits)
     }
 
     /**
-     * Repos : alerte des signes de la nuit, ou score sous 35. Alléger : sous 50, ou à partir de 50 avec un pic de charge
+     * Repos : alerte des signes de la nuit ou maladie notée ([alert]), ou score sous 35. Alléger : sous 50, ou à partir de 50 avec un pic de charge
      * (rapport > 1,5) ou un surmenage repéré sur la VFC. Pousser : 70 et plus, aucun signal bas et pas de hausse de charge
      * (rapport ≤ 1,3). Sinon : comme prévu.
      */

@@ -33,6 +33,10 @@ object Bedtime {
     /** Nuits avec heure de coucher et de lever avant de proposer une heure. */
     const val MIN_NIGHTS = 7
 
+    /** Nuits utilisables trouvées au dernier calcul (pour dire où l'on en est avant [MIN_NIGHTS]). */
+    @kotlin.concurrent.Volatile var nightsFound = 0
+        private set
+
     private data class Night(val day: LocalDate, val wakeMinute: Int, val asleepMin: Double, val inBedMin: Double, val onsetMinute: Int)
 
     suspend fun tonight(ctx: Context): Plan? {
@@ -51,6 +55,7 @@ object Bedtime {
             val o = Instant.ofEpochMilli(n.filter { it.kind != ActivityKind.AWAKE_SLEEP }.minOfOrNull { it.start } ?: start).atZone(zone).toLocalTime()
             Night(d, t.hour * 60 + t.minute, asleep, inBed, o.hour * 60 + o.minute)
         }
+        nightsFound = nights.size
         if (nights.size < MIN_NIGHTS) return null
         val tomorrow = today.plusDays(1)
         fun weekend(d: LocalDate) = d.dayOfWeek == DayOfWeek.SATURDAY || d.dayOfWeek == DayOfWeek.SUNDAY

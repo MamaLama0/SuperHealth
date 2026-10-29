@@ -368,7 +368,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val modules by app.superhealth.modules.Modules.installed.collectAsState()
     // cartes qui posent une question (moral du jour) : elles s'effacent une fois la réponse donnée
     val moodDays by app.superhealth.wellbeing.Journal.days.collectAsState()
-    val moodDone = moodDays[app.superhealth.platform.LocalDate.now().toEpochDay()] != null
+    val moodDone = moodDays[app.superhealth.platform.LocalDate.now().toEpochDay()] != null && app.superhealth.ui.wellbeing.moodOpen != app.superhealth.platform.LocalDate.now().toEpochDay()
     val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules, moodDone) {
         cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) && !(it == DashCard.JOURNAL && moodDone) }
     }
@@ -584,7 +584,7 @@ private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss:
                                     horizontalAlignment = Alignment.CenterHorizontally) {
                                     SizeGlyph(z, if (on) Mf.colors.onStrong else c.hue(), if (on) Mf.colors.onStrong.copy(alpha = 0.25f) else Mf.colors.chip)
                                     Spacer(Modifier.height(6.dp))
-                                    Text(tr(z.label), style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1)
+                                    Text(z.title, style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1)
                                 }
                             }
                             repeat(4 - line.size) { Spacer(Modifier.weight(1f)) }

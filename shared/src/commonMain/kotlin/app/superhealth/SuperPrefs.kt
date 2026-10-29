@@ -86,7 +86,12 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
  * Les cartes se rangent dans l'ordre ; un trou en fin de rangée est comblé par la prochaine carte qui y tient.
  */
 @Serializable
-enum class CardSize(val span: Int, val label: String) { S(1, "Petit"), M(2, "Moyen"), W(3, "Bandeau"), L(3, "Grand") }
+enum class CardSize(val span: Int, val label: String, private val en: String) {
+    S(1, "Petit", "Small"), M(2, "Moyen", "Medium"), W(3, "Bandeau", "Strip"), L(3, "Grand", "Large");
+
+    /** Nom affiché ; « Moyen » a son propre anglais (taille, pas humeur). */
+    val title: String get() = if (app.superhealth.ui.Lang.english) en else label
+}
 
 const val GRID = 3
 
@@ -290,6 +295,8 @@ data class SuperSettings(
     val coachMemory: List<String> = emptyList(),
     /** 2.0 : catégories que le coach ne reçoit pas (noms de coach.Coach.Share). */
     val coachHidden: Set<String> = emptySet(),
+    /** Catégories sensibles (moral, cycle) envoyées au coach seulement si l'utilisateur les active. */
+    val coachShared: Set<String> = emptySet(),
     val coachModel: String = "",
     val coachBrief: Boolean = true,
     /** Planificateur de repas : aliments à éviter (texte libre, transmis au fournisseur). */

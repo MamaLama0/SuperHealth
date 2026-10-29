@@ -16,6 +16,10 @@ import app.superhealth.nutrition.data.AiFood
 import app.superhealth.nutrition.data.Net
 import app.superhealth.nutrition.domain.Sex
 import app.superhealth.training.WorkoutApp
+import app.superhealth.wellbeing.Checkin
+import app.superhealth.wellbeing.Cycle
+import app.superhealth.wellbeing.Form
+import app.superhealth.wellbeing.Journal
 import app.superhealth.training.domain.Analytics as TrainingAnalytics
 import app.superhealth.ui.Lang
 import app.superhealth.platform.File
@@ -122,7 +126,8 @@ object Coach {
      * sont jamais envoyés.
      */
     /** Ce que l'on accepte d'envoyer au coach (Réglages du coach > Données envoyées) ; tout est envoyé au départ. */
-    enum class Share(val label: String) {
+    /** [optIn] : catégorie sensible, jamais envoyée tant que l'utilisateur ne l'active pas. */
+    enum class Share(val label: String, val optIn: Boolean = false) {
         PROFILE("Profil : sexe, âge, taille"),
         WEIGHT("Poids et objectif"),
         FOOD("Repas et cibles"),
@@ -131,9 +136,46 @@ object Coach {
         ACTIVITIES("Autres activités"),
         INSIGHTS("Constats de l'appli"),
         MEMORY("Ce qu'il retient"),
+        WELLBEING("Moral, habitudes et forme du jour", optIn = true),
+        CYCLE("Cycle menstruel", optIn = true),
     }
 
-    private fun shares(s: Share) = s.name !in SuperPrefs.settings.value.coachHidden
+    fun shares(s: Share): Boolean = SuperPrefs.settings.value.let { if (s.optIn) s.name in it.coachShared else s.name !in it.coachHidden }
+
+    fun setShared(s: Share, on: Boolean) = SuperPrefs.update {
+        if (s.optIn) it.copy(coachShared = if (on) it.coachShared + s.name else it.coachShared - s.name)
+        else it.copy(coachHidden = if (on) it.coachHidden - s.name else it.coachHidden + s.name)
+    }
+
+    /** Moral, habitudes et ressenti des 14 jours, conseil de forme du jour et effets personnels des habitudes. */
+    private suspend fun wellbeing(ctx: Context, today: LocalDate, from: LocalDate): String? {
+        val journalOn = SuperPrefs.settings.value.let { it.features.contains(app.superhealth.Feature.JOURNAL.name) }
+        val moods = Journal.days.value; val feels = Checkin.days.value
+        val lines = generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.mapNotNull { d ->
+            val e = moods[d.toEpochDay()]; val f = feels[d.toEpochDay()]
+            if (e == null && f == null) return@mapNotNull null
+            "- ${d.format(dayFmt)}: " + listOfNotNull(
+                e?.let { "mood ${it.mood}/5" + if (it.tags.isNotEmpty()) ", habits: " + it.tags.joinToString { t -> t.lowercase().replace('_', ' ') } else "" },
+                f?.let { "morning check-in sleep ${it.sleep}/5, energy ${it.energy}/5" },
+            ).joinToString("; ")
+        }.toList()
+        val form = runCatching { Form.today(ctx, journalOn) }.getOrNull() as? Form.Advice
+        val impacts = runCatching { Journal.findings(ctx).impacts }.getOrDefault(emptyList())
+        if (lines.isEmpty() && form == null && impacts.isEmpty()) return null
+        return buildString {
+            appendLine("## Wellbeing (mood journal 1-5, habits, morning check-in)")
+            lines.forEach { appendLine(it) }
+            form?.let { a ->
+                appendLine("Today's readiness (app): ${a.verdict.name.lowercase()}" + (a.score?.let { ", score $it/100" } ?: "") +
+                    (a.cause?.let { ", ${it.name.lowercase()} fatigue" } ?: "") +
+                    ". Signals: " + a.signals.joinToString { "${it.kind.name.lowercase()} ${if (it.level > 0) "good" else if (it.level < 0) "low" else "usual"}" })
+            }
+            impacts.forEach { i ->
+                appendLine("Personal effect found: ${i.tag.name.lowercase().replace('_', ' ')} → next-day ${i.outcome.name.lowercase()} " +
+                    "${if (i.diff.delta >= 0) "+" else ""}${n(i.diff.delta, 1)} (${i.diff.nWith} days with, ${i.diff.nWithout} without)")
+            }
+        }
+    }
 
     suspend fun context(ctx: Context, today: LocalDate = LocalDate.now()): String = withContext(Dispatchers.Default) {
         coroutineScope {
@@ -247,6 +289,14 @@ object Coach {
                         val kcal = (a.watch?.kcal ?: a.run?.kcal)?.takeIf { it > 0 }?.let { ", ${n(it)} kcal" } ?: ""
                         appendLine("- ${TrainingAnalytics.day(a.start).format(dayFmt)}: ${a.title} (${a.kind.name.lowercase()}), ${a.minutes} min$km$kcal")
                     }
+                }
+                if (shares(Share.WELLBEING)) wellbeing(ctx, today, from)?.let { appendLine(); append(it) }
+                if (shares(Share.CYCLE)) Cycle.info()?.let { c ->
+                    appendLine()
+                    appendLine("## Menstrual cycle")
+                    appendLine("Day ${c.dayOfCycle}" + (c.phase?.let { ", ${it.name.lowercase()} phase" } ?: "") +
+                        (c.length?.let { ", usual cycle $it days" } ?: "") +
+                        (c.nextStart?.let { ", next period around ${LocalDate.ofEpochDay(it).format(dayFmt)}" } ?: ""))
                 }
                 if (insights.isNotEmpty() && shares(Share.INSIGHTS)) {
                     appendLine()

@@ -36,6 +36,8 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.wellbeing.color
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -105,7 +107,8 @@ fun WorkoutTabScreen(
                 confirmButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false; vm.skipNext() }) { Text(tr("Passer"), color = Mf.colors.accent) } },
                 dismissButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
             if (active != null) ActiveProgramCard(active, db!!, nav, resume = st.session != null, onSkip = { askSkip = true },
-                onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") })
+                onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") },
+                onAdjusted = { delta -> app.superhealth.ui.wellbeing.startAdjusted(vm, nav, delta) })
             else MfCard(onClick = { nav.navigate("wizard") }) {
                 // Pas de programme actif : invitation à en générer un
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,7 +192,8 @@ private fun ProgramRow(p: Program, onClick: () -> Unit) {
 
 /** Programme actif : cycle en cours, jours du cycle, prochaine séance (WorkoutProgramExpandableCard). */
 @Composable
-private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController, resume: Boolean, onSkip: () -> Unit, onStart: (Int) -> Unit) {
+private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController, resume: Boolean, onSkip: () -> Unit, onStart: (Int) -> Unit,
+                              onAdjusted: (Int) -> Unit) {
     val color = ProgramColors[p.color % ProgramColors.size]
     MfCard(padding = PaddingValues(0.dp)) {
         Box(Modifier.fillMaxWidth().height(6.dp).background(color))
@@ -231,6 +235,8 @@ private fun ActiveProgramCard(p: Program, db: ExerciseDb, nav: NavHostController
                 Spacer(Modifier.height(12.dp))
                 // une séance est déjà en cours : le bouton y ramène au lieu d'en promettre une nouvelle
                 PillButton(if (resume) tr("Reprendre la séance") else trf("Commencer %1\$s", next.name), Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow) { onStart(p.dayIndex) }
+                // la Forme du jour pèse sur la séance : un cran plus lourd, une série de moins, ou le repos conseillé
+                if (!resume) FormHint(onAdjusted)
                 if (!resume) Text(tr("Passer cette séance"), Modifier.fillMaxWidth().clip(CircleShape).clickable(onClick = onSkip).padding(10.dp),
                     style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             } else if (p.cycleIndex >= p.numCycles) {
@@ -316,4 +322,22 @@ private fun WeekStrip(history: List<app.superhealth.training.domain.Workout>, se
             }
         }
     }
+}
+
+/** Conseil de la Forme du jour sous « Commencer » : séance plus dure ou allégée en un geste, repos signalé. */
+@Composable
+private fun FormHint(onAdjusted: (Int) -> Unit) {
+    val a = app.superhealth.ui.wellbeing.rememberForm() as? app.superhealth.wellbeing.Form.Advice ?: return
+    val top = (app.superhealth.wellbeing.Checkin.days.collectAsState().value[app.superhealth.platform.LocalDate.now().toEpochDay()]?.energy ?: 0) >= 5
+    val (label, delta) = when (a.verdict) {
+        app.superhealth.wellbeing.Form.Verdict.PUSH -> tr("Forme au vert : un cran plus lourd") to 1
+        app.superhealth.wellbeing.Form.Verdict.NORMAL -> if (top) tr("Au top : un cran plus lourd") to 1 else return
+        app.superhealth.wellbeing.Form.Verdict.EASY -> tr("Forme basse : séance allégée") to -1
+        app.superhealth.wellbeing.Form.Verdict.REST -> tr("Forme du jour : repos conseillé") to 0
+    }
+    Spacer(Modifier.height(8.dp))
+    if (delta == 0) Text(label, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium,
+        color = a.verdict.color().onContainer(),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    else PillButton(label, Modifier.fillMaxWidth(), strong = false) { onAdjusted(delta) }
 }

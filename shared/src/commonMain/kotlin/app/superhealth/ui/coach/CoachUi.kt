@@ -457,13 +457,13 @@ private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
             }
             SectionLabel(tr("Données envoyées"))
             MfCard(padding = PaddingValues(0.dp)) {
-                Coach.Share.entries.forEach { c ->
-                    SwitchRow(tr(c.label), null, c.name !in sh.coachHidden) { on ->
-                        SuperPrefs.update { it.copy(coachHidden = if (on) it.coachHidden - c.name else it.coachHidden + c.name) }
-                    }
+                // le cycle n'est proposé qu'avec son suivi activé
+                Coach.Share.entries.filter { it != Coach.Share.CYCLE || sh.features.contains(app.superhealth.Feature.CYCLE.name) }.forEach { c ->
+                    val on = if (c.optIn) c.name in sh.coachShared else c.name !in sh.coachHidden
+                    SwitchRow(tr(c.label), if (c.optIn && !on) tr("Coupé tant que vous ne l'activez pas") else null, on) { v -> Coach.setShared(c, v) }
                 }
             }
-            Text(tr("Humeur, journal du moral et cycle ne sont jamais envoyés. Le détail : « Ce que voit le coach », en haut."), style = MaterialTheme.typography.bodySmall,
+            Text(tr("Moral et cycle ne partent que si vous les activez. Le détail : « Ce que voit le coach », en haut."), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
             SectionLabel(tr("Modèle"))
             MfCard {

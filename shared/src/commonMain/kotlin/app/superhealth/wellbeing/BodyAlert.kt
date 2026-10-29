@@ -19,9 +19,11 @@ import kotlin.math.abs
  *
  * Nuance (règle SuperHealth) : pouls et VFC réagissent aussi à l'effort, à l'alcool et aux réveils. Ils ne comptent pas
  * s'ils s'expliquent par la veille ou la nuit : Effort de la veille au-dessus de vos jours habituels, effort dans les
- * 3 heures avant le coucher, nuit agitée (au moins 45 min éveillé ou 300 pas pendant la nuit), alcool noté au journal.
- * La respiration et la température comptent toujours. Avec le ressenti du matin, une énergie basse (1 ou 2 sur 5) tient
- * lieu de seconde nuit : signes physiques et symptôme ressenti ensemble, comme l'alerte à deux niveaux de Mishra et al.
+ * 3 heures avant le coucher, nuit agitée (au moins 45 min éveillé ou 300 pas pendant la nuit), alcool, journée stressante
+ * (le stress psychologique élève le pouls et abaisse la VFC, Kim et al. 2018) ou voyage notés au journal la veille.
+ * La respiration et la température comptent toujours. Une énergie ressentie basse (1 ou 2 sur 5) ou « Malade » noté au
+ * journal la veille ou le jour même tient lieu de seconde nuit : signes physiques et symptôme ensemble, comme l'alerte à
+ * deux niveaux de Mishra et al.
  */
 object BodyAlert {
     enum class Level { NONE, WATCH, ALERT }
@@ -31,6 +33,8 @@ object BodyAlert {
         LATE("l'effort en soirée"),
         RESTLESS("la nuit agitée"),
         ALCOHOL("l'alcool d'hier soir"),
+        STRESS("la journée stressante d'hier"),
+        TRAVEL("le voyage"),
     }
 
     /** Écart à la médiane habituelle, dans l'unité de la mesure. */
@@ -115,7 +119,7 @@ object BodyAlert {
             val prev = night(dates.lastIndex - 1)
             val lastCauses = causes(ctx, today)
             val prevCauses = causes(ctx, today.minusDays(1))
-            val feelLow = (Checkin.today()?.energy ?: 5) <= 2
+            val feelLow = (Checkin.today()?.energy ?: 5) <= 2 || Journal.tagged(Journal.Tag.SICK, today)
             Status(level(last.first, lastCauses, prev.first, prevCauses, feelLow), last.first, lastCauses)
         }
         cache = today to status
@@ -146,7 +150,10 @@ object BodyAlert {
                 .filter { it.timestampMs >= start && it.timestampMs + 3_600_000L <= end }.sumOf { it.value }
             if (awake >= 45 || steps >= 300) out += Cause.RESTLESS
         }
-        if (Journal.days.value[eve.toEpochDay()]?.tags?.contains(Journal.Tag.ALCOHOL.name) == true) out += Cause.ALCOHOL
+        val tags = Journal.days.value[eve.toEpochDay()]?.tags.orEmpty()
+        if (Journal.Tag.ALCOHOL.name in tags) out += Cause.ALCOHOL
+        if (Journal.Tag.STRESS.name in tags) out += Cause.STRESS
+        if (Journal.Tag.TRAVEL.name in tags || Journal.tagged(Journal.Tag.TRAVEL, date, 0)) out += Cause.TRAVEL
         return out
     }
 
