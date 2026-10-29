@@ -1,5 +1,7 @@
 package app.superhealth.nutrition.ui.screens
 
+import app.superhealth.ui.theme.container
+import androidx.compose.runtime.LaunchedEffect
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.Lang
 import app.superhealth.ui.theme.CaloriesColor
@@ -104,6 +106,10 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
     var openEntry by remember { mutableStateOf<FoodEntryEntity?>(null) }
     var menu by remember { mutableStateOf(false) }
     var selection by remember { mutableStateOf(setOf<Long>()) }
+    // dernière suppression, annulable quelques secondes
+    var undo by remember { mutableStateOf<List<FoodEntryEntity>>(emptyList()) }
+    LaunchedEffect(undo) { if (undo.isNotEmpty()) { kotlinx.coroutines.delay(5_000); undo = emptyList() } }
+    fun delete(list: List<FoodEntryEntity>) { vm.launch { list.forEach { this.entries.delete(it.id) } }; undo = list }
     val clipboard by vm.clipboard.collectAsState()
     val ctx = LocalContext.current
 
@@ -170,7 +176,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                     IconButton(onClick = { vm.clipboard.value = entries.filter { it.id in selection }; selection = emptySet() }) {
                         Icon(Icons.Rounded.ContentCopy, tr("Copier"), tint = Mf.colors.onStrong)
                     }
-                    IconButton(onClick = { val ids = selection; vm.launch { ids.forEach { this.entries.delete(it) } }; selection = emptySet() }) {
+                    IconButton(onClick = { val ids = selection; delete(entries.filter { it.id in ids }); selection = emptySet() }) {
                         Icon(Icons.Rounded.Delete, tr("Supprimer"), tint = Mf.colors.onStrong)
                     }
                     IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Rounded.Close, tr("Annuler"), tint = Mf.colors.onStrong) }
@@ -205,12 +211,24 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
 
         SearchPill(Modifier.align(Alignment.BottomCenter), onSearch = { nav.openSearch() }, onScan = { nav.openSearch(SearchMode.SCAN) },
             onAi = if (s.aiEnabled) ({ nav.navigate("ai") }) else null)
+        if (undo.isNotEmpty()) {
+            val gone = undo
+            Row(Modifier.align(Alignment.BottomCenter).padding(start = 14.dp, end = 14.dp, bottom = 74.dp).fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp)).background(Mf.colors.text).padding(start = 16.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(if (gone.size == 1) tr("Aliment supprimé") else trf("%1\$s aliments supprimés", gone.size), color = Mf.colors.background,
+                    style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                TextButton(onClick = { vm.launch { gone.forEach { this.entries.insert(it) } }; undo = emptyList() }) {
+                    Text(tr("Annuler"), color = Mf.colors.accent.container(1.5f), fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
     }
 
     openEntry?.let { e ->
         EntrySheet(
             e, target, s, onDismiss = { openEntry = null },
-            onDelete = { vm.launch { this.entries.delete(e.id) }; openEntry = null },
+            onDelete = { delete(listOf(e)); openEntry = null },
             onDuplicate = { vm.launch { this.entries.insert(e.copy(id = 0, createdAt = System.currentTimeMillis())) }; openEntry = null },
             onCopy = { vm.clipboard.value = listOf(e); openEntry = null },
             onUpdate = { updated -> vm.launch { this.entries.upsertAll(listOf(updated)) }; openEntry = null },
@@ -312,7 +330,8 @@ private fun SearchPill(modifier: Modifier, onSearch: () -> Unit, onScan: () -> U
         ) {
             Icon(Icons.Rounded.Search, null, tint = Mf.colors.textSecondary)
             Spacer(Modifier.width(10.dp))
-            Text(tr("Rechercher un aliment"), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(tr("Rechercher un aliment"), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             if (onAi != null) Icon(Icons.Rounded.AutoAwesome, tr("Décrire avec l'IA"), tint = Mf.colors.accent, modifier = Modifier.clip(CircleShape).clickable(onClick = onAi).padding(6.dp))
             Icon(Icons.Rounded.QrCodeScanner, tr("Scanner"), tint = Mf.colors.accent, modifier = Modifier.clip(CircleShape).clickable(onClick = onScan).padding(6.dp))
         }

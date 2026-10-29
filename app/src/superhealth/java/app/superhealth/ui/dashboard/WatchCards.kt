@@ -71,8 +71,9 @@ internal class WatchSnap(
     val zones: IntArray? = null,
     val night: List<HealthRepository.SleepPhase>? = null,
     val debt: Double? = null,
-    /** Score de sommeil de la nuit, quand la montre le calcule. */
+    /** Repos de la nuit (score de sommeil SuperHealth), montré en mots à l'accueil. */
     val sleepScore: Double? = null,
+    val needMin: Double? = null,
     val hrv: List<Pair<LocalDate, Double?>> = emptyList(),
     val stress: List<Point> = emptyList(),
     val hourly: List<Point> = emptyList(),
@@ -103,13 +104,15 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
         else emptyList()
     }
     val efforts = async {
-        val n = if (has(DashCard.LOAD)) 28L else if (has(DashCard.EFFORT)) 7L else 0L
+        // 28 jours d'avant + aujourd'hui : charge chronique (Charge d'entraînement, Effort à viser)
+        val n = if (has(DashCard.LOAD) || has(DashCard.EFFORT)) 29L else 0L
         (n - 1 downTo 0L).map { d -> async { runCatching { Scores.effortOf(ctx, today.minusDays(d)) }.getOrNull() } }.awaitAll()
     }
     val zones = async { if (has(DashCard.HR_ZONES)) runCatching { Scores.zonesOf(ctx, today) }.getOrNull() else null }
     val night = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Bridge.sleepNight(today) }.getOrNull() else null }
     val debt = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Scores.sleepDebtOf(ctx, today) }.getOrNull() else null }
     val score = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, today) }.getOrNull() else null }
+    val need = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Scores.sleepHabits(ctx).needMin }.getOrNull() else null }
     val hrv = async {
         if (has(DashCard.HRV_STATUS)) (29L downTo 0L).map { today.minusDays(it) }.map { d -> async { d to runCatching { Bridge.healthValue(ctx, Metric.HRV, d) }.getOrNull() } }.awaitAll()
         else emptyList()
@@ -117,7 +120,7 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
     val stress = async { if (has(DashCard.STRESS_DAY)) runCatching { HealthRepository.intraday(Metric.STRESS, today) }.getOrDefault(emptyList()) else emptyList() }
     val hourly = async { if (has(DashCard.DAY_TIMELINE)) runCatching { Bridge.hourlySteps(ctx, today) }.getOrDefault(emptyList()) else emptyList() }
     val ef = efforts.await()
-    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), score.await(), hrv.await(), stress.await(), hourly.await())
+    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), score.await(), need.await(), hrv.await(), stress.await(), hourly.await())
 }
 
 // ---- Couleurs ------------------------------------------------------------------------------
@@ -218,6 +221,14 @@ internal fun ChargeCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavH
                     }
                 }
                 if (d.isEmpty()) Text(tr("Quatre nuits de pouls au repos suffisent pour la calculer."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                // VFC de la semaine contre la zone normale, et phase du cycle quand elle sert de référence
+                val note = listOfNotNull(
+                    w.charge?.hrv?.let { when (it.zone) { -1 -> tr("VFC 7 j sous votre zone"); 1 -> tr("VFC 7 j au-dessus de votre zone"); else -> tr("VFC 7 j dans votre zone") } },
+                    w.charge?.luteal?.let { if (it) tr("comparée à votre phase lutéale") else tr("comparée à votre phase folliculaire") },
+                    // montre changée : la VFC n'est comparée qu'aux nuits du même appareil
+                    w.charge?.hrvSource?.let { trf("VFC comparée aux nuits de %1\$s", it) },
+                ).joinToString(" · ")
+                if (note.isNotEmpty()) Text(note, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2)
             }
         }
         if (w.chargeHistory.count { it != null } >= 2) {
@@ -241,6 +252,13 @@ internal fun EffortCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavH
                 val days = (6L downTo 0L).map { LocalDate.now().minusDays(it) }
                 BarChart(w.efforts.takeLast(7), emptyList(), EffortBlue, height = 70.dp, track = softTrack(), labels = days.map { dayLetter(it) })
             }
+        }
+        // Effort à viser selon la Forme du jour (seulement quand la Forme a un conseil complet)
+        val form = app.superhealth.ui.wellbeing.rememberForm() as? app.superhealth.wellbeing.Form.Advice
+        form?.let { a -> app.superhealth.wellbeing.Form.effortRange(a.verdict, w.efforts.dropLast(1)) }?.let { (lo, hi) ->
+            Spacer(Modifier.height(8.dp))
+            Text(trf("À viser aujourd'hui : %1\$s–%2\$s, selon votre forme", formatNumber(lo), formatNumber(hi)),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
     }
 }
@@ -293,9 +311,16 @@ internal fun SleepStagesCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav:
         val asleep = night.filter { it.kind != ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60_000.0
         Row(verticalAlignment = Alignment.Bottom) {
             Value(formatDuration(asleep), color = c.ink().onContainer())
-            w.sleepScore?.let { Sub(" · " + trf("Score %1\$s", it.roundToInt())) }
+            w.sleepScore?.let { Sub(" · " + tr(Scores.restWord(it, asleep, w.needMin ?: Scores.sleepNeed()).label)) }
             Spacer(Modifier.weight(1f))
             w.debt?.let { d -> Sub(if (d <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(d))) }
+        }
+        // effet nocebo : un score bas annoncé à quelqu'un qui se sent reposé dégrade sa journée (Gavriloff 2018,
+        // Draganich 2014) ; le ressenti prédit mieux la fatigue du lendemain que la mesure
+        val feel = app.superhealth.wellbeing.Checkin.today()
+        if (feel != null && feel.sleep >= 4 && (w.sleepScore ?: 100.0) < 55) {
+            Spacer(Modifier.height(4.dp))
+            Text(tr("Vous vous sentez reposé : votre ressenti compte plus que le score."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
         Spacer(Modifier.height(10.dp))
         Hypnogram(night, Modifier.fillMaxWidth().height(86.dp))

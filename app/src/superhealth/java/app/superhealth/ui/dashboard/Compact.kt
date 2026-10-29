@@ -390,8 +390,8 @@ internal fun dashRings(names: List<String>, h: HealthSnap, eaten: List<FoodEntry
         when (k) {
             Rings.Kind.STEPS -> h.today(Metric.STEPS)
             Rings.Kind.ENERGY -> h.today(Metric.BODY_ENERGY)
-            Rings.Kind.KCAL -> eaten.takeIf { it.isNotEmpty() }?.sumOf { it.macros().kcal }
-            Rings.Kind.PROTEIN -> eaten.takeIf { it.isNotEmpty() }?.sumOf { it.macros().protein }
+            Rings.Kind.KCAL -> eaten.sumOf { it.macros().kcal } // rien noté aujourd'hui : 0, pas « — »
+            Rings.Kind.PROTEIN -> eaten.sumOf { it.macros().protein }
             Rings.Kind.WATER -> h.today(Metric.HYDRATION)
             Rings.Kind.SLEEP -> h.latest(Metric.SLEEP)?.takeIf { it.first == LocalDate.now() }?.second
             Rings.Kind.CARDIO -> h.cardio?.total?.toDouble()

@@ -78,8 +78,8 @@ internal suspend fun loadRings(ctx: Context): List<Rings.Ring> {
         when (k) {
             Rings.Kind.STEPS -> runCatching { Bridge.steps(ctx, today) }.getOrNull()
             Rings.Kind.ENERGY -> metric(Metric.BODY_ENERGY)
-            Rings.Kind.KCAL -> entries.takeIf { it.isNotEmpty() }?.sumOf { it.kcal }
-            Rings.Kind.PROTEIN -> entries.takeIf { it.isNotEmpty() }?.sumOf { it.protein }
+            Rings.Kind.KCAL -> entries.sumOf { it.kcal }
+            Rings.Kind.PROTEIN -> entries.sumOf { it.protein }
             Rings.Kind.WATER -> metric(Metric.HYDRATION)
             Rings.Kind.SLEEP -> metric(Metric.SLEEP)
             Rings.Kind.CARDIO -> cardio?.total?.toDouble()

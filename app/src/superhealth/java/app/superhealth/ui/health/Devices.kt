@@ -36,6 +36,11 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.NotificationsActive
+import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -106,6 +111,7 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
                 DeviceRow(d, onSync = { vm.syncDevice(d) }) {
                     DeviceSettingsActivity.start(ctx, d.device)
                 }
+                if (d.connected && !d.connecting) DeviceActions(d)
             }
             if (devices.isNotEmpty()) RowDivider()
             SettingRow(tr("Associer un appareil"), icon = Icons.Rounded.Add) { pair() }
@@ -168,6 +174,30 @@ private fun DeviceRow(d: DeviceUi, onSync: () -> Unit, onClick: () -> Unit) {
         Spacer(Modifier.width(8.dp))
         if (d.busy || d.connecting) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = Mf.colors.accent)
         else PillButton(if (d.connected) tr("Synchro") else tr("Connecter"), strong = false, onClick = onSync)
+    }
+}
+
+/** Raccourcis de Gadgetbridge sous une montre connectée : la faire sonner, régler ses alarmes (si elle les gère). */
+@Composable
+private fun DeviceActions(d: DeviceUi) {
+    val ctx = LocalContext.current
+    val coordinator = remember(d.address) { runCatching { d.device.deviceCoordinator }.getOrNull() } ?: return
+    val find = remember(d.address) { runCatching { coordinator.supportsFindDevice(d.device) }.getOrDefault(false) }
+    val alarms = remember(d.address) { runCatching { coordinator.getAlarmSlotCount(d.device) > 0 }.getOrDefault(false) }
+    if (!find && !alarms) return
+    var ringing by remember(d.address) { mutableStateOf(false) }
+    // la sonnerie s'arrête en quittant l'écran
+    DisposableEffect(d.address) { onDispose { if (ringing) runCatching { GBApplication.deviceService(d.device).onFindDevice(false) } } }
+    Row(Modifier.fillMaxWidth().padding(start = 72.dp, end = 16.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (find) PillButton(if (ringing) tr("Arrêter") else tr("Trouver"), strong = ringing,
+            icon = if (ringing) Icons.Rounded.Stop else Icons.Rounded.NotificationsActive) {
+            ringing = !ringing
+            runCatching { GBApplication.deviceService(d.device).onFindDevice(ringing) }
+        }
+        if (alarms) PillButton(tr("Alarmes"), strong = false, icon = Icons.Rounded.Alarm) {
+            ctx.startActivity(Intent(ctx, nodomain.freeyourgadget.gadgetbridge.activities.ConfigureAlarms::class.java)
+                .putExtra(GBDevice.EXTRA_DEVICE, d.device))
+        }
     }
 }
 

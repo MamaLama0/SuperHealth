@@ -21,6 +21,10 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.bridge.HcHeart.init(this)
         app.superhealth.meals.MealPlanner.init(this)
         app.superhealth.meds.Meds.init(this)
+        app.superhealth.wellbeing.Journal.init(this)
+        app.superhealth.wellbeing.Checkin.init(this)
+        app.superhealth.wellbeing.Cycle.init(this)
+        app.superhealth.wellbeing.Reminders.schedule(this)
         app.superhealth.bridge.WatchOnline.install(this)
         // Module montre désactivé : le moteur reste chargé (base de données) mais ne se connecte à rien.
         if (!SuperPrefs.settings.value.watchModule) {

@@ -33,6 +33,9 @@ object SwissFoods {
     private fun norm(s: String) = Normalizer.normalize(s.lowercase().replace("œ", "oe").replace("æ", "ae"), Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "").replace(Regex("[^a-z0-9 ]+"), " ").replace(Regex("\\s+"), " ").trim()
 
+    /** Espaces en double dans certains noms de la base (« cuite,  égouttée »). */
+    private val spaces = Regex("\\s{2,}")
+
     fun load(context: Context): List<Item> = items ?: synchronized(this) {
         items ?: runCatching {
             val root = Json.parseToJsonElement(context.assets.open("swissfcdb.json").use { it.readBytes().decodeToString() }).jsonObject
@@ -42,7 +45,7 @@ object SwissFoods {
                 val a = e as JsonArray
                 fun d(i: Int) = (a[i] as JsonPrimitive).double
                 val m = (a[12] as JsonObject).mapNotNull { (k, v) -> (v as JsonPrimitive).doubleOrNull?.let { codes[k.toInt()] to it } }.toMap()
-                val name = a[1].jsonPrimitive.content; val syn = a[2].jsonPrimitive.content
+                val name = a[1].jsonPrimitive.content.replace(spaces, " ").trim(); val syn = a[2].jsonPrimitive.content
                 Item(a[0].jsonPrimitive.int, name, syn, a[3].jsonPrimitive.content, d(4), d(5), d(6), d(7), d(8), d(9), d(10), d(11), m, norm("$name $syn"))
             }
         }.getOrDefault(emptyList()).also { items = it }

@@ -28,6 +28,7 @@
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_VO2_MAX" />
+    <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
     </queries>
@@ -42,6 +43,7 @@
 
         <activity
             android:name="app.superhealth.MainActivity"
+            android:enableOnBackInvokedCallback="true"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/SuperHealth.Theme"
@@ -163,6 +165,15 @@
 
         <!-- Rappel médication : alarmes, boutons « Pris » / « Plus tard », reprogrammation au démarrage -->
         <receiver android:name="app.superhealth.meds.MedsReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Rappels (pesée, journal, moral, coucher) : alarmes et reprogrammation au démarrage -->
+        <receiver android:name="app.superhealth.wellbeing.RemindersReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />

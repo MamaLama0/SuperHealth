@@ -49,6 +49,9 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Favorite
@@ -197,6 +200,10 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.LOAD -> WorkoutBlue
     DashCard.DAY_TIMELINE -> HealthHues.Activity
     DashCard.COACH, DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachHue
+    DashCard.FORM -> HealthHues.Activity
+    DashCard.JOURNAL -> HealthHues.Mind
+    DashCard.BEDTIME -> HealthHues.Sleep
+    DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleHue
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -240,6 +247,10 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.DAY_TIMELINE -> Icons.Rounded.Timeline
     DashCard.COACH -> Icons.Rounded.AutoAwesome
     DashCard.COACH_WEEK -> Icons.Rounded.DateRange
+    DashCard.FORM -> Icons.Rounded.Speed
+    DashCard.JOURNAL -> Icons.Rounded.SentimentSatisfied
+    DashCard.BEDTIME -> Icons.Rounded.Bedtime
+    DashCard.CYCLE -> Icons.Rounded.CalendarMonth
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -345,9 +356,15 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
 
     val name = remember(refresh) { app.superhealth.ui.userName() }
     val modules by app.superhealth.modules.Modules.installed.collectAsState()
-    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules) {
-        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) }
+    // cartes qui posent une question (moral du jour) : elles s'effacent une fois la réponse donnée
+    val moodDays by app.superhealth.wellbeing.Journal.days.collectAsState()
+    val moodDone = moodDays[java.time.LocalDate.now().toEpochDay()] != null && app.superhealth.ui.wellbeing.moodOpen != java.time.LocalDate.now().toEpochDay()
+    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules, moodDone) {
+        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) && !(it == DashCard.JOURNAL && moodDone) }
     }
+    // ressenti du matin : les questions sur la première carte à score visible, en grand de préférence
+    checkinFirst = visible.filter { it in app.superhealth.ui.wellbeing.CHECKIN_GATED }
+        .let { g -> g.firstOrNull { sh.sizeOf(it) == app.superhealth.CardSize.L } ?: g.firstOrNull() }
     val rows = remember(visible, sh.dashSizes) { app.superhealth.packRows(visible) { sh.sizeOf(it).span } }
     var editing by remember { mutableStateOf<DashCard?>(null) }
     // Liste paresseuse : seules les rangées à l'écran sont composées (premier affichage plus rapide, moins de mémoire).
@@ -557,7 +574,7 @@ private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss:
                                     horizontalAlignment = Alignment.CenterHorizontally) {
                                     SizeGlyph(z, if (on) Mf.colors.onStrong else c.hue(), if (on) Mf.colors.onStrong.copy(alpha = 0.25f) else Mf.colors.chip)
                                     Spacer(Modifier.height(6.dp))
-                                    Text(tr(z.label), style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1)
+                                    Text(z.title, style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1)
                                 }
                             }
                             repeat(4 - line.size) { Spacer(Modifier.weight(1f)) }
@@ -679,15 +696,24 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
     app.superhealth.ui.theme.CardTone(c.hue(), rich = c in richCards, night = c == DashCard.RINGS) { CardBody(c, size, vm, nav, h, modifier, tab) }
 }
 
+/** Carte qui porte les questions du ressenti du matin (les autres cartes à score y renvoient). */
+private var checkinFirst: DashCard? = null
+
 @Composable
 private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, modifier: Modifier, tab: (String) -> Unit) {
     val an = vm.nutrition.analytics.collectAsState().value ?: return
     val s by vm.nutrition.settings.collectAsState()
+    // ressenti du matin d'abord : les cartes à score attendent la réponse
+    if (c in app.superhealth.ui.wellbeing.CHECKIN_GATED && app.superhealth.ui.wellbeing.checkinPending()) {
+        app.superhealth.ui.wellbeing.CheckinCard(c, size, c == checkinFirst, modifier, nav)
+        return
+    }
     // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
     // Petit, moyen et bandeau : versions à regarder d'un coup d'œil, communes à toutes les cartes qui ont une valeur ;
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
-        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK -> true
+        DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK,
+        DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -811,6 +837,10 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.DAY_TIMELINE -> DayTimelineCard(c, h, h.watch, modifier, nav)
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachWeekCard(c, size, vm, modifier, nav)
+        DashCard.FORM -> app.superhealth.ui.wellbeing.FormCard(c, size, vm, modifier, nav)
+        DashCard.JOURNAL -> app.superhealth.ui.wellbeing.JournalCard(c, size, vm, modifier, nav)
+        DashCard.BEDTIME -> app.superhealth.ui.wellbeing.BedtimeCard(c, size, modifier, nav)
+        DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleCard(c, size, modifier, nav)
         DashCard.STEPS -> {
             val series = h.series[Metric.STEPS].orEmpty()
             val today = h.today(Metric.STEPS)

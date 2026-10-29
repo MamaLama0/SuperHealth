@@ -297,7 +297,10 @@ fun targetSummary(t: List<TargetSet>) = t.firstOrNull()?.let { trf("%1\$s × %2\
 fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     val st by vm.state.collectAsState()
     val db = vm.db.collectAsState().value ?: return
-    val p = st.programs.firstOrNull { it.id == id } ?: run { LaunchedEffect(Unit) { nav.popBackStack() }; return }
+    val p = st.programs.firstOrNull { it.id == id } ?: run {
+        // supprimé : l'écran se retire s'il est encore en haut (le bouton Supprimer a déjà dépilé ; deux retours vidaient la pile)
+        LaunchedEffect(Unit) { if (nav.currentBackStackEntry?.destination?.route == "program/{id}") nav.popBackStack() }; return
+    }
     val active = st.settings.activeProgramId == id
     var confirm by remember { mutableStateOf<String?>(null) }
     var cycle by remember { mutableIntStateOf(p.cycleIndex.coerceIn(0, p.numCycles - 1)) }

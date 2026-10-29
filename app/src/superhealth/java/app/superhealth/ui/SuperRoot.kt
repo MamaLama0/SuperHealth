@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,6 +57,9 @@ import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.RestaurantMenu
+import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Straighten
@@ -130,7 +134,12 @@ private val tabs = listOf(
     Tab("activities", "Activités", Icons.AutoMirrored.Rounded.DirectionsRun),
 )
 
-private fun isTabRoute(route: String?) = tabs.any { it.route == route }
+/** Réglages en onglet : « + » au milieu avec un nombre impair d'onglets, pour une barre symétrique. */
+private val settingsTab = Tab("settings", "Réglages", Icons.Rounded.Settings)
+
+fun settingsIsTab(s: app.superhealth.SuperSettings) = s.plusSide == "CENTER" && visibleTabs(s).size % 2 == 1
+
+private fun isTabRoute(route: String?) = tabs.any { it.route == route } || (route == "settings" && settingsIsTab(app.superhealth.SuperPrefs.settings.value))
 
 /** Onglets des parties activées : Journal avec la nutrition, Activités avec la musculation ou les activités. */
 private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
@@ -214,6 +223,13 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }
+            composable("journal") { app.superhealth.ui.wellbeing.JournalScreen(vm, nav) }
+            composable("form") { app.superhealth.ui.wellbeing.FormScreen(vm, nav) }
+            composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }
+            composable("breathe") { app.superhealth.ui.wellbeing.BreatheScreen(nav) }
+            composable("checkin") { app.superhealth.ui.wellbeing.CheckinScreen(nav) }
+            composable("settings/reminders") { app.superhealth.ui.wellbeing.RemindersScreen(vm, nav) }
+            composable("settings/sleep") { app.superhealth.ui.settings.SleepSettingsScreen(nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
@@ -279,23 +295,43 @@ private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f,
  */
 @Composable
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
+    val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
+    val shown = visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it }
+    val pill = Modifier.height(68.dp)
+        .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
+        .clip(RoundedCornerShape(26.dp)).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).padding(horizontal = 4.dp)
     Row(Modifier.fillMaxWidth().background(Mf.colors.background).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        val shown = visibleTabs(app.superhealth.SuperPrefs.settings.collectAsState().value)
-        // moins d'onglets (parties coupées) : barre plus courte, gardée près du « + » sous le pouce
-        if (shown.size < tabs.size) Spacer(Modifier.weight(1f))
-        Row((if (shown.size < tabs.size) Modifier.width((100 * shown.size + 8).dp) else Modifier.weight(1f)).height(68.dp)
-            .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
-            .clip(RoundedCornerShape(26.dp)).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).padding(horizontal = 4.dp)) {
-            shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
+        when (sh.plusSide) {
+            // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
+            "CENTER" -> Row(pill.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                val left = shown.take(shown.size / 2)
+                Row(Modifier.weight(1f).fillMaxHeight()) { left.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
+                PlusButton(56.dp, onPlus)
+                Row(Modifier.weight(1f).fillMaxHeight()) { (shown - left.toSet()).forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
+            }
+            else -> {
+                val leftHanded = sh.plusSide == "LEFT"
+                // moins d'onglets (parties coupées) : barre plus courte, gardée près du « + » sous le pouce
+                val short = shown.size < tabs.size
+                if (leftHanded) { PlusButton(64.dp, onPlus); Spacer(Modifier.width(10.dp)) } else if (short) Spacer(Modifier.weight(1f))
+                Row((if (short) Modifier.width((100 * shown.size + 8).dp) else Modifier.weight(1f)).then(pill)) {
+                    shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
+                }
+                if (!leftHanded) { Spacer(Modifier.width(10.dp)); PlusButton(64.dp, onPlus) } else if (short) Spacer(Modifier.weight(1f))
+            }
         }
-        Spacer(Modifier.width(10.dp))
-        Box(
-            Modifier.size(64.dp).shadow(10.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
-                .clip(RoundedCornerShape(20.dp)).background(Mf.colors.strong).clickable(onClick = onPlus),
-            contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(30.dp)) }
     }
+}
+
+@Composable
+private fun PlusButton(size: androidx.compose.ui.unit.Dp, onPlus: () -> Unit) {
+    val r = RoundedCornerShape(size * 0.31f)
+    Box(
+        Modifier.size(size).shadow(10.dp, r, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
+            .clip(r).background(Mf.colors.strong).clickable(onClick = onPlus),
+        contentAlignment = Alignment.Center,
+    ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(size * 0.47f)) }
 }
 
 @Composable
@@ -346,6 +382,9 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
         PlusAction.WATER -> QuickAction("Verre d'eau (250 ml)", Icons.Rounded.LocalDrink, "water")
         PlusAction.VITALS -> QuickAction("Hydratation et constantes", Icons.Rounded.WaterDrop, "log_health")
         PlusAction.BODY -> QuickAction("Mesures", Icons.Rounded.Straighten, "body")
+        PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "journal")
+        PlusAction.PERIOD -> QuickAction("Règles", Icons.Rounded.CalendarMonth, "cycle")
+        PlusAction.BREATHE -> QuickAction("Respirer", Icons.Rounded.Air, "breathe")
         PlusAction.SYNC -> if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null
     }
 }
@@ -392,8 +431,9 @@ private fun ActionGroup(title: String, hue: Color, actions: List<QuickAction>, o
     app.superhealth.nutrition.ui.components.GroupHeader(title, Modifier.padding(top = 4.dp))
     actions.chunked(3).forEachIndexed { i, row ->
         if (i > 0) Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            row.forEach { a -> ActionTile(a, hue, Modifier.weight(1f)) { onAction(a.action) } }
+        // rangée à la hauteur de la tuile la plus haute : un libellé sur deux lignes n'est plus coupé
+        Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            row.forEach { a -> ActionTile(a, hue, Modifier.weight(1f).fillMaxHeight()) { onAction(a.action) } }
             repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
         }
     }
@@ -403,7 +443,7 @@ private fun ActionGroup(title: String, hue: Color, actions: List<QuickAction>, o
 @Composable
 private fun ActionTile(a: QuickAction, hue: Color, modifier: Modifier, onClick: () -> Unit) {
     Column(
-        modifier.height(108.dp).clip(RoundedCornerShape(20.dp)).background(Mf.colors.card).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 12.dp),
+        modifier.heightIn(min = 108.dp).clip(RoundedCornerShape(20.dp)).background(Mf.colors.card).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         Box(Modifier.size(42.dp).clip(CircleShape).background(hue.container(1.3f)), contentAlignment = Alignment.Center) {
@@ -423,10 +463,12 @@ fun NavHostController.go(route: String) = runCatching { if (isTabRoute(route)) o
  * s'ouvre à sa racine au lieu de retrouver l'écran où on l'avait laissé.
  */
 fun NavHostController.openTab(route: String, fresh: Boolean = false) {
-    val start = graph.findStartDestination().id
+    val start = graph.findStartDestination()
     navigate(route) {
-        popUpTo(start) { saveState = !fresh }
+        popUpTo(start.id) { saveState = !fresh }
         launchSingleTop = true
-        restoreState = !fresh
+        // L'accueil, racine jamais dépilée, n'a rien à restaurer : Navigation range sous son id la pile de l'onglet quitté
+        // (popUpTo non inclusif), et après un widget « Accueil » restaurait le Journal au lieu du tableau de bord.
+        restoreState = !fresh && route != start.route
     }
 }

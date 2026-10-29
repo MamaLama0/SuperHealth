@@ -73,6 +73,7 @@ import app.superhealth.ui.trf
 import app.superhealth.ui.unitOf
 import java.time.DayOfWeek
 import java.time.LocalDate
+import kotlin.math.roundToInt
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
@@ -124,7 +125,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
     val source by produceState<DataSource?>(null, metric, lastDay, refresh) {
         value = lastDay?.let { runCatching { Bridge.dataSource(metric, it) }.getOrNull() }
     }
-    // Sommeil : le score de chaque nuit de la période, quand une montre le calcule.
+    // Sommeil : le Repos de chaque nuit de la période (phases de la montre ou de Health Connect).
     val scores by produceState(emptyList<Pair<LocalDate, Double>>(), metric, span, offset, refresh) {
         value = if (metric == Metric.SLEEP && Bridge.hasSource(Metric.SLEEP_SCORE)) coroutineScope {
             generateSequence(p.from) { it.plusDays(1) }.takeWhile { !it.isAfter(minOf(p.to, today)) }.toList()
@@ -218,6 +219,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
         }
 
         if (scores.isNotEmpty()) SleepScoreCard(scores, span, scoreSource) { nav.go("h/metric/SLEEP_SCORE") }
+        if (metric == Metric.SLEEP) { UsualNight(); SriRow() }
         if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
 
         if (metric.manual) {
@@ -336,6 +338,49 @@ private fun SleepScoreCard(scores: List<Pair<LocalDate, Double>>, span: Span, sr
                     style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
         }
         if (span != Span.DAY) Text(relativeDay(day), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        // score de SuperHealth (Repos) pour toutes les montres ; celui que la montre calcule elle-même, en second
+        val ctx = LocalContext.current
+        val watch by produceState<Double?>(null, day) { value = runCatching { Bridge.watchSleepScore(ctx, day) }.getOrNull() }
+        watch?.let { Text(trf("Score de la montre : %1\$s", it.roundToInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
         src?.let { SourceLine(it) }
+    }
+}
+
+/** La dernière nuit, partie par partie, face à vos habitudes (désactivable dans Réglages > Sommeil). */
+@Composable
+private fun UsualNight() {
+    val sh by app.superhealth.SuperPrefs.settings.collectAsState()
+    if (!sh.sleepCompare) return
+    val cmp by produceState<Map<app.superhealth.health.data.Scores.SleepPart, Int>?>(null) {
+        value = runCatching {
+            val S = app.superhealth.health.data.Scores
+            val today = LocalDate.now()
+            val last = S.nightParts(today) ?: return@runCatching null
+            S.compareToUsual(last, (28L downTo 1L).mapNotNull { S.nightParts(today.minusDays(it)) })
+        }.getOrNull()
+    }
+    val c = cmp?.takeIf { it.isNotEmpty() } ?: return
+    SectionLabel(tr("Par rapport à vos habitudes"))
+    app.superhealth.nutrition.ui.components.GroupCard {
+        c.forEach { (p, v) ->
+            val (name, low, high) = when (p) {
+                app.superhealth.health.data.Scores.SleepPart.DURATION -> Triple("Durée", "Plus courte", "Plus longue")
+                app.superhealth.health.data.Scores.SleepPart.EFFICIENCY -> Triple("Efficacité", "Plus basse", "Plus haute")
+                app.superhealth.health.data.Scores.SleepPart.RESTORATIVE -> Triple("Sommeil réparateur", "Moins", "Plus")
+                app.superhealth.health.data.Scores.SleepPart.AWAKE -> Triple("Éveils", "Moins", "Plus")
+            }
+            app.superhealth.nutrition.ui.components.SettingRow(tr(name), value = tr(when (v) { -1 -> low; 1 -> high; else -> "Habituelle" }))
+        }
+    }
+}
+
+/** Régularité du sommeil (SRI des 2 dernières semaines) : une ligne, absente sans 6 nuits consécutives. */
+@Composable
+private fun SriRow() {
+    val sri by produceState<Double?>(null) { value = runCatching { app.superhealth.health.data.Scores.sriOf(LocalDate.now()) }.getOrNull() }
+    val v = sri ?: return
+    app.superhealth.nutrition.ui.components.GroupCard {
+        app.superhealth.nutrition.ui.components.SettingRow(tr("Régularité"), subtitle = tr("Même état, endormi ou éveillé, d'un jour à l'autre (SRI, 14 jours)"),
+            value = "${v.roundToInt()} / 100")
     }
 }

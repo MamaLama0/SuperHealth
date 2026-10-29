@@ -72,6 +72,12 @@ object HealthConnectHub {
         write(ExerciseSessionRecord::class), write(HydrationRecord::class),
     )
 
+    /** Règles (suivi du cycle) : demandées à part, depuis l'écran Cycle, pour ne pas les demander à tout le monde. */
+    val CYCLE_PERMISSIONS = setOf(
+        read(androidx.health.connect.client.records.MenstruationPeriodRecord::class),
+        read(androidx.health.connect.client.records.MenstruationFlowRecord::class),
+    )
+
     /** Jours relus / réécrits à chaque synchronisation. */
     private const val WINDOW_DAYS = 30L
 
@@ -289,6 +295,15 @@ object HealthConnectHub {
                 kcal = agg?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories?.takeIf { it > 0 },
                 avgHr = bpm?.takeIf { it.isNotEmpty() }?.average()?.toInt(), maxHr = bpm?.maxOrNull()?.toInt())
         } ?: prev.sessions
+        // règles : périodes et jours de flux des autres applis (les 30 jours relus remplacent l'import précédent sur cette fenêtre)
+        if (granted.containsAll(CYCLE_PERMISSIONS)) runCatching {
+            val periods = others(androidx.health.connect.client.records.MenstruationPeriodRecord::class).orEmpty()
+                .flatMap { r -> (r.startTime.day()..(r.endTime.minusMillis(1)).day()).toList() }
+            val flow = others(androidx.health.connect.client.records.MenstruationFlowRecord::class).orEmpty()
+                .map { it.time.day() }
+            val from = LocalDate.now().minusDays(WINDOW_DAYS).toEpochDay()
+            app.superhealth.wellbeing.Cycle.mergeSynced(from, (periods + flow).toSet())
+        }
         val steps = if (read(StepsRecord::class) in granted) runCatching { stepsHourly(client, range, me) }.getOrDefault(prev.stepsHourly)
         else prev.stepsHourly
         return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps, origins, nights,

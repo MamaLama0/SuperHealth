@@ -1,6 +1,8 @@
 package app.superhealth.ui.dashboard
 
 import app.superhealth.available
+import app.superhealth.feature
+import app.superhealth.has
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -109,7 +111,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
                             horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             c.sizes.forEach { z ->
                                 val on = sh.sizeOf(c) == z
-                                Text(tr(z.label), style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                                Text(z.title, style = MaterialTheme.typography.labelMedium, maxLines = 1,
                                     color = if (on) Mf.colors.onStrong else Mf.colors.text,
                                     modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.strong else Mf.colors.chip)
                                         .clickable { SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }
@@ -123,7 +125,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
         }
 
         DashCard.Section.entries.forEach { section ->
-            val hidden = DashCard.entries.filter { it.section == section && it !in shown && it.available }
+            val hidden = DashCard.entries.filter { it.section == section && it !in shown && it.available && (it.feature()?.let { f -> sh.has(f) } ?: true) }
             if (hidden.isEmpty()) return@forEach
             app.superhealth.nutrition.ui.components.GroupHeader(tr(section.label), Modifier.padding(start = 0.dp))
             GroupCard {
@@ -206,28 +208,35 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
     }) {
         Text(tr("Raccourcis du bouton + et leur ordre. Un seul : le + l'ouvre directement."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-        app.superhealth.nutrition.ui.components.GroupHeader(tr("Affichés"), Modifier.padding(start = 0.dp))
+        // place du bouton : réglée dans Apparence, rappelée ici pour la trouver où l'on règle le +
+        GroupCard {
+            app.superhealth.nutrition.ui.components.SettingRow(tr("Position"), tr(when (sh.plusSide) { "LEFT" -> "Gauche"; "CENTER" -> "Milieu"; else -> "Droite" })) {
+                nav.navigate("settings/look")
+            }
+        }
+        // même geste que pour les cartes : interrupteur sur chaque ligne, ordre dans la feuille « Réorganiser »
+        var reorder by remember { mutableStateOf(false) }
+        if (reorder) app.superhealth.training.ui.components.ReorderSheet(shown.map { it.name to null }, shown.map { null },
+            onMove = { from, to -> set(with(app.superhealth.training.domain.ProgramEdit) { SuperPrefs.settings.value.plusActions.moved(from, to) }) },
+            onDismiss = { reorder = false }, title = tr("Ordre des raccourcis"), names = shown.map { tr(it.label) })
+        SectionLabel(tr("Affichés")) {
+            if (shown.size > 1) Text(tr("Réorganiser"), Modifier.clickable { reorder = true }, color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
+        }
         if (shown.isEmpty()) Text(tr("Aucun raccourci"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
         else GroupCard {
             shown.forEachIndexed { i, a ->
                 if (i > 0) RowDivider()
-                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(tr(a.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(tr(a.section.label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-                    }
-                    IconButton(onClick = { set(shown.toMutableList().apply { add(i - 1, removeAt(i)) }) }, enabled = i > 0) {
-                        Icon(Icons.Rounded.KeyboardArrowUp, tr("Monter"), tint = if (i > 0) Mf.colors.text else Mf.colors.textTertiary)
-                    }
-                    IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
-                        Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
                     }
                     app.superhealth.nutrition.ui.components.Toggle(true, { set(shown - a) }, Modifier.padding(end = 8.dp))
                 }
             }
         }
         DashCard.Section.entries.forEach { section ->
-            val hidden = PlusAction.entries.filter { it.section == section && it !in shown }
+            val hidden = PlusAction.entries.filter { it.section == section && it !in shown && (it.feature()?.let { f -> sh.has(f) } ?: true) }
             if (hidden.isEmpty()) return@forEach
             app.superhealth.nutrition.ui.components.GroupHeader(tr(section.label), Modifier.padding(start = 0.dp))
             GroupCard {

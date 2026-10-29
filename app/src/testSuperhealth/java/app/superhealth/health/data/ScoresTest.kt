@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import app.superhealth.wellbeing.Form
+import app.superhealth.wellbeing.Form.Model.Term
 import kotlin.math.ln
 
 class ScoresTest {
@@ -63,8 +65,6 @@ class ScoresTest {
         assertEquals(500.0, Scores.personalNeed(n, 500.0), 1e-9)
         assertEquals(480.0, Scores.personalNeed(n.take(6), 480.0), 1e-9)
         assertEquals(570.0, Scores.personalNeed(List(10) { 700.0 }, 480.0), 1e-9)
-        assertEquals(1.0, Scores.consistency(listOf(420.0, 420.0, 420.0))!!, 1e-9)
-        assertNull(Scores.consistency(listOf(420.0, 420.0)))
     }
 
     @Test fun fitnessAgeNes2011() {
@@ -75,5 +75,126 @@ class ScoresTest {
         assertEquals(5 * 40.0 / 30, Scores.activityIndex(listOf(40.0, 40.0, 40.0, 40.0, 40.0, 10.0, 0.0)), 1e-9)
         assertEquals(0.0, Scores.activityIndex(listOf(10.0, 20.0)), 1e-9)
         assertEquals(2.5 * 3, Scores.activityIndex(listOf(95.0, 95.0, 95.0)), 1e-9)
+    }
+
+    // ---- 2.0 : VFC sur 7 jours, signes de la nuit, régularité ----
+
+    @Test fun hrvTrendZoneFromSevenDayMean() {
+        val stable = List(60) { 50.0 + (it % 5 - 2) * 3 }
+        val t = Scores.hrvTrend(stable)!!
+        assertEquals(0, t.zone)
+        assertTrue(t.lowMs < 50 && t.highMs > 49)
+        // une semaine nettement plus basse : sous la zone
+        assertEquals(-1, Scores.hrvTrend(stable.dropLast(7) + List(7) { 38.0 })!!.zone)
+        // une seule nuit basse ne sort pas la semaine de la zone
+        assertEquals(0, Scores.hrvTrend(stable.dropLast(1) + 38.0)!!.zone)
+        // trop peu d'historique ou de mesures cette semaine
+        assertNull(Scores.hrvTrend(stable.takeLast(20)))
+        assertNull(Scores.hrvTrend(stable.dropLast(7) + listOf(50.0, 50.0) + List<Double?>(5) { null }))
+    }
+
+    @Test fun chargeUsesSamePhaseBaseline() {
+        // pouls 5 bpm plus haut en phase lutéale : comparé à la même phase, il n'est plus « haut »
+        val phases = List(40) { (it / 7) % 2 == 1 } + true
+        val h = phases.dropLast(1).map { l -> Scores.Night(null, if (l) 60.0 else 55.0, 0.85, 14.0, null) }
+        val mixed = Scores.charge(h, Scores.Night(null, 60.0, 0.85, 14.0, null))!!
+        val matched = Scores.charge(h, Scores.Night(null, 60.0, 0.85, 14.0, null), phases)!!
+        assertEquals(true, matched.luteal)
+        assertTrue("mixed=${mixed.score} matched=${matched.score}", matched.score > mixed.score + 10)
+    }
+
+    @Test fun sriIdenticalDaysIs100() {
+        val night = BooleanArray(1440) { it in 660..1110 }    // 23 h → 6 h 30 chaque jour
+        assertEquals(100.0, Scores.sri(List(8) { night })!!, 1e-9)
+        val shifted = BooleanArray(1440) { it in 780..1230 }  // 2 h plus tard un jour sur deux
+        assertTrue(Scores.sri(List(8) { if (it % 2 == 0) night else shifted })!! < 80)
+        assertNull(Scores.sri(List(5) { night }))
+        assertNull(Scores.sri(listOf(night, null, night, null, night, null, night, null, night)))
+    }
+
+    @Test fun bodyAlertNeedsTwoUnexplainedNights() {
+        val rhr = app.superhealth.wellbeing.BodyAlert.Sign(Metric.RESTING_HR, 7.0)
+        val resp = app.superhealth.wellbeing.BodyAlert.Sign(Metric.RESPIRATORY_RATE, 1.8)
+        val hrv = app.superhealth.wellbeing.BodyAlert.Sign(Metric.HRV, -15.0)
+        val late = listOf(app.superhealth.wellbeing.BodyAlert.Cause.LATE)
+
+        assertEquals(app.superhealth.wellbeing.BodyAlert.Level.ALERT, app.superhealth.wellbeing.BodyAlert.level(listOf(rhr, resp), emptyList(), listOf(rhr, resp), emptyList()))
+        // pouls et VFC expliqués par l'effort en soirée : à surveiller seulement
+        assertEquals(app.superhealth.wellbeing.BodyAlert.Level.WATCH, app.superhealth.wellbeing.BodyAlert.level(listOf(rhr, hrv), late, listOf(rhr, hrv), emptyList()))
+        // une seule nuit : à surveiller
+        assertEquals(app.superhealth.wellbeing.BodyAlert.Level.WATCH, app.superhealth.wellbeing.BodyAlert.level(listOf(rhr, resp), emptyList(), listOf(rhr), emptyList()))
+        assertEquals(app.superhealth.wellbeing.BodyAlert.Level.NONE, app.superhealth.wellbeing.BodyAlert.level(listOf(rhr), emptyList(), listOf(rhr, resp), emptyList()))
+        // une nuit hors norme et une énergie ressentie basse : alerte
+        assertEquals(app.superhealth.wellbeing.BodyAlert.Level.ALERT, app.superhealth.wellbeing.BodyAlert.level(listOf(rhr, resp), emptyList(), emptyList(), emptyList(), feelLow = true))
+        val r = app.superhealth.wellbeing.BodyAlert.range(List(10) { 55.0 }, Metric.RESTING_HR)!!
+        assertEquals(52.0, r.first, 1e-9); assertEquals(58.0, r.third, 1e-9)
+    }
+
+    @Test fun restWordsHideTheNumber() {
+        assertEquals(Scores.RestWord.SHORT, Scores.restWord(70.0, 360.0, 480.0))
+        assertEquals(Scores.RestWord.RESTFUL, Scores.restWord(80.0, 360.0, 480.0))
+        assertEquals(Scores.RestWord.FAIR, Scores.restWord(60.0, 470.0, 480.0))
+        assertEquals(Scores.RestWord.RESTLESS, Scores.restWord(50.0, 470.0, 480.0))
+    }
+
+    @Test fun adaptiveFormScoreAndVerdict() {
+        val m = Form.Model
+        val t = Term.entries
+        assertEquals(50, m.score(emptyMap(), null, m.PRIOR))
+        assertEquals(50, m.score(t.filter { it in m.MEASURED }.associateWith { 0.0 }, 3.0, m.PRIOR))
+        val good = m.score(mapOf(t[0] to 1.5, t[1] to 1.0, t[2] to 1.0), 4.5, m.PRIOR)
+        val bad = m.score(mapOf(t[0] to -2.0, t[1] to -1.0, t[2] to -1.5), 1.5, m.PRIOR)
+        assertTrue("good=$good bad=$bad", good > 80 && bad < 20)
+        assertEquals(Form.Verdict.REST, Form.verdict(80, emptyList(), 1.0, overreaching = false, alert = true))
+        assertEquals(Form.Verdict.REST, Form.verdict(30, emptyList(), 1.0, false, false))
+        assertEquals(Form.Verdict.EASY, Form.verdict(65, emptyList(), 1.6, false, false))
+        assertEquals(Form.Verdict.EASY, Form.verdict(65, emptyList(), 1.0, overreaching = true, alert = false))
+        assertEquals(Form.Verdict.PUSH, Form.verdict(75, emptyList(), 1.1, false, false))
+        assertEquals(Form.Verdict.NORMAL, Form.verdict(75, emptyList(), 1.4, false, false))
+        assertEquals(Form.Cause.TRAINING, Form.cause(1.4, emptyMap()))
+        assertEquals(Form.Cause.OTHER, Form.cause(1.0, mapOf(t[3] to 1.0)))
+    }
+
+    @Test fun adaptiveWeightsLearnWhatPredictsFeeling() {
+        val m = Form.Model
+        assertEquals(m.PRIOR, m.fit(List(10) { mapOf(Term.HRV to 1.0) to 4.0 }))
+        // ressenti qui suit le sommeil et pas la VFC : le poids du Repos monte, celui de la VFC baisse
+        val rnd = java.util.Random(7)
+        val rows = List(120) {
+            val sleep = rnd.nextGaussian(); val hrv = rnd.nextGaussian()
+            mapOf(Term.HRV to hrv, Term.RHR to rnd.nextGaussian(), Term.SLEEP to sleep, Term.LOAD to 0.0, Term.MOOD to 0.0) to (3 + sleep).coerceIn(1.0, 5.0)
+        }
+        val w = m.fit(rows)
+        assertTrue("w=$w", w.getValue(Term.SLEEP) > 0.4 && w.getValue(Term.HRV) < m.PRIOR.getValue(Term.HRV))
+        assertEquals(1.0, w.values.sum(), 1e-9)
+        assertEquals(0.25, w.getValue(Term.FEEL), 1e-9)
+    }
+
+    @Test fun sleepGateAcrossMidnight() {
+        val B = app.superhealth.wellbeing.Bedtime
+        assertNull(B.gate(listOf(1380, 1400, 10)))
+        val g = B.gate(listOf(1410, 1430, 0, 20, 1420, 10))!!     // 23:30 → 00:20
+        assertEquals(1420.0, g.first.toDouble(), 5.0); assertEquals(5.0, g.second.toDouble(), 5.0)
+        val p = app.superhealth.wellbeing.Bedtime.Plan(bedMinute = 21 * 60, wakeMinute = 7 * 60, needMin = 480.0, debtMin = 0.0, efficiency = 0.9, nights = 10, gate = g)
+        assertTrue(p.tooEarly)
+    }
+
+    @Test fun nightComparedToUsual() {
+        val usual = List(20) { i -> Scores.NightParts(440.0 + (i % 5) * 4, 0.9, 0.42, 40.0 + i % 3) }
+        assertNull(Scores.compareToUsual(usual[0], usual.take(10)))
+        val c = Scores.compareToUsual(Scores.NightParts(360.0, 0.9, 0.30, 90.0), usual)!!
+        assertEquals(-1, c[Scores.SleepPart.DURATION]); assertEquals(0, c[Scores.SleepPart.EFFICIENCY])
+        assertEquals(-1, c[Scores.SleepPart.RESTORATIVE]); assertEquals(1, c[Scores.SleepPart.AWAKE])
+    }
+
+    @Test fun effortTargetAndPerceivedLoad() {
+        assertEquals(385.0 / 2, Scores.perceivedTrimp(7, 55.0), 1e-9)
+        val past = List(28) { 50.0 }
+        assertNull(Form.effortRange(Form.Verdict.NORMAL, List(28) { if (it < 20) null else 50.0 }))
+        val (lo, hi) = Form.effortRange(Form.Verdict.NORMAL, past)!!
+        assertTrue("lo=$lo hi=$hi", lo < 50 && hi > 50)
+        val push = Form.effortRange(Form.Verdict.PUSH, past)!!
+        val rest = Form.effortRange(Form.Verdict.REST, past)!!
+        assertTrue(push.first > 50 && rest.second < lo)
     }
 }

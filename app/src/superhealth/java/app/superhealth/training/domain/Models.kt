@@ -196,6 +196,8 @@ data class Session(
     val pausedAt: Long? = null,
     /** Exercice affiché (page du PageView de séance). */
     val current: Int = 0,
+    /** Forme du jour appliquée : +1 un cran plus lourd (pousser) ou −1 une série de moins (alléger) ; le programme ne change pas. */
+    val adjust: Int = 0,
 ) {
     /** Durée effective en secondes, pauses déduites. */
     fun elapsedSec(now: Long): Long = ((now - startTime - pausedMs - (pausedAt?.let { now - it } ?: 0)) / 1000).coerceAtLeast(0)
@@ -214,6 +216,8 @@ data class Workout(
     val cycleIndex: Int? = null,
     val note: String = "",
     val dayId: String? = null,
+    /** Effort ressenti de la séance (échelle CR-10, 1–10) : sa charge ressentie entre dans l'Effort du jour. */
+    val rpe: Int? = null,
 )
 
 // ----- Salles et réglages -----

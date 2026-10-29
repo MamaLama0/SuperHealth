@@ -147,7 +147,7 @@ private fun hypnogram(night: List<HealthRepository.SleepPhase>, w: Int, h: Int):
 }
 
 /**
- * Sommeil de la nuit : durée, score (montre qui le calcule), hypnogramme (phases si l'appareil les mesure), heures et
+ * Sommeil de la nuit : durée, Repos en mots, hypnogramme (phases si l'appareil les mesure), heures et
  * dette. Montre gérée ici ou appli via Health Connect.
  */
 class SleepWidget : GlanceAppWidget() {
@@ -157,8 +157,10 @@ class SleepWidget : GlanceAppWidget() {
         val today = LocalDate.now()
         val night = runCatching { Bridge.sleepNight(today) }.getOrNull().orEmpty()
         val debt = runCatching { Scores.sleepDebtOf(context, today) }.getOrNull()
-        val score = runCatching { Bridge.healthValue(context, Metric.SLEEP_SCORE, today) }.getOrNull()?.roundToInt()
         val asleep = night.filter { it.kind != ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60_000.0
+        // Repos en mots, comme à l'accueil (le nombre reste sur l'écran Sommeil)
+        val score = runCatching { Bridge.healthValue(context, Metric.SLEEP_SCORE, today) }.getOrNull()
+            ?.let { tr(Scores.restWord(it, asleep, runCatching { Scores.sleepHabits(context).needMin }.getOrDefault(Scores.sleepNeed())).label) }
         val hypno = hypnogram(night, WK.px(context, 240.dp), WK.px(context, 50.dp))
         val ring = WK.ring((asleep / Scores.sleepNeed()).toFloat(), HealthHues.Sleep, WK.px(context, 72.dp))
         provideContent {
@@ -183,7 +185,7 @@ class SleepWidget : GlanceAppWidget() {
                             WidgetValue(v, null, hue, 20)
                             if (score != null) {
                                 Spacer(GlanceModifier.defaultWeight())
-                                WidgetValue("$score", "/ 100", hue, if (size == WK.Size.LARGE) 20 else 16)
+                                WidgetValue(score, null, hue, if (size == WK.Size.LARGE) 18 else 14)
                             }
                         }
                         Spacer(GlanceModifier.defaultWeight())

@@ -158,7 +158,8 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                 Icon(Icons.Rounded.Search, null, tint = Mf.colors.textSecondary, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) {
-                    if (query.isEmpty()) Text(tr("Rechercher un aliment"), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodyLarge)
+                    if (query.isEmpty()) Text(tr("Rechercher un aliment"), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     BasicTextField(
                         query, { query = it; if (tab != SearchTab.ALL && it.isNotEmpty()) tab = SearchTab.ALL },
                         Modifier.fillMaxWidth().focusRequester(focus), singleLine = true,

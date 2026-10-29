@@ -15,6 +15,8 @@ object Routes {
         "update", "coach", "modules",
         // notification du rappel médication
         "meds",
+        // 1.8 : rappels et raccourcis du bien-être
+        "journal", "cycle", "breathe", "form", "checkin",
     )
     private val patterns = listOf(Regex("search/[01]/-1"), Regex("h/metric/[A-Z0-9_]{1,32}"), Regex("exercise/[A-Za-z0-9_-]{1,64}"))
 

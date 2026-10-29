@@ -453,6 +453,16 @@ private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
                 TextInput(tr("Ajouter"), fact, { fact = it.take(160) }, placeholder = tr("Ex. : genou gauche fragile"))
                 if (fact.isNotBlank()) PillButton(tr("Retenir"), Modifier.fillMaxWidth(), strong = false) { Coach.remember(fact); fact = "" }
             }
+            SectionLabel(tr("Données envoyées"))
+            MfCard(padding = PaddingValues(0.dp)) {
+                // le cycle n'est proposé qu'avec son suivi activé
+                Coach.Share.entries.filter { it != Coach.Share.CYCLE || sh.features.contains(app.superhealth.Feature.CYCLE.name) }.forEach { c ->
+                    val on = if (c.optIn) c.name in sh.coachShared else c.name !in sh.coachHidden
+                    SwitchRow(tr(c.label), if (c.optIn && !on) tr("Coupé tant que vous ne l'activez pas") else null, on) { v -> Coach.setShared(c, v) }
+                }
+            }
+            Text(tr("Moral et cycle ne partent que si vous les activez. Le détail : « Ce que voit le coach », en haut."), style = MaterialTheme.typography.bodySmall,
+                color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
             SectionLabel(tr("Modèle"))
             MfCard {
                 TextInput(tr("Modèle du coach (vide : celui de l'IA)"), sh.coachModel, { v -> SuperPrefs.update { it.copy(coachModel = v.trim()) } },

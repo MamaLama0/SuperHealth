@@ -134,6 +134,8 @@ object Bridge {
     /** Valeur santé du jour : montre gérée par SuperHealth, sinon dernière lecture Health Connect. */
     suspend fun healthValue(ctx: Context, metric: Metric, date: LocalDate): Double? {
         if (metric == Metric.STEPS) return steps(ctx, date)
+        // un seul score de sommeil pour toutes les montres : Repos, calculé d'après les phases ; celui de la montre en secours
+        if (metric == Metric.SLEEP_SCORE) return app.superhealth.health.data.Scores.restOf(ctx, date) ?: watchSleepScore(ctx, date)
         if (Watch.enabled && HealthRepository.isSupported(metric)) HealthRepository.dayValue(ctx, metric, date)?.let { return it }
         val hc = SuperPrefs.hc.value
         val d = date.toEpochDay()
@@ -148,8 +150,6 @@ object Bridge {
             Metric.VO2MAX -> hc.vo2max[d]
             Metric.DISTANCE -> hc.distanceKm[d]
             Metric.CALORIES -> hc.activeKcal[d]
-            // pas de score de la montre : Repos calculé d'après les phases de la nuit
-            Metric.SLEEP_SCORE -> app.superhealth.health.data.Scores.restOf(ctx, date)
             Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT, Metric.EFFORT,
             Metric.FITNESS_AGE -> HealthRepository.dayValue(ctx, metric, date)
             else -> null
@@ -187,7 +187,13 @@ object Bridge {
         night.any { it.kind == ActivityKind.LIGHT_SLEEP || it.kind == ActivityKind.DEEP_SLEEP || it.kind == ActivityKind.REM_SLEEP }
 
     /** D'où vient [metric] le jour [date] : la montre gérée ici, sinon l'appli qui l'a écrite dans Health Connect, ou la saisie. */
+    /** Score de sommeil calculé par la montre elle-même (Garmin, Huami…), affiché en second sur l'écran Sommeil. */
+    suspend fun watchSleepScore(ctx: Context, date: LocalDate): Double? =
+        if (Watch.enabled && HealthRepository.isSupported(Metric.SLEEP_SCORE)) HealthRepository.dayValue(ctx, Metric.SLEEP_SCORE, date) else null
+
     suspend fun dataSource(metric: Metric, date: LocalDate): app.superhealth.health.data.DataSource? {
+        // Repos vient de la nuit enregistrée : sa source est celle du sommeil
+        if (metric == Metric.SLEEP_SCORE) return dataSource(Metric.SLEEP, date)
         if (metric.manual) return app.superhealth.health.data.DataSource(app.superhealth.health.data.SourceKind.MANUAL)
         if (Watch.enabled && HealthRepository.isSupported(metric)) HealthRepository.sourceOf(metric, date)?.let { return it }
         return SuperPrefs.hc.value.origins[metric.name]

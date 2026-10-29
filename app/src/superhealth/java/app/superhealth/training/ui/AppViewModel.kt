@@ -123,6 +123,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         update { it.copy(session = e.fromProgram(p, day, cycle, it.history, it.settings, gym)) }
     }
 
+    /**
+     * Forme du jour au vert (ou ressenti au top) : séries de travail pas encore faites un cran plus lourd, selon le matériel
+     * de la salle, mêmes répétitions — seulement si ce cran fait au plus 5 % de la charge (un coup de pouce, pas un saut).
+     */
+    fun stepUpLoads() {
+        val e = engine ?: return
+        update { s ->
+            val sess = s.session ?: return@update s
+            val g = gym(sess.gymId)
+            s.copy(session = sess.copy(adjust = 1, exercises = sess.exercises.map { ex ->
+                val ladder = e.ladderFor(ex.exerciseId, g)
+                ex.copy(sets = ex.sets.map { set ->
+                    val w = set.weight ?: set.autoWeight
+                    if (set.type == app.superhealth.training.domain.SetType.WARMUP || set.done || w == null || w <= 0) return@map set
+                    val next = ladder.above(w)
+                    if (next != null && next - w <= 0.05 * w + 1e-9) set.copy(weight = next) else set
+                })
+            }))
+        }
+    }
+
     fun startCustom(w: CustomWorkout) {
         val e = engine ?: return
         update { it.copy(session = e.fromCustom(w, it.history, it.settings, gym(w.gymId) ?: activeGym())) }
@@ -333,7 +354,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val sess = s0.session ?: return
         val program = s0.programs.firstOrNull { it.id == sess.programId }
         val day = program?.days?.firstOrNull { it.id == sess.dayId }
-        planChange.value = if (program != null && day != null) PlanDiff.compute(day, sess).takeUnless { it.isEmpty }?.let { PlanChange(program.id, day, sess, it) } else null
+        planChange.value = if (program != null && day != null && sess.adjust == 0) PlanDiff.compute(day, sess).takeUnless { it.isEmpty }?.let { PlanChange(program.id, day, sess, it) } else null
         val w = e.finish(sess, System.currentTimeMillis(), gym(sess.gymId), program?.name, logAll)
         update { s ->
             val programs = if (program != null) s.programs.map { if (it.id == program.id) e.advance(it, sess.dayId) else it } else s.programs

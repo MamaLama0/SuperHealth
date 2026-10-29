@@ -160,7 +160,9 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     val s = st.session
     val completed by vm.completed.collectAsState()
     // fin de séance : la racine ouvre « Séance terminée » ; sinon (abandon) on revient simplement en arrière
-    if (s == null || db == null) { LaunchedEffect(Unit) { if (completed == null) nav.popBackStack() }; return }
+    // séance terminée ailleurs : l'écran se retire, seulement s'il est encore en haut de la pile (après « Abandonner », déjà
+    // dépilé, un second retour vidait la pile : page blanche et barre d'onglets en haut)
+    if (s == null || db == null) { LaunchedEffect(Unit) { if (completed == null && nav.currentBackStackEntry?.destination?.route == "session") nav.popBackStack() }; return }
     // Horloge de la séance : lue seulement par la barre du haut et la carte de repos (voir Ticking), pour ne pas
     // recomposer les pages d'exercices deux fois par seconde (saccades au passage d'un exercice à l'autre).
     val clock = remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -257,7 +259,13 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
         val left = s.exercises.sumOf { ex -> ex.sets.count { !it.done && it.type != SetType.WARMUP } }
         // CompleteWorkoutDialog : « Log All Sets » / « Log Only Completed Sets » quand des séries restent à cocher
         val fillable = s.exercises.sumOf { ex -> ex.sets.count { !it.done && (it.reps ?: 0) > 0 } }
-        if (left > 0 && fillable > 0) AlertDialog(onDismissRequest = { confirmFinish = false }, containerColor = Mf.colors.card,
+        // aucune série faite ni remplie : rien à enregistrer, le programme n'avance pas
+        if (fillable == 0 && s.exercises.none { ex -> ex.sets.any { it.done } }) AlertDialog(onDismissRequest = { confirmFinish = false }, containerColor = Mf.colors.card,
+            title = { Text(tr("Aucune série faite")) },
+            text = { Text(tr("Rien ne sera enregistré.")) },
+            confirmButton = { TextButton(onClick = { confirmFinish = false; vm.discardSession(); nav.popBackStack() }) { Text(tr("Fermer la séance"), color = Mf.colors.accent) } },
+            dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text(tr("Continuer"), color = Mf.colors.text) } })
+        else if (left > 0 && fillable > 0) AlertDialog(onDismissRequest = { confirmFinish = false }, containerColor = Mf.colors.card,
             title = { Text(tr("Terminer l'entraînement ?")) },
             text = { Text(trf("%1\$s série(s) de travail ne sont pas cochées.", left)) },
             confirmButton = {
@@ -823,12 +831,22 @@ private fun EndPage(s: Session, onAdd: () -> Unit, onFinish: () -> Unit) {
         Icon(if (allDone) Icons.Rounded.CheckCircle else Icons.Rounded.Flag, null, Modifier.size(64.dp),
             tint = if (allDone) app.superhealth.ui.theme.Base.Green else Mf.colors.textTertiary)
         Spacer(Modifier.height(16.dp))
-        Text(if (left == 0 && s.exercises.isNotEmpty()) tr("Tout est fait !") else tr("Fin de la séance"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(if (left > 0) trf("%1\$s série(s) restante(s)", left) else tr("Ajoutez un exercice ou terminez."), color = Mf.colors.textSecondary)
+        // séance encore vide : ajouter un exercice est l'action attendue, pas terminer
+        val empty = s.exercises.isEmpty()
+        Text(when { allDone -> tr("Tout est fait !"); empty -> tr("Séance vide"); else -> tr("Fin de la séance") },
+            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(when { left > 0 -> trf("%1\$s série(s) restante(s)", left); empty -> tr("Ajoutez un premier exercice."); else -> tr("Ajoutez un exercice ou terminez.") },
+            color = Mf.colors.textSecondary)
         Spacer(Modifier.height(20.dp))
-        PillButton(tr("Terminer la séance"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Flag, onClick = onFinish)
-        Spacer(Modifier.height(10.dp))
-        PillButton(tr("Ajouter des exercices"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Add, onClick = onAdd)
+        if (empty) {
+            PillButton(tr("Ajouter des exercices"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Add, onClick = onAdd)
+            Spacer(Modifier.height(10.dp))
+            PillButton(tr("Terminer la séance"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Flag, onClick = onFinish)
+        } else {
+            PillButton(tr("Terminer la séance"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Flag, onClick = onFinish)
+            Spacer(Modifier.height(10.dp))
+            PillButton(tr("Ajouter des exercices"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Add, onClick = onAdd)
+        }
     }
 }
 

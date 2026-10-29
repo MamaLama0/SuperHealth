@@ -28,6 +28,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
@@ -134,7 +139,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     val name = remember(nameTick) { app.superhealth.ui.userName() }
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Réglages"), onBack = { nav.popBackStack() })
+        // onglet de la barre (« + » au milieu) : pas de retour
+        ScreenTitle(tr("Réglages"), onBack = if (app.superhealth.ui.settingsIsTab(sh)) null else ({ nav.popBackStack() }))
         Column(Modifier.padding(horizontal = 16.dp)) {
             // Profil : la seule source de sexe, âge, taille et poids pour la nutrition, la musculation et la montre.
             MfCard(onClick = { nav.go("profile") }) {
@@ -181,6 +187,36 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
                 RowDivider(56.dp)
                 ModulesRow(nav)
+            }
+
+            // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
+            Group(tr("Bien-être")) {
+                fun toggle(f: app.superhealth.Feature, on: Boolean) = SuperPrefs.update { it.copy(features = if (on) it.features + f.name else it.features - f.name) }
+                IconSwitchRow(tr("Journal du moral"), if (!sh.has(app.superhealth.Feature.JOURNAL)) tr("Désactivé")
+                    else if (sh.morningCheck) tr("Humeur, habitudes et ressenti du matin") else tr("Humeur et habitudes"),
+                    Icons.Rounded.SentimentSatisfied, HealthHues.Mind, sh.has(app.superhealth.Feature.JOURNAL), onClick = { nav.go("journal") }) {
+                    toggle(app.superhealth.Feature.JOURNAL, it)
+                }
+                // cycle : proposé selon le sexe déclaré dans le profil (gardé s'il est déjà activé)
+                if (sh.has(app.superhealth.Feature.CYCLE) || app.superhealth.nutrition.NutriApp.repository.prefs.profile.collectAsState().value.sex ==
+                    app.superhealth.nutrition.domain.Sex.FEMALE) {
+                RowDivider(56.dp)
+                IconSwitchRow(tr("Cycle menstruel"), if (sh.has(app.superhealth.Feature.CYCLE)) tr("Règles et phases") else tr("Désactivé"),
+                    Icons.Rounded.CalendarMonth, app.superhealth.ui.wellbeing.CycleHue, sh.has(app.superhealth.Feature.CYCLE), onClick = { nav.go("cycle") }) { on ->
+                    toggle(app.superhealth.Feature.CYCLE, on)
+                    // la carte arrive avec la fonction (retirable ensuite dans Cartes)
+                    if (on) SuperPrefs.update { s -> if (app.superhealth.DashCard.CYCLE in s.dashboard) s else s.copy(dashboard = s.dashboard + app.superhealth.DashCard.CYCLE,
+                        plus = (s.plus + app.superhealth.PlusAction.PERIOD.name).distinct()) }
+                }
+                }
+                RowDivider(56.dp)
+                SettingRow(tr("Sommeil"), subtitle = tr("Fenêtre d'endormissement, comparaison aux habitudes"), icon = Icons.Rounded.Bedtime, hue = HealthHues.Sleep) {
+                    nav.go("settings/sleep")
+                }
+                RowDivider(56.dp)
+                SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Sleep) {
+                    nav.go("settings/reminders")
+                }
             }
 
             Group(tr("Général")) {
@@ -283,6 +319,16 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         Spacer(Modifier.height(12.dp))
         MfCard {
+            // place du « + » dans la barre du bas (au milieu, Réglages devient un onglet si le nombre d'onglets le permet)
+            Label(tr("Bouton +"))
+            val sh by SuperPrefs.settings.collectAsState()
+            val sides = listOf("LEFT", "CENTER", "RIGHT")
+            ChipChoice(sides, sh.plusSide.takeIf { it in sides } ?: "RIGHT", { tr(when (it) { "LEFT" -> "Gauche"; "CENTER" -> "Milieu"; else -> "Droite" }) }) { v ->
+                SuperPrefs.update { it.copy(plusSide = v) }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        MfCard {
             Label(tr("Langue"))
             ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { it.label }) { l -> set { it.copy(language = l) } }
         }
@@ -294,6 +340,23 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Réglages > Sommeil : les ajouts de la 2.0, chacun désactivable. */
+@Composable
+fun SleepSettingsScreen(nav: NavHostController) {
+    val sh by SuperPrefs.settings.collectAsState()
+    DetailScaffold(tr("Sommeil"), onBack = { nav.popBackStack() }) {
+        app.superhealth.nutrition.ui.components.GroupCard {
+            app.superhealth.nutrition.ui.components.SwitchRow(tr("Fenêtre d'endormissement"), tr("Sur le Coucher conseillé : l'heure où vous vous endormez le mieux"), sh.sleepGate) { v ->
+                SuperPrefs.update { it.copy(sleepGate = v) }
+            }
+            RowDivider(16.dp)
+            app.superhealth.nutrition.ui.components.SwitchRow(tr("Comparaison aux habitudes"), tr("Sur l'écran Sommeil : durée, efficacité, sommeil réparateur et éveils"), sh.sleepCompare) { v ->
+                SuperPrefs.update { it.copy(sleepCompare = v) }
+            }
+        }
     }
 }
 
