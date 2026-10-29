@@ -86,7 +86,7 @@ enum class Metric(
     SLEEP("Sommeil", null, Icons.Rounded.Bedtime, Aggregation.AVERAGE, ChartKind.BARS, Category.SLEEP,
         about = "Temps passé endormi la nuit. La plupart des adultes ont besoin de 7 à 9 h."),
     SLEEP_SCORE("Score de sommeil", null, Icons.Rounded.Bedtime, Aggregation.AVERAGE, ChartKind.DOTS, Category.SLEEP,
-        about = "Qualité de la nuit (0–100) : celle de la montre, sinon calculée à partir de la durée et des phases."),
+        about = "Repos (0–100), le même pour toutes les montres : durée face à votre besoin, efficacité, sommeil réparateur et régularité."),
     READINESS("Disposition", null, Icons.Rounded.Speed, Aggregation.LAST, ChartKind.DOTS, Category.FITNESS,
         about = "Disposition à l'entraînement calculée par la montre (sommeil, récupération, charge récente)."),
     BODY_ENERGY("Énergie corporelle", null, Icons.Rounded.Bolt, Aggregation.LAST, ChartKind.LINE, Category.MIND,

@@ -415,7 +415,12 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             else svm.pendingRoute.value = "training:wizard" // base d'exercices pas encore prête : l'assistant prend le relais
         }
         Watch.setEnabled(wantsHealth && watch != WatchChoice.NONE)
-        SuperPrefs.update { it.copy(onboarded = true, healthConnect = health, features = uses.toSet()) }
+        SuperPrefs.update {
+            val cyc = app.superhealth.Feature.CYCLE.name in uses && app.superhealth.DashCard.CYCLE !in it.dashboard
+            it.copy(onboarded = true, healthConnect = health, features = uses.toSet(),
+                dashboard = if (cyc) it.dashboard + app.superhealth.DashCard.CYCLE else it.dashboard,
+                plus = if (cyc) (it.plus + app.superhealth.PlusAction.PERIOD.name).distinct() else it.plus)
+        }
         vm.launch {
             weighIns.upsert(WeighInEntity(today, weightKg, bodyFat?.toDouble()))
             saveCheckIn(ci)
@@ -477,7 +482,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                 when (st) {
                     Step.WELCOME -> Welcome(settings.accent)
                     Step.USES -> Page(st, tr("Que voulez-vous suivre ?"), tr("Le reste se masque. Tout se réactive dans Réglages > Fonctions.")) {
-                        app.superhealth.Feature.entries.forEachIndexed { i, f ->
+                        // le cycle se propose avec le sexe déclaré (page « Votre corps »)
+                        app.superhealth.Feature.entries.filter { it != app.superhealth.Feature.CYCLE }.forEachIndexed { i, f ->
                             Staggered(i) {
                                 val on = f.name in uses
                                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(18.dp))
@@ -527,7 +533,17 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     }
                     Step.BODY -> Page(st, tr("Votre corps"), tr("Pour estimer votre métabolisme de base.")) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            ChipChoice(listOf(Sex.MALE, Sex.FEMALE), sex, { if (it == Sex.MALE) tr("Homme") else tr("Femme") }) { sex = it }
+                            ChipChoice(listOf(Sex.MALE, Sex.FEMALE), sex, { if (it == Sex.MALE) tr("Homme") else tr("Femme") }) {
+                                sex = it
+                                if (it == Sex.MALE) uses = uses - app.superhealth.Feature.CYCLE.name
+                            }
+                        }
+                        if (mode == OnboardingMode.FULL && sex == Sex.FEMALE) {
+                            val cyc = app.superhealth.Feature.CYCLE.name in uses
+                            Spacer(Modifier.height(10.dp))
+                            app.superhealth.nutrition.ui.components.SwitchRow(tr("Suivre mon cycle"), tr("Règles, phases, et Charge comparée à votre phase"), cyc) {
+                                uses = if (it) uses + app.superhealth.Feature.CYCLE.name else uses - app.superhealth.Feature.CYCLE.name
+                            }
                         }
                         Spacer(Modifier.height(12.dp))
                         // année de naissance et taille côte à côte : une seule page

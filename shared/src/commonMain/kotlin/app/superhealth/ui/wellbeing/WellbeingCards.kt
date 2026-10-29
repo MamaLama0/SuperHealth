@@ -128,6 +128,12 @@ fun JournalCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modif
         CardSize.W -> CompactStrip(c, d, modifier)
         CardSize.L -> Tile(c, if (today == null) tr("Comment ça va ?") else tr("Moral du jour"), modifier, onClick = open) {
             MoodPicker(today?.mood) { Journal.setMood(ctx, it) }
+            // test du Labo en cours : la consigne du jour, une ligne
+            val exps by app.superhealth.wellbeing.Labo.experiments.collectAsState()
+            remember(exps) { app.superhealth.wellbeing.Labo.current() }?.let { e ->
+                Spacer(Modifier.height(6.dp))
+                Text(laboToday(e), style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.HealthHues.Mind.onContainer(), maxLines = 1)
+            }
             if (today != null && today.tags.isNotEmpty()) {
                 Spacer(Modifier.height(6.dp))
                 Text(today.tags.mapNotNull { n -> Journal.Tag.entries.firstOrNull { it.name == n }?.let { tr(it.label) } }.joinToString(" · "),
@@ -169,7 +175,7 @@ fun FormCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifier
     val r = rememberForm()
     val open: () -> Unit = { nav.go("form") }
     val advice = r as? Form.Advice
-    val d = CompactData(advice?.verdict?.short?.let(::tr) ?: "—", null, tr("Forme"), advice?.let { a -> (a.signals.sumOf { it.level } + 4) / 8f }, onClick = open)
+    val d = CompactData(advice?.verdict?.short?.let(::tr) ?: "—", null, tr("Forme"), advice?.let { it.score / 100f }, onClick = open)
     when (size) {
         CardSize.S -> CompactBubble(c, d, modifier)
         CardSize.M -> CompactMedium(c, d, modifier)
@@ -206,6 +212,7 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
             val col = r.verdict.color()
             Text(tr(r.verdict.label), style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold, color = col.onContainer())
+            r.cause?.let { Text(tr(it.label), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
             Spacer(Modifier.height(8.dp))
             r.signals.forEach { sg ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -225,16 +232,21 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
                     if (program != null) { Spacer(Modifier.height(8.dp)); PillButton(tr("Séance plus dure")) { startAdjusted(vm, nav, +1) } }
                 }
                 Form.Verdict.EASY -> {
-                    Text(if (program != null) tr("Un signal est bas : une série de moins sur les gros exercices.") else tr("Un signal est bas : restez en endurance facile."),
+                    Text(if (program != null) tr("Une série de moins sur les gros exercices.") else tr("Restez en endurance facile."),
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     if (program != null) { Spacer(Modifier.height(8.dp)); PillButton(tr("Séance allégée"), strong = false) { startAdjusted(vm, nav, -1) } }
                 }
                 Form.Verdict.REST -> {
-                    Text(tr("Plusieurs signaux sont bas : marche, mobilité ou repos."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    Text(tr("Marche, mobilité ou repos."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     Spacer(Modifier.height(8.dp))
                     PillButton(tr("Respirer 5 min"), strong = false) { nav.go("breathe") }
                 }
                 Form.Verdict.NORMAL -> Text(tr("Faites la séance prévue."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            }
+            // Forme adaptative : les poids ont appris de votre ressenti
+            if (!compact && r.learned > 0) {
+                Spacer(Modifier.height(6.dp))
+                Text(trf("Ajustée à votre ressenti (%1\$s matins)", r.learned), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
             }
         }
     }

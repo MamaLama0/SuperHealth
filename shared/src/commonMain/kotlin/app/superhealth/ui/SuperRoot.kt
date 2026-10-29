@@ -228,6 +228,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }
             composable("breathe") { app.superhealth.ui.wellbeing.BreatheScreen(nav) }
             composable("checkin") { app.superhealth.ui.wellbeing.CheckinScreen(nav) }
+            composable("labo") { app.superhealth.ui.wellbeing.LaboScreen(nav) }
             composable("settings/reminders") { app.superhealth.ui.wellbeing.RemindersScreen(vm, nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }

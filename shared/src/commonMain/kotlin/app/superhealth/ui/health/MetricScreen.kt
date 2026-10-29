@@ -127,7 +127,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
     val source by produceState<DataSource?>(null, metric, lastDay, refresh) {
         value = lastDay?.let { runCatching { Bridge.dataSource(metric, it) }.getOrNull() }
     }
-    // Sommeil : le score de chaque nuit de la période, quand une montre le calcule.
+    // Sommeil : le Repos de chaque nuit de la période (phases de la montre ou de Health Connect).
     val scores by produceState(emptyList<Pair<LocalDate, Double>>(), metric, span, offset, refresh) {
         value = if (metric == Metric.SLEEP && Bridge.hasSource(Metric.SLEEP_SCORE)) coroutineScope {
             generateSequence(p.from) { it.plusDays(1) }.takeWhile { !it.isAfter(minOf(p.to, today)) }.toList()
@@ -340,6 +340,10 @@ private fun SleepScoreCard(scores: List<Pair<LocalDate, Double>>, span: Span, sr
                     style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
         }
         if (span != Span.DAY) Text(relativeDay(day), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        // score de SuperHealth (Repos) pour toutes les montres ; celui que la montre calcule elle-même, en second
+        val ctx = LocalContext.current
+        val watch by produceState<Double?>(null, day) { value = runCatching { Bridge.watchSleepScore(ctx, day) }.getOrNull() }
+        watch?.let { Text(trf("Score de la montre : %1\$s", it.roundToInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
         src?.let { SourceLine(it) }
     }
 }

@@ -63,12 +63,14 @@ import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.go
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import app.superhealth.wellbeing.Bedtime
 import app.superhealth.wellbeing.Checkin
 import app.superhealth.wellbeing.Cycle
 import app.superhealth.wellbeing.Journal
+import app.superhealth.wellbeing.Labo
 import app.superhealth.wellbeing.Reminders
 import androidx.compose.runtime.withFrameMillis
 import app.superhealth.platform.LocalDate
@@ -164,6 +166,88 @@ fun JournalScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         Text(tr("Comparaison de vos propres jours, pas un avis médical."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+
+        GroupHeader(tr("Labo"))
+        val exps by Labo.experiments.collectAsState()
+        val cur = remember(exps) { Labo.current() }
+        GroupCard {
+            if (cur != null) SettingRow(trf("Test : %1\$s", tr(laboTag(cur).label)), subtitle = laboToday(cur), onClick = { nav.go("labo") })
+            else SettingRow(tr("Tester une habitude"), subtitle = tr("4 semaines, avec et sans tirés au sort"), onClick = { nav.go("labo") })
+        }
+    }
+}
+
+internal fun laboTag(e: Labo.Experiment): Journal.Tag = Journal.Tag.entries.first { it.name == e.tag }
+
+/** Consigne du jour d'un test en cours. */
+internal fun laboToday(e: Labo.Experiment): String {
+    val day = LocalDate.now().toEpochDay()
+    val label = tr(laboTag(e).label).lowercase(app.superhealth.ui.Lang.locale)
+    return if (e.assigned(day) == true) trf("Aujourd'hui : avec (%1\$s)", label) else trf("Aujourd'hui : sans (%1\$s)", label)
+}
+
+// ---- Labo -----------------------------------------------------------------------------------------------------------
+
+@Composable
+fun LaboScreen(nav: NavHostController) {
+    val ctx = LocalContext.current
+    val exps by Labo.experiments.collectAsState()
+    val journal by Journal.days.collectAsState()
+    val cur = remember(exps) { Labo.current() }
+    val last = remember(exps) { Labo.last() }
+    val shown = cur ?: last
+    var result by remember { mutableStateOf<Labo.Result?>(null) }
+    LaunchedEffect(shown, journal) { result = shown?.let { runCatching { Labo.result(ctx, it) }.getOrNull() } }
+    DetailScaffold(tr("Labo"), onBack = { nav.popBackStack() }) {
+        if (cur != null) {
+            val day = (LocalDate.now().toEpochDay() - cur.start + 1).toInt()
+            GroupCard {
+                Column(Modifier.padding(16.dp)) {
+                    Text(laboToday(cur), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = HealthHues.Mind.onContainer())
+                    Spacer(Modifier.height(4.dp))
+                    Text(trf("Jour %1\$s sur %2\$s · %3\$s jours suivis", day, cur.plan.size, result?.followed ?: 0),
+                        style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+                    Spacer(Modifier.height(6.dp))
+                    Text(tr("Cochez-la ou non chaque soir dans le journal. Résultat à la fin du test."), style = MaterialTheme.typography.bodySmall,
+                        color = Mf.colors.textSecondary)
+                }
+            }
+            GroupCard { SettingRow(tr("Arrêter le test"), danger = true, onClick = { Labo.stop() }) }
+        } else {
+            last?.let { e ->
+                GroupHeader(trf("Résultat : %1\$s", tr(laboTag(e).label)))
+                GroupCard {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val r = result
+                        when {
+                            r == null -> Text(tr("Calcul…"), color = Mf.colors.textSecondary)
+                            r.effects.isEmpty() -> Text(tr("Pas assez de jours suivis : il en faut 5 avec et 5 sans."),
+                                style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+                            else -> r.effects.forEach { f ->
+                                val d = f.diff.delta
+                                val v = if (f.outcome == Labo.Outcome.FEEL) String.format(app.superhealth.ui.Lang.locale, "%+.1f", d).replace("-", "−")
+                                    else (if (d.roundToInt() >= 0) "+" else "−") + abs(d.roundToInt())
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(tr(f.outcome.label), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                    Text(if (f.net) trf("%1\$s · effet net", v) else tr("Pas d'effet net"), style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (f.net) FontWeight.SemiBold else FontWeight.Normal)
+                                }
+                            }
+                        }
+                        r?.let { Text(trf("%1\$s jours suivis sur %2\$s", it.followed, it.elapsed), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
+                    }
+                }
+            }
+            GroupHeader(tr("Tester une habitude"))
+            GroupCard {
+                Labo.TESTABLE.forEachIndexed { i, t ->
+                    if (i > 0) RowDivider()
+                    SettingRow(tr(t.label), onClick = { Labo.start(t) })
+                }
+            }
+            Text(tr("Pendant 4 semaines, l'appli tire au sort les jours avec et sans. Le lendemain, Repos, Charge et ressenti disent si l'habitude change quelque chose pour vous."),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+        }
     }
 }
 
@@ -174,7 +258,7 @@ fun FormScreen(vm: SuperViewModel, nav: NavHostController) {
     val r = rememberForm()
     DetailScaffold(tr("Forme du jour"), onBack = { nav.popBackStack() }) {
         GroupCard { Column(Modifier.padding(16.dp)) { FormBody(r, vm, nav, compact = false) } }
-        Text(tr("Recoupe la Charge du matin, la nuit rapportée à votre besoin, l'entraînement des 4 dernières semaines (rapport 7 j / 28 j) et votre moral. Sans les quatre, aucun conseil."),
+        Text(tr("Score adaptatif : VFC, pouls au repos, Repos, entraînement (7 j / 28 j), moral et ressenti, comparés à votre normale. Dès 30 matins de ressenti, les poids s'ajustent à vous. Sans Charge, sommeil, entraînement et moral, aucun conseil."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
     }
 }

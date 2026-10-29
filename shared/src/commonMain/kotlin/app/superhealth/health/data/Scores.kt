@@ -291,6 +291,19 @@ object Scores {
             Bridge.healthValue(ctx, Metric.RESPIRATORY_RATE, d), Bridge.healthValue(ctx, Metric.TEMPERATURE, d))
     }
 
+    /**
+     * Charge de chacun des [days] jours jusqu'à [date], nuits lues une seule fois (apprentissage de la Forme adaptative) ;
+     * même calcul que [chargeOf], jour par jour.
+     */
+    suspend fun chargeSeries(ctx: Context, date: LocalDate, days: Int): List<Charge?> {
+        if (!Bridge.hasSource(Metric.HRV) && !Bridge.hasSource(Metric.RESTING_HR)) return List(days) { null }
+        val need = sleepHabits(ctx).needMin
+        val dates = ((days + 66).toLong() downTo 0L).map { date.minusDays(it) }
+        val nights = dates.map { night(ctx, it, need) }
+        val ph = phases(dates)
+        return (67 until dates.size).map { i -> charge(nights.subList(i - 67, i), nights[i], ph?.subList(i - 67, i + 1)) }
+    }
+
     suspend fun chargeOf(ctx: Context, date: LocalDate): Charge? {
         if (chargeCache.containsKey(date) && date.isBefore(LocalDate.now())) return chargeCache[date]
         if (!Bridge.hasSource(Metric.HRV) && !Bridge.hasSource(Metric.RESTING_HR)) return null
@@ -383,6 +396,20 @@ object Scores {
         val restorative = min(100.0, (deepMin + remMin) / asleepMin / 0.50 * 100) * deepFactor
         val regular = ((consistency ?: 0.5) * 100).coerceIn(0.0, 100.0)
         return 0.50 * duration + 0.20 * efficiency + 0.20 * restorative + 0.10 * regular
+    }
+
+    /**
+     * Repos en mots, pour l'accueil et les widgets (le nombre reste sur l'écran Sommeil) : un score chiffré bas vu au
+     * réveil dégrade la journée même quand il est faux (Gavriloff et al. 2018). Courte : sous 85 % du besoin et sous 75 ;
+     * Reposante : 75 et plus ; Correcte : 55 et plus ; Agitée sinon (assez longue, mais éveils ou peu de sommeil réparateur).
+     */
+    enum class RestWord(val label: String) { RESTFUL("Reposante"), FAIR("Correcte"), SHORT("Courte"), RESTLESS("Agitée") }
+
+    fun restWord(score: Double, asleepMin: Double, needMin: Double): RestWord = when {
+        asleepMin < 0.85 * needMin && score < 75 -> RestWord.SHORT
+        score >= 75 -> RestWord.RESTFUL
+        score >= 55 -> RestWord.FAIR
+        else -> RestWord.RESTLESS
     }
 
     /** Besoin de sommeil personnel (min) et régularité (SRI des 2 dernières semaines ramené à 0–1), relus une fois par jour. */

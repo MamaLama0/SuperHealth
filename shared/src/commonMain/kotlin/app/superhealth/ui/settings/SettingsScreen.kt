@@ -186,6 +186,9 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Ressenti du matin"), if (sh.morningCheck) tr("Avant les scores") else tr("Désactivé"),
                     Icons.Rounded.WbSunny, HealthHues.Mind, sh.morningCheck) { on -> SuperPrefs.update { it.copy(morningCheck = on) } }
+                // cycle : proposé selon le sexe déclaré dans le profil (gardé s'il est déjà activé)
+                if (sh.has(app.superhealth.Feature.CYCLE) || app.superhealth.nutrition.NutriApp.repository.prefs.profile.collectAsState().value.sex ==
+                    app.superhealth.nutrition.domain.Sex.FEMALE) {
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Cycle menstruel"), if (sh.has(app.superhealth.Feature.CYCLE)) tr("Règles et phases") else tr("Désactivé"),
                     Icons.Rounded.CalendarMonth, app.superhealth.ui.wellbeing.CycleHue, sh.has(app.superhealth.Feature.CYCLE), onClick = { nav.go("cycle") }) { on ->
@@ -193,6 +196,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     // la carte arrive avec la fonction (retirable ensuite dans Cartes)
                     if (on) SuperPrefs.update { s -> if (app.superhealth.DashCard.CYCLE in s.dashboard) s else s.copy(dashboard = s.dashboard + app.superhealth.DashCard.CYCLE,
                         plus = (s.plus + app.superhealth.PlusAction.PERIOD.name).distinct()) }
+                }
                 }
                 RowDivider(56.dp)
                 SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Sleep) {
