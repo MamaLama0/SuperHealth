@@ -53,6 +53,8 @@ import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.formatDuration
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
 import app.superhealth.ui.localDate
 import app.superhealth.ui.relativeDay
 import app.superhealth.ui.theme.HealthHues
@@ -119,21 +121,92 @@ fun openActivity(ctx: Context, nav: NavHostController, a: Bridge.Activity) {
     }
 }
 
-/** Onglet Activités, sous la musculation : course, marche, randonnée… de la montre et de Health Connect. */
+/** Activités lues pour l'onglet : [strength] garde la musculation, [health] les séances de la montre et de Health Connect. */
+private suspend fun tabActivities(fromMs: Long, strength: Boolean, health: Boolean): List<Bridge.Activity> =
+    runCatching { Bridge.activities(fromMs) }.getOrDefault(emptyList()).filter { a ->
+        val gym = a.source == Bridge.Source.GYM || a.kind == Bridge.Kind.STRENGTH
+        if (gym) strength && (a.source == Bridge.Source.GYM || health) else health
+    }
+
+/**
+ * Semaine de l'onglet Activités : nombre de séances, durée et distance de toutes les activités, et les sept jours en
+ * pastilles de la couleur de l'activité la plus longue du jour. Le toucher ouvre les performances.
+ */
 @Composable
-fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
+fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean) {
+    val refresh by vm.refresh.collectAsState()
+    val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
+    val sh by vm.settings.collectAsState()
+    val devices by vm.devices.collectAsState()
+    val today = LocalDate.now()
+    val start = app.superhealth.training.domain.Analytics.weekStart(today)
+    val history by vm.training.state.collectAsState()
+    val list by produceState(emptyList<Bridge.Activity>(), refresh, imported, history.history.size) {
+        value = tabActivities(start.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), strength, health)
+    }
+    val route = when {
+        health && sh.watchModule && devices.isNotEmpty() -> "h/performance"
+        strength -> "t/insights"
+        else -> null
+    }
+    val minutes = list.sumOf { it.minutes }
+    val dist = list.sumOf { it.distanceM ?: 0.0 } / 1000
+    val byDay = list.groupBy { localDate(it.start) }.mapValues { (_, l) -> l.maxBy { it.minutes } }
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+        .then(if (route != null) Modifier.clickable { nav.navigate(route) } else Modifier).padding(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Cette semaine"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+            if (route != null) {
+                Text(tr("Performances"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(18.dp), tint = Mf.colors.accent)
+            }
+        }
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 2.dp)) {
+            Text("${list.size}", style = MaterialTheme.typography.headlineMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                modifier = Modifier.alignByBaseline())
+            Text(" " + (if (list.size > 1) tr("activités") else tr("activité")), style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.alignByBaseline())
+            Text(listOfNotNull(minutes.takeIf { it > 0 }?.let { formatDuration(it.toDouble()) }, dist.takeIf { it >= 0.1 }?.let { km(it * 1000) + " km" })
+                .joinToString(" · ", prefix = if (minutes > 0) "  ·  " else ""), style = MaterialTheme.typography.bodyMedium,
+                color = Mf.colors.textSecondary, maxLines = 1, modifier = Modifier.alignByBaseline())
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth()) {
+            (0L..6L).forEach { i ->
+                val d = start.plusDays(i)
+                val a = byDay[d]
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val hue = a?.kind?.hue()
+                    Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(hue ?: Mf.colors.chip)
+                        .then(if (d == today && a == null) Modifier.border(1.5.dp, Mf.colors.accent, androidx.compose.foundation.shape.CircleShape) else Modifier),
+                        contentAlignment = Alignment.Center) {
+                        if (a != null) Icon(a.kind.icon(), null, Modifier.size(17.dp), tint = Color.White)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(app.superhealth.ui.dayLetter(d), style = MaterialTheme.typography.labelSmall,
+                        color = if (d == today) Mf.colors.text else Mf.colors.textSecondary)
+                }
+            }
+        }
+    }
+}
+
+/** Activités récentes : musculation et cardio dans une seule liste, la plus récente en haut. */
+@Composable
+fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean) {
     val ctx = LocalContext.current
     val refresh by vm.refresh.collectAsState()
     val sh by vm.settings.collectAsState()
     val devices by vm.devices.collectAsState()
     val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
-    val list by produceState(emptyList<Bridge.Activity>(), refresh, sh.watchModule, imported) {
-        // Les dernières, quel que soit leur âge (historique rapatrié de la montre, pause hivernale…).
-        value = runCatching { Bridge.activities(0L) }.getOrDefault(emptyList())
-            .filter { it.source != Bridge.Source.GYM && it.kind != Bridge.Kind.STRENGTH } // la musculation a sa propre section
+    val history by vm.training.state.collectAsState()
+    val list by produceState(emptyList<Bridge.Activity>(), refresh, sh.watchModule, imported, history.history.size) {
+        // les dernières, quel que soit leur âge (historique rapatrié de la montre, pause hivernale…)
+        value = tabActivities(0L, strength, health)
     }
-    SectionLabel(tr("Cardio et plein air")) {
-        if (list.isNotEmpty()) Text(tr("Tout voir"), Modifier.clickable { nav.navigate("h/activities") }, color = Mf.colors.accent,
+    SectionLabel(tr("Récentes")) {
+        if (list.isNotEmpty()) Text(tr("Tout voir"), Modifier.clickable { nav.navigate(if (health) "h/activities" else "history") }, color = Mf.colors.accent,
             style = MaterialTheme.typography.labelLarge)
     }
     if (list.isEmpty()) MfCard {
@@ -141,6 +214,7 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
             Icon(Icons.Rounded.Watch, null, Modifier.size(28.dp), tint = Mf.colors.accent)
             Spacer(Modifier.width(12.dp))
             Text(when {
+                !health -> tr("Vos séances terminées apparaîtront ici.")
                 sh.watchModule && devices.isNotEmpty() -> tr("Lancez une activité sur la montre : elle apparaîtra ici après synchronisation.")
                 sh.healthConnect -> tr("Les activités de vos autres apps (Apple Santé) apparaîtront ici.")
                 else -> tr("Associez une montre ou Apple Santé pour retrouver vos activités ici.")
@@ -152,9 +226,17 @@ fun ColumnScope.OtherActivities(vm: SuperViewModel, nav: NavHostController) {
             ActivityRow(a) { openActivity(ctx, nav, a) }
         }
     }
-    if (sh.watchModule && devices.isNotEmpty()) PerformanceEntry(nav)
-    WatchHistoryCard(vm)
-    ImportActivitiesCard(vm, nav)
+}
+
+/** Réglages > Données : récupérer l'historique de la montre et importer des fichiers d'activités. */
+@Composable
+fun ActivityImportScreen(vm: SuperViewModel, nav: NavHostController) {
+    DetailScaffold(tr("Import d'activités"), onBack = { nav.popBackStack() }) {
+        Text(tr("Retrouvez vos anciennes séances : elles rejoignent l'onglet Activités, les records et la charge d'entraînement."),
+            style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        WatchHistoryCard(vm)
+        ImportActivitiesCard(vm, nav)
+    }
 }
 
 /** Rapatrie les activités gardées en mémoire par une montre Garmin (après une réinitialisation ou un nouvel appairage). */
@@ -195,26 +277,6 @@ fun ColumnScope.WatchHistoryCard(vm: SuperViewModel) {
             }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             if (p != null && p.second > 0) androidx.compose.material3.LinearProgressIndicator(progress = { p.first.toFloat() / p.second },
                 Modifier.fillMaxWidth().padding(top = 6.dp), color = HealthHues.Fitness, trackColor = HealthHues.Fitness.container())
-        }
-        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
-    }
-}
-
-/** Accès aux performances (records, récupération, charge, volume). */
-@Composable
-fun ColumnScope.PerformanceEntry(nav: NavHostController) {
-    Spacer(Modifier.height(10.dp))
-    val hue = HealthHues.Mind
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius))
-        .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(hue.container(1.4f), HealthHues.Fitness.container(1.1f))))
-        .clickable { nav.navigate("h/performance") }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Mf.colors.card), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(22.dp), tint = hue)
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(tr("Performances"), style = MaterialTheme.typography.bodyLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-            Text(tr("Records, récupération, charge et volume"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
     }

@@ -141,7 +141,7 @@ object BodyAlert {
             val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: Bridge.healthValue(ctx, Metric.RESTING_HR, eve)
             if (rest != null) {
                 val hr = (Bridge.minuteHeart(eve) + Bridge.minuteHeart(date)).filter { it.first * 1000 in (start - 3 * 3_600_000L) until start }
-                val max = Scores.hrMax(age(), hr.map { it.second })
+                val max = Scores.hrMax(age(), hr.map { it.second }, runCatching { app.superhealth.health.data.ActivityUser().gender == app.superhealth.health.data.ActivityUser.GENDER_FEMALE }.getOrDefault(false))
                 if (hr.count { it.second >= rest + 0.6 * (max - rest) } >= 10) out += Cause.LATE
             }
             // réveils : au moins 45 min éveillé ou 300 pas dans les heures entières de la nuit

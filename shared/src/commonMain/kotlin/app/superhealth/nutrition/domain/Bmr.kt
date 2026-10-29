@@ -41,14 +41,51 @@ object Bmr {
     /** % masse grasse par défaut quand aucun n'est connu : 25 % (homme) / 35 % (femme) (fournisseur 0x13c41b0). */
     fun defaultBodyFat(sex: Sex) = if (sex == Sex.MALE) 25.0 else 35.0
 
-    /** Masse maigre (0x13c4010) ; 65 kg sans aucun poids. */
-    fun leanMassOrDefault(weightKg: Double?, bodyFatPct: Double?, sex: Sex) =
-        if (weightKg == null) 65.0 else leanMass(weightKg, bodyFatPct ?: defaultBodyFat(sex))
+    /**
+     * CUN-BAE (Gómez-Ambrosi et al. 2012, Diabetes Care 35:383) : % de masse grasse estimé par l'IMC, l'âge et le sexe ;
+     * validé contre la pléthysmographie chez 6 510 adultes de 18 à 80 ans, IMC normal à obésité sévère (r = 0,89).
+     */
+    fun cunBae(sex: Sex, ageYears: Int, bmi: Double): Double {
+        val f = if (sex == Sex.FEMALE) 1.0 else 0.0
+        val a = ageYears.toDouble()
+        return -44.988 + 0.503 * a + 10.689 * f + 3.172 * bmi - 0.026 * bmi * bmi + 0.181 * bmi * f - 0.02 * bmi * a -
+            0.005 * bmi * bmi * f + 0.00021 * bmi * bmi * a
+    }
+
+    /**
+     * % masse grasse sans mesure (règle SuperHealth) : le défaut de MacroFactor (25 / 35 %), relevé par CUN-BAE quand
+     * l'IMC le dit plus haut. En obésité sévère, 25 % surestimait la masse maigre de 30 à 40 kg, donc les protéines.
+     */
+    fun estimatedBodyFat(sex: Sex, ageYears: Int?, weightKg: Double?, heightCm: Double?): Double {
+        if (ageYears == null || weightKg == null || heightCm == null || heightCm < 100) return defaultBodyFat(sex)
+        val bmi = weightKg / (heightCm / 100).let { it * it }
+        return max(defaultBodyFat(sex), min(cunBae(sex, ageYears.coerceIn(18, 90), bmi), 60.0))
+    }
+
+    /**
+     * Mifflin-St Jeor (1990). L'équation la mieux validée en obésité, sévère comprise (revue systématique de Madden et al.
+     * 2016, J Hum Nutr Diet 29:458 ; 4 247 patients d'IMC moyen 44 chez Bedogni et al. 2018, Front Endocrinol 9:367).
+     */
+    fun mifflin(sex: Sex, weightKg: Double, heightCm: Double, ageYears: Int) =
+        10 * weightKg + 6.25 * heightCm - 5 * ageYears + if (sex == Sex.MALE) 5 else -161
+
+    /** IMC à partir duquel, sans masse grasse mesurée, le métabolisme automatique passe à Mifflin-St Jeor. */
+    const val MIFFLIN_BMI = 30.0
+
+    /** Masse maigre (0x13c4010) ; 65 kg sans aucun poids. Sans masse grasse connue : [estimatedBodyFat]. */
+    fun leanMassOrDefault(weightKg: Double?, bodyFatPct: Double?, sex: Sex, heightCm: Double? = null, ageYears: Int? = null) =
+        if (weightKg == null) 65.0 else leanMass(weightKg, bodyFatPct ?: estimatedBodyFat(sex, ageYears, weightKg, heightCm))
 
     fun bmr(profile: Profile, weightKg: Double, bodyFatPct: Double?, ageYears: Int): Double {
-        val bf = bodyFatPct ?: profile.bodyFatPct ?: defaultBodyFat(profile.sex)
+        val measured = bodyFatPct ?: profile.bodyFatPct
+        val bf = measured ?: estimatedBodyFat(profile.sex, ageYears, weightKg, profile.heightCm)
         val lbm = leanMass(weightKg, bf)
         val factor = adaptationFactor(profile.weightChange, profile.lifetimeWeight)
+        // règle SuperHealth : en obésité sans masse grasse mesurée, les équations à masse maigre reposent sur une estimation ;
+        // Mifflin-St Jeor n'en a pas besoin et reste la plus juste dans cette population
+        val bmi = if (profile.heightCm >= 100) weightKg / (profile.heightCm / 100).let { it * it } else 0.0
+        if (profile.bmrEquation == BmrEquation.MACROFACTOR_B && measured == null && bmi >= MIFFLIN_BMI)
+            return mifflin(profile.sex, weightKg, profile.heightCm, ageYears) * factor
         val a = equationA(lbm, factor)
         val b = equationB(lbm, fatMass(weightKg, bf), ageYears, factor)
         return when (profile.bmrEquation) {

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Restaurant
@@ -225,6 +226,9 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Apple Santé"), if (sh.healthConnect) tr("Activé") else tr("Désactivé"), icon = Icons.Rounded.Favorite, hue = HealthHues.Heart) {
                     nav.go("settings/hc")
                 }
+                RowDivider(56.dp)
+                SettingRow(tr("Import d'activités"), tr("Fichiers GPX, TCX, FIT ou ZIP, historique de la montre"), icon = Icons.Rounded.FileOpen,
+                    hue = HealthHues.Fitness) { nav.go("settings/activities") }
                 RowDivider(56.dp)
                 SettingRow(tr("Sauvegarde"), subtitle = when {
                     sh.lastBackupError != null -> trf("Échec : %1\$s", sh.lastBackupError)

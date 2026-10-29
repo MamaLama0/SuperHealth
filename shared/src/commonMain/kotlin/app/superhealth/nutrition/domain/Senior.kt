@@ -79,6 +79,17 @@ object Senior {
 
     fun maxDeficit(band: Band): Double? = rules(band).maxDeficit
 
+    /**
+     * Obésité sévère (IMC ≥ 35), à tout âge : NHLBI 1998 (Clinical Guidelines on Overweight and Obesity) propose « jusqu'à 500–1 000 kcal/j »,
+     * soit 0,5–1 kg/semaine et 10 % en 6 mois. Le 1 %/semaine de MacroFactor dépasserait ce plafond au-delà de 91 kg.
+     */
+    const val SEVERE_BMI = 35.0
+    const val SEVERE_MAX_DEFICIT = 1000.0
+
+    /** Déficit maximal (kcal/j) pour l'âge et l'IMC ; null = pas de limite. */
+    fun deficitCap(age: Int?, kg: Double, heightCm: Double): Double? =
+        listOfNotNull(rules(age).maxDeficit, SEVERE_MAX_DEFICIT.takeIf { heightCm >= 100 && bmi(kg, heightCm) >= SEVERE_BMI }).minOrNull()
+
     /** Protéines par repas à 65 ans et plus (EASO 2025). */
     const val PROTEIN_PER_MEAL = 25.0
     /** Premier objectif de perte chez l'adulte (NHLBI 1998). */
@@ -101,8 +112,8 @@ object Senior {
         Band.OLDER, Band.OLDEST -> (if (cutting) 1.2 else 1.0) * adjustedKg(kg, heightCm, female)
     }
 
-    /** Pourquoi la cible a été retenue par l'âge (NOT_OBESE : IMC sous le seuil de perte de la tranche). */
-    enum class Reason { CAPPED, NOT_OBESE }
+    /** Pourquoi la cible a été retenue (NOT_OBESE : IMC sous le seuil de perte de la tranche ; SEVERE : plafond NHLBI). */
+    enum class Reason { CAPPED, NOT_OBESE, SEVERE }
 
     /**
      * Calories du jour en perte de poids, bornées par l'âge : [raw] = dépense + écart visé. Renvoie les calories retenues
@@ -113,15 +124,15 @@ object Senior {
         if (raw >= tdee) return raw to null
         val r = rules(b)
         if (bmi(trendKg, heightCm) < r.loseFromBmi) return tdee to Reason.NOT_OBESE
-        if (b == Band.ADULT) return raw to null
-        var kcal = max(raw, tdee - r.maxDeficit!!)
+        val cap = deficitCap(age, trendKg, heightCm) ?: return raw to null
+        var kcal = max(raw, tdee - cap)
         r.minIntake?.let { kcal = max(kcal, min(it, tdee)) }
-        return kcal to (if (kcal > raw) Reason.CAPPED else null)
+        return kcal to when { kcal <= raw -> null; r.maxDeficit != null && r.maxDeficit <= cap -> Reason.CAPPED; else -> Reason.SEVERE }
     }
 
     /** Rythme de perte maximal (% du poids / semaine) qu'autorise le déficit de la tranche ; null = pas de limite. */
-    fun maxCutRatePct(age: Int?, trendKg: Double): Double? =
-        maxDeficit(band(age))?.let { it * 7 / Targets.KCAL_PER_KG / trendKg * 100 }
+    fun maxCutRatePct(age: Int?, trendKg: Double, heightCm: Double = 0.0): Double? =
+        deficitCap(age, trendKg, heightCm)?.let { it * 7 / Targets.KCAL_PER_KG / trendKg * 100 }
 
     /** Perte de poids proposée ? (dès 60 ans : seulement au-dessus du seuil d'IMC de la tranche). */
     fun cutAllowed(age: Int?, trendKg: Double, heightCm: Double): Boolean = bmi(trendKg, heightCm) >= rules(age).loseFromBmi

@@ -71,7 +71,7 @@ data class Analytics(
     fun lbmAt(day: Long): Double {
         val w = trendByDay[day] ?: currentTrendKg
         val bf = days.lastOrNull { it.epochDay <= day && it.bodyFatPct != null }?.bodyFatPct ?: profile.bodyFatPct
-        return Bmr.leanMassOrDefault(w, bf, profile.sex)
+        return Bmr.leanMassOrDefault(w, bf, profile.sex, profile.heightCm, LocalDate.ofEpochDay(day).year - profile.birthYear)
     }
 
     /** Cibles de la semaine en cours : le programme en vigueur aujourd'hui, appliqué à chaque jour (jours hauts compris). */
@@ -352,7 +352,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             }
             val currentTrend = trend.lastOrNull { it.epochDay <= today }?.trend
             val lastBf = bodyFat.entries.maxByOrNull { it.key }?.value ?: profile.bodyFatPct
-            val lbm = currentTrend?.let { Bmr.leanMassOrDefault(it, lastBf, profile.sex) }
+            val lbm = currentTrend?.let { Bmr.leanMassOrDefault(it, lastBf, profile.sex, profile.heightCm, age) }
             return Analytics(today, days, trend, exp, initial, currentTrend, lbm, profile, program, settings, goals, checkIns)
         }
     }

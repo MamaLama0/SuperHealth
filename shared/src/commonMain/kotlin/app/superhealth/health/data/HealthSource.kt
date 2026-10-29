@@ -139,6 +139,8 @@ class ActivityUser {
     /** Objectif de sommeil en minutes (Gadgetbridge : 7 h). */
     val sleepDurationGoal: Int get() = (sp.getString(PREF_USER_SLEEP_DURATION, null)?.toIntOrNull() ?: 7) * 60
     val hydrationGoalMl: Int get() = 0
+    /** Sexe recopié du profil (−1 : inconnu, jamais pris pour une femme par défaut). */
+    val gender: Int get() = sp.getString(PREF_USER_GENDER, null)?.toIntOrNull() ?: -1
 
     companion object {
         const val PREF_USER_NAME = "mi_user_alias"
