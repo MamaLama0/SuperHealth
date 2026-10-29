@@ -1,5 +1,6 @@
 package app.superhealth.nutrition.ui.screens
 
+import app.superhealth.ui.go
 import app.superhealth.ui.theme.container
 import androidx.compose.runtime.LaunchedEffect
 import app.superhealth.nutrition.ui.components.MfCard
@@ -151,7 +152,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                                     DropdownMenuItem({ Text(tr("Aller à aujourd'hui")) }, onClick = { menu = false; vm.selectedDay.value = LocalDate.now().toEpochDay() })
                                 }
                             }
-                            app.superhealth.nutrition.ui.components.SettingsAvatar { nav.navigate("settings") }
+                            app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
                         }
                     }
                     WeekStrip(day, onSelect = { vm.selectedDay.value = it }) { d ->
