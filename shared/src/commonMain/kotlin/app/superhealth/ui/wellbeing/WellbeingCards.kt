@@ -147,8 +147,9 @@ fun rememberForm(): Form.Result? {
     val ctx = LocalContext.current
     val journal by Journal.days.collectAsState()
     val sh by SuperPrefs.settings.collectAsState()
+    val feel by Checkin.days.collectAsState()
     var r by remember { mutableStateOf(formCache?.takeIf { it.first == LocalDate.now() }?.second) }
-    LaunchedEffect(journal, sh.features) {
+    LaunchedEffect(journal, sh.features, feel) {
         val v = runCatching { Form.today(ctx, sh.has(Feature.JOURNAL)) }.getOrNull() ?: return@LaunchedEffect
         formCache = LocalDate.now() to v
         r = v

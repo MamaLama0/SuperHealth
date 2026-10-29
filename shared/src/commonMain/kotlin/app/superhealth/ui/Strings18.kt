@@ -151,6 +151,9 @@ object Strings18 {
         "Fatigué" to "Tired",
         "En forme" to "Good",
         "Au top" to "Great",
+        "Vous vous sentez reposé : votre ressenti compte plus que le score." to "You feel rested: how you feel matters more than the score.",
+        "Forme ressentie du lendemain" to "next-day perceived form",
+        "forme ressentie" to "perceived form",
         // séance vide
         "Aucune série faite" to "No sets done",
         "Fermer la séance" to "Close workout",

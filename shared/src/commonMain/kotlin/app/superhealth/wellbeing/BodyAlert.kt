@@ -20,7 +20,8 @@ import kotlin.math.abs
  * Nuance (règle SuperHealth) : pouls et VFC réagissent aussi à l'effort, à l'alcool et aux réveils. Ils ne comptent pas
  * s'ils s'expliquent par la veille ou la nuit : Effort de la veille au-dessus de vos jours habituels, effort dans les
  * 3 heures avant le coucher, nuit agitée (au moins 45 min éveillé ou 300 pas pendant la nuit), alcool noté au journal.
- * La respiration et la température comptent toujours.
+ * La respiration et la température comptent toujours. Avec le ressenti du matin, une énergie basse (1 ou 2 sur 5) tient
+ * lieu de seconde nuit : signes physiques et symptôme ressenti ensemble, comme l'alerte à deux niveaux de Mishra et al.
  */
 object BodyAlert {
     enum class Level { NONE, WATCH, ALERT }
@@ -78,9 +79,12 @@ object BodyAlert {
     /** Signes qui comptent : ceux du pouls et de la VFC tombent quand la nuit s'explique par [causes]. */
     fun unexplained(signs: List<Sign>, causes: List<Cause>) = signs.filter { !(cardiac(it.metric) && causes.isNotEmpty()) }
 
-    /** Alerte : deux signes inexpliqués deux nuits de suite. À surveiller : deux signes la dernière nuit, expliqués ou non. */
-    fun level(last: List<Sign>, lastCauses: List<Cause>, previous: List<Sign>, previousCauses: List<Cause>): Level = when {
-        unexplained(last, lastCauses).size >= 2 && unexplained(previous, previousCauses).size >= 2 -> Level.ALERT
+    /**
+     * Alerte : deux signes inexpliqués deux nuits de suite, ou une nuit avec une énergie ressentie basse ([feelLow]).
+     * À surveiller : deux signes la dernière nuit, expliqués ou non.
+     */
+    fun level(last: List<Sign>, lastCauses: List<Cause>, previous: List<Sign>, previousCauses: List<Cause>, feelLow: Boolean = false): Level = when {
+        unexplained(last, lastCauses).size >= 2 && (unexplained(previous, previousCauses).size >= 2 || feelLow) -> Level.ALERT
         last.size >= 2 -> Level.WATCH
         else -> Level.NONE
     }
@@ -111,7 +115,8 @@ object BodyAlert {
             val prev = night(dates.lastIndex - 1)
             val lastCauses = causes(ctx, today)
             val prevCauses = causes(ctx, today.minusDays(1))
-            Status(level(last.first, lastCauses, prev.first, prevCauses), last.first, lastCauses)
+            val feelLow = (Checkin.today()?.energy ?: 5) <= 2
+            Status(level(last.first, lastCauses, prev.first, prevCauses, feelLow), last.first, lastCauses)
         }
         cache = today to status
         status

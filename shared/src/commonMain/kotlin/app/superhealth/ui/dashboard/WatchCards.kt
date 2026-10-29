@@ -305,6 +305,13 @@ internal fun SleepStagesCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav:
             Spacer(Modifier.weight(1f))
             w.debt?.let { d -> Sub(if (d <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(d))) }
         }
+        // effet nocebo : un score bas annoncé à quelqu'un qui se sent reposé dégrade sa journée (Gavriloff 2018,
+        // Draganich 2014) ; le ressenti prédit mieux la fatigue du lendemain que la mesure
+        val feel = app.superhealth.wellbeing.Checkin.today()
+        if (feel != null && feel.sleep >= 4 && (w.sleepScore ?: 100.0) < 60) {
+            Spacer(Modifier.height(4.dp))
+            Text(tr("Vous vous sentez reposé : votre ressenti compte plus que le score."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        }
         Spacer(Modifier.height(10.dp))
         Hypnogram(night, Modifier.fillMaxWidth().height(86.dp))
         Spacer(Modifier.height(10.dp))

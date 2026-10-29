@@ -37,6 +37,8 @@ object Checkin {
 
     fun set(feel: Feel, day: Long = LocalDate.now().toEpochDay()) {
         days.value = days.value + (day to feel)
+        // l'alerte des signes de la nuit et les constats du journal en tiennent compte
+        BodyAlert.invalidate(); Journal.invalidate()
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), Store(days.value))) }
     }
 }

@@ -20,6 +20,12 @@ import app.superhealth.platform.LocalDate
  * ou au-dessus de la normale, plus légères sinon) et du rapport charge aiguë / chronique (Gabbett 2016, contesté : il ne
  * sert ici qu'à repérer les extrêmes). Sans les quatre, aucun conseil : une recommandation à moitié informée est pire
  * que rien.
+ *
+ * Signaux facultatifs, quand ils ont quelque chose à dire : surmenage repéré sur la VFC de 3 semaines, alerte des signes
+ * de la nuit (impose le repos) et ressenti du matin. Le ressenti pèse autant qu'un signal mesuré : les mesures subjectives
+ * suivent la charge d'entraînement mieux que les objectives (Saw et al. 2016), Polar Recovery Pro croise de même VFC et
+ * questions de récupération, et adapter l'entraînement à la VFC nocturne et à la récupération perçue a doublé le progrès
+ * sur 10 km chez des coureurs amateurs (Nuuttila et al. 2022).
  */
 object Form {
     enum class Verdict(val label: String, val short: String) {

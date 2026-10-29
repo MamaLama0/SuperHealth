@@ -79,7 +79,10 @@ object Journal {
     // ---- Ce qui vous influence ---------------------------------------------------------------------------------
 
     /** Mesure du lendemain comparée avec et sans l'habitude. */
-    enum class Outcome(val label: String, val unit: String) { CHARGE("Charge du lendemain", "%"), SLEEP("Sommeil de la nuit", "min") }
+    /** [FEEL] : moyenne sommeil + énergie du ressenti du matin (1–5), quand il est activé. */
+    enum class Outcome(val label: String, val unit: String) {
+        CHARGE("Charge du lendemain", "%"), SLEEP("Sommeil de la nuit", "min"), FEEL("Forme ressentie du lendemain", "/ 5"),
+    }
 
     data class Impact(val tag: Tag, val outcome: Outcome, val diff: Stats.Diff)
 
@@ -99,6 +102,8 @@ object Journal {
      * un faux constat apparaîtrait régulièrement). L'humeur est reliée au sommeil de la nuit précédente et à la Charge du
      * matin (au moins 10 jours notés). Rien n'est affiché sans preuve suffisante.
      */
+    fun invalidate() { impactsCache = null }
+
     suspend fun findings(ctx: Context): Findings = withContext(Dispatchers.Default) {
         val today = LocalDate.now()
         impactsCache?.takeIf { it.first == today }?.let { return@withContext it.second }
@@ -106,6 +111,7 @@ object Journal {
         suspend fun outcome(o: Outcome, d: LocalDate): Double? = when (o) {
             Outcome.CHARGE -> runCatching { Scores.chargeOf(ctx, d)?.score?.toDouble() }.getOrNull()
             Outcome.SLEEP -> Bridge.healthValue(ctx, Metric.SLEEP, d)?.takeIf { it > 60 }
+            Outcome.FEEL -> Checkin.days.value[d.toEpochDay()]?.let { (it.sleep + it.energy) / 2.0 }
         }
         // mesure du lendemain de chaque jour noté (le lendemain doit être passé ou être aujourd'hui)
         val next = HashMap<Pair<Outcome, Long>, Double?>()

@@ -141,17 +141,20 @@ fun JournalScreen(vm: SuperViewModel, nav: NavHostController) {
                         style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                     else -> {
                         f.impacts.forEach { i ->
-                            val unit = if (i.outcome == Journal.Outcome.CHARGE) " %" else " min"
-                            val v = i.diff.delta.roundToInt()
-                            Text(trf("%1\$s : %2\$s sur la %3\$s", tr(i.tag.label), (if (v > 0) "+" else "−") + abs(v) + unit,
+                            val d = i.diff.delta
+                            val value = when (i.outcome) {
+                                Journal.Outcome.FEEL -> String.format(app.superhealth.ui.Lang.locale, "%+.1f", d).replace("-", "−") + " / 5"
+                                else -> (if (d.roundToInt() > 0) "+" else "−") + abs(d.roundToInt()) + if (i.outcome == Journal.Outcome.CHARGE) " %" else " min"
+                            }
+                            Text(trf("%1\$s : %2\$s sur la %3\$s", tr(i.tag.label), value,
                                 tr(i.outcome.label).lowercase(app.superhealth.ui.Lang.locale)), style = MaterialTheme.typography.bodyMedium)
                             Text(trf("%1\$s jours avec, %2\$s sans", i.diff.nWith, i.diff.nWithout), style = MaterialTheme.typography.bodySmall,
                                 color = Mf.colors.textSecondary)
                         }
                         f.links.forEach { l ->
-                            Text(if (l.r > 0) trf("Votre moral suit votre %1\$s (r = %2\$s, %3\$s jours).", tr(if (l.outcome == Journal.Outcome.SLEEP) "sommeil" else "Charge"),
+                            Text(if (l.r > 0) trf("Votre moral suit votre %1\$s (r = %2\$s, %3\$s jours).", tr(when (l.outcome) { Journal.Outcome.SLEEP -> "sommeil"; Journal.Outcome.FEEL -> "forme ressentie"; else -> "Charge" }),
                                 String.format(app.superhealth.ui.Lang.locale, "%.2f", l.r), l.n)
-                            else trf("Votre moral va à l'inverse de votre %1\$s (r = %2\$s, %3\$s jours).", tr(if (l.outcome == Journal.Outcome.SLEEP) "sommeil" else "Charge"),
+                            else trf("Votre moral va à l'inverse de votre %1\$s (r = %2\$s, %3\$s jours).", tr(when (l.outcome) { Journal.Outcome.SLEEP -> "sommeil"; Journal.Outcome.FEEL -> "forme ressentie"; else -> "Charge" }),
                                 String.format(app.superhealth.ui.Lang.locale, "%.2f", l.r), l.n),
                                 style = MaterialTheme.typography.bodyMedium)
                         }
