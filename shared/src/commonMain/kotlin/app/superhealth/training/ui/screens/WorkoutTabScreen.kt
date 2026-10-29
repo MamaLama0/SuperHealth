@@ -1,5 +1,6 @@
 package app.superhealth.training.ui.screens
 
+import app.superhealth.ui.go
 import app.superhealth.platform.*
 
 import app.superhealth.ui.theme.WorkoutBlue
@@ -93,7 +94,7 @@ fun WorkoutTabScreen(
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         ScreenTitle(tr("Activités"), actions = {
             if (strength) app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate("history") }
-            app.superhealth.nutrition.ui.components.SettingsAvatar { nav.navigate("settings") }
+            app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
         })
         Column(Modifier.padding(horizontal = 16.dp)) {
             top()
