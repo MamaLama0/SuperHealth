@@ -43,7 +43,7 @@
 
         <activity
             android:name="app.superhealth.MainActivity"
-            android:enableOnBackInvokedCallback="true"
+            android:enableOnBackInvokedCallback="false"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/SuperHealth.Theme"
