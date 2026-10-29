@@ -386,7 +386,7 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             )
             vm.repo.startGoal(g)
             // Nouvel objectif → nouveau programme immédiat (comme « Set New Program » de MacroFactor).
-            vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), trend, an.lbmAt(an.today), an.program, g, an.profile.heightCm))
+            vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), trend, an.lbmAt(an.today), an.program, g, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear))
             onBack()
         }
         current?.let { cur ->
@@ -605,7 +605,7 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             vm.repo.prefs.setProfile(profile.copy(bmrEquation = bmr))
             a?.let { an ->
                 val w = an.currentTrendKg ?: Analytics.DEFAULT_WEIGHT
-                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), w, an.lbmAt(an.today), newP, an.currentGoal, an.profile.heightCm))
+                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), w, an.lbmAt(an.today), newP, an.currentGoal, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear))
             }
             onBack()
         }

@@ -377,7 +377,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         val w = listOf(WeighInEntity(today, weightKg, bodyFat?.toDouble()))
         val p = draftProgram(); val g = draftGoal()
         val an = computeAnalytics(emptyList(), w, emptyList(), draftProfile(), p, settings.copy(weightUnit = unit), listOf(g), emptyList(), today)
-        return an.initialTdee to Targets.checkIn(today, an.initialTdee, weightKg, an.lbmAt(today), p, g, heightCm.toDouble())
+        return an.initialTdee to Targets.checkIn(today, an.initialTdee, weightKg, an.lbmAt(today), p, g, heightCm.toDouble(),
+            draftProfile().let { LocalDate.now().year - it.birthYear })
     }
 
     /** Programme de musculation proposé (aperçu sur l'écran final, activé à la validation). */

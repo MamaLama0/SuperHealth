@@ -111,7 +111,7 @@ internal fun VitalsGrid(metrics: List<Metric>, series: (Metric) -> List<Pair<Loc
 }
 
 /** Plage de l'anneau de chaque mesure (valeur → remplissage). */
-private fun Metric.ringRange(): ClosedFloatingPointRange<Double> = when (this) {
+internal fun Metric.ringRange(): ClosedFloatingPointRange<Double> = when (this) {
     Metric.RESTING_HR -> 40.0..100.0
     Metric.HEART_RATE -> 40.0..180.0
     Metric.RESPIRATORY_RATE -> 8.0..25.0

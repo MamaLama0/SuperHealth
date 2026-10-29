@@ -2,6 +2,9 @@ package app.superhealth.ui.coach
 
 import app.superhealth.platform.*
 
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -275,7 +278,9 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
                 if (day != prevDay) item(key = "day$day") { DaySeparator(day) }
                 item(key = m.time.toString() + m.role) {
                     val last = i == chat.lastIndex
-                    Bubble(m, onCopy = { clipboard.setText(AnnotatedString(if (m.role == "user") m.text else Coach.split(m.text).first)) },
+                    Bubble(m, onAction = { a -> scope.launch { runCatching { Coach.apply(m, a) }.onSuccess { r -> r?.let { nav.go(it) } }
+                            .onFailure { error = it.message } } },
+                        onCopy = { clipboard.setText(AnnotatedString(if (m.role == "user") m.text else Coach.split(m.text).first)) },
                         onRegenerate = if (last && m.role == "assistant" && ready && !thinking) ({ run { Coach.regenerate(ctx) } }) else null,
                         onEdit = if (last && m.role == "user" && !thinking) ({ Coach.dropPendingQuestion()?.let { input = it }; error = null }) else null)
                 }
@@ -375,7 +380,7 @@ private fun DaySeparator(day: LocalDate) {
 /** Bulle ; appui long : copier, et sur le dernier message, autre réponse ou modifier la question. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun Bubble(m: Coach.Msg, onCopy: () -> Unit, onRegenerate: (() -> Unit)?, onEdit: (() -> Unit)?) {
+private fun Bubble(m: Coach.Msg, onAction: (app.superhealth.coach.CoachTools.Action) -> Unit, onCopy: () -> Unit, onRegenerate: (() -> Unit)?, onEdit: (() -> Unit)?) {
     val mine = m.role == "user"
     val text = if (mine) m.text else Coach.split(m.text).first
     var menu by remember { mutableStateOf(false) }
@@ -399,6 +404,47 @@ private fun Bubble(m: Coach.Msg, onCopy: () -> Unit, onRegenerate: (() -> Unit)?
                 modifier = Modifier.align(Alignment.End).padding(top = 2.dp))
         }
         }
+    }
+    // ce que le coach a consulté, puis ses propositions (rien n'est fait sans le bouton)
+    if (!mine && (m.used.isNotEmpty() || m.actions.isNotEmpty())) Column(Modifier.fillMaxWidth().padding(start = 34.dp, top = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (m.used.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Visibility, null, Modifier.size(12.dp), tint = Mf.colors.textTertiary)
+            Text(" " + m.used.joinToString(" · ") { tr(it) }, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, maxLines = 1)
+        }
+        m.actions.filter { it.kind == "open" }.takeIf { it.isNotEmpty() }?.let { opens ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                opens.forEach { a ->
+                    Row(Modifier.clip(CircleShape).background(CoachHue.container()).clickable { onAction(a) }.padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(a.title, style = MaterialTheme.typography.labelLarge, color = CoachHue.onContainer(), maxLines = 1)
+                        Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.padding(start = 4.dp).size(14.dp), tint = CoachHue.onContainer())
+                    }
+                }
+            }
+        }
+        m.actions.filter { it.kind != "open" }.forEach { a -> ActionCard(a) { onAction(a) } }
+    }
+}
+
+/** Proposition du coach : programme ou repas, avec son bouton ; une fois faite, le bouton devient « Fait ». */
+@Composable
+private fun ActionCard(a: app.superhealth.coach.CoachTools.Action, onApply: () -> Unit) {
+    Row(Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(18.dp)).background(Mf.colors.card).padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(34.dp).clip(CircleShape).background(CoachHue.container()), contentAlignment = Alignment.Center) {
+            Icon(if (a.kind == "program") Icons.Rounded.FitnessCenter else Icons.Rounded.Restaurant, null, Modifier.size(18.dp), tint = CoachHue.onContainer())
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(a.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if (a.detail.isNotEmpty()) Text(a.detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2)
+        }
+        Spacer(Modifier.width(8.dp))
+        if (a.done) Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = Mf.colors.textSecondary)
+            Text(tr("Fait"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+        } else Text(if (a.kind == "program") tr("Créer") else tr("Ajouter"), style = MaterialTheme.typography.labelLarge, color = Color.White,
+            modifier = Modifier.clip(CircleShape).background(CoachHue).clickable(onClick = onApply).padding(horizontal = 14.dp, vertical = 8.dp))
     }
 }
 
@@ -483,5 +529,20 @@ private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
                     Text(tr("Effacer"), color = app.superhealth.ui.theme.Base.Red) } },
                 dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmClear = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
         }
+    }
+}
+
+/**
+ * Pastille du coach posée dans un écran (séance, programme, journal, constantes…) : une question prête, envoyée au coach
+ * qui va chercher lui-même les données utiles avec ses outils. Absente quand le plugin Coach n'est pas installé.
+ */
+@Composable
+fun CoachChip(label: String, question: String, nav: NavHostController, modifier: Modifier = Modifier) {
+    if (!coachAvailable()) return
+    Row(modifier.clip(CircleShape).background(CoachHue.container()).clickable { nav.askCoach(question) }.padding(start = 8.dp, end = 12.dp, top = 7.dp, bottom = 7.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(15.dp), tint = CoachHue.onContainer())
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = CoachHue.onContainer(), maxLines = 1)
     }
 }

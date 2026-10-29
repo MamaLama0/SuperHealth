@@ -217,6 +217,9 @@ fun VitalsScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         Spacer(Modifier.height(12.dp))
         MfCard { NightVitalsBody(night, onMetric = { nav.go("h/metric/${it.name}") }) }
+        app.superhealth.ui.coach.CoachChip(tr("Expliquer avec le coach"),
+            tr("Explique mes constantes de la dernière nuit et leurs tendances sur 30 jours : qu'est-ce qui sort de ma normale et pourquoi (sommeil, entraînement, alimentation) ?"),
+            nav, Modifier.padding(top = 10.dp))
 
         SectionLabel(tr("Tendances"))
         ChipChoice(VitalsSpan.entries, span, { tr(it.label) }) { span = it }

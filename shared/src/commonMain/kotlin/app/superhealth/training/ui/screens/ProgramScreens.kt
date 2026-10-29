@@ -335,6 +335,8 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         Spacer(Modifier.height(10.dp))
         Text(trf("%1\$s séances par cycle de %2\$s jours · %3\$s", (p.days.count { !it.isRest }), p.days.size, p.goal.label.tr()), color = Mf.colors.textSecondary)
         if (active) Text(trf("Programme actif · cycle %1\$s/%2\$s", (p.cycleIndex + 1), p.numCycles), color = WorkoutBlue, style = MaterialTheme.typography.labelLarge)
+        app.superhealth.ui.coach.CoachChip(tr("Avis du coach"), trf("Que penses-tu de mon programme « %1\$s » (volume par muscle, choix d'exercices, progression) ? Propose une version améliorée si besoin.", p.name),
+            nav, Modifier.padding(top = 8.dp))
         Spacer(Modifier.height(10.dp))
         if (p.numCycles > 1) ChipChoice((0 until p.numCycles).toList(), cycle, { c -> trf("Cycle %1\$s", (c + 1)) + if ((p.deload == Deload.FIRST && c == 0) || (p.deload == Deload.LAST && c == p.numCycles - 1)) tr(" · décharge") else "" }) { cycle = it }
         p.days.forEachIndexed { i, d ->

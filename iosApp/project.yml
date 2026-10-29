@@ -6,8 +6,8 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: "2.1"
-    CURRENT_PROJECT_VERSION: "17"
+    MARKETING_VERSION: "2.2"
+    CURRENT_PROJECT_VERSION: "18"
     SWIFT_VERSION: "5.0"
 targets:
   SuperHealth:

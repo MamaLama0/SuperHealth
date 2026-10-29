@@ -733,7 +733,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
         DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK,
-        DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE -> true
+        DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE, DashCard.VITALS, DashCard.VITALS_TRENDS -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -859,7 +859,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.SLEEP_QUALITY -> SleepQualityCard(c, h.watch, modifier, nav)
         DashCard.NIGHT_HEART -> NightHeartCard(c, h.watch, modifier, nav)
         DashCard.NIGHT_VITALS -> NightVitalsCard(c, h.watch, modifier, nav)
-        DashCard.VITALS_TRENDS -> VitalsTrendsCard(c, h.watch, modifier, nav)
+        DashCard.VITALS_TRENDS -> if (size == app.superhealth.CardSize.L) VitalsTrendsCard(c, h.watch, modifier, nav) else TrendsCompact(c, size, h.watch.trends, modifier, nav)
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachWeekCard(c, size, vm, modifier, nav)
         DashCard.FORM -> app.superhealth.ui.wellbeing.FormCard(c, size, vm, modifier, nav)
@@ -956,6 +956,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.VITALS -> {
             // Les mesures choisies dont une source existe (montre ou Health Connect) ; touche l'en-tête pour les choisir.
             val tiles = VITALS.filter { Bridge.hasSource(it) }
+            if (size != app.superhealth.CardSize.L) { VitalsCompact(c, size, tiles, { h.latest(it)?.second }, modifier, nav); return }
             Tile(c, tr("Constantes"), modifier, onClick = { nav.go("h/vitals") }, tinted = false) {
                 if (tiles.isEmpty()) Text(tr("Vos constantes apparaîtront après une nuit avec la montre."), style = MaterialTheme.typography.bodyMedium,
                     color = Mf.colors.textSecondary)

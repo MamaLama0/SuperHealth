@@ -502,7 +502,7 @@ fun NutrientsScreen(vm: AppViewModel, onBack: () -> Unit) {
                 list.forEachIndexed { i, d ->
                     val total = macroTotals[d.code] ?: totals[d.code] ?: 0.0
                     val avg = total / loggedDays
-                    val target = s.microTargets[d.code] ?: d.reference
+                    val target = s.microTargets[d.code] ?: (if (d.category == tr("Macronutriments")) d.reference else app.superhealth.nutrition.data.Micros.reference(d))
                     if (i > 0) RowDivider()
                     Column(Modifier.fillMaxWidth().clickable { open = d }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row {

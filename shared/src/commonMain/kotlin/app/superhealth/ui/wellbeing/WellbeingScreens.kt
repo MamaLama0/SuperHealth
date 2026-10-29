@@ -170,6 +170,9 @@ fun FormScreen(vm: SuperViewModel, nav: NavHostController) {
     val r = rememberForm()
     DetailScaffold(tr("Forme du jour"), onBack = { nav.popBackStack() }) {
         GroupCard { Column(Modifier.padding(16.dp)) { FormBody(r, vm, nav, compact = false) } }
+        app.superhealth.ui.coach.CoachChip(tr("Que faire aujourd'hui ?"),
+            tr("Vu ma forme du jour, mon sommeil et mes dernières séances, que me conseilles-tu pour aujourd'hui (entraînement, repas, coucher) ?"),
+            nav, Modifier.padding(top = 10.dp))
         Text(tr("Score adaptatif : VFC, pouls au repos, Repos, entraînement (7 j / 28 j), moral et ressenti, comparés à votre normale. Dès 30 matins de ressenti, les poids s'ajustent à vous. « Malade » noté au journal impose le repos."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
     }

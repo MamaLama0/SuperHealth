@@ -261,7 +261,7 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
                     val f = grams / 100
                     val item = RecipeItemEntity(recipeId = 0, position = 0, foodId = saved.id, name = saved.name, grams = grams,
                         kcal = saved.kcal100 * f, protein = saved.protein100 * f, fat = saved.fat100 * f, carbs = saved.carbs100 * f,
-                        fiber = saved.fiber100 * f, microsJson = Micros.scale(saved.microsJson, f))
+                        fiber = saved.fiber100 * f, microsJson = Micros.encode(Micros.of(saved.microsJson, saved.name, saved.sugars100, saved.satFat100, saved.sodiumMg100).mapValues { it.value * f }))
                     vm.recipeDraft.value = (vm.recipeDraft.value ?: RecipeDraft()).let { it.copy(items = it.items + item) }
                     selected = null
                     onDone()
