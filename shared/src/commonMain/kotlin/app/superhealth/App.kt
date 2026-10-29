@@ -65,7 +65,6 @@ object SuperHealth {
         app.superhealth.meds.Meds.init(appContext)
         app.superhealth.wellbeing.Journal.init(appContext)
         app.superhealth.wellbeing.Checkin.init(appContext)
-        app.superhealth.wellbeing.Labo.init(appContext)
         app.superhealth.wellbeing.Cycle.init(appContext)
         NutriApp.init(appContext)
         WorkoutApp.init(appContext)

@@ -366,8 +366,11 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
 
     val name = remember(refresh) { app.superhealth.ui.userName() }
     val modules by app.superhealth.modules.Modules.installed.collectAsState()
-    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules) {
-        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) }
+    // cartes qui posent une question (moral du jour) : elles s'effacent une fois la réponse donnée
+    val moodDays by app.superhealth.wellbeing.Journal.days.collectAsState()
+    val moodDone = moodDays[app.superhealth.platform.LocalDate.now().toEpochDay()] != null
+    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules, moodDone) {
+        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) && !(it == DashCard.JOURNAL && moodDone) }
     }
     // ressenti du matin : les questions sur la première carte à score visible, en grand de préférence
     checkinFirst = visible.filter { it in app.superhealth.ui.wellbeing.CHECKIN_GATED }

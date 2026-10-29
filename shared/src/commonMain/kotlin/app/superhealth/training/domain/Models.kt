@@ -198,7 +198,7 @@ data class Session(
     val pausedAt: Long? = null,
     /** Exercice affiché (page du PageView de séance). */
     val current: Int = 0,
-    /** Forme du jour appliquée : +1 série (pousser) ou −1 (alléger) ; le programme n'est pas modifié pour autant. */
+    /** Forme du jour appliquée : +1 un cran plus lourd (pousser) ou −1 une série de moins (alléger) ; le programme ne change pas. */
     val adjust: Int = 0,
 ) {
     /** Durée effective en secondes, pauses déduites. */

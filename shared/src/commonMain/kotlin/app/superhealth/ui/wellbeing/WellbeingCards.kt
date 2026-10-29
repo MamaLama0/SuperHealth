@@ -128,12 +128,6 @@ fun JournalCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modif
         CardSize.W -> CompactStrip(c, d, modifier)
         CardSize.L -> Tile(c, if (today == null) tr("Comment ça va ?") else tr("Moral du jour"), modifier, onClick = open) {
             MoodPicker(today?.mood) { Journal.setMood(ctx, it) }
-            // test du Labo en cours : la consigne du jour, une ligne
-            val exps by app.superhealth.wellbeing.Labo.experiments.collectAsState()
-            remember(exps) { app.superhealth.wellbeing.Labo.current() }?.let { e ->
-                Spacer(Modifier.height(6.dp))
-                Text(laboToday(e), style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.HealthHues.Mind.onContainer(), maxLines = 1)
-            }
             if (today != null && today.tags.isNotEmpty()) {
                 Spacer(Modifier.height(6.dp))
                 Text(today.tags.mapNotNull { n -> Journal.Tag.entries.firstOrNull { it.name == n }?.let { tr(it.label) } }.joinToString(" · "),
@@ -226,7 +220,7 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
             val program = vm.training.activeProgram()?.takeIf { p -> p.days.getOrNull(p.dayIndex)?.isRest == false }
             when (r.verdict) {
                 Form.Verdict.PUSH -> {
-                    Text(if (program != null) tr("Tout est au vert : une série de plus sur chaque exercice.")
+                    Text(if (program != null) tr("Tout est au vert : un cran plus lourd, mêmes répétitions.")
                         else tr("Tout est au vert : ajoutez un bloc intense, comme 4 × 4 min à 90 % de votre FC max."),
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     if (program != null) { Spacer(Modifier.height(8.dp)); PillButton(tr("Séance plus dure")) { startAdjusted(vm, nav, +1) } }
@@ -241,7 +235,13 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
                     Spacer(Modifier.height(8.dp))
                     PillButton(tr("Respirer 5 min"), strong = false) { nav.go("breathe") }
                 }
-                Form.Verdict.NORMAL -> Text(tr("Faites la séance prévue."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                Form.Verdict.NORMAL -> {
+                    // ressenti au top un jour normal : le ressenti suffit à proposer un cran de plus
+                    val top = (Checkin.today()?.energy ?: 0) >= 5
+                    Text(tr(if (top) "Vous vous sentez au top : tentez un cran plus lourd." else "Faites la séance prévue."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    if (top && program != null) { Spacer(Modifier.height(8.dp)); PillButton(tr("Un cran plus lourd"), strong = false) { startAdjusted(vm, nav, +1) } }
+                }
             }
             // Forme adaptative : les poids ont appris de votre ressenti
             if (!compact && r.learned > 0) {
@@ -253,15 +253,17 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
 }
 
 /**
- * Lance la séance du jour du programme avec une série de travail de plus ([delta] = +1) sur chaque exercice, ou une de
- * moins (−1) sur ceux qui en ont au moins trois.
+ * Lance la séance du jour du programme un cran plus lourde ([delta] = +1, voir stepUpLoads : 5 % au plus), ou avec une
+ * série de travail de moins (−1) sur les exercices qui en ont au moins trois. Asymétrique exprès : la Forme pousse plus
+ * qu'elle ne retient.
  */
 fun startAdjusted(vm: SuperViewModel, nav: NavHostController, delta: Int) {
     val t = vm.training
     if (t.state.value.session == null) {
         val p = t.activeProgram() ?: return
         t.startProgramDay(p, p.dayIndex, p.cycleIndex)
-        t.session { s -> s.copy(adjust = delta, exercises = s.exercises.map { adjustSets(it, delta) }) }
+        if (delta > 0) t.stepUpLoads()
+        else t.session { s -> s.copy(adjust = delta, exercises = s.exercises.map { adjustSets(it, delta) }) }
     }
     nav.navigate("session")
 }
@@ -269,7 +271,6 @@ fun startAdjusted(vm: SuperViewModel, nav: NavHostController, delta: Int) {
 private fun adjustSets(ex: SessionExercise, delta: Int): SessionExercise {
     val work = ex.sets.filter { it.type != SetType.WARMUP }
     return when {
-        delta > 0 && work.isNotEmpty() -> ex.copy(sets = ex.sets + work.last().copy(id = UUID.randomUUID().toString(), done = false, completedAt = null))
         delta < 0 && work.size >= 3 -> ex.copy(sets = ex.sets - work.last())
         else -> ex
     }

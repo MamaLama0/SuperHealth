@@ -179,13 +179,17 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     toggle(app.superhealth.Feature.HEALTH, on); vm.setWatchModule(on)
                 }
                 RowDivider(56.dp)
-                IconSwitchRow(tr("Journal du moral"), if (sh.has(app.superhealth.Feature.JOURNAL)) tr("Humeur et habitudes") else tr("Désactivé"),
+                ModulesRow(nav)
+            }
+
+            // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
+            Group(tr("Bien-être")) {
+                fun toggle(f: app.superhealth.Feature, on: Boolean) = SuperPrefs.update { it.copy(features = if (on) it.features + f.name else it.features - f.name) }
+                IconSwitchRow(tr("Journal du moral"), if (!sh.has(app.superhealth.Feature.JOURNAL)) tr("Désactivé")
+                    else if (sh.morningCheck) tr("Humeur, habitudes et ressenti du matin") else tr("Humeur et habitudes"),
                     Icons.Rounded.SentimentSatisfied, HealthHues.Mind, sh.has(app.superhealth.Feature.JOURNAL), onClick = { nav.go("journal") }) {
                     toggle(app.superhealth.Feature.JOURNAL, it)
                 }
-                RowDivider(56.dp)
-                IconSwitchRow(tr("Ressenti du matin"), if (sh.morningCheck) tr("Avant les scores") else tr("Désactivé"),
-                    Icons.Rounded.WbSunny, HealthHues.Mind, sh.morningCheck) { on -> SuperPrefs.update { it.copy(morningCheck = on) } }
                 // cycle : proposé selon le sexe déclaré dans le profil (gardé s'il est déjà activé)
                 if (sh.has(app.superhealth.Feature.CYCLE) || app.superhealth.nutrition.NutriApp.repository.prefs.profile.collectAsState().value.sex ==
                     app.superhealth.nutrition.domain.Sex.FEMALE) {
@@ -202,8 +206,6 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Sleep) {
                     nav.go("settings/reminders")
                 }
-                RowDivider(56.dp)
-                ModulesRow(nav)
             }
 
             Group(tr("Général")) {
@@ -303,6 +305,16 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             ChipChoice(app.superhealth.nutrition.domain.TextSize.entries, s.textSize, { tr(it.label) }) { t -> set { it.copy(textSize = t) } }
             Spacer(Modifier.height(14.dp))
             Text(tr("Aperçu : 2 140 kcal, 150 g de protéines."), style = MaterialTheme.typography.bodyLarge, color = Mf.colors.textSecondary)
+        }
+        Spacer(Modifier.height(12.dp))
+        MfCard {
+            // place du « + » dans la barre du bas (au milieu, Réglages devient un onglet si le nombre d'onglets le permet)
+            Label(tr("Bouton +"))
+            val sh by SuperPrefs.settings.collectAsState()
+            val sides = listOf("LEFT", "CENTER", "RIGHT")
+            ChipChoice(sides, sh.plusSide.takeIf { it in sides } ?: "RIGHT", { tr(when (it) { "LEFT" -> "Gauche"; "CENTER" -> "Milieu"; else -> "Droite" }) }) { v ->
+                SuperPrefs.update { it.copy(plusSide = v) }
+            }
         }
         Spacer(Modifier.height(12.dp))
         MfCard {
