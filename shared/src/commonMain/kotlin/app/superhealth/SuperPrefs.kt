@@ -229,6 +229,8 @@ data class SuperSettings(
     val remindLog: Int = -1,
     val remindJournal: Int = -1,
     val remindBedtime: Boolean = false,
+    /** Ressenti du matin demandé avant d'afficher Charge, Forme et sommeil. */
+    val morningCheck: Boolean = false,
     /** Habitudes proposées dans le journal du moral (noms de wellbeing.Journal.Tag). */
     val journalTags: List<String> = app.superhealth.wellbeing.Journal.Tag.entries.map { it.name },
     /** 1.8 : journal du moral, forme du jour et coucher conseillé déjà proposés (migration unique). */

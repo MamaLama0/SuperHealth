@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
@@ -182,6 +183,9 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     Icons.Rounded.SentimentSatisfied, HealthHues.Mind, sh.has(app.superhealth.Feature.JOURNAL), onClick = { nav.go("journal") }) {
                     toggle(app.superhealth.Feature.JOURNAL, it)
                 }
+                RowDivider(56.dp)
+                IconSwitchRow(tr("Ressenti du matin"), if (sh.morningCheck) tr("Avant les scores") else tr("Désactivé"),
+                    Icons.Rounded.WbSunny, HealthHues.Mind, sh.morningCheck) { on -> SuperPrefs.update { it.copy(morningCheck = on) } }
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Cycle menstruel"), if (sh.has(app.superhealth.Feature.CYCLE)) tr("Règles et phases") else tr("Désactivé"),
                     Icons.Rounded.CalendarMonth, app.superhealth.ui.wellbeing.CycleHue, sh.has(app.superhealth.Feature.CYCLE), onClick = { nav.go("cycle") }) { on ->

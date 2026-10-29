@@ -73,6 +73,7 @@ import app.superhealth.ui.timeOf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import app.superhealth.ui.unitOf
+import kotlin.math.roundToInt
 import app.superhealth.platform.DayOfWeek
 import app.superhealth.platform.LocalDate
 import app.superhealth.platform.YearMonth
@@ -220,6 +221,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
         }
 
         if (scores.isNotEmpty()) SleepScoreCard(scores, span, scoreSource) { nav.go("h/metric/SLEEP_SCORE") }
+        if (metric == Metric.SLEEP) SriRow()
         if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
 
         if (metric.manual) {
@@ -339,5 +341,16 @@ private fun SleepScoreCard(scores: List<Pair<LocalDate, Double>>, span: Span, sr
         }
         if (span != Span.DAY) Text(relativeDay(day), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         src?.let { SourceLine(it) }
+    }
+}
+
+/** Régularité du sommeil (SRI des 2 dernières semaines) : une ligne, absente sans 6 nuits consécutives. */
+@Composable
+private fun SriRow() {
+    val sri by produceState<Double?>(null) { value = runCatching { app.superhealth.health.data.Scores.sriOf(LocalDate.now()) }.getOrNull() }
+    val v = sri ?: return
+    app.superhealth.nutrition.ui.components.GroupCard {
+        app.superhealth.nutrition.ui.components.SettingRow(tr("Régularité"), subtitle = tr("Même état, endormi ou éveillé, d'un jour à l'autre (SRI, 14 jours)"),
+            value = "${v.roundToInt()} / 100")
     }
 }

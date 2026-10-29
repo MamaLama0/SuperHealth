@@ -35,6 +35,8 @@ object Cycle {
 
     private fun save() {
         publish()
+        // la Charge compare à la même phase du cycle : à recalculer
+        app.superhealth.health.data.Scores.invalidate()
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), store)) }
     }
 
@@ -77,6 +79,18 @@ object Cycle {
 
     /** Débuts de règles, du plus ancien au plus récent. */
     fun starts(d: Set<Long> = days.value): List<Long> = d.sorted().filter { day -> (1..GAP).none { (day - it) in d } }
+
+    /**
+     * Le jour [day] est-il en phase lutéale (après l'ovulation, estimée 14 jours avant les règles suivantes : réelles si
+     * le cycle est terminé, sinon prévues avec [length]) ? Null hors d'un cycle connu.
+     */
+    fun luteal(day: Long, d: Set<Long> = days.value, length: Int? = info(d = d)?.length): Boolean? {
+        val st = starts(d)
+        val s = st.lastOrNull { it <= day } ?: return null
+        val next = st.firstOrNull { it > s } ?: (s + (length ?: return null))
+        if (next - s !in 15..60) return null
+        return day > next - 14
+    }
 
     fun info(today: Long = LocalDate.now().toEpochDay(), d: Set<Long> = days.value): Info? {
         val st = starts(d).filter { it <= today }

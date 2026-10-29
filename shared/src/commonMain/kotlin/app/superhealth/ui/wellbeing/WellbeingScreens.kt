@@ -66,6 +66,7 @@ import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import app.superhealth.wellbeing.Bedtime
+import app.superhealth.wellbeing.Checkin
 import app.superhealth.wellbeing.Cycle
 import app.superhealth.wellbeing.Journal
 import app.superhealth.wellbeing.Reminders
@@ -374,3 +375,16 @@ fun RemindersScreen(vm: SuperViewModel, nav: NavHostController) {
     }
 }
 
+
+/** Ressenti du matin : les deux questions, puis retour aux scores. */
+@Composable
+fun CheckinScreen(nav: NavHostController) {
+    val days by Checkin.days.collectAsState()
+    val done = days[LocalDate.now().toEpochDay()] != null
+    LaunchedEffect(done) { if (done && nav.currentBackStackEntry?.destination?.route == "checkin") nav.popBackStack() }
+    DetailScaffold(tr("Ressenti du matin"), onBack = { nav.popBackStack() }) {
+        GroupCard { Column(Modifier.padding(16.dp)) { CheckinPickers() } }
+        Text(tr("Noté avant de voir vos scores, pour qu'ils n'influencent pas votre ressenti."), style = MaterialTheme.typography.bodySmall,
+            color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+    }
+}

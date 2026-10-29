@@ -220,6 +220,12 @@ internal fun ChargeCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavH
                     }
                 }
                 if (d.isEmpty()) Text(tr("Quatre nuits de pouls au repos suffisent pour la calculer."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                // VFC de la semaine contre la zone normale, et phase du cycle quand elle sert de référence
+                val note = listOfNotNull(
+                    w.charge?.hrv?.let { when (it.zone) { -1 -> tr("VFC 7 j sous votre zone"); 1 -> tr("VFC 7 j au-dessus de votre zone"); else -> tr("VFC 7 j dans votre zone") } },
+                    w.charge?.luteal?.let { if (it) tr("comparée à votre phase lutéale") else tr("comparée à votre phase folliculaire") },
+                ).joinToString(" · ")
+                if (note.isNotEmpty()) Text(note, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2)
             }
         }
         if (w.chargeHistory.count { it != null } >= 2) {

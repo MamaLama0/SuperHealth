@@ -64,6 +64,8 @@ import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import app.superhealth.wellbeing.Bedtime
+import app.superhealth.wellbeing.BodyAlert
+import app.superhealth.wellbeing.Checkin
 import app.superhealth.wellbeing.Cycle
 import app.superhealth.wellbeing.Form
 import app.superhealth.wellbeing.Journal
@@ -92,7 +94,7 @@ fun moodColor(mood: Int): Color = when (mood) {
 
 /** Les cinq humeurs, à toucher. */
 @Composable
-fun MoodPicker(selected: Int?, modifier: Modifier = Modifier, onPick: (Int) -> Unit) {
+fun MoodPicker(selected: Int?, modifier: Modifier = Modifier, labels: List<String> = Journal.MOODS, onPick: (Int) -> Unit) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         (1..5).forEach { m ->
             val on = selected == m
@@ -100,10 +102,10 @@ fun MoodPicker(selected: Int?, modifier: Modifier = Modifier, onPick: (Int) -> U
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) moodColor(m).container(1.8f) else Color.Transparent),
                     contentAlignment = Alignment.Center) {
-                    Icon(moodIcon(m), tr(Journal.MOODS[m - 1]), Modifier.size(30.dp), tint = if (on || selected == null) moodColor(m) else Mf.colors.textTertiary)
+                    Icon(moodIcon(m), tr(labels[m - 1]), Modifier.size(30.dp), tint = if (on || selected == null) moodColor(m) else Mf.colors.textTertiary)
                 }
                 Spacer(Modifier.height(2.dp))
-                Text(tr(Journal.MOODS[m - 1]), style = MaterialTheme.typography.labelSmall, color = if (on) Mf.colors.text else Mf.colors.textSecondary,
+                Text(tr(labels[m - 1]), style = MaterialTheme.typography.labelSmall, color = if (on) Mf.colors.text else Mf.colors.textSecondary,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -178,6 +180,7 @@ fun FormCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifier
 /** Contenu de la forme du jour : verdict, signaux et proposition, ou ce qui manque. */
 @Composable
 fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compact: Boolean) {
+    r?.body?.takeIf { it.level != BodyAlert.Level.NONE }?.let { BodyLine(it); Spacer(Modifier.height(10.dp)) }
     when (r) {
         null -> Text(tr("Calcul…"), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         is Form.Missing -> {
@@ -190,6 +193,7 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
                     Form.Kind.LOAD -> tr("Entraînement : 14 jours de pouls sur 4 semaines")
                     Form.Kind.MOOD -> if (!SuperPrefs.settings.value.has(Feature.JOURNAL)) tr("Moral : activez le journal du moral")
                         else trf("Moral : la note du jour et %1\$s jours notés", Form.MIN_MOOD_DAYS)
+                    else -> ""
                 }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             }
             if (Form.Kind.MOOD in r.what && SuperPrefs.settings.value.has(Feature.JOURNAL) && Journal.today() == null) {
@@ -332,6 +336,91 @@ fun CycleCard(c: DashCard, size: CardSize, modifier: Modifier, nav: NavHostContr
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             } ?: Text(trf("Prédictions après %1\$s cycles complets.", Cycle.MIN_CYCLES), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary)
+        }
+    }
+}
+
+// ---- Signes de la nuit ---------------------------------------------------------------------------------------
+
+private fun signText(g: BodyAlert.Sign): String {
+    val l = app.superhealth.ui.Lang.locale
+    return when (g.metric) {
+        app.superhealth.health.data.Metric.RESTING_HR -> trf("pouls %1\$s bpm", String.format(l, "%+.0f", g.delta))
+        app.superhealth.health.data.Metric.RESPIRATORY_RATE -> trf("respiration %1\$s /min", String.format(l, "%+.1f", g.delta))
+        app.superhealth.health.data.Metric.TEMPERATURE -> trf("température %1\$s °C", String.format(l, "%+.1f", g.delta))
+        else -> trf("VFC %1\$s ms", String.format(l, "%+.0f", g.delta))
+    }
+}
+
+/** Une phrase, seulement quand la nuit sort de l'ordinaire : alerte, ou écart expliqué par la veille. */
+@Composable
+fun BodyLine(b: BodyAlert.Status) {
+    val signs = b.signs.joinToString(", ") { signText(it) }.replaceFirstChar { it.uppercase() }
+    val text = when {
+        b.level == BodyAlert.Level.ALERT -> trf("Depuis 2 nuits : %1\$s. Votre corps lutte peut-être.", signs)
+        b.causes.isNotEmpty() -> trf("%1\$s, sans doute à cause de %2\$s.", signs, b.causes.joinToString(" " + tr("et") + " ") { tr(it.label) })
+        else -> trf("%1\$s cette nuit : à surveiller.", signs)
+    }
+    val col = if (b.level == BodyAlert.Level.ALERT) Base.Orange else Mf.colors.textSecondary
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(col.container(0.6f)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.bodySmall, color = if (b.level == BodyAlert.Level.ALERT) col.onContainer() else Mf.colors.text,
+            modifier = Modifier.weight(1f))
+    }
+}
+
+// ---- Ressenti du matin ---------------------------------------------------------------------------------------
+
+/** Cartes masquées tant que le ressenti du matin n'est pas noté (si l'option est activée). */
+val CHECKIN_GATED = setOf(DashCard.CHARGE, DashCard.RECOVERY, DashCard.FORM, DashCard.SLEEP_STAGES)
+
+/** Vrai tant que le ressenti du jour manque et que l'option est activée. */
+@Composable
+fun checkinPending(): Boolean {
+    val sh by SuperPrefs.settings.collectAsState()
+    val days by Checkin.days.collectAsState()
+    return sh.morningCheck && days[LocalDate.now().toEpochDay()] == null
+}
+
+/** Les deux questions ; enregistre dès que les deux sont choisies. */
+@Composable
+fun CheckinPickers() {
+    var sleep by remember { mutableStateOf<Int?>(null) }
+    var energy by remember { mutableStateOf<Int?>(null) }
+    fun save() { val s = sleep; val e = energy; if (s != null && e != null) Checkin.set(Checkin.Feel(s, e)) }
+    Text(tr("Avez-vous bien dormi ?"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    Spacer(Modifier.height(6.dp))
+    MoodPicker(sleep, labels = Checkin.SLEEP) { sleep = it; save() }
+    Spacer(Modifier.height(10.dp))
+    Text(tr("Votre énergie ?"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    Spacer(Modifier.height(6.dp))
+    MoodPicker(energy, labels = Checkin.ENERGY) { energy = it; save() }
+}
+
+/**
+ * À la place d'une carte à score tant que le ressenti manque : les questions sur la première de ces cartes (en grand),
+ * une invitation sur les autres.
+ */
+@Composable
+fun CheckinCard(c: DashCard, size: CardSize, first: Boolean, modifier: Modifier, nav: NavHostController) {
+    val open: () -> Unit = { nav.go("checkin") }
+    if (first && size == CardSize.L) Tile(c, tr("Ressenti du matin"), modifier, onClick = null) { CheckinPickers() }
+    else if (first) {
+        val d = CompactData(tr("Ressenti"), null, tr("Avez-vous bien dormi ?"), null, onClick = open)
+        when (size) {
+            CardSize.S -> CompactBubble(c, d, modifier)
+            CardSize.M -> CompactMedium(c, d, modifier)
+            else -> CompactStrip(c, d, modifier)
+        }
+    }
+    else {
+        val d = CompactData(tr("Ressenti"), null, tr(c.label), null, onClick = open)
+        when (size) {
+            CardSize.S -> CompactBubble(c, d, modifier)
+            CardSize.M -> CompactMedium(c, d, modifier)
+            CardSize.W -> CompactStrip(c, d, modifier)
+            CardSize.L -> Tile(c, tr(c.label), modifier, onClick = open) {
+                Text(tr("Notez d'abord votre ressenti du matin."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+            }
         }
     }
 }

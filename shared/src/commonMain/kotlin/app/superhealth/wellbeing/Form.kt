@@ -29,15 +29,20 @@ object Form {
         REST("Repos ou activité douce", "Repos"),
     }
 
-    enum class Kind(val label: String) { CHARGE("Charge"), SLEEP("Sommeil"), LOAD("Entraînement"), MOOD("Moral") }
+    enum class Kind(val label: String) {
+        CHARGE("Charge"), SLEEP("Sommeil"), LOAD("Entraînement"), MOOD("Moral"),
+        /** Facultatifs : n'apparaissent que s'ils ont quelque chose à dire. */
+        TREND("VFC sur 3 semaines"), BODY("Signes de la nuit"), FEEL("Ressenti"),
+    }
 
     /** Un signal : sa valeur lisible et son sens (−1 fatigue, 0 neutre, +1 prêt). */
     data class Signal(val kind: Kind, val value: String, val level: Int)
 
-    sealed interface Result
-    data class Advice(val verdict: Verdict, val signals: List<Signal>) : Result
+    /** [body] : alerte des signes de la nuit, affichée même sans conseil complet. */
+    sealed interface Result { val body: BodyAlert.Status? }
+    data class Advice(val verdict: Verdict, val signals: List<Signal>, override val body: BodyAlert.Status?) : Result
     /** Ce qui manque encore pour conseiller (aucun conseil partiel). */
-    data class Missing(val what: List<Kind>) : Result
+    data class Missing(val what: List<Kind>, override val body: BodyAlert.Status?) : Result
 
     /** Nuits de référence de la Charge avant de s'y fier pour pousser. */
     const val MIN_CHARGE_NIGHTS = 14
@@ -68,10 +73,13 @@ object Form {
         val base = Journal.moodBaseline(today.toEpochDay())?.takeIf { it.second >= MIN_MOOD_DAYS }
         if (entry == null || base == null) missing += Kind.MOOD
 
-        if (missing.isNotEmpty()) return@withContext Missing(missing)
+        val body = runCatching { BodyAlert.today(ctx) }.getOrNull()
+        if (missing.isNotEmpty()) return@withContext Missing(missing, body)
 
         val signals = ArrayList<Signal>()
         signals += Signal(Kind.CHARGE, "${charge!!.score} %", when (Scores.band(charge.score)) { 2 -> 1; 0 -> -1; else -> 0 })
+        // surmenage : VFC de la semaine sous la zone, moyenne et variation en baisse depuis 3 semaines
+        if (charge.hrv?.overreaching == true) signals += Signal(Kind.TREND, "↓", -1)
         val gap = slept!! - need
         signals += Signal(Kind.SLEEP, hm(slept) + " / " + hm(need), when {
             gap >= -15 && debt!! < 30 -> 1
@@ -90,7 +98,14 @@ object Form {
             mood <= 2 || mood <= base!!.first - 1.5 -> -1
             else -> 0
         })
-        Advice(verdict(signals, acwr), signals)
+        // ressenti du matin (facultatif) : moyenne sommeil + énergie
+        Checkin.today()?.let { f ->
+            val avg = (f.sleep + f.energy) / 2.0
+            signals += Signal(Kind.FEEL, app.superhealth.ui.tr(Checkin.ENERGY[f.energy - 1]), if (avg >= 4) 1 else if (avg <= 2) -1 else 0)
+        }
+        // une alerte des signes de la nuit impose le repos ; à surveiller, elle s'affiche sans compter
+        if (body?.level == BodyAlert.Level.ALERT) signals += Signal(Kind.BODY, "!", -1)
+        Advice(if (body?.level == BodyAlert.Level.ALERT) Verdict.REST else verdict(signals, acwr), signals, body)
     }
 
     /**

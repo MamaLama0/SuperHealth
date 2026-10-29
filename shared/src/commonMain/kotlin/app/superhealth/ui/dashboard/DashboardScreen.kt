@@ -369,6 +369,9 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules) {
         cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) }
     }
+    // ressenti du matin : les questions sur la première carte à score visible, en grand de préférence
+    checkinFirst = visible.filter { it in app.superhealth.ui.wellbeing.CHECKIN_GATED }
+        .let { g -> g.firstOrNull { sh.sizeOf(it) == app.superhealth.CardSize.L } ?: g.firstOrNull() }
     val rows = remember(visible, sh.dashSizes) { app.superhealth.packRows(visible) { sh.sizeOf(it).span } }
     var editing by remember { mutableStateOf<DashCard?>(null) }
     // Liste paresseuse : seules les rangées à l'écran sont composées (premier affichage plus rapide, moins de mémoire).
@@ -700,10 +703,18 @@ private fun Card(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel
     app.superhealth.ui.theme.CardTone(c.hue(), rich = c in richCards, night = c == DashCard.RINGS) { CardBody(c, size, vm, nav, h, modifier, tab) }
 }
 
+/** Carte qui porte les questions du ressenti du matin (les autres cartes à score y renvoient). */
+private var checkinFirst: DashCard? = null
+
 @Composable
 private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, modifier: Modifier, tab: (String) -> Unit) {
     val an = vm.nutrition.analytics.collectAsState().value ?: return
     val s by vm.nutrition.settings.collectAsState()
+    // ressenti du matin d'abord : les cartes à score attendent la réponse
+    if (c in app.superhealth.ui.wellbeing.CHECKIN_GATED && app.superhealth.ui.wellbeing.checkinPending()) {
+        app.superhealth.ui.wellbeing.CheckinCard(c, size, c == checkinFirst, modifier, nav)
+        return
+    }
     // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
     // Petit, moyen et bandeau : versions à regarder d'un coup d'œil, communes à toutes les cartes qui ont une valeur ;
     // grand : la version détaillée de chaque carte.
