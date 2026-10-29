@@ -237,8 +237,10 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("sim/training") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.TRAINING_SIM) { nav.popBackStack() } }
             composable("h/metric/{metric}", listOf(navArgument("metric") { type = NavType.StringType })) {
                 val m = runCatching { Metric.valueOf(it.arguments!!.getString("metric")!!) }.getOrNull() ?: Metric.STEPS
-                MetricScreen(vm, nav, m)
+                // 2.1 : le sommeil a son écran (nuit en détail, semaine, mois, année)
+                if (m == Metric.SLEEP) app.superhealth.ui.health.SleepScreen(vm, nav) else MetricScreen(vm, nav, m)
             }
+            composable("h/vitals") { app.superhealth.ui.health.VitalsScreen(vm, nav) }
             composable("h/devices") { DevicesScreen(vm, nav) }
             composable("h/activities") { ActivitiesHistoryScreen(vm, nav) }
             composable("h/permissions") { PermissionsScreen(vm, nav) }

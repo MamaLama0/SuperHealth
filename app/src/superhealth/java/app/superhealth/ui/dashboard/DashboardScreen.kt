@@ -34,6 +34,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Hotel
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.AccessibilityNew
@@ -204,6 +209,8 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.JOURNAL -> HealthHues.Mind
     DashCard.BEDTIME -> HealthHues.Sleep
     DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleHue
+    DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY -> HealthHues.Sleep
+    DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS -> HealthHues.Heart
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -251,6 +258,11 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.JOURNAL -> Icons.Rounded.SentimentSatisfied
     DashCard.BEDTIME -> Icons.Rounded.Bedtime
     DashCard.CYCLE -> Icons.Rounded.CalendarMonth
+    DashCard.SLEEP_SCHEDULE -> Icons.Rounded.Schedule
+    DashCard.SLEEP_QUALITY -> Icons.Rounded.Hotel
+    DashCard.NIGHT_HEART -> Icons.Rounded.FavoriteBorder
+    DashCard.NIGHT_VITALS -> Icons.Rounded.NightsStay
+    DashCard.VITALS_TRENDS -> Icons.AutoMirrored.Rounded.ShowChart
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -688,7 +700,7 @@ internal fun Sub(text: String?) {
 /** Cartes aux couleurs multiples (séries, muscles, phases) : en « Plein », fond profond pour que ces couleurs restent lisibles. */
 private val richCards = setOf(DashCard.RINGS, DashCard.MUSCLES, DashCard.MUSCLE_SETS, DashCard.ACTIVITIES, DashCard.VITALS, DashCard.SLEEP_STAGES,
     DashCard.HR_ZONES, DashCard.DAY_TIMELINE, DashCard.MACROS, DashCard.CALORIES, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.BALANCE,
-    DashCard.FOCUS, DashCard.LOAD, DashCard.CHARGE, DashCard.ENERGY)
+    DashCard.FOCUS, DashCard.LOAD, DashCard.CHARGE, DashCard.ENERGY, DashCard.SLEEP, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
 
 /** Une carte dans son ton (labo de style) : fond et couleurs de la carte suivent la variante choisie. */
 @Composable
@@ -835,6 +847,11 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.HR_ZONES -> HrZonesCard(c, h.watch, modifier, nav)
         DashCard.LOAD -> LoadCard(c, h.watch, modifier, nav)
         DashCard.DAY_TIMELINE -> DayTimelineCard(c, h, h.watch, modifier, nav)
+        DashCard.SLEEP_SCHEDULE -> SleepScheduleCard(c, h.watch, modifier, nav)
+        DashCard.SLEEP_QUALITY -> SleepQualityCard(c, h.watch, modifier, nav)
+        DashCard.NIGHT_HEART -> NightHeartCard(c, h.watch, modifier, nav)
+        DashCard.NIGHT_VITALS -> NightVitalsCard(c, h.watch, modifier, nav)
+        DashCard.VITALS_TRENDS -> VitalsTrendsCard(c, h.watch, modifier, nav)
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachWeekCard(c, size, vm, modifier, nav)
         DashCard.FORM -> app.superhealth.ui.wellbeing.FormCard(c, size, vm, modifier, nav)
@@ -883,16 +900,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
                 Sub(p?.acwr?.let { trf("Charge %1\$s", tr(app.superhealth.ui.health.loadStatus(it).first).lowercase(app.superhealth.ui.Lang.locale)) })
             }
         }
-        DashCard.SLEEP -> {
-            val series = h.series[Metric.SLEEP].orEmpty()
-            val last = h.latest(Metric.SLEEP)
-            Tile(c, tr("Sommeil"), modifier, onClick = { nav.go("h/metric/SLEEP") }, bottom = {
-                BarChart(series.map { it.second?.div(60) }, series.map { 8.0 }, c.ink(), height = 34.dp, track = softTrack(), dimBelowGoal = true, labels = series.map { dayLetter(it.first) })
-            }) {
-                Value(last?.let { formatValue(Metric.SLEEP, it.second) } ?: "—", color = c.ink().onContainer())
-                Sub(series.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.let { trf("Moy. %1\$s", formatValue(Metric.SLEEP, it.average())) })
-            }
-        }
+        DashCard.SLEEP -> SleepWeekCard(c, h, modifier, nav)
         DashCard.CARDIO -> {
             val cw = h.cardio
             Tile(c, tr("Minutes cardio"), modifier, onClick = { nav.go("h/metric/CARDIO_WEEK") }) {
@@ -940,7 +948,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.VITALS -> {
             // Les mesures choisies dont une source existe (montre ou Health Connect) ; touche l'en-tête pour les choisir.
             val tiles = VITALS.filter { Bridge.hasSource(it) }
-            Tile(c, tr("Constantes"), modifier, onClick = { nav.go("vitals/edit") }, tinted = false, trailing = tr("Modifier")) {
+            Tile(c, tr("Constantes"), modifier, onClick = { nav.go("h/vitals") }, tinted = false) {
                 if (tiles.isEmpty()) Text(tr("Vos constantes apparaîtront après une nuit avec la montre."), style = MaterialTheme.typography.bodyMedium,
                     color = Mf.colors.textSecondary)
                 val female = vm.nutrition.profile.collectAsState().value.sex.name == "FEMALE"

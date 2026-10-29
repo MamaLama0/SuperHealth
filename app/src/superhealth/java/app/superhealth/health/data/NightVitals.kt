@@ -1,0 +1,85 @@
+package app.superhealth.health.data
+
+import android.content.Context
+import app.superhealth.bridge.Bridge
+import java.time.LocalDate
+import kotlin.math.abs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+
+/**
+ * Signes vitaux de la nuit, à la manière de l'app Signes vitaux de watchOS : pouls au repos, VFC, respiration,
+ * température au poignet, SpO₂ et sommeil de la nuit comparés à votre plage habituelle.
+ *
+ * Règle SuperHealth (pas celle d'Apple, non publiée) : plage habituelle = médiane des 28 nuits précédentes ± 2 écarts
+ * absolus médians (×1,4826, équivalent d'un écart-type robuste), avec un écart minimal propre à chaque mesure ; il faut
+ * au moins 7 nuits pour juger.
+ */
+object NightVitals {
+    enum class Status { TYPICAL, HIGH, LOW, UNKNOWN }
+
+    data class Item(val metric: Metric, val value: Double?, val low: Double?, val high: Double?, val status: Status)
+
+    data class Night(val date: LocalDate, val items: List<Item>) {
+        val outliers: Int get() = items.count { it.status == Status.HIGH || it.status == Status.LOW }
+        val measured: Int get() = items.count { it.value != null }
+    }
+
+    val METRICS = listOf(Metric.RESTING_HR, Metric.HRV, Metric.RESPIRATORY_RATE, Metric.TEMPERATURE, Metric.SPO2, Metric.SLEEP)
+
+    /** Écart minimal de la plage (sinon une semaine très régulière rendrait la moindre variation « hors norme »). */
+    private fun minSpread(m: Metric) = when (m) {
+        Metric.RESTING_HR -> 3.0
+        Metric.HRV -> 6.0
+        Metric.RESPIRATORY_RATE -> 0.8
+        Metric.TEMPERATURE -> 0.3
+        Metric.SPO2 -> 1.5
+        Metric.SLEEP -> 45.0
+        else -> 0.0
+    }
+
+    private const val MIN_NIGHTS = 7
+
+    fun range(history: List<Double>, m: Metric): Pair<Double, Double>? {
+        if (history.size < MIN_NIGHTS) return null
+        val sorted = history.sorted()
+        val med = sorted[sorted.size / 2]
+        val mad = history.map { abs(it - med) }.sorted().let { it[it.size / 2] } * 1.4826
+        val half = maxOf(2 * mad, minSpread(m))
+        return med - half to med + half
+    }
+
+    fun status(v: Double?, r: Pair<Double, Double>?): Status = when {
+        v == null || r == null -> Status.UNKNOWN
+        v > r.second -> Status.HIGH
+        v < r.first -> Status.LOW
+        else -> Status.TYPICAL
+    }
+
+    /** Valeurs par jour de [m] de [from] à [to] inclus (montre ou Health Connect). */
+    suspend fun series(ctx: Context, m: Metric, from: LocalDate, to: LocalDate): List<Pair<LocalDate, Double?>> = withContext(Dispatchers.IO) {
+        coroutineScope {
+            generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toList()
+                .map { d -> async { d to runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull() } }.awaitAll()
+        }
+    }
+
+    /** Mesures suivies ici dont une source existe. */
+    fun available(): List<Metric> = METRICS.filter { Bridge.hasSource(it) }
+
+    /** Nuit qui finit le jour [date] et plage habituelle de chaque mesure disponible. */
+    suspend fun of(ctx: Context, date: LocalDate = LocalDate.now()): Night = coroutineScope {
+        val items = available().map { m ->
+            async {
+                val s = series(ctx, m, date.minusDays(28), date)
+                val value = s.last().second
+                val r = range(s.dropLast(1).mapNotNull { it.second }, m)
+                Item(m, value, r?.first, r?.second, status(value, r))
+            }
+        }.awaitAll()
+        Night(date, items)
+    }
+}

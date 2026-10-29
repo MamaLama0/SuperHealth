@@ -59,7 +59,17 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** 1.8 : coucher conseillé (besoin, dette, heure de réveil habituelle). */
     BEDTIME("Coucher conseillé", Section.HEALTH, watch = true),
     /** 1.8 : suivi du cycle. */
-    CYCLE("Cycle", Section.HEALTH);
+    CYCLE("Cycle", Section.HEALTH),
+    /** 2.1 : coucher et lever des deux dernières semaines. */
+    SLEEP_SCHEDULE("Horaires de sommeil", Section.HEALTH, watch = true),
+    /** 2.1 : Repos et ses quatre parties. */
+    SLEEP_QUALITY("Qualité du sommeil", Section.HEALTH, watch = true),
+    /** 2.1 : pouls du coucher au lever et son point bas. */
+    NIGHT_HEART("Cœur la nuit", Section.HEALTH, watch = true),
+    /** 2.1 : signes vitaux de la nuit face à la plage habituelle. */
+    NIGHT_VITALS("Signes vitaux de la nuit", Section.HEALTH, watch = true),
+    /** 2.1 : constantes sur 30 jours avec leur plage habituelle. */
+    VITALS_TRENDS("Tendances des constantes", Section.HEALTH, watch = true);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -96,11 +106,13 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
     DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE,
-    DashCard.COACH, DashCard.COACH_WEEK, DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE)
+    DashCard.COACH, DashCard.COACH_WEEK, DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE,
+    DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
 
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
-    DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD)
+    DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD,
+    DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART)
 
 /** Module téléchargeable dont dépend la carte (null : toujours disponible). */
 val DashCard.module: String? get() = when (this) {
@@ -239,6 +251,8 @@ data class SuperSettings(
     val hrvSources: Map<Long, String> = emptyMap(),
     /** Habitudes proposées dans le journal du moral (noms de wellbeing.Journal.Tag). */
     val journalTags: List<String> = app.superhealth.wellbeing.Journal.Tag.entries.map { it.name },
+    /** 2.1 : cartes du sommeil et des constantes déjà proposées (migration unique). */
+    val nightCardsAdded: Boolean = false,
     /** 1.8 : journal du moral, forme du jour et coucher conseillé déjà proposés (migration unique). */
     val wellbeingAdded: Boolean = false,
     /** Mesures de la carte Constantes (pièce maîtresse du tableau de bord), noms de [app.superhealth.health.data.Metric]. */
@@ -421,6 +435,16 @@ object SuperPrefs {
             listOf(DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME).filter { it !in cards }.reversed().forEach { cards.add(at, it) }
             s.copy(dashboard = cards, features = s.features + Feature.JOURNAL.name, wellbeingAdded = true,
                 plus = (s.plus + listOf(PlusAction.MOOD.name, PlusAction.BREATHE.name)).distinct())
+        }
+        // 2.1 : nouvelles cartes du sommeil après la carte Sommeil, celles des constantes après Constantes (masquées sans montre)
+        if (!_settings.value.nightCardsAdded) update { s ->
+            val cards = s.dashboard.toMutableList()
+            val sleep = listOf(DashCard.SLEEP_QUALITY, DashCard.SLEEP_SCHEDULE, DashCard.NIGHT_HEART).filter { it !in cards }
+            val at = maxOf(cards.indexOf(DashCard.SLEEP), cards.indexOf(DashCard.SLEEP_STAGES)).let { if (it >= 0) it + 1 else cards.size }
+            cards.addAll(at, sleep)
+            val vitals = listOf(DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS).filter { it !in cards }
+            cards.addAll((cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size, vitals)
+            s.copy(dashboard = cards, nightCardsAdded = true)
         }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }

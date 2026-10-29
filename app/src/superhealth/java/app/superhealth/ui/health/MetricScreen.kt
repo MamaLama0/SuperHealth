@@ -275,7 +275,7 @@ private fun Stat(label: String, value: String, modifier: Modifier) {
 }
 
 @Composable
-private fun RoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun RoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
     Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.chip).clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, description, tint = if (enabled) Mf.colors.text else Mf.colors.textTertiary)
     }

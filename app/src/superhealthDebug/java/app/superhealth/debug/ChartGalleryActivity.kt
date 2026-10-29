@@ -33,6 +33,7 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.SuperTheme
 import app.superhealth.nutrition.domain.ThemeMode
 import kotlin.math.sin
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind as K
 
 /** Galerie des graphiques avec des données de test et leurs cas limites, pour vérifier la charte (build debug). */
 class ChartGalleryActivity : ComponentActivity() {
@@ -116,6 +117,7 @@ private fun Gallery(page: Int) {
                     }
                 }
             }
+            6 -> SleepGallery()
             else -> {
                 Case("Vide") { LineChart(emptyList(), height = 120.dp) }
                 Case("Un point") { LineChart(listOf(Series(listOf(1L to 72.0), blue)), height = 120.dp) }
@@ -131,5 +133,36 @@ private fun Gallery(page: Int) {
                 } } }
             }
         }
+    }
+}
+
+/** Page 6 : graphiques du sommeil et des constantes (2.1) sur des nuits fictives. */
+@Composable
+private fun SleepGallery() {
+    val today = java.time.LocalDate.now()
+    fun night(d: java.time.LocalDate, shift: Int, staged: Boolean = true): app.superhealth.health.data.NightSummary {
+        var t = app.superhealth.health.data.NightSummary.noon(d) + (11 * 60 + shift) * 60_000L
+        val seq = if (staged) listOf(K.AWAKE_SLEEP to 12, K.LIGHT_SLEEP to 25, K.DEEP_SLEEP to 50, K.LIGHT_SLEEP to 40, K.REM_SLEEP to 20, K.AWAKE_SLEEP to 6,
+            K.LIGHT_SLEEP to 45, K.DEEP_SLEEP to 35, K.LIGHT_SLEEP to 50, K.REM_SLEEP to 35, K.LIGHT_SLEEP to 40, K.AWAKE_SLEEP to 4, K.REM_SLEEP to 40, K.LIGHT_SLEEP to 30 + shift % 40)
+            else listOf(K.SLEEP_ANY to 420 + shift % 50)
+        return app.superhealth.health.data.NightSummary(d, seq.map { (k, m) -> app.superhealth.health.data.HealthRepository.SleepPhase(k, t, t + m * 60_000L).also { t += m * 60_000L } })
+    }
+    val nights = (13 downTo 0).map { i -> today.minusDays(i.toLong()).let { d -> if (i == 9) null else night(d, (i * 37) % 70 - 20, staged = i != 5) } }
+    val last = nights.last()!!
+    val red = androidx.compose.ui.graphics.Color(0xFFFA114F)
+    val green = androidx.compose.ui.graphics.Color(0xFF2EA043)
+    val purple = androidx.compose.ui.graphics.Color(0xFFBF5AF2)
+    Case("Hypnogramme détaillé") { app.superhealth.ui.health.Hypnogram(last.phases, Modifier.fillMaxWidth().height(150.dp), axis = true) }
+    Case("Phases") { app.superhealth.ui.health.StageLegend(last, mapOf(K.DEEP_SLEEP to 70.0, K.REM_SLEEP to 90.0, K.LIGHT_SLEEP to 230.0, K.AWAKE_SLEEP to 25.0)) }
+    Case("Phases nuit par nuit + besoin") { app.superhealth.ui.health.StageBars(nights.takeLast(7), 465.0, Modifier, listOf("L", "M", "M", "J", "V", "S", "D"), height = 150.dp) }
+    Case("Horaires 14 nuits") { app.superhealth.ui.health.ScheduleChart(nights, Modifier, nights.indices.map { if (it % 2 == 1) "x" else "" }, height = 150.dp) }
+    Case("Parties de Repos") { app.superhealth.ui.health.RestPartsRows(app.superhealth.health.data.Scores.RestParts(92.0, 88.0, 64.0, 41.0), app.superhealth.ui.theme.HealthHues.Sleep) }
+    val heart = (0 until 460).map { m -> last.bedMs + m * 60_000L to (58 - 8 * sin(m / 140.0) + (m % 7) - 3).toInt() }
+    val low = app.superhealth.health.data.Nights.lowest(heart)
+    Case("Cœur la nuit, plus bas ${low?.second?.toInt()} à ${low?.first?.let { app.superhealth.ui.timeOf(it) }}") {
+        HeartChart(app.superhealth.health.data.Nights.fiveMinutes(heart), red, height = 140.dp, from = last.bedMs, to = last.wakeMs, reference = low?.second, gapMs = 20 * 60_000L)
+    }
+    Case("Barre de plage") {
+        app.superhealth.ui.health.RangeBar(52.0, 48.0, 58.0, green); app.superhealth.ui.health.RangeBar(61.0, 48.0, 58.0, purple)
     }
 }

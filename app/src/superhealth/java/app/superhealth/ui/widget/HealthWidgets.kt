@@ -219,7 +219,7 @@ private data class Vital(val icon: Int, val color: Color, val value: String, val
 private fun VitalsContent(ctx: Context, items: List<Vital>) {
     val size = WK.size(LocalSize.current)
     val main = items.firstOrNull { it.value != "—" } ?: items.first()
-    WidgetCard(WK.open(ctx, if (size == WK.Size.SMALL) main.route else "home"), if (size == WK.Size.SMALL) main.color else null,
+    WidgetCard(WK.open(ctx, if (size == WK.Size.SMALL) main.route else "h/vitals"), if (size == WK.Size.SMALL) main.color else null,
         padding = if (size == WK.Size.SMALL) 6.dp else 12.dp, horizontal = Alignment.CenterHorizontally) {
         when (size) {
             // petit : la première mesure disponible, symbole et valeur
