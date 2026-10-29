@@ -337,7 +337,11 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
 
     // Profil, programme et objectif tels que saisis : utilisés pour l'aperçu du rythme et pour le résultat.
     val today = LocalDate.now().toEpochDay()
-    fun targetOk() = (goal == GoalType.CUT && targetKg < weightKg - 0.05) || (goal == GoalType.BULK && targetKg > weightKg + 0.05)
+    fun age() = LocalDate.now().year - birthYear
+    /** Après 65 ans en obésité : la cible ne descend pas sous un IMC de 23 (Senior). */
+    fun seniorFloorOk() = !app.superhealth.nutrition.domain.Senior.cutAllowed(age(), weightKg, heightCm.toDouble()) ||
+        app.superhealth.nutrition.domain.Senior.minTargetKg(age(), heightCm.toDouble())?.let { targetKg >= it } ?: true
+    fun targetOk() = (goal == GoalType.CUT && targetKg < weightKg - 0.05 && seniorFloorOk()) || (goal == GoalType.BULK && targetKg > weightKg + 0.05)
     /**
      * Durée → rythme en % du poids par semaine (unité des programmes de MacroFactor) : écart / semaines / poids actuel.
      * Les durées proposées gardent le rythme entre 0,1 % et le maximum de MacroFactor (1 % en perte, 0,5 % en prise).
@@ -347,9 +351,11 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     fun initTarget() {
         if (goal != GoalType.MAINTENANCE && !targetOk()) targetKg = (weightKg + if (goal == GoalType.CUT) -5 else 5).coerceIn(35.0, 250.0)
     }
+    /** Rythme maximal : 1 % en perte (0,5 % en prise), moins dès 60 ans (Senior : déficit borné). */
+    fun maxPace() = if (goal == GoalType.BULK) 0.5 else minOf(1.0, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age(), weightKg) ?: 1.0)
     fun paceWeeks(): List<Int> {
         val delta = abs(targetKg - weightKg).coerceAtLeast(0.1)
-        val max = if (goal == GoalType.BULK) 0.5 else 1.0
+        val max = maxPace()
         val shortest = kotlin.math.ceil(delta / (weightKg * max / 100)).toInt().coerceAtLeast(1)
         val longest = (delta / (weightKg * 0.1 / 100)).toInt().coerceIn(shortest, 156)
         return (shortest..longest).toList()
@@ -357,7 +363,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     /** Durée par défaut : celle du rythme recommandé de MacroFactor (0,5 % en perte, 0,25 % en prise), puis le rythme exact qui en découle. */
     fun initPace() {
         val options = paceWeeks()
-        val pref = abs(targetKg - weightKg) / (weightKg * (if (goal == GoalType.BULK) 0.25 else 0.5) / 100)
+        val pref = abs(targetKg - weightKg) / (weightKg * minOf(if (goal == GoalType.BULK) 0.25 else 0.5, maxPace()) / 100)
         weeks = pref.roundToInt().coerceIn(options.first(), options.last())
         rate = rateFor(weeks)
     }
@@ -378,7 +384,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         val p = draftProgram(); val g = draftGoal()
         val an = computeAnalytics(emptyList(), w, emptyList(), draftProfile(), p, settings.copy(weightUnit = unit), listOf(g), emptyList(), today)
         return an.initialTdee to Targets.checkIn(today, an.initialTdee, weightKg, an.lbmAt(today), p, g, heightCm.toDouble(),
-            draftProfile().let { LocalDate.now().year - it.birthYear })
+            draftProfile().let { LocalDate.now().year - it.birthYear }, sex == app.superhealth.nutrition.domain.Sex.FEMALE)
     }
 
     /** Programme de musculation proposé (aperçu sur l'écran final, activé à la validation). */
@@ -640,6 +646,20 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         if (!targetOk()) Text(if (goal == GoalType.CUT) tr("Choisissez un poids plus bas que le poids actuel.") else tr("Choisissez un poids plus haut que le poids actuel."),
                             color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                             textAlign = TextAlign.Center)
+                        // âge (Senior) : après 65 ans, perte seulement en obésité et pas sous un IMC de 23
+                        if (goal == GoalType.CUT) {
+                            val h = heightCm.toDouble()
+                            val note = when {
+                                !app.superhealth.nutrition.domain.Senior.cutAllowed(age(), weightKg, h) ->
+                                    tr("Après 65 ans, la perte de poids n'est conseillée qu'en cas d'obésité (IMC ≥ 30) : vos calories resteront au maintien (ESPEN 2022).")
+                                app.superhealth.nutrition.domain.Senior.minTargetKg(age(), h)?.let { targetKg < it } == true ->
+                                    trf("Après 65 ans, visez au moins %1\$s (IMC 23) : en dessous, le risque augmente.",
+                                        settings.copy(weightUnit = unit).weight(app.superhealth.nutrition.domain.Senior.minTargetKg(age(), h)!!, 1))
+                                else -> null
+                            }
+                            note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp), textAlign = TextAlign.Center) }
+                        }
                     }
                     Step.PACE -> Page(st, tr("En combien de temps ?"), tr("Le rythme et votre budget calorique en découlent.")) {
                         val options = paceWeeks()
@@ -648,7 +668,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                         val kgWeek = weightKg * rate / 100
                         val (_, ci) = remember(rate, targetKg, goal) { draftCheckIn() }
-                        val max = if (goal == GoalType.BULK) 0.5 else 1.0
+                        val max = maxPace()
                         Spacer(Modifier.height(12.dp))
                         Text(trf("%1\$s %% du poids / semaine", num(rate, 2)), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
                             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
@@ -1050,6 +1070,7 @@ private fun Result(tdee: Double, ci: app.superhealth.nutrition.domain.CheckIn, s
     val bullets = listOfNotNull(
         trf("Dépense estimée : %1\$s par jour.", s.energy(tdee)),
         if (ci.limitedByFloor) tr("Cible relevée au plancher calorique.") else null,
+        app.superhealth.nutrition.ui.screens.ageLimitText(ci),
         trf("Protéines : %1\$s g par kg de masse maigre.", num(Targets.proteinPerKgLbm(p.goalType, p.training, p.proteinPreference), 1)),
         tr("La dépense et les cibles s'ajustent à chaque check-in hebdomadaire."),
     )

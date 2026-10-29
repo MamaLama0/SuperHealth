@@ -72,7 +72,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** 2.1 : signes vitaux de la nuit face à la plage habituelle. */
     NIGHT_VITALS("Signes vitaux de la nuit", Section.HEALTH, watch = true),
     /** 2.1 : constantes sur 30 jours avec leur plage habituelle. */
-    VITALS_TRENDS("Tendances des constantes", Section.HEALTH, watch = true);
+    VITALS_TRENDS("Tendances des constantes", Section.HEALTH, watch = true),
+    /** 2.2 : Forme, Charge, Repos et Effort réunis en anneaux sur une carte sombre. */
+    SCORES("Scores du jour", Section.HEALTH, watch = true);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -256,6 +258,8 @@ data class SuperSettings(
     val journalTags: List<String> = app.superhealth.wellbeing.Journal.Tag.entries.map { it.name },
     /** 2.1 : cartes du sommeil et des constantes déjà proposées (migration unique). */
     val nightCardsAdded: Boolean = false,
+    /** 2.2 : carte Scores du jour ajoutée une fois, en tête. */
+    val scoresAdded: Boolean = false,
     /** 1.8 : journal du moral, forme du jour et coucher conseillé déjà proposés (migration unique). */
     val wellbeingAdded: Boolean = false,
     /** Règles lues dans Apple Santé (autorisation à part, demandée depuis l'écran Cycle). */
@@ -454,6 +458,10 @@ object SuperPrefs {
             val vitals = listOf(DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS).filter { it !in cards }
             cards.addAll((cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size, vitals)
             s.copy(dashboard = cards, nightCardsAdded = true)
+        }
+        // 2.2 : Scores du jour en tête du tableau de bord (masquée sans montre)
+        if (!_settings.value.scoresAdded) update { s ->
+            s.copy(dashboard = if (DashCard.SCORES in s.dashboard) s.dashboard else listOf(DashCard.SCORES) + s.dashboard, scoresAdded = true)
         }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }

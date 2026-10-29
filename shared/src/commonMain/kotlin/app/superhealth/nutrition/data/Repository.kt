@@ -107,7 +107,7 @@ data class Analytics(
     fun provisionalCheckIn(day: Long): CheckIn {
         val w = trendByDay[day] ?: currentTrendKg ?: DEFAULT_WEIGHT
         return Targets.checkIn(day, tdeeAt(day), w, lbmAt(day), program, goalAt(day), profile.heightCm,
-            LocalDate.ofEpochDay(day).year - profile.birthYear)
+            LocalDate.ofEpochDay(day).year - profile.birthYear, profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE)
     }
 
     /** Prochain check-in : prochain jour de check-in choisi, strictement après le dernier check-in (ou le début du programme). */

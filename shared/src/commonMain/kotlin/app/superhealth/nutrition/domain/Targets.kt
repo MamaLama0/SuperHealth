@@ -177,25 +177,18 @@ object Targets {
         return Distribution((1..7).map { if (it in highDays) hi else lo }, shifted = true, limitedByFloor = false)
     }
 
-    /** Âge à partir duquel s'applique le plancher protéique des personnes âgées. */
-    const val OLDER_AGE = 65
-
-    /**
-     * Plancher protéique après 65 ans (règle SuperHealth, pas MacroFactor) : au moins 1,0 g par kg de poids et par jour,
-     * recommandation PROT-AGE (Bauer 2013) reprise par l'ESPEN (Volkert 2022, grade B). Sans effet quand la table habituelle
-     * donne déjà plus, ce qui est le cas sauf masse grasse élevée (la table est en g/kg de masse maigre).
-     */
-    fun olderProteinFloorG(ageYears: Int?, trendKg: Double): Double = if (ageYears != null && ageYears >= OLDER_AGE) 1.0 * trendKg else 0.0
-
     /** Calcule un check-in (mise à jour hebdomadaire du programme coaché). */
-    fun checkIn(day: Long, tdee: Double, trendKg: Double, lbmKg: Double, program: Program, goal: Goal?, heightCm: Double = 175.0, ageYears: Int? = null): CheckIn {
-        val minP = olderProteinFloorG(ageYears, trendKg)
+    fun checkIn(day: Long, tdee: Double, trendKg: Double, lbmKg: Double, program: Program, goal: Goal?, heightCm: Double = 175.0,
+                ageYears: Int? = null, female: Boolean = false): CheckIn {
+        // à partir de 60 ans : protéines sur le poids ajusté, déficit borné (Senior)
+        val minP = Senior.proteinFloorG(ageYears, trendKg, heightCm, female, goal?.type == GoalType.CUT)
         val type = goal?.type ?: GoalType.MAINTENANCE
         if (program.style == ProgramStyle.MANUAL) {
             return CheckIn(day, tdee, trendKg, program.manualKcal, program.manualProtein, program.manualFat, program.manualCarbs,
                 type, goal?.ratePctPerWeek ?: 0.0, manual = true)
         }
-        val raw = tdee + dailyEnergyDelta(weeklyRateKg(goal, trendKg))
+        val wanted = tdee + dailyEnergyDelta(weeklyRateKg(goal, trendKg))
+        val (raw, ageLimit) = if (type == GoalType.CUT) Senior.limitCut(ageYears, heightCm, trendKg, tdee, wanted) else wanted to null
         val floorKcal = dynamicFloor(program.calorieFloor, heightCm, lbmKg)
         val kcal = max(raw, floorKcal)
         val m = macrosFor(kcal, program, type, lbmKg, heightCm, minP)
@@ -204,7 +197,7 @@ object Targets {
             macrosFor(k, program, type, lbmKg, heightCm, minP).let { DayTarget(k, it.protein, it.fat, it.carbs) }
         }
         return CheckIn(day, tdee, trendKg, kcal, m.protein, m.fat, m.carbs, type, goal?.ratePctPerWeek ?: 0.0, raw < floorKcal,
-            days = days, floorKcal = floorKcal)
+            days = days, floorKcal = floorKcal, ageLimit = ageLimit?.name)
     }
 
     // ----- Objectifs : lien taux ↔ date de fin -----

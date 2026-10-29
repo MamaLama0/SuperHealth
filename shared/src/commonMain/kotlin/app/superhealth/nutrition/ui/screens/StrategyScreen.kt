@@ -335,8 +335,14 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     val targetKg = target.toNum()?.let { s.toKg(it) }
     val computedRate = if (byDate && targetKg != null) Targets.rateFromEndDay(an.today, trend, targetKg, endDay) else rate.toNum()
     val computedEnd = if (!byDate && targetKg != null && computedRate != null) Targets.endDayFromRate(an.today, trend, targetKg, computedRate) else endDay
-    val rateOk = type == GoalType.MAINTENANCE || (computedRate != null && computedRate in Targets.MIN_RATE..Targets.MAX_RATE)
+    // âge (Senior) : rythme de perte borné dès 60 ans ; après 65 ans, perte seulement en obésité et jamais sous un IMC de 23
+    val age = LocalDate.now().year - an.profile.birthYear
+    val maxRate = if (type == GoalType.CUT) minOf(Targets.MAX_RATE, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age, trend) ?: Targets.MAX_RATE) else Targets.MAX_RATE
+    val cutAllowed = type != GoalType.CUT || app.superhealth.nutrition.domain.Senior.cutAllowed(age, trend, an.profile.heightCm)
+    val minTarget = if (type == GoalType.CUT) app.superhealth.nutrition.domain.Senior.minTargetKg(age, an.profile.heightCm) else null
+    val rateOk = type == GoalType.MAINTENANCE || (computedRate != null && computedRate in Targets.MIN_RATE..maxRate)
     val directionOk = targetKg == null || type == GoalType.MAINTENANCE || (type == GoalType.CUT && targetKg < trend) || (type == GoalType.BULK && targetKg > trend)
+    val floorOk = minTarget == null || targetKg == null || targetKg >= minTarget
 
     DetailScaffold(tr("Objectif"), onBack) {
         MfCard {
@@ -359,6 +365,8 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 }
             }
         }
+        if (!cutAllowed) Text(tr("Après 65 ans, la perte de poids n'est conseillée qu'en cas d'obésité (IMC ≥ 30) : vos calories resteront au maintien (ESPEN 2022)."),
+            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
         if (type != GoalType.MAINTENANCE && targetKg != null) {
             Spacer(Modifier.height(12.dp))
             MfCard {
@@ -371,22 +379,27 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                     Text(trf("Écart calorique moyen : %1\$s%2\$s %3\$s/jour", (if (type == GoalType.CUT) "−" else "+"), (s.energyValue(r / 100 * trend * Targets.KCAL_PER_KG / 7).roundToInt()), s.energyUnit.label.tr()),
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
                 }
-                if (!rateOk) Text(trf("Rythme hors limites (%1\$s–%2\$s %%/sem.) : choisissez une date plus %3\$s.", (num(Targets.MIN_RATE, 2)), (num(Targets.MAX_RATE, 1)), (if ((computedRate ?: 0.0) > Targets.MAX_RATE) tr("lointaine") else tr("proche"))),
+                if (!rateOk) Text(trf("Rythme hors limites (%1\$s–%2\$s %%/sem.) : choisissez une date plus %3\$s.", (num(Targets.MIN_RATE, 2)), (num(maxRate, if (maxRate < 1) 2 else 1)), (if ((computedRate ?: 0.0) > maxRate) tr("lointaine") else tr("proche"))),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
                 if (!directionOk) Text(tr("Le poids cible ne correspond pas au type d'objectif."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                if (maxRate < Targets.MAX_RATE) Text(trf("À votre âge, perte limitée à %1\$s %%/sem. (déficit de %2\$s kcal/j au plus).", num(maxRate, 2),
+                    app.superhealth.nutrition.domain.Senior.maxDeficit(app.superhealth.nutrition.domain.Senior.band(age))!!.roundToInt()),
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
+                if (!floorOk) Text(trf("Après 65 ans, visez au moins %1\$s (IMC 23) : en dessous, le risque augmente.", s.weight(minTarget!!)),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
                 Text(tr("Estimation optimiste : prévoyez un peu de marge."),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
             }
         }
         Spacer(Modifier.height(16.dp))
-        PillButton(tr("Enregistrer l'objectif"), Modifier.fillMaxWidth(), enabled = rateOk && directionOk && (type == GoalType.MAINTENANCE || targetKg != null)) {
+        PillButton(tr("Enregistrer l'objectif"), Modifier.fillMaxWidth(), enabled = rateOk && directionOk && floorOk && (type == GoalType.MAINTENANCE || targetKg != null)) {
             val g = Goal(
                 startDay = an.today, type = type, startWeightKg = trend, targetWeightKg = targetKg ?: if (type == GoalType.MAINTENANCE) trend else null,
                 ratePctPerWeek = if (type == GoalType.MAINTENANCE) 0.0 else (computedRate ?: 0.5), endDay = if (byDate && type != GoalType.MAINTENANCE) endDay else null,
             )
             vm.repo.startGoal(g)
             // Nouvel objectif → nouveau programme immédiat (comme « Set New Program » de MacroFactor).
-            vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), trend, an.lbmAt(an.today), an.program, g, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear))
+            vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), trend, an.lbmAt(an.today), an.program, g, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear, an.profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE))
             onBack()
         }
         current?.let { cur ->
@@ -469,6 +482,7 @@ fun CheckInScreen(vm: AppViewModel, onBack: () -> Unit) {
                     CompareRow(tr("Lipides (g)"), prev?.fat, next.fat, FatColor)
                     CompareRow(tr("Glucides (g)"), prev?.carbs, next.carbs, CarbsColor)
                     if (next.limitedByFloor) Text(tr("Cible limitée par le plancher calorique."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    ageLimitText(next)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
                 }
                 Spacer(Modifier.height(16.dp))
                 PillButton(tr("Appliquer le nouveau programme"), Modifier.fillMaxWidth()) { vm.repo.saveCheckIn(next); onBack() }
@@ -605,7 +619,7 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             vm.repo.prefs.setProfile(profile.copy(bmrEquation = bmr))
             a?.let { an ->
                 val w = an.currentTrendKg ?: Analytics.DEFAULT_WEIGHT
-                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), w, an.lbmAt(an.today), newP, an.currentGoal, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear))
+                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), w, an.lbmAt(an.today), newP, an.currentGoal, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear, an.profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE))
             }
             onBack()
         }
@@ -649,4 +663,11 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/** Pourquoi l'âge a retenu la cible (Senior) : une phrase, ou null. */
+internal fun ageLimitText(ci: app.superhealth.nutrition.domain.CheckIn): String? = when (ci.ageLimit) {
+    "NOT_OBESE" -> tr("Après 65 ans, la perte de poids n'est conseillée qu'en cas d'obésité (IMC ≥ 30) : calories au maintien, pour garder muscle et os.")
+    "CAPPED" -> tr("Déficit limité par l'âge (750 kcal/j de 60 à 64 ans, 500 kcal/j après 65 ans) pour préserver le muscle.")
+    else -> null
 }

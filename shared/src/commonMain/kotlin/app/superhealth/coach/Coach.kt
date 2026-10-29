@@ -206,9 +206,12 @@ object Coach {
                     val age = today.year - p.birthYear
                     appendLine(listOf(if (p.sex == Sex.MALE) "male" else "female", "$age y",
                         "${p.heightCm.roundToInt()} cm").joinToString(", "))
-                    // 2.2 : après 65 ans, le coach connaît les repères appliqués par l'app (voir Targets.olderProteinFloorG)
-                    if (age >= app.superhealth.nutrition.domain.Targets.OLDER_AGE) appendLine("Older adult: the app keeps protein ≥ 1.0 g/kg/day (PROT-AGE, ESPEN 2022); " +
-                        "favour ~0.4 g/kg protein per meal (Moore 2015), resistance training to preserve muscle during any weight loss, vitamin D and calcium.")
+                    // 2.2 : à partir de 60 ans, le coach connaît les règles d'âge appliquées par l'app (Senior)
+                    val band = app.superhealth.nutrition.domain.Senior.band(age)
+                    if (band != app.superhealth.nutrition.domain.Senior.Band.ADULT) appendLine("Age rules applied by the app (EASO 2025, ESPEN 2022): " +
+                        (if (band == app.superhealth.nutrition.domain.Senior.Band.OLDER) "65+: weight loss only if BMI ≥ 30, deficit ≤ 500 kcal/day, intake ≥ 1200 kcal, never below BMI 23, protein 1.0-1.2 g/kg adjusted weight, ≥ 25 g protein per meal"
+                        else "60-64: deficit ≤ 750 kcal/day, protein ≥ 1.0 g/kg adjusted weight") +
+                        ". Never suggest a bigger deficit; favour resistance training, protein, vitamin D and calcium.")
                 }
                 if (shares(Share.WEIGHT)) {
                     an.currentTrendKg?.let { t ->
@@ -466,7 +469,8 @@ object Coach {
     /** Point du jour (comme le Daily Outlook de WHOOP) : préparé une fois par jour, gardé jusqu'au lendemain. */
     suspend fun makeBrief(ctx: Context): Brief {
         val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
-        val raw = split(complete(p, system(p, context(ctx)), listOf(Msg("user", p.brief)))).first
+        // 2.2 : le point du jour peut aller chercher le détail (repas, nuit, séances) avec les outils de lecture
+        val raw = split(converse(ctx, p, system(p, context(ctx)), listOf(Msg("user", p.brief)), tools = true).text).first
         val lines = raw.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val head = lines.firstOrNull { !it.startsWith("•") && !it.startsWith("-") && !it.startsWith("*") }?.trim('*', '#', ' ') ?: ""
         val points = lines.filter { it.startsWith("•") || it.startsWith("-") || (it.startsWith("*") && !it.startsWith("**")) }

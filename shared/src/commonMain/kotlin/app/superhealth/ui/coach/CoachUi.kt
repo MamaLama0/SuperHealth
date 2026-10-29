@@ -429,6 +429,8 @@ private fun Bubble(m: Coach.Msg, onAction: (app.superhealth.coach.CoachTools.Act
 /** Proposition du coach : programme ou repas, avec son bouton ; une fois faite, le bouton devient « Fait ». */
 @Composable
 private fun ActionCard(a: app.superhealth.coach.CoachTools.Action, onApply: () -> Unit) {
+    var compare by remember { mutableStateOf(false) }
+    if (compare) ProgramCompareSheet(a, onApply = { compare = false; onApply() }) { compare = false }
     Row(Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(18.dp)).background(Mf.colors.card).padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(34.dp).clip(CircleShape).background(CoachHue.container()), contentAlignment = Alignment.Center) {
@@ -438,12 +440,14 @@ private fun ActionCard(a: app.superhealth.coach.CoachTools.Action, onApply: () -
         Column(Modifier.weight(1f)) {
             Text(a.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             if (a.detail.isNotEmpty()) Text(a.detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2)
+            if (a.kind == "program") Text(tr("Comparer avant / après"), style = MaterialTheme.typography.labelLarge, color = CoachHue,
+                modifier = Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp)).clickable { compare = true }.padding(vertical = 2.dp))
         }
         Spacer(Modifier.width(8.dp))
         if (a.done) Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = Mf.colors.textSecondary)
             Text(tr("Fait"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
-        } else Text(if (a.kind == "program") tr("Créer") else tr("Ajouter"), style = MaterialTheme.typography.labelLarge, color = Color.White,
+        } else Text(if (a.kind == "program") (if ("replaces_program_id" in a.payload) tr("Mettre à jour") else tr("Créer")) else tr("Ajouter"), style = MaterialTheme.typography.labelLarge, color = Color.White,
             modifier = Modifier.clip(CircleShape).background(CoachHue).clickable(onClick = onApply).padding(horizontal = 14.dp, vertical = 8.dp))
     }
 }
@@ -544,5 +548,42 @@ fun CoachChip(label: String, question: String, nav: NavHostController, modifier:
         Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(15.dp), tint = CoachHue.onContainer())
         Spacer(Modifier.width(6.dp))
         Text(label, style = MaterialTheme.typography.labelLarge, color = CoachHue.onContainer(), maxLines = 1)
+    }
+}
+
+
+/**
+ * Programme proposé face à l'actuel, jour par jour : exercice ajouté (+, couleur du coach), retiré (barré), séries
+ * changées (avant → après). Pour un nouveau programme, la colonne « avant » est vide.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProgramCompareSheet(a: app.superhealth.coach.CoachTools.Action, onApply: () -> Unit, onDismiss: () -> Unit) {
+    val days = remember(a) { app.superhealth.coach.CoachTools.compare(a) }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp).verticalScroll(rememberScrollState())) {
+            Text(a.title, style = MaterialTheme.typography.titleLarge)
+            Text(a.detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
+            days.forEach { d ->
+                Text(d.name, style = MaterialTheme.typography.labelLarge, color = CoachHue, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.card).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    if (d.rows.isEmpty()) Text(tr("Repos"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    d.rows.forEach { r ->
+                        val added = r.before == null; val removed = r.after == null
+                        Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (added) "+" else if (removed) "−" else " ", color = if (added) CoachHue else app.superhealth.ui.theme.Base.Red,
+                                style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(14.dp))
+                            Text(r.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, modifier = Modifier.weight(1f),
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = if (removed) Mf.colors.textTertiary else Mf.colors.text,
+                                textDecoration = if (removed) androidx.compose.ui.text.style.TextDecoration.LineThrough else null)
+                            Text(when { added -> r.after!!; removed -> r.before!!; r.before == r.after -> r.after!!; else -> "${r.before} → ${r.after}" },
+                                style = MaterialTheme.typography.labelMedium, color = if (!added && !removed && r.before != r.after) CoachHue else Mf.colors.textSecondary)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            if (!a.done) PillButton(if ("replaces_program_id" in a.payload) tr("Mettre à jour le programme") else tr("Créer le programme"), Modifier.fillMaxWidth(), onClick = onApply)
+        }
     }
 }

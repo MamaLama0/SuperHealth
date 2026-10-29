@@ -104,8 +104,9 @@ object CoachTools {
         add(fn("get_body", "Weight trend (weekly, last 26 weeks), scale weigh-ins and body measurements."))
         add(fn("get_activities", "Cardio and other watch / Health Connect activities (max 90 days).",
             props("days" to p("integer", "Number of days back")), listOf("days")))
-        add(fn("propose_program", "Propose a strength program. Nothing is created until the user taps the button under your answer. Use exercise ids from search_exercises or get_programs.",
+        add(fn("propose_program", "Propose a strength program, new or as a revision of an existing one (replaces_program_id). Nothing changes until the user taps the button under your answer; they can compare before/after. Use exercise ids from search_exercises or get_programs.",
             props("name" to p("string", "Program name"), "weeks" to p("integer", "Number of weeks (cycles), 4 to 12"),
+                "replaces_program_id" to p("string", "Id of the program this revises (from get_programs), omit for a new program"),
                 "days" to buildJsonObject {
                     put("type", "array"); put("description", "Training days in order (a rest day = a day with no exercise)")
                     putJsonObject("items") {
@@ -226,7 +227,7 @@ object CoachTools {
                     appendLine("Experience: ${st.settings.experience.name.lowercase()}" + (gym?.let { ", gym: ${it.name} (${it.equipmentIds.size} equipment items)" } ?: ""))
                     if (st.programs.none { !it.archived }) appendLine("No program yet.")
                     st.programs.filter { !it.archived }.forEach { p ->
-                        appendLine("## ${p.name}" + (if (p.id == st.settings.activeProgramId) " (ACTIVE, week ${p.cycleIndex + 1}/${p.numCycles}, next day ${p.days.getOrNull(p.dayIndex)?.name})" else "") +
+                        appendLine("## ${p.name} [id ${p.id}]" + (if (p.id == st.settings.activeProgramId) " (ACTIVE, week ${p.cycleIndex + 1}/${p.numCycles}, next day ${p.days.getOrNull(p.dayIndex)?.name})" else "") +
                             ", goal ${p.goal.name.lowercase()}")
                         p.days.forEach { d ->
                             appendLine("- ${d.name}" + if (d.isRest) ": rest" else ":")
@@ -297,8 +298,10 @@ object CoachTools {
                 if (unknown.isNotEmpty()) return Outcome("Error: unknown exercise ids ${unknown.joinToString()}. Use search_exercises.")
                 val name = a.str("name") ?: "Programme"
                 val training = days.count { d -> d["exercises"]?.jsonArray.orEmpty().isNotEmpty() }
-                Outcome("Proposal shown to the user with a 'Create' button.", Action("program", name,
-                    app.superhealth.ui.trf("%1\$s jours d'entraînement · %2\$s semaines", training, (a.int("weeks") ?: 6).coerceIn(2, 16)), a.toString()))
+                val old = a.str("replaces_program_id")?.let { id -> WorkoutApp.store.state.value.programs.firstOrNull { it.id == id } }
+                Outcome("Proposal shown to the user with a '${if (old != null) "Update" else "Create"}' button and a before/after comparison.", Action("program", name,
+                    (if (old != null) app.superhealth.ui.trf("Révision de « %1\$s » · ", old.name) else "") +
+                        app.superhealth.ui.trf("%1\$s jours d'entraînement · %2\$s semaines", training, (a.int("weeks") ?: 6).coerceIn(2, 16)), a.toString()))
             }
             "propose_food_log" -> {
                 val items = a["items"]?.jsonArray.orEmpty().map { it.jsonObject }
@@ -332,6 +335,13 @@ object CoachTools {
                     })
                 }
                 val st = WorkoutApp.store.state.value
+                // révision d'un programme existant : mêmes id et réglages, nouveaux jours, position recalée
+                st.programs.firstOrNull { it.id == a.str("replaces_program_id") }?.let { old ->
+                    val np = app.superhealth.training.domain.ProgramEdit.fixCursor(old.copy(name = action.title, days = days, numCycles = weeks,
+                        periodization = Periodization.STATIC, cycleIndex = old.cycleIndex.coerceAtMost(weeks - 1)))
+                    WorkoutApp.store.update { s -> s.copy(programs = s.programs.map { if (it.id == old.id) np else it }) }
+                    return "program/${old.id}"
+                }
                 val p = Program(uid(), action.title, days = days, numCycles = weeks, periodization = Periodization.STATIC, gymId = st.settings.activeGymId)
                 // actif s'il n'y en a pas, sinon rangé dans la bibliothèque (l'utilisateur l'active s'il le veut)
                 WorkoutApp.store.update { s -> s.copy(programs = s.programs + p,
@@ -350,6 +360,35 @@ object CoachTools {
             }
             "open" -> SCREENS[a.str("screen")]
             else -> null
+        }
+    }
+
+    // ---- Comparaison avant / après d'une proposition de programme ---------------------------------------
+
+    /** Ligne de la comparaison : exercice, séries avant et après (null = absent de ce côté). */
+    class CompareRow(val name: String, val before: String?, val after: String?)
+    class CompareDay(val name: String, val rows: List<CompareRow>)
+
+    /** Jours du programme remplacé (s'il y en a un) face aux jours proposés, appariés par position. */
+    fun compare(action: Action): List<CompareDay> {
+        val a = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(action.payload).jsonObject }.getOrNull() ?: return emptyList()
+        val db = WorkoutApp.db.value
+        fun name(id: String) = db?.exercise(id)?.name ?: id
+        val old = WorkoutApp.store.state.value.programs.firstOrNull { it.id == a.str("replaces_program_id") }
+        val newDays = a["days"]?.jsonArray.orEmpty().map { it.jsonObject }
+        val n = maxOf(newDays.size, old?.days?.size ?: 0)
+        return (0 until n).map { i ->
+            val od = old?.days?.getOrNull(i)
+            val nd = newDays.getOrNull(i)
+            val before = od?.exercises.orEmpty().associate { pe ->
+                val t = pe.cycles.firstOrNull()?.filter { it.type.name != "WARMUP" }.orEmpty()
+                pe.exerciseId to "${t.size}×${t.firstOrNull()?.let { "${it.minReps}-${it.maxReps}" } ?: ""}"
+            }
+            val after = nd?.get("exercises")?.jsonArray.orEmpty().map { it.jsonObject }.associate { e ->
+                (e.str("exercise_id") ?: "") to "${e.int("sets") ?: 3}×${e.int("rep_min") ?: 8}-${e.int("rep_max") ?: 12}"
+            }
+            val ids = (after.keys + before.keys).distinct()
+            CompareDay(nd?.str("name") ?: od?.name ?: "", ids.map { CompareRow(name(it), before[it], after[it]) })
         }
     }
 }

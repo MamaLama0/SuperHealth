@@ -70,5 +70,27 @@ object Strings22 {
         "Donne-moi les points clés d'exécution du %1\$s et les erreurs fréquentes." to "Give me the key technique points of the %1\$s and common mistakes.",
         "Analyse ma progression au %1\$s (historique complet) : est-ce que je progresse, et comment continuer ?" to
             "Analyse my progress on the %1\$s (full history): am I progressing, and how to keep going?",
+        // âge (Senior)
+        "Après 65 ans, la perte de poids n'est conseillée qu'en cas d'obésité (IMC ≥ 30) : vos calories resteront au maintien (ESPEN 2022)." to
+            "After 65, weight loss is only advised with obesity (BMI ≥ 30): your calories will stay at maintenance (ESPEN 2022).",
+        "À votre âge, perte limitée à %1\$s %%/sem. (déficit de %2\$s kcal/j au plus)." to "At your age, loss is limited to %1\$s %%/wk (deficit of %2\$s kcal/day at most).",
+        "Après 65 ans, visez au moins %1\$s (IMC 23) : en dessous, le risque augmente." to "After 65, aim for at least %1\$s (BMI 23): below that, risk rises.",
+        "Après 65 ans, la perte de poids n'est conseillée qu'en cas d'obésité (IMC ≥ 30) : calories au maintien, pour garder muscle et os." to
+            "After 65, weight loss is only advised with obesity (BMI ≥ 30): calories at maintenance, to keep muscle and bone.",
+        "Déficit limité par l'âge (750 kcal/j de 60 à 64 ans, 500 kcal/j après 65 ans) pour préserver le muscle." to
+            "Deficit limited by age (750 kcal/day at 60–64, 500 kcal/day after 65) to preserve muscle.",
+        "−%1\$s %% en 6 mois sans le vouloir : à signaler à votre médecin" to "−%1\$s %% in 6 months without trying: tell your doctor",
+        // carte Scores du jour, comparaison de programme
+        "Scores du jour" to "Today's scores",
+        "Forme" to "Readiness",
+        "Repos" to "Rest",
+        "Basse" to "Low",
+        "Moyenne" to "Medium",
+        "Haute" to "High",
+        "Révision de « %1\$s » · " to "Revision of “%1\$s” · ",
+        "Comparer avant / après" to "Compare before / after",
+        "Mettre à jour" to "Update",
+        "Mettre à jour le programme" to "Update the program",
+        "Créer le programme" to "Create the program",
     )
 }
