@@ -208,10 +208,14 @@ object Coach {
                         "${p.heightCm.roundToInt()} cm").joinToString(", "))
                     // 2.2 : à partir de 60 ans, le coach connaît les règles d'âge appliquées par l'app (Senior)
                     val band = app.superhealth.nutrition.domain.Senior.band(age)
-                    if (band != app.superhealth.nutrition.domain.Senior.Band.ADULT) appendLine("Age rules applied by the app (EASO 2025, ESPEN 2022): " +
-                        (if (band == app.superhealth.nutrition.domain.Senior.Band.OLDER) "65+: weight loss only if BMI ≥ 30, deficit ≤ 500 kcal/day, intake ≥ 1200 kcal, never below BMI 23, protein 1.0-1.2 g/kg adjusted weight, ≥ 25 g protein per meal"
-                        else "60-64: deficit ≤ 750 kcal/day, protein ≥ 1.0 g/kg adjusted weight") +
-                        ". Never suggest a bigger deficit; favour resistance training, protein, vitamin D and calcium.")
+                    if (band != app.superhealth.nutrition.domain.Senior.Band.ADULT) {
+                        val r = app.superhealth.nutrition.domain.Senior.rules(band)
+                        appendLine("Age rules applied by the app (ESPEN 2022, EASO 2025, GLIM 2019): advised BMI zone ${r.zone.start}-${r.zone.endInclusive}, " +
+                            "weight loss only if BMI ≥ ${r.loseFromBmi}, deficit ≤ ${r.maxDeficit?.toInt()} kcal/day, at most ${((r.maxLoss ?: 0.0) * 100).toInt()} % of start weight per goal, " +
+                            "target never below BMI ${r.floorBmi}" + (r.minIntake?.let { ", intake ≥ ${it.toInt()} kcal" } ?: "") +
+                            ", protein ≥ 1.0 g/kg adjusted weight (1.2 when losing after 65), ≥ 25 g protein per meal" +
+                            ". Never suggest a bigger deficit or a lower target; favour resistance training, protein, vitamin D and calcium.")
+                    }
                 }
                 if (shares(Share.WEIGHT)) {
                     an.currentTrendKg?.let { t ->

@@ -92,5 +92,18 @@ object Strings22 {
         "Mettre à jour" to "Update",
         "Mettre à jour le programme" to "Update the program",
         "Créer le programme" to "Create the program",
+        // règles d'âge par tranche (Senior), jauge d'IMC de l'introduction
+        "Déficit limité à %1\$s kcal/j à votre âge, pour préserver le muscle." to "Deficit limited to %1\$s kcal/day at your age, to preserve muscle.",
+        "À votre âge, la perte de poids n'est conseillée qu'à partir d'un IMC de %1\$s : vos calories restent au maintien." to "At your age, weight loss is only advised from a BMI of %1\$s: your calories stay at maintenance.",
+        "Visez au moins %1\$s (IMC %2\$s) : en dessous, le risque augmente." to "Aim for at least %1\$s (BMI %2\$s): below that, risk rises.",
+        "À votre âge, perdez au plus %1\$s %% par objectif : visez au moins %2\$s, puis refaites le point." to "At your age, lose at most %1\$s %% per goal: aim for at least %2\$s, then review.",
+        "Conseillé pour votre âge et votre IMC" to "Advised for your age and BMI",
+        "Non conseillé : les calories resteront au maintien" to "Not advised: calories will stay at maintenance",
+        "IMC %1\$s" to "BMI %1\$s",
+        "zone conseillée %1\$s–%2\$s" to "advised range %1\$s–%2\$s",
+        "Zone de l'OMS chez l'adulte." to "WHO range for adults.",
+        "Dès 60 ans : perte proposée à partir du surpoids, déficit modéré, protéines renforcées." to "From 60: loss offered from overweight, moderate deficit, more protein.",
+        "Après 65 ans, un léger surpoids protège : perte seulement en obésité, 10 % au plus (ESPEN 2022)." to "After 65, slight overweight is protective: loss only with obesity, 10 % at most (ESPEN 2022).",
+        "Après 75 ans, le poids stable est le plus sûr : perte seulement dès l'IMC 35, 5 % au plus." to "After 75, a stable weight is safest: loss only from BMI 35, 5 % at most.",
     )
 }

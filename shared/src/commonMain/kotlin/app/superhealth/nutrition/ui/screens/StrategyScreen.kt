@@ -335,11 +335,11 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     val targetKg = target.toNum()?.let { s.toKg(it) }
     val computedRate = if (byDate && targetKg != null) Targets.rateFromEndDay(an.today, trend, targetKg, endDay) else rate.toNum()
     val computedEnd = if (!byDate && targetKg != null && computedRate != null) Targets.endDayFromRate(an.today, trend, targetKg, computedRate) else endDay
-    // âge (Senior) : rythme de perte borné dès 60 ans ; après 65 ans, perte seulement en obésité et jamais sous un IMC de 23
+    // âge (Senior) : par tranche, perte seulement au-dessus d'un IMC, déficit borné, perte et IMC de la cible bornés
     val age = LocalDate.now().year - an.profile.birthYear
     val maxRate = if (type == GoalType.CUT) minOf(Targets.MAX_RATE, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age, trend) ?: Targets.MAX_RATE) else Targets.MAX_RATE
     val cutAllowed = type != GoalType.CUT || app.superhealth.nutrition.domain.Senior.cutAllowed(age, trend, an.profile.heightCm)
-    val minTarget = if (type == GoalType.CUT) app.superhealth.nutrition.domain.Senior.minTargetKg(age, an.profile.heightCm) else null
+    val minTarget = if (type == GoalType.CUT) app.superhealth.nutrition.domain.Senior.minTargetKg(age, an.profile.heightCm, trend) else null
     val rateOk = type == GoalType.MAINTENANCE || (computedRate != null && computedRate in Targets.MIN_RATE..maxRate)
     val directionOk = targetKg == null || type == GoalType.MAINTENANCE || (type == GoalType.CUT && targetKg < trend) || (type == GoalType.BULK && targetKg > trend)
     val floorOk = minTarget == null || targetKg == null || targetKg >= minTarget
@@ -365,7 +365,7 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 }
             }
         }
-        if (!cutAllowed) Text(tr("Après 65 ans, la perte de poids n'est conseillée qu'en cas d'obésité (IMC ≥ 30) : vos calories resteront au maintien (ESPEN 2022)."),
+        if (!cutAllowed) Text(noCutText(age),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
         if (type != GoalType.MAINTENANCE && targetKg != null) {
             Spacer(Modifier.height(12.dp))
@@ -385,7 +385,7 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 if (maxRate < Targets.MAX_RATE) Text(trf("À votre âge, perte limitée à %1\$s %%/sem. (déficit de %2\$s kcal/j au plus).", num(maxRate, 2),
                     app.superhealth.nutrition.domain.Senior.maxDeficit(app.superhealth.nutrition.domain.Senior.band(age))!!.roundToInt()),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
-                if (!floorOk) Text(trf("Après 65 ans, visez au moins %1\$s (IMC 23) : en dessous, le risque augmente.", s.weight(minTarget!!)),
+                if (!floorOk) Text(minTargetText(age, an.profile.heightCm, trend, s::weight),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
                 Text(tr("Estimation optimiste : prévoyez un peu de marge."),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
@@ -482,7 +482,7 @@ fun CheckInScreen(vm: AppViewModel, onBack: () -> Unit) {
                     CompareRow(tr("Lipides (g)"), prev?.fat, next.fat, FatColor)
                     CompareRow(tr("Glucides (g)"), prev?.carbs, next.carbs, CarbsColor)
                     if (next.limitedByFloor) Text(tr("Cible limitée par le plancher calorique."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-                    ageLimitText(next)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
+                    ageLimitText(next, LocalDate.now().year - an.profile.birthYear)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
                 }
                 Spacer(Modifier.height(16.dp))
                 PillButton(tr("Appliquer le nouveau programme"), Modifier.fillMaxWidth()) { vm.repo.saveCheckIn(next); onBack() }
@@ -666,8 +666,22 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
 }
 
 /** Pourquoi l'âge a retenu la cible (Senior) : une phrase, ou null. */
-internal fun ageLimitText(ci: app.superhealth.nutrition.domain.CheckIn): String? = when (ci.ageLimit) {
-    "NOT_OBESE" -> tr("Après 65 ans, la perte de poids n'est conseillée qu'en cas d'obésité (IMC ≥ 30) : calories au maintien, pour garder muscle et os.")
-    "CAPPED" -> tr("Déficit limité par l'âge (750 kcal/j de 60 à 64 ans, 500 kcal/j après 65 ans) pour préserver le muscle.")
+internal fun ageLimitText(ci: app.superhealth.nutrition.domain.CheckIn, age: Int): String? = when (ci.ageLimit) {
+    "NOT_OBESE" -> noCutText(age)
+    "CAPPED" -> trf("Déficit limité à %1\$s kcal/j à votre âge, pour préserver le muscle.",
+        app.superhealth.nutrition.domain.Senior.rules(age).maxDeficit?.roundToInt() ?: 0)
     else -> null
+}
+
+/** Perte non proposée : seuil d'IMC de la tranche d'âge (Senior). */
+internal fun noCutText(age: Int): String = trf("À votre âge, la perte de poids n'est conseillée qu'à partir d'un IMC de %1\$s : vos calories restent au maintien.",
+    num(app.superhealth.nutrition.domain.Senior.rules(age).loseFromBmi, 1))
+
+/** Cible trop basse : dit ce qui la borne, l'IMC plancher ou la perte maximale par objectif (Senior). */
+internal fun minTargetText(age: Int, heightCm: Double, startKg: Double, weight: (Double) -> String): String {
+    val r = app.superhealth.nutrition.domain.Senior.rules(age)
+    val min = app.superhealth.nutrition.domain.Senior.minTargetKg(age, heightCm, startKg)
+    val byFloor = app.superhealth.nutrition.domain.Senior.weightAtBmi(r.floorBmi, heightCm) >= min - 0.01
+    return if (byFloor) trf("Visez au moins %1\$s (IMC %2\$s) : en dessous, le risque augmente.", weight(min), num(r.floorBmi, 1))
+    else trf("À votre âge, perdez au plus %1\$s %% par objectif : visez au moins %2\$s, puis refaites le point.", ((r.maxLoss ?: 0.0) * 100).roundToInt(), weight(min))
 }
