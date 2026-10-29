@@ -66,7 +66,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Dernière lecture : réaffichée au retour sur l'écran, le temps de relire (pas de clignotement). */
-private var lastNight: NightVitals.Night? = null
 private var lastLatest: Map<Metric, Pair<LocalDate, Double>> = emptyMap()
 
 /** Familles de l'écran Apple Watch, dans l'ordre d'affichage. */
@@ -75,23 +74,6 @@ private val GROUPS = listOf(
     "Activité et mobilité" to listOf(Metric.STEPS, Metric.STAND_HOURS, Metric.FLIGHTS, Metric.WALKING_SPEED, Metric.WALKING_STEADINESS),
     "Bien-être et environnement" to listOf(Metric.DAYLIGHT, Metric.MINDFUL, Metric.NOISE),
 )
-
-/** Plage habituelle et valeur de la nuit, dans la couleur du statut. */
-private fun NightVitals.Status.color(): Color = when (this) {
-    NightVitals.Status.HIGH, NightVitals.Status.LOW -> HealthHues.Mind
-    NightVitals.Status.TYPICAL -> HealthHues.Activity
-    NightVitals.Status.UNKNOWN -> Color(0xFF8E9199)
-}
-
-@Composable
-fun nightVitalsState(vm: SuperViewModel): NightVitals.Night? {
-    val refresh by vm.refresh.collectAsState()
-    val ctx = LocalContext.current
-    val night by produceState(lastNight, refresh) {
-        value = withContext(Dispatchers.IO) { runCatching { NightVitals.of(ctx) }.getOrNull() }?.also { lastNight = it } ?: value
-    }
-    return night
-}
 
 /**
  * Santé Apple Watch : signes vitaux de la nuit, cœur (dont alertes et ECG), activité et mobilité, bien-être.
@@ -132,63 +114,6 @@ fun AppleWatchScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         Text(tr("Les signes vitaux comparent la dernière nuit à vos 28 nuits précédentes (méthode SuperHealth). Ce ne sont pas des diagnostics médicaux."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 14.dp))
-    }
-}
-
-/** En-tête (tout est dans la normale, ou nombre de mesures hors de l'habituel) puis une ligne par mesure. */
-@Composable
-fun NightVitalsBody(night: NightVitals.Night?, onMetric: ((Metric) -> Unit)?, compact: Boolean = false) {
-    val n = night
-    if (n == null || n.measured == 0) {
-        Text(tr("Portez l'Apple Watch la nuit avec le suivi du sommeil : vos signes vitaux apparaissent après quelques nuits."),
-            style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
-        return
-    }
-    val ok = n.outliers == 0
-    val hue = if (ok) HealthHues.Activity else HealthHues.Mind
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(if (ok) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline, null, Modifier.size(22.dp), tint = hue)
-        Spacer(Modifier.width(8.dp))
-        Text(if (ok) tr("Dans votre plage habituelle") else if (n.outliers == 1) tr("1 mesure hors de l'habituel") else trf("%1\$s mesures hors de l'habituel", n.outliers),
-            style = MaterialTheme.typography.titleMedium, color = hue.onContainer())
-    }
-    Spacer(Modifier.height(10.dp))
-    val items = if (compact) n.items.filter { it.value != null }.take(4) else n.items
-    items.forEachIndexed { i, it ->
-        if (i > 0) Spacer(Modifier.height(10.dp))
-        VitalRangeRow(it, onMetric)
-    }
-}
-
-@Composable
-private fun VitalRangeRow(item: NightVitals.Item, onClick: ((Metric) -> Unit)?) {
-    val m = item.metric
-    val c = item.status.color()
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).then(if (onClick != null) Modifier.clickable { onClick(m) } else Modifier)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(m.icon, null, Modifier.size(16.dp), tint = m.color)
-            Spacer(Modifier.width(6.dp))
-            Text(tr(m.label), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(item.value?.let { formatValue(m, it) + (unitOf(m)?.let { u -> " $u" } ?: "") } ?: "—", style = MaterialTheme.typography.titleSmall,
-                color = if (item.status == NightVitals.Status.UNKNOWN) Mf.colors.textSecondary else c.onContainer())
-        }
-        val lo = item.low; val hi = item.high; val v = item.value
-        if (lo != null && hi != null && v != null) {
-            Spacer(Modifier.height(5.dp))
-            // la plage habituelle occupe le milieu de la barre ; la valeur s'y place, ou dépasse d'un côté
-            val span = (hi - lo).coerceAtLeast(1e-6)
-            val f = (((v - lo) / span) * 0.5 + 0.25).coerceIn(0.02, 0.98).toFloat()
-            // dessin direct (pas de BoxWithConstraints : la carte du tableau de bord se mesure en hauteur intrinsèque)
-            val track = Mf.colors.chip
-            val band = HealthHues.Activity.container(1.6f)
-            androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(10.dp)) {
-                val h = 6.dp.toPx(); val y = (size.height - h) / 2
-                val r = androidx.compose.ui.geometry.CornerRadius(h / 2, h / 2)
-                drawRoundRect(track, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(size.width, h), r)
-                drawRoundRect(band, androidx.compose.ui.geometry.Offset(size.width * 0.25f, y), androidx.compose.ui.geometry.Size(size.width * 0.5f, h), r)
-                drawCircle(c, size.height / 2, androidx.compose.ui.geometry.Offset(size.width * f, size.height / 2))
-            }
-        }
     }
 }
 

@@ -99,12 +99,6 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
                 vm.nutrition.selectedDay.value = an.today; tab("log")
             }
         }
-        DashCard.NIGHT_VITALS -> {
-            val n = app.superhealth.ui.health.nightVitalsState(vm)
-            val out = n?.outliers ?: 0
-            CompactData(when { n == null || n.measured == 0 -> "—"; out == 0 -> tr("Normal"); else -> out.toString() }, null,
-                if (out > 0) tr("Hors de l'habituel") else tr("Signes vitaux"), null) { nav.go("h/apple") }
-        }
         DashCard.WEIGHT -> CompactData(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), tr("Tendance"), null,
             (an.today - 27..an.today).map { d -> an.trendByDay[d]?.let(s::weightValue) }, bars = false) { nav.go("weight") }
         DashCard.EXPENDITURE -> CompactData(s.energyValue(an.currentTdee).roundToInt().toString(), kcal, tr("Dépense"), null,

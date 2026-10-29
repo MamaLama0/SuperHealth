@@ -461,7 +461,7 @@ fun BodyLine(b: BodyAlert.Status) {
 // ---- Ressenti du matin ---------------------------------------------------------------------------------------
 
 /** Cartes masquées tant que le ressenti du matin n'est pas noté (si l'option est activée). */
-val CHECKIN_GATED = setOf(DashCard.CHARGE, DashCard.RECOVERY, DashCard.FORM, DashCard.SLEEP_STAGES)
+val CHECKIN_GATED = setOf(DashCard.CHARGE, DashCard.RECOVERY, DashCard.FORM, DashCard.SLEEP_STAGES, DashCard.SLEEP_QUALITY)
 
 /** Vrai tant que le ressenti du jour manque et que l'option est activée. */
 @Composable

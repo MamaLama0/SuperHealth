@@ -2,14 +2,18 @@ package app.superhealth.health.data
 
 import app.superhealth.platform.*
 
+import app.superhealth.bridge.Bridge
+import app.superhealth.platform.LocalDate
 import kotlin.math.abs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 
 /**
- * Signes vitaux de la nuit, à la manière de l'app Signes vitaux de watchOS : pouls au repos, respiration, température au
- * poignet, SpO₂, sommeil et troubles respiratoires de la dernière nuit comparés à votre plage habituelle.
+ * Signes vitaux de la nuit, à la manière de l'app Signes vitaux de watchOS : pouls au repos, VFC, respiration,
+ * température au poignet, SpO₂, sommeil et troubles respiratoires de la nuit comparés à votre plage habituelle.
  *
  * Règle SuperHealth (pas celle d'Apple, non publiée) : plage habituelle = médiane des 28 nuits précédentes ± 2 écarts
  * absolus médians (×1,4826, équivalent d'un écart-type robuste), avec un écart minimal propre à chaque mesure ; il faut
@@ -25,11 +29,12 @@ object NightVitals {
         val measured: Int get() = items.count { it.value != null }
     }
 
-    val METRICS = listOf(Metric.RESTING_HR, Metric.RESPIRATORY_RATE, Metric.TEMPERATURE, Metric.SPO2, Metric.SLEEP, Metric.BREATHING_DISTURBANCES)
+    val METRICS = listOf(Metric.RESTING_HR, Metric.HRV, Metric.RESPIRATORY_RATE, Metric.TEMPERATURE, Metric.SPO2, Metric.SLEEP, Metric.BREATHING_DISTURBANCES)
 
     /** Écart minimal de la plage (sinon une semaine très régulière rendrait la moindre variation « hors norme »). */
     private fun minSpread(m: Metric) = when (m) {
         Metric.RESTING_HR -> 3.0
+        Metric.HRV -> 6.0
         Metric.RESPIRATORY_RATE -> 0.8
         Metric.TEMPERATURE -> 0.3
         Metric.SPO2 -> 1.5
@@ -49,22 +54,32 @@ object NightVitals {
         return med - half to med + half
     }
 
-    /** Dernière nuit (celle qui finit le jour [date]) et plage habituelle de chaque mesure disponible. */
+    fun status(v: Double?, r: Pair<Double, Double>?): Status = when {
+        v == null || r == null -> Status.UNKNOWN
+        v > r.second -> Status.HIGH
+        v < r.first -> Status.LOW
+        else -> Status.TYPICAL
+    }
+
+    /** Valeurs par jour de [m] de [from] à [to] inclus (montre ou Health Connect). */
+    suspend fun series(ctx: Context, m: Metric, from: LocalDate, to: LocalDate): List<Pair<LocalDate, Double?>> = withContext(Dispatchers.IO) {
+        coroutineScope {
+            generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toList()
+                .map { d -> async { d to runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull() } }.awaitAll()
+        }
+    }
+
+    /** Mesures suivies ici dont une source existe. */
+    fun available(): List<Metric> = METRICS.filter { Bridge.hasSource(it) }
+
+    /** Nuit qui finit le jour [date] et plage habituelle de chaque mesure disponible. */
     suspend fun of(ctx: Context, date: LocalDate = LocalDate.now()): Night = coroutineScope {
-        val metrics = METRICS.filter { HealthRepository.isSupported(it) }
-        val items = metrics.map { m ->
+        val items = available().map { m ->
             async {
-                val series = HealthRepository.series(ctx, m, date.minusDays(28), date)
-                val value = series.lastOrNull()?.second
-                val past = series.dropLast(1).mapNotNull { it.second }
-                val r = range(past, m)
-                val status = when {
-                    value == null || r == null -> Status.UNKNOWN
-                    value > r.second -> Status.HIGH
-                    value < r.first -> Status.LOW
-                    else -> Status.TYPICAL
-                }
-                Item(m, value, r?.first, r?.second, status)
+                val s = series(ctx, m, date.minusDays(28), date)
+                val value = s.last().second
+                val r = range(s.dropLast(1).mapNotNull { it.second }, m)
+                Item(m, value, r?.first, r?.second, status(value, r))
             }
         }.awaitAll()
         Night(date, items)

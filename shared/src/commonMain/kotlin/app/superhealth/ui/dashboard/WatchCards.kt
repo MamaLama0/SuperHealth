@@ -44,6 +44,8 @@ import app.superhealth.ui.charts.LineChart
 import app.superhealth.ui.charts.Series
 import app.superhealth.ui.charts.smooth
 import app.superhealth.ui.dayLetter
+import app.superhealth.ui.health.Hypnogram
+import app.superhealth.ui.health.stageColor
 import app.superhealth.ui.formatDuration
 import app.superhealth.ui.formatNumber
 import app.superhealth.ui.go
@@ -79,10 +81,20 @@ internal class WatchSnap(
     val hrv: List<Pair<LocalDate, Double?>> = emptyList(),
     val stress: List<Point> = emptyList(),
     val hourly: List<Point> = emptyList(),
+    /** 2.1 : nuits des 14 derniers jours, dernière nuit et ses parties de Repos, Repos des 7 nuits, pouls de la nuit. */
+    val nights: List<Pair<LocalDate, app.superhealth.health.data.NightSummary?>> = emptyList(),
+    val lastNight: app.superhealth.health.data.NightSummary? = null,
+    val restParts: Scores.RestParts? = null,
+    val restHistory: List<Double?> = emptyList(),
+    val nightHeart: List<Pair<Long, Int>> = emptyList(),
+    val sri: Double? = null,
+    /** 2.1 : signes vitaux de la nuit et tendances des constantes sur 30 jours. */
+    val nightVitals: app.superhealth.health.data.NightVitals.Night? = null,
+    val trends: List<app.superhealth.ui.health.VitalTrend> = emptyList(),
 )
 
 private val WATCH_CARDS = setOf(DashCard.CHARGE, DashCard.EFFORT, DashCard.SLEEP_STAGES, DashCard.HRV_STATUS, DashCard.STRESS_DAY,
-    DashCard.HR_ZONES, DashCard.LOAD, DashCard.DAY_TIMELINE)
+    DashCard.HR_ZONES, DashCard.LOAD, DashCard.DAY_TIMELINE) + NIGHT_CARDS
 
 internal val DashCard.isWatchChart: Boolean get() = this in WATCH_CARDS
 
@@ -92,6 +104,10 @@ internal fun watchSource(c: DashCard): Boolean = when (c) {
     DashCard.EFFORT, DashCard.HR_ZONES, DashCard.LOAD -> HealthRepository.isSupported(Metric.HEART_RATE)
     DashCard.SLEEP_STAGES -> Bridge.hasSource(Metric.SLEEP)
     DashCard.STRESS_DAY -> HealthRepository.isSupported(Metric.STRESS)
+    DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY -> Bridge.hasSource(Metric.SLEEP)
+    DashCard.NIGHT_HEART -> Bridge.hasSource(Metric.SLEEP) && Bridge.hasSource(Metric.HEART_RATE)
+    DashCard.NIGHT_VITALS -> app.superhealth.health.data.NightVitals.available().isNotEmpty()
+    DashCard.VITALS_TRENDS -> app.superhealth.ui.health.vitalsList().isNotEmpty()
     else -> true
 }
 
@@ -121,8 +137,32 @@ internal suspend fun loadWatch(ctx: Context, cards: List<DashCard>): WatchSnap =
     }
     val stress = async { if (has(DashCard.STRESS_DAY)) runCatching { HealthRepository.intraday(Metric.STRESS, today) }.getOrDefault(emptyList()) else emptyList() }
     val hourly = async { if (has(DashCard.DAY_TIMELINE)) runCatching { Bridge.hourlySteps(ctx, today) }.getOrDefault(emptyList()) else emptyList() }
+    // 2.1 : la carte Sommeil en grand empile les phases des 7 nuits ; Horaires en lit 14
+    val sleepBig = DashCard.SLEEP in cards && Bridge.hasSource(Metric.SLEEP)
+    val nightCount = when { has(DashCard.SLEEP_SCHEDULE) -> 14L; sleepBig || has(DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART) -> 7L; else -> 0L }
+    val nights = async { if (nightCount > 0) app.superhealth.health.data.Nights.range(today.minusDays(nightCount - 1), today) else emptyList() }
+    val parts = async { if (has(DashCard.SLEEP_QUALITY)) runCatching { Scores.restPartsOf(ctx, today) }.getOrNull() else null }
+    val restHist = async {
+        if (has(DashCard.SLEEP_QUALITY)) (6L downTo 0L).map { d -> async { runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, today.minusDays(d)) }.getOrNull() } }.awaitAll()
+        else emptyList()
+    }
+    val sri = async { if (has(DashCard.SLEEP_SCHEDULE)) runCatching { Scores.sriOf(today) }.getOrNull() else null }
+    val vitals = async { if (has(DashCard.NIGHT_VITALS)) runCatching { app.superhealth.health.data.NightVitals.of(ctx, today) }.getOrNull() else null }
+    val trends = async {
+        if (has(DashCard.VITALS_TRENDS)) runCatching { app.superhealth.ui.health.loadTrends(ctx, app.superhealth.ui.health.vitalsList(), today, 30) }.getOrDefault(emptyList())
+        else emptyList()
+    }
+    val ns = nights.await()
+    val lastNight = ns.lastOrNull()?.second
+    val heart = if (has(DashCard.NIGHT_HEART) && lastNight != null) runCatching { app.superhealth.health.data.Nights.heart(lastNight) }.getOrDefault(emptyList()) else emptyList()
     val ef = efforts.await()
-    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), score.await(), need.await(), hrv.await(), stress.await(), hourly.await())
+    // score et besoin servent aussi aux cartes Sommeil et Qualité
+    val wantScore = has(DashCard.SLEEP_QUALITY) || sleepBig
+    val score2 = score.await() ?: if (wantScore) runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, today) }.getOrNull() else null
+    val need2 = need.await() ?: if (wantScore || nightCount > 0) runCatching { Scores.sleepHabits(ctx).needMin }.getOrNull() else null
+    WatchSnap(charge.await(), chargeHist.await(), ef.lastOrNull(), ef, zones.await(), night.await(), debt.await(), score2, need2, hrv.await(), stress.await(), hourly.await(),
+        nights = ns, lastNight = lastNight, restParts = parts.await(), restHistory = restHist.await(), nightHeart = heart, sri = sri.await(),
+        nightVitals = vitals.await(), trends = trends.await())
 }
 
 // ---- Couleurs ------------------------------------------------------------------------------
@@ -133,12 +173,6 @@ private val Green = app.superhealth.ui.theme.Base.Green
 internal fun chargeColor(score: Int) = when (Scores.band(score)) { 0 -> Red; 1 -> Yellow; else -> Green }
 private val EffortBlue = app.superhealth.ui.theme.Base.Blue
 
-private fun stageColor(k: ActivityKind) = when (k) {
-    ActivityKind.DEEP_SLEEP -> Color(0xFF3634A3)
-    ActivityKind.REM_SLEEP -> Color(0xFF5AC8FA)
-    ActivityKind.AWAKE_SLEEP -> Color(0xFFFF7F66)
-    else -> Color(0xFF0A84FF)
-}
 
 private val zoneColors = listOf(Color(0xFFB8BEC8), Color(0xFF7FB9F0), Color(0xFF3FBF8F), Color(0xFFF2C14E), Color(0xFFF08A3E), Color(0xFFE5484D))
 
@@ -182,7 +216,7 @@ internal fun watchCompact(c: DashCard, w: WatchSnap, nav: NavHostController): Co
         val total = w.hourly.sumOf { it.value }
         CompactData(formatNumber(total), tr("pas"), tr("Ma journée"), null, hourlySteps(w.hourly)) { nav.go("h/metric/STEPS") }
     }
-    else -> null
+    else -> nightCompact(c, w, nav)
 }
 
 /** Pas des 24 heures du jour (null avant la première heure mesurée). */
@@ -349,28 +383,6 @@ internal fun SleepStagesCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav:
                     Text("${(100 * ms / total).roundToInt()} %", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
                 }
             }
-        }
-    }
-}
-
-/** Hypnogramme : un palier par phase, arrondi, de la couleur de la phase. */
-@Composable
-private fun Hypnogram(night: List<HealthRepository.SleepPhase>, modifier: Modifier) {
-    val grid = Mf.colors.divider
-    Canvas(modifier) {
-        val t0 = night.first().start; val t1 = night.last().end
-        // sans phases : une seule bande « endormi », les réveils en creux
-        val staged = Bridge.hasStages(night)
-        val levels = if (staged) 4 else 1
-        val rowH = size.height / levels
-        for (k in 0 until levels) drawLine(grid, Offset(0f, rowH * (k + 0.5f)), Offset(size.width, rowH * (k + 0.5f)), ChartStyle.grid.toPx(), pathEffect = ChartStyle.dash(this))
-        fun row(k: ActivityKind) = if (!staged) 0 else when (k) { ActivityKind.AWAKE_SLEEP -> 0; ActivityKind.REM_SLEEP -> 1; ActivityKind.DEEP_SLEEP -> 3; else -> 2 }
-        night.filter { staged || it.kind != ActivityKind.AWAKE_SLEEP }.forEach { p ->
-            val x0 = size.width * (p.start - t0) / (t1 - t0).toFloat()
-            val x1 = size.width * (p.end - t0) / (t1 - t0).toFloat()
-            val r = row(p.kind)
-            val h = if (staged) rowH * 0.62f else rowH * 0.42f
-            drawRoundRect(stageColor(p.kind), Offset(x0, rowH * r + (rowH - h) / 2), Size((x1 - x0).coerceAtLeast(2f), h), CornerRadius(h / 2))
         }
     }
 }

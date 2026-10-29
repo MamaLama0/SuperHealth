@@ -445,14 +445,22 @@ object Scores {
      * + 0,20 × part réparatrice ((profond + paradoxal) / endormi rapportée à 50 %, plafonnée, × facteur de sommeil profond
      * de 0,5 à 1 selon sa part rapportée à 13 %) + 0,10 × régularité (SRI ramené à 0–1, 0,5 sans historique). Null sans sommeil.
      */
-    fun rest(asleepMin: Double, inBedMin: Double, deepMin: Double, remMin: Double, needMin: Double, consistency: Double?): Double? {
+    fun rest(asleepMin: Double, inBedMin: Double, deepMin: Double, remMin: Double, needMin: Double, consistency: Double?): Double? =
+        restParts(asleepMin, inBedMin, deepMin, remMin, needMin, consistency)?.total
+
+    /** Les quatre parties de Repos (0–100 chacune), affichées sur la carte Qualité et l'écran Sommeil. */
+    data class RestParts(val duration: Double, val efficiency: Double, val restorative: Double, val regular: Double) {
+        val total: Double get() = 0.50 * duration + 0.20 * efficiency + 0.20 * restorative + 0.10 * regular
+    }
+
+    fun restParts(asleepMin: Double, inBedMin: Double, deepMin: Double, remMin: Double, needMin: Double, consistency: Double?): RestParts? {
         if (asleepMin <= 0 || inBedMin <= 0) return null
         val duration = min(100.0, asleepMin / needMin.coerceAtLeast(6.0) * 100)
         val efficiency = (asleepMin / inBedMin * 100).coerceIn(0.0, 100.0)
         val deepFactor = 0.5 + 0.5 * (deepMin / asleepMin / DEEP_TARGET).coerceIn(0.0, 1.0)
         val restorative = min(100.0, (deepMin + remMin) / asleepMin / 0.50 * 100) * deepFactor
         val regular = ((consistency ?: 0.5) * 100).coerceIn(0.0, 100.0)
-        return 0.50 * duration + 0.20 * efficiency + 0.20 * restorative + 0.10 * regular
+        return RestParts(duration, efficiency, restorative, regular)
     }
 
     /**
@@ -526,21 +534,23 @@ object Scores {
 
     private val restCache = ConcurrentHashMap<LocalDate, Double>()
 
-    /** Repos de la nuit qui se termine le jour [date] (phases de la montre ou de l'appli Health Connect) ; null sans phases. */
+    /** Repos de la nuit qui se termine le jour [date] (phases de la montre ou d'Apple Santé) ; null sans phases. */
     suspend fun restOf(ctx: Context, date: LocalDate): Double? {
         val past = date.isBefore(LocalDate.now())
         if (past) restCache[date]?.let { return it.takeUnless { v -> v.isNaN() } }
-        val night = Bridge.sleepNight(date)?.takeIf { Bridge.hasStages(it) }
-        val v = night?.let { n ->
-            fun minutes(vararg k: app.superhealth.health.data.ActivityKind) = n.filter { it.kind in k }.sumOf { it.end - it.start } / 60000.0
-            val awake = minutes(app.superhealth.health.data.ActivityKind.AWAKE_SLEEP)
-            val asleep = n.sumOf { it.end - it.start } / 60000.0 - awake
-            val h = sleepHabits(ctx)
-            rest(asleep, asleep + awake, minutes(app.superhealth.health.data.ActivityKind.DEEP_SLEEP),
-                minutes(app.superhealth.health.data.ActivityKind.REM_SLEEP), h.needMin, h.consistency)
-        }
+        val v = restPartsOf(ctx, date)?.total
         if (past) restCache[date] = v ?: Double.NaN
         return v
+    }
+
+    /** Parties de Repos de la nuit qui se termine le jour [date] ; null sans phases. */
+    suspend fun restPartsOf(ctx: Context, date: LocalDate): RestParts? {
+        val n = Bridge.sleepNight(date)?.takeIf { Bridge.hasStages(it) } ?: return null
+        fun minutes(vararg k: app.superhealth.health.data.ActivityKind) = n.filter { it.kind in k }.sumOf { it.end - it.start } / 60000.0
+        val awake = minutes(app.superhealth.health.data.ActivityKind.AWAKE_SLEEP)
+        val asleep = n.sumOf { it.end - it.start } / 60000.0 - awake
+        val h = sleepHabits(ctx)
+        return restParts(asleep, asleep + awake, minutes(app.superhealth.health.data.ActivityKind.DEEP_SLEEP), minutes(app.superhealth.health.data.ActivityKind.REM_SLEEP), h.needMin, h.consistency)
     }
 
     // ---- Âge de forme -------------------------------------------------------------------------
