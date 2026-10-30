@@ -16,7 +16,15 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "5") {
+    if (round == "6") {
+        val only = args.getOrNull(2)
+        for (st in STYLES.filter { only == null || it.name == only }) {
+            shot("s-${st.name}-1-accueil") { StyleHome(st) }
+            val scene = ImageComposeScene((w * scale).toInt(), (2200 * scale).toInt(), Density(scale)) { StyleSheet(st) }
+            scene.render(0); val img = scene.render(16_000_000)
+            java.io.File(out, "s-${st.name}-2-planche.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes); scene.close(); println("${st.name} planche")
+        }
+    } else if (round == "5") {
         // catalogue : args[2] = spécification de design (« base=porcelaine glow=0.3 … »), sinon graphite puis porcelaine
         val specs = args.getOrNull(2)?.let { listOf(it) } ?: listOf("base=graphite", "base=porcelaine")
         for (spec in specs) { val dz = parseDesign(spec)
