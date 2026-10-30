@@ -127,10 +127,9 @@ fun CardTone(hue: Color, rich: Boolean = false, night: Boolean = false, content:
 /** Fond d'une carte du tableau de bord : celui de son [CardTone], sinon la surface neutre. */
 @Composable
 fun Modifier.dashCardBackground(@Suppress("UNUSED_PARAMETER") hue: Color = Color.Unspecified): Modifier {
-    // style Score : surface de carte bordée d'un filet
-    val s = LocalCardSurface.current ?: return background(Mf.colors.card).border(1.dp, Mf.colors.line, RoundedCornerShape(CardRadius))
+    val s = LocalCardSurface.current ?: return background(Mf.colors.card)
     val b = background(s.brush)
-    return b.border(if (s.border != null) 2.dp else 1.dp, s.border ?: Mf.colors.line, RoundedCornerShape(CardRadius))
+    return if (s.border != null) b.border(2.dp, s.border, RoundedCornerShape(CardRadius)) else b
 }
 
 /** Pastille de symbole d'une carte : fond et couleur du symbole. */

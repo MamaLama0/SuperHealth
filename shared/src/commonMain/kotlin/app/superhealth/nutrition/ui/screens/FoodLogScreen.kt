@@ -48,6 +48,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.MoreVert
@@ -73,6 +74,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import androidx.navigation.NavHostController
 import app.superhealth.nutrition.data.DayFlagEntity
 import app.superhealth.nutrition.data.FoodEntryEntity
@@ -95,6 +97,7 @@ import app.superhealth.nutrition.ui.openSearch
 import app.superhealth.ui.theme.Mf
 import app.superhealth.platform.LocalDate
 import app.superhealth.platform.LocalTime
+import app.superhealth.ui.theme.dashCardBackground
 
 private val DAY_LETTERS get() = (1..7).map { app.superhealth.nutrition.ui.dayLetter(it) }
 
@@ -107,6 +110,8 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
     val flags by vm.dayFlags.collectAsState()
     var openEntry by remember { mutableStateOf<FoodEntryEntity?>(null) }
     var menu by remember { mutableStateOf(false) }
+    // nutriments du jour : dépliés depuis le résumé (toucher) ou le menu, cachés par défaut
+    var nutrients by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var selection by remember { mutableStateOf(setOf<Long>()) }
     // dernière suppression, annulable quelques secondes
     var undo by remember { mutableStateOf<List<FoodEntryEntity>>(emptyList()) }
@@ -115,23 +120,26 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
     val clipboard by vm.clipboard.collectAsState()
     val ctx = LocalContext.current
 
-    val total = entries.fold(Macros.ZERO) { acc, e -> acc + e.macros() }
+    val total = remember(entries) { entries.fold(Macros.ZERO) { acc, e -> acc + e.macros() } }
+    val mealEnds = app.superhealth.SuperPrefs.settings.collectAsState().value.mealEnds
+    var mealHours by remember { mutableStateOf(false) }
+    val meals = remember(entries, mealEnds) { entries.sortedBy { it.minuteOf() }.groupBy { MealSlot.of(it.minuteOf()) }.toSortedMap() }
     val target = a?.targetFor(day)?.macros
     val flag = flags[day]
-    val intakeByDay = remember(a) { a?.days?.associate { it.epochDay to (it.intakeKcal ?: 0.0) } ?: emptyMap() }
+    // calories de la semaine affichée, lues dans les repas (les analyses ne couvrent que les jours depuis le début du programme)
+    val intakeByDay by vm.weekIntake.collectAsState()
 
-    Box(Modifier.fillMaxSize().background(Mf.colors.background)) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+    if (mealHours) MealHoursDialog { mealHours = false }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 110.dp)) {
             item {
                 Column(Modifier.fillMaxWidth().statusBarsPadding()) {
                     // grand titre du jour (toucher : revenir à aujourd'hui), calendrier et options en boutons ronds
-                    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 8.dp), verticalAlignment = Alignment.Bottom) {
-                        Column(Modifier.weight(1f).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    app.superhealth.nutrition.ui.components.TabHeader(
+                        LocalDate.ofEpochDay(day).format(DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.ui.Lang.locale))
+                            .replaceFirstChar { it.uppercase(app.superhealth.ui.Lang.locale) }, tr("Journal"),
+                        Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null) { vm.selectedDay.value = LocalDate.now().toEpochDay() }) {
-                            Text(tr("Journal"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
-                            Text(dayLabel(day), style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.CalendarMonth, tr("Calendrier")) {
                                 val d = LocalDate.ofEpochDay(day)
                                 DatePickerDialog(ctx, { _, y, m, dd -> vm.selectedDay.value = LocalDate.of(y, m + 1, dd).toEpochDay() }, d.year, d.monthValue - 1, d.dayOfMonth).show()
@@ -142,6 +150,8 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                                     if (clipboard.isNotEmpty()) DropdownMenuItem({ Text(trf("Coller %1\$s élément(s)", clipboard.size)) }, onClick = {
                                         menu = false; val items = clipboard; vm.launch { paste(items, day) }
                                     })
+                                    DropdownMenuItem({ Text(tr("Horaires des repas")) }, onClick = { menu = false; mealHours = true })
+                                    DropdownMenuItem({ Text(tr("Nutriments du jour")) }, enabled = entries.isNotEmpty(), onClick = { menu = false; nutrients = !nutrients })
                                     DropdownMenuItem({ Text(tr("Copier la journée")) }, enabled = entries.isNotEmpty(), onClick = { menu = false; vm.clipboard.value = entries })
                                     DropdownMenuItem({ Text(tr("Copier la veille ici")) }, onClick = { menu = false; vm.launch { copyDay(day - 1, day) } })
                                     DropdownMenuItem({ Text(if (flag?.fasted == true) tr("Annuler « jour de jeûne »") else tr("Marquer comme jour de jeûne")) }, onClick = {
@@ -154,7 +164,6 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                                 }
                             }
                             app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
-                        }
                     }
                     WeekStrip(day, onSelect = { vm.selectedDay.value = it }) { d ->
                         val t = a?.targetFor(d)?.macros?.kcal
@@ -162,8 +171,10 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                         if (t == null || v == null || t <= 0) 0f else (v / t).toFloat()
                     }
                     Spacer(Modifier.height(12.dp))
-                    MfCard(Modifier.padding(horizontal = 16.dp), padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-                        MacroSummary(total, target, { s.energyValue(it) })
+                    val box = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
+                    Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(box).dashCardBackground(app.superhealth.ui.theme.CaloriesColor)
+                        .clickable(enabled = entries.isNotEmpty()) { nutrients = !nutrients }.padding(14.dp)) {
+                        app.superhealth.nutrition.ui.components.EnergySummary(total, target, { s.energyValue(it) }, tr(s.energyUnit.label))
                     }
                 }
             }
@@ -171,9 +182,9 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
             item(key = "mealplan") {
                 app.superhealth.ui.meals.MealPlanCard(day, entries, target, { s.energy(it) }, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp))
             }
-            // 2.2 : vitamines, minéraux, caféine… du jour, repliés par défaut
-            if (entries.isNotEmpty()) item(key = "nutrients") {
-                DayNutrients(entries, s, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp), nav) { nav.navigate("nutrients") }
+            // 2.2 : vitamines, minéraux, caféine… du jour
+            if (nutrients && entries.isNotEmpty()) item(key = "nutrients") {
+                DayNutrients(entries, s, Modifier.padding(horizontal = 16.dp).padding(top = 10.dp), nav) { nav.navigate("nutrients") }
             }
             if (selection.isNotEmpty()) item {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.strong)
@@ -205,10 +216,12 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                 )
             }
             if (entries.isEmpty()) item { EmptyLog(onAdd = { nav.openSearch() }) }
-            val groups = entries.groupBy { it.minuteOf() / 60 }.toSortedMap()
-            groups.forEach { (hour, list) ->
-                item(key = "h${hour}") {
-                    HourGroup(hour, list, { s.energyValue(it) }, selection, onAdd = { nav.openSearch(SearchMode.SEARCH, hour * 60) },
+            // repas déduits de l'heure de chaque aliment (petit-déjeuner, déjeuner, collation, dîner), dans l'ordre du jour
+            val groups = meals
+            groups.forEach { (slot, list) ->
+                item(key = "m${slot.ordinal}") {
+                    MealGroup(slot, list, { s.energyValue(it) }, tr(s.energyUnit.label), selection,
+                        onAdd = { nav.openSearch(SearchMode.SEARCH, list.maxOf { it.minuteOf() }) },
                         onOpen = { if (selection.isEmpty()) openEntry = it else selection = selection.toggle(it.id) },
                         onLongPress = { selection = selection.toggle(it.id) })
                 }
@@ -264,14 +277,13 @@ private fun WeekStrip(day: Long, onSelect: (Long) -> Unit, progress: (Long) -> F
         (0 until 7).forEach { i ->
             val d = monday + i
             val sel = d == day
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { onSelect(d) }
-                .padding(vertical = 4.dp)) {
-                Text(DAY_LETTERS[i], style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = Mf.colors.textSecondary)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { onSelect(d) }.padding(vertical = 4.dp)) {
+                Text(DAY_LETTERS[i], style = MaterialTheme.typography.labelMedium, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Mf.colors.textSecondary)
                 Spacer(Modifier.height(6.dp))
-                Ring(if (d <= today) progress(d) else 0f, CaloriesColor, 40.dp, stroke = 2.5.dp, track = Mf.colors.chip) {
-                    Box(Modifier.size(31.dp).clip(CircleShape).background(if (sel) Mf.colors.accent else Color.Transparent), contentAlignment = Alignment.Center) {
+                Ring(if (d <= today) progress(d) else 0f, app.superhealth.ui.theme.CaloriesColor, 40.dp, stroke = 3.dp, track = Mf.colors.chip) {
+                    Box(Modifier.size(30.dp).clip(CircleShape).background(if (sel) Mf.colors.accent else Color.Transparent), contentAlignment = Alignment.Center) {
                         Text(LocalDate.ofEpochDay(d).dayOfMonth.toString(), style = MaterialTheme.typography.titleSmall, fontSize = 15.sp,
-                            color = when { sel -> Mf.colors.onStrong; d == today -> Mf.colors.accent; else -> Mf.colors.text })
+                            color = when { sel -> Mf.colors.onStrong; d == today -> Mf.colors.accent; d > today -> Mf.colors.textSecondary; else -> Mf.colors.text })
                     }
                 }
             }
@@ -279,43 +291,90 @@ private fun WeekStrip(day: Long, onSelect: (Long) -> Unit, progress: (Long) -> F
     }
 }
 
+/** Repas, d'après l'heure : bornes fixes, la couleur de la pastille de l'en-tête. */
+internal enum class MealSlot(val label: String, val short: String, val color: () -> Color) {
+    BREAKFAST("Petit-déjeuner", "Petit-déj.", { app.superhealth.ui.theme.Base.Yellow }),
+    LUNCH("Déjeuner", "Déjeuner", { app.superhealth.ui.theme.Base.Teal }),
+    SNACK("Collation", "Collation", { app.superhealth.ui.theme.Base.Purple }),
+    DINNER("Dîner", "Dîner", { app.superhealth.ui.theme.Base.Blue });
+    companion object {
+        /** Repas d'une minute du jour, selon les horaires réglés (Réglages ou menu du Journal). */
+        fun of(minute: Int): MealSlot {
+            val ends = app.superhealth.SuperPrefs.settings.value.mealEnds
+            return entries[ends.indexOfFirst { minute < it }.takeIf { it >= 0 } ?: 3]
+        }
+    }
+}
+
+/** Horaires des repas : la fin de chacun, le dîner allant jusqu'à minuit. Chaque fin reste entre ses voisines. */
+@Composable
+internal fun MealHoursDialog(onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val ends = app.superhealth.SuperPrefs.settings.collectAsState().value.mealEnds
+    androidx.compose.material3.AlertDialog(onDismissRequest = onDismiss, containerColor = Mf.colors.card, title = { Text(tr("Horaires des repas")) },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("OK", color = Mf.colors.accent) } },
+        text = {
+            Column {
+                MealSlot.entries.forEachIndexed { i, slot ->
+                    val from = if (i == 0) 0 else ends[i - 1]
+                    val to = ends.getOrNull(i)
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).then(if (to != null) Modifier.clickable {
+                        TimePickerDialog(ctx, { _, h, m ->
+                            val low = from + 15; val high = (ends.getOrNull(i + 1) ?: 1440) - 15
+                            val v = (h * 60 + m).coerceIn(low, high)
+                            app.superhealth.SuperPrefs.update { st -> st.copy(mealEnds = st.mealEnds.toMutableList().also { it[i] = v }) }
+                        }, to / 60, to % 60, true).show()
+                    } else Modifier).padding(vertical = 10.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(slot.color()))
+                        Spacer(Modifier.width(10.dp))
+                        Text(tr(slot.label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Text("%d:%02d – %s".format(from / 60, from % 60, to?.let { "%d:%02d".format(it / 60, it % 60) } ?: "0:00"), style = MaterialTheme.typography.titleSmall,
+                            color = if (to != null) Mf.colors.accent else Mf.colors.textSecondary)
+                    }
+                }
+            }
+        })
+}
+
+/** Un repas : pastille, nom, heure du premier aliment, total ; aliments avec quantité et macros, kcal à droite. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HourGroup(
-    hour: Int, list: List<FoodEntryEntity>, energy: (Double) -> Double, selection: Set<Long>, onAdd: () -> Unit,
+private fun MealGroup(
+    slot: MealSlot, list: List<FoodEntryEntity>, energy: (Double) -> Double, unit: String, selection: Set<Long>, onAdd: () -> Unit,
     onOpen: (FoodEntryEntity) -> Unit, onLongPress: (FoodEntryEntity) -> Unit,
 ) {
     val sum = list.fold(Macros.ZERO) { acc, e -> acc + e.macros() }
-    Row(Modifier.fillMaxWidth().padding(start = 10.dp, end = 14.dp, top = 14.dp)) {
-        Column(Modifier.width(62.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(hourLabel(hour), Modifier.padding(vertical = 4.dp), style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary)
-            Spacer(Modifier.height(8.dp))
-            Box(Modifier.size(26.dp).clip(CircleShape).background(Mf.colors.card).clickable(onClick = onAdd), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Add, trf("Ajouter à %1\$s h", hour), Modifier.size(16.dp), tint = Mf.colors.textSecondary)
+    val first = list.minOf { it.minuteOf() }
+    Column(Modifier.padding(horizontal = 16.dp).padding(top = 10.dp).fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius))
+        .background(Mf.colors.card).border(1.dp, Mf.colors.line, RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).padding(vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(9.dp).clip(CircleShape).background(slot.color()))
+            Spacer(Modifier.width(9.dp))
+            Text(tr(slot.label), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Spacer(Modifier.width(8.dp))
+            Text("%d:%02d".format(first / 60, first % 60), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+            Text("${energy(sum.kcal).roundToInt()} $unit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Box(Modifier.padding(start = 6.dp).size(30.dp).clip(CircleShape).clickable(onClick = onAdd), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Add, trf("Ajouter à %1\$s", tr(slot.label)), Modifier.size(18.dp), tint = Mf.colors.textSecondary)
             }
         }
-        Column(Modifier.weight(1f)) {
-            Row(Modifier.fillMaxWidth().padding(end = 4.dp, bottom = 6.dp), horizontalArrangement = Arrangement.End) {
-                MacroLine(sum, energy, style = MaterialTheme.typography.labelMedium, color = Mf.colors.text)
-            }
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
-                .border(1.dp, Mf.colors.line, RoundedCornerShape(app.superhealth.ui.theme.CardRadius))) {
-                list.forEachIndexed { i, e ->
-                    if (i > 0) Box(Modifier.padding(start = 64.dp).fillMaxWidth().height(androidx.compose.ui.unit.Dp.Hairline).background(Mf.colors.divider))
-                    val sel = e.id in selection
-                    Row(Modifier.fillMaxWidth().background(if (sel) Mf.colors.accent.copy(alpha = 0.14f) else Color.Transparent)
-                        .combinedClickable(onClick = { onOpen(e) }, onLongClick = { onLongPress(e) })
-                        .padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (sel) Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Check, null, tint = Color.White)
-                        } else FoodIcon(e.name, 40.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(e.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            MacroLine(e.macros(), energy, suffix = e.grams?.let { trf("%1\$s g", (num(it, if (it < 10) 1 else 0))) })
-                        }
-                    }
+        list.forEach { e ->
+            val sel = e.id in selection
+            Row(Modifier.fillMaxWidth().background(if (sel) Mf.colors.accent.copy(alpha = 0.14f) else Color.Transparent)
+                .combinedClickable(onClick = { onOpen(e) }, onLongClick = { onLongPress(e) })
+                .padding(horizontal = 14.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (sel) Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Check, null, tint = Color.White)
+                } else FoodIcon(e.name, 40.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(e.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val m = e.macros()
+                    // la quantité ; les macros seulement sans quantité (le détail est au toucher)
+                    Text(e.grams?.let { trf("%1\$s g", num(it, if (it < 10) 1 else 0)) } ?: trf("%1\$sP %2\$sL %3\$sG", m.protein.roundToInt(), m.fat.roundToInt(), m.carbs.roundToInt()),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                Text(energy(e.macros().kcal).roundToInt().toString(), style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary, maxLines = 1)
             }
         }
     }
@@ -329,9 +388,12 @@ private fun EmptyLog(onAdd: () -> Unit) {
 
 @Composable
 private fun SearchPill(modifier: Modifier, onSearch: () -> Unit, onScan: () -> Unit, onAi: (() -> Unit)?) {
-    Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    // flotte au-dessus de la liste (qui défile dessous et s'efface en bas), toujours à portée de pouce
+    Row(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background.copy(alpha = 0.92f))))
+        .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
-            Modifier.weight(1f).height(50.dp).shadow(if (Mf.colors.dark) 0.dp else 10.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.16f), spotColor = Color.Black.copy(alpha = 0.10f))
+            Modifier.weight(1f).height(52.dp).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.16f),
+                spotColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.12f))
                 .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, CircleShape)
                 .clickable(onClick = onSearch).padding(start = 16.dp, end = 5.dp),
             verticalAlignment = Alignment.CenterVertically,

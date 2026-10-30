@@ -213,7 +213,7 @@ internal fun RecordCard(db: ExerciseDb, settings: Settings, r: Analytics.NewReco
         }
         Spacer(Modifier.height(10.dp))
         Text(e?.name ?: "?", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(trf("Record %1\$s · %2\$s", (r.kind.lowercase()), date), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+        Text(tr(r.kind) + " · " + date, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2)
     }
 }
 

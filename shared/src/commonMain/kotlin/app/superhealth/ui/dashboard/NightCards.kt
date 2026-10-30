@@ -77,8 +77,10 @@ internal fun nightCompact(c: DashCard, w: WatchSnap, nav: NavHostController): Co
         }
         DashCard.NIGHT_HEART -> {
             val low = Nights.lowest(w.nightHeart)
-            CompactData(low?.let { formatNumber(it.second) } ?: "—", tr("bpm"), tr("Cœur la nuit"), null,
-                Nights.fiveMinutes(w.nightHeart).map { it.second }, bars = false, onClick = sleep)
+            // la note dit quand arrive le point bas ; pas d'écart « vs moy. » (une moyenne de tranches de 5 min ne dit rien)
+            CompactData(low?.let { formatNumber(it.second) } ?: "—", tr("bpm"), low?.let { trf("Point bas %1\$s", timeOf(it.first)) } ?: tr("Cœur la nuit"), null,
+                // tranches de 15 min : une courbe lisible à cette taille (le grand garde les 5 min)
+                w.nightHeart.groupBy { it.first / 900_000L }.toSortedMap().values.map { v -> v.map { it.second }.average() }, bars = false, onClick = sleep)
         }
         DashCard.NIGHT_VITALS -> {
             val n = w.nightVitals
@@ -150,50 +152,6 @@ internal fun NightHeartCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: 
     }) {
         Value(low?.let { formatNumber(it.second) } ?: "—", tr("bpm"), color = c.ink().onContainer())
         Sub(if (n != null && low != null) lowestWhen(n, low.first) + " · " + timeOf(low.first) else tr("Pas de pouls cette nuit"))
-    }
-}
-
-/** Signes vitaux de la nuit : statut d'ensemble et barre de plage de chaque mesure. */
-@Composable
-internal fun NightVitalsCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavHostController) {
-    Tile(c, tr("Signes vitaux de la nuit"), modifier, onClick = { nav.go("h/vitals") }) {
-        NightVitalsBody(w.nightVitals, onMetric = null, compact = true)
-    }
-}
-
-/** Tendances des constantes : une ligne par mesure, valeur, courbe de 30 jours et barre de plage habituelle. */
-@Composable
-internal fun VitalsTrendsCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavHostController) {
-    val rows = w.trends.filter { it.last != null }.take(5)
-    Tile(c, tr("Tendances des constantes"), modifier, onClick = { nav.go("h/vitals") }, trailing = tr("30 j")) {
-        if (rows.isEmpty()) {
-            Text(tr("Vos constantes apparaîtront après une nuit avec la montre."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
-            return@Tile
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { rows.forEach { TrendRow(it) } }
-    }
-}
-
-@Composable
-private fun TrendRow(t: VitalTrend) {
-    val m = t.metric
-    val last = t.last ?: return
-    val st = t.status
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(m.icon, null, Modifier.size(18.dp), tint = m.color)
-        Spacer(Modifier.width(8.dp))
-        Column(Modifier.weight(1f)) {
-            Text(tr(m.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(formatValue(m, last.second), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                    color = if (st == NightVitals.Status.UNKNOWN) m.color.onContainer() else st.color().onContainer(), maxLines = 1)
-                unitOf(m)?.let { Text(" $it", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1, modifier = Modifier.padding(bottom = 2.dp)) }
-            }
-        }
-        Column(Modifier.width(130.dp)) {
-            MiniChart(CompactData("", null, "", null, t.days.map { it.second }, bars = false, onClick = {}), m.color, Modifier.fillMaxWidth().height(28.dp))
-            RangeBar(last.second, t.range?.first, t.range?.second, st.color(), Modifier.padding(top = 4.dp))
-        }
     }
 }
 

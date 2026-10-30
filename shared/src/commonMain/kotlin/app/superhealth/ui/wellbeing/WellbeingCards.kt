@@ -11,12 +11,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.SentimentDissatisfied
 import androidx.compose.material.icons.rounded.SentimentNeutral
 import androidx.compose.material.icons.rounded.SentimentSatisfied
@@ -115,11 +119,8 @@ fun MoodPicker(selected: Int?, modifier: Modifier = Modifier, labels: List<Strin
 
 // ---- Journal du moral -----------------------------------------------------------------------------------------
 
-/**
- * Jour où l'humeur vient d'être notée depuis la carte : la carte reste le temps d'écrire une note, puis s'efface
- * (bouton OK, ou dès qu'elle quitte l'écran).
- */
-var moodOpen by mutableStateOf<Long?>(null)
+/** Fenêtre du moral ouverte (bandeau de l'accueil, « + », rappel, carte Forme) ; affichée par SuperRoot. */
+var moodSheet by mutableStateOf(false)
 
 /** Note libre du jour [day] (enregistrée en écrivant, et en quittant le champ). */
 @Composable
@@ -143,27 +144,33 @@ fun MoodNote(day: Long, modifier: Modifier = Modifier, minLines: Int = 2, enable
     }
 }
 
+/** Moral du jour, comme la pesée : une fenêtre, l'humeur, puis une note si l'on veut. L'historique reste dans le Journal du moral. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun JournalCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifier, nav: NavHostController) {
+fun MoodSheet(nav: NavHostController) {
     val ctx = LocalContext.current
     val days by Journal.days.collectAsState()
-    val today = days[LocalDate.now().toEpochDay()]
-    val open: () -> Unit = { nav.go("journal") }
-    val d = CompactData(today?.let { tr(Journal.MOODS[it.mood - 1]) } ?: tr("Noter"), null, tr("Moral"), today?.let { it.mood / 5f },
-        history = (13L downTo 0L).map { k -> days[LocalDate.now().toEpochDay() - k]?.mood?.toDouble() }, bars = true, onClick = open)
-    when (size) {
-        CardSize.S -> CompactBubble(c, d, modifier)
-        CardSize.M -> CompactMedium(c, d, modifier)
-        CardSize.W -> CompactStrip(c, d, modifier)
-        CardSize.L -> Tile(c, if (today == null) tr("Comment ça va ?") else tr("Quelque chose à noter ?"), modifier, onClick = open) {
-            // l'humeur, puis une note si l'on veut
-            androidx.compose.runtime.DisposableEffect(Unit) { onDispose { moodOpen = null } }
-            MoodPicker(today?.mood) { Journal.setMood(ctx, it); moodOpen = LocalDate.now().toEpochDay() }
+    val day = LocalDate.now().toEpochDay()
+    val today = days[day]
+    androidx.compose.material3.ModalBottomSheet({ moodSheet = false }, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Mf.colors.card, dragHandle = null) {
+        Column(Modifier.padding(20.dp).navigationBarsPadding().imePadding()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Comment ça va ?"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Box(Modifier.size(36.dp).clip(CircleShape).clickable { moodSheet = false; nav.go("journal") }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.History, tr("Historique"), tint = Mf.colors.textSecondary)
+                }
+                Box(Modifier.size(36.dp).clip(CircleShape).clickable { moodSheet = false }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Close, tr("Fermer"), tint = Mf.colors.textSecondary)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            MoodPicker(today?.mood) { Journal.setMood(ctx, it) }
             if (today != null) {
-                Spacer(Modifier.height(10.dp))
-                MoodNote(LocalDate.now().toEpochDay())
-                Spacer(Modifier.height(10.dp))
-                PillButton(tr("OK"), Modifier.fillMaxWidth(), strong = false) { moodOpen = null }
+                Spacer(Modifier.height(12.dp))
+                MoodNote(day)
+                Spacer(Modifier.height(12.dp))
+                PillButton(tr("OK"), Modifier.fillMaxWidth()) { moodSheet = false }
             }
         }
     }
@@ -241,7 +248,7 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
             }
             if (Form.Kind.MOOD in r.what && journalOn && !moodToday) {
                 Spacer(Modifier.height(8.dp))
-                PillButton(tr("Noter mon moral"), strong = false) { nav.go("journal") }
+                PillButton(tr("Noter mon moral"), strong = false) { moodSheet = true }
             }
         }
         is Form.Advice -> {

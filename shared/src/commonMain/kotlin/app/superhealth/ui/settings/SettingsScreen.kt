@@ -75,6 +75,7 @@ import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material3.IconButton
@@ -162,6 +163,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Cartes"), trf("%1\$s affichées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider(56.dp)
                 SettingRow(tr("Bouton +"), trf("%1\$s raccourcis", sh.plus.size), icon = Icons.Rounded.AddCircle, hue = HealthHues.Activity) { nav.go("plus/edit") }
+                RowDivider(56.dp)
+                var hours by remember { mutableStateOf(false) }
+                SettingRow(tr("Horaires des repas"), sh.mealEnds.joinToString(" · ") { "%d:%02d".format(it / 60, it % 60) }, icon = Icons.Rounded.Schedule, hue = app.superhealth.ui.theme.CaloriesColor) { hours = true }
+                if (hours) app.superhealth.nutrition.ui.screens.MealHoursDialog { hours = false }
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Bandeau de pesée"), tr("Tant que la pesée du jour manque"), Icons.Rounded.MonitorWeight, HealthHues.Body, sh.weighPrompt) { v ->
                     SuperPrefs.update { it.copy(weighPrompt = v) }
@@ -314,8 +319,6 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        LookPalettes()
-        Spacer(Modifier.height(12.dp))
         MfCard {
             Label(tr("Taille du texte"))
             ChipChoice(app.superhealth.nutrition.domain.TextSize.entries, s.textSize, { tr(it.label) }) { t -> set { it.copy(textSize = t) } }
@@ -345,63 +348,6 @@ fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
         Spacer(Modifier.height(24.dp))
-    }
-}
-
-/**
- * Fond de l'app, couleurs des données et police (2.4). Chaque choix montre son aperçu : le fond avec une carte et ses
- * filets, les teintes sur une rangée de pastilles.
- */
-@Composable
-private fun LookPalettes() {
-    val sh by SuperPrefs.settings.collectAsState()
-    val dark = Mf.colors.dark
-    MfCard {
-        Label(tr("Fond"))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            app.superhealth.ui.theme.Surface.entries.forEach { sf ->
-                val sel = sf.name == sh.surface
-                val c = if (dark) sf.dark else sf.light
-                Column(Modifier.weight(1f).clickable { SuperPrefs.update { it.copy(surface = sf.name) } }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    // aperçu : le fond, une carte bordée de son filet, une barre de donnée
-                    Box(Modifier.fillMaxWidth().height(58.dp).clip(RoundedCornerShape(14.dp)).background(Color(c[0]))
-                        .border(if (sel) 2.dp else 1.dp, if (sel) Mf.colors.text else Mf.colors.line, RoundedCornerShape(14.dp)).padding(7.dp)) {
-                        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(Color(c[1])).border(1.dp, Mf.colors.line, RoundedCornerShape(8.dp)).padding(6.dp),
-                            verticalArrangement = Arrangement.Bottom) {
-                            Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(Color(c[3]))) {
-                                Box(Modifier.fillMaxWidth(0.62f).fillMaxHeight().clip(CircleShape).background(app.superhealth.ui.theme.Base.Green))
-                            }
-                        }
-                    }
-                    Text(tr(sf.label), style = MaterialTheme.typography.labelMedium, color = if (sel) Mf.colors.text else Mf.colors.textSecondary,
-                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
-                }
-            }
-        }
-        Spacer(Modifier.height(18.dp))
-        Label(tr("Couleurs des données"))
-        app.superhealth.ui.theme.HueSet.entries.forEach { hs ->
-            val sel = hs.name == sh.dataHues
-            val pk = if (dark) hs.dark else hs.light
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (sel) Mf.colors.elevated else Color.Transparent)
-                .clickable { SuperPrefs.update { it.copy(dataHues = hs.name) } }.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr(hs.label), style = MaterialTheme.typography.bodyLarge, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
-                // la même rangée de mesures pour chaque jeu : activité, cœur, sommeil, calories, protéines, lipides, glucides
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    listOf(pk.activity, pk.heart, pk.sleep, pk.blue, pk.red, pk.yellow, pk.green).forEach { col ->
-                        Box(Modifier.size(18.dp).clip(CircleShape).background(col))
-                    }
-                }
-                Spacer(Modifier.width(10.dp))
-                Box(Modifier.size(20.dp).clip(CircleShape).border(2.dp, if (sel) Mf.colors.text else Mf.colors.textTertiary, CircleShape), contentAlignment = Alignment.Center) {
-                    if (sel) Box(Modifier.size(10.dp).clip(CircleShape).background(Mf.colors.text))
-                }
-            }
-        }
-        Spacer(Modifier.height(18.dp))
-        Label(tr("Police"))
-        ChipChoice(app.superhealth.ui.theme.AppFont.entries, app.superhealth.ui.theme.AppFont.entries.firstOrNull { it.name == sh.font } ?: app.superhealth.ui.theme.AppFont.INTER,
-            { it.label }) { f -> SuperPrefs.update { it.copy(font = f.name) } }
     }
 }
 

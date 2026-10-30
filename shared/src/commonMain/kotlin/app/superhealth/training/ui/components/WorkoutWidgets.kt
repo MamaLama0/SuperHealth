@@ -31,6 +31,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.AnnotatedString
@@ -58,14 +61,21 @@ import kotlinx.serialization.json.Json
 @Serializable private data class BodyFile(val w: Float, val h: Float, val paths: List<BodyPath>)
 private class Body(val w: Float, val h: Float, val parts: List<Pair<String, Path>>)
 
-private val bodyCache = mutableMapOf<String, Body?>()
+private class Loaded(val body: Body?)
+private val bodyCache = ConcurrentHashMap<String, Loaded>()
 private val json = Json { ignoreUnknownKeys = true }
 
 private fun body(name: String): Body? = bodyCache.getOrPut(name) {
-    Assets.text("body/${name}.json")?.let { t ->
+    Loaded(Assets.text("body/${name}.json")?.let { t ->
         val f = json.decodeFromString(BodyFile.serializer(), t)
         Body(f.w, f.h, f.paths.mapNotNull { p -> runCatching { p.id to PathParser().parsePathString(p.d).toPath() }.getOrNull() })
-    }
+    })
+}.body
+
+/** Lit à l'avance les silhouettes (hors du fil principal) : l'onglet Activités s'ouvre sans à-coup. */
+fun preloadBodies(sex: Sex) {
+    val prefix = if (sex == Sex.FEMALE) "avatar_female" else "avatar_male"
+    body("${prefix}_front"); body("${prefix}_back")
 }
 
 /**
@@ -93,6 +103,40 @@ fun BodyMap(intensity: Map<String, Float>, sex: Sex, modifier: Modifier = Modifi
                             drawPath(path, c)
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Corps « rayons X » d'une séance : silhouette neutre, muscles du jour en dégradé de [hue], en gris pour une séance faite
+ * ([hue] null). Face ou dos selon les muscles visés, cadré sur le haut, le bas ou le corps entier.
+ */
+@Composable
+fun XRayBody(targets: Set<MuscleGroup>, sex: Sex, hue: Color?, modifier: Modifier = Modifier) {
+    val prefix = if (sex == Sex.FEMALE) "avatar_female" else "avatar_male"
+    val front = remember(prefix) { body("${prefix}_front") }
+    val back = remember(prefix) { body("${prefix}_back") }
+    val keys = targets.map { it.key }.toSet()
+    val b = (if ((back?.parts?.count { it.first in keys } ?: 0) > (front?.parts?.count { it.first in keys } ?: 0)) back else front) ?: return
+    val (from, to) = when {
+        targets.isNotEmpty() && targets.all { it.upper } -> 0.06f to 0.54f
+        targets.isNotEmpty() && targets.none { it.upper } -> 0.44f to 1f
+        else -> 0f to 1f
+    }
+    val dark = Mf.colors.dark
+    val base = SolidColor(if (dark) Color(0xFF2A2D34) else Color(0xFFD7DAE0))
+    val idle = SolidColor(if (dark) Color(0xFF3A3E47) else Color(0xFFC4C8D0))
+    val done = SolidColor(Mf.colors.textSecondary)
+    Canvas(modifier) {
+        val y0 = b.h * from; val hh = b.h * (to - from)
+        val s = minOf(size.width / b.w, size.height / hh)
+        val hot = if (hue == null) done else app.superhealth.ui.theme.dataBrush(hue, Offset(0f, y0 + hh), Offset(0f, y0))
+        clipRect {
+            translate((size.width - b.w * s) / 2, (size.height - hh * s) / 2 - y0 * s) {
+                scale(s, s, pivot = Offset.Zero) {
+                    b.parts.forEach { (id, path) -> drawPath(path, when { id == "body" -> base; id in keys -> hot; else -> idle }) }
                 }
             }
         }

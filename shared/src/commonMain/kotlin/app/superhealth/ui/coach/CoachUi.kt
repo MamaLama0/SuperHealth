@@ -1,7 +1,7 @@
 package app.superhealth.ui.coach
 
 import app.superhealth.platform.*
-
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -171,10 +171,10 @@ fun CoachCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modifie
         .cardClick(open)
     when (size) {
         CardSize.S -> Box(box.square().padding(10.dp), contentAlignment = Alignment.Center) { CoachAvatar(46.dp) }
-        CardSize.M -> Column(box.padding(12.dp)) {
-            CoachAvatar(30.dp)
-            Spacer(Modifier.height(8.dp))
-            Text(headline, style = MaterialTheme.typography.titleSmall, color = CoachHue.onContainer(), maxLines = 3, overflow = TextOverflow.Ellipsis)
+        CardSize.M -> Column(box.heightIn(min = app.superhealth.ui.dashboard.MEDIUM_H).padding(horizontal = 14.dp, vertical = 12.dp)) {
+            app.superhealth.ui.dashboard.CardHead(androidx.compose.material.icons.Icons.Rounded.AutoAwesome, tr("Coach"), CoachHue)
+            Spacer(Modifier.height(10.dp))
+            Text(headline, style = MaterialTheme.typography.titleSmall, color = CoachHue.onContainer(), maxLines = 5, overflow = TextOverflow.Ellipsis)
         }
         CardSize.W -> Row(box.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             CoachAvatar(32.dp)

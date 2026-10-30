@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -155,6 +156,16 @@ private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
 
 @Composable
 fun SuperRoot(vm: SuperViewModel) {
+    // lectures faites à l'avance, juste après le démarrage : silhouettes et activités récentes de l'onglet Activités
+    val preloadCtx = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(800)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { app.superhealth.training.ui.components.preloadBodies(vm.training.state.value.settings.sex) }
+            val f = app.superhealth.SuperPrefs.settings.value
+            runCatching { app.superhealth.ui.health.preloadRecent(preloadCtx, f.has(app.superhealth.Feature.TRAINING), f.has(app.superhealth.Feature.HEALTH)) }
+        }
+    }
     val sh by vm.settings.collectAsState()
     val tst by vm.training.state.collectAsState()
     val db by vm.training.db.collectAsState()
@@ -196,6 +207,7 @@ fun SuperRoot(vm: SuperViewModel) {
         plus = false; logSheet = false
         runCatching {
             when {
+                r == "mood" -> app.superhealth.ui.wellbeing.moodSheet = true
                 r.startsWith("training:") -> { nav.popBackStack(nav.graph.findStartDestination().id, false); handleTrainingRoute(vm.training, nav, r.removePrefix("training:")) }
                 isTabRoute(r) -> nav.openTab(r, fresh = true)
                 r == current -> Unit
@@ -207,11 +219,11 @@ fun SuperRoot(vm: SuperViewModel) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background)) {
         NavHost(
             nav, startDestination = "home", modifier = Modifier.weight(1f),
-            // Axe partagé horizontal de Material : glissement court et fondu ; les onglets se croisent en fondu.
-            enterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeIn(tween(160)) else slideInHorizontally(push) { it / 5 } + fadeIn(tween(220, 60)) },
-            exitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeOut(tween(120)) else slideOutHorizontally(push) { -it / 5 } + fadeOut(tween(120)) },
-            popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeIn(tween(160)) else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
-            popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeOut(tween(120)) else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
+            // Axe partagé horizontal de Material : glissement court et fondu ; les onglets changent sans transition (le fondu croisé accrochait pendant la construction de l'écran).
+            enterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { it / 5 } + fadeIn(tween(220, 60)) },
+            exitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { -it / 5 } + fadeOut(tween(120)) },
+            popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
+            popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
@@ -289,6 +301,7 @@ fun SuperRoot(vm: SuperViewModel) {
                 Toast.makeText(appContext, tr("250 ml d'eau ajoutés"), Toast.LENGTH_SHORT).show()
             }
             "log_health" -> logSheet = true
+            "mood" -> app.superhealth.ui.wellbeing.moodSheet = true
             "sync" -> vm.syncNow(nav.context)
             "next" -> vm.training.activeProgram()?.let { p -> vm.training.startProgramDay(p, p.dayIndex, p.cycleIndex); nav.navigate("session") }
             "empty" -> { vm.training.startEmpty(); nav.navigate("session") }
@@ -301,66 +314,78 @@ fun SuperRoot(vm: SuperViewModel) {
         runAction(action)
     }
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
+    if (app.superhealth.ui.wellbeing.moodSheet) app.superhealth.ui.wellbeing.MoodSheet(nav)
 }
 
 /** Courbe « emphasized decelerate » de Material. */
 private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
 
 /**
- * Barre de navigation (style Score) : une pilule flottante bordée d'un filet, l'onglet actif en pastille pleine avec son nom,
- * les autres en symbole seul ; à côté, le « + » rond sous le pouce.
+ * Barre de navigation : une pilule flottante bordée d'un filet, les onglets à parts égales (symbole et nom, l'actif sur une
+ * pastille d'encre) et, à côté, le « + » rond sous le pouce (ou au milieu de la barre).
  */
 @Composable
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
     val shown = visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it }
     val dark = Mf.colors.dark
-    val pill = Modifier.height(60.dp)
-        .shadow(if (dark) 0.dp else 12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
-        .clip(CircleShape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, CircleShape).padding(5.dp)
+    val shape = RoundedCornerShape(26.dp)
+    val pill = Modifier.height(68.dp)
+        .shadow(if (dark) 0.dp else 12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
+        .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, shape).padding(horizontal = 4.dp)
     Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background), endY = 40f))
-        .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 10.dp),
+        .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        @Composable fun Tabs(list: List<Tab>) = Row(pill, horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-            list.forEach { TabItem(it, current == it.route) { onTab(it.route) } }
-        }
         when (sh.plusSide) {
-            "CENTER" -> {
+            // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
+            "CENTER" -> Row(pill.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 val left = shown.take(shown.size / 2)
-                Spacer(Modifier.weight(1f)); Tabs(left); Spacer(Modifier.width(10.dp)); PlusButton(58.dp, onPlus); Spacer(Modifier.width(10.dp)); Tabs(shown - left.toSet()); Spacer(Modifier.weight(1f))
+                Row(Modifier.weight(1f).fillMaxHeight()) { left.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
+                PlusButton(56.dp, onPlus)
+                Row(Modifier.weight(1f).fillMaxHeight()) { (shown - left.toSet()).forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
             }
-            "LEFT" -> { PlusButton(58.dp, onPlus); Spacer(Modifier.weight(1f)); Tabs(shown) }
-            else -> { Tabs(shown); Spacer(Modifier.weight(1f)); PlusButton(58.dp, onPlus) }
+            else -> {
+                val leftHanded = sh.plusSide == "LEFT"
+                // moins d'onglets (parties coupées) : barre plus courte, gardée près du « + » sous le pouce
+                val short = shown.size < tabs.size
+                if (leftHanded) { PlusButton(64.dp, onPlus); Spacer(Modifier.width(10.dp)) } else if (short) Spacer(Modifier.weight(1f))
+                Row((if (short) Modifier.width((84 * shown.size + 8).dp) else Modifier.weight(1f)).then(pill)) {
+                    shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
+                }
+                if (!leftHanded) { Spacer(Modifier.width(10.dp)); PlusButton(64.dp, onPlus) } else if (short) Spacer(Modifier.weight(1f))
+            }
         }
     }
 }
 
 @Composable
 private fun PlusButton(size: androidx.compose.ui.unit.Dp, onPlus: () -> Unit) {
-    val dark = Mf.colors.dark
+    val r = RoundedCornerShape(size * 0.31f)
     Box(
-        Modifier.size(size).shadow(if (dark) 0.dp else 12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
-            .clip(CircleShape).background(Brush.linearGradient(listOf(Mf.colors.strong, androidx.compose.ui.graphics.lerp(Mf.colors.strong, Color.White, if (dark) 0.18f else 0.22f))))
+        Modifier.size(size).shadow(10.dp, r, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
+            .clip(r).background(app.superhealth.ui.theme.actionFill(Mf.colors.strong, app.superhealth.ui.theme.partnerOf(Mf.colors.strong)))
             .clickable(onClick = onPlus),
         contentAlignment = Alignment.Center,
-    ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(size * 0.5f)) }
+    ) {
+        Icon(Icons.Rounded.Add, tr("Ajouter"), tint = app.superhealth.ui.theme.actionInk(), modifier = Modifier.size(size * 0.47f))
+    }
 }
 
 @Composable
-private fun TabItem(tab: Tab, selected: Boolean, onClick: () -> Unit) {
-    // onglet actif : pastille à l'encre du texte, symbole et nom en couleur du fond ; les autres : symbole gris
-    Row(
-        Modifier.fillMaxHeight().clip(CircleShape).background(if (selected) Mf.colors.text else Color.Transparent)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
-            .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 700f))
-            .padding(horizontal = if (selected) 16.dp else 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    // onglet actif : pastille teintée de l'accent derrière le symbole, nom en gras
+    val accent = Mf.colors.accent
+    val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
+    Column(
+        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
-        Icon(tab.icon, tr(tab.label), tint = if (selected) Mf.colors.background else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
-        if (selected) {
-            Spacer(Modifier.width(7.dp))
-            Text(tr(tab.label), fontSize = 14.sp, color = Mf.colors.background, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent), contentAlignment = Alignment.Center) {
+            Icon(tab.icon, tr(tab.label), tint = if (selected) accent.onContainer() else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
         }
+        Spacer(Modifier.height(3.dp))
+        Text(tr(tab.label), fontSize = 12.sp, color = if (selected) Mf.colors.text else Mf.colors.textSecondary,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -394,7 +419,7 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
         PlusAction.WATER -> QuickAction("Verre d'eau (250 ml)", Icons.Rounded.LocalDrink, "water")
         PlusAction.VITALS -> QuickAction("Hydratation et constantes", Icons.Rounded.WaterDrop, "log_health")
         PlusAction.BODY -> QuickAction("Mesures", Icons.Rounded.Straighten, "body")
-        PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "journal")
+        PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "mood")
         PlusAction.PERIOD -> QuickAction("Règles", Icons.Rounded.CalendarMonth, "cycle")
         PlusAction.BREATHE -> QuickAction("Respirer", Icons.Rounded.Air, "breathe")
         PlusAction.SYNC -> if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null

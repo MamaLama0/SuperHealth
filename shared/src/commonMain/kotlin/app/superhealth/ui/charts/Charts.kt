@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.superhealth.ui.formatNumber
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.isWarm
 import app.superhealth.ui.tr
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -211,6 +212,8 @@ fun LineChart(
     invertY: Boolean = false, xLabels: List<Pair<Number, String>> = emptyList(), timeAxis: Boolean = false,
     highlightEnd: Boolean = true, ringedEnd: Boolean = false, emptyText: String = "Pas encore assez de données",
 ) {
+    // bande d'une teinte chaude en sombre : gris neutre (une teinte chaude mêlée au fond sombre vire au brun)
+    val darkTheme = Mf.colors.dark
     val ys = series.flatMap { s -> s.points.map { it.second } + s.band.orEmpty().flatMap { listOf(it.second, it.third) } } + listOfNotNull(reference)
     val xs = series.flatMap { s -> s.points.map { it.first.toDouble() } + s.band.orEmpty().map { it.first.toDouble() } }
     if (series.sumOf { it.points.size } < 2 || xs.isEmpty()) { ChartEmpty(modifier, height, emptyText); return }
@@ -240,7 +243,7 @@ fun LineChart(
                 p.smooth(b.map { Offset(x(it.first.toDouble()), y(it.second)) })
                 p.smooth(b.reversed().map { Offset(x(it.first.toDouble()), y(it.third)) }, start = false)
                 p.close()
-                drawPath(p, s.color.copy(alpha = 0.16f))
+                drawPath(p, if (darkTheme && s.color.isWarm()) Color.White.copy(alpha = 0.07f) else s.color.copy(alpha = 0.16f))
             }
             if (s.dots) {
                 s.points.forEach { (px, py) -> drawCircle(s.color.copy(alpha = 0.55f), ChartStyle.dot.toPx(), Offset(x(px.toDouble()), y(py))) }

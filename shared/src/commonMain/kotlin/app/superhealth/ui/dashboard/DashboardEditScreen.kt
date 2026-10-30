@@ -328,7 +328,7 @@ private fun Block(c: DashCard, z: app.superhealth.CardSize, selected: Boolean, m
         .then(if (selected) Modifier.border(1.5.dp, c.hue(), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)) else Modifier)
         .clickable(onClick = onClick).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(c.icon(), null, Modifier.size(16.dp), tint = c.hue())
-        if (z.span > 1) {
+        if (z != app.superhealth.CardSize.S) {
             Spacer(Modifier.width(6.dp))
             Text(tr(c.label), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = if (selected) c.hue().onContainer() else Mf.colors.text)

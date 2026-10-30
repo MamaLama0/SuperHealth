@@ -44,6 +44,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,7 +85,9 @@ import kotlin.math.roundToInt
  */
 internal data class CompactData(
     val value: String, val unit: String?, val label: String, val progress: Float?,
-    val history: List<Double?> = emptyList(), val bars: Boolean = true, val goal: Double? = null, val onClick: () -> Unit,
+    val history: List<Double?> = emptyList(), val bars: Boolean = true, val goal: Double? = null,
+    /** Les 7 derniers jours, faits ou non (moyen : une rangée de points). */
+    val week: List<Boolean>? = null, val onClick: () -> Unit,
 )
 
 @Composable
@@ -156,7 +159,7 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
         }
         DashCard.HABITS -> {
             val logged = an.days.filter { it.intakeKcal != null || it.fasted }.map { it.epochDay }.toSet()
-            CompactData(Habits.streak(logged, an.today).current.toString(), tr("j."), tr("Série journal"), null) { nav.go("habits") }
+            CompactData(Habits.streak(logged, an.today).current.toString(), tr("j."), tr("Série journal"), null, week = (an.today - 6..an.today).map { it in logged }) { nav.go("habits") }
         }
         DashCard.BALANCE -> {
             val days = Balance.days(an.days, an::tdeeAt, an.today)
@@ -239,17 +242,26 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
     }
 }
 
+/** Nom pour l'en-tête d'un petit carré, où la place est comptée. */
+internal fun DashCard.tiny(): String = when (this) {
+    DashCard.EXPENDITURE -> tr("Dépensé")
+    DashCard.LOAD -> tr("Entraîn.")
+    DashCard.LIFTS -> tr("Progrès")
+    else -> short()
+}
+
 /** Nom court d'une carte, pour l'en-tête des petites tailles. */
 internal fun DashCard.short(): String = tr(when (this) {
-    DashCard.CALORIES -> "Calories"; DashCard.WEIGHT -> "Poids"; DashCard.EXPENDITURE -> "Dépense"; DashCard.INTAKE -> "Apports"
+    DashCard.RINGS -> "Anneaux"; DashCard.STRATEGY -> "Programme"; DashCard.BODY -> "Mesures"; DashCard.TRAINING_TRENDS -> "Tendances"; DashCard.MUSCLE_SETS -> "Séries"
+    DashCard.CALORIES -> "Calories"; DashCard.MEALS -> "Repas"; DashCard.WEIGHT -> "Poids"; DashCard.EXPENDITURE -> "Dépense"; DashCard.INTAKE -> "Apports"
     DashCard.MACROS -> "Protéines"; DashCard.STEPS -> "Pas"; DashCard.HEART -> "Cœur"; DashCard.SLEEP -> "Sommeil"
     DashCard.CARDIO -> "Cardio"; DashCard.ENERGY -> "Énergie"; DashCard.HYDRATION -> "Eau"; DashCard.RUNNING -> "Course"
     DashCard.RECOVERY -> "Récupération"; DashCard.TRAINING_WEEK -> "Semaine"; DashCard.HABITS -> "Habitudes"; DashCard.BALANCE -> "Bilan"
     DashCard.CHARGE -> "Charge"; DashCard.EFFORT -> "Effort"; DashCard.HRV_STATUS -> "VFC"; DashCard.STRESS_DAY -> "Stress"
     DashCard.LOAD -> "Charge entr."; DashCard.SLEEP_STAGES -> "Phases"; DashCard.HR_ZONES -> "Zones"; DashCard.DAY_TIMELINE -> "Journée"
-    DashCard.FORM -> "Forme"; DashCard.JOURNAL -> "Moral"; DashCard.BEDTIME -> "Coucher"; DashCard.CYCLE -> "Cycle"
+    DashCard.FORM -> "Forme"; DashCard.BEDTIME -> "Coucher"; DashCard.CYCLE -> "Cycle"
     DashCard.SLEEP_SCHEDULE -> "Horaires"; DashCard.SLEEP_QUALITY -> "Qualité"; DashCard.NIGHT_HEART -> "Cœur la nuit"
-    DashCard.NIGHT_VITALS -> "Nuit"; DashCard.VITALS_TRENDS -> "Constantes"; DashCard.NEXT_WORKOUT -> "Séance"; DashCard.MUSCLES -> "Muscles"
+    DashCard.NIGHT_VITALS -> "Nuit"; DashCard.VITALS_TRENDS -> "Tendances"; DashCard.NEXT_WORKOUT -> "Séance"; DashCard.MUSCLES -> "Muscles"
     DashCard.RECORDS -> "Records"; DashCard.MUSCLE_SETS -> "Séries"; DashCard.LIFTS -> "Progression"; DashCard.ACTIVITIES -> "Activités"
     else -> label
 })
@@ -261,12 +273,13 @@ internal fun DashCard.short(): String = tr(when (this) {
 @Composable
 internal fun CardHead(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, hue: androidx.compose.ui.graphics.Color,
                       trailing: String? = null, trailingHue: androidx.compose.ui.graphics.Color? = null) {
-    Row(Modifier.height(18.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, Modifier.size(15.dp), tint = hue)
-        Spacer(Modifier.width(5.dp))
-        Text(title, style = MaterialTheme.typography.labelLarge, fontSize = 13.sp, color = Mf.colors.textSecondary, maxLines = 1,
+    val (chipBg, chipTint) = dashChipColors(hue)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(30.dp).clip(CircleShape).background(chipBg), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(17.dp), tint = chipTint) }
+        Spacer(Modifier.width(10.dp))
+        Text(title, style = MaterialTheme.typography.titleSmall, color = Mf.colors.text, maxLines = 1,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        trailing?.let { Text(it, style = MaterialTheme.typography.labelLarge, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+        trailing?.let { Text(it, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
             color = trailingHue ?: hue.onContainer(), maxLines = 1) }
     }
 }
@@ -285,25 +298,6 @@ internal fun CardValue(value: String, unit: String?, size: androidx.compose.ui.u
 
 private fun CompactData.chart() = history.count { it != null } >= 2
 private fun CompactData.percent() = progress?.takeIf { unit != "%" && !value.endsWith("%") }?.let { "${(it * 100).roundToInt()} %" }
-/** Ligne d'explication sous la valeur, sauf si elle répète le nom de la carte. */
-private fun CompactData.note(c: DashCard) = label.takeIf { !it.equals(c.short(), ignoreCase = true) && !it.equals(tr(c.label), ignoreCase = true) }
-
-/** Anneau de progression, [content] au centre : un cercle sur le plus petit côté. */
-@Composable
-private fun Disc(progress: Float?, hue: androidx.compose.ui.graphics.Color, modifier: Modifier, strokeFrac: Float = 0.1f, content: @Composable () -> Unit) {
-    val track = softTrack()
-    Box(modifier, contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val d = size.minDimension
-            val stroke = d * strokeFrac
-            val box = Size(d - stroke, d - stroke)
-            val tl = Offset((size.width - d) / 2 + stroke / 2, (size.height - d) / 2 + stroke / 2)
-            drawArc(track, 0f, 360f, false, tl, box, style = Stroke(stroke))
-            progress?.takeIf { it > 0f }?.let { p -> drawArc(hue, -90f, 360f * p.coerceAtMost(1f), false, tl, box, style = Stroke(stroke, cap = StrokeCap.Round)) }
-        }
-        content()
-    }
-}
 
 /** Cartes dont la courbe dit un sens (poids, dépense) : écart du début à la fin de la période ; les autres : écart à la moyenne. */
 private val trendCards = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE)
@@ -312,7 +306,9 @@ private val trendCards = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE)
  * Écart de la dernière valeur : à la première de la période pour une tendance, sinon à la moyenne des jours précédents.
  * Null sans au moins 3 valeurs ou si l'écart s'arrondit à zéro.
  */
-private fun CompactData.delta(c: DashCard): Pair<Double, String>? {
+internal fun CompactData.delta(c: DashCard): Pair<Double, String>? {
+    // courbes d'une seule nuit ou heures de coucher : un écart à la moyenne n'aurait pas de sens
+    if (c == DashCard.NIGHT_HEART || c == DashCard.SLEEP_SCHEDULE) return null
     val v = history.filterNotNull()
     if (v.size < 3) return null
     val d = if (c in trendCards) v.last() - v.first() else v.last() - v.dropLast(1).average()
@@ -334,78 +330,6 @@ internal fun DeltaLine(d: Pair<Double, String>, hue: androidx.compose.ui.graphic
     }
 }
 
-/**
- * Petit (1 bloc, carré) : l'état d'un coup d'œil, rien de plus. Avec un objectif : l'anneau, la valeur au centre. Sinon la
- * valeur et son écart (à la moyenne, ou sur la période pour une tendance), et la courbe seulement quand elle dit un sens.
- */
-@Composable
-internal fun CompactBubble(c: DashCard, d: CompactData, modifier: Modifier) {
-    val hue = c.ink()
-    Column(modifier.square().clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue).cardClick(d.onClick).padding(12.dp)) {
-        CardHead(c.icon(), c.short(), hue)
-        if (d.progress != null) {
-            Disc(d.progress, hue, Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(d.value, style = MaterialTheme.typography.headlineMedium, fontSize = 19.sp, lineHeight = 21.sp, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 12.dp))
-                    // les calories affichent le reste : « 17 % » sous « 2015 » se lirait comme une contradiction
-                    Text(if (c == DashCard.CALORIES) d.label.lowercase() else d.percent() ?: d.unit.orEmpty(), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1)
-                }
-            }
-        } else {
-            Spacer(Modifier.height(4.dp))
-            CardValue(d.value, d.unit, 22.sp)
-            Spacer(Modifier.weight(1f))
-            val delta = d.delta(c)
-            when {
-                c in trendCards && d.chart() -> { MiniChart(d, hue, Modifier.fillMaxWidth().height(24.dp)); delta?.let { Spacer(Modifier.height(4.dp)); DeltaLine(it, hue) } }
-                delta != null -> DeltaLine(delta, hue)
-                c in trendCards -> Text(if (d.history.count { it != null } >= 3) tr("Stable") else tr("Peu de données"),
-                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-                else -> d.note(c)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            }
-        }
-    }
-}
-
-/** Petit graphique sans texte : barres (objectif atteint en plein) ou courbe avec aire ; rien sous 2 valeurs. */
-@Composable
-internal fun MiniChart(d: CompactData, hue: androidx.compose.ui.graphics.Color, modifier: Modifier) {
-    val track = softTrack()
-    // une courbe commence à la première valeur (premières pesées) ; les barres gardent tous leurs jours
-    val vals = if (d.bars) d.history else d.history.dropWhile { it == null }
-    if (vals.count { it != null } < 2) { Box(modifier); return }
-    // sous l'objectif : couleur atténuée en clair ; en sombre un gris neutre (une teinte chaude atténuée sur noir vire au brun)
-    val below = if (Mf.colors.dark) Mf.colors.textTertiary else hue.copy(alpha = ChartStyle.BELOW_GOAL_ALPHA)
-    Canvas(modifier) {
-        val n = vals.size
-        val present = vals.filterNotNull()
-        if (d.bars) {
-            // barres de la charte commune : fond de barre, objectif atteint en plein, sinon atténuée
-            val max = (present + listOfNotNull(d.goal)).max().coerceAtLeast(1e-9)
-            val slot = size.width / n; val bw = (slot * ChartStyle.BAR_FILL).coerceAtMost(ChartStyle.barMax.toPx())
-            vals.forEachIndexed { i, v ->
-                val x = i * slot + (slot - bw) / 2
-                drawRoundRect(track, Offset(x, 0f), Size(bw, size.height), androidx.compose.ui.geometry.CornerRadius(bw / 2))
-                val bh = ((v ?: 0.0) / max * size.height).toFloat()
-                if (v != null && v > 0) drawRoundRect(if (d.goal != null && v >= d.goal) hue else below,
-                    Offset(x, size.height - bh.coerceAtLeast(bw)), Size(bw, bh.coerceAtLeast(bw)), androidx.compose.ui.geometry.CornerRadius(bw / 2))
-            }
-        } else {
-            val lo = present.min(); val hi = present.max()
-            val pad = ChartStyle.endDot.toPx() + 1.dp.toPx()
-            fun x(i: Int) = pad + (size.width - 2 * pad) * i / (n - 1).coerceAtLeast(1)
-            fun y(v: Double) = pad + (size.height - 2 * pad) * (1 - if (hi > lo) ((v - lo) / (hi - lo)).toFloat() else 0.5f)
-            val pts = vals.withIndex().mapNotNull { (i, v) -> v?.let { Offset(x(i), y(it)) } }
-            val line = androidx.compose.ui.graphics.Path().apply { smooth(pts) }
-            val area = androidx.compose.ui.graphics.Path().apply { addPath(line); lineTo(pts.last().x, size.height); lineTo(pts.first().x, size.height); close() }
-            drawPath(area, Brush.verticalGradient(listOf(hue.copy(alpha = ChartStyle.AREA_ALPHA), hue.copy(alpha = 0f))))
-            drawPath(line, hue, style = Stroke(ChartStyle.line.toPx(), cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
-            drawCircle(hue, ChartStyle.endDot.toPx(), pts.last())
-        }
-    }
-}
-
 @Composable
 private fun TintedBox(c: DashCard, modifier: Modifier, onClick: () -> Unit, padding: androidx.compose.ui.unit.Dp = 12.dp,
                       content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
@@ -414,55 +338,30 @@ private fun TintedBox(c: DashCard, modifier: Modifier, onClick: () -> Unit, padd
         .cardClick(onClick).padding(padding), content = content)
 }
 
-/**
- * Moyen (2 blocs) : nom et détail en tête ; la valeur et ce qu'elle veut dire à gauche, le graphique de la période
- * (ou l'anneau de l'objectif) à droite.
- */
-@Composable
-internal fun CompactMedium(c: DashCard, d: CompactData, modifier: Modifier) {
-    val hue = c.ink()
-    TintedBox(c, modifier.fillMaxWidth().heightIn(min = 118.dp), d.onClick, padding = 14.dp) {
-        CardHead(c.icon(), c.short(), hue, d.percent())
-        Spacer(Modifier.weight(1f))
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.weight(1f)) {
-                CardValue(d.value, d.unit, 26.sp)
-                val delta = if (d.progress == null) d.delta(c) else null
-                if (delta != null) DeltaLine(delta, hue)
-                else d.note(c)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            }
-            Spacer(Modifier.width(10.dp))
-            when {
-                d.chart() -> MiniChart(d, hue, Modifier.width(112.dp).height(54.dp))
-                d.progress != null -> Disc(d.progress, hue, Modifier.size(58.dp), 0.12f) {}
-            }
-        }
-    }
-}
-
-/** Bandeau (toute la largeur, une ligne) : pastille, nom et valeur, puis le graphique ou la barre d'objectif à droite. */
+/** Bandeau (toute la largeur, une ligne) : pastille teintée, valeur en couleur et nom, le graphique ou la barre d'objectif à droite. */
 @Composable
 internal fun CompactStrip(c: DashCard, d: CompactData, modifier: Modifier) {
     val hue = c.ink()
-    TintedBox(c, modifier.fillMaxWidth().heightIn(min = 68.dp), d.onClick, padding = 14.dp) {
+    val (chipBg, chipTint) = dashChipColors(hue)
+    TintedBox(c, modifier.fillMaxWidth().heightIn(min = 72.dp), d.onClick, padding = 12.dp) {
         Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.elevated), contentAlignment = Alignment.Center) {
-                Icon(c.icon(), null, Modifier.size(21.dp), tint = hue)
-            }
+            Box(Modifier.size(44.dp).clip(CircleShape).background(chipBg), contentAlignment = Alignment.Center) { Icon(c.icon(), null, Modifier.size(24.dp), tint = chipTint) }
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(tr(c.label), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                CardValue(d.value, d.unit, 20.sp)
+            Column {
+                CardValue(d.value, d.unit, 22.sp, hue.onContainer())
+                Text(c.short(), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(Modifier.width(10.dp))
-            if (d.progress == null && d.chart()) Column(horizontalAlignment = Alignment.End) {
-                MiniChart(d, hue, Modifier.width(104.dp).height(26.dp))
-                d.delta(c)?.let { DeltaLine(it, hue) }
-            }
-            else d.progress?.let { p ->
-                Column(horizontalAlignment = Alignment.End) {
-                    ProgressBar(p.coerceIn(0f, 1f), hue, Modifier.width(104.dp), height = 8.dp, track = softTrack())
-                    Text(d.percent() ?: "", style = MaterialTheme.typography.labelMedium, color = hue.onContainer(), modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.width(16.dp))
+            // le repère prend toute la place qui reste, il n'est pas relégué au bout
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                if (d.progress == null && d.history.isNotEmpty()) {
+                    if (!d.bars && d.chart()) TileLine(d.history, hue, Modifier.fillMaxWidth().height(44.dp))
+                    else if (d.bars) DayBars(d.history, d.goal, hue, Modifier.fillMaxWidth().height(44.dp))
+                } else d.progress?.let { p ->
+                    Column(horizontalAlignment = Alignment.End) {
+                        ProgressLine(p, hue, Modifier.fillMaxWidth())
+                        Text(d.percent() ?: "", style = MaterialTheme.typography.labelMedium, color = hue.onContainer(), modifier = Modifier.padding(top = 4.dp))
+                    }
                 }
             }
         }

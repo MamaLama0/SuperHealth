@@ -76,7 +76,9 @@ object Nights {
             val avg = heart.subList(i, j + 1).map { it.second }.average()
             if (best == null || avg < best.second) best = heart[(i + j) / 2].first to avg
         }
-        return best
+        // mesures espacées (une toutes les 5 à 10 min, fréquent via Health Connect) : aucune fenêtre de 4 min pleine,
+        // le point bas est alors la tranche de 5 min la plus basse
+        return best ?: fiveMinutes(heart).minByOrNull { it.second }
     }
 
     /** Pouls moyen par tranche de 5 minutes (ms, bpm), pour une courbe lisible. */

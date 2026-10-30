@@ -1,7 +1,7 @@
 package app.superhealth.ui.theme
 
 import app.superhealth.platform.*
-
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -17,7 +17,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
@@ -62,7 +65,7 @@ val BodyGrey = Color(0xFFDCDCDC)
 val MuscleIdle = Color(0xFFEEEEEE)
 
 /** Couleurs des programmes. */
-val ProgramColors = ProgramPalette
+val ProgramColors: List<Color> get() = ProgramPalette
 
 /** Familles de mesures santé, à la manière de Google Santé (une couleur par famille). */
 object HealthHues {
@@ -90,27 +93,12 @@ private fun pack(vararg c: Long) = HuePack(Color(c[0]), Color(c[1]), Color(c[2])
  * indigo, sarcelle, menthe, cyan, puis activité, cœur, sommeil, esprit, corps.
  */
 enum class HueSet(val label: String, val light: HuePack, val dark: HuePack) {
-    VIVES("Vives",
-        pack(0xFF7A7F88, 0xFF0F9F62, 0xFFCC9100, 0xFFE8601F, 0xFF1F68D6, 0xFF8B4FD8, 0xFFD93A3A, 0xFFD93465, 0xFF4B49D2, 0xFF0C968B, 0xFF0E9474, 0xFF0B8FC7,
-            0xFF0E9474, 0xFFD62D52, 0xFF6448D6, 0xFFD18F00, 0xFF2873D0),
-        pack(0xFF8E939B, 0xFF3FCF8E, 0xFFEDC055, 0xFFF2834B, 0xFF4A8EF0, 0xFFA87BEF, 0xFFEE5A5A, 0xFFE95A7E, 0xFF7470EA, 0xFF3EC1B4, 0xFF45C9A4, 0xFF35B4E0,
-            0xFF45C9A4, 0xFFEE5A72, 0xFF8D7BEF, 0xFFF0BA45, 0xFF5BA0EC)),
-    DOUCES("Douces",
-        pack(0xFF8A8F98, 0xFF3FA97A, 0xFFC9A23C, 0xFFE08A5A, 0xFF5B8FD9, 0xFF9A7AD6, 0xFFD96B6B, 0xFFD9739A, 0xFF7471D6, 0xFF4AA9A0, 0xFF48A88E, 0xFF4BA3CC,
-            0xFF48A88E, 0xFFD96B80, 0xFF8B79D6, 0xFFC9A23C, 0xFF5B8FD9),
-        pack(0xFFA3A8B0, 0xFF8FDDB5, 0xFFF2D58A, 0xFFF5B48E, 0xFF9DBFF2, 0xFFC4AEF2, 0xFFF2A0A0, 0xFFF2A6C2, 0xFFA9A7F2, 0xFF93D9D2, 0xFF95DBC6, 0xFF96D2EC,
-            0xFF95DBC6, 0xFFF2A3B2, 0xFFB9AAF2, 0xFFF2D58A, 0xFF9DBFF2)),
-    PROFONDES("Profondes",
-        pack(0xFF5B616B, 0xFF0B7A4B, 0xFFB07A00, 0xFFC2410C, 0xFF1D4ED8, 0xFF6D28D9, 0xFFB91C1C, 0xFFBE185D, 0xFF3730A3, 0xFF0F766E, 0xFF047857, 0xFF0369A1,
-            0xFF047857, 0xFFBE123C, 0xFF5B21B6, 0xFFB07A00, 0xFF1D4ED8),
-        // en sombre, seules les teintes froides s'assombrissent (saturées, type pierre) ; les chaudes restent claires
-        pack(0xFF7D838C, 0xFF16A066, 0xFFE0A82E, 0xFFEA7A3C, 0xFF3366F2, 0xFF8550F2, 0xFFE23B3B, 0xFFDB3D7C, 0xFF5550EE, 0xFF0F9D91, 0xFF119B77, 0xFF1787D1,
-            0xFF119B77, 0xFFE33D5F, 0xFF7A52F0, 0xFFE0A82E, 0xFF3366F2)),
-    SOBRES("Sobres",
-        pack(0xFF7A7F88, 0xFF4F8A6B, 0xFF9C8540, 0xFFB0704A, 0xFF4F6F9C, 0xFF7A6A9C, 0xFFA85454, 0xFFA85C78, 0xFF5F5F9C, 0xFF4B8A86, 0xFF4B8A78, 0xFF4B7F9C,
-            0xFF4B8A78, 0xFFA8586A, 0xFF6F64A8, 0xFF9C8540, 0xFF4F6F9C),
-        pack(0xFF8E939B, 0xFF7FB497, 0xFFC9B26E, 0xFFD29A7C, 0xFF85A3CC, 0xFFA898C9, 0xFFCC8585, 0xFFCC8CA4, 0xFF9393CC, 0xFF7FB5B1, 0xFF7FB5A5, 0xFF7FAECC,
-            0xFF7FB5A5, 0xFFCC8A9A, 0xFF9E94D4, 0xFFC9B26E, 0xFF85A3CC)),
+    // les couleurs d'origine de l'app, les mêmes en clair et en sombre
+    ORIGINE("Origine",
+        pack(0xFF8E9199, 0xFF34A853, 0xFFF9B500, 0xFFF2803A, 0xFF4285F4, 0xFF9C5AE6, 0xFFEA4335, 0xFFE8558F, 0xFF6C6FE0, 0xFF12A4AF, 0xFF1EA88E, 0xFF2E97C7,
+            0xFF1F9E85, 0xFFE5574F, 0xFF7B61D9, 0xFFD9931F, 0xFF3F7DE8),
+        pack(0xFF8E9199, 0xFF34A853, 0xFFF9B500, 0xFFF2803A, 0xFF4285F4, 0xFF9C5AE6, 0xFFEA4335, 0xFFE8558F, 0xFF6C6FE0, 0xFF12A4AF, 0xFF1EA88E, 0xFF2E97C7,
+            0xFF1F9E85, 0xFFE5574F, 0xFF7B61D9, 0xFFD9931F, 0xFF3F7DE8)),
 }
 
 /**
@@ -118,8 +106,10 @@ enum class HueSet(val label: String, val light: HuePack, val dark: HuePack) {
  * passage clair / sombre, même hors des fonctions Compose (graphiques, widgets).
  */
 object Hues {
-    var set by mutableStateOf(HueSet.VIVES)
+    var set by mutableStateOf(HueSet.ORIGINE)
     var dark by mutableStateOf(false)
+    /** Données en aplat : les dégradés restent réservés aux styles de cartes (Réglages > Style). */
+    val gradient = false
     val pack: HuePack get() = if (dark) set.dark else set.light
 }
 
@@ -129,11 +119,8 @@ object Hues {
  */
 enum class Surface(val label: String, val light: List<Long>, val dark: List<Long>) {
     // fond, carte, bloc posé sur une carte, remplissage neutre (pistes, champs)
-    GRAPHITE("Graphite", listOf(0xFFF3F4F6, 0xFFFFFFFF, 0xFFF0F1F4, 0xFFE9EBEF), listOf(0xFF08090B, 0xFF131519, 0xFF1D2025, 0xFF262A30)),
-    NUIT("Nuit", listOf(0xFFE6EEFA, 0xFFFFFFFF, 0xFFE6EDF8, 0xFFD9E3F3), listOf(0xFF081026, 0xFF12203D, 0xFF1B2B4D, 0xFF24365C)),
-    ARDOISE("Ardoise", listOf(0xFFE1E6EC, 0xFFF8FAFC, 0xFFEBEFF3, 0xFFD8DFE7), listOf(0xFF12171D, 0xFF1D252E, 0xFF27313C, 0xFF313D4A)),
-    FORET("Forêt", listOf(0xFFE3F0E8, 0xFFFFFFFF, 0xFFE3EFE7, 0xFFD3E6DA), listOf(0xFF05160F, 0xFF0E2A1E, 0xFF16382A, 0xFF1F4535)),
-    PRUNE("Prune", listOf(0xFFEEE8F9, 0xFFFFFFFF, 0xFFEBE4F7, 0xFFDFD4F2), listOf(0xFF120B22, 0xFF21173A, 0xFF2C2049, 0xFF372A57)),
+    // le fond d'origine de l'app : cartes pleines et douces, sans filet
+    ORIGINE("Origine", listOf(0xFFF1F3F8, 0xFFFFFFFF, 0xFFE9ECF3, 0xFFE7EAF1), listOf(0xFF111318, 0xFF1D2026, 0xFF282B32, 0xFF2A2D35)),
 }
 
 /** Fond légèrement teinté d'une couleur (pastilles, sélection), lisible en clair comme en sombre. */
@@ -142,6 +129,54 @@ fun Color.container(strength: Float = 1f): Color =
     // en sombre, une teinte chaude mêlée au fond vire au brun : fond neutre à la place, la couleur reste au symbole
     if (Mf.colors.dark && isWarm()) androidx.compose.ui.graphics.lerp(Mf.colors.card, Color.White, 0.07f * strength)
     else androidx.compose.ui.graphics.lerp(Mf.colors.card, this, (if (Mf.colors.dark) 0.24f else 0.14f) * strength)
+
+/**
+ * Second ton du dégradé d'une donnée : teinte voisine (les froides glissent vers le bleu-violet, les chaudes vers le rose),
+ * un peu plus claire, même saturation : un dégradé de deux couleurs proches, jamais fluo.
+ */
+fun Color.partner(): Color {
+    val mx = maxOf(red, green, blue); val mn = minOf(red, green, blue); val d = mx - mn
+    if (d < 0.08f) return this
+    var h = when (mx) {
+        red -> 60f * (((green - blue) / d) % 6f)
+        green -> 60f * ((blue - red) / d + 2f)
+        else -> 60f * ((red - green) / d + 4f)
+    }
+    if (h < 0f) h += 360f
+    val l = (mx + mn) / 2f
+    val sat = if (l == 0f || l == 1f) 0f else d / (1f - kotlin.math.abs(2f * l - 1f))
+    val h2 = ((if (isWarm()) h - 28f else h + 34f) + 360f) % 360f
+    return Color.hsl(h2, sat.coerceIn(0f, 1f), (l + 0.07f).coerceAtMost(0.82f), alpha)
+}
+
+/**
+ * Couleur d'un voile ou d'une aire posés sur une carte : la teinte elle-même, sauf l'orange et le jaune en sombre qui
+ * vireraient au brun et deviennent un rose (règle : jamais de teinte chaude assombrie).
+ */
+fun veilOf(c: Color): Color = if (!Hues.dark || !c.isWarm() || c.blue >= c.green) c else Color.hsl(338f, 0.75f, 0.6f)
+
+/** Fond d'un bouton d'action : la couleur d'accent. */
+@Composable
+fun actionFill(@Suppress("UNUSED_PARAMETER") a: Color, @Suppress("UNUSED_PARAMETER") b: Color): Brush = SolidColor(Mf.colors.strong)
+
+/** Symbole et texte posés sur un bouton d'action : un accent pâle prend une encre foncée (le blanc s'y perdrait). */
+@Composable
+fun actionInk(): Color = if (Mf.colors.strong.luminance() > 0.5f) Color(0xFF0F1114) else Mf.colors.onStrong
+
+/** [partner] appelable sans import d'extension. */
+fun partnerOf(c: Color): Color = c.partner()
+
+/** Pinceau d'une donnée : aplat, ou dégradé de [partner] (départ, [from]) vers la couleur (arrivée, [to]) avec le réglage « Dégradé ». */
+fun dataBrush(c: Color, from: Offset, to: Offset): Brush =
+    if (Hues.gradient) Brush.linearGradient(listOf(c.partner(), c), from, to) else SolidColor(c)
+
+/** Fond d'un onglet : le fond de l'app. */
+@Composable
+fun androidx.compose.ui.Modifier.tabBackground(@Suppress("UNUSED_PARAMETER") tint: Color?): androidx.compose.ui.Modifier = this.then(androidx.compose.ui.Modifier.background(Mf.colors.background))
+
+/** Pinceau d'un arc tracé depuis 0° (après rotate(-90)) sur la fraction [f] du cercle : aplat, ou dégradé le long du trait. */
+fun arcBrush(c: Color, f: Float): Brush =
+    if (Hues.gradient) Brush.sweepGradient(0f to c.partner(), f.coerceIn(0.01f, 1f) to c, 1f to c) else SolidColor(c)
 
 /** Teinte chaude (rouge, orange, jaune, rose) : celles qui tournent au brun quand on les assombrit. */
 fun Color.isWarm(): Boolean {
@@ -164,7 +199,13 @@ fun Color.onContainer(): Color {
 }
 
 /** Rayon des cartes et des listes groupées. */
-val CardRadius = 22.dp
+val CardRadius = 28.dp
+
+/** Surtitre d'onglet (date, « Journal ») : gris, au-dessus du titre. */
+@Composable
+fun Overline(text: String) {
+    androidx.compose.material3.Text(text, style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, maxLines = 1)
+}
 /** Rayon des champs, vignettes et petits blocs posés dans une carte. */
 val FieldRadius = 12.dp
 
@@ -205,16 +246,18 @@ data class MfColors(
 
 private fun onAccent(accent: Color) = if (accent.luminance() > 0.62f) Color(0xFF1C1C1E) else Color.White
 
-private fun lightMf(accent: Color, sf: Surface = Surface.GRAPHITE) = MfColors(
+private fun lightMf(accent: Color, sf: Surface = Surface.ORIGINE) = MfColors(
     dark = false, background = Color(sf.light[0]), card = Color(sf.light[1]), elevated = Color(sf.light[2]),
-    text = Color(0xFF0F1114), textSecondary = Color(0xFF5F646D), textTertiary = Color(0xFF9EA3AC),
-    divider = Color(0x14000000), line = Color(0x12000000), chip = Color(sf.light[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
+    text = if (sf == Surface.ORIGINE) Color(0xFF1B1C20) else Color(0xFF0F1114), textSecondary = if (sf == Surface.ORIGINE) Color(0xFF5E636D) else Color(0xFF5F646D),
+    textTertiary = if (sf == Surface.ORIGINE) Color(0xFFA0A5AE) else Color(0xFF9EA3AC),
+    divider = if (sf == Surface.ORIGINE) Color(0xFFE2E5EC) else Color(0x14000000), line = if (sf == Surface.ORIGINE) Color.Transparent else Color(0x12000000), chip = Color(sf.light[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
 )
 
-private fun darkMf(accent: Color, sf: Surface = Surface.GRAPHITE) = MfColors(
+private fun darkMf(accent: Color, sf: Surface = Surface.ORIGINE) = MfColors(
     dark = true, background = Color(sf.dark[0]), card = Color(sf.dark[1]), elevated = Color(sf.dark[2]),
-    text = Color(0xFFF4F5F7), textSecondary = Color(0xFF8E939B), textTertiary = Color(0xFF5E636B),
-    divider = Color(0x17FFFFFF), line = Color(0x14FFFFFF), chip = Color(sf.dark[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
+    text = if (sf == Surface.ORIGINE) Color(0xFFE3E4E9) else Color(0xFFF4F5F7), textSecondary = if (sf == Surface.ORIGINE) Color(0xFFA9ADB7) else Color(0xFF8E939B),
+    textTertiary = if (sf == Surface.ORIGINE) Color(0xFF6B707A) else Color(0xFF5E636B),
+    divider = if (sf == Surface.ORIGINE) Color(0xFF30333A) else Color(0x17FFFFFF), line = if (sf == Surface.ORIGINE) Color.Transparent else Color(0x14FFFFFF), chip = Color(sf.dark[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
 )
 
 val LocalMf = staticCompositionLocalOf { lightMf(Base.Blue) }
@@ -240,7 +283,7 @@ val SansText = sansFamily(14f)
 val SansDisplay = sansFamily(28f)
 
 /** Inter (texte) et Inter Display (titres, chiffres) : la police du style Score. */
-private fun inter(file: String, weight: FontWeight): androidx.compose.ui.text.font.Font {
+private fun inter(file: String, weight: FontWeight): Font {
     val bytes by lazy { readAsset("fonts/$file.ttf") ?: ByteArray(0) }
     return androidx.compose.ui.text.platform.Font(file, { bytes }, weight, androidx.compose.ui.text.font.FontStyle.Normal)
 }
@@ -296,13 +339,10 @@ private val shapes = androidx.compose.material3.Shapes(
 fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentColor.BLUE, textSize: TextSize = TextSize.NORMAL,
                content: @Composable () -> Unit) {
     val dark = mode.isDark(isSystemInDarkTheme())
-    val look = app.superhealth.SuperPrefs.settings.collectAsState().value
-    val hueSet = HueSet.entries.firstOrNull { it.name == look.dataHues } ?: HueSet.VIVES
     // teintes des données posées avant de lire les couleurs (accent compris) : tout l'écran les suit
-    if (Hues.set != hueSet) Hues.set = hueSet
     if (Hues.dark != dark) Hues.dark = dark
-    val surface = Surface.entries.firstOrNull { it.name == look.surface } ?: Surface.GRAPHITE
-    val font = AppFont.entries.firstOrNull { it.name == look.font } ?: AppFont.INTER
+    val surface = Surface.ORIGINE
+    val font = AppFont.SANS
     val acc = accent.color()
     val mf = if (dark) darkMf(acc, surface) else lightMf(acc, surface)
     // labo de style : couleur de l'entraînement (bleu, accent ou programme), suivie par WorkoutBlue

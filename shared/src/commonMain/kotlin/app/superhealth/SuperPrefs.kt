@@ -14,6 +14,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     RINGS("Anneaux du jour", Section.HEALTH),
     FOCUS("À faire", Section.HEALTH),
     CALORIES("Calories restantes", Section.NUTRITION),
+    MEALS("Repas du jour", Section.NUTRITION),
     WEIGHT("Tendance du poids", Section.NUTRITION),
     INTAKE("Calories consommées", Section.NUTRITION),
     EXPENDITURE("Dépense énergétique", Section.NUTRITION),
@@ -57,8 +58,6 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** iOS : signes vitaux de la nuit comparés à la plage habituelle (comme l'app Signes vitaux de l'Apple Watch). */
     /** 1.8 : pousser ou se reposer aujourd'hui (Charge, sommeil, charge d'entraînement et moral recoupés). */
     FORM("Forme du jour", Section.HEALTH),
-    /** 1.8 : journal du moral et ce qui influence la récupération. */
-    JOURNAL("Journal du moral", Section.HEALTH),
     /** 1.8 : coucher conseillé (besoin, dette, heure de réveil habituelle). */
     BEDTIME("Coucher conseillé", Section.HEALTH, watch = true),
     /** 1.8 : suivi du cycle. */
@@ -91,27 +90,28 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
 }
 
 /**
- * Taille d'une carte dans la grille de [GRID] blocs : petit (carré, 1 bloc), moyen (2 blocs), bandeau (toute la largeur,
+ * Taille d'une carte dans la grille de [GRID] blocs : petit (carré, un tiers), moyen (demi-largeur), bandeau (toute la largeur,
  * une ligne) et grand (toute la largeur, version détaillée). Petit, moyen et bandeau sont les versions à regarder d'un coup
  * d'œil (symbole et valeur, peu ou pas de texte) ; grand donne le détail.
  * Les cartes se rangent dans l'ordre ; un trou en fin de rangée est comblé par la prochaine carte qui y tient.
  */
 @Serializable
 enum class CardSize(val span: Int, val label: String, private val en: String) {
-    S(1, "Petit", "Small"), M(2, "Moyen", "Medium"), W(3, "Bandeau", "Strip"), L(3, "Grand", "Large");
+    S(2, "Petit", "Small"), M(3, "Moyen", "Medium"), W(6, "Bandeau", "Strip"), L(6, "Grand", "Large");
 
     /** Nom affiché ; « Moyen » a son propre anglais (taille, pas humeur). */
     val title: String get() = if (app.superhealth.ui.Lang.english) en else label
 }
 
-const val GRID = 3
+/** Six blocs : trois petits, deux moyens côte à côte, ou un moyen et un petit (le moyen prend alors les deux tiers). */
+const val GRID = 6
 
 /** Cartes qui ont une valeur principale : disponibles en bulle (S) et en tuile (M). */
 val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.INTAKE, DashCard.MACROS,
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
     DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE,
-    DashCard.COACH, DashCard.COACH_WEEK, DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE,
+    DashCard.COACH, DashCard.COACH_WEEK, DashCard.FORM, DashCard.BEDTIME, DashCard.CYCLE,
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
 
 /** Cartes conçues en demi-largeur. */
@@ -194,7 +194,7 @@ enum class Feature(val label: String, val summary: String) {
     NUTRITION("Nutrition", "Journal, calories adaptatives, tendance du poids"),
     TRAINING("Musculation", "Programmes, séances guidées, progression"),
     HEALTH("Activités et montre", "Course, pas, cœur, sommeil, Apple Santé"),
-    JOURNAL("Journal du moral", "Humeur du jour, habitudes et leur effet sur la récupération"),
+    JOURNAL("Journal du moral", "Humeur du jour et une note"),
     CYCLE("Cycle menstruel", "Règles, phases et prochaines dates estimées"),
 }
 
@@ -207,7 +207,6 @@ fun DashCard.feature(): Feature? = when (this) {
     DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS, DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS,
     DashCard.MUSCLE_SETS, DashCard.LIFTS -> Feature.TRAINING
     DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE, DashCard.FORM -> Feature.HEALTH
-    DashCard.JOURNAL -> Feature.JOURNAL
     DashCard.CYCLE -> Feature.CYCLE
     else -> if (watch) Feature.HEALTH else null
 }
@@ -290,6 +289,8 @@ data class SuperSettings(
     /** Demande de pesée à l'ouverture tant qu'aucune pesée n'est saisie aujourd'hui ; [weighSkipDay] : « pas aujourd'hui ». */
     val weighPrompt: Boolean = true,
     val weighSkipDay: Long = 0,
+    /** Bandeau du moral replié jusqu'au lendemain. */
+    val moodSkipDay: Long = 0,
     /** Fonds de carte OpenStreetMap des activités (seule connexion liée à vos parcours ; sans eux, le tracé seul). */
     val onlineMaps: Boolean = true,
     /** Sauvegarde automatique chiffrée : destination (nom de backup.Remote.Kind), serveur WebDAV, dossier (arbre SAF), fréquence en jours (0 : jamais). */
@@ -332,15 +333,16 @@ data class SuperSettings(
     /** Parties de l'app activées (noms de [Feature]). */
     val features: Set<String> = Feature.entries.filter { it != Feature.CYCLE }.map { it.name }.toSet(),
     /** Labo de style (version test) : cartes du tableau de bord en clair et en sombre, séance de musculation. Noms des enums de ui.theme.StyleLab. */
-    val styleCardsLight: String = "NEUTRAL",
-    val styleCardsDark: String = "NEUTRAL",
-    val styleWorkoutColor: String = "BLUE",
+    val styleCardsLight: String = "GRADIENT",
+    val styleCardsDark: String = "VIVID",
+    val styleWorkoutColor: String = "PROGRAM",
     val styleHero: String = "LARGE",
     val styleSets: String = "CARDS",
-    /** Apparence (2.4) : fond de l'app, jeu de teintes des données et police (noms de ui.theme.Surface, HueSet, AppFont). */
-    val surface: String = "GRAPHITE",
-    val dataHues: String = "VIVES",
-    val font: String = "INTER",
+    /** Fin (minute du jour) du petit-déjeuner, du déjeuner et de la collation ; le dîner va jusqu'à minuit. */
+    val mealEnds: List<Int> = listOf(630, 900, 1110),
+    /** Tâches ajoutées à la carte À faire, et le dernier jour où chacune a été cochée. */
+    val todos: List<String> = emptyList(),
+    val todosDone: Map<String, Long> = emptyMap(),
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,
@@ -383,7 +385,8 @@ data class HcPhase(val kind: String, val start: Long, val end: Long)
 
 /** Séance d'exercice enregistrée par une autre app (course, marche, vélo…). */
 @Serializable
-data class HcSession(val id: String, val type: Int, val title: String?, val start: Long, val end: Long, val app: String)
+data class HcSession(val id: String, val type: Int, val title: String?, val start: Long, val end: Long, val app: String,
+                     val distanceM: Double? = null, val kcal: Double? = null, val avgHr: Int? = null, val maxHr: Int? = null)
 
 private val SuperJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; coerceInputValues = true }
 
@@ -447,11 +450,11 @@ object SuperPrefs {
             if (DashCard.NIGHT_VITALS !in cards) cards.add((cards.indexOf(DashCard.VITALS) + 1).takeIf { it > 0 } ?: cards.size, DashCard.NIGHT_VITALS)
             s.copy(dashboard = cards, appleCardsAdded = true)
         }
-        // 1.8 : journal du moral activé une fois ; forme du jour en tête, journal et coucher conseillé juste après
+        // 1.8 : journal du moral activé une fois ; forme du jour en tête, coucher conseillé juste après
         if (!_settings.value.wellbeingAdded) update { s ->
             val cards = s.dashboard.toMutableList()
             val at = (cards.indexOf(DashCard.RINGS) + 1).coerceAtLeast(0)
-            listOf(DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME).filter { it !in cards }.reversed().forEach { cards.add(at, it) }
+            listOf(DashCard.FORM, DashCard.BEDTIME).filter { it !in cards }.reversed().forEach { cards.add(at, it) }
             s.copy(dashboard = cards, features = s.features + Feature.JOURNAL.name, wellbeingAdded = true,
                 plus = (s.plus + listOf(PlusAction.MOOD.name, PlusAction.BREATHE.name)).distinct())
         }

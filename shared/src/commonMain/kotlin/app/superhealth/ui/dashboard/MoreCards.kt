@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -122,20 +123,23 @@ internal fun RingsCard(c: DashCard, size: app.superhealth.CardSize, rings: List<
             ActivityRings(rings, 92.dp, track = Mf.colors.background, icons = false)
         }
         // Demi : l'anneau d'abord, chaque mesure reconnue au symbole posé sur son rayon ; en face, la valeur seule, dans sa couleur.
-        app.superhealth.CardSize.M -> Box(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
-            .cardClick { nav.go("rings/edit") }.padding(10.dp), contentAlignment = Alignment.Center) {
-            // largeur calculée sans BoxWithConstraints : la rangée mesure ses cartes en hauteur intrinsèque
+        app.superhealth.CardSize.M -> Column(modifier.fillMaxWidth().heightIn(min = MEDIUM_H).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
+            .cardClick { nav.go("rings/edit") }.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            CardHead(c.icon(), c.short(), c.ink())
+            Spacer(Modifier.height(6.dp))
+            // largeur calculée sans BoxWithConstraints : la rangée mesure ses cartes en hauteur intrinsèque ; 58 dp restent pour « 12 345 »
             val screen = LocalConfiguration.current.screenWidthDp.dp
-            val inner = (screen - 32.dp - GAP * 2) * (2f / 3f) + GAP - 20.dp
-            val side = (inner * 0.64f).coerceIn(100.dp, 164.dp)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val half = LocalCardHalf.current
+            val inner = if (half) (screen - 32.dp - GAP) / 2 - 28.dp else (screen - 32.dp - GAP * 2) * (2f / 3f) + GAP - 28.dp
+            val side = (if (half) inner - 68.dp else inner * 0.64f).coerceIn(92.dp, 112.dp)
+            Row(Modifier.fillMaxWidth().weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 ActivityRings(rings, side, track = Mf.colors.background)
                 Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (rings.size > 3) 2.dp else 8.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (rings.size > 3) 0.dp else 4.dp)) {
                     rings.forEach { r ->
                         // valeur dans sa couleur et pourcentage de l'objectif dessous : on sait où l'on en est sans libellé
                         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { open(r.kind) }) {
-                            Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                            Text(ringText(r, s).first ?: "—", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
                                 color = r.kind.color.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (rings.size <= 3) Text(if (r.value == null) "–" else "${(r.progress * 100).toInt()} %",
                                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, maxLines = 1)
