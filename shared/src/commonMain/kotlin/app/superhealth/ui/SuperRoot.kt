@@ -22,6 +22,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -306,65 +307,60 @@ fun SuperRoot(vm: SuperViewModel) {
 private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
 
 /**
- * Barre de navigation flottante : quatre onglets (pastille teintée derrière l'icône active, comme Material 3) et, à côté,
- * le « + » en bouton d'action carré arrondi.
+ * Barre de navigation (style Score) : une pilule flottante bordée d'un filet, l'onglet actif en pastille pleine avec son nom,
+ * les autres en symbole seul ; à côté, le « + » rond sous le pouce.
  */
 @Composable
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
     val shown = visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it }
-    val pill = Modifier.height(68.dp)
-        .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
-        .clip(RoundedCornerShape(26.dp)).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).padding(horizontal = 4.dp)
-    Row(Modifier.fillMaxWidth().background(Mf.colors.background).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+    val dark = Mf.colors.dark
+    val pill = Modifier.height(60.dp)
+        .shadow(if (dark) 0.dp else 12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
+        .clip(CircleShape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, CircleShape).padding(5.dp)
+    Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background), endY = 40f))
+        .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
+        @Composable fun Tabs(list: List<Tab>) = Row(pill, horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+            list.forEach { TabItem(it, current == it.route) { onTab(it.route) } }
+        }
         when (sh.plusSide) {
-            // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
-            "CENTER" -> Row(pill.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            "CENTER" -> {
                 val left = shown.take(shown.size / 2)
-                Row(Modifier.weight(1f).fillMaxHeight()) { left.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
-                PlusButton(56.dp, onPlus)
-                Row(Modifier.weight(1f).fillMaxHeight()) { (shown - left.toSet()).forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } } }
+                Spacer(Modifier.weight(1f)); Tabs(left); Spacer(Modifier.width(10.dp)); PlusButton(58.dp, onPlus); Spacer(Modifier.width(10.dp)); Tabs(shown - left.toSet()); Spacer(Modifier.weight(1f))
             }
-            else -> {
-                val leftHanded = sh.plusSide == "LEFT"
-                // moins d'onglets (parties coupées) : barre plus courte, gardée près du « + » sous le pouce
-                val short = shown.size < tabs.size
-                if (leftHanded) { PlusButton(64.dp, onPlus); Spacer(Modifier.width(10.dp)) } else if (short) Spacer(Modifier.weight(1f))
-                Row((if (short) Modifier.width((100 * shown.size + 8).dp) else Modifier.weight(1f)).then(pill)) {
-                    shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
-                }
-                if (!leftHanded) { Spacer(Modifier.width(10.dp)); PlusButton(64.dp, onPlus) } else if (short) Spacer(Modifier.weight(1f))
-            }
+            "LEFT" -> { PlusButton(58.dp, onPlus); Spacer(Modifier.weight(1f)); Tabs(shown) }
+            else -> { Tabs(shown); Spacer(Modifier.weight(1f)); PlusButton(58.dp, onPlus) }
         }
     }
 }
 
 @Composable
 private fun PlusButton(size: androidx.compose.ui.unit.Dp, onPlus: () -> Unit) {
-    val r = RoundedCornerShape(size * 0.31f)
+    val dark = Mf.colors.dark
     Box(
-        Modifier.size(size).shadow(10.dp, r, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
-            .clip(r).background(Mf.colors.strong).clickable(onClick = onPlus),
+        Modifier.size(size).shadow(if (dark) 0.dp else 12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
+            .clip(CircleShape).background(Brush.linearGradient(listOf(Mf.colors.strong, androidx.compose.ui.graphics.lerp(Mf.colors.strong, Color.White, if (dark) 0.18f else 0.22f))))
+            .clickable(onClick = onPlus),
         contentAlignment = Alignment.Center,
-    ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(size * 0.47f)) }
+    ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(size * 0.5f)) }
 }
 
 @Composable
-private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val accent = Mf.colors.accent
-    val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
-    Column(
-        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+private fun TabItem(tab: Tab, selected: Boolean, onClick: () -> Unit) {
+    // onglet actif : pastille à l'encre du texte, symbole et nom en couleur du fond ; les autres : symbole gris
+    Row(
+        Modifier.fillMaxHeight().clip(CircleShape).background(if (selected) Mf.colors.text else Color.Transparent)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+            .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 700f))
+            .padding(horizontal = if (selected) 16.dp else 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent),
-            contentAlignment = Alignment.Center) {
-            Icon(tab.icon, tr(tab.label), tint = if (selected) accent.onContainer() else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
+        Icon(tab.icon, tr(tab.label), tint = if (selected) Mf.colors.background else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
+        if (selected) {
+            Spacer(Modifier.width(7.dp))
+            Text(tr(tab.label), fontSize = 14.sp, color = Mf.colors.background, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
-        Spacer(Modifier.height(3.dp))
-        Text(tr(tab.label), fontSize = 11.sp, color = if (selected) Mf.colors.text else Mf.colors.textSecondary,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

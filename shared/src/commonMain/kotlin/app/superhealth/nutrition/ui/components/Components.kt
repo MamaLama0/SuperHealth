@@ -96,7 +96,7 @@ val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
 @Composable
 fun MfCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(16.dp), content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card)
+        modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card).border(1.dp, Mf.colors.line, CardShape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
         content = content,
     )
@@ -308,7 +308,7 @@ fun RowDivider(inset: Dp = 16.dp) = Box(Modifier.padding(start = inset).fillMaxW
 /** Groupe de lignes dans une carte (réglages). */
 @Composable
 fun GroupCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card), content = content)
+    Column(modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card).border(1.dp, Mf.colors.line, CardShape), content = content)
 }
 
 /** Bouton capsule de Material 3 : plein (accent, texte blanc) ou tonal (fond teinté d'accent). */

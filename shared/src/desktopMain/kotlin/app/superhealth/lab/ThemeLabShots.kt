@@ -16,7 +16,18 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "9") {
+    if (round == "10") {
+        val only = args.getOrNull(2)
+        for (dark in listOf(false, true)) { val m = if (dark) "sombre" else "clair"
+            if (only == null || only == "ecrans") {
+                shot("score-$m-1-accueil") { Score10Home(dark) }; shot("score-$m-2-nutrition") { Score10Food(dark) }; shot("score-$m-3-activites") { Score10Act(dark) } }
+            if (only == null || only == "planche") listOf(0 to 7, 7 to 13).forEachIndexed { k, (a, b) ->
+                val scene = ImageComposeScene((3 * w * 2f).toInt(), (2700 * 2f).toInt(), Density(2f)) { Score10Sheet(dark, a, b) }
+                scene.render(0); val img = scene.render(16_000_000)
+                java.io.File(out, "planche-$m-${k + 1}.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes); scene.close(); println("planche $m $k")
+            }
+        }
+    } else if (round == "9") {
         val only = args.getOrNull(2)
         val styles = listOf<Triple<String, String, @Composable (Boolean, Int) -> Unit>>(
             Triple("score", "", { d, t -> when (t) { 0 -> ScoreHome(d); 1 -> ScoreFood(d); else -> ScoreAct(d) } }),

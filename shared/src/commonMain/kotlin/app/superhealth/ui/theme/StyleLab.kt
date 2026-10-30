@@ -60,7 +60,7 @@ object StyleLab {
 }
 
 /** Couleurs des programmes, fixes (sans dépendre de la couleur d'entraînement choisie). */
-internal val ProgramPalette = listOf(Base.Blue, Base.Red, Base.Green, Base.Orange, Base.Purple, Base.Pink, Base.Yellow, Base.Grey)
+internal val ProgramPalette get() = listOf(Base.Blue, Base.Red, Base.Green, Base.Orange, Base.Purple, Base.Pink, Base.Yellow, Base.Grey)
 
 /** Fond d'une carte posé par [CardTone] (dégradé éventuel, liseré). */
 class CardSurface(val brush: Brush, val border: Color?)
@@ -127,9 +127,10 @@ fun CardTone(hue: Color, rich: Boolean = false, night: Boolean = false, content:
 /** Fond d'une carte du tableau de bord : celui de son [CardTone], sinon la surface neutre. */
 @Composable
 fun Modifier.dashCardBackground(@Suppress("UNUSED_PARAMETER") hue: Color = Color.Unspecified): Modifier {
-    val s = LocalCardSurface.current ?: return background(Mf.colors.card)
+    // style Score : surface de carte bordée d'un filet
+    val s = LocalCardSurface.current ?: return background(Mf.colors.card).border(1.dp, Mf.colors.line, RoundedCornerShape(CardRadius))
     val b = background(s.brush)
-    return if (s.border != null) b.border(2.dp, s.border, RoundedCornerShape(CardRadius)) else b
+    return b.border(if (s.border != null) 2.dp else 1.dp, s.border ?: Mf.colors.line, RoundedCornerShape(CardRadius))
 }
 
 /** Pastille de symbole d'une carte : fond et couleur du symbole. */

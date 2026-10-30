@@ -97,9 +97,10 @@ object Rings {
     fun shade(c: Color, k: Float = 0.72f) = Color(c.red * k, c.green * k, c.blue * k, c.alpha)
 }
 
-/** Piste d'un anneau : sa couleur éclaircie (clair) ou en ton profond (sombre), indépendante du fond de la carte. */
+/** Piste d'un anneau : sa couleur éclaircie (clair) ou un gris neutre (sombre), indépendante du fond de la carte. */
 internal fun trackOf(c: Color, dark: Boolean): Color =
-    if (dark) androidx.compose.ui.graphics.lerp(Color(0xFF121317), c, 0.3f) else androidx.compose.ui.graphics.lerp(Color.White, c, 0.24f)
+    // en sombre, piste neutre pour tous les anneaux (une piste teintée de rouge ou d'orange sur noir vire au brun)
+    if (dark) Color(0xFF292C32) else androidx.compose.ui.graphics.lerp(Color.White, c, 0.24f)
 
 /** Les anneaux emboîtés, remplis une fois à l'ouverture (pas d'animation en boucle). */
 @Composable

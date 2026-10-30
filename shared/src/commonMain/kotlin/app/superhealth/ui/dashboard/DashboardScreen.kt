@@ -664,14 +664,8 @@ internal fun Tile(
             .dashCardBackground(hue)
             .cardClick(onClick).padding(padding),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconChip(c.icon(), hue, 26.dp)
-            Spacer(Modifier.width(8.dp))
-            Text(title, style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            trailing?.let { Text(it, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Normal, color = Mf.colors.textSecondary, maxLines = 1) }
-            if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(20.dp), tint = Mf.colors.textTertiary)
-        }
+        // en-tête Score : symbole coloré, nom en gris, détail à droite
+        CardHead(c.icon(), title, hue, trailing, Mf.colors.textSecondary)
         Spacer(Modifier.height(10.dp))
         content()
         if (bottom != null) {

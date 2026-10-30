@@ -96,7 +96,7 @@ val STYLES = listOf(
         ENCRE_H, card = CardM.ELEVATED, radius = 24.dp, numW = FontWeight.Bold, icon = IconBox.CIRCLE, gradient = false, mono = true, nav = NavS.NOTER),
 )
 
-private val W = Modifier.fillMaxWidth()
+private val FW = Modifier.fillMaxWidth()
 
 @Composable private fun ScorePill(text: String, hue: Hue) {
     val hd = data(hue, true); val f = sf(); val s = st()
@@ -115,7 +115,7 @@ private val W = Modifier.fillMaxWidth()
 // ---- A ----------------------------------------------------------------------------------------------------------------------
 
 @Composable fun VA4() { val s = st(); val h = s.hues
-    Card5(h.forme, W) {
+    Card5(h.forme, FW) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Tx("Forme", 17.sp, Role.DISPLAY); Spacer(Modifier.width(8.dp)); Tx("78", 17.sp, Role.NUM, color = data(h.forme, true).a)
             Spacer(Modifier.weight(1f)); Tx("Prêt à pousser", 13.sp, Role.LABEL)
@@ -137,7 +137,7 @@ private val W = Modifier.fillMaxWidth()
 }
 
 @Composable fun VA6() { val s = st(); val h = s.hues
-    Card5(h.forme, W, pad = 12.dp) {
+    Card5(h.forme, FW, pad = 12.dp) {
         val f = sf()
         Row(verticalAlignment = Alignment.CenterVertically) {
             val shape = when (s.icon) { IconBox.COOKIE -> cookie(9, 0.07f); IconBox.SQUIRCLE -> RoundedCornerShape(18.dp); else -> if (s.corner == Corner.SQUARE) RoundedCornerShape(8.dp) else CircleShape }
@@ -170,11 +170,11 @@ private val W = Modifier.fillMaxWidth()
 }
 
 @Composable fun VB1() { val s = st(); val h = s.hues
-    Card5(h.sleep, W) {
+    Card5(h.sleep, FW) {
         Label5(Icons.Rounded.Bedtime, "Sommeil", h.sleep); SleepTop()
         Spacer(Modifier.height(8.dp))
         val cols = stages(); val single = sf().on || s.mono
-        Canvas(W.height(76.dp)) {
+        Canvas(FW.height(76.dp)) {
             val total = night4.sumOf { it.second }.toFloat(); val pad = 5.dp.toPx(); val r = if (s.butt) 0.01f else 5.dp.toPx()
             fun y(st: Int) = pad + (size.height - 2 * pad) * (4 - st) / 3f
             val line = Path(); var x = 0f
@@ -201,13 +201,13 @@ private val W = Modifier.fillMaxWidth()
     val s = st(); val cols = stages()
     val tot = listOf(1, 2, 3, 4).associateWith { k -> night4.filter { it.first == k }.sumOf { it.second } }; val sum = tot.values.sum().toFloat()
     val shape = when (s.bar) { BarS.PILL -> CircleShape; else -> RoundedCornerShape(2.dp) }
-    Row(W.height(height), horizontalArrangement = Arrangement.spacedBy(if (s.bar == BarS.SEGMENT) 2.dp else 3.dp)) {
+    Row(FW.height(height), horizontalArrangement = Arrangement.spacedBy(if (s.bar == BarS.SEGMENT) 2.dp else 3.dp)) {
         listOf(1, 2, 3, 4).forEach { k -> Box(Modifier.weight(tot.getValue(k) / sum).fillMaxHeight().clip(shape).background(cols.getValue(k))) }
     }
 }
 
 @Composable fun VB3() { val s = st(); val h = s.hues
-    Card5(h.sleep, W) {
+    Card5(h.sleep, FW) {
         Label5(Icons.Rounded.Bedtime, "Sommeil", h.sleep); SleepTop()
         Tx("23:48 → 07:20", 13.sp, color = sf().sub)
         Spacer(Modifier.height(12.dp)); PhaseBar(14.dp * s.stroke.coerceAtLeast(0.9f)); Spacer(Modifier.height(12.dp))
@@ -228,7 +228,7 @@ private val W = Modifier.fillMaxWidth()
 }
 
 @Composable fun VB4() { val s = st(); val h = s.hues
-    Card5(h.sleep, W) {
+    Card5(h.sleep, FW) {
         val cols = stages(); val f = sf()
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(168.dp), contentAlignment = Alignment.Center) {
@@ -258,7 +258,7 @@ private val W = Modifier.fillMaxWidth()
 }
 
 @Composable fun VB6() { val s = st(); val h = s.hues
-    Card5(h.sleep, W, pad = 12.dp) {
+    Card5(h.sleep, FW, pad = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconIn(Icons.Rounded.Bedtime, h.sleep, 46.dp); Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) { Tx("7 h 32 de sommeil", 17.sp, Role.DISPLAY); Tx("Score 84 · couché 23:48", 12.sp, color = sf().sub) }
@@ -272,7 +272,7 @@ private val W = Modifier.fillMaxWidth()
 private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipides", 52 to 76, 1), Triple("Glucides", 141 to 285, 2))
 
 @Composable fun VC2() { val s = st(); val h = s.hues
-    Card5(h.kcal, W, pad = 14.dp) {
+    Card5(h.kcal, FW, pad = 14.dp) {
         val ms = series(listOf(h.prot, h.fat, h.carb)); val trs = listOf(h.prot, h.fat, h.carb).map { track(it) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Canvas(Modifier.size(66.dp)) {
@@ -298,7 +298,7 @@ private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipi
 }
 
 @Composable fun VC3() { val s = st(); val h = s.hues
-    Card5(h.kcal, W) {
+    Card5(h.kcal, FW) {
         val mh = series(listOf(h.steps, h.kcal, h.repos))
         Row(verticalAlignment = Alignment.Bottom) {
             Tx("1 353", 30.sp, Role.NUM); Tx(" / 2 280 kcal", 14.sp, color = sf().sub, modifier = Modifier.padding(bottom = 5.dp))
@@ -306,7 +306,7 @@ private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipi
         }
         Spacer(Modifier.height(12.dp))
         val shape = if (s.bar == BarS.PILL) CircleShape else RoundedCornerShape(3.dp)
-        Row(W.height(18.dp * s.stroke.coerceAtLeast(0.8f)).clip(shape).background(sf().s2), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(FW.height(18.dp * s.stroke.coerceAtLeast(0.8f)).clip(shape).background(sf().s2), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             meals4.forEachIndexed { i, m -> Box(Modifier.weight(m.third.sumOf { it.kcal }.toFloat()).fillMaxHeight().background(brush(mh[i]))) }
             Spacer(Modifier.weight(927f))
         }
@@ -323,7 +323,7 @@ private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipi
 }
 
 @Composable fun VC4() { val s = st(); val h = s.hues
-    Card5(h.kcal, W) {
+    Card5(h.kcal, FW) {
         val ms = series(listOf(h.prot, h.fat, h.carb))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) { Tx("927", 34.sp, Role.NUM); Tx("kcal restantes", 13.sp, Role.LABEL); Spacer(Modifier.height(4.dp)); Tx("1 353 / 2 280", 12.sp, color = sf().sub) }
@@ -349,7 +349,7 @@ private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipi
             Label5(Icons.AutoMirrored.Rounded.DirectionsRun, "Pas", h.steps); Tx("6 240", 26.sp, Role.NUM)
             Spacer(Modifier.weight(1f))
             val hd = data(h.steps); val f = sf()
-            Canvas(W.height(48.dp)) {
+            Canvas(FW.height(48.dp)) {
                 val n = 24; val gap = 2.dp.toPx(); val bw = (size.width - gap * (n - 1)) / n; val max = steps4.max().toFloat()
                 steps4.forEachIndexed { i, v ->
                     val x = i * (bw + gap)
@@ -370,7 +370,7 @@ private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipi
             Row(verticalAlignment = Alignment.Bottom) { Tx("54", 26.sp, Role.NUM); Tx(" bpm", 13.sp, color = sf().sub, modifier = Modifier.padding(bottom = 4.dp)) }
             Spacer(Modifier.weight(1f))
             val hd = data(h.heart); val f = sf()
-            Canvas(W.height(48.dp)) {
+            Canvas(FW.height(48.dp)) {
                 val v = heart4.map { it.toFloat() }; val lo = v.min() - 1; val hi = v.max() + 1; val pad = 6.dp.toPx()
                 val pts = v.mapIndexed { i, y -> Offset(pad + (size.width - 2 * pad) * i / (v.size - 1), pad + (size.height - 2 * pad) * (hi - y) / (hi - lo)) }
                 val line = if (s.butt) Path().apply { moveTo(pts[0].x, pts[0].y); pts.drop(1).forEach { lineTo(it.x, it.y) } } else smooth(pts)
@@ -391,7 +391,7 @@ private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipi
             Tx("−1,4 kg en 4 sem.", 12.sp, color = if (sf().on) sf().ink else data(h.forme, true).a)
             Spacer(Modifier.weight(1f))
             val hd = data(h.weight); val f = sf()
-            Canvas(W.height(40.dp)) {
+            Canvas(FW.height(40.dp)) {
                 val raw = weight4.map { it.toFloat() }; var t = raw[0]; val trend = raw.map { t += 0.1f * (it - t); t }
                 val lo = raw.min() - 0.2f; val hi = raw.max() + 0.2f; val pad = 4.dp.toPx()
                 fun p(i: Int, v: Float) = Offset(pad + (size.width - 2 * pad) * i / (raw.size - 1), pad + (size.height - 2 * pad) * (hi - v) / (hi - lo))
@@ -402,7 +402,7 @@ private val macroRows5 = listOf(Triple("Protéines", 98 to 150, 0), Triple("Lipi
         Card5(h.steps, Modifier.weight(1f).height(156.dp)) {
             Label5(Icons.AutoMirrored.Rounded.DirectionsRun, "Pas", h.steps)
             val hd = data(h.steps); val tr = track(h.steps)
-            Box(W.weight(1f), contentAlignment = Alignment.Center) {
+            Box(FW.weight(1f), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.size(100.dp)) { val w = 10.dp.toPx() * s.stroke; arc5(s, center, size.minDimension / 2 - w / 2 - 2.dp.toPx(), w, 6240f / 8000, hd, tr, 135f, 270f) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) { Tx("6 240", 19.sp, Role.NUM); Tx("/ 8 000", 11.sp, Role.LABEL) }
             }
@@ -458,7 +458,7 @@ private val tabs5 = listOf(Icons.Rounded.Today to "Aujourd'hui", Icons.Rounded.R
                     }
                 }
             }
-            Box(W.height(1.dp).background(s.base.line))
+            Box(FW.height(1.dp).background(s.base.line))
         }
     } else Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) { Tx("Vendredi 30 octobre", 13.sp, Role.LABEL); Tx(title, 32.sp, Role.DISPLAY) }

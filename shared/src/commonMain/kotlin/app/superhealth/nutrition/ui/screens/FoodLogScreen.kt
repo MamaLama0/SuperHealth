@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.MoreHoriz
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -297,7 +298,8 @@ private fun HourGroup(
             Row(Modifier.fillMaxWidth().padding(end = 4.dp, bottom = 6.dp), horizontalArrangement = Arrangement.End) {
                 MacroLine(sum, energy, style = MaterialTheme.typography.labelMedium, color = Mf.colors.text)
             }
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
+                .border(1.dp, Mf.colors.line, RoundedCornerShape(app.superhealth.ui.theme.CardRadius))) {
                 list.forEachIndexed { i, e ->
                     if (i > 0) Box(Modifier.padding(start = 64.dp).fillMaxWidth().height(androidx.compose.ui.unit.Dp.Hairline).background(Mf.colors.divider))
                     val sel = e.id in selection
@@ -327,10 +329,11 @@ private fun EmptyLog(onAdd: () -> Unit) {
 
 @Composable
 private fun SearchPill(modifier: Modifier, onSearch: () -> Unit, onScan: () -> Unit, onAi: (() -> Unit)?) {
-    Row(modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
-            Modifier.weight(1f).height(50.dp).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
-                .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).clickable(onClick = onSearch).padding(horizontal = 16.dp),
+            Modifier.weight(1f).height(50.dp).shadow(if (Mf.colors.dark) 0.dp else 10.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.16f), spotColor = Color.Black.copy(alpha = 0.10f))
+                .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, CircleShape)
+                .clickable(onClick = onSearch).padding(start = 16.dp, end = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Rounded.Search, null, tint = Mf.colors.textSecondary)
@@ -338,7 +341,8 @@ private fun SearchPill(modifier: Modifier, onSearch: () -> Unit, onScan: () -> U
             Text(tr("Rechercher un aliment"), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
                 maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             if (onAi != null) Icon(Icons.Rounded.AutoAwesome, tr("Décrire avec l'IA"), tint = Mf.colors.accent, modifier = Modifier.clip(CircleShape).clickable(onClick = onAi).padding(6.dp))
-            Icon(Icons.Rounded.QrCodeScanner, tr("Scanner"), tint = Mf.colors.accent, modifier = Modifier.clip(CircleShape).clickable(onClick = onScan).padding(6.dp))
+            Box(Modifier.padding(start = 4.dp).size(40.dp).clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.chip else Mf.colors.elevated).clickable(onClick = onScan),
+                contentAlignment = Alignment.Center) { Icon(Icons.Rounded.QrCodeScanner, tr("Scanner"), tint = Mf.colors.text, modifier = Modifier.size(20.dp)) }
         }
     }
 }

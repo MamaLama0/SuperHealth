@@ -42,16 +42,19 @@ import kotlin.math.roundToInt
 /** Lecture des données (nutrition, entraînement, montre) pour les insights, la carte de corrélation et les widgets. */
 object InsightData {
     /** Séries de jours qu'on peut superposer. [sparse] : seulement certains jours (séances), tracée en points. */
-    enum class Source(val label: String, val color: Color, val icon: ImageVector, val sparse: Boolean = false, val metric: Metric? = null) {
-        SLEEP("Sommeil", HealthHues.Sleep, Icons.Rounded.Bedtime, metric = Metric.SLEEP),
-        STEPS("Pas", HealthHues.Activity, Icons.AutoMirrored.Rounded.DirectionsWalk, metric = Metric.STEPS),
-        WEIGHT("Tendance du poids", app.superhealth.ui.theme.Base.Pink, Icons.Rounded.MonitorWeight),
-        ENERGY("Body Battery", Color(0xFF9BE22A), Icons.Rounded.Bolt, metric = Metric.BODY_ENERGY),
-        VOLUME("Volume d'entraînement", WorkoutBlue, Icons.Rounded.FitnessCenter, sparse = true),
-        KCAL("Calories mangées", app.superhealth.ui.theme.CaloriesColor, Icons.Rounded.Restaurant),
-        PROTEIN("Protéines", ProteinColor, Icons.Rounded.EggAlt),
-        RESTING_HR("Pouls au repos", HealthHues.Heart, Icons.Rounded.Favorite, metric = Metric.RESTING_HR),
-        STRESS("Stress", HealthHues.Mind, Icons.Rounded.SelfImprovement, metric = Metric.STRESS),
+    enum class Source(val label: String, private val hue: () -> Color, val icon: ImageVector, val sparse: Boolean = false, val metric: Metric? = null) {
+        SLEEP("Sommeil", { HealthHues.Sleep }, Icons.Rounded.Bedtime, metric = Metric.SLEEP),
+        STEPS("Pas", { HealthHues.Activity }, Icons.AutoMirrored.Rounded.DirectionsWalk, metric = Metric.STEPS),
+        WEIGHT("Tendance du poids", { app.superhealth.ui.theme.Base.Pink }, Icons.Rounded.MonitorWeight),
+        ENERGY("Body Battery", { Color(0xFF9BE22A) }, Icons.Rounded.Bolt, metric = Metric.BODY_ENERGY),
+        VOLUME("Volume d'entraînement", { WorkoutBlue }, Icons.Rounded.FitnessCenter, sparse = true),
+        KCAL("Calories mangées", { app.superhealth.ui.theme.CaloriesColor }, Icons.Rounded.Restaurant),
+        PROTEIN("Protéines", { ProteinColor }, Icons.Rounded.EggAlt),
+        RESTING_HR("Pouls au repos", { HealthHues.Heart }, Icons.Rounded.Favorite, metric = Metric.RESTING_HR),
+        STRESS("Stress", { HealthHues.Mind }, Icons.Rounded.SelfImprovement, metric = Metric.STRESS);
+
+        /** Couleur du jeu de teintes en cours. */
+        val color: Color get() = hue()
     }
 
     /** Sources dont une donnée peut exister (montre, Health Connect ou saisie). */

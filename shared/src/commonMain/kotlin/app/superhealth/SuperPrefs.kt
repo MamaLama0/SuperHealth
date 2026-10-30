@@ -337,6 +337,10 @@ data class SuperSettings(
     val styleWorkoutColor: String = "BLUE",
     val styleHero: String = "LARGE",
     val styleSets: String = "CARDS",
+    /** Apparence (2.4) : fond de l'app, jeu de teintes des données et police (noms de ui.theme.Surface, HueSet, AppFont). */
+    val surface: String = "GRAPHITE",
+    val dataHues: String = "VIVES",
+    val font: String = "INTER",
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,

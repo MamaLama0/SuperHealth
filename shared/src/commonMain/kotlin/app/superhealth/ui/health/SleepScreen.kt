@@ -91,7 +91,7 @@ import app.superhealth.health.data.ActivityKind
 
 private enum class SleepSpan(val label: String) { NIGHT("Nuit"), WEEK("Semaine"), MONTH("Mois"), YEAR("Année") }
 
-private val SleepHue = HealthHues.Sleep
+private val SleepHue get() = HealthHues.Sleep
 
 @Composable
 fun SleepScreen(vm: SuperViewModel, nav: NavHostController) {
