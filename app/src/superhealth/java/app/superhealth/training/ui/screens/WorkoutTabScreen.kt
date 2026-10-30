@@ -238,24 +238,32 @@ internal fun ProgramPicker(p: Program, db: ExerciseDb?, sex: app.superhealth.tra
     val color = ProgramColors[p.color % ProgramColors.size]
     val train = p.days.withIndex().filter { !it.value.isRest }
     var selected by androidx.compose.runtime.saveable.rememberSaveable(p.id) { androidx.compose.runtime.mutableStateOf(-1) }
-    // petites tuiles (carte moyenne) : on fait défiler plutôt que couper les noms
-    val fit = train.size <= 4 && bodyH >= 80.dp
-    Row(if (fit) Modifier.fillMaxWidth() else Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        train.forEach { (i, d) ->
-            val isDone = d.id in p.doneDayIds
-            val sel = i == selected
-            val muscles = androidx.compose.runtime.remember(d, db) { d.exercises.flatMap { db?.exercise(it.exerciseId)?.muscleGroups.orEmpty() }.toSet() }
-            val shape = RoundedCornerShape(22.dp)
-            Column((if (fit) Modifier.weight(1f) else Modifier.width(78.dp)).clip(shape).background(if (sel) color.container(1.4f) else Mf.colors.chip)
-                .then(if (sel) Modifier.border(2.dp, color, shape) else Modifier)
-                .clickable { selected = if (sel) -1 else i }.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.fillMaxWidth().height(bodyH)) {
-                    app.superhealth.training.ui.components.XRayBody(muscles, sex, if (isDone && !sel) null else color, Modifier.fillMaxSize())
-                    if (isDone) Box(Modifier.align(Alignment.TopEnd).padding(end = 6.dp).size(18.dp).clip(CircleShape).background(app.superhealth.ui.theme.Base.Green),
-                        contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, Modifier.size(13.dp), tint = Color.White) }
+    // toutes visibles, sans défilement : jusqu'à 4 sur une ligne, puis deux lignes égales (plus basses) ; carte à demi-largeur : les corps seuls
+    val half = app.superhealth.ui.dashboard.LocalCardHalf.current
+    val perRow = when { train.size <= 4 -> train.size.coerceAtLeast(1); train.size <= 8 -> (train.size + 1) / 2; else -> 4 }
+    val lines = train.chunked(perRow)
+    val height = if (lines.size > 1) bodyH * 0.8f else bodyH
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        lines.forEach { line ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                line.forEach { (i, d) ->
+                    val isDone = d.id in p.doneDayIds
+                    val sel = i == selected
+                    val muscles = androidx.compose.runtime.remember(d, db) { d.exercises.flatMap { db?.exercise(it.exerciseId)?.muscleGroups.orEmpty() }.toSet() }
+                    val shape = RoundedCornerShape(22.dp)
+                    Column(Modifier.weight(1f).clip(shape).background(if (sel) color.container(1.4f) else Mf.colors.chip)
+                        .then(if (sel) Modifier.border(2.dp, color, shape) else Modifier)
+                        .clickable { selected = if (sel) -1 else i }.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.fillMaxWidth().height(height)) {
+                            app.superhealth.training.ui.components.XRayBody(muscles, sex, if (isDone && !sel) null else color, Modifier.fillMaxSize())
+                            if (isDone) Box(Modifier.align(Alignment.TopEnd).padding(end = 6.dp).size(18.dp).clip(CircleShape).background(app.superhealth.ui.theme.Base.Green),
+                                contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Check, null, Modifier.size(13.dp), tint = Color.White) }
+                        }
+                        if (!half) Text(dayShort(d.name), style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = if (isDone && !sel) Mf.colors.textSecondary else Mf.colors.text, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
+                    }
                 }
-                Text(dayShort(d.name), style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = if (isDone && !sel) Mf.colors.textSecondary else Mf.colors.text, modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp))
+                repeat(perRow - line.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -264,7 +272,8 @@ internal fun ProgramPicker(p: Program, db: ExerciseDb?, sex: app.superhealth.tra
         Spacer(Modifier.height(12.dp))
         PillButton(tr("Reprendre la séance"), Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow, onClick = onResume)
     } else if (day != null) {
-        Spacer(Modifier.height(12.dp))
+        if (half) Text(day.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        Spacer(Modifier.height(if (half) 6.dp else 12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton(tr("Lancer") + " · " + trf("%1\$s min", Generator.estimateMinutes(day, p.cycleIndex)), Modifier.weight(1.4f), icon = Icons.Rounded.PlayArrow) { onStart(selected) }
             PillButton(tr("Modifier"), Modifier.weight(1f), strong = false) { onEdit(selected) }
