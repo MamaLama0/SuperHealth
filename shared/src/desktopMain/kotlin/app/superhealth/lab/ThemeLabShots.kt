@@ -16,7 +16,14 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "1") for (look in ALL) {
+    if (round == "3") {
+        shot("pixel-1-accueil") { PixelHome() }; shot("pixel-2-journal") { PixelJournal() }
+        shot("pixel-3-activites") { PixelActivities() }; shot("pixel-4-recherche") { PixelSearch() }
+        shot("bulles-1-accueil") { BullesHome() }; shot("bulles-2-journal") { BullesJournal() }
+        shot("bulles-3-activites") { BullesActivities() }; shot("bulles-4-recherche") { BullesSearch() }
+        shot("fil-1-accueil") { FilHome() }; shot("fil-2-journal") { FilJournal() }
+        shot("fil-3-activites") { FilActivities() }; shot("fil-4-recherche") { FilSearch() }
+    } else if (round == "1") for (look in ALL) {
         shot("${look.name.lowercase()}-accueil") { Home(look) }
         shot("${look.name.lowercase()}-journal") { Journal(look) }
         shot("${look.name.lowercase()}-activites") { Activities(look) }

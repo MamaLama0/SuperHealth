@@ -494,9 +494,9 @@ private val navItems = listOf(Icons.Rounded.GridView to "Accueil", Icons.Rounded
 
 // ---- corps (silhouettes de l'app, un tracé par muscle) ------------------------------------------------------------------
 
-private data class BodyArt(val w: Float, val h: Float, val parts: List<Pair<String, Path>>)
+internal data class BodyArt(val w: Float, val h: Float, val parts: List<Pair<String, Path>>)
 private val bodies = HashMap<String, BodyArt>()
-private fun body(side: String): BodyArt = bodies.getOrPut(side) {
+internal fun body(side: String): BodyArt = bodies.getOrPut(side) {
     val txt = java.io.File(System.getProperty("superhealth.assets", "assets"), "body/avatar_male_$side.json").readText()
     val o = kotlinx.serialization.json.Json.parseToJsonElement(txt) as kotlinx.serialization.json.JsonObject
     val num = { k: String -> (o[k] as kotlinx.serialization.json.JsonPrimitive).content.toFloat() }
@@ -529,7 +529,7 @@ fun Body(side: String, target: Set<String>, hue: Color, from: Float, to: Float, 
 }
 @Composable private fun rememberBody(side: String) = androidx.compose.runtime.remember(side) { body(side) }
 
-private fun image(path: String) = runCatching {
+internal fun image(path: String) = runCatching {
     org.jetbrains.skia.Image.makeFromEncoded(java.io.File(System.getProperty("superhealth.assets", "assets"), path).readBytes()).toComposeImageBitmap()
 }.getOrNull()
 
@@ -713,7 +713,7 @@ fun Journal2(kit: Kit) = Screen2(kit, 1) {
 
 // ---- Activités : semaine fine, grandes tuiles de musculation --------------------------------------------------------------
 
-private data class Day(val name: String, val groups: String, val side: String, val target: Set<String>, val from: Float, val to: Float,
+internal data class Day(val name: String, val groups: String, val side: String, val target: Set<String>, val from: Float, val to: Float,
                        val done: Boolean, val next: Boolean)
 private val days = listOf(
     Day("Push", "Pecs · Épaules · Triceps", "front", setOf("chest", "frontDelts", "sideDelts"), 0.1f, 0.5f, done = true, next = false),
