@@ -16,7 +16,10 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "7") {
+    if (round == "8") {
+        for (dark in listOf(false, true)) { val m = if (dark) "sombre" else "clair"
+            shot("compact-$m-1-accueil") { CompactHome(dark) }; shot("compact-$m-2-nutrition") { CompactFood(dark) }; shot("compact-$m-3-activites") { CompactAct(dark) } }
+    } else if (round == "7") {
         val only = args.getOrNull(2)
         val all = listOf<Pair<String, @Composable () -> Unit>>("instrument-1-accueil" to { InstHome() }, "instrument-2-nutrition" to { InstFood() }, "instrument-3-activites" to { InstAct() },
             "affiche-1-accueil" to { AffHome() }, "affiche-2-nutrition" to { AffFood() }, "affiche-3-activites" to { AffAct() },
