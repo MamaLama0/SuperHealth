@@ -145,3 +145,15 @@ tasks.register<JavaExec>("screenshots") {
     systemProperty("java.awt.headless", "true")
     jvmArgs("-Xmx3g")
 }
+
+// Maquettes de thèmes (labo, hors app) : ./gradlew :shared:themelab -Pout=dossier
+tasks.register<JavaExec>("themelab") {
+    val main = kotlin.jvm("desktop").compilations.getByName("main")
+    dependsOn(main.compileTaskProvider)
+    classpath = files(main.output.allOutputs, main.runtimeDependencyFiles)
+    mainClass.set("app.superhealth.lab.ThemeLabShotsKt")
+    args = listOf(project.findProperty("out") as String? ?: "${rootDir}/themelab")
+    systemProperty("superhealth.assets", "${rootDir}/assets")
+    systemProperty("java.awt.headless", "true")
+    jvmArgs("-Xmx3g")
+}
