@@ -16,7 +16,19 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "4") {
+    if (round == "5") {
+        // catalogue : args[2] = spécification de design (« base=porcelaine glow=0.3 … »), sinon graphite puis porcelaine
+        val specs = args.getOrNull(2)?.let { listOf(it) } ?: listOf("base=graphite", "base=porcelaine")
+        for (spec in specs) { val dz = parseDesign(spec)
+            for (f in FAMILIES) {
+                val scene = ImageComposeScene((w * scale).toInt(), (3000 * scale).toInt(), Density(scale)) {
+                    androidx.compose.runtime.CompositionLocalProvider(LocalD provides dz) { CatalogSheet(f) }
+                }
+                scene.render(0); val img = scene.render(16_000_000)
+                java.io.File(out, "w-${f.key}-${dz.base.name}.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes); scene.close(); println("${f.key} ${dz.base.name}")
+            }
+        }
+    } else if (round == "4") {
         val only = args.getOrNull(2)
         fun pick(n: String, c: @Composable () -> Unit) { if (only == null || n.startsWith(only)) shot(n, c) }
         pick("keynote-1-accueil") { KeynoteHome() }; pick("keynote-2-journal") { KeynoteJournal() }; pick("keynote-3-activites") { KeynoteActivities() }
