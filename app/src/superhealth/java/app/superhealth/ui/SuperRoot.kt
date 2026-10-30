@@ -206,6 +206,7 @@ fun SuperRoot(vm: SuperViewModel) {
         plus = false; logSheet = false
         runCatching {
             when {
+                r == "mood" -> app.superhealth.ui.wellbeing.moodSheet = true
                 r.startsWith("training:") -> { nav.popBackStack(nav.graph.findStartDestination().id, false); handleTrainingRoute(vm.training, nav, r.removePrefix("training:")) }
                 isTabRoute(r) -> nav.openTab(r, fresh = true)
                 r == current -> Unit
@@ -299,6 +300,7 @@ fun SuperRoot(vm: SuperViewModel) {
                 android.widget.Toast.makeText(nav.context, tr("250 ml d'eau ajoutés"), android.widget.Toast.LENGTH_SHORT).show()
             }
             "log_health" -> logSheet = true
+            "mood" -> app.superhealth.ui.wellbeing.moodSheet = true
             "sync" -> vm.syncNow(nav.context)
             "next" -> vm.training.activeProgram()?.let { p -> vm.training.startProgramDay(p, p.dayIndex, p.cycleIndex); nav.navigate("session") }
             "empty" -> { vm.training.startEmpty(); nav.navigate("session") }
@@ -311,6 +313,7 @@ fun SuperRoot(vm: SuperViewModel) {
         runAction(action)
     }
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
+    if (app.superhealth.ui.wellbeing.moodSheet) app.superhealth.ui.wellbeing.MoodSheet(nav)
 }
 
 /** Courbe « emphasized decelerate » de Material. */
@@ -415,7 +418,7 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
         PlusAction.WATER -> QuickAction("Verre d'eau (250 ml)", Icons.Rounded.LocalDrink, "water")
         PlusAction.VITALS -> QuickAction("Hydratation et constantes", Icons.Rounded.WaterDrop, "log_health")
         PlusAction.BODY -> QuickAction("Mesures", Icons.Rounded.Straighten, "body")
-        PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "journal")
+        PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "mood")
         PlusAction.PERIOD -> QuickAction("Règles", Icons.Rounded.CalendarMonth, "cycle")
         PlusAction.BREATHE -> QuickAction("Respirer", Icons.Rounded.Air, "breathe")
         PlusAction.SYNC -> if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null

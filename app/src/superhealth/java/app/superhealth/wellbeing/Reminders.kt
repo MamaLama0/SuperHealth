@@ -31,7 +31,7 @@ object Reminders {
     enum class Kind(val title: String, val route: String) {
         WEIGH("Pesée du matin", "weight"),
         LOG("Journal alimentaire", "log"),
-        JOURNAL("Comment s'est passée la journée ?", "journal"),
+        JOURNAL("Comment s'est passée la journée ?", "mood"),
         BEDTIME("Bientôt l'heure du coucher", "home"),
     }
 

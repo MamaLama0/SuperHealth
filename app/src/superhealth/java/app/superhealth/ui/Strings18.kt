@@ -115,6 +115,7 @@ object Strings18 {
         "Expirez" to "Breathe out",
         "sommeil" to "sleep",
         "Modifier la liste" to "Edit list",
+        "Humeur du jour et une note" to "Daily mood and a note",
         "Humeur du jour, habitudes et leur effet sur la récupération" to "Daily mood, habits and their effect on recovery",
         "Règles, phases et prochaines dates estimées" to "Periods, phases and estimated next dates",
         "À l'heure précise" to "On time",

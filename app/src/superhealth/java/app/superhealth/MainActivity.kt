@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vm.bind(nutrition, training)
+        askNotificationsOnce()
         if (savedInstanceState == null) vm.pendingRoute.value = app.superhealth.ui.Routes.external(intent?.getStringExtra(EXTRA_ROUTE))
         enableEdgeToEdge()
         setContent {
@@ -56,6 +57,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Mises à jour et rappels passent par une notification : autorisation demandée une seule fois, après la prise en main. */
+    private fun askNotificationsOnce() {
+        val perm = android.Manifest.permission.POST_NOTIFICATIONS
+        val prefs = getSharedPreferences("superhealth_perms", MODE_PRIVATE)
+        if (android.os.Build.VERSION.SDK_INT < 33 || !SuperPrefs.settings.value.onboarded || checkSelfPermission(perm) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+            prefs.getBoolean("asked_$perm", false)) return
+        prefs.edit().putBoolean("asked_$perm", true).apply()
+        requestPermissions(arrayOf(perm), 4202)
     }
 
     /** Raccourcis des widgets et de la notification de séance : l'activité existe déjà. */

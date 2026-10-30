@@ -32,7 +32,13 @@ object WhoopAnalysis {
         fun count(s: Stage) = stages.count { it.second == s }
     }
 
-    data class Result(val minutes: List<Minute>, val sessions: List<Session>, val stress: List<Pair<Long, Int>>)
+    data class Result(val minutes: List<Minute>, val sessions: List<Session>, val stress: List<Pair<Long, Int>>) {
+        /** Ce qui commence à partir de [start]. */
+        fun since(start: Long) = Result(minutes.filter { it.start >= start }, sessions.filter { it.start >= start }, stress.filter { it.first >= start })
+    }
+
+    /** Début de l'écriture d'un recalcul : [cut], reculé au début de la nuit à cheval, pour ne jamais en réécrire qu'un morceau. */
+    fun writeStart(sessions: List<Session>, cut: Long): Long = sessions.firstOrNull { it.start < cut && it.end > cut }?.start ?: cut
 
     // seuils (voir l'en-tête)
     const val STILL_G = 0.01

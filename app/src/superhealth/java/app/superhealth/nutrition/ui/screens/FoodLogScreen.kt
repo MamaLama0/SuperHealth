@@ -135,14 +135,11 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
             item {
                 Column(Modifier.fillMaxWidth().statusBarsPadding()) {
                     // grand titre du jour (toucher : revenir à aujourd'hui), calendrier et options en boutons ronds
-                    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 8.dp), verticalAlignment = Alignment.Bottom) {
-                        Column(Modifier.weight(1f).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    app.superhealth.nutrition.ui.components.TabHeader(
+                        LocalDate.ofEpochDay(day).format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.ui.Lang.locale))
+                            .replaceFirstChar { it.uppercase(app.superhealth.ui.Lang.locale) }, tr("Journal"),
+                        Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                             indication = null) { vm.selectedDay.value = LocalDate.now().toEpochDay() }) {
-                            app.superhealth.ui.theme.Overline(LocalDate.ofEpochDay(day).format(java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.ui.Lang.locale))
-                                .replaceFirstChar { it.uppercase(app.superhealth.ui.Lang.locale) })
-                            Text(tr("Journal"), style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.CalendarMonth, tr("Calendrier")) {
                                 val d = LocalDate.ofEpochDay(day)
                                 DatePickerDialog(ctx, { _, y, m, dd -> vm.selectedDay.value = LocalDate.of(y, m + 1, dd).toEpochDay() }, d.year, d.monthValue - 1, d.dayOfMonth).show()
@@ -167,7 +164,6 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                                 }
                             }
                             app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
-                        }
                     }
                     WeekStrip(day, onSelect = { vm.selectedDay.value = it }) { d ->
                         val t = a?.targetFor(d)?.macros?.kcal

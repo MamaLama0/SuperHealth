@@ -131,5 +131,11 @@ object Strings24 {
         "Terminé" to "Done",
         "Maintenez une carte puis glissez-la pour la déplacer." to "Hold a card, then drag it to move it.",
         "effort conseillé %1\$s–%2\$s" to "suggested effort %1\$s–%2\$s",
+        "Moral du jour" to "Today's mood",
+        // Mise à jour depuis la notification
+        "Mettre à jour" to "Update",
+        "Téléchargement…" to "Downloading…",
+        "Mise à jour prête" to "Update ready",
+        "Mise à jour impossible" to "Update failed",
     )
 }

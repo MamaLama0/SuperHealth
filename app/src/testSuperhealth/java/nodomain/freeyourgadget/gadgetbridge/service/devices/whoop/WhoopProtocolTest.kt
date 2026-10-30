@@ -102,6 +102,35 @@ class WhoopProtocolTest {
         assertEquals(34.12f, s.skinTempC!!, 1e-4f)
     }
 
+    @Test fun standardHeartRate() {
+        // 8 bits, énergie (2 octets à sauter), deux R-R en 1/1024 s
+        assertEquals(60 to listOf(1000, 500), WhoopFrames.standardHr(byteArrayOf(0x18, 60, 9, 9, 0x00, 0x04, 0x00, 0x02)))
+        // 16 bits sans R-R
+        assertEquals(300 to emptyList<Int>(), WhoopFrames.standardHr(byteArrayOf(0x01, 0x2C, 0x01)))
+        assertNull(WhoopFrames.standardHr(byteArrayOf(0x01, 0x2C)))
+    }
+
+    @Test fun whoop4V25HasMotionOnly() {
+        val r = ByteBuffer.allocate(76).order(ByteOrder.LITTLE_ENDIAN) // trame 4..80 + CRC = 84 octets
+        r.put(0, 47); r.put(1, 25)
+        r.putInt(11 - 4, 1_760_000_000)
+        r.putShort(73 - 4, 0); r.putShort(75 - 4, 0); r.putShort(77 - 4, 16384)
+        val f = w4(r.array())
+        assertEquals(84, f.size)
+        val s = WhoopFrames.historical(WhoopFamily.WHOOP4, f)!!
+        assertNull(s.hr); assertTrue(s.hasGravity); assertEquals(1f, s.gz!!, 1e-6f)
+    }
+
+    @Test fun v25MotionAndLiveHeartMergeInTheStore() {
+        val dir = kotlin.io.path.createTempDirectory().toFile()
+        val st = WhoopRawStore(dir, "AA:BB")
+        st.append(listOf(WhoopSecond(1_760_000_000, 58, listOf(1030))))
+        st.append(listOf(WhoopSecond(1_760_000_000, gx = 0f, gy = 0f, gz = 1f)))
+        val s = st.read(1_760_000_000, 1_760_000_001).single()
+        assertEquals(58, s.hr); assertEquals(listOf(1030), s.rr); assertTrue(s.hasGravity)
+        dir.deleteRecursively()
+    }
+
     @Test fun rawStoreRoundTrip() {
         val dir = kotlin.io.path.createTempDirectory().toFile()
         val st = WhoopRawStore(dir, "AA:BB")
@@ -150,6 +179,57 @@ class WhoopAnalysisTest {
         assertTrue(s.stages.take(15).none { it.second == WhoopAnalysis.Stage.REM })
         val score = WhoopAnalysis.restScore(s)
         assertTrue(score in 50..100)
+    }
+
+    /** Un recalcul du soir commence au milieu de la nuit précédente : il doit la reprendre entière, pas la tronquer. */
+    @Test fun lateRecomputeKeepsTheWholeNight() {
+        val seconds = day()
+        val whole = WhoopAnalysis.analyze(seconds).sessions.single()
+        val cut = whole.start + 3 * 3600
+        val result = WhoopAnalysis.analyze(seconds)
+        val start = WhoopAnalysis.writeStart(result.sessions, cut)
+        assertEquals(whole.start, start)
+        val kept = result.since(start)
+        assertEquals(whole.end, kept.sessions.single().end)
+        assertEquals(whole.asleepMin, kept.sessions.single().asleepMin)
+        assertEquals(WhoopAnalysis.restScore(whole), WhoopAnalysis.restScore(kept.sessions.single()))
+        // sans nuit à cheval, le début reste celui demandé
+        val afterNight = whole.end + 3600
+        assertEquals(afterNight, WhoopAnalysis.writeStart(result.sessions, afterNight))
+        assertTrue(result.since(afterNight).sessions.isEmpty())
+    }
+
+    /** Chaîne complète WHOOP 4 v24 : fragments BLE, réassemblage, décodage, stockage, analyse. */
+    @Test fun whoop4FramesToSleepEndToEnd() {
+        val dir = kotlin.io.path.createTempDirectory().toFile()
+        val st = WhoopRawStore(dir, "AA:BB")
+        val re = WhoopFrames.Reassembler(WhoopFamily.WHOOP4)
+        val records = ArrayList<WhoopSecond>()
+        day().forEach { s ->
+            val r = ByteBuffer.allocate(82).order(ByteOrder.LITTLE_ENDIAN)
+            r.put(0, 47); r.put(1, 24)
+            r.putInt(11 - 4, s.unix.toInt())
+            r.put(21 - 4, s.hr!!.toByte()); r.put(22 - 4, s.rr.size.toByte()); s.rr.forEachIndexed { i, v -> r.putShort(23 - 4 + 2 * i, v.toShort()) }
+            r.putFloat(40 - 4, s.gx!!); r.putFloat(44 - 4, s.gy!!); r.putFloat(48 - 4, s.gz!!)
+            val inner = r.array(); val len = inner.size + 4
+            val head = byteArrayOf(0xAA.toByte(), len.toByte(), (len shr 8).toByte())
+            val frame = head + byteArrayOf(WhoopCrc.crc8(head, 1, 3).toByte()) + inner +
+                ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(WhoopCrc.crc32(inner, 0, inner.size).toInt()).array()
+            frame.toList().chunked(20).forEach { c ->
+                re.feed(c.toByteArray()).forEach { f ->
+                    assertTrue(WhoopFrames.valid(WhoopFamily.WHOOP4, f))
+                    records += WhoopFrames.historical(WhoopFamily.WHOOP4, f)!!
+                }
+            }
+        }
+        st.append(records)
+        val back = st.read(records.first().unix, records.last().unix + 1)
+        assertEquals(records.size, back.size)
+        val r = WhoopAnalysis.analyze(back)
+        assertEquals(1, r.sessions.size)
+        assertTrue(r.sessions[0].restingHr!! in 48..55)
+        assertTrue(r.sessions[0].avgHrv!! > 0)
+        dir.deleteRecursively()
     }
 
     @Test fun rmssdAndCleaning() {

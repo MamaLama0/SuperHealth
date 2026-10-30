@@ -257,7 +257,7 @@ internal fun DashCard.short(): String = tr(when (this) {
     DashCard.RECOVERY -> "Récupération"; DashCard.TRAINING_WEEK -> "Semaine"; DashCard.HABITS -> "Habitudes"; DashCard.BALANCE -> "Bilan"
     DashCard.CHARGE -> "Charge"; DashCard.EFFORT -> "Effort"; DashCard.HRV_STATUS -> "VFC"; DashCard.STRESS_DAY -> "Stress"
     DashCard.LOAD -> "Charge entr."; DashCard.SLEEP_STAGES -> "Phases"; DashCard.HR_ZONES -> "Zones"; DashCard.DAY_TIMELINE -> "Journée"
-    DashCard.FORM -> "Forme"; DashCard.JOURNAL -> "Moral"; DashCard.BEDTIME -> "Coucher"; DashCard.CYCLE -> "Cycle"
+    DashCard.FORM -> "Forme"; DashCard.BEDTIME -> "Coucher"; DashCard.CYCLE -> "Cycle"
     DashCard.SLEEP_SCHEDULE -> "Horaires"; DashCard.SLEEP_QUALITY -> "Qualité"; DashCard.NIGHT_HEART -> "Cœur la nuit"
     DashCard.NIGHT_VITALS -> "Nuit"; DashCard.VITALS_TRENDS -> "Tendances"; DashCard.NEXT_WORKOUT -> "Séance"; DashCard.MUSCLES -> "Muscles"
     DashCard.RECORDS -> "Records"; DashCard.MUSCLE_SETS -> "Séries"; DashCard.LIFTS -> "Progression"; DashCard.ACTIVITIES -> "Activités"

@@ -97,10 +97,10 @@ fun WorkoutTabScreen(
     val active = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
     var create by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Activités"), actions = {
+        app.superhealth.nutrition.ui.components.TabHeader(app.superhealth.ui.longToday(), tr("Activités")) {
             app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate(historyRoute) }
             app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
-        })
+        }
         Column(Modifier.padding(horizontal = 16.dp)) {
             week()
             if (cardioFirst || !strength) recent()

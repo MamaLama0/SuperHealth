@@ -55,8 +55,6 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     BODY("Mesures et photos", Section.NUTRITION),
     /** 1.8 : pousser ou se reposer aujourd'hui (Charge, sommeil, charge d'entraînement et moral recoupés). */
     FORM("Forme du jour", Section.HEALTH),
-    /** 1.8 : journal du moral et ce qui influence la récupération. */
-    JOURNAL("Journal du moral", Section.HEALTH),
     /** 1.8 : coucher conseillé (besoin, dette, heure de réveil habituelle). */
     BEDTIME("Coucher conseillé", Section.HEALTH, watch = true),
     /** 1.8 : suivi du cycle. */
@@ -110,7 +108,7 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.STEPS, DashCard.HEART, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION, DashCard.RUNNING,
     DashCard.RECOVERY, DashCard.TRAINING_WEEK, DashCard.HABITS, DashCard.BALANCE, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS,
     DashCard.STRESS_DAY, DashCard.LOAD, DashCard.SLEEP_STAGES, DashCard.HR_ZONES, DashCard.DAY_TIMELINE,
-    DashCard.COACH, DashCard.COACH_WEEK, DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE,
+    DashCard.COACH, DashCard.COACH_WEEK, DashCard.FORM, DashCard.BEDTIME, DashCard.CYCLE,
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
 
 /** Cartes conçues en demi-largeur. */
@@ -193,7 +191,7 @@ enum class Feature(val label: String, val summary: String) {
     NUTRITION("Nutrition", "Journal, calories adaptatives, tendance du poids"),
     TRAINING("Musculation", "Programmes, séances guidées, progression"),
     HEALTH("Activités et montre", "Course, pas, cœur, sommeil, Health Connect"),
-    JOURNAL("Journal du moral", "Humeur du jour, habitudes et leur effet sur la récupération"),
+    JOURNAL("Journal du moral", "Humeur du jour et une note"),
     CYCLE("Cycle menstruel", "Règles, phases et prochaines dates estimées"),
 }
 
@@ -206,7 +204,6 @@ fun DashCard.feature(): Feature? = when (this) {
     DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS, DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS,
     DashCard.MUSCLE_SETS, DashCard.LIFTS -> Feature.TRAINING
     DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE, DashCard.FORM -> Feature.HEALTH
-    DashCard.JOURNAL -> Feature.JOURNAL
     DashCard.CYCLE -> Feature.CYCLE
     else -> if (watch) Feature.HEALTH else null
 }
@@ -287,6 +284,8 @@ data class SuperSettings(
     /** Demande de pesée à l'ouverture tant qu'aucune pesée n'est saisie aujourd'hui ; [weighSkipDay] : « pas aujourd'hui ». */
     val weighPrompt: Boolean = true,
     val weighSkipDay: Long = 0,
+    /** Bandeau du moral replié jusqu'au lendemain. */
+    val moodSkipDay: Long = 0,
     /** Fonds de carte OpenStreetMap des activités (seule connexion liée à vos parcours ; sans eux, le tracé seul). */
     val onlineMaps: Boolean = true,
     /** Sauvegarde automatique chiffrée : destination (nom de backup.Remote.Kind), serveur WebDAV, dossier (arbre SAF), fréquence en jours (0 : jamais). */
@@ -441,11 +440,11 @@ object SuperPrefs {
             if (at >= 0 && DashCard.COACH_WEEK !in cards) cards.add(at + 1, DashCard.COACH_WEEK)
             s.copy(dashboard = cards, coachWeekAdded = true)
         }
-        // 1.8 : journal du moral activé une fois ; forme du jour en tête, journal et coucher conseillé juste après
+        // 1.8 : journal du moral activé une fois ; forme du jour en tête, coucher conseillé juste après
         if (!_settings.value.wellbeingAdded) update { s ->
             val cards = s.dashboard.toMutableList()
             val at = (cards.indexOf(DashCard.RINGS) + 1).coerceAtLeast(0)
-            listOf(DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME).filter { it !in cards }.reversed().forEach { cards.add(at, it) }
+            listOf(DashCard.FORM, DashCard.BEDTIME).filter { it !in cards }.reversed().forEach { cards.add(at, it) }
             s.copy(dashboard = cards, features = s.features + Feature.JOURNAL.name, wellbeingAdded = true,
                 plus = (s.plus + listOf(PlusAction.MOOD.name, PlusAction.BREATHE.name)).distinct())
         }

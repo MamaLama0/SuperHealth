@@ -50,6 +50,10 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
     private var lastHistoryRequest = 0L
     private var realtime = false
 
+    /** Faux tant que l'historique n'a pas livré de pouls : le WHOOP 4 v25 n'en contient pas, seul le service standard le mesure. */
+    private var historyHasHr = false
+    private val liveSeconds = ArrayList<WhoopSecond>()
+
     private val store by lazy { WhoopRawStore(context.filesDir, device.address) }
 
     init {
@@ -95,7 +99,11 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
             cmd(builder, WhoopCommand.GET_BATTERY_LEVEL)
         }
         builder.setDeviceState(GBDevice.State.INITIALIZED)
-        builder.run(Runnable { handler.postDelayed({ fetchHistory() }, 1500) })
+        builder.run(Runnable {
+            handler.postDelayed({ fetchHistory() }, 1500)
+            handler.removeCallbacks(backfill)
+            handler.postDelayed(backfill, BACKFILL_MS)
+        })
         return builder
     }
 
@@ -140,7 +148,10 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
                     WhoopEvent.CHARGING_OFF -> battery(null, false)
                 }
             }
-            WhoopPacket.HISTORICAL_DATA -> { WhoopFrames.historical(family, f)?.let { chunk += it }; armWatchdog() }
+            WhoopPacket.HISTORICAL_DATA -> {
+                WhoopFrames.historical(family, f)?.let { if (it.hr != null) historyHasHr = true; chunk += it }
+                armWatchdog()
+            }
             WhoopPacket.METADATA, WhoopPacket.PUFFIN_METADATA -> WhoopFrames.meta(family, f)?.let { meta(it) }
         }
     }
@@ -154,7 +165,7 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
         if (now - lastHistoryRequest < 60_000) return
         lastHistoryRequest = now
         historyRunning = true
-        chunk.clear(); touchedFrom = Long.MAX_VALUE; touchedTo = Long.MIN_VALUE
+        chunk.clear()
         GB.updateTransferNotification(null, context.getString(R.string.busy_task_fetch_activity_data), true, 0, context)
         device.setBusyTask(R.string.busy_task_fetch_activity_data, context)
         device.sendDeviceUpdateIntent(context)
@@ -175,7 +186,7 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
                 worker.execute {
                     val ok = runCatching { if (records.isNotEmpty()) store.append(records) }.onFailure { LOG.error("WHOOP store", it) }.isSuccess
                     if (ok) {
-                        records.forEach { touchedFrom = minOf(touchedFrom, it.unix); touchedTo = maxOf(touchedTo, it.unix) }
+                        touch(records)
                         handler.post { send("whoop ack", WhoopCommand.HISTORICAL_DATA_RESULT, WhoopFrames.ackPayload(block)) }
                     }
                 }
@@ -187,15 +198,22 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
 
     private val watchdog = Runnable { LOG.info("WHOOP history idle"); finishHistory() }
 
+    /** Récupération toutes les 15 min tant que le bracelet est connecté, sans attendre l'ouverture de l'app. */
+    private val backfill: Runnable = Runnable { fetchHistory(); handler.postDelayed(backfill, BACKFILL_MS) }
+
     private fun armWatchdog() { handler.removeCallbacks(watchdog); handler.postDelayed(watchdog, 60_000) }
 
     private fun finishHistory() {
         handler.removeCallbacks(watchdog)
         if (!historyRunning) return
         historyRunning = false
+        flushLive()
         // les écritures en attente passent avant le recalcul (même exécuteur)
         worker.execute {
-            if (touchedFrom != Long.MAX_VALUE) runCatching { recompute(touchedFrom, touchedTo) }.onFailure { LOG.error("WHOOP analysis", it) }
+            if (touchedFrom != Long.MAX_VALUE) runCatching {
+                recompute(touchedFrom, touchedTo)
+                touchedFrom = Long.MAX_VALUE; touchedTo = Long.MIN_VALUE
+            }.onFailure { LOG.error("WHOOP analysis", it) }
             runCatching { store.prune() }
             handler.post {
                 device.unsetBusyTask()
@@ -206,16 +224,30 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
         }
     }
 
+    /** Secondes écrites par ce support (exécuteur [worker] uniquement). */
+    private fun touch(records: List<WhoopSecond>) {
+        records.forEach { touchedFrom = minOf(touchedFrom, it.unix); touchedTo = maxOf(touchedTo, it.unix) }
+    }
+
+    /** Par tranches de 2 jours : une longue absence ne charge pas toutes ses secondes en mémoire. */
+    private fun recompute(from: Long, to: Long) {
+        var a = from
+        while (a <= to) { val b = minOf(a + 2 * 86400 - 1, to); recomputeWindow(a, b); a = b + 1 }
+    }
+
     /**
      * Recalcule la fenêtre touchée, élargie à la journée de la veille (une nuit commence la veille au soir) : minutes,
-     * sommeil, VFC, pouls au repos, respiration, température, stress.
+     * sommeil, VFC, pouls au repos, respiration, température, stress. On lit 18 h de plus qu'on n'écrit : une nuit à cheval
+     * sur le début de la fenêtre est analysée entière et réécrite entière, jamais tronquée.
      */
-    private fun recompute(from: Long, to: Long) {
-        val start = (from - 18 * 3600) / 60 * 60
+    private fun recomputeWindow(from: Long, to: Long) {
+        val cut = (from - 18 * 3600) / 60 * 60
         val end = (to / 60 + 1) * 60
-        val seconds = store.read(start, end)
+        val seconds = store.read(cut - 18 * 3600, end)
         if (seconds.isEmpty()) return
-        val result = WhoopAnalysis.analyze(seconds)
+        val all = WhoopAnalysis.analyze(seconds)
+        val start = WhoopAnalysis.writeStart(all.sessions, cut)
+        val result = all.since(start)
         GBApplication.acquireDB().use { db ->
             WhoopPersist.write(db, device, start, end, result, WhoopPersist.previousOnsets(db, device, start))
         }
@@ -233,11 +265,20 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
 
     override fun onEnableRealtimeSteps(enable: Boolean) {}
 
-    /** Service cardio standard (2A37) : drapeaux, puis pouls sur 8 ou 16 bits. */
     private fun standardHr(v: ByteArray) {
-        if (v.size < 2) return
-        val hr = if (v[0].toInt() and 1 != 0 && v.size >= 3) v.u16(1) else v.u8(1)
+        val (hr, rr) = WhoopFrames.standardHr(v) ?: return
         live(hr)
+        // fusionné seconde par seconde avec le mouvement de l'historique (WhoopRawStore) ; ce que livre l'historique reste prioritaire
+        if (!historyHasHr && hr in 25..230) {
+            val full = synchronized(liveSeconds) { liveSeconds += WhoopSecond(System.currentTimeMillis() / 1000, hr, rr); liveSeconds.size >= 60 }
+            if (full) flushLive()
+        }
+    }
+
+    private fun flushLive() {
+        val batch = synchronized(liveSeconds) { ArrayList(liveSeconds).also { liveSeconds.clear() } }
+        if (batch.isEmpty()) return
+        worker.execute { runCatching { store.append(batch); touch(batch) }.onFailure { LOG.error("WHOOP store", it) } }
     }
 
     private fun live(hr: Int) {
@@ -261,11 +302,13 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
 
     override fun dispose() {
         handler.removeCallbacksAndMessages(null)
+        flushLive()
         worker.shutdown()
         super.dispose()
     }
 
     companion object {
         private val LOG: Logger = LoggerFactory.getLogger(WhoopSupport::class.java)
+        private const val BACKFILL_MS = 15 * 60_000L
     }
 }

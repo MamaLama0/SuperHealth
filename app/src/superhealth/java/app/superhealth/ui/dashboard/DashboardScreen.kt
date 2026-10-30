@@ -222,7 +222,6 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.DAY_TIMELINE -> HealthHues.Activity
     DashCard.COACH, DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachHue
     DashCard.FORM -> HealthHues.Activity
-    DashCard.JOURNAL -> HealthHues.Mind
     DashCard.BEDTIME -> HealthHues.Sleep
     DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleHue
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY -> HealthHues.Sleep
@@ -273,7 +272,6 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.COACH -> Icons.Rounded.AutoAwesome
     DashCard.COACH_WEEK -> Icons.Rounded.DateRange
     DashCard.FORM -> Icons.Rounded.Speed
-    DashCard.JOURNAL -> Icons.Rounded.SentimentSatisfied
     DashCard.BEDTIME -> Icons.Rounded.Bedtime
     DashCard.CYCLE -> Icons.Rounded.CalendarMonth
     DashCard.SLEEP_SCHEDULE -> Icons.Rounded.Schedule
@@ -399,11 +397,8 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
 
     val name = remember(refresh) { app.superhealth.ui.userName() }
     val modules by app.superhealth.modules.Modules.installed.collectAsState()
-    // cartes qui posent une question (moral du jour) : elles s'effacent une fois la réponse donnée
-    val moodDays by app.superhealth.wellbeing.Journal.days.collectAsState()
-    val moodDone = moodDays[java.time.LocalDate.now().toEpochDay()] != null && app.superhealth.ui.wellbeing.moodOpen != java.time.LocalDate.now().toEpochDay()
-    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules, moodDone) {
-        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) && !(it == DashCard.JOURNAL && moodDone) }
+    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules) {
+        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) }
     }
     // ressenti du matin : les questions sur la première carte à score visible, en grand de préférence
     checkinFirst = visible.filter { it in app.superhealth.ui.wellbeing.CHECKIN_GATED }
@@ -420,16 +415,11 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
         contentPadding = PaddingValues(bottom = 24.dp)) {
         item(key = "header") {
             // En-tête : salutation et date, réglages du tableau de bord, avatar (profil).
-            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 10.dp), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
-                    app.superhealth.ui.theme.Overline(longToday())
-                    Text(name?.let { trf("Bonjour %1\$s", it) } ?: tr("Aujourd'hui"), style = MaterialTheme.typography.headlineLarge,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                if (arranging) Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            app.superhealth.nutrition.ui.components.TabHeader(longToday(), name?.let { trf("Bonjour %1\$s", it) } ?: tr("Aujourd'hui")) {
+                if (arranging) {
                     app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Add, tr("Ajouter une carte")) { arranging = false; nav.go("dash/edit") }
                     PillButton(tr("Terminé"), icon = Icons.Rounded.Check) { arranging = false }
-                } else Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                } else {
                     // module Coach : son étincelle en tête, à portée de pouce
                     if (modules.any { it.kind == app.superhealth.modules.Modules.COACH && it.enabled })
                         app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.AutoAwesome, tr("Coach"), tint = app.superhealth.ui.coach.CoachHue) { nav.go("coach") }
@@ -440,17 +430,13 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         val an = a ?: return@LazyColumn
         item(key = "banner") {
-            // Seul élément au-dessus de la grille : le bandeau de pesée (désactivable), refermé d'un geste.
+            // Seuls éléments au-dessus de la grille : les bandeaux de pesée et de moral (désactivables), refermés d'un geste.
             Column(Modifier.padding(horizontal = 16.dp)) {
                 if (arranging) Text(tr("Touchez une carte pour la régler, maintenez-la pour la déplacer."), style = MaterialTheme.typography.bodySmall,
                     color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                 else {
                     WeighBanner(vm, an)
-                    // humeur du jour : l'invitation revient même sans la carte Moral sur le tableau de bord
-                    if (sh.has(app.superhealth.Feature.JOURNAL) && !moodDone && DashCard.JOURNAL !in visible) {
-                        app.superhealth.ui.theme.CardTone(DashCard.JOURNAL.hue()) { app.superhealth.ui.wellbeing.JournalCard(DashCard.JOURNAL, app.superhealth.CardSize.W, vm, Modifier.fillMaxWidth(), nav) }
-                        Spacer(Modifier.height(6.dp))
-                    }
+                    MoodBanner(sh)
                 }
                 Spacer(Modifier.height(6.dp))
             }
@@ -551,26 +537,41 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     val today = LocalDate.now().toEpochDay()
     val weighed = an.days.any { it.epochDay == today && it.weightKg != null }
     var sheet by remember { mutableStateOf(false) }
-    val hue = DashCard.WEIGHT.hue()
-    androidx.compose.animation.AnimatedVisibility(sh.weighPrompt && !weighed && sh.weighSkipDay != today,
-        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()) {
-        app.superhealth.ui.theme.CardTone(hue) {
-        Row(Modifier.padding(top = 2.dp, bottom = 6.dp).fillMaxWidth().clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue)
-            .clickable { sheet = true }.padding(start = 12.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconChip(Icons.Rounded.MonitorWeight, hue, 30.dp)
-            Spacer(Modifier.width(12.dp))
-            Text(tr("Pesée du jour"), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            Box(Modifier.size(34.dp).clip(CircleShape).clickable { app.superhealth.SuperPrefs.update { it.copy(weighSkipDay = today) } },
-                contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.KeyboardArrowUp, tr("Masquer jusqu'à demain"), tint = Mf.colors.textTertiary)
-            }
-        }
-        }
+    PromptBanner(sh.weighPrompt && !weighed && sh.weighSkipDay != today, Icons.Rounded.MonitorWeight, DashCard.WEIGHT.hue(), tr("Pesée du jour"), { sheet = true }) {
+        app.superhealth.SuperPrefs.update { it.copy(weighSkipDay = today) }
     }
     if (sheet) app.superhealth.nutrition.ui.screens.WeighInSheet(null, s, profile.sex, onDismiss = { sheet = false }, onDelete = null) { w ->
         sheet = false
         vm.nutrition.launch { weighIns.upsert(w) }
+    }
+}
+
+/** Moral pas encore noté aujourd'hui : même bandeau que la pesée, la fenêtre s'ouvre par-dessus (voir SuperRoot). */
+@Composable
+private fun MoodBanner(sh: app.superhealth.SuperSettings) {
+    val days by app.superhealth.wellbeing.Journal.days.collectAsState()
+    val today = LocalDate.now().toEpochDay()
+    PromptBanner(sh.has(app.superhealth.Feature.JOURNAL) && days[today] == null && sh.moodSkipDay != today, Icons.Rounded.SentimentSatisfied, HealthHues.Mind,
+        tr("Moral du jour"), { app.superhealth.ui.wellbeing.moodSheet = true }) { app.superhealth.SuperPrefs.update { it.copy(moodSkipDay = today) } }
+}
+
+/** Bandeau du haut de l'accueil : un toucher ouvre sa fenêtre, la flèche le replie jusqu'à demain. */
+@Composable
+private fun PromptBanner(visible: Boolean, icon: ImageVector, hue: Color, title: String, onOpen: () -> Unit, onSkip: () -> Unit) {
+    androidx.compose.animation.AnimatedVisibility(visible,
+        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()) {
+        app.superhealth.ui.theme.CardTone(hue) {
+        Row(Modifier.padding(top = 2.dp, bottom = 6.dp).fillMaxWidth().clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue)
+            .clickable(onClick = onOpen).padding(start = 12.dp, end = 6.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconChip(icon, hue, 30.dp)
+            Spacer(Modifier.width(12.dp))
+            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Box(Modifier.size(34.dp).clip(CircleShape).clickable(onClick = onSkip), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.KeyboardArrowUp, tr("Masquer jusqu'à demain"), tint = Mf.colors.textTertiary)
+            }
+        }
+        }
     }
 }
 
@@ -880,7 +881,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
         DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK,
-        DashCard.FORM, DashCard.JOURNAL, DashCard.BEDTIME, DashCard.CYCLE, DashCard.VITALS, DashCard.VITALS_TRENDS, DashCard.NIGHT_VITALS, DashCard.SCORES -> true
+        DashCard.FORM, DashCard.BEDTIME, DashCard.CYCLE, DashCard.VITALS, DashCard.VITALS_TRENDS, DashCard.NIGHT_VITALS, DashCard.SCORES -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -1018,7 +1019,6 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         DashCard.COACH -> app.superhealth.ui.coach.CoachCard(c, size, vm, modifier, nav)
         DashCard.COACH_WEEK -> app.superhealth.ui.coach.CoachWeekCard(c, size, vm, modifier, nav)
         DashCard.FORM -> app.superhealth.ui.wellbeing.FormCard(c, size, vm, modifier, nav)
-        DashCard.JOURNAL -> app.superhealth.ui.wellbeing.JournalCard(c, size, vm, modifier, nav)
         DashCard.BEDTIME -> app.superhealth.ui.wellbeing.BedtimeCard(c, size, modifier, nav)
         DashCard.CYCLE -> app.superhealth.ui.wellbeing.CycleCard(c, size, modifier, nav)
         DashCard.STEPS -> {

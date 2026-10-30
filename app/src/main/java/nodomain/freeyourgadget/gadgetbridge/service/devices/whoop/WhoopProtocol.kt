@@ -275,6 +275,20 @@ object WhoopFrames {
         }
     }
 
+    /** Service cardio standard (2A37) : drapeaux, pouls sur 8 ou 16 bits, énergie facultative, puis R-R en 1/1024 s. */
+    fun standardHr(v: ByteArray): Pair<Int, List<Int>>? {
+        if (v.size < 2) return null
+        val flags = v.u8(0)
+        val wide = flags and 1 != 0
+        if (wide && v.size < 3) return null
+        val hr = if (wide) v.u16(1) else v.u8(1)
+        var at = if (wide) 3 else 2
+        if (flags and 8 != 0) at += 2
+        val rr = ArrayList<Int>()
+        if (flags and 16 != 0) while (at + 2 <= v.size) { rr += ((v.u16(at) * 1000L + 512) / 1024).toInt(); at += 2 }
+        return hr to rr.filter { it in 250..2500 }
+    }
+
     /** Événement (type 48) : numéro, et pour le niveau de batterie WHOOP 4 le pourcentage et la charge. */
     data class Event(val number: Int, val batteryPct: Int? = null, val charging: Boolean? = null)
 

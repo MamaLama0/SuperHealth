@@ -124,6 +124,18 @@ fun ScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? 
     }
 }
 
+/** En-tête des trois onglets : surtitre, titre, puis les boutons ronds, au même endroit partout. */
+@Composable
+fun TabHeader(overline: String, title: String, titleModifier: Modifier = Modifier, actions: @Composable RowScope.() -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 10.dp), verticalAlignment = Alignment.Bottom) {
+        Column(Modifier.weight(1f).then(titleModifier)) {
+            app.superhealth.ui.theme.Overline(overline)
+            Text(title, style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
+    }
+}
+
 /** Bouton rond des barres de titre (bouton d'icône tonal de Material 3). */
 @Composable
 fun CircleAction(icon: ImageVector, label: String?, modifier: Modifier = Modifier, tint: Color = Mf.colors.text, onClick: () -> Unit) {
