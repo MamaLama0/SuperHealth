@@ -152,6 +152,8 @@ internal val LocalCardHalf = staticCompositionLocalOf { false }
 
 private val sub @Composable get() = Mf.colors.textSecondary
 private val faint @Composable get() = Mf.colors.chip
+/** Points des jours ou heures sans valeur : visibles aussi sur une carte teintée. */
+private val blank @Composable get() = Mf.colors.text.copy(alpha = 0.16f)
 
 // ---- Anatomie ------------------------------------------------------------------------------------------------------
 
@@ -225,9 +227,9 @@ internal fun RingCenter(icon: ImageVector?, hue: Color, value: String, unit: Str
 
 /** Pastille teintée, grande : le symbole d'un petit sans anneau ni courbe. */
 @Composable
-internal fun BigChip(icon: ImageVector, hue: Color) {
+internal fun BigChip(icon: ImageVector, hue: Color, modifier: Modifier = Modifier) {
     val (bg, tint) = app.superhealth.ui.theme.dashChipColors(hue)
-    Box(Modifier.size(40.dp).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(23.dp), tint = tint) }
+    Box(modifier.size(40.dp).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(23.dp), tint = tint) }
 }
 
 /** Petit sans objectif : pastille et nom, valeur en couleur, sa courbe en bas. */
@@ -250,25 +252,45 @@ internal fun CurveTile(m: Modifier, onClick: () -> Unit, icon: ImageVector, labe
     }
 }
 
-/** Moyen : valeur à gauche, graphique à droite ; à demi-largeur, le graphique sous la valeur. [chartW] nul : tout à gauche. */
+/**
+ * Moyen : une seule anatomie pour toutes les cartes, à demi-largeur comme plus large. En-tête (pastille, nom court, détail
+ * très court), valeur en couleur, une ligne d'explication, puis le visuel qui remplit le bas. Hauteur commune.
+ */
 @Composable
-private fun Medium(m: Modifier, onClick: () -> Unit, icon: ImageVector, label: String, c: Color, trailing: String? = null, tc: Color = c, chartW: Dp = 108.dp, chartH: Dp = 58.dp,
-                   left: @Composable ColumnScope.() -> Unit, right: @Composable BoxScope.() -> Unit = {}) {
-    val half = LocalCardHalf.current
-    Tile(c, m.fillMaxWidth().heightIn(min = if (half) 160.dp else 132.dp), onClick, 16.dp, 14.dp) {
-        Head(icon, label, c, trailing, tc)
-        if (half || chartW == 0.dp) {
-            Spacer(Modifier.height(4.dp))
-            Column(if (chartW == 0.dp) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth(), verticalArrangement = if (chartW == 0.dp) Arrangement.Bottom else Arrangement.Top, content = left)
-            if (chartW != 0.dp) {
-                Spacer(Modifier.weight(1f))
-                Box(Modifier.fillMaxWidth().padding(top = 8.dp).height(chartH), contentAlignment = Alignment.BottomCenter, content = right)
-            }
-        } else Row(Modifier.weight(1f).padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Bottom, content = left)
-            Spacer(Modifier.width(10.dp))
-            Box(Modifier.width(chartW).fillMaxHeight(), contentAlignment = Alignment.BottomCenter, content = right)
+internal fun MediumShell(m: Modifier, onClick: () -> Unit, icon: ImageVector, title: String, hue: Color, detail: String? = null, detailColor: Color? = null,
+                         value: String, unit: String? = null, caption: String? = null, captionSlot: (@Composable () -> Unit)? = null, visual: @Composable BoxScope.() -> Unit) =
+    Tile(hue, m.fillMaxWidth().heightIn(min = MEDIUM_H), onClick, 14.dp, 12.dp) {
+        Head(icon, title, hue, detail, detailColor ?: hue.onContainer())
+        Spacer(Modifier.height(6.dp))
+        V(value, unit, 26.sp)
+        Box(Modifier.heightIn(min = 18.dp), contentAlignment = Alignment.CenterStart) {
+            if (value == "—" && caption == null) Tq(tr("Pas de données"), 12.sp, sub)
+            else if (captionSlot != null) captionSlot() else if (!caption.isNullOrBlank()) Tq(caption, 12.sp, sub)
         }
+        Spacer(Modifier.height(6.dp))
+        Box(Modifier.fillMaxWidth().weight(1f).heightIn(min = 44.dp), contentAlignment = Alignment.BottomCenter, content = visual)
+    }
+
+/** Hauteur d'une carte moyenne. */
+internal val MEDIUM_H = 176.dp
+
+/** Visuel d'une carte sans données : sept points discrets, la place reste la même. */
+@Composable
+internal fun EmptyDots(modifier: Modifier = Modifier) {
+    val dot = blank
+    Canvas(modifier.fillMaxWidth().height(8.dp)) {
+        val slot = size.width / 7
+        repeat(7) { drawCircle(dot, 3.dp.toPx(), Offset(slot * (it + 0.5f), size.height / 2)) }
+    }
+}
+
+/** Les 7 derniers jours d'une habitude : point plein les jours faits, discret les autres. */
+@Composable
+internal fun WeekDots(days: List<Boolean>, hue: Color, modifier: Modifier = Modifier) {
+    val dot = blank
+    Canvas(modifier.fillMaxWidth().height(14.dp)) {
+        val slot = size.width / days.size
+        days.forEachIndexed { i, on -> drawCircle(if (on) hue else dot, if (on) 6.dp.toPx() else 3.dp.toPx(), Offset(slot * (i + 0.5f), size.height / 2)) }
     }
 }
 
@@ -354,7 +376,7 @@ private fun PhaseBar(n: NightSummary, cols: List<Color>, modifier: Modifier) = C
 /** Pas par heure : barres jusqu'à l'heure en cours, points pour les heures vides et à venir. */
 @Composable
 private fun StepBars(values: List<Double?>, t: Tone, now: Int, modifier: Modifier) {
-    val dot = faint
+    val dot = blank
     Canvas(modifier) {
         val n = values.size; val gap = 2.dp.toPx(); val bw = (size.width - gap * (n - 1)) / n; val max = values.maxOf { it ?: 0.0 }.coerceAtLeast(1.0)
         values.forEachIndexed { i, v ->
@@ -372,7 +394,7 @@ private fun StepBars(values: List<Double?>, t: Tone, now: Int, modifier: Modifie
 @Composable
 private fun GoalBars(values: List<Double?>, goal: Double?, t: Tone, modifier: Modifier) {
     val below = if (Mf.colors.dark) Color(0xFF3A3F47) else Color(0xFFD7DAE0)
-    val dash = sub; val dot = faint
+    val dash = sub; val dot = blank
     Canvas(modifier) {
         val max = (values.filterNotNull() + listOfNotNull(goal)).maxOrNull()?.times(1.08)?.coerceAtLeast(1e-6) ?: 1.0
         val n = values.size; val slot = size.width / n; val bw = minOf(slot * 0.56f, 10.dp.toPx())
@@ -445,7 +467,7 @@ private fun BandLine(values: List<Double>, lo: Double, hi: Double, t: Tone, modi
 /** Sept jours en barres (minutes d'activité) ; points pour les jours vides. */
 @Composable
 private fun WeekBars(minutes: List<Long>, todayIdx: Int, start: LocalDate, t: Tone, modifier: Modifier, h: Dp, letters: Boolean = true, barW: Dp = 7.dp) {
-    val dot = faint; val max = minutes.max().coerceAtLeast(1L)
+    val dot = blank; val max = minutes.max().coerceAtLeast(1L)
     Row(modifier, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
         minutes.forEachIndexed { i, m ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -534,14 +556,13 @@ private fun WForme(sz: CardSize, icon: ImageVector, w: WatchSnap, m: Modifier, o
     fun text(v: Int?) = v?.toString() ?: "—"
     when (sz) {
         CardSize.S -> RingTile(m, onClick, tone.a, (score ?: 0) / 100f) { RingCenter(icon, tone.a, text(score), a?.let { tr(it.verdict.short) } ?: tr("Forme")) }
-        CardSize.M -> Medium(m, onClick, icon, tr("Forme"), tone.a, if (LocalCardHalf.current) a?.let { tr(it.verdict.short) } ?: word else word, chartW = 118.dp, chartH = 62.dp, left = {
-            Box(contentAlignment = Alignment.Center) { DialT((score ?: 0) / 100f, tone, Modifier.size(78.dp), 8.dp); Tq(text(score), 26.sp, weight = FontWeight.SemiBold, num = true) }
-        }) {
-            Column(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Forme"), tone.a, value = text(score), unit = "/ 100", caption = word) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(Triple(tr("Charge"), charge, chargeTone), Triple(tr("Repos"), repos, Sc.repos)).forEach { (l, v, t) ->
-                    Column {
-                        Row { Tq(l, 12.sp, sub, modifier = Modifier.weight(1f)); Tq(text(v), 13.sp, weight = FontWeight.SemiBold) }
-                        Bar((v ?: 0) / 100f, t, Modifier.fillMaxWidth().padding(top = 3.dp), 6.dp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Tq(l, 12.sp, sub, modifier = Modifier.width(52.dp))
+                        Bar((v ?: 0) / 100f, t, Modifier.weight(1f), 6.dp)
+                        Tq(text(v), 12.sp, weight = FontWeight.SemiBold, modifier = Modifier.width(30.dp).padding(start = 6.dp))
                     }
                 }
             }
@@ -598,9 +619,14 @@ private fun WSommeil(sz: CardSize, icon: ImageVector, h: HealthSnap, m: Modifier
         CardSize.S -> RingTile(m, onClick, c, min?.let { (it / (w.needMin ?: 480.0)).toFloat() }) {
             RingCenter(icon, c, min?.let { formatDuration(it) } ?: "—", rest?.let { trf("score %1\$s", it) })
         }
-        CardSize.M -> Medium(m, onClick, icon, tr("Sommeil"), c, score, left = {
-            Hm(min, 26.sp); if (span != null) Tq(span, 12.sp, sub)
-        }) { Hyp(Modifier.fillMaxWidth().height(58.dp)) }
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Sommeil"), c, rest?.toString(), value = min?.let { formatDuration(it) } ?: "—", caption = span ?: tr("Pas de données")) {
+            val past = h.series[Metric.SLEEP].orEmpty().map { it.second }
+            when {
+                n != null && staged -> Hypnogram(n, Modifier.fillMaxSize())
+                past.count { it != null } >= 2 -> GoalBars(past, 480.0, t, Modifier.fillMaxSize())
+                else -> EmptyDots()
+            }
+        }
         CardSize.W -> Wide(m, onClick, icon, c, if (rest != null) "${tr("Sommeil")} · ${trf("score %1\$s", rest)}" else tr("Sommeil"), { Hm(min, 20.sp, "min") }) {
             Column(horizontalAlignment = Alignment.End) {
                 if (n != null && staged) PhaseBar(n, cols, Modifier.width(124.dp))
@@ -686,13 +712,13 @@ private fun WCalories(sz: CardSize, icon: ImageVector, vm: SuperViewModel, an: A
     val unit = tr(s.energyUnit.label)
     when (sz) {
         CardSize.S -> RingTile(m, onClick, t.a, f) { RingCenter(icon, t.a, leftTxt, word) }
-        CardSize.M -> Medium(m, onClick, icon, tr("Calories"), t.a, pair, sub, chartH = 62.dp, left = { V(leftTxt, null, 26.sp, color = t.a); Tq(word, 12.sp, sub) }) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Calories"), t.a, value = leftTxt, caption = "$word · $pair") {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf(Triple("P", eaten.protein to target.protein, Sc.prot), Triple("L", eaten.fat to target.fat, Sc.fat), Triple("G", eaten.carbs to target.carbs, Sc.carb)).forEach { (n, v, c) ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Tq(n, 12.sp, c, FontWeight.SemiBold, modifier = Modifier.width(14.dp))
                         Bar(if (v.second > 0) (v.first / v.second).toFloat() else 0f, Tone(c, c), Modifier.weight(1f), 6.dp)
-                        Tq("${v.first.roundToInt()}", 12.sp, weight = FontWeight.SemiBold, modifier = Modifier.width(32.dp).padding(start = 6.dp))
+                        Tq("${v.first.roundToInt()}", 12.sp, weight = FontWeight.SemiBold, modifier = Modifier.width(34.dp).padding(start = 6.dp))
                     }
                 }
             }
@@ -735,16 +761,16 @@ private fun WMacros(sz: CardSize, icon: ImageVector, vm: SuperViewModel, an: Ana
     val all = listOf(Triple("P", eaten.protein to target.protein, Sc.prot), Triple("L", eaten.fat to target.fat, Sc.fat), Triple("G", eaten.carbs to target.carbs, Sc.carb))
     when (sz) {
         CardSize.S -> RingTile(m, onClick, c, pf) { RingCenter(icon, c, "$p", "/ $pt g") }
-        CardSize.M -> Medium(m, onClick, icon, tr("Macros"), c, tr("aujourd'hui"), sub, chartW = 0.dp, left = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Macros"), c, value = "$p", unit = "g", caption = trf("/ %1\$s g de protéines", pt)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 all.forEach { (n, v, col) ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(contentAlignment = Alignment.Center) { DialT(if (v.second > 0) (v.first / v.second).toFloat() else 0f, Tone(col, col), Modifier.size(50.dp), 6.dp, 360f); Tq(n, 13.sp, col, FontWeight.Bold) }
-                        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.Bottom) { Tq("${v.first.roundToInt()}", 15.sp, weight = FontWeight.SemiBold, num = true, modifier = Modifier.alignByBaseline()); Tq(" g", 12.sp, sub, modifier = Modifier.alignByBaseline()) }
+                    Box(contentAlignment = Alignment.Center) {
+                        DialT(if (v.second > 0) (v.first / v.second).toFloat() else 0f, Tone(col, col), Modifier.size(46.dp), 6.dp, 360f)
+                        Tq(n, 13.sp, col, FontWeight.Bold)
                     }
                 }
             }
-        })
+        }
         CardSize.W -> Wide(m, onClick, icon, c, tr("Macros"), {
             Row(verticalAlignment = Alignment.Bottom) { Tq("$p", 20.sp, weight = FontWeight.SemiBold, num = true, modifier = Modifier.alignByBaseline()); Tq(" " + trf("/ %1\$s g de protéines", pt), 12.sp, sub, modifier = Modifier.alignByBaseline()) }
         }, 104.dp) {
@@ -799,17 +825,13 @@ private fun WRepas(sz: CardSize, icon: ImageVector, vm: SuperViewModel, s: Nutri
             Text(total, style = MaterialTheme.typography.titleMedium, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = c.onContainer(), maxLines = 1)
             Text(unit, style = MaterialTheme.typography.labelMedium, color = sub, maxLines = 1)
         }
-        CardSize.M -> Medium(m, onClick, icon, tr("Repas du jour"), c, "$total $unit", sub, chartW = 0.dp, left = {
-            if (meals.isEmpty()) Tq(tr("Rien de noté"), 13.sp, sub)
-            meals.take(4).forEach { (slot, l) ->
-                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (!LocalCardHalf.current) Tq(hour(l), 12.sp, sub, modifier = Modifier.width(38.dp))
-                    Box(Modifier.size(7.dp).clip(CircleShape).background(slot.color()))
-                    Tq("  " + tr(if (LocalCardHalf.current) slot.short else slot.label), 14.sp, modifier = Modifier.weight(1f))
-                    Tq(formatNumber(s.energyValue(l.sumOf { it.kcal })), 13.sp, weight = FontWeight.SemiBold)
-                }
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Repas"), c, value = total, unit = unit, caption = if (meals.isEmpty()) tr("Rien de noté") else if (meals.size == 1) tr("1 repas") else trf("%1\$s repas", meals.size)) {
+            if (meals.isEmpty()) EmptyDots()
+            else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) { eaten.sortedBy { it.minuteOf() }.take(5).forEach { FoodIcon(it.name, 26.dp) } }
+                MealBar(eaten, eaten.sumOf { it.kcal }, Modifier.fillMaxWidth())
             }
-        })
+        }
         CardSize.W -> Wide(m, onClick, icon, c, if (meals.size == 1) tr("1 repas") else trf("%1\$s repas", meals.size), { V(total, unit, 20.sp) }, 150.dp) {
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) { eaten.sortedBy { it.minuteOf() }.take(6).forEach { FoodIcon(it.name, 23.dp) } }
         }
@@ -857,8 +879,8 @@ private fun WPas(sz: CardSize, icon: ImageVector, h: HealthSnap, s: NutritionSet
     val hourly = remember(h.watch.hourly) { hourlySteps(h.watch.hourly) }
     when (sz) {
         CardSize.S -> RingTile(m, onClick, c, f) { RingCenter(icon, c, txt, pct) }
-        CardSize.M -> Medium(m, onClick, icon, tr("Pas"), c, pct, left = { V(txt, null, 26.sp); Tq(trf("sur %1\$s", formatNumber(goal)), 12.sp, sub) }) {
-            GoalBars(h.series[Metric.STEPS].orEmpty().map { it.second }, goal, t, Modifier.fillMaxWidth().height(56.dp))
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Pas"), c, pct, value = txt, caption = trf("sur %1\$s", formatNumber(goal))) {
+            GoalBars(h.series[Metric.STEPS].orEmpty().map { it.second }, goal, t, Modifier.fillMaxSize())
         }
         CardSize.W -> Wide(m, onClick, icon, c, tr("Pas"), { V(txt, "/ ${formatNumber(goal)}", 20.sp) }, 112.dp) {
             Column(horizontalAlignment = Alignment.End) { Bar(f, t, Modifier.width(112.dp)); Spacer(Modifier.height(5.dp)); Tq(pct, 12.sp, c, FontWeight.SemiBold) }
@@ -897,8 +919,12 @@ private fun WCoeur(sz: CardSize, icon: ImageVector, h: HealthSnap, m: Modifier, 
     @Composable fun Dot(mod: Modifier) { if (rest != null && range != null) RangeDot(rest, range.first, range.second, minOf(range.first, rest) - 4, maxOf(range.second, rest) + 4, c, mod) }
     when (sz) {
         CardSize.S -> CurveTile(m, onClick, icon, tr("Repos"), c, txt, bpm) { LineT(hist, t, it, area = true) }
-        CardSize.M -> Medium(m, onClick, icon, tr("Cœur au repos"), c, left = { V(txt, bpm, 26.sp); D() }) {
-            if (range != null) BandLine(hist, range.first, range.second, t, Modifier.fillMaxWidth().height(58.dp), false) else LineT(hist, t, Modifier.fillMaxWidth().height(58.dp), area = true)
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Cœur au repos"), c, value = txt, unit = bpm, captionSlot = { D() }) {
+            when {
+                range != null -> BandLine(hist, range.first, range.second, t, Modifier.fillMaxSize(), false)
+                hist.size >= 2 -> LineT(hist, t, Modifier.fillMaxSize(), area = true)
+                else -> EmptyDots()
+            }
         }
         CardSize.W -> Wide(m, onClick, icon, c, tr("Cœur au repos"), { V(txt, bpm, 20.sp) }, 120.dp) {
             Column(horizontalAlignment = Alignment.End) {
@@ -945,8 +971,12 @@ private fun WVfc(sz: CardSize, icon: ImageVector, w: WatchSnap, m: Modifier, onC
     @Composable fun Dot(mod: Modifier) { if (v != null && range != null) RangeDot(v, range.first, range.second, minOf(range.first, v) * 0.85, maxOf(range.second, v) * 1.15, c, mod) }
     when (sz) {
         CardSize.S -> CurveTile(m, onClick, icon, tr("VFC"), c, txt, "ms") { LineT(all.takeLast(14), t, it, area = true) }
-        CardSize.M -> Medium(m, onClick, icon, tr("VFC nocturne"), c, status, good, left = { V(txt, "ms", 26.sp); D() }) {
-            if (range != null) BandLine(all.takeLast(7), range.first, range.second, t, Modifier.fillMaxWidth().height(58.dp), true) else LineT(all.takeLast(7), t, Modifier.fillMaxWidth().height(58.dp))
+        CardSize.M -> MediumShell(m, onClick, icon, tr("VFC"), c, status, good, value = txt, unit = "ms", captionSlot = { D() }) {
+            when {
+                range != null -> BandLine(all.takeLast(14), range.first, range.second, t, Modifier.fillMaxSize(), false)
+                all.size >= 2 -> LineT(all.takeLast(14), t, Modifier.fillMaxSize())
+                else -> EmptyDots()
+            }
         }
         CardSize.W -> Wide(m, onClick, icon, c, tr("VFC nocturne"), { V(txt, "ms", 20.sp) }, 120.dp) {
             Column(horizontalAlignment = Alignment.End) {
@@ -962,7 +992,7 @@ private fun WVfc(sz: CardSize, icon: ImageVector, w: WatchSnap, m: Modifier, onC
             }
             Spacer(Modifier.height(12.dp))
             if (range != null) BandLine(all.takeLast(14), range.first, range.second, t, Modifier.fillMaxWidth().height(82.dp), true) else LineT(all.takeLast(14), t, Modifier.fillMaxWidth().height(82.dp))
-            Row(Modifier.padding(top = 4.dp)) { Tq(trf("il y a %1\$s nuits", all.takeLast(14).size), 12.sp, sub, modifier = Modifier.weight(1f)); Tq(tr("cette nuit"), 12.sp, sub) }
+            if (all.isNotEmpty()) Row(Modifier.padding(top = 4.dp)) { Tq(trf("il y a %1\$s nuits", all.takeLast(14).size), 12.sp, sub, modifier = Modifier.weight(1f)); Tq(tr("cette nuit"), 12.sp, sub) }
         }
     }
 }
@@ -988,9 +1018,8 @@ private fun WEffort(sz: CardSize, icon: ImageVector, w: WatchSnap, m: Modifier, 
     val rest = if (range != null && v != null && v < range.first) formatNumber(range.first - v) else null
     when (sz) {
         CardSize.S -> RingTile(m, onClick, c, f) { RingCenter(icon, c, txt, zone ?: "/ 100") }
-        CardSize.M -> Medium(m, onClick, icon, tr(if (LocalCardHalf.current) "Effort" else "Effort du jour"), c, zone, t.b, chartW = 82.dp, chartH = 62.dp, left = { V(txt, "/ 100", 26.sp); if (rest != null) Tq(trf("encore %1\$s", rest), 12.sp, sub) }) {
-            if (LocalCardHalf.current) EffortBar(f, range, Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom = 4.dp))
-            else Box(contentAlignment = Alignment.Center) { EffortDial(f, range, 78.dp, 8.dp); Icon(icon, null, Modifier.size(24.dp), tint = c) }
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Effort"), c, zone, t.b, value = txt, unit = "/ 100", caption = rest?.let { trf("encore %1\$s", it) }) {
+            GoalBars(w.efforts.takeLast(7), range?.first, t, Modifier.fillMaxSize())
         }
         CardSize.W -> Wide(m, onClick, icon, c, tr("Effort du jour"), { V(txt, "/ 100", 20.sp) }, 120.dp) {
             Column(horizontalAlignment = Alignment.End) { EffortBar(f, range, Modifier.width(112.dp)); if (zone != null) { Spacer(Modifier.height(5.dp)); Tq(zone, 12.sp, t.b, FontWeight.SemiBold) } }
@@ -1044,14 +1073,16 @@ private fun WSeance(sz: CardSize, icon: ImageVector, vm: SuperViewModel, m: Modi
     when (sz) {
         CardSize.S -> RingTile(m, open, c, if (train.isNotEmpty()) train.count { it.value.id in p!!.doneDayIds }.toFloat() / train.size else null) {
             if (next != null) XRayBody(muscles(next), st.settings.sex, c, Modifier.size(34.dp, 44.dp))
-            Text(name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = c.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 12.dp))
+            Text(next?.name?.let { app.superhealth.training.ui.screens.dayShort(it) } ?: name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = c.onContainer(), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 12.dp))
         }
         // moyen et grand : les séances sont là, on choisit laquelle lancer ou modifier
-        CardSize.M -> Tile(c, m.fillMaxWidth(), open, 16.dp, 14.dp) {
-            Head(icon, p?.name ?: tr("Prochaine séance"), c)
-            Spacer(Modifier.height(10.dp))
-            if (p != null) app.superhealth.training.ui.screens.ProgramPicker(p, db, st.settings.sex, resume, 58.dp, { nav.go("session") }, { i -> vm.training.startProgramDay(p, i, p.cycleIndex); nav.go("session") }, { i -> nav.go("programday/${p.id}/$i") })
-            else Tq(tr("Créer un programme"), 15.sp, weight = FontWeight.SemiBold)
+        // moyen : les séances sont là, on choisit laquelle lancer ou modifier
+        CardSize.M -> Tile(c, m.fillMaxWidth().heightIn(min = MEDIUM_H), open, 14.dp, 12.dp) {
+            Head(icon, tr("Séances"), c, if (train.isNotEmpty()) "${train.count { it.value.id in p!!.doneDayIds }} / ${train.size}" else null, sub)
+            Spacer(Modifier.height(6.dp))
+            Tq(p?.name ?: tr("Créer un programme"), 13.sp, sub)
+            Spacer(Modifier.height(8.dp))
+            if (p != null) app.superhealth.training.ui.screens.ProgramPicker(p, db, st.settings.sex, resume, 62.dp, { nav.go("session") }, { i -> vm.training.startProgramDay(p, i, p.cycleIndex); nav.go("session") }, { i -> nav.go("programday/${p.id}/$i") }, oneLine = true)
         }
         CardSize.W -> Tile(c, m.fillMaxWidth().heightIn(min = 68.dp), open, 14.dp, 8.dp, center = true) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1094,7 +1125,9 @@ private fun WSemaine(sz: CardSize, icon: ImageVector, vm: SuperViewModel, h: Hea
     @Composable fun D() { if (last.isNotEmpty() && diff != 0L) Delta(formatDuration(abs(diff).toDouble()), up = diff > 0, good = diff > 0) }
     when (sz) {
         CardSize.S -> RingTile(m, onClick, c, minutes / 150f) { RingCenter(icon, c, "$n", words) }
-        CardSize.M -> Medium(m, onClick, icon, tr("Cette semaine"), c, dur, Mf.colors.text, chartW = 124.dp, chartH = 62.dp, left = { V("$n", words, 26.sp); D() }) { WeekBars(byDay, idx, start, t, Modifier.fillMaxWidth(), 42.dp) }
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Semaine"), c, dur, Mf.colors.text, value = "$n", unit = words, captionSlot = { D() }) {
+            WeekBars(byDay, idx, start, t, Modifier.fillMaxWidth(), 34.dp)
+        }
         CardSize.W -> Wide(m, onClick, icon, c, tr("Cette semaine"), { V(dur, "· $n $words", 20.sp) }, 128.dp) { WeekBars(byDay, idx, start, t, Modifier.width(124.dp), 30.dp) }
         else -> Large(m, onClick, icon, tr("Semaine d'entraînement"), c, if (last.isNotEmpty() && diff != 0L) (if (diff > 0) "+ " else "− ") + formatDuration(abs(diff).toDouble()) else null, Sc.good) {
             val kcal = week.sumOf { it.hc?.kcal ?: it.run?.kcal ?: 0.0 }
@@ -1146,7 +1179,10 @@ private fun WCourse(sz: CardSize, icon: ImageVector, h: HealthSnap, m: Modifier,
                 Text("km", style = MaterialTheme.typography.labelMedium, color = sub, maxLines = 1)
             } else RingCenter(icon, c, km, if (a != null) "km" else tr("Aucune course"))
         }
-        CardSize.M -> Medium(m, onClick, icon, label, c, chartH = 62.dp, left = { V(km, "km", 26.sp); if (paceTxt != null) Tq(paceTxt, 12.sp, sub) }) { Trace(Modifier.fillMaxWidth().height(62.dp)) }
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Course"), c, value = km, unit = "km",
+            caption = a?.let { listOfNotNull(relativeDay(localDate(it.start)), paceTxt).joinToString(" · ") } ?: tr("Aucune course")) {
+            if (route != null) Trace(Modifier.fillMaxSize()) else EmptyDots()
+        }
         CardSize.W -> Wide(m, onClick, icon, c, label, { V(km, "km", 20.sp) }, 120.dp) {
             Column(horizontalAlignment = Alignment.End) {
                 if (paceTxt != null) Tq(paceTxt, 16.sp, weight = FontWeight.SemiBold, num = true)

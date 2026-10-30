@@ -83,7 +83,9 @@ import kotlin.math.roundToInt
  */
 internal data class CompactData(
     val value: String, val unit: String?, val label: String, val progress: Float?,
-    val history: List<Double?> = emptyList(), val bars: Boolean = true, val goal: Double? = null, val onClick: () -> Unit,
+    val history: List<Double?> = emptyList(), val bars: Boolean = true, val goal: Double? = null,
+    /** Les 7 derniers jours, faits ou non (moyen : une rangée de points). */
+    val week: List<Boolean>? = null, val onClick: () -> Unit,
 )
 
 @Composable
@@ -155,7 +157,7 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
         }
         DashCard.HABITS -> {
             val logged = an.days.filter { it.intakeKcal != null || it.fasted }.map { it.epochDay }.toSet()
-            CompactData(Habits.streak(logged, an.today).current.toString(), tr("j."), tr("Série journal"), null) { nav.go("habits") }
+            CompactData(Habits.streak(logged, an.today).current.toString(), tr("j."), tr("Série journal"), null, week = (an.today - 6..an.today).map { it in logged }) { nav.go("habits") }
         }
         DashCard.BALANCE -> {
             val days = Balance.days(an.days, an::tdeeAt, an.today)
@@ -238,8 +240,17 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
     }
 }
 
+/** Nom pour l'en-tête d'un petit carré, où la place est comptée. */
+internal fun DashCard.tiny(): String = when (this) {
+    DashCard.EXPENDITURE -> tr("Dépensé")
+    DashCard.LOAD -> tr("Entraîn.")
+    DashCard.LIFTS -> tr("Progrès")
+    else -> short()
+}
+
 /** Nom court d'une carte, pour l'en-tête des petites tailles. */
 internal fun DashCard.short(): String = tr(when (this) {
+    DashCard.RINGS -> "Anneaux"; DashCard.STRATEGY -> "Programme"; DashCard.BODY -> "Mesures"; DashCard.TRAINING_TRENDS -> "Tendances"; DashCard.MUSCLE_SETS -> "Séries"
     DashCard.CALORIES -> "Calories"; DashCard.MEALS -> "Repas"; DashCard.WEIGHT -> "Poids"; DashCard.EXPENDITURE -> "Dépense"; DashCard.INTAKE -> "Apports"
     DashCard.MACROS -> "Protéines"; DashCard.STEPS -> "Pas"; DashCard.HEART -> "Cœur"; DashCard.SLEEP -> "Sommeil"
     DashCard.CARDIO -> "Cardio"; DashCard.ENERGY -> "Énergie"; DashCard.HYDRATION -> "Eau"; DashCard.RUNNING -> "Course"
@@ -293,7 +304,7 @@ private val trendCards = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE)
  * Écart de la dernière valeur : à la première de la période pour une tendance, sinon à la moyenne des jours précédents.
  * Null sans au moins 3 valeurs ou si l'écart s'arrondit à zéro.
  */
-private fun CompactData.delta(c: DashCard): Pair<Double, String>? {
+internal fun CompactData.delta(c: DashCard): Pair<Double, String>? {
     // courbes d'une seule nuit ou heures de coucher : un écart à la moyenne n'aurait pas de sens
     if (c == DashCard.NIGHT_HEART || c == DashCard.SLEEP_SCHEDULE) return null
     val v = history.filterNotNull()

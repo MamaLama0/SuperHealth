@@ -1,0 +1,12 @@
+# Profil de compilation de SuperHealth : tout le code de l'app est compilé d'avance à l'installation (sinon l'interpréteur,
+# puis le JIT, à chaque première ouverture d'un écran). Compose et ses voisins aussi : leurs propres profils ne couvrent pas tout.
+Lapp/superhealth/**;
+HSPLapp/superhealth/**->**(**)**
+Landroidx/compose/**;
+HSPLandroidx/compose/**->**(**)**
+Landroidx/navigation/**;
+HSPLandroidx/navigation/**->**(**)**
+Landroidx/lifecycle/**;
+HSPLandroidx/lifecycle/**->**(**)**
+Lkotlinx/coroutines/**;
+HSPLkotlinx/coroutines/**->**(**)**

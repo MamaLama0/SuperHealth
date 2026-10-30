@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -27,6 +28,13 @@ class AppViewModel(val repo: Repository) : ViewModel() {
     @OptIn(ExperimentalCoroutinesApi::class)
     val dayEntries = selectedDay.flatMapLatest { repo.entriesForDay(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Calories de chaque jour de la semaine affichée : lues dès le lancement, les anneaux du Journal sont déjà pleins à son ouverture. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val weekIntake = selectedDay.map { it - LocalDate.ofEpochDay(it).dayOfWeek.value + 1 }.distinctUntilChanged()
+        .flatMapLatest { m -> repo.entries.rangeFlow(m, m + 6) }
+        .map { l -> l.groupBy { it.epochDay }.mapValues { (_, e) -> e.sumOf { it.kcal } } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     /** Aujourd'hui, avancé au retour dans l'app (sinon le jour restait celui du lancement après minuit). */
     private val today = MutableStateFlow(LocalDate.now().toEpochDay())

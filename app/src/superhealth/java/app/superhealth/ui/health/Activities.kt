@@ -155,9 +155,11 @@ fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strengt
     val today = java.time.LocalDate.now()
     val start = app.superhealth.training.domain.Analytics.weekStart(today)
     val history by vm.training.state.collectAsState()
-    val list by produceState(emptyList<Bridge.Activity>(), refresh, imported, history.history.size) {
-        value = tabActivities(start.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), strength, health)
+    // dernière lecture réaffichée dès l'ouverture (lue à l'avance au démarrage) : le panneau ne repart pas de zéro
+    val read by produceState(lastWeek, refresh, imported, history.history.size) {
+        value = weekActivities(strength, health).also { lastWeek = it }
     }
+    val list = read.filter { !localDate(it.start).isBefore(start) }
     val route = when {
         health && sh.watchModule && devices.isNotEmpty() -> "h/performance"
         strength -> "t/insights"
@@ -258,12 +260,17 @@ fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, str
 /** Activités récentes et tracés des premières (clé de l'activité → tracé). */
 private class Recent(val list: List<Bridge.Activity>, val routes: Map<String, List<Pair<Double, Double>>>)
 private var lastRecent = Recent(emptyList(), emptyMap())
+private var lastWeek = emptyList<Bridge.Activity>()
+
+private suspend fun weekActivities(strength: Boolean, health: Boolean) = tabActivities(
+    app.superhealth.training.domain.Analytics.weekStart(java.time.LocalDate.now()).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), strength, health)
 
 private suspend fun routesOf(ctx: Context, l: List<Bridge.Activity>) =
     l.take(5).filter { (it.distanceM ?: 0.0) >= 100 }.mapNotNull { a -> routeOf(ctx, a)?.let { a.key to it } }.toMap()
 
 /** Lit à l'avance les activités récentes et leurs tracés : l'onglet Activités les montre dès son ouverture. */
 suspend fun preloadRecent(ctx: Context, strength: Boolean, health: Boolean) {
+    lastWeek = weekActivities(strength, health)
     val l = tabActivities(0L, strength, health)
     lastRecent = Recent(l, lastRecent.routes)
     lastRecent = Recent(l, routesOf(ctx, l))

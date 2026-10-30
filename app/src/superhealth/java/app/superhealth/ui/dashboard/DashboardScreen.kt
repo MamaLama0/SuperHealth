@@ -7,6 +7,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -366,10 +367,18 @@ private suspend fun loadHealth(ctx: android.content.Context, cards: List<DashCar
         HealthSnap(series.mapValues { it.value.awaitAll() }, cardio, energy, heart2, acts, perf, recent = recent)
 }
 
+/** Aperçu de test (version debug, WidgetPreviewActivity) : cartes et taille montrées à la place de la disposition, sans rien enregistrer. */
+internal object DashPreview {
+    var cards: List<DashCard>? = null
+    var sizes: Map<String, String> = emptyMap()
+}
+
 @Composable
 fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
-    val sh by vm.settings.collectAsState()
+    val saved by vm.settings.collectAsState()
+    // aperçu de test : une disposition en mémoire seulement, rien n'est enregistré
+    val sh = DashPreview.cards?.let { p -> saved.copy(dashboard = p, dashSizes = DashPreview.sizes) } ?: saved
     val a by vm.nutrition.analytics.collectAsState()
     val refresh by vm.refresh.collectAsState()
     val devices by vm.devices.collectAsState()
@@ -645,6 +654,27 @@ private fun FocusCard(c: DashCard, vm: SuperViewModel, an: app.superhealth.nutri
     }
 }
 
+/** À faire, moyen : l'en-tête commun et les trois premières choses à faire, chacune ouvre son écran. */
+@Composable
+private fun FocusMedium(c: DashCard, vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics, h: HealthSnap, modifier: Modifier, nav: NavHostController, tab: (String) -> Unit) {
+    val items = focusItems(vm, an, h, nav, tab)
+    Column(modifier.fillMaxWidth().heightIn(min = MEDIUM_H).clip(RoundedCornerShape(CardRadius)).dashCardBackground(c.ink()).cardClick { items.firstOrNull()?.third?.second?.invoke() }
+        .padding(horizontal = 14.dp, vertical = 12.dp)) {
+        CardHead(c.icon(), tr("À faire"), c.ink(), items.size.takeIf { it > 0 }?.toString())
+        Spacer(Modifier.height(4.dp))
+        if (items.isEmpty()) Text(tr("Tout est fait pour aujourd'hui."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
+        Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.SpaceEvenly) {
+            items.take(3).forEach { (icon, hue, t) ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { t.second() }.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconChip(icon, hue, 26.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(t.first, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
 /** Tâches perso de la carte À faire : en ajouter, en retirer. */
 @Composable
 private fun TodosDialog(onDismiss: () -> Unit) {
@@ -842,6 +872,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         app.superhealth.ui.wellbeing.CheckinCard(c, size, c == checkinFirst, modifier, nav)
         return
     }
+    if (c == DashCard.FOCUS && size == app.superhealth.CardSize.M) { FocusMedium(c, vm, an, h, modifier, nav, tab); return }
     // cartes principales : leur famille de widgets, dans les quatre tailles
     if (FamilyCard(c, size, vm, nav, h, an, s, modifier, tab)) return
     // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
@@ -1110,11 +1141,18 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
             val db = vm.training.db.collectAsState().value ?: return
             val weekStart = TrainingAnalytics.weekStart(LocalDate.now())
             val sets = TrainingAnalytics.setsByMuscle(st.history.filter { !localDate(it.startTime).isBefore(weekStart) }, db)
-            // petit et moyen : la silhouette seule, sans texte
-            if (size != app.superhealth.CardSize.L) {
-                Box(modifier.then(if (size == app.superhealth.CardSize.S) Modifier.square() else Modifier.height(190.dp)).clip(RoundedCornerShape(CardRadius))
-                    .dashCardBackground().cardClick { nav.go("levels") }.padding(8.dp), contentAlignment = Alignment.Center) {
+            // petit : la silhouette seule ; moyen : l'en-tête commun, la silhouette dessous
+            if (size == app.superhealth.CardSize.S) {
+                Box(modifier.square().clip(RoundedCornerShape(CardRadius)).dashCardBackground().cardClick { nav.go("levels") }.padding(8.dp), contentAlignment = Alignment.Center) {
                     BodyMap(intensity(sets, TrainingAnalytics.SETS_HIGH), st.settings.sex, Modifier.fillMaxSize())
+                }
+                return
+            }
+            if (size == app.superhealth.CardSize.M) {
+                Column(modifier.fillMaxWidth().heightIn(min = MEDIUM_H).clip(RoundedCornerShape(CardRadius)).dashCardBackground().cardClick { nav.go("levels") }.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                    CardHead(c.icon(), c.short(), c.ink())
+                    Spacer(Modifier.height(6.dp))
+                    BodyMap(intensity(sets, TrainingAnalytics.SETS_HIGH), st.settings.sex, Modifier.fillMaxWidth().weight(1f).heightIn(min = 120.dp))
                 }
                 return
             }

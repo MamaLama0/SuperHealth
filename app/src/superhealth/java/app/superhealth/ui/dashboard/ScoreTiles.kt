@@ -99,22 +99,6 @@ internal fun tileExtra(c: DashCard, h: HealthSnap): TileExtra {
 @Composable
 internal fun TileLabel(icon: ImageVector, title: String, hue: Color, trailing: String? = null) = CardHead(icon, title, hue, trailing)
 
-@Composable
-private fun ScoreBox(modifier: Modifier, hue: Color, onClick: () -> Unit, pad: Dp, content: @Composable ColumnScope.() -> Unit) =
-    Column(modifier.clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue).cardClick(onClick).padding(pad), content = content)
-
-/** Détail de l'en-tête : pourcentage d'objectif, Repos de la nuit ou écart signé d'une tendance. */
-private fun trailingOf(c: DashCard, d: CompactData, x: TileExtra): String? = when {
-    c == DashCard.SLEEP && x.rest != null -> x.rest.toString()
-    c == DashCard.WEIGHT || c == DashCard.EXPENDITURE -> d.history.filterNotNull().takeIf { it.size >= 3 }?.let { v ->
-        val delta = v.last() - v.first()
-        val s = formatNumber(abs(delta), if (c == DashCard.WEIGHT) 1 else 0)
-        if (s == "0" || s == "0,0" || s == "0.0") null else (if (delta < 0) "−" else "+") + s + (d.unit?.let { " $it" } ?: "")
-    }
-    c == DashCard.CALORIES || c == DashCard.EFFORT -> null
-    else -> d.progress?.takeIf { d.unit != "%" && !d.value.endsWith("%") }?.let { "${(it * 100).roundToInt()} %" }
-}
-
 private fun CompactData.hasChart() = history.count { it != null } >= 2
 
 /** Valeur et unité de la tuile (le Cœur montre la FC au repos quand elle existe). */
@@ -130,60 +114,6 @@ private fun titleOf(c: DashCard, x: TileExtra) = when {
 }
 
 /**
- * Graphique du bas, selon la mesure : il remplit la place sous la valeur. Sans aucune donnée à tracer : la note et le
- * symbole de la carte en filigrane, pour ne jamais laisser une tuile vide.
- */
-@Composable
-private fun ColumnScope.TileChart(c: DashCard, d: CompactData, x: TileExtra, hue: Color, times: Boolean) {
-    val m = Modifier.fillMaxWidth().weight(1f)
-    val hourly = x.hourly?.takeIf { h -> h.any { (it ?: 0.0) > 0 } }
-    when {
-        c == DashCard.SLEEP && x.night?.staged == true -> {
-            Hypnogram(x.night, m)
-            if (times) Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
-                Text(timeOf(x.night.bedMs), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
-                Spacer(Modifier.weight(1f))
-                Text(timeOf(x.night.wakeMs), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
-            }
-        }
-        c == DashCard.STEPS && hourly != null -> HourBars(hourly, hue, LocalTime.now().hour, m)
-        c == DashCard.EFFORT && x.effortRange != null -> { Spacer(Modifier.weight(1f)); RangeBar(d.progress ?: 0f, x.effortRange, hue, Modifier.fillMaxWidth()) }
-        d.hasChart() -> if (d.bars) DayBars(d.history, d.goal, hue, m) else TileLine(d.history, hue, m)
-        // des jours prévus mais pas encore de valeurs : les barres vides disent la période
-        d.bars && d.history.isNotEmpty() -> DayBars(d.history, d.goal, hue, m)
-        d.progress != null -> { Spacer(Modifier.weight(1f)); ProgressLine(d.progress, hue, Modifier.fillMaxWidth()) }
-        else -> Box(m, contentAlignment = Alignment.BottomStart) {
-            TileNote(c, d)
-            Icon(c.icon(), null, Modifier.align(Alignment.BottomEnd).size(40.dp), tint = veilOf(hue).copy(alpha = 0.3f))
-        }
-    }
-}
-
-/** Note du bas quand il n'y a pas de graphique : explication courte, ou le manque de données d'une tendance. */
-@Composable
-private fun TileNote(c: DashCard, d: CompactData) {
-    val note = if (c == DashCard.WEIGHT || c == DashCard.EXPENDITURE || c == DashCard.BALANCE) tr("Peu de données")
-        else d.label.takeIf { !it.equals(c.short(), ignoreCase = true) && !it.equals(tr(c.label), ignoreCase = true) }
-    note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 44.dp)) }
-}
-
-/** Valeurs à anneau : calories et objectifs sans historique. */
-private fun ringed(c: DashCard, d: CompactData) = c == DashCard.CALORIES || (d.progress != null && !d.hasChart() && c != DashCard.EFFORT)
-
-@Composable
-private fun RingValue(c: DashCard, d: CompactData, hue: Color, modifier: Modifier, valueSize: Float) {
-    Box(modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
-        Dial(d.progress ?: 0f, hue, Modifier.fillMaxSize(), null, 360f)
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(d.value, style = MaterialTheme.typography.headlineMedium, fontSize = valueSize.sp, lineHeight = (valueSize * 1.1f).sp, color = hue.onContainer(), maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 12.dp))
-            val sub = if (c == DashCard.CALORIES) d.label.lowercase() else d.progress?.let { "${(it * 100).roundToInt()} %" } ?: d.unit.orEmpty()
-            Text(sub, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1)
-        }
-    }
-}
-
-/**
  * Petit (un tiers, carré), une seule logique pour toutes les cartes : avec un objectif, l'anneau et la valeur au centre ;
  * sans objectif, la valeur et sa courbe ; sans historique, le symbole et la valeur.
  */
@@ -193,28 +123,30 @@ internal fun CompactBubble(c: DashCard, d: CompactData, modifier: Modifier, x: T
     val (value, unit) = shown(c, d, x)
     when {
         d.progress != null -> RingTile(modifier, d.onClick, hue, d.progress) { RingCenter(c.icon(), hue, value, unit) }
-        d.hasChart() -> CurveTile(modifier, d.onClick, c.icon(), c.short(), hue, value, unit) {
+        d.hasChart() -> CurveTile(modifier, d.onClick, c.icon(), c.tiny(), hue, value, unit) {
             if (d.bars) DayBars(d.history, d.goal, hue, it) else TileLine(d.history, hue, it)
         }
         else -> RingTile(modifier, d.onClick, hue, null, ring = false) { BigChip(c.icon(), hue); Spacer(Modifier.height(6.dp)); RingCenter(null, hue, value, unit) }
     }
 }
 
-/** Moyen (demi-largeur) : valeur en haut, graphique de la mesure en bas sur toute la largeur. */
+/** Moyen générique : l'anatomie commune (voir MediumShell) ; la courbe ou les barres de la carte, sinon sa progression, sinon son symbole. */
 @Composable
 internal fun CompactMedium(c: DashCard, d: CompactData, modifier: Modifier, x: TileExtra = TileExtra()) {
     val hue = c.ink()
-    ScoreBox(modifier.fillMaxWidth().heightIn(min = 160.dp), hue, d.onClick, 16.dp) {
-        TileLabel(c.icon(), titleOf(c, x), hue, trailingOf(c, d, x)?.takeIf { !ringed(c, d) })
-        if (ringed(c, d)) {
-            Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) { RingValue(c, d, hue, Modifier.size(104.dp), 24f) }
-        } else {
-            val (v, u) = shown(c, d, x)
-            Spacer(Modifier.height(2.dp))
-            Spacer(Modifier.height(4.dp))
-            CardValue(v, u, 24.sp, hue.onContainer())
-            Spacer(Modifier.height(8.dp))
-            TileChart(c, d, x, hue, times = true)
+    val (v, u) = shown(c, d, x)
+    val delta = d.delta(c)?.let { (n, t) -> (if (n < 0) "−" else "+") + t }
+    val note = d.label.takeIf { !it.equals(c.short(), ignoreCase = true) && !it.equals(tr(c.label), ignoreCase = true) }
+    val detail = d.progress?.takeIf { d.unit != "%" && !d.value.endsWith("%") }?.let { "${(it * 100).roundToInt()} %" }
+    MediumShell(modifier, d.onClick, c.icon(), titleOf(c, x), hue, detail, value = v, unit = u,
+        caption = if (v != "—") delta ?: note else if (c == DashCard.LOAD) tr("Pas assez de données") else tr("Pas de données")) {
+        when {
+            d.week != null -> WeekDots(d.week, hue, Modifier.padding(bottom = 4.dp))
+            d.hasChart() -> if (d.bars) DayBars(d.history, d.goal, hue, Modifier.fillMaxSize()) else TileLine(d.history, hue, Modifier.fillMaxSize())
+            d.progress != null -> ProgressLine(d.progress, hue, Modifier.fillMaxWidth().padding(bottom = 4.dp))
+            d.bars && d.history.isNotEmpty() -> DayBars(d.history, d.goal, hue, Modifier.fillMaxSize())
+            v == "—" -> EmptyDots()
+            else -> BigChip(c.icon(), hue, Modifier.align(Alignment.BottomEnd))
         }
     }
 }
@@ -237,7 +169,7 @@ internal fun Dial(f: Float, hue: Color, modifier: Modifier, stroke: Dp?, span: F
 
 /** Couleur des points « vides » (heures sans pas, heures à venir) : la piste, jamais une teinte chaude assombrie. */
 @Composable
-private fun emptyDot(): Color = softTrack()
+private fun emptyDot(): Color = Mf.colors.text.copy(alpha = 0.16f)
 
 /** Pas heure par heure : barres en dégradé jusqu'à l'heure en cours, points pour les heures vides et à venir. */
 @Composable
@@ -303,7 +235,7 @@ internal fun TileLine(values: List<Double?>, hue: Color, modifier: Modifier) {
 /** Barre d'objectif en dégradé. */
 @Composable
 internal fun ProgressLine(f: Float, hue: Color, modifier: Modifier) {
-    val track = softTrack()
+    val track = emptyDot()
     Canvas(modifier.height(8.dp)) {
         val r = CornerRadius(size.height / 2)
         drawRoundRect(track, cornerRadius = r)

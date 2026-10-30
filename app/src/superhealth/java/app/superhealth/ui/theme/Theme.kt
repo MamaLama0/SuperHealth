@@ -65,7 +65,7 @@ val BodyGrey = Color(0xFFDCDCDC)
 val MuscleIdle = Color(0xFFEEEEEE)
 
 /** Couleurs des programmes. */
-val ProgramColors = ProgramPalette
+val ProgramColors: List<Color> get() = ProgramPalette
 
 /** Familles de mesures santé, à la manière de Google Santé (une couleur par famille). */
 object HealthHues {

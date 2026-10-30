@@ -1,5 +1,6 @@
 package app.superhealth.ui.dashboard
 
+import androidx.compose.foundation.layout.heightIn
 import app.superhealth.ui.theme.dashCardBackground
 import app.superhealth.ui.charts.smooth
 import androidx.compose.foundation.Canvas
@@ -93,6 +94,20 @@ internal fun InsightsCard(c: DashCard, size: CardSize, vm: SuperViewModel, s: Nu
         // moyen et bandeau : le constat le plus marquant seul, sans titre (le symbole et la couleur suffisent)
         val i = list.orEmpty().firstOrNull()
         val hue = i?.source?.color ?: c.ink()
+        // moyen : l'en-tête commun, le constat dessous
+        if (size == CardSize.M) {
+            Column(modifier.fillMaxWidth().heightIn(min = MEDIUM_H).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
+                .cardClick(i?.let { { nav.go(it.route) } }).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                CardHead(i?.icon ?: c.icon(), tr("Insights"), hue)
+                Spacer(Modifier.height(10.dp))
+                Text(i?.text(s) ?: tr("Les constats arrivent après quelques jours de suivi."), style = MaterialTheme.typography.titleSmall, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                list.orEmpty().getOrNull(1)?.let { n ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(n.text(s), Modifier.clickable { nav.go(n.route) }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            return
+        }
         Row(modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground()
             .cardClick(i?.let { { nav.go(it.route) } }).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(34.dp).clip(CircleShape).background(hue.container()), contentAlignment = Alignment.Center) {
@@ -198,10 +213,12 @@ internal fun CorrelationCard(c: DashCard, size: CardSize, vm: SuperViewModel, s:
                 DualChart(data?.first.orEmpty(), data?.second.orEmpty(), a, b, days, Modifier.weight(1f).height(36.dp))
                 Spacer(Modifier.width(10.dp)); rLabel()
             }
-            else -> Column(box.padding(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) { pair(); Spacer(Modifier.weight(1f)); rLabel() }
-                Spacer(Modifier.height(10.dp))
-                DualChart(data?.first.orEmpty(), data?.second.orEmpty(), a, b, days, Modifier.fillMaxWidth().height(80.dp))
+            else -> Column(box.heightIn(min = MEDIUM_H).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                CardHead(c.icon(), c.short(), c.ink(), rText, if (r?.significant == true) Mf.colors.text else Mf.colors.textSecondary)
+                Spacer(Modifier.height(6.dp))
+                pair()
+                Spacer(Modifier.height(6.dp))
+                DualChart(data?.first.orEmpty(), data?.second.orEmpty(), a, b, days, Modifier.fillMaxWidth().weight(1f).heightIn(min = 70.dp))
             }
         }
         return

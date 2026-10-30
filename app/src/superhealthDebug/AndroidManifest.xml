@@ -15,6 +15,7 @@
         <!-- debug seulement : galerie des graphiques (adb shell am start -n app.superhealth/app.superhealth.debug.ChartGalleryActivity) -->
         <activity android:name="app.superhealth.debug.ChartGalleryActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <!-- debug seulement : 30 jours de données de démo (adb shell am start -n app.superhealth/app.superhealth.debug.DemoDataActivity) -->
+        <activity android:name="app.superhealth.debug.WidgetPreviewActivity" android:exported="true" />
         <activity android:name="app.superhealth.debug.DemoDataActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
     </application>
 </manifest>

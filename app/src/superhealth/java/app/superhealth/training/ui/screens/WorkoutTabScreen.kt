@@ -234,13 +234,13 @@ private fun ActiveProgramCard(p: Program, db: ExerciseDb, sex: app.superhealth.t
  */
 @Composable
 internal fun ProgramPicker(p: Program, db: ExerciseDb?, sex: app.superhealth.training.domain.Sex, resume: Boolean, bodyH: androidx.compose.ui.unit.Dp, onResume: () -> Unit,
-                           onStart: (Int) -> Unit, onEdit: (Int) -> Unit, below: @Composable (Int) -> Unit = {}) {
+                           onStart: (Int) -> Unit, onEdit: (Int) -> Unit, oneLine: Boolean = false, below: @Composable (Int) -> Unit = {}) {
     val color = ProgramColors[p.color % ProgramColors.size]
     val train = p.days.withIndex().filter { !it.value.isRest }
     var selected by androidx.compose.runtime.saveable.rememberSaveable(p.id) { androidx.compose.runtime.mutableStateOf(-1) }
     // toutes visibles, sans défilement : jusqu'à 4 sur une ligne, puis deux lignes égales (plus basses) ; carte à demi-largeur : les corps seuls
-    val half = app.superhealth.ui.dashboard.LocalCardHalf.current
-    val perRow = when { train.size <= 4 -> train.size.coerceAtLeast(1); train.size <= 8 -> (train.size + 1) / 2; else -> 4 }
+    val half = oneLine
+    val perRow = when { oneLine || train.size <= 4 -> train.size.coerceAtLeast(1); train.size <= 8 -> (train.size + 1) / 2; else -> 4 }
     val lines = train.chunked(perRow)
     val height = if (lines.size > 1) bodyH * 0.8f else bodyH
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -301,7 +301,7 @@ fun HistoryScreen(vm: AppViewModel, nav: NavHostController) {
 }
 
 /** Libellé court d'un jour : lettre de variante (« Corps entier A » → « A ») ou premier mot. */
-private fun dayShort(name: String): String {
+internal fun dayShort(name: String): String {
     val parts = name.split(' ')
     return if (parts.size > 1 && parts.last().length == 1) "${parts.first()} ${parts.last()}" else parts.first()
 }

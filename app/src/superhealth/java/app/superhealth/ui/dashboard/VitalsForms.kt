@@ -102,21 +102,22 @@ internal fun VitalsKitCard(c: DashCard, size: CardSize, title: String, items: Li
     val v = verdict(rows)
     val box = Modifier.clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue).cardClick(onOpen)
     when (size) {
-        CardSize.S -> Column(modifier.square().then(box).padding(12.dp)) {
+        CardSize.S -> if (rows.isEmpty()) RingTile(modifier, onOpen, hue, null, ring = false) { BigChip(c.icon(), hue); Spacer(Modifier.height(6.dp)); RingCenter(null, hue, "—", null) }
+        else Column(modifier.square().then(box).padding(12.dp)) {
             CardHead(c.icon(), c.short(), hue)
             Spacer(Modifier.weight(1f))
-            if (rows.isEmpty()) Note(empty)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { rows.take(3).forEach { InlineVital(it, 15.sp) } }
         }
         CardSize.W -> Row(modifier.fillMaxWidth().heightIn(min = 72.dp).then(box).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (rows.isEmpty()) Note(empty)
             rows.take(3).forEach { VitalTile(it, Modifier.weight(1f), false, compact = true) }
         }
-        CardSize.M -> Column(modifier.fillMaxWidth().heightIn(min = 118.dp).then(box).padding(14.dp)) {
-            CardHead(c.icon(), c.short(), hue, v?.first, v?.second)
-            Spacer(Modifier.height(10.dp))
+        // moyen : même hauteur et même en-tête que les autres, une mesure par ligne
+        CardSize.M -> Column(modifier.fillMaxWidth().heightIn(min = MEDIUM_H).then(box).padding(horizontal = 14.dp, vertical = 12.dp)) {
+            CardHead(c.icon(), c.short(), hue, v?.first?.takeIf { it.length <= 7 }, v?.second)
+            Spacer(Modifier.height(8.dp))
             if (rows.isEmpty()) Note(empty)
-            Grid(rows.take(4), false, onMetric)
+            Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.SpaceEvenly) { rows.take(4).forEach { InlineVital(it, 16.sp) } }
         }
         CardSize.L -> Column(modifier.fillMaxWidth().then(box).padding(16.dp)) {
             CardHead(c.icon(), title, hue, span, Mf.colors.textSecondary)

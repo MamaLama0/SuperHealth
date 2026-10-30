@@ -127,9 +127,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
     val target = a?.targetFor(day)?.macros
     val flag = flags[day]
     // calories de la semaine affichée, lues dans les repas (les analyses ne couvrent que les jours depuis le début du programme)
-    val monday = day - LocalDate.ofEpochDay(day).dayOfWeek.value + 1
-    val weekEntries by remember(monday) { vm.repo.entries.rangeFlow(monday, monday + 6) }.collectAsState(initial = emptyList())
-    val intakeByDay = remember(weekEntries) { weekEntries.groupBy { it.epochDay }.mapValues { (_, l) -> l.sumOf { it.kcal } } }
+    val intakeByDay by vm.weekIntake.collectAsState()
 
     if (mealHours) MealHoursDialog { mealHours = false }
     Box(Modifier.fillMaxSize()) {
