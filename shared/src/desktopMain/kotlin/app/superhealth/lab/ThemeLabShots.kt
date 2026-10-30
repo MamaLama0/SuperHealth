@@ -16,7 +16,13 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "6") {
+    if (round == "7") {
+        val only = args.getOrNull(2)
+        val all = listOf<Pair<String, @Composable () -> Unit>>("instrument-1-accueil" to { InstHome() }, "instrument-2-nutrition" to { InstFood() }, "instrument-3-activites" to { InstAct() },
+            "affiche-1-accueil" to { AffHome() }, "affiche-2-nutrition" to { AffFood() }, "affiche-3-activites" to { AffAct() },
+            "galet-1-accueil" to { GalHome() }, "galet-2-nutrition" to { GalFood() }, "galet-3-activites" to { GalAct() })
+        all.filter { only == null || it.first.startsWith(only) }.forEach { (n, c) -> shot(n, c) }
+    } else if (round == "6") {
         val only = args.getOrNull(2)
         for (st in STYLES.filter { only == null || it.name == only }) {
             shot("s-${st.name}-1-accueil") { StyleHome(st) }
