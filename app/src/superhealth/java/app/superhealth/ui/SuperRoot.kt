@@ -107,11 +107,12 @@ import app.superhealth.training.ui.screens.WorkoutTabScreen
 import app.superhealth.training.ui.trainingGraph
 import app.superhealth.ui.dashboard.DashboardEditScreen
 import app.superhealth.ui.dashboard.DashboardScreen
+import app.superhealth.ui.health.ActivityWeek
+import app.superhealth.ui.health.RecentActivities
 import app.superhealth.ui.health.ActivitiesHistoryScreen
 import app.superhealth.ui.health.DevicesScreen
 import app.superhealth.ui.health.LogSheet
 import app.superhealth.ui.health.MetricScreen
-import app.superhealth.ui.health.OtherActivities
 import app.superhealth.ui.health.PermissionsScreen
 import app.superhealth.ui.health.WorkoutMapScreen
 import app.superhealth.ui.health.WorkoutScreen
@@ -216,10 +217,11 @@ fun SuperRoot(vm: SuperViewModel) {
                 // onglet adapté aux parties choisies : musculation, activités de la montre, ou l'endurance d'abord
                 val f by app.superhealth.SuperPrefs.settings.collectAsState()
                 val endurance = vm.nutrition.program.collectAsState().value.training == app.superhealth.nutrition.domain.Training.CARDIO
-                WorkoutTabScreen(vm.training, nav, strength = f.has(app.superhealth.Feature.TRAINING),
-                    cardioFirst = endurance && f.has(app.superhealth.Feature.HEALTH)) {
-                    if (f.has(app.superhealth.Feature.HEALTH)) OtherActivities(vm, nav)
-                }
+                val strength = f.has(app.superhealth.Feature.TRAINING); val health = f.has(app.superhealth.Feature.HEALTH)
+                WorkoutTabScreen(vm.training, nav, strength = strength, cardioFirst = endurance && health,
+                    week = { ActivityWeek(vm, nav, strength, health) },
+                    recent = { RecentActivities(vm, nav, strength, health) },
+                    historyRoute = if (health) "h/activities" else "history")
             }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
@@ -229,6 +231,8 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("settings/style") { app.superhealth.ui.settings.StyleLabScreen(vm, nav) }
             composable("settings/units") { app.superhealth.ui.settings.UnitsSettingsScreen(vm, nav) }
             composable("settings/hc") { app.superhealth.ui.settings.HealthConnectSettingsScreen(vm, nav) }
+            composable("settings/activities") { app.superhealth.ui.health.ActivityImportScreen(vm, nav) }
+            composable("settings/security") { app.superhealth.ui.settings.SecurityScreen(nav) }
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }

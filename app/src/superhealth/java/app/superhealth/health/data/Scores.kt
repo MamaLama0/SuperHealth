@@ -192,9 +192,13 @@ object Scores {
 
     const val STRAIN_D = 7201.0
 
-    /** Fréquence maximale : Tanaka (208 − 0,7 × âge), ou le 99,5e percentile observé s'il est plus haut (≥ 600 mesures). */
-    fun hrMax(age: Int, observed: List<Int>): Double {
-        val tanaka = 208 - 0.7 * age
+    /**
+     * Fréquence maximale : Tanaka (2001, 208 − 0,7 × âge) ; chez la femme Gulati (2010, Circulation 122:130, 5 437 femmes :
+     * 206 − 0,88 × âge, la formule « masculine » la surestime). Le 99,5e percentile observé l'emporte s'il est plus haut
+     * (≥ 600 mesures), ce qui couvre les femmes entraînées que Gulati sous-estime.
+     */
+    fun hrMax(age: Int, observed: List<Int>, female: Boolean = false): Double {
+        val tanaka = if (female) 206 - 0.88 * age else 208 - 0.7 * age
         if (observed.size < 600) return tanaka
         val s = observed.sorted()
         return max(tanaka, s[((s.size - 1) * 0.995).toInt()].toDouble())
@@ -266,11 +270,22 @@ object Scores {
 
     // ---- Charge acquise / aiguë (Effort) --------------------------------------------------
 
-    /** Charge aiguë (moyenne sur 7 j) et chronique (28 j) de l'Effort ; null sans 14 jours mesurés. */
+    /**
+     * Charge aiguë (7 j) et chronique (28 j) de l'Effort en moyennes mobiles exponentielles, λ = 2 / (N + 1) : plus
+     * sensibles que les moyennes glissantes, les derniers jours pesant le plus (Williams et al. 2017, Br J Sports Med
+     * 51:209 ; Murray et al. 2017, Br J Sports Med 51:749). Null sans 14 jours mesurés.
+     */
     fun load(efforts: List<Double?>): Pair<Double, Double>? {
-        val last28 = efforts.takeLast(28)
-        if (last28.count { it != null } < 14) return null
-        return last28.takeLast(7).map { it ?: 0.0 }.average() to last28.map { it ?: 0.0 }.average()
+        if (efforts.takeLast(28).count { it != null } < 14) return null
+        return ewma(efforts, 7).last() to ewma(efforts, 28).last()
+    }
+
+    /** Moyenne mobile exponentielle jour par jour (jour sans mesure = 0), amorcée sur la moyenne de la fenêtre. */
+    fun ewma(values: List<Double?>, days: Int): List<Double> {
+        if (values.isEmpty()) return emptyList()
+        val k = 2.0 / (days + 1)
+        var m = values.take(days).map { it ?: 0.0 }.average()
+        return values.map { v -> m = k * (v ?: 0.0) + (1 - k) * m; m }
     }
 
     // ---- Lecture des données --------------------------------------------------------------
@@ -281,6 +296,8 @@ object Scores {
     fun invalidate() { chargeCache.clear(); effortCache.clear(); restCache.clear(); habits = null; app.superhealth.wellbeing.BodyAlert.invalidate() }
 
     private fun age(): Int = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().age }.getOrDefault(30).coerceIn(10, 100)
+    private fun female(): Boolean = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().gender ==
+        nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.GENDER_FEMALE }.getOrDefault(false)
 
     /** Pouls (s, bpm) du jour pour l'Effort. */
     suspend fun heart(date: LocalDate): List<Pair<Long, Int>> = Bridge.minuteHeart(date)
@@ -289,7 +306,7 @@ object Scores {
         if (date.isBefore(LocalDate.now())) effortCache[date]?.let { return it.takeUnless { v -> v.isNaN() } }
         val hr = heart(date)
         val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: hr.map { it.second.toDouble() }.sorted().let { s -> s.getOrNull(s.size / 10) }
-        val max = hrMax(age(), hr.map { it.second })
+        val max = hrMax(age(), hr.map { it.second }, female())
         val (hrTrimp, covered) = if (rest != null) trimp(hr, rest, max) else 0.0 to 0.0
         // séances notées (effort ressenti) : leur charge ressentie, au-delà de ce que le pouls a mesuré pendant la séance
         val from = HealthRepository.startMs(date); val to = HealthRepository.endMs(date)
@@ -306,7 +323,7 @@ object Scores {
     suspend fun zonesOf(ctx: Context, date: LocalDate): IntArray? {
         val hr = heart(date).takeIf { it.isNotEmpty() } ?: return null
         val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: hr.map { it.second.toDouble() }.sorted()[hr.size / 10]
-        return zones(hr, rest, hrMax(age(), hr.map { it.second }))
+        return zones(hr, rest, hrMax(age(), hr.map { it.second }, female()))
     }
 
     private suspend fun night(ctx: Context, d: LocalDate, need: Double): Night {

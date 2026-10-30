@@ -30,9 +30,6 @@ object BodyAlert {
         HARD_DAY("la grosse journée d'effort d'hier"),
         LATE("l'effort en soirée"),
         RESTLESS("la nuit agitée"),
-        ALCOHOL("l'alcool d'hier soir"),
-        STRESS("la journée stressante d'hier"),
-        TRAVEL("le voyage"),
     }
 
     /** Écart à la médiane habituelle, dans l'unité de la mesure. */
@@ -117,7 +114,7 @@ object BodyAlert {
             val prev = night(dates.lastIndex - 1)
             val lastCauses = causes(ctx, today)
             val prevCauses = causes(ctx, today.minusDays(1))
-            val feelLow = (Checkin.today()?.energy ?: 5) <= 2 || Journal.tagged(Journal.Tag.SICK, today)
+            val feelLow = (Checkin.today()?.energy ?: 5) <= 2
             Status(level(last.first, lastCauses, prev.first, prevCauses, feelLow), last.first, lastCauses)
         }
         cache = today to status
@@ -139,7 +136,7 @@ object BodyAlert {
             val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: Bridge.healthValue(ctx, Metric.RESTING_HR, eve)
             if (rest != null) {
                 val hr = (Bridge.minuteHeart(eve) + Bridge.minuteHeart(date)).filter { it.first * 1000 in (start - 3 * 3_600_000L) until start }
-                val max = Scores.hrMax(age(), hr.map { it.second })
+                val max = Scores.hrMax(age(), hr.map { it.second }, runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().gender == nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.GENDER_FEMALE }.getOrDefault(false))
                 if (hr.count { it.second >= rest + 0.6 * (max - rest) } >= 10) out += Cause.LATE
             }
             // réveils : au moins 45 min éveillé ou 300 pas dans les heures entières de la nuit
@@ -148,10 +145,6 @@ object BodyAlert {
                 .filter { it.timestampMs >= start && it.timestampMs + 3_600_000L <= end }.sumOf { it.value }
             if (awake >= 45 || steps >= 300) out += Cause.RESTLESS
         }
-        val tags = Journal.days.value[eve.toEpochDay()]?.tags.orEmpty()
-        if (Journal.Tag.ALCOHOL.name in tags) out += Cause.ALCOHOL
-        if (Journal.Tag.STRESS.name in tags) out += Cause.STRESS
-        if (Journal.Tag.TRAVEL.name in tags || Journal.tagged(Journal.Tag.TRAVEL, date, 0)) out += Cause.TRAVEL
         return out
     }
 

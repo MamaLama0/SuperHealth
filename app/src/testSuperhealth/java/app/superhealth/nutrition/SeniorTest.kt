@@ -68,4 +68,15 @@ class SeniorTest {
         // homme 175 cm : idéal 70,6 kg ; 110 kg → 70,6 + 0,25 × 39,4
         assertEquals(80.45, Senior.adjustedKg(110.0, 175.0, false), 0.05)
     }
+    @Test fun severeObesityCapsAt1000() {
+        // 40 ans, 175 cm, 140 kg = IMC 45,7 : 1 %/sem. = 1 540 kcal/j → 1 000 au plus (NHLBI)
+        val (k, r) = Senior.limitCut(40, 175.0, 140.0, 3200.0, 1660.0)
+        assertEquals(2200.0, k, 0.01); assertEquals(Senior.Reason.SEVERE, r)
+        // IMC 34 : pas de plafond chez l'adulte
+        assertEquals(1660.0 to null, Senior.limitCut(40, 175.0, 104.0, 3200.0, 1660.0))
+        // 70 ans IMC 45 : le plafond d'âge (500) reste le plus bas
+        assertEquals(Senior.Reason.CAPPED, Senior.limitCut(70, 175.0, 140.0, 3000.0, 2000.0).second)
+        assertEquals(1000.0 * 7 / 7700 / 140 * 100, Senior.maxCutRatePct(40, 140.0, 175.0)!!, 1e-9)
+        assertNull(Senior.maxCutRatePct(40, 90.0, 175.0))
+    }
 }

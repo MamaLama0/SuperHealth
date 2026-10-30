@@ -36,6 +36,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.theme.container
+import app.superhealth.ui.coach.askCoach
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.ui.graphics.graphicsLayer
 import app.superhealth.ui.wellbeing.color
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,16 +78,18 @@ import app.superhealth.ui.theme.ProgramColors
 import app.superhealth.training.ui.volume
 
 /**
- * Onglet Activités de SuperHealth : programme de musculation actif, changement de programme, puis [others]
- * (course, marche, randonnée… de la montre et de Health Connect) et l'historique de musculation.
+ * Onglet Activités, pensé dans l'ordre où on s'en sert : la semaine d'un coup d'œil ([week], toutes activités), la séance
+ * du jour et trois gestes rapides, les activités récentes ([recent], musculation et cardio mêlées), puis les programmes.
+ * L'import de fichiers et l'historique de la montre vivent dans les Réglages (Données).
  */
 @Composable
 fun WorkoutTabScreen(
     vm: AppViewModel, nav: NavHostController,
-    top: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
-    /** Musculation activée (Réglages > Fonctions) ; [cardioFirst] : les activités de la montre passent devant (sportif d'endurance). */
+    /** Musculation activée (Réglages > Fonctions) ; [cardioFirst] : les activités récentes passent devant (sportif d'endurance). */
     strength: Boolean = true, cardioFirst: Boolean = false,
-    others: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
+    week: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
+    recent: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
+    historyRoute: String = "history",
 ) {
     val st by vm.state.collectAsState()
     val db by vm.db.collectAsState()
@@ -91,92 +97,99 @@ fun WorkoutTabScreen(
     var create by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         ScreenTitle(tr("Activités"), actions = {
-            if (strength) app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate("history") }
+            app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate(historyRoute) }
             app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
         })
         Column(Modifier.padding(horizontal = 16.dp)) {
-            top()
-            if (cardioFirst || !strength) others()
+            week()
+            if (cardioFirst || !strength) recent()
             if (strength) {
-            SectionLabel(tr("Musculation"))
-            WeekStrip(st.history, st.settings) { nav.navigate("t/insights") }
-            var askSkip by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-            if (askSkip) androidx.compose.material3.AlertDialog(onDismissRequest = { askSkip = false }, containerColor = Mf.colors.card,
-                title = { Text(tr("Passer cette séance ?")) }, text = { Text(tr("Elle est retirée du cycle en cours ; la suivante devient la prochaine.")) },
-                confirmButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false; vm.skipNext() }) { Text(tr("Passer"), color = Mf.colors.accent) } },
-                dismissButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
-            if (active != null) ActiveProgramCard(active, db!!, nav, resume = st.session != null, onSkip = { askSkip = true },
-                onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") },
-                onAdjusted = { delta -> app.superhealth.ui.wellbeing.startAdjusted(vm, nav, delta) })
-            else MfCard(onClick = { nav.navigate("wizard") }) {
-                // Pas de programme actif : invitation à en générer un
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp)).background(WorkoutBlue), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(26.dp))
-                    }
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("Créer un programme"), style = MaterialTheme.typography.titleMedium)
-                        Text(tr("Généré selon vos objectifs, votre emploi du temps et votre équipement."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-                    }
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (st.session == null) PillButton(tr("Séance vide"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Bolt) {
-                    if (st.session == null) vm.startEmpty(); nav.navigate("session")
-                }
-                // Programme généré ou manuel, ou séance perso (sans l'algorithme de génération).
-                PillButton(tr("Créer"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Add) { create = true }
-            }
-            if (create) CreateTrainingSheet(vm, nav) { create = false }
-            // 2.2 : le coach construit ou ajuste le programme avec ses outils (exercices de la salle, historique)
-            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (active == null) app.superhealth.ui.coach.CoachChip(tr("Programme avec le coach"),
-                    tr("Construis-moi un programme de musculation adapté à mon niveau, mon matériel et mes objectifs. Pose-moi d'abord les questions utiles."), nav)
-                else app.superhealth.ui.coach.CoachChip(tr("Ajuster avec le coach"),
-                    trf("Analyse mon programme « %1\$s » et mes dernières séances : que faudrait-il ajuster ?", active.name), nav)
-            }
-
-            val library = st.programs.filter { it.id != active?.id && !it.archived }
-            if (library.isNotEmpty() || st.customWorkouts.isNotEmpty()) {
-                SectionLabel(if (active != null) tr("Changer de programme") else tr("Bibliothèque"))
-                GroupCard {
-                    library.forEachIndexed { i, p ->
-                        if (i > 0) RowDivider()
-                        ProgramRow(p) { nav.navigate("program/${p.id}") }
-                    }
-                    st.customWorkouts.forEachIndexed { i, w ->
-                        if (i > 0 || library.isNotEmpty()) RowDivider()
-                        SettingRow(w.name, trf("%1\$s exercices", w.exercises.size), subtitle = tr("Séance perso"), icon = Icons.Rounded.FitnessCenter, hue = app.superhealth.ui.theme.Base.Grey) {
-                            nav.navigate("custom/${w.id}")
+                SectionLabel(tr("Entraînement"))
+                var askSkip by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                if (askSkip) androidx.compose.material3.AlertDialog(onDismissRequest = { askSkip = false }, containerColor = Mf.colors.card,
+                    title = { Text(tr("Passer cette séance ?")) }, text = { Text(tr("Elle est retirée du cycle en cours ; la suivante devient la prochaine.")) },
+                    confirmButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false; vm.skipNext() }) { Text(tr("Passer"), color = Mf.colors.accent) } },
+                    dismissButton = { androidx.compose.material3.TextButton(onClick = { askSkip = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
+                if (active != null) ActiveProgramCard(active, db!!, nav, resume = st.session != null, onSkip = { askSkip = true },
+                    onStart = { day -> if (st.session == null) vm.startProgramDay(active, day, active.cycleIndex); nav.navigate("session") },
+                    onAdjusted = { delta -> app.superhealth.ui.wellbeing.startAdjusted(vm, nav, delta) })
+                else MfCard(onClick = { create = true }) {
+                    // pas de programme actif : une seule invitation, qui ouvre les mêmes choix que « Créer »
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(WorkoutBlue), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(26.dp))
                         }
-                    }
-                }
-            }
-            }
-            if (strength && !cardioFirst) others()
-            if (!strength) { Spacer(Modifier.height(24.dp)); return@Column }
-
-            val archived = st.programs.filter { it.archived }
-            if (archived.isNotEmpty()) {
-                SectionLabel(tr("Archive"))
-                GroupCard { archived.forEachIndexed { i, p -> if (i > 0) RowDivider(); ProgramRow(p) { nav.navigate("program/${p.id}") } } }
-            }
-
-            if (st.history.isNotEmpty()) {
-                SectionLabel(tr("Historique musculation")) { Text(tr("Tout voir"), Modifier.clickable { nav.navigate("history") }, color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge) }
-                GroupCard {
-                    st.history.sortedByDescending { it.startTime }.take(4).forEachIndexed { i, w ->
-                        if (i > 0) RowDivider()
-                        SettingRow(w.name, shortDate(w.startTime), subtitle = "${durationWords(w.durationSec)} · ${st.settings.volume(app.superhealth.training.domain.Analytics.run { w.exercises.sumOf { volume(it.sets) } })}") {
-                            nav.navigate("workoutdetail/${w.id}")
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(tr("Créer un programme"), style = MaterialTheme.typography.titleMedium)
+                            Text(tr("Généré selon vos objectifs, votre emploi du temps et votre équipement."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                         }
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
                     }
                 }
+                Spacer(Modifier.height(10.dp))
+                // trois gestes, toujours au même endroit ; « Créer » disparaît quand la carte du dessus fait déjà l'invitation
+                val coach = app.superhealth.ui.coach.coachAvailable()
+                val wide = listOf(st.session == null, active != null, coach).count { it } == 1
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (st.session == null) ActionTile(Icons.Rounded.Bolt, tr("Séance libre"), WorkoutBlue, Modifier.weight(1f), wide) {
+                        vm.startEmpty(); nav.navigate("session")
+                    }
+                    if (active != null) ActionTile(Icons.Rounded.Add, tr("Créer"), app.superhealth.ui.theme.HealthHues.Fitness, Modifier.weight(1f), wide) { create = true }
+                    if (coach) ActionTile(Icons.Rounded.AutoAwesome, tr("Coach"), app.superhealth.ui.coach.CoachHue, Modifier.weight(1f), wide) {
+                        nav.askCoach(if (active == null) tr("Construis-moi un programme de musculation adapté à mon niveau, mon matériel et mes objectifs. Pose-moi d'abord les questions utiles.")
+                            else trf("Analyse mon programme « %1\$s » et mes dernières séances : que faudrait-il ajuster ?", active.name))
+                    }
+                }
+                if (create) CreateTrainingSheet(vm, nav) { create = false }
             }
+            if (strength && !cardioFirst) recent()
+            if (strength) Programs(st, active, nav)
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/** Geste rapide : symbole teinté au-dessus de son nom, sur une pastille douce ; seul sur sa ligne, côte à côte ([wide]). */
+@Composable
+private fun ActionTile(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, modifier: Modifier, wide: Boolean, onClick: () -> Unit) {
+    val box = modifier.clip(RoundedCornerShape(18.dp)).background(hue.container()).clickable(onClick = onClick)
+    if (wide) Row(box.padding(vertical = 13.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, Modifier.size(20.dp), tint = hue.onContainer())
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = hue.onContainer(), maxLines = 1)
+    } else Column(box.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, Modifier.size(22.dp), tint = hue.onContainer())
+        Spacer(Modifier.height(4.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = hue.onContainer(), maxLines = 1)
+    }
+}
+
+/** Mes programmes : les autres programmes et séances perso ; les archivés sous une ligne repliée. */
+@Composable
+private fun Programs(st: app.superhealth.training.data.AppState, active: Program?, nav: NavHostController) {
+    val library = st.programs.filter { it.id != active?.id && !it.archived }
+    val archived = st.programs.filter { it.archived }
+    if (library.isEmpty() && st.customWorkouts.isEmpty() && archived.isEmpty()) return
+    var showArchived by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    SectionLabel(tr("Mes programmes"))
+    GroupCard {
+        var first = true
+        fun sep(): Boolean = if (first) { first = false; false } else true
+        library.forEach { p -> if (sep()) RowDivider(); ProgramRow(p) { nav.navigate("program/${p.id}") } }
+        st.customWorkouts.forEach { w ->
+            if (sep()) RowDivider()
+            SettingRow(w.name, trf("%1\$s exercices", w.exercises.size), subtitle = tr("Séance perso"), icon = Icons.Rounded.FitnessCenter, hue = app.superhealth.ui.theme.Base.Grey) {
+                nav.navigate("custom/${w.id}")
+            }
+        }
+        if (archived.isNotEmpty()) {
+            if (sep()) RowDivider()
+            Row(Modifier.fillMaxWidth().clickable { showArchived = !showArchived }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(trf("Archivés (%1\$s)", archived.size), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+                Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.size(20.dp).graphicsLayer(rotationZ = if (showArchived) 180f else 0f), tint = Mf.colors.textTertiary)
+            }
+            if (showArchived) archived.forEach { p -> RowDivider(); ProgramRow(p) { nav.navigate("program/${p.id}") } }
         }
     }
 }
@@ -296,39 +309,6 @@ private fun dayShort(name: String): String {
     return if (parts.size > 1 && parts.last().length == 1) "${parts.first().take(5)} ${parts.last()}" else parts.first().take(8)
 }
 
-
-/** Semaine de musculation en un coup d'œil : jours entraînés (lun → dim), séances, séries et volume. */
-@Composable
-private fun WeekStrip(history: List<app.superhealth.training.domain.Workout>, settings: app.superhealth.training.domain.Settings, onClick: () -> Unit) {
-    val today = java.time.LocalDate.now()
-    val start = app.superhealth.training.domain.Analytics.weekStart(today)
-    val week = history.filter { !app.superhealth.ui.localDate(it.startTime).isBefore(start) }
-    val days = week.map { app.superhealth.ui.localDate(it.startTime) }.toSet()
-    val sets = week.sumOf { w -> w.exercises.sumOf { app.superhealth.training.domain.Analytics.workingSets(it).size } }
-    val volume = week.sumOf { w -> w.exercises.sumOf { app.superhealth.training.domain.Analytics.volume(it.sets) } }
-    Row(Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
-        .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(tr("Cette semaine"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
-            Text(trf(if (week.size > 1) "%1\$s séances" else "%1\$s séance", week.size) + " · " + trf(if (sets > 1) "%1\$s séries" else "%1\$s série", sets),
-                style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            if (volume > 0) Text(settings.volume(volume), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            (0L..6L).forEach { i ->
-                val d = start.plusDays(i)
-                val done = d in days
-                Box(Modifier.size(22.dp).clip(CircleShape).background(when {
-                    done -> app.superhealth.ui.theme.WorkoutBlue
-                    d == today -> app.superhealth.ui.theme.WorkoutBlue.copy(alpha = 0.18f)
-                    else -> Mf.colors.chip
-                }), contentAlignment = Alignment.Center) {
-                    Text(app.superhealth.ui.dayLetter(d), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = if (done) Color.White else Mf.colors.textSecondary)
-                }
-            }
-        }
-    }
-}
 
 /** Conseil de la Forme du jour sous « Commencer » : séance plus dure ou allégée en un geste, repos signalé. */
 @Composable

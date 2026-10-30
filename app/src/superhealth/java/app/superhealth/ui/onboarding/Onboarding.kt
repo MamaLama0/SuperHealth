@@ -361,7 +361,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     /** Objectif conseillé par l'âge et l'IMC (null = au choix). */
     fun suggestedGoal() = app.superhealth.nutrition.domain.Senior.suggestedGoal(age(), weightKg, heightCm.toDouble())
     /** Rythme maximal : 1 % en perte (0,5 % en prise), moins dès 60 ans (Senior : déficit borné). */
-    fun maxPace() = if (goal == GoalType.BULK) 0.5 else minOf(1.0, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age(), weightKg) ?: 1.0)
+    fun maxPace() = if (goal == GoalType.BULK) 0.5 else minOf(1.0, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age(), weightKg, heightCm.toDouble()) ?: 1.0)
     fun paceWeeks(): List<Int> {
         val delta = abs(targetKg - weightKg).coerceAtLeast(0.1)
         val max = maxPace()
@@ -373,8 +373,10 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     fun initPace() {
         val options = paceWeeks()
         val pref = abs(targetKg - weightKg) / (weightKg * minOf(if (goal == GoalType.BULK) 0.25 else 0.5, maxPace()) / 100)
-        // dès 65 ans en perte : au moins 6 mois par défaut (ESPEN 2022 : 5–10 % en 6 mois ou plus)
-        val espen = if (goal == GoalType.CUT && app.superhealth.nutrition.domain.Senior.band(age()) >= app.superhealth.nutrition.domain.Senior.Band.OLDER) 26.0 else 0.0
+        // en perte dès 65 ans ou en obésité sévère : au moins 6 mois par défaut (ESPEN 2022 : 5–10 % en 6 mois ou plus ;
+        // NHLBI 1998 : 10 % en 6 mois)
+        val espen = if (goal == GoalType.CUT && (app.superhealth.nutrition.domain.Senior.band(age()) >= app.superhealth.nutrition.domain.Senior.Band.OLDER ||
+            app.superhealth.nutrition.domain.Senior.bmi(weightKg, heightCm.toDouble()) >= app.superhealth.nutrition.domain.Senior.SEVERE_BMI)) 26.0 else 0.0
         weeks = maxOf(pref, espen).roundToInt().coerceIn(options.first(), options.last())
         rate = rateFor(weeks)
     }
@@ -594,7 +596,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     Step.BODY_FAT -> Page(st, tr("Quelle silhouette vous ressemble le plus ?"), tr("Facultatif : une estimation suffit.")) {
                         BodyFatPicker(sex, bodyFat?.toDouble()) { bodyFat = if (bodyFat == it) null else it }
                         Spacer(Modifier.height(8.dp))
-                        Text(bodyFat?.let { trf("Masse grasse : %1\$d %%", it) } ?: trf("Sans réponse : %1\$d %% par défaut", if (sex == Sex.MALE) 25 else 35),
+                        Text(bodyFat?.let { trf("Masse grasse : %1\$d %%", it) } ?: trf("Sans réponse : %1\$d %% estimés", app.superhealth.nutrition.domain.Bmr.estimatedBodyFat(sex, age(), weightKg, heightCm.toDouble()).roundToInt()),
                             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                     }
                     Step.ACTIVITY -> Page(st, tr("Quel est votre niveau d'activité ?"), tr("En dehors du sport : travail, marche, quotidien.")) {
@@ -973,12 +975,13 @@ private fun BmiZone(age: Int, kg: Double, heightCm: Double, targetKg: Double?) {
             drawCircle(ink, r * 0.55f, androidx.compose.ui.geometry.Offset(x(now) * size.width, cy))
         }
         Spacer(Modifier.height(6.dp))
-        Text(when (S.band(age)) {
+        Text(if (now >= S.SEVERE_BMI && S.band(age) == app.superhealth.nutrition.domain.Senior.Band.ADULT)
+            tr("Obésité sévère : environ 1 kg par semaine au plus, 10 % en 6 mois pour commencer (NHLBI).") else when (S.band(age)) {
             app.superhealth.nutrition.domain.Senior.Band.ADULT -> tr("Zone de l'OMS chez l'adulte.")
             app.superhealth.nutrition.domain.Senior.Band.TRANSITION -> tr("Dès 60 ans : perte proposée à partir du surpoids, déficit modéré, protéines renforcées.")
             app.superhealth.nutrition.domain.Senior.Band.OLDER -> tr("Après 65 ans, un léger surpoids protège : perte seulement en obésité, 10 % au plus (ESPEN 2022).")
             app.superhealth.nutrition.domain.Senior.Band.OLDEST -> tr("Après 75 ans, le poids stable est le plus sûr : perte seulement dès l'IMC 35, 5 % au plus.")
-        }, style = MaterialTheme.typography.bodySmall, color = sub)
+        }.replace(" %", "\u00A0%"), style = MaterialTheme.typography.bodySmall, color = sub)
     }
 }
 

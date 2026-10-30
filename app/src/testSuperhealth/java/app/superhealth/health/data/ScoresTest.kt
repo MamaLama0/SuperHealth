@@ -36,6 +36,22 @@ class ScoresTest {
         assertEquals(0.0, Scores.sleepDebt(List(14) { 600.0 }, 480.0), 0.0)
     }
 
+    @Test fun hrMaxGulatiForWomen() {
+        // Gulati 2010 : 206 − 0,88 × âge ; à 50 ans 162 contre 173 (Tanaka)
+        assertEquals(162.0, Scores.hrMax(50, emptyList(), female = true), 1e-9)
+        assertEquals(173.0, Scores.hrMax(50, emptyList()), 1e-9)
+    }
+    @Test fun loadIsExponential() {
+        // charge stable : aiguë = chronique ; hausse la dernière semaine : l'aiguë réagit plus que la moyenne glissante
+        val flat = List(28) { 50.0 }
+        val (a, c) = Scores.load(flat)!!
+        assertEquals(50.0, a, 1e-9); assertEquals(50.0, c, 1e-9)
+        val rise = List(21) { 40.0 } + List(7) { 80.0 }
+        val (a2, c2) = Scores.load(rise)!!
+        assertEquals(40 + 40 * (1 - Math.pow(0.75, 7.0)), a2, 1e-6)
+        assertTrue(c2 > 40 && c2 < a2)
+        assertNull(Scores.load(List(28) { if (it < 15) null else 30.0 }))
+    }
     @Test fun hrMaxPrefersObservedWhenHigher() {
         assertEquals(208 - 0.7 * 30, Scores.hrMax(30, emptyList()), 1e-9)
         assertEquals(199.0, Scores.hrMax(30, List(1000) { if (it > 990) 199 else 120 }), 1e-9)

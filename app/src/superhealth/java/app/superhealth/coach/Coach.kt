@@ -147,7 +147,7 @@ object Coach {
         else it.copy(coachHidden = if (on) it.coachHidden - s.name else it.coachHidden + s.name)
     }
 
-    /** Moral, habitudes et ressenti des 14 jours, conseil de forme du jour et effets personnels des habitudes. */
+    /** Moral et ressenti des 14 jours, conseil de forme du jour. */
     private suspend fun wellbeing(ctx: Context, today: LocalDate, from: LocalDate): String? {
         val journalOn = SuperPrefs.settings.value.let { it.features.contains(app.superhealth.Feature.JOURNAL.name) }
         val moods = Journal.days.value; val feels = Checkin.days.value
@@ -155,24 +155,19 @@ object Coach {
             val e = moods[d.toEpochDay()]; val f = feels[d.toEpochDay()]
             if (e == null && f == null) return@mapNotNull null
             "- ${d.format(dayFmt)}: " + listOfNotNull(
-                e?.let { "mood ${it.mood}/5" + if (it.tags.isNotEmpty()) ", habits: " + it.tags.joinToString { t -> t.lowercase().replace('_', ' ') } else "" },
+                e?.let { "mood ${it.mood}/5" },
                 f?.let { "morning check-in sleep ${it.sleep}/5, energy ${it.energy}/5" },
             ).joinToString("; ")
         }.toList()
         val form = runCatching { Form.today(ctx, journalOn) }.getOrNull() as? Form.Advice
-        val impacts = runCatching { Journal.findings(ctx).impacts }.getOrDefault(emptyList())
-        if (lines.isEmpty() && form == null && impacts.isEmpty()) return null
+        if (lines.isEmpty() && form == null) return null
         return buildString {
-            appendLine("## Wellbeing (mood journal 1-5, habits, morning check-in)")
+            appendLine("## Wellbeing (mood journal 1-5, morning check-in)")
             lines.forEach { appendLine(it) }
             form?.let { a ->
                 appendLine("Today's readiness (app): ${a.verdict.name.lowercase()}" + (a.score?.let { ", score $it/100" } ?: "") +
                     (a.cause?.let { ", ${it.name.lowercase()} fatigue" } ?: "") +
                     ". Signals: " + a.signals.joinToString { "${it.kind.name.lowercase()} ${if (it.level > 0) "good" else if (it.level < 0) "low" else "usual"}" })
-            }
-            impacts.forEach { i ->
-                appendLine("Personal effect found: ${i.tag.name.lowercase().replace('_', ' ')} → next-day ${i.outcome.name.lowercase()} " +
-                    "${if (i.diff.delta >= 0) "+" else ""}${n(i.diff.delta, 1)} (${i.diff.nWith} days with, ${i.diff.nWithout} without)")
             }
         }
     }

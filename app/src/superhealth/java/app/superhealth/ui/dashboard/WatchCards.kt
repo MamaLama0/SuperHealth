@@ -462,14 +462,14 @@ internal fun HrZonesCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: Nav
     }
 }
 
-/** Charge d'entraînement : Effort des 28 jours, moyennes aiguë (7 j) et chronique (28 j) et leur rapport. */
+/** Charge d'entraînement : Effort des 28 jours, moyennes exponentielles aiguë (7 j) et chronique (28 j) et leur rapport. */
 @Composable
 internal fun LoadCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavHostController) {
     val l = Scores.load(w.efforts)
     Tile(c, tr("Charge d'entraînement"), modifier, onClick = { nav.go("h/metric/EFFORT") }, bottom = {
         val pts = w.efforts.withIndex().mapNotNull { (i, v) -> v?.let { i to it } }
-        val acute = w.efforts.indices.map { i -> i to w.efforts.subList(maxOf(0, i - 6), i + 1).map { it ?: 0.0 }.average() }
-        val chronic = w.efforts.indices.map { i -> i to w.efforts.subList(0, i + 1).map { it ?: 0.0 }.average() }
+        val acute = Scores.ewma(w.efforts, 7).withIndex().map { it.index to it.value }
+        val chronic = Scores.ewma(w.efforts, 28).withIndex().map { it.index to it.value }
         if (pts.size >= 2) LineChart(listOf(Series(chronic, Mf.colors.textSecondary, dashed = true), Series(pts, c.ink(), dots = true), Series(acute, c.ink())),
             height = 56.dp, showAxis = false)
     }) {

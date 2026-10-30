@@ -336,7 +336,7 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     val computedEnd = if (!byDate && targetKg != null && computedRate != null) Targets.endDayFromRate(an.today, trend, targetKg, computedRate) else endDay
     // âge (Senior) : par tranche, perte seulement au-dessus d'un IMC, déficit borné, perte et IMC de la cible bornés
     val age = LocalDate.now().year - an.profile.birthYear
-    val maxRate = if (type == GoalType.CUT) minOf(Targets.MAX_RATE, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age, trend) ?: Targets.MAX_RATE) else Targets.MAX_RATE
+    val maxRate = if (type == GoalType.CUT) minOf(Targets.MAX_RATE, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age, trend, an.profile.heightCm) ?: Targets.MAX_RATE) else Targets.MAX_RATE
     val cutAllowed = type != GoalType.CUT || app.superhealth.nutrition.domain.Senior.cutAllowed(age, trend, an.profile.heightCm)
     val minTarget = if (type == GoalType.CUT) app.superhealth.nutrition.domain.Senior.minTargetKg(age, an.profile.heightCm, trend) else null
     val rateOk = type == GoalType.MAINTENANCE || (computedRate != null && computedRate in Targets.MIN_RATE..maxRate)
@@ -381,8 +381,8 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 if (!rateOk) Text(trf("Rythme hors limites (%1\$s–%2\$s %%/sem.) : choisissez une date plus %3\$s.", (num(Targets.MIN_RATE, 2)), (num(maxRate, if (maxRate < 1) 2 else 1)), (if ((computedRate ?: 0.0) > maxRate) tr("lointaine") else tr("proche"))),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
                 if (!directionOk) Text(tr("Le poids cible ne correspond pas au type d'objectif."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                if (maxRate < Targets.MAX_RATE) Text(trf("À votre âge, perte limitée à %1\$s %%/sem. (déficit de %2\$s kcal/j au plus).", num(maxRate, 2),
-                    app.superhealth.nutrition.domain.Senior.maxDeficit(app.superhealth.nutrition.domain.Senior.band(age))!!.roundToInt()),
+                if (maxRate < Targets.MAX_RATE) Text(trf("Perte limitée à %1\$s %%/sem. (déficit de %2\$s kcal/j au plus) pour votre âge et votre IMC.", num(maxRate, 2),
+                    (app.superhealth.nutrition.domain.Senior.deficitCap(age, trend, an.profile.heightCm) ?: 0.0).roundToInt()),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
                 if (!floorOk) Text(minTargetText(age, an.profile.heightCm, trend, s::weight),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
@@ -667,6 +667,7 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
 /** Pourquoi l'âge a retenu la cible (Senior) : une phrase, ou null. */
 internal fun ageLimitText(ci: app.superhealth.nutrition.domain.CheckIn, age: Int): String? = when (ci.ageLimit) {
     "NOT_OBESE" -> noCutText(age)
+    "SEVERE" -> tr("Déficit limité à 1 000 kcal/j en obésité sévère (NHLBI) : environ 1 kg par semaine au plus.")
     "CAPPED" -> trf("Déficit limité à %1\$s kcal/j à votre âge, pour préserver le muscle.",
         app.superhealth.nutrition.domain.Senior.rules(age).maxDeficit?.roundToInt() ?: 0)
     else -> null
