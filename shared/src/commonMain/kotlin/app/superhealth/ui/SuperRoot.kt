@@ -232,6 +232,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("settings/units") { app.superhealth.ui.settings.UnitsSettingsScreen(vm, nav) }
             composable("settings/hc") { app.superhealth.ui.settings.HealthConnectSettingsScreen(vm, nav) }
             composable("settings/activities") { app.superhealth.ui.health.ActivityImportScreen(vm, nav) }
+            composable("settings/security") { app.superhealth.ui.settings.SecurityScreen(nav) }
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }

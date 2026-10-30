@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FileOpen
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Restaurant
@@ -188,7 +189,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             Group(tr("Bien-être")) {
                 fun toggle(f: app.superhealth.Feature, on: Boolean) = SuperPrefs.update { it.copy(features = if (on) it.features + f.name else it.features - f.name) }
                 IconSwitchRow(tr("Journal du moral"), if (!sh.has(app.superhealth.Feature.JOURNAL)) tr("Désactivé")
-                    else if (sh.morningCheck) tr("Humeur, habitudes et ressenti du matin") else tr("Humeur et habitudes"),
+                    else if (sh.morningCheck) tr("Humeur, notes et ressenti du matin") else tr("Humeur et notes"),
                     Icons.Rounded.SentimentSatisfied, HealthHues.Mind, sh.has(app.superhealth.Feature.JOURNAL), onClick = { nav.go("journal") }) {
                     toggle(app.superhealth.Feature.JOURNAL, it)
                 }
@@ -220,6 +221,9 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 RowDivider(56.dp)
                 SettingRow(tr("Unités et objectifs"), "${tr(s.weightUnit.label)} · ${tr(s.energyUnit.label)}",
                     icon = Icons.Rounded.Straighten, hue = HealthHues.Activity) { nav.go("settings/units") }
+                RowDivider(56.dp)
+                SettingRow(tr("Sécurité"), if (sh.appLock) tr("Verrouillage par Face ID ou code") else tr("Verrouillage désactivé"),
+                    icon = androidx.compose.material.icons.Icons.Rounded.Lock, hue = HealthHues.Respiration) { nav.go("settings/security") }
             }
 
             Group(tr("Données")) {

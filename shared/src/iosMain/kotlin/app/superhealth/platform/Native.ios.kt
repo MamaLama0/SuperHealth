@@ -152,3 +152,12 @@ actual fun setWindowAppearance(dark: Boolean?) {
     }
     platform.UIKit.UIApplication.sharedApplication.windows.forEach { (it as? platform.UIKit.UIWindow)?.overrideUserInterfaceStyle = style }
 }
+
+actual fun deviceAuthAvailable(): Boolean =
+    platform.LocalAuthentication.LAContext().canEvaluatePolicy(platform.LocalAuthentication.LAPolicyDeviceOwnerAuthentication, null)
+
+actual fun deviceAuthenticate(reason: String, onDone: (Boolean) -> Unit) {
+    platform.LocalAuthentication.LAContext().evaluatePolicy(platform.LocalAuthentication.LAPolicyDeviceOwnerAuthentication, reason) { ok, _ ->
+        platform.darwin.dispatch_async(platform.darwin.dispatch_get_main_queue()) { onDone(ok) }
+    }
+}

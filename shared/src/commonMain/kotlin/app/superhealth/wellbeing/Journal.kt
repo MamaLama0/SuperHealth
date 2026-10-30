@@ -3,39 +3,18 @@ package app.superhealth.wellbeing
 import app.superhealth.platform.*
 
 import app.superhealth.platform.Context
-import app.superhealth.bridge.Bridge
-import app.superhealth.health.data.Metric
-import app.superhealth.health.data.Scores
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import app.superhealth.platform.File
 import app.superhealth.platform.LocalDate
 
 /**
- * Journal du moral : chaque jour, l'humeur (1 à 5) et ce qui s'est passé (habitudes cochées). Comme le Journal de WHOOP et
- * l'humeur de NOOP, il sert à voir ce qui pèse vraiment sur votre récupération — un constat n'apparaît que s'il est net sur
- * vos propres jours (voir [impacts]).
+ * Journal du moral : chaque jour, l'humeur (1 à 5) et, si l'on veut, une note. Rien d'autre n'est demandé : l'humeur se
+ * lit seule, sur l'année en couleurs. Elle entre dans la Forme du jour (comparée à votre humeur habituelle).
  */
 object Journal {
-    @Serializable data class Entry(val mood: Int, val tags: Set<String> = emptySet(), val at: Long = 0)
-
-    /** Habitudes proposées. [evening] : ce qui se passe le soir et joue surtout sur la nuit suivante. */
-    enum class Tag(val label: String, val evening: Boolean) {
-        ALCOHOL("Alcool", true),
-        CAFFEINE_LATE("Caféine après 14 h", true),
-        LATE_MEAL("Repas tardif", true),
-        SCREENS("Écrans au lit", true),
-        STRESS("Journée stressante", false),
-        SICK("Malade", false),
-        TRAVEL("En voyage", false),
-        NAP("Sieste", false),
-        OUTSIDE("Dehors à la lumière", false),
-        MEDITATION("Méditation", true),
-        SOCIAL("Moment entre proches", false),
-    }
+    @Serializable data class Entry(val mood: Int, val note: String = "", val at: Long = 0)
 
     val MOODS = listOf("Très mal", "Mal", "Moyen", "Bien", "Très bien")
 
@@ -55,32 +34,19 @@ object Journal {
 
     fun set(ctx: Context, day: Long, e: Entry?) {
         days.value = if (e == null) days.value - day else days.value + (day to e)
-        impactsCache = null
-        // les habitudes entrent dans l'alerte des signes de la nuit (alcool, stress, voyage, maladie)
-        BodyAlert.invalidate()
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), Store(days.value))) }
         Reminders.schedule(ctx)
     }
 
     fun setMood(ctx: Context, mood: Int, day: Long = LocalDate.now().toEpochDay()) {
         val old = days.value[day]
-        set(ctx, day, Entry(mood.coerceIn(1, 5), old?.tags.orEmpty(), System.currentTimeMillis()))
+        set(ctx, day, Entry(mood.coerceIn(1, 5), old?.note.orEmpty(), System.currentTimeMillis()))
     }
 
-    fun toggleTag(ctx: Context, tag: String, day: Long = LocalDate.now().toEpochDay()) {
+    /** Note du jour [day] (il faut une humeur ce jour-là). */
+    fun setNote(ctx: Context, note: String, day: Long = LocalDate.now().toEpochDay()) {
         val old = days.value[day] ?: return
-        set(ctx, day, old.copy(tags = if (tag in old.tags) old.tags - tag else old.tags + tag))
-    }
-
-    /** [tag] noté le jour [day] ou l'un des [back] jours d'avant. */
-    fun tagged(tag: Tag, day: LocalDate, back: Int = 1): Boolean =
-        (0..back).any { days.value[day.minusDays(it.toLong()).toEpochDay()]?.tags?.contains(tag.name) == true }
-
-    /** Habitudes notées le jour [day] dont l'effet sur [outcomes] est net chez vous (constats ci-dessous), la plus forte d'abord. */
-    suspend fun weighed(ctx: Context, day: LocalDate, outcomes: Set<Outcome>): List<Impact> {
-        val tags = days.value[day.toEpochDay()]?.tags.orEmpty()
-        if (tags.isEmpty()) return emptyList()
-        return findings(ctx).impacts.filter { it.tag.name in tags && it.outcome in outcomes }
+        if (old.note != note) set(ctx, day, old.copy(note = note))
     }
 
     /** Humeur moyenne des [n] derniers jours notés avant [day], et leur nombre. */
@@ -89,62 +55,10 @@ object Journal {
         return if (xs.isEmpty()) null else xs.average() to xs.size
     }
 
-    // ---- Ce qui vous influence ---------------------------------------------------------------------------------
-
-    /** Mesure du lendemain comparée avec et sans l'habitude. */
-    /** [FEEL] : moyenne sommeil + énergie du ressenti du matin (1–5), quand il est activé. */
-    enum class Outcome(val label: String, val unit: String) {
-        CHARGE("Charge du lendemain", "%"), SLEEP("Sommeil de la nuit", "min"), FEEL("Forme ressentie du lendemain", "/ 5"),
-    }
-
-    data class Impact(val tag: Tag, val outcome: Outcome, val diff: Stats.Diff)
-
-    /** Lien entre l'humeur du jour et une mesure du matin même (corrélation de Pearson). */
-    data class Link(val outcome: Outcome, val r: Double, val n: Int)
-
-    data class Findings(val impacts: List<Impact>, val links: List<Link>, val loggedDays: Int)
-
-    @kotlin.concurrent.Volatile private var impactsCache: Pair<LocalDate, Findings>? = null
-
-    /** Jours étudiés : les 180 derniers jours notés. */
-    private const val WINDOW = 180L
-
-    /**
-     * Habitudes dont l'effet sur la Charge du lendemain ou le sommeil de la nuit suivante est net : au moins 5 jours avec et
-     * 5 sans, test t de Welch, puis tri de Benjamini-Hochberg sur tous les tests faits (sinon, avec une dizaine d'habitudes,
-     * un faux constat apparaîtrait régulièrement). L'humeur est reliée au sommeil de la nuit précédente et à la Charge du
-     * matin (au moins 10 jours notés). Rien n'est affiché sans preuve suffisante.
-     */
-    fun invalidate() { impactsCache = null }
-
-    suspend fun findings(ctx: Context): Findings = withContext(Dispatchers.Default) {
-        val today = LocalDate.now()
-        impactsCache?.takeIf { it.first == today }?.let { return@withContext it.second }
-        val logged = days.value.filterKeys { it in (today.toEpochDay() - WINDOW)..today.toEpochDay() }
-        suspend fun outcome(o: Outcome, d: LocalDate): Double? = when (o) {
-            Outcome.CHARGE -> runCatching { Scores.chargeOf(ctx, d)?.score?.toDouble() }.getOrNull()
-            Outcome.SLEEP -> Bridge.healthValue(ctx, Metric.SLEEP, d)?.takeIf { it > 60 }
-            Outcome.FEEL -> Checkin.days.value[d.toEpochDay()]?.let { (it.sleep + it.energy) / 2.0 }
-        }
-        // mesure du lendemain de chaque jour noté (le lendemain doit être passé ou être aujourd'hui)
-        val next = HashMap<Pair<Outcome, Long>, Double?>()
-        for (o in Outcome.entries) for (day in logged.keys) {
-            val d = LocalDate.ofEpochDay(day + 1)
-            if (!d.isAfter(today)) next[o to day] = outcome(o, d)
-        }
-        val candidates = ArrayList<Pair<Impact, Double>>()
-        for (tag in Tag.entries) for (o in Outcome.entries) {
-            val with = ArrayList<Double>(); val without = ArrayList<Double>()
-            logged.forEach { (day, e) -> next[o to day]?.let { if (tag.name in e.tags) with += it else without += it } }
-            Stats.welch(with, without)?.let { candidates += Impact(tag, o, it) to it.p }
-        }
-        val keep = Stats.significant(candidates.map { it.second })
-        val impacts = candidates.filterIndexed { i, _ -> keep[i] }.map { it.first }.sortedByDescending { kotlin.math.abs(it.diff.delta) }
-        val links = Outcome.entries.mapNotNull { o ->
-            val pairs = logged.mapNotNull { (day, e) -> outcome(o, LocalDate.ofEpochDay(day))?.let { e.mood.toDouble() to it } }
-            val res = Stats.pearson(pairs.map { it.first }, pairs.map { it.second }) ?: return@mapNotNull null
-            if (res.second <= Stats.ALPHA) Link(o, res.first, pairs.size) else null
-        }
-        Findings(impacts, links, logged.size).also { impactsCache = today to it }
+    /** Nombre de jours de chaque humeur (index 0 = « Très mal ») entre [from] et [to] inclus. */
+    fun counts(from: LocalDate, to: LocalDate): IntArray {
+        val out = IntArray(5)
+        days.value.forEach { (d, e) -> if (d in from.toEpochDay()..to.toEpochDay()) out[e.mood.coerceIn(1, 5) - 1]++ }
+        return out
     }
 }

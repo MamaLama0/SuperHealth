@@ -6,6 +6,18 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.drawText
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,82 +94,207 @@ import kotlin.math.sin
 
 // ---- Journal du moral ----------------------------------------------------------------------------------------------
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JournalScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
     val days by Journal.days.collectAsState()
     val sh by SuperPrefs.settings.collectAsState()
-    val todayDay = LocalDate.now().toEpochDay()
-    val today = days[todayDay]
-    var findings by remember { mutableStateOf<Journal.Findings?>(null) }
-    LaunchedEffect(days.size) { findings = runCatching { Journal.findings(ctx) }.getOrNull() }
-    var editTags by remember { mutableStateOf(false) }
+    val todayDate = LocalDate.now()
+    val todayDay = todayDate.toEpochDay()
+    var sel by remember { mutableLongStateOf(todayDay) }
+    var year by remember { mutableIntStateOf(todayDate.year) }
+    val entry = days[sel]
+    val scroll = androidx.compose.foundation.rememberScrollState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val dayFmt = remember(app.superhealth.ui.Lang.locale) { DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.ui.Lang.locale) }
 
-    DetailScaffold(tr("Journal du moral"), onBack = { nav.popBackStack() }) {
-        GroupCard {
-            Column(Modifier.padding(14.dp)) {
-                Text(tr("Comment ça va aujourd'hui ?"), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                MoodPicker(today?.mood) { Journal.setMood(ctx, it) }
-            }
-        }
-        if (today != null) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                GroupHeader(tr("Aujourd'hui"), Modifier.weight(1f))
-                Text(tr(if (editTags) "OK" else "Modifier la liste"), color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(end = 8.dp, bottom = 6.dp).clickable { editTags = !editTags })
-            }
-            JournalTagChips(today, editTags)
-        }
-
-        GroupHeader(tr("30 derniers jours"))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            (29L downTo 0L).forEach { k ->
-                val m = days[todayDay - k]?.mood
-                Box(Modifier.weight(1f).height(28.dp).clip(RoundedCornerShape(4.dp)).background(m?.let { moodColor(it).copy(alpha = 0.85f) } ?: Mf.colors.chip))
-            }
-        }
-
-        GroupHeader(tr("Ce qui vous influence"))
-        val f = findings
-        GroupCard {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                when {
-                    f == null -> Text(tr("Calcul…"), color = Mf.colors.textSecondary)
-                    f.impacts.isEmpty() && f.links.isEmpty() -> Text(
-                        trf("Rien de net pour l'instant (jours notés : %1\$s). Un constat apparaît quand une habitude a au moins 5 jours avec et 5 sans, et que l'écart ne peut pas venir du hasard.", f.loggedDays),
-                        style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
-                    else -> {
-                        f.impacts.forEach { i ->
-                            val d = i.diff.delta
-                            val value = when (i.outcome) {
-                                Journal.Outcome.FEEL -> String.format(app.superhealth.ui.Lang.locale, "%+.1f", d).replace("-", "−") + " / 5"
-                                else -> (if (d.roundToInt() > 0) "+" else "−") + abs(d.roundToInt()) + if (i.outcome == Journal.Outcome.CHARGE) " %" else " min"
-                            }
-                            Text(trf("%1\$s : %2\$s sur la %3\$s", tr(i.tag.label), value,
-                                tr(i.outcome.label).lowercase(app.superhealth.ui.Lang.locale)), style = MaterialTheme.typography.bodyMedium)
-                            Text(trf("%1\$s jours avec, %2\$s sans", i.diff.nWith, i.diff.nWithout), style = MaterialTheme.typography.bodySmall,
-                                color = Mf.colors.textSecondary)
+    Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
+        app.superhealth.nutrition.ui.components.NavBar(tr("Journal du moral"), { nav.popBackStack() }) {}
+        Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp).navigationBarsPadding()) {
+            // le jour choisi : humeur et note
+            GroupCard {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (sel == todayDay) tr("Comment ça va aujourd'hui ?")
+                            else LocalDate.ofEpochDay(sel).format(dayFmt).replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        if (sel != todayDay && entry != null) Box(Modifier.size(36.dp).clip(CircleShape).clickable { Journal.set(ctx, sel, null) },
+                            contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Delete, tr("Effacer ce jour"),
+                                Modifier.size(20.dp), tint = Mf.colors.textSecondary)
                         }
-                        f.links.forEach { l ->
-                            Text(if (l.r > 0) trf("Votre moral suit votre %1\$s (r = %2\$s, %3\$s jours).", tr(when (l.outcome) { Journal.Outcome.SLEEP -> "sommeil"; Journal.Outcome.FEEL -> "forme ressentie"; else -> "Charge" }),
-                                String.format(app.superhealth.ui.Lang.locale, "%.2f", l.r), l.n)
-                            else trf("Votre moral va à l'inverse de votre %1\$s (r = %2\$s, %3\$s jours).", tr(when (l.outcome) { Journal.Outcome.SLEEP -> "sommeil"; Journal.Outcome.FEEL -> "forme ressentie"; else -> "Charge" }),
-                                String.format(app.superhealth.ui.Lang.locale, "%.2f", l.r), l.n),
-                                style = MaterialTheme.typography.bodyMedium)
+                        if (sel != todayDay) Text(tr("Aujourd'hui"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent,
+                            modifier = Modifier.clip(CircleShape).clickable { sel = todayDay; year = todayDate.year }.padding(horizontal = 8.dp, vertical = 4.dp))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    MoodPicker(entry?.mood) { Journal.setMood(ctx, it, sel) }
+                    Spacer(Modifier.height(12.dp))
+                    // toujours là (la carte ne change pas de taille) ; on écrit une fois l'humeur choisie
+                    MoodNote(sel, minLines = 3, enabled = entry != null)
+                }
+            }
+
+            // l'année en couleurs
+            val from = LocalDate.of(year, 1, 1); val to = LocalDate.of(year, 12, 31)
+            val counts = remember(days, year) { Journal.counts(from, to) }
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                YearArrow(true, year > (days.keys.minOrNull()?.let { LocalDate.ofEpochDay(it).year } ?: todayDate.year)) { year-- }
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("$year", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(if (counts.sum() == 1) tr("1 jour noté") else trf("%1\$s jours notés", counts.sum()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                }
+                YearArrow(false, year < todayDate.year) { year++ }
+            }
+            GroupCard {
+                Column(Modifier.padding(start = 10.dp, end = 12.dp, top = 12.dp, bottom = 14.dp)) {
+                    MoodYear(year, days, sel, todayDay) { d -> sel = d }
+                    Spacer(Modifier.height(14.dp))
+                    MoodShare(counts)
+                }
+            }
+
+            // les notes de l'année, la plus récente d'abord
+            val notes = remember(days, year) {
+                days.entries.filter { (d, e) -> e.note.isNotBlank() && d in from.toEpochDay()..to.toEpochDay() }.sortedByDescending { it.key }
+            }
+            if (notes.isNotEmpty()) {
+                GroupHeader(tr("Notes"))
+                GroupCard {
+                    Column {
+                        notes.forEachIndexed { i, (d, e) ->
+                            if (i > 0) RowDivider()
+                            Row(Modifier.fillMaxWidth().clickable { sel = d; scope.launch { scroll.animateScrollTo(0) } }.padding(14.dp)) {
+                                Box(Modifier.size(34.dp).clip(CircleShape).background(moodColor(e.mood).container(1.6f)), contentAlignment = Alignment.Center) {
+                                    androidx.compose.material3.Icon(moodIcon(e.mood), null, Modifier.size(22.dp), tint = moodColor(e.mood))
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(LocalDate.ofEpochDay(d).format(dayFmt).replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+                                    Text(e.note, style = MaterialTheme.typography.bodyMedium, maxLines = 4,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-        Text(tr("Comparaison de vos propres jours, pas un avis médical."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
 
-        // ressenti du matin : réglé ici, avec le journal (une seule ligne dans Réglages)
-        GroupCard {
-            SwitchRow(tr("Ressenti du matin"), tr("Sommeil et énergie notés avant de voir vos scores"), sh.morningCheck) { on ->
-                SuperPrefs.update { it.copy(morningCheck = on) }
+            // ressenti du matin : réglé ici, avec le journal (une seule ligne dans Réglages)
+            Spacer(Modifier.height(16.dp))
+            GroupCard {
+                SwitchRow(tr("Ressenti du matin"), tr("Sommeil et énergie notés avant de voir vos scores"), sh.morningCheck) { on ->
+                    SuperPrefs.update { it.copy(morningCheck = on) }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun YearArrow(back: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Box(Modifier.size(40.dp).clip(CircleShape).background(Mf.colors.chip).clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center) {
+        androidx.compose.material3.Icon(if (back) androidx.compose.material.icons.Icons.AutoMirrored.Rounded.KeyboardArrowLeft
+            else androidx.compose.material.icons.Icons.AutoMirrored.Rounded.KeyboardArrowRight, null,
+            tint = if (enabled) Mf.colors.text else Mf.colors.textTertiary.copy(alpha = 0.4f))
+    }
+}
+
+/**
+ * L'année en couleurs : une colonne par mois, une ligne par jour ; chaque case prend la couleur de l'humeur notée.
+ * Dernière ligne : l'humeur moyenne du mois. Toucher une case passée ouvre ce jour.
+ */
+@Composable
+private fun MoodYear(year: Int, days: Map<Long, Journal.Entry>, sel: Long, today: Long, onPick: (Long) -> Unit) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val label = MaterialTheme.typography.labelSmall.copy(color = Mf.colors.textTertiary)
+    val empty = Mf.colors.chip
+    val ink = Mf.colors.text
+    val months = listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
+    val first = remember(year) { (1..12).map { LocalDate.of(year, it, 1) } }
+    val avg = remember(days, year) {
+        first.map { m ->
+            val xs = (0 until m.lengthOfMonth()).mapNotNull { days[m.toEpochDay() + it]?.mood }
+            if (xs.isEmpty()) null else xs.average()
+        }
+    }
+    // case : 31 lignes de jours + la moyenne, hauteur fixe ; la largeur suit l'écran
+    val rowH = 15.dp; val gap = 3.dp; val left = 20.dp; val top = 18.dp
+    Canvas(Modifier.fillMaxWidth().height(top + (rowH + gap) * 32 + 4.dp).pointerInput(year, today) {
+        detectTapGestures { o ->
+            val cw = (size.width - left.toPx()) / 12f
+            val m = ((o.x - left.toPx()) / cw).toInt(); val d = ((o.y - top.toPx()) / (rowH + gap).toPx()).toInt()
+            if (m !in 0..11 || d !in 0..30) return@detectTapGestures
+            val start = first[m]
+            if (d >= start.lengthOfMonth()) return@detectTapGestures
+            val day = start.toEpochDay() + d
+            if (day <= today) onPick(day)
+        }
+    }) {
+        val cw = (size.width - left.toPx()) / 12f
+        val g = gap.toPx(); val h = rowH.toPx()
+        val r = androidx.compose.ui.geometry.CornerRadius(minOf(h, cw) * 0.38f)
+        months.forEachIndexed { m, t ->
+            val lay = measurer.measure(t, label)
+            drawText(lay, topLeft = Offset(left.toPx() + cw * m + (cw - lay.size.width) / 2f, 0f))
+        }
+        for (d in listOf(1, 5, 10, 15, 20, 25, 30)) {
+            val lay = measurer.measure("$d", label)
+            drawText(lay, topLeft = Offset(left.toPx() - g - lay.size.width - 2f, top.toPx() + (d - 1) * (h + g) + (h - lay.size.height) / 2f))
+        }
+        for (m in 0..11) {
+            val start = first[m]
+            val x = left.toPx() + cw * m + g / 2f
+            for (d in 0 until start.lengthOfMonth()) {
+                val day = start.toEpochDay() + d
+                val y = top.toPx() + d * (h + g)
+                val mood = days[day]?.mood
+                val color = when {
+                    mood != null -> moodColor(mood)
+                    day > today -> empty.copy(alpha = empty.alpha * 0.35f)
+                    else -> empty
+                }
+                drawRoundRect(color, Offset(x, y), androidx.compose.ui.geometry.Size(cw - g, h), r)
+                if (day == sel) drawRoundRect(ink, Offset(x - 1.5f, y - 1.5f), androidx.compose.ui.geometry.Size(cw - g + 3f, h + 3f),
+                    androidx.compose.ui.geometry.CornerRadius(r.x + 1.5f), style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+                else if (day == today) drawRoundRect(ink.copy(alpha = 0.5f), Offset(x, y), androidx.compose.ui.geometry.Size(cw - g, h), r,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))
+            }
+            // moyenne du mois : une pastille ronde sous la colonne
+            avg[m]?.let { a ->
+                val y = top.toPx() + 31 * (h + g) + 4.dp.toPx()
+                drawCircle(moodColor(a.roundToInt().coerceIn(1, 5)), h * 0.42f, Offset(x + (cw - g) / 2f, y + h / 2f))
+            }
+        }
+        val lay = measurer.measure(tr("moy."), label)
+        if (avg.any { it != null }) drawText(lay, topLeft = Offset(0f, top.toPx() + 31 * (h + g) + 4.dp.toPx() + (h - lay.size.height) / 2f))
+    }
+}
+
+/** Part de chaque humeur sur l'année : une barre en couleurs, puis le nombre de jours de chacune. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MoodShare(counts: IntArray) {
+    val total = counts.sum()
+    if (total == 0) {
+        Text(tr("Touchez une case pour noter un jour passé."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+            modifier = Modifier.padding(start = 10.dp))
+        return
+    }
+    Row(Modifier.fillMaxWidth().padding(start = 10.dp).height(12.dp).clip(CircleShape), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        (5 downTo 1).forEach { m -> if (counts[m - 1] > 0) Box(Modifier.weight(counts[m - 1].toFloat()).fillMaxHeight().background(moodColor(m))) }
+    }
+    Spacer(Modifier.height(10.dp))
+    FlowRow(Modifier.padding(start = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        (5 downTo 1).forEach { m ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(moodColor(m)))
+                Spacer(Modifier.width(6.dp))
+                Text(tr(Journal.MOODS[m - 1]), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
+                Spacer(Modifier.width(4.dp))
+                Text("${counts[m - 1]}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             }
         }
     }

@@ -91,6 +91,8 @@
 	<string>SuperHealth lit vos pas, votre fréquence cardiaque, votre sommeil, votre VFC et vos séances (Apple Watch et autres apps) pour vos cartes, vos scores de récupération et votre dépense énergétique. Rien ne quitte l'iPhone.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>SuperHealth enregistre dans Santé vos pesées, le total nutritionnel du jour, vos séances de musculation et votre hydratation.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID déverrouille SuperHealth quand le verrouillage est activé dans Réglages &gt; Sécurité.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Pour scanner le code-barres d'un aliment, photographier un repas pour l'IA ou prendre une photo de progression.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

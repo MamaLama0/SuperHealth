@@ -960,7 +960,7 @@ private fun BmiZone(age: Int, kg: Double, heightCm: Double, targetKg: Double?) {
             app.superhealth.nutrition.domain.Senior.Band.TRANSITION -> tr("Dès 60 ans : perte proposée à partir du surpoids, déficit modéré, protéines renforcées.")
             app.superhealth.nutrition.domain.Senior.Band.OLDER -> tr("Après 65 ans, un léger surpoids protège : perte seulement en obésité, 10 % au plus (ESPEN 2022).")
             app.superhealth.nutrition.domain.Senior.Band.OLDEST -> tr("Après 75 ans, le poids stable est le plus sûr : perte seulement dès l'IMC 35, 5 % au plus.")
-        }, style = MaterialTheme.typography.bodySmall, color = sub)
+        }.replace(" %", "\u00A0%"), style = MaterialTheme.typography.bodySmall, color = sub)
     }
 }
 

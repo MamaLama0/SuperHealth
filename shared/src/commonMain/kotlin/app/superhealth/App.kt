@@ -97,7 +97,13 @@ fun App() {
     val vm = SuperHealth.vm
     val s by vm.nutrition.settings.collectAsState()
     val dark = s.themeMode.isDark(isSystemInDarkTheme())
+    // verrouillage : en arrière-plan (pas pour une alerte ou le centre de contrôle), retour, aperçu caché
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_STOP) { app.superhealth.security.AppLock.left() }
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_START) { app.superhealth.security.AppLock.returned() }
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_PAUSE) { app.superhealth.security.AppLock.cover(true) }
     LifecycleResumeEffect(Unit) {
+        app.superhealth.security.AppLock.cover(false)
+        app.superhealth.security.AppLock.autoPrompt()
         vm.onResume(appContext)
         // rappels du jour devenus inutiles retirés, 7 jours suivants reprogrammés
         app.superhealth.wellbeing.Reminders.schedule(appContext)
@@ -115,6 +121,10 @@ fun App() {
             SuperRoot(vm)
             PlatformDialogHost()
             ToastHost()
+            val sh by SuperPrefs.settings.collectAsState()
+            if (app.superhealth.security.AppLock.locked) app.superhealth.ui.settings.LockScreen({}) { app.superhealth.security.AppLock.authenticate() }
+            // sélecteur d'apps : l'aperçu ne montre que le fond
+            else if (sh.secureScreen && app.superhealth.security.AppLock.away) Box(Modifier.fillMaxSize().background(Mf.colors.background))
         }
     }
     LaunchedEffect(s.themeMode) {

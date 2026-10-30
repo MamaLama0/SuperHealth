@@ -231,6 +231,10 @@ object DashCardList : kotlinx.serialization.KSerializer<List<DashCard>> {
 data class SuperSettings(
     /** Questionnaire d'accueil terminé. */
     val onboarded: Boolean = false,
+    /** 2.31 : verrouillage de l'app (empreinte ou code du téléphone), délai avant de redemander (s), écran masqué dans les Récents. */
+    val appLock: Boolean = false,
+    val lockDelaySec: Int = 0,
+    val secureScreen: Boolean = false,
     /** Module LocalHealth (moteur Gadgetbridge : montres et capteurs Bluetooth). Désactivable. */
     val watchModule: Boolean = true,
     /** Health Connect activé (lecture et écriture, voir HealthConnectHub). */
@@ -254,8 +258,6 @@ data class SuperSettings(
     val sleepCompare: Boolean = true,
     /** 2.0 : appareil de la VFC de chaque jour (epochDay → nom), pour ne comparer la VFC qu'aux nuits du même appareil. */
     val hrvSources: Map<Long, String> = emptyMap(),
-    /** Habitudes proposées dans le journal du moral (noms de wellbeing.Journal.Tag). */
-    val journalTags: List<String> = app.superhealth.wellbeing.Journal.Tag.entries.map { it.name },
     /** 2.1 : cartes du sommeil et des constantes déjà proposées (migration unique). */
     val nightCardsAdded: Boolean = false,
     /** 2.2 : carte Scores du jour ajoutée une fois, en tête. */

@@ -40,3 +40,7 @@ actual fun showSessionActivity(s: SessionActivity?) = Unit
 actual fun setAppIcon(name: String?) = Unit
 
 actual fun setWindowAppearance(dark: Boolean?) = Unit
+
+actual fun deviceAuthAvailable(): Boolean = false
+
+actual fun deviceAuthenticate(reason: String, onDone: (Boolean) -> Unit) = onDone(true)

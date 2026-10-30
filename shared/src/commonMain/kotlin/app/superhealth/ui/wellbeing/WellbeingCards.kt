@@ -116,30 +116,30 @@ fun MoodPicker(selected: Int?, modifier: Modifier = Modifier, labels: List<Strin
 // ---- Journal du moral -----------------------------------------------------------------------------------------
 
 /**
- * Jour où l'humeur vient d'être notée depuis la carte : la carte reste le temps de cocher les habitudes, puis s'efface
+ * Jour où l'humeur vient d'être notée depuis la carte : la carte reste le temps d'écrire une note, puis s'efface
  * (bouton OK, ou dès qu'elle quitte l'écran).
  */
 var moodOpen by mutableStateOf<Long?>(null)
 
-/** Habitudes du jour à cocher ([edit] : choisir celles qui s'affichent). */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/** Note libre du jour [day] (enregistrée en écrivant, et en quittant le champ). */
 @Composable
-fun JournalTagChips(entry: Journal.Entry, edit: Boolean = false) {
+fun MoodNote(day: Long, modifier: Modifier = Modifier, minLines: Int = 2, enabled: Boolean = true) {
     val ctx = LocalContext.current
-    val sh by SuperPrefs.settings.collectAsState()
-    val shown = Journal.Tag.entries.filter { edit || it.name in sh.journalTags }
-    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        shown.forEach { t ->
-            val visible = t.name in sh.journalTags
-            val on = if (edit) visible else t.name in entry.tags
-            Text(tr(t.label), style = MaterialTheme.typography.labelLarge,
-                color = if (on) Mf.colors.accent.onContainer() else Mf.colors.textSecondary,
-                modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.accent.container(1.4f) else Mf.colors.chip)
-                    .clickable {
-                        if (edit) SuperPrefs.update { s -> s.copy(journalTags = if (visible) s.journalTags - t.name else s.journalTags + t.name) }
-                        else Journal.toggleTag(ctx, t.name)
-                    }.padding(horizontal = 14.dp, vertical = 8.dp))
-        }
+    val days by Journal.days.collectAsState()
+    var text by remember(day, days[day] == null) { mutableStateOf(days[day]?.note.orEmpty()) }
+    LaunchedEffect(day, text) {
+        kotlinx.coroutines.delay(600)
+        Journal.setNote(ctx, text.trim(), day)
+    }
+    androidx.compose.runtime.DisposableEffect(day) { onDispose { Journal.setNote(ctx, text.trim(), day) } }
+    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Mf.colors.chip).padding(horizontal = 14.dp, vertical = 12.dp)) {
+        if (text.isEmpty()) Text(tr(if (enabled) "Une note sur la journée…" else "Choisissez une humeur pour écrire une note."),
+            style = MaterialTheme.typography.bodyLarge, color = Mf.colors.textTertiary)
+        androidx.compose.foundation.text.BasicTextField(text, { text = it.take(2000) }, enabled = enabled,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Mf.colors.text), minLines = minLines, maxLines = 8,
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(Mf.colors.accent), modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences))
     }
 }
 
@@ -156,12 +156,12 @@ fun JournalCard(c: DashCard, size: CardSize, vm: SuperViewModel, modifier: Modif
         CardSize.M -> CompactMedium(c, d, modifier)
         CardSize.W -> CompactStrip(c, d, modifier)
         CardSize.L -> Tile(c, if (today == null) tr("Comment ça va ?") else tr("Quelque chose à noter ?"), modifier, onClick = open) {
-            // l'humeur, puis les habitudes du jour (elles pèsent dans la Forme, l'alerte de la nuit et le coucher)
+            // l'humeur, puis une note si l'on veut
             androidx.compose.runtime.DisposableEffect(Unit) { onDispose { moodOpen = null } }
             MoodPicker(today?.mood) { Journal.setMood(ctx, it); moodOpen = LocalDate.now().toEpochDay() }
             if (today != null) {
                 Spacer(Modifier.height(10.dp))
-                JournalTagChips(today)
+                MoodNote(LocalDate.now().toEpochDay())
                 Spacer(Modifier.height(10.dp))
                 PillButton(tr("OK"), Modifier.fillMaxWidth(), strong = false) { moodOpen = null }
             }
@@ -258,12 +258,6 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
                     Text(sg.value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
             }
-            // habitudes d'hier qui pèsent chez vous (constats du journal) : l'explication, pas un signal de plus
-            if (r.habits.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                Text(tr("Hier") + " : " + r.habits.distinctBy { it.tag }.take(2).joinToString(" · ") { impactText(it) },
-                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
             Spacer(Modifier.height(10.dp))
             val program = vm.training.activeProgram()?.takeIf { p -> p.days.getOrNull(p.dayIndex)?.isRest == false }
             when (r.verdict) {
@@ -341,18 +335,6 @@ fun rememberBedtime(): Bedtime.Plan? {
     return p
 }
 
-/** Habitudes notées aujourd'hui dont l'effet sur votre nuit est net chez vous. */
-@Composable
-fun rememberTonightHabits(): List<Journal.Impact> {
-    val ctx = LocalContext.current
-    val journal by Journal.days.collectAsState()
-    var out by remember { mutableStateOf(emptyList<Journal.Impact>()) }
-    LaunchedEffect(journal) {
-        out = runCatching { Journal.weighed(ctx, LocalDate.now(), setOf(Journal.Outcome.SLEEP)) }.getOrDefault(emptyList())
-    }
-    return out
-}
-
 @Composable
 fun BedtimeCard(c: DashCard, size: CardSize, modifier: Modifier, nav: NavHostController) {
     val p = rememberBedtime()
@@ -381,13 +363,6 @@ fun BedtimeCard(c: DashCard, size: CardSize, modifier: Modifier, nav: NavHostCon
                     style = MaterialTheme.typography.bodyMedium, color = c.hueInk())
                 if (p.tooEarly) Text(tr("Bien avant votre fenêtre : avancez plutôt de 15 min par soir."),
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-            }
-            // habitudes notées ce soir qui raccourcissent ou allongent nettement vos nuits (constats du journal)
-            val tonight = rememberTonightHabits()
-            if (tonight.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                Text(tr("Ce soir") + " : " + tonight.take(2).joinToString(" · ") { impactText(it) },
-                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -515,14 +490,3 @@ fun CheckinCard(c: DashCard, size: CardSize, first: Boolean, modifier: Modifier,
     }
 }
 
-/** « Alcool −9 % de Charge » : effet net d'une habitude chez vous (constat du journal), dans l'unité de la mesure. */
-fun impactText(i: Journal.Impact): String {
-    val d = i.diff.delta
-    val value = when (i.outcome) {
-        Journal.Outcome.FEEL -> String.format(app.superhealth.ui.Lang.locale, "%+.1f", d).replace("-", "−") + " / 5"
-        else -> (if (d.roundToInt() > 0) "+" else "−") + kotlin.math.abs(d.roundToInt()) + if (i.outcome == Journal.Outcome.CHARGE) " %" else " min"
-    }
-    return trf("%1\$s %2\$s (%3\$s)", tr(i.tag.label), value, tr(when (i.outcome) {
-        Journal.Outcome.CHARGE -> "Charge"; Journal.Outcome.SLEEP -> "sommeil"; Journal.Outcome.FEEL -> "ressenti"
-    }))
-}

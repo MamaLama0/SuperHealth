@@ -32,9 +32,6 @@ object BodyAlert {
         HARD_DAY("la grosse journée d'effort d'hier"),
         LATE("l'effort en soirée"),
         RESTLESS("la nuit agitée"),
-        ALCOHOL("l'alcool d'hier soir"),
-        STRESS("la journée stressante d'hier"),
-        TRAVEL("le voyage"),
     }
 
     /** Écart à la médiane habituelle, dans l'unité de la mesure. */
@@ -119,7 +116,7 @@ object BodyAlert {
             val prev = night(dates.lastIndex - 1)
             val lastCauses = causes(ctx, today)
             val prevCauses = causes(ctx, today.minusDays(1))
-            val feelLow = (Checkin.today()?.energy ?: 5) <= 2 || Journal.tagged(Journal.Tag.SICK, today)
+            val feelLow = (Checkin.today()?.energy ?: 5) <= 2
             Status(level(last.first, lastCauses, prev.first, prevCauses, feelLow), last.first, lastCauses)
         }
         cache = today to status
@@ -150,10 +147,6 @@ object BodyAlert {
                 .filter { it.timestampMs >= start && it.timestampMs + 3_600_000L <= end }.sumOf { it.value }
             if (awake >= 45 || steps >= 300) out += Cause.RESTLESS
         }
-        val tags = Journal.days.value[eve.toEpochDay()]?.tags.orEmpty()
-        if (Journal.Tag.ALCOHOL.name in tags) out += Cause.ALCOHOL
-        if (Journal.Tag.STRESS.name in tags) out += Cause.STRESS
-        if (Journal.Tag.TRAVEL.name in tags || Journal.tagged(Journal.Tag.TRAVEL, date, 0)) out += Cause.TRAVEL
         return out
     }
 

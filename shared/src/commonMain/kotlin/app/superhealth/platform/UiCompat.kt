@@ -121,3 +121,9 @@ val <T : Any> kotlin.reflect.KClass<T>.java: kotlin.reflect.KClass<T> get() = th
  * dans l'app.
  */
 expect fun setWindowAppearance(dark: Boolean?)
+
+/** Le téléphone a un verrouillage (Face ID, Touch ID ou code) pour vérifier le propriétaire. */
+expect fun deviceAuthAvailable(): Boolean
+
+/** Demande Face ID, Touch ID ou le code ; [onDone] (fil principal) reçoit vrai si c'est bien le propriétaire. */
+expect fun deviceAuthenticate(reason: String, onDone: (Boolean) -> Unit)
