@@ -16,7 +16,13 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "3") {
+    if (round == "4") {
+        val only = args.getOrNull(2)
+        fun pick(n: String, c: @Composable () -> Unit) { if (only == null || n.startsWith(only)) shot(n, c) }
+        pick("keynote-1-accueil") { KeynoteHome() }; pick("keynote-2-journal") { KeynoteJournal() }; pick("keynote-3-activites") { KeynoteActivities() }
+        pick("paysage-1-accueil") { PaysageHome() }; pick("paysage-2-journal") { PaysageJournal() }; pick("paysage-3-activites") { PaysageActivities() }
+        pick("matrice-1-accueil") { MatriceHome() }; pick("matrice-2-journal") { MatriceJournal() }; pick("matrice-3-activites") { MatriceActivities() }
+    } else if (round == "3") {
         shot("pixel-1-accueil") { PixelHome() }; shot("pixel-2-journal") { PixelJournal() }
         shot("pixel-3-activites") { PixelActivities() }; shot("pixel-4-recherche") { PixelSearch() }
         shot("bulles-1-accueil") { BullesHome() }; shot("bulles-2-journal") { BullesJournal() }

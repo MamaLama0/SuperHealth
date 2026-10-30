@@ -152,7 +152,7 @@ tasks.register<JavaExec>("themelab") {
     dependsOn(main.compileTaskProvider)
     classpath = files(main.output.allOutputs, main.runtimeDependencyFiles)
     mainClass.set("app.superhealth.lab.ThemeLabShotsKt")
-    args = listOf(project.findProperty("out") as String? ?: "${rootDir}/themelab", project.findProperty("round") as String? ?: "2")
+    args = listOfNotNull(project.findProperty("out") as String? ?: "${rootDir}/themelab", project.findProperty("round") as String? ?: "2", project.findProperty("only") as String?)
     systemProperty("superhealth.assets", "${rootDir}/assets")
     systemProperty("java.awt.headless", "true")
     jvmArgs("-Xmx3g")
