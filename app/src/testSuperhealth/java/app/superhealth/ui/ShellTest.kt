@@ -91,19 +91,20 @@ class ShellTest {
         assertTrue(runCatching { Net.readCapped(big.inputStream(), 99) }.exceptionOrNull() is java.io.IOException)
     }
 
-    @Test fun gridPacksRowsOfThreeBlocks() {
-        // S=1, M=2, L=3 ; ordre gardé quand tout tient
-        assertEquals(listOf(listOf(1, 1, 1), listOf(2, 1), listOf(3)), packRows(listOf(1, 1, 1, 2, 1, 3)) { it })
-        // une demi seule devant une pleine : le carré suivant remonte combler le trou
-        assertEquals(listOf(listOf("M", "S"), listOf("L"), listOf("S")), packRows(listOf("M", "L", "S", "S")) { mapOf("S" to 1, "M" to 2, "L" to 3)[it]!! })
-        // deux demis ne tiennent pas ensemble
-        assertEquals(listOf(listOf(2), listOf(2)), packRows(listOf(2, 2)) { it })
+    @Test fun gridPacksRowsOfSixBlocks() {
+        val span = mapOf("S" to 2, "M" to 3, "L" to 6)
+        // trois petits, ordre gardé quand tout tient
+        assertEquals(listOf(listOf("S", "S", "S"), listOf("L")), packRows(listOf("S", "S", "S", "L")) { span[it]!! })
+        // une moyenne seule devant une pleine : le carré suivant remonte combler le trou
+        assertEquals(listOf(listOf("M", "S"), listOf("L"), listOf("S")), packRows(listOf("M", "L", "S", "S")) { span[it]!! })
+        // deux moyennes tiennent côte à côte
+        assertEquals(listOf(listOf("M", "M")), packRows(listOf("M", "M")) { span[it]!! })
         assertEquals(emptyList<List<Int>>(), packRows(emptyList<Int>()) { it })
         assertEquals(listOf(listOf(9), listOf(3)), packRows(listOf(9, 3)) { it }) // largeur bornée : une rangée chacun
         // chaque carte placée une seule fois
-        val items = (1..40).map { it % 3 + 1 }.mapIndexed { i, w -> i to w }
+        val items = (1..40).map { listOf(2, 3, 6)[it % 3] }.mapIndexed { i, w -> i to w }
         assertEquals(items.map { it.first }.toSet(), packRows(items) { it.second }.flatten().map { it.first }.toSet())
-        packRows(items) { it.second }.forEach { r -> assertTrue(r.sumOf { it.second } <= 3) }
+        packRows(items) { it.second }.forEach { r -> assertTrue(r.sumOf { it.second } <= 6) }
     }
 
     @Test fun cardSizesFallBackToWhatTheCardAccepts() {

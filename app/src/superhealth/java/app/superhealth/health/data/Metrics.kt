@@ -31,16 +31,19 @@ enum class Aggregation { SUM, AVERAGE, LAST }
 enum class ChartKind { BARS, LINE, DOTS }
 
 /** Familles de mesures (catégories « Stats importantes » de Google Health), couleur MacroFactor de chacune. */
-enum class Category(val label: String, val color: Color) {
-    HEART("Cœur", HealthHues.Heart),
-    METABOLISM("Métabolisme", HealthHues.Body),
-    RESPIRATION("Respiration", HealthHues.Respiration),
-    TEMPERATURE("Température", HealthHues.Fitness),
-    FITNESS("Forme", HealthHues.Activity),
-    SLEEP("Sommeil", HealthHues.Sleep),
-    NUTRITION("Nutrition", HealthHues.Body),
-    MIND("Bien-être", HealthHues.Mind),
-    VITALS("Signes vitaux", HealthHues.Heart),
+enum class Category(val label: String, private val hue: () -> Color) {
+    HEART("Cœur", { HealthHues.Heart }),
+    METABOLISM("Métabolisme", { HealthHues.Body }),
+    RESPIRATION("Respiration", { HealthHues.Respiration }),
+    TEMPERATURE("Température", { HealthHues.Fitness }),
+    FITNESS("Forme", { HealthHues.Activity }),
+    SLEEP("Sommeil", { HealthHues.Sleep }),
+    NUTRITION("Nutrition", { HealthHues.Body }),
+    MIND("Bien-être", { HealthHues.Mind }),
+    VITALS("Signes vitaux", { HealthHues.Heart });
+
+    /** Couleur du jeu de teintes en cours. */
+    val color: Color get() = hue()
 }
 
 /**

@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- debug seulement : écriture des données de démo (DemoDataActivity) -->
+    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
+    <uses-permission android:name="android.permission.health.WRITE_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.WRITE_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_VO2_MAX" />
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
     <application>
         <!-- debug seulement : galerie des graphiques (adb shell am start -n app.superhealth/app.superhealth.debug.ChartGalleryActivity) -->
         <activity android:name="app.superhealth.debug.ChartGalleryActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
+        <!-- debug seulement : 30 jours de données de démo (adb shell am start -n app.superhealth/app.superhealth.debug.DemoDataActivity) -->
+        <activity android:name="app.superhealth.debug.DemoDataActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
     </application>
 </manifest>

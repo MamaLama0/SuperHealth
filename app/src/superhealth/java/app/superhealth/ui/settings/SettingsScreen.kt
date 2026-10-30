@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -76,6 +77,7 @@ import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material3.IconButton
@@ -167,6 +169,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Cartes"), trf("%1\$s affichées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider(56.dp)
                 SettingRow(tr("Bouton +"), trf("%1\$s raccourcis", sh.plus.size), icon = Icons.Rounded.AddCircle, hue = HealthHues.Activity) { nav.go("plus/edit") }
+                RowDivider(56.dp)
+                var hours by remember { mutableStateOf(false) }
+                SettingRow(tr("Horaires des repas"), sh.mealEnds.joinToString(" · ") { "%d:%02d".format(it / 60, it % 60) }, icon = Icons.Rounded.Schedule, hue = app.superhealth.ui.theme.CaloriesColor) { hours = true }
+                if (hours) app.superhealth.nutrition.ui.screens.MealHoursDialog { hours = false }
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Bandeau de pesée"), tr("Tant que la pesée du jour manque"), Icons.Rounded.MonitorWeight, HealthHues.Body, sh.weighPrompt) { v ->
                     SuperPrefs.update { it.copy(weighPrompt = v) }

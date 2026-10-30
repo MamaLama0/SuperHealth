@@ -58,7 +58,7 @@ object StyleLab {
 }
 
 /** Couleurs des programmes, fixes (sans dépendre de la couleur d'entraînement choisie). */
-internal val ProgramPalette = listOf(Base.Blue, Base.Red, Base.Green, Base.Orange, Base.Purple, Base.Pink, Base.Yellow, Base.Grey)
+internal val ProgramPalette get() = listOf(Base.Blue, Base.Red, Base.Green, Base.Orange, Base.Purple, Base.Pink, Base.Yellow, Base.Grey)
 
 /** Fond d'une carte posé par [CardTone] (dégradé éventuel, liseré). */
 class CardSurface(val brush: Brush, val border: Color?)

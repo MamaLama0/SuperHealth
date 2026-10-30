@@ -79,9 +79,10 @@ object Rings {
     fun shade(c: Color, k: Float = 0.72f) = Color(c.red * k, c.green * k, c.blue * k, c.alpha)
 }
 
-/** Piste d'un anneau : sa couleur éclaircie (clair) ou en ton profond (sombre), indépendante du fond de la carte. */
+/** Piste d'un anneau : sa couleur éclaircie (clair) ou un gris neutre (sombre), indépendante du fond de la carte. */
 internal fun trackOf(c: Color, dark: Boolean): Color =
-    if (dark) androidx.compose.ui.graphics.lerp(Color(0xFF121317), c, 0.3f) else androidx.compose.ui.graphics.lerp(Color.White, c, 0.24f)
+    // en sombre, piste neutre pour tous les anneaux (une piste teintée de rouge ou d'orange sur noir vire au brun)
+    if (dark) Color(0xFF292C32) else androidx.compose.ui.graphics.lerp(Color.White, c, 0.24f)
 
 /** Les anneaux emboîtés, remplis une fois à l'ouverture (pas d'animation en boucle). */
 @Composable
@@ -92,7 +93,7 @@ fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifi
     val gap = stroke * 0.2f
     val dark = app.superhealth.ui.theme.Mf.colors.dark
     val anims = rings.map { r ->
-        val a = remember(r.kind) { Animatable(0f) }
+        val a = remember(r.kind) { Animatable(r.progress) }
         LaunchedEffect(r.progress) { a.animateTo(r.progress, tween(1100, easing = FastOutSlowInEasing)) }
         a
     }
@@ -112,7 +113,7 @@ fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifi
                     val first = (p.coerceAtMost(1f)) * 360f
                     // dégradé le long de l'arc seulement (du départ à la pointe), pas sur tout le cercle
                     val f = (first / 360f).coerceIn(0.01f, 1f)
-                    drawArc(Brush.sweepGradient(0f to Rings.shade(c, 0.82f), f to c, 1f to c), 0f, first, false, tl, box, style = Stroke(s, cap = StrokeCap.Round))
+                    drawArc(if (app.superhealth.ui.theme.Hues.gradient) app.superhealth.ui.theme.arcBrush(c, f) else Brush.sweepGradient(0f to Rings.shade(c, 0.82f), f to c, 1f to c), 0f, first, false, tl, box, style = Stroke(s, cap = StrokeCap.Round))
                     if (p > 1f) {
                         // second tour : la pointe porte une ombre pour se détacher du premier
                         val end = (p - 1f) * 360f

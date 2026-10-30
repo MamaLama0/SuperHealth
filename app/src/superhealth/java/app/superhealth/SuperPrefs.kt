@@ -12,6 +12,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     RINGS("Anneaux du jour", Section.HEALTH),
     FOCUS("À faire", Section.HEALTH),
     CALORIES("Calories restantes", Section.NUTRITION),
+    MEALS("Repas du jour", Section.NUTRITION),
     WEIGHT("Tendance du poids", Section.NUTRITION),
     INTAKE("Calories consommées", Section.NUTRITION),
     EXPENDITURE("Dépense énergétique", Section.NUTRITION),
@@ -88,20 +89,21 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
 }
 
 /**
- * Taille d'une carte dans la grille de [GRID] blocs : petit (carré, 1 bloc), moyen (2 blocs), bandeau (toute la largeur,
+ * Taille d'une carte dans la grille de [GRID] blocs : petit (carré, un tiers), moyen (demi-largeur), bandeau (toute la largeur,
  * une ligne) et grand (toute la largeur, version détaillée). Petit, moyen et bandeau sont les versions à regarder d'un coup
  * d'œil (symbole et valeur, peu ou pas de texte) ; grand donne le détail.
  * Les cartes se rangent dans l'ordre ; un trou en fin de rangée est comblé par la prochaine carte qui y tient.
  */
 @Serializable
 enum class CardSize(val span: Int, val label: String, private val en: String) {
-    S(1, "Petit", "Small"), M(2, "Moyen", "Medium"), W(3, "Bandeau", "Strip"), L(3, "Grand", "Large");
+    S(2, "Petit", "Small"), M(3, "Moyen", "Medium"), W(6, "Bandeau", "Strip"), L(6, "Grand", "Large");
 
     /** Nom affiché ; « Moyen » a son propre anglais (taille, pas humeur). */
     val title: String get() = if (app.superhealth.ui.Lang.english) en else label
 }
 
-const val GRID = 3
+/** Six blocs : trois petits, deux moyens côte à côte, ou un moyen et un petit (le moyen prend alors les deux tiers). */
+const val GRID = 6
 
 /** Cartes qui ont une valeur principale : disponibles en bulle (S) et en tuile (M). */
 val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.INTAKE, DashCard.MACROS,
@@ -325,11 +327,16 @@ data class SuperSettings(
     /** Parties de l'app activées (noms de [Feature]). */
     val features: Set<String> = Feature.entries.filter { it != Feature.CYCLE }.map { it.name }.toSet(),
     /** Labo de style (version test) : cartes du tableau de bord en clair et en sombre, séance de musculation. Noms des enums de ui.theme.StyleLab. */
-    val styleCardsLight: String = "NEUTRAL",
-    val styleCardsDark: String = "NEUTRAL",
-    val styleWorkoutColor: String = "BLUE",
+    val styleCardsLight: String = "GRADIENT",
+    val styleCardsDark: String = "VIVID",
+    val styleWorkoutColor: String = "PROGRAM",
     val styleHero: String = "LARGE",
     val styleSets: String = "CARDS",
+    /** Fin (minute du jour) du petit-déjeuner, du déjeuner et de la collation ; le dîner va jusqu'à minuit. */
+    val mealEnds: List<Int> = listOf(630, 900, 1110),
+    /** Tâches ajoutées à la carte À faire, et le dernier jour où chacune a été cochée. */
+    val todos: List<String> = emptyList(),
+    val todosDone: Map<String, Long> = emptyMap(),
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,

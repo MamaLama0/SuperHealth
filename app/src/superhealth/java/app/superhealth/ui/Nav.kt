@@ -1,5 +1,6 @@
 package app.superhealth.ui
 
+import app.superhealth.ui.theme.tabBackground
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
@@ -29,5 +30,8 @@ fun NavGraphBuilder.composable(
 ) = navComposable(route, arguments, enterTransition = enterTransition, exitTransition = exitTransition,
     popEnterTransition = popEnterTransition, popExitTransition = popExitTransition) { entry ->
     val scope = this
-    Box(Modifier.fillMaxSize().background(Mf.colors.background)) { scope.content(entry) }
+    // onglets : le lavis (réglage Apparence), une couleur froide par onglet
+    val tint = when (route) { "home" -> app.superhealth.ui.theme.Base.Teal; "log" -> app.superhealth.ui.theme.Base.Green
+        "activities" -> app.superhealth.ui.theme.Base.Indigo; else -> null }
+    Box(Modifier.fillMaxSize().tabBackground(tint)) { scope.content(entry) }
 }

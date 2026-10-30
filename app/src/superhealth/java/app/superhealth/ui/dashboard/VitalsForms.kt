@@ -8,15 +8,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,201 +26,193 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
+import androidx.compose.ui.unit.sp
 import app.superhealth.CardSize
 import app.superhealth.DashCard
 import app.superhealth.health.data.Metric
 import app.superhealth.health.data.NightVitals
 import app.superhealth.ui.formatValue
-import app.superhealth.ui.go
+import app.superhealth.ui.health.RangeBar
 import app.superhealth.ui.health.VitalTrend
 import app.superhealth.ui.health.color
-import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.health.word
 import app.superhealth.ui.theme.CardRadius
-import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.dashCardBackground
-import app.superhealth.ui.theme.onContainer
+import app.superhealth.ui.theme.dataBrush
 import app.superhealth.ui.tr
+import app.superhealth.ui.trf
 import app.superhealth.ui.unitOf
-import kotlin.math.roundToInt
+import java.time.LocalDate
 
 /*
- * 2.2 : deux cartes qui ne se ressemblent plus.
- * « Constantes » = l'instant, sans chiffres autour : une grappe de bulles (valeur et symbole), dans toutes les tailles.
- * « Tendances » = les données : chaque mesure avec sa courbe de 30 jours posée sur sa bande habituelle, et son statut.
- * Pas de BoxWithConstraints : les rangées de la grille se mesurent en hauteur intrinsèque (Layout simple à la place).
+ * 2.4 : les trois cartes de constantes (Constantes, Signes vitaux de la nuit, Tendances) parlent la même langue que les
+ * autres widgets. Une mesure = symbole, valeur, unité, pastille de statut (vert dans l'habituel, ambre au-dehors).
+ * Petit : trois mesures. Moyen : quatre cellules avec leur plage. Bandeau : le verdict en mots et trois valeurs.
+ * Grand : une ligne par mesure (courbe ou barre de plage). Ce qui les distingue : la période (l'instant, la nuit, 30 jours).
  */
 
-/** Place d'une bulle dans la grappe, en fraction du côté : coin haut-gauche, diamètre, et rang (taille du texte). */
-private class Slot(val x: Float, val y: Float, val d: Float, val rank: Int)
-
-/** Moyen : quatre bulles qui se nichent sans se toucher (vérifié : distances des centres > somme des rayons). */
-private val SLOTS_M = listOf(Slot(0f, .02f, .58f, 0), Slot(.60f, 0f, .40f, 2), Slot(.50f, .50f, .48f, 1), Slot(.08f, .62f, .36f, 2))
-/** Petit : trois bulles. */
-private val SLOTS_S = listOf(Slot(0f, .05f, .62f, 1), Slot(.62f, .02f, .38f, 3), Slot(.55f, .58f, .42f, 3))
-
-/** Constantes en petit, moyen ou bandeau ; le grand garde la grappe complète (VitalsGrid). */
-@Composable
-internal fun VitalsCompact(c: DashCard, size: CardSize, metrics: List<Metric>, latest: (Metric) -> Double?, modifier: Modifier, nav: NavHostController) {
-    val open: (Metric) -> Unit = { m -> nav.go("h/metric/${m.name}") }
-    val shown = metrics.ifEmpty { listOf(Metric.RESTING_HR, Metric.HRV, Metric.RESPIRATORY_RATE, Metric.SPO2) }
-    when (size) {
-        CardSize.S -> Box(modifier.square().clip(RoundedCornerShape(CardRadius)).dashCardBackground(c.ink()).padding(8.dp)) {
-            Cluster(SLOTS_S, shown, Modifier.fillMaxSize()) { m, rank -> VitalDot(m, latest(m), rank) { open(m) } }
-        }
-        CardSize.W -> Row(modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).dashCardBackground(c.ink()).cardClick { nav.go("h/vitals") }
-            .padding(horizontal = 8.dp, vertical = 8.dp).height(70.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            // une vague : tailles et hauteurs alternées, comme des bulles qui montent
-            val sizes = listOf(66, 54, 62, 52, 58)
-            shown.take(5).forEachIndexed { i, m ->
-                Box(Modifier.size(sizes[i].dp).align(if (i % 2 == 0) Alignment.Top else Alignment.Bottom)) {
-                    VitalDot(m, latest(m), if (i == 0) 1 else 2) { open(m) }
-                }
-            }
-        }
-        else -> Box(modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(CardRadius)).dashCardBackground(c.ink()).padding(10.dp)) {
-            Cluster(SLOTS_M, shown, Modifier.fillMaxSize()) { m, rank -> VitalDot(m, latest(m), rank) { open(m) } }
-        }
-    }
+/** Constantes du jour : dernière valeur, 14 derniers jours, plage tirée des valeurs précédentes (même règle que la nuit). */
+internal fun vitalsNow(metrics: List<Metric>, series: (Metric) -> List<Pair<LocalDate, Double?>>): List<VitalTrend> = metrics.map { m ->
+    val s = series(m)
+    val lastIdx = s.indexOfLast { it.second != null }
+    val past = if (lastIdx > 0) s.subList(0, lastIdx).mapNotNull { it.second } else emptyList()
+    VitalTrend(m, s.takeLast(14), NightVitals.range(past, m))
 }
 
-/** Grappe : chaque bulle mesurée et posée à sa place, à l'échelle du plus petit côté. */
-@Composable
-private fun Cluster(slots: List<Slot>, items: List<Metric>, modifier: Modifier, bubble: @Composable (Metric, Int) -> Unit) {
-    val n = minOf(slots.size, items.size)
-    Layout(content = { (0 until n).forEach { bubble(items[it], slots[it].rank) } }, modifier = modifier) { ms, c ->
-        val w = c.maxWidth
-        val h = if (c.hasBoundedHeight) c.maxHeight else w
-        val side = minOf(w, h)
-        val ox = (w - side) / 2
-        val oy = (h - side) / 2
-        val ps = ms.mapIndexed { i, m -> val px = (slots[i].d * side).roundToInt(); m.measure(Constraints.fixed(px, px)) }
-        layout(w, h) { ps.forEachIndexed { i, p -> p.place(ox + (slots[i].x * side).roundToInt(), oy + (slots[i].y * side).roundToInt()) } }
-    }
+/** Signes vitaux d'une nuit : une valeur par mesure, face à la plage des 28 nuits précédentes. */
+internal fun vitalsOfNight(n: NightVitals.Night?): List<VitalTrend> = n?.items.orEmpty().filter { it.value != null }.map { i ->
+    VitalTrend(i.metric, listOf(n!!.date to i.value), if (i.low != null && i.high != null) i.low to i.high else null)
 }
 
-/** Une bulle : dégradé de la mesure, anneau rempli selon la valeur, symbole et valeur au centre. */
-@Composable
-private fun VitalDot(m: Metric, v: Double?, rank: Int, onClick: () -> Unit) {
-    val hue = m.color
-    val range = m.ringRange()
-    val fill = v?.let { ((it - range.start) / (range.endInclusive - range.start)).toFloat().coerceIn(0.03f, 1f) } ?: 0f
-    val track = Mf.colors.card.copy(alpha = if (Mf.colors.dark) 0.5f else 0.85f)
-    Box(Modifier.fillMaxSize().clip(CircleShape).background(Brush.radialGradient(listOf(hue.container(1.8f), hue.container(0.9f))))
-        .drawBehind {
-            val stroke = size.minDimension * (if (rank == 0) 0.055f else 0.07f)
-            val inset = stroke * 0.9f
-            val box = Size(size.width - inset * 2, size.height - inset * 2)
-            drawArc(track, 0f, 360f, false, Offset(inset, inset), box, style = Stroke(stroke))
-            if (fill > 0f) rotate(-90f) {
-                drawArc(Brush.sweepGradient(listOf(hue.copy(alpha = 0.55f), hue, hue.copy(alpha = 0.55f))), 0f, 360f * fill, false,
-                    Offset(inset, inset), box, style = Stroke(stroke, cap = StrokeCap.Round))
-            }
-        }
-        .clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(m.icon, null, Modifier.size(when (rank) { 0 -> 18.dp; 1 -> 14.dp; 2 -> 12.dp; else -> 10.dp }), tint = hue)
-            Text(v?.let { formatValue(m, it) } ?: "—", style = when (rank) {
-                0 -> MaterialTheme.typography.titleLarge; 1 -> MaterialTheme.typography.titleMedium
-                2 -> MaterialTheme.typography.titleSmall; else -> MaterialTheme.typography.labelMedium
-            }, fontWeight = FontWeight.Bold, color = hue.onContainer(), maxLines = 1)
-            if (rank == 0) unitOf(m)?.takeIf { v != null }?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1) }
-        }
-    }
+/** Nom court d'une mesure (cellules et bandeau). */
+internal fun Metric.shortName(): String = when (this) {
+    Metric.RESTING_HR -> tr("FC repos"); Metric.HRV -> tr("VFC"); Metric.RESPIRATORY_RATE -> tr("Respiration"); Metric.SPO2 -> "SpO₂"
+    Metric.TEMPERATURE -> tr("Température"); Metric.SLEEP -> tr("Sommeil"); Metric.VO2MAX -> "VO₂ max"; Metric.HEART_RATE -> tr("Pouls")
+    Metric.STEPS -> tr("Pas")
+    else -> tr(label)
 }
 
-/** Tendances en petit, moyen ou bandeau : chaque mesure avec sa courbe sur la bande habituelle. */
-@Composable
-internal fun TrendsCompact(c: DashCard, size: CardSize, trends: List<VitalTrend>, modifier: Modifier, nav: NavHostController) {
-    val rows = trends.filter { it.last != null }
-    val open: () -> Unit = { nav.go("h/vitals") }
-    when (size) {
-        CardSize.S -> Column(modifier.square().clip(RoundedCornerShape(CardRadius)).dashCardBackground(c.ink()).cardClick(open).padding(10.dp),
-            verticalArrangement = Arrangement.SpaceEvenly) {
-            if (rows.isEmpty()) EmptyTrends()
-            rows.take(3).forEach { t ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(t.metric.icon, null, Modifier.size(13.dp), tint = t.metric.color)
-                    Spacer(Modifier.width(5.dp))
-                    TrendValue(t, MaterialTheme.typography.labelLarge, Modifier.weight(1f))
-                    StatusDot(t)
-                }
-            }
-        }
-        CardSize.W -> Row(modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).dashCardBackground(c.ink()).cardClick(open).padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (rows.isEmpty()) EmptyTrends()
-            rows.take(3).forEach { t ->
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(t.metric.icon, null, Modifier.size(14.dp), tint = t.metric.color)
-                        Spacer(Modifier.width(5.dp))
-                        TrendValue(t, MaterialTheme.typography.titleSmall, Modifier.weight(1f))
-                        StatusDot(t)
-                    }
-                    TrendSpark(t, Modifier.padding(top = 6.dp).fillMaxWidth().height(26.dp))
-                }
-            }
-        }
-        else -> Column(modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).dashCardBackground(c.ink()).cardClick(open).padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (rows.isEmpty()) EmptyTrends()
-            rows.take(4).forEach { t ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(t.metric.icon, null, Modifier.size(14.dp), tint = t.metric.color)
-                    Spacer(Modifier.width(6.dp))
-                    TrendValue(t, MaterialTheme.typography.titleSmall, Modifier.width(52.dp))
-                    TrendSpark(t, Modifier.weight(1f).height(24.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyTrends() {
-    Text(tr("Après une nuit avec la montre."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-}
-
-/** Valeur colorée par son statut : dans la plage, la couleur de la mesure ; hors plage, celle de l'alerte. */
-@Composable
-private fun TrendValue(t: VitalTrend, style: androidx.compose.ui.text.TextStyle, modifier: Modifier) {
-    val st = t.status
-    Text(formatValue(t.metric, t.last!!.second), style = style, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Clip,
-        color = if (st == NightVitals.Status.UNKNOWN) t.metric.color.onContainer() else st.color().onContainer(), modifier = modifier)
-}
-
-@Composable
-private fun StatusDot(t: VitalTrend) {
-    val st = t.status
-    if (st == NightVitals.Status.UNKNOWN) return
-    Box(Modifier.size(7.dp).clip(CircleShape).background(st.color()))
+/** Verdict d'ensemble : « Normal », ou le nombre de mesures hors de la plage ; null sans plage connue. */
+private fun verdict(items: List<VitalTrend>): Pair<String, Color>? {
+    val known = items.filter { it.status != NightVitals.Status.UNKNOWN }
+    if (known.isEmpty()) return null
+    val out = known.count { it.status == NightVitals.Status.HIGH || it.status == NightVitals.Status.LOW }
+    return if (out == 0) tr("Normal") to NightVitals.Status.TYPICAL.color() else trf("%1\$s hors plage", out) to NightVitals.Status.HIGH.color()
 }
 
 /**
- * Courbe de 30 jours posée sur la bande habituelle de la mesure (28 jours précédents) : on voit d'un coup d'œil si
- * les dernières nuits sortent de votre normale. Le dernier point est marqué dans la couleur du statut.
+ * Une carte de constantes dans ses quatre tailles. [spark] : la ligne du grand porte la courbe de la période (sinon la
+ * barre de plage) ; [span] : la période affichée à droite de l'en-tête du grand (« 30 j »).
+ */
+@Composable
+internal fun VitalsKitCard(c: DashCard, size: CardSize, title: String, items: List<VitalTrend>, spark: Boolean, span: String?, lines: Boolean = false, empty: String,
+                           modifier: Modifier, onOpen: () -> Unit, onMetric: ((Metric) -> Unit)? = null) {
+    val hue = c.ink()
+    val rows = items.filter { it.last != null }
+    val v = verdict(rows)
+    val box = Modifier.clip(RoundedCornerShape(CardRadius)).dashCardBackground(hue).cardClick(onOpen)
+    when (size) {
+        CardSize.S -> Column(modifier.square().then(box).padding(12.dp)) {
+            CardHead(c.icon(), c.short(), hue)
+            Spacer(Modifier.weight(1f))
+            if (rows.isEmpty()) Note(empty)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { rows.take(3).forEach { InlineVital(it, 15.sp) } }
+        }
+        CardSize.W -> Row(modifier.fillMaxWidth().heightIn(min = 72.dp).then(box).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (rows.isEmpty()) Note(empty)
+            rows.take(3).forEach { VitalTile(it, Modifier.weight(1f), false, compact = true) }
+        }
+        CardSize.M -> Column(modifier.fillMaxWidth().heightIn(min = 118.dp).then(box).padding(14.dp)) {
+            CardHead(c.icon(), c.short(), hue, v?.first, v?.second)
+            Spacer(Modifier.height(10.dp))
+            if (rows.isEmpty()) Note(empty)
+            Grid(rows.take(4), false, onMetric)
+        }
+        CardSize.L -> Column(modifier.fillMaxWidth().then(box).padding(16.dp)) {
+            CardHead(c.icon(), title, hue, span, Mf.colors.textSecondary)
+            Spacer(Modifier.height(10.dp))
+            if (rows.isEmpty()) { Note(empty); return@Column }
+            v?.let { (word, col) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(if (col == NightVitals.Status.TYPICAL.color()) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline, null, Modifier.size(18.dp), tint = col)
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (word == tr("Normal")) tr("Dans votre plage habituelle") else word, style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold, color = col, maxLines = 1)
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+            if (lines) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { rows.take(5).forEach { Line(it, spark, onMetric) } }
+            else Grid(rows.take(6), spark, onMetric)
+        }
+    }
+}
+
+@Composable
+private fun Note(text: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 3)
+}
+
+/** Symbole, valeur (et unité), pastille de statut : la mesure en une ligne. */
+@Composable
+private fun InlineVital(t: VitalTrend, size: androidx.compose.ui.unit.TextUnit, unit: Boolean = true) {
+    val m = t.metric
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(m.icon, null, Modifier.size(14.dp), tint = m.color)
+        Spacer(Modifier.width(5.dp))
+        Text(formatValue(m, t.last!!.second), style = MaterialTheme.typography.titleMedium, fontSize = size, fontWeight = FontWeight.Bold,
+            color = m.color, maxLines = 1)
+        // unités courtes seulement (bpm, ms, %) : « resp./min » ne tient pas dans un petit
+        if (unit) unitOf(m)?.takeIf { it.length <= 3 }?.let { Text(" $it", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false)) }
+        Spacer(Modifier.width(5.dp))
+        Dot(t.status)
+    }
+}
+
+@Composable
+private fun Dot(s: NightVitals.Status) {
+    if (s != NightVitals.Status.UNKNOWN) Box(Modifier.size(6.dp).clip(CircleShape).background(s.color()))
+}
+
+/** Cellule du moyen : nom court, valeur et unité, barre de plage (ou rien sans plage). */
+@Composable
+private fun Cell(t: VitalTrend, modifier: Modifier) {
+    val m = t.metric
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(m.icon, null, Modifier.size(12.dp), tint = m.color)
+            Spacer(Modifier.width(4.dp))
+            Text(m.shortName(), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        CardValue(formatValue(m, t.last!!.second), unitOf(m), 19.sp)
+        RangeBar(t.last!!.second, t.range?.first, t.range?.second, t.status.color(), Modifier.padding(top = 2.dp))
+    }
+}
+
+/** Ligne du grand : symbole, nom et statut, courbe (ou barre de plage), valeur. */
+@Composable
+private fun Line(t: VitalTrend, spark: Boolean, onMetric: ((Metric) -> Unit)?) {
+    val m = t.metric
+    val last = t.last!!
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).then(if (onMetric != null) Modifier.clickable { onMetric(m) } else Modifier)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(m.icon, null, Modifier.size(16.dp), tint = m.color)
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tr(m.label), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                t.status.word()?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = t.status.color(), maxLines = 1) }
+            }
+            if (spark) TrendSpark(t, Modifier.padding(horizontal = 8.dp).width(84.dp).height(28.dp))
+            Row(Modifier.width(if (spark) 92.dp else 104.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.Bottom) {
+                Text(formatValue(m, last.second), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                unitOf(m)?.let { Text(" $it", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(bottom = 2.dp)) }
+            }
+        }
+        if (!spark) RangeBar(last.second, t.range?.first, t.range?.second, t.status.color(), Modifier.padding(top = 5.dp))
+    }
+}
+
+/**
+ * Courbe de la période posée sur la bande habituelle de la mesure (gris neutre : une bande teintée vire au brun sur fond
+ * sombre). Le dernier point est marqué dans la couleur du statut.
  */
 @Composable
 internal fun TrendSpark(t: VitalTrend, modifier: Modifier) {
     val hue = t.metric.color
-    val band = hue.copy(alpha = if (Mf.colors.dark) 0.20f else 0.16f)
+    val band = Mf.colors.chip
     val dot = if (t.status == NightVitals.Status.UNKNOWN) hue else t.status.color()
-    val halo = Color.White.copy(alpha = if (Mf.colors.dark) 0f else 0.9f)
+    val halo = Mf.colors.card
     val vals = t.days.map { it.second }.dropWhile { it == null }
     Canvas(modifier) {
         val present = vals.filterNotNull()
@@ -240,7 +234,44 @@ internal fun TrendSpark(t: VitalTrend, modifier: Modifier) {
             if (!started) { path.moveTo(p.x, p.y); started = true } else path.lineTo(p.x, p.y)
             last = p
         }
-        drawPath(path, hue.copy(alpha = 0.9f), style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round))
-        last?.let { drawCircle(halo, 3.6.dp.toPx(), it); drawCircle(dot, 2.6.dp.toPx(), it) }
+        drawPath(path, dataBrush(hue, Offset.Zero, Offset(size.width, 0f)), style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round))
+        last?.let { drawCircle(halo, 4.dp.toPx(), it); drawCircle(dot, 2.8.dp.toPx(), it) }
+    }
+}
+
+/** Grille de constantes sur deux colonnes. */
+@Composable
+private fun Grid(rows: List<VitalTrend>, spark: Boolean, onMetric: ((Metric) -> Unit)?) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        rows.chunked(2).forEach { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                pair.forEach { t -> VitalTile(t, Modifier.weight(1f).then(if (onMetric != null) Modifier.clip(RoundedCornerShape(18.dp)).clickable { onMetric(t.metric) } else Modifier), spark) }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/** Une constante, tuile douce posée dans la carte : symbole et nom, valeur dans sa couleur, tendance (ou plage habituelle) dessous. */
+@Composable
+private fun VitalTile(t: VitalTrend, modifier: Modifier, spark: Boolean, compact: Boolean = false) {
+    val m = t.metric
+    val narrow = LocalCardHalf.current || compact
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Mf.colors.chip).padding(horizontal = if (compact) 8.dp else 10.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(m.icon, null, Modifier.size(14.dp), tint = m.color)
+            Spacer(Modifier.width(4.dp))
+            // tuile étroite : le symbole et l'unité suffisent, le nom serait coupé
+            Text(if (narrow) unitOf(m).orEmpty() else m.shortName(), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.Bottom) {
+            Text(formatValue(m, t.last!!.second), style = MaterialTheme.typography.titleMedium, fontSize = if (compact) 17.sp else 20.sp, fontWeight = FontWeight.Bold, color = m.color, maxLines = 1,
+                modifier = Modifier.alignByBaseline())
+            if (!narrow) unitOf(m)?.takeIf { it.length <= 4 }?.let { Text(" $it", style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1, modifier = Modifier.alignByBaseline()) }
+        }
+        if (!compact) {
+            if (spark) TrendSpark(t, Modifier.padding(top = 4.dp).fillMaxWidth().height(30.dp))
+            else RangeBar(t.last!!.second, t.range?.first, t.range?.second, t.status.color(), Modifier.padding(top = 4.dp))
+        }
     }
 }

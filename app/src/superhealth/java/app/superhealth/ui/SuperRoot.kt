@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -20,6 +21,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -153,6 +155,16 @@ private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
 
 @Composable
 fun SuperRoot(vm: SuperViewModel) {
+    // lectures faites à l'avance, juste après le démarrage : silhouettes et activités récentes de l'onglet Activités
+    val preloadCtx = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(800)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { app.superhealth.training.ui.components.preloadBodies(vm.training.state.value.settings.sex) }
+            val f = app.superhealth.SuperPrefs.settings.value
+            runCatching { app.superhealth.ui.health.preloadRecent(preloadCtx, f.has(app.superhealth.Feature.TRAINING), f.has(app.superhealth.Feature.HEALTH)) }
+        }
+    }
     val sh by vm.settings.collectAsState()
     val tst by vm.training.state.collectAsState()
     val db by vm.training.db.collectAsState()
@@ -205,11 +217,11 @@ fun SuperRoot(vm: SuperViewModel) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background)) {
         NavHost(
             nav, startDestination = "home", modifier = Modifier.weight(1f),
-            // Axe partagé horizontal de Material : glissement court et fondu ; les onglets se croisent en fondu.
-            enterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeIn(tween(160)) else slideInHorizontally(push) { it / 5 } + fadeIn(tween(220, 60)) },
-            exitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeOut(tween(120)) else slideOutHorizontally(push) { -it / 5 } + fadeOut(tween(120)) },
-            popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeIn(tween(160)) else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
-            popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) fadeOut(tween(120)) else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
+            // Axe partagé horizontal de Material : glissement court et fondu ; les onglets changent sans transition (le fondu croisé accrochait pendant la construction de l'écran).
+            enterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { it / 5 } + fadeIn(tween(220, 60)) },
+            exitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { -it / 5 } + fadeOut(tween(120)) },
+            popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
+            popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
@@ -305,17 +317,20 @@ fun SuperRoot(vm: SuperViewModel) {
 private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
 
 /**
- * Barre de navigation flottante : quatre onglets (pastille teintée derrière l'icône active, comme Material 3) et, à côté,
- * le « + » en bouton d'action carré arrondi.
+ * Barre de navigation : une pilule flottante bordée d'un filet, les onglets à parts égales (symbole et nom, l'actif sur une
+ * pastille d'encre) et, à côté, le « + » rond sous le pouce (ou au milieu de la barre).
  */
 @Composable
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
     val shown = visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it }
+    val dark = Mf.colors.dark
+    val shape = RoundedCornerShape(26.dp)
     val pill = Modifier.height(68.dp)
-        .shadow(10.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = 0.18f), spotColor = Color.Black.copy(alpha = 0.12f))
-        .clip(RoundedCornerShape(26.dp)).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).padding(horizontal = 4.dp)
-    Row(Modifier.fillMaxWidth().background(Mf.colors.background).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+        .shadow(if (dark) 0.dp else 12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
+        .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, shape).padding(horizontal = 4.dp)
+    Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background), endY = 40f))
+        .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
         when (sh.plusSide) {
             // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
@@ -330,7 +345,7 @@ private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> U
                 // moins d'onglets (parties coupées) : barre plus courte, gardée près du « + » sous le pouce
                 val short = shown.size < tabs.size
                 if (leftHanded) { PlusButton(64.dp, onPlus); Spacer(Modifier.width(10.dp)) } else if (short) Spacer(Modifier.weight(1f))
-                Row((if (short) Modifier.width((100 * shown.size + 8).dp) else Modifier.weight(1f)).then(pill)) {
+                Row((if (short) Modifier.width((84 * shown.size + 8).dp) else Modifier.weight(1f)).then(pill)) {
                     shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
                 }
                 if (!leftHanded) { Spacer(Modifier.width(10.dp)); PlusButton(64.dp, onPlus) } else if (short) Spacer(Modifier.weight(1f))
@@ -344,25 +359,28 @@ private fun PlusButton(size: androidx.compose.ui.unit.Dp, onPlus: () -> Unit) {
     val r = RoundedCornerShape(size * 0.31f)
     Box(
         Modifier.size(size).shadow(10.dp, r, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
-            .clip(r).background(Mf.colors.strong).clickable(onClick = onPlus),
+            .clip(r).background(app.superhealth.ui.theme.actionFill(Mf.colors.strong, app.superhealth.ui.theme.partnerOf(Mf.colors.strong)))
+            .clickable(onClick = onPlus),
         contentAlignment = Alignment.Center,
-    ) { Icon(Icons.Rounded.Add, tr("Ajouter"), tint = Mf.colors.onStrong, modifier = Modifier.size(size * 0.47f)) }
+    ) {
+        Icon(Icons.Rounded.Add, tr("Ajouter"), tint = app.superhealth.ui.theme.actionInk(), modifier = Modifier.size(size * 0.47f))
+    }
 }
 
 @Composable
 private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    // onglet actif : pastille teintée de l'accent derrière le symbole, nom en gras
     val accent = Mf.colors.accent
     val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
     Column(
         modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
-        Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent),
-            contentAlignment = Alignment.Center) {
+        Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent), contentAlignment = Alignment.Center) {
             Icon(tab.icon, tr(tab.label), tint = if (selected) accent.onContainer() else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.height(3.dp))
-        Text(tr(tab.label), fontSize = 11.sp, color = if (selected) Mf.colors.text else Mf.colors.textSecondary,
+        Text(tr(tab.label), fontSize = 12.sp, color = if (selected) Mf.colors.text else Mf.colors.textSecondary,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

@@ -56,12 +56,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
@@ -86,6 +88,7 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.ProteinColor
+import app.superhealth.ui.theme.partner
 import kotlin.math.roundToInt
 
 val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
@@ -94,7 +97,7 @@ val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
 @Composable
 fun MfCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(16.dp), content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card)
+        modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card).border(1.dp, Mf.colors.line, CardShape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
         content = content,
     )
@@ -172,9 +175,9 @@ fun GroupHeader(text: String, modifier: Modifier = Modifier) {
 
 /** Icône d'aliment associée au nom, toujours en pixel-art (pack, sinon générée) ; aliment non reconnu : le repas générique. */
 @Composable
-fun FoodIcon(name: String, size: Dp = 40.dp, modifier: Modifier = Modifier) {
+fun FoodIcon(name: String, size: Dp = 40.dp, modifier: Modifier = Modifier, corner: Dp? = null) {
     val px = remember(name) { (FoodIcons.match(name)?.let { FoodIcons.pixel(it) }) ?: FoodIcons.pixel(FoodIcons.GENERIC) }
-    Box(modifier.size(size).clip(CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
+    Box(modifier.size(size).clip(if (corner != null) RoundedCornerShape(corner) else CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
         if (px != null) Canvas(Modifier.size(size * 0.76f)) { drawPixelArt(px, center, this.size.minDimension) }
     }
 }
@@ -188,7 +191,9 @@ fun AssetImage(path: String, modifier: Modifier = Modifier, crop: Boolean = fals
 @Composable
 fun ProgressBar(fraction: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 4.dp, track: Color = Mf.colors.chip) {
     Box(modifier.fillMaxWidth().height(height).clip(CircleShape).background(track)) {
-        if (fraction > 0f) Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(height).clip(CircleShape).background(color))
+        if (fraction > 0f) Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(height).clip(CircleShape)
+            .background(if (app.superhealth.ui.theme.Hues.gradient) androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(color.partner(), color))
+                else androidx.compose.ui.graphics.SolidColor(color)))
     }
 }
 
@@ -201,7 +206,10 @@ fun Ring(fraction: Float, color: Color, size: Dp, stroke: Dp = 4.dp, track: Colo
             val d = this.size.minDimension - s
             val tl = Offset(s / 2, s / 2)
             drawArc(track, 0f, 360f, false, tl, Size(d, d), style = Stroke(s))
-            if (fraction > 0f) drawArc(color, -90f, 360f * fraction.coerceIn(0f, 1f), false, tl, Size(d, d), style = Stroke(s, cap = StrokeCap.Round))
+            if (fraction > 0f) rotate(-90f) {
+                val f = fraction.coerceIn(0f, 1f)
+                drawArc(app.superhealth.ui.theme.arcBrush(color, f), 0f, 360f * f, false, tl, Size(d, d), style = Stroke(s, cap = StrokeCap.Round))
+            }
         }
         content()
     }
@@ -217,6 +225,50 @@ fun MacroSummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Dou
         MacroCell(tr("P"), consumed.protein, target?.protein, ratio(consumed.protein, target?.protein), ProteinColor, Modifier.weight(1f))
         MacroCell(tr("L"), consumed.fat, target?.fat, ratio(consumed.fat, target?.fat), FatColor, Modifier.weight(1f))
         MacroCell(tr("G"), consumed.carbs, target?.carbs, ratio(consumed.carbs, target?.carbs), CarbsColor, Modifier.weight(1f))
+    }
+}
+
+/**
+ * Résumé du jour : un anneau en trois arcs, un par macro, chacun rempli jusqu'à son objectif ; le reste en grand ; trois
+ * barres de macros à droite.
+ */
+@Composable
+fun EnergySummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Double, unit: String, modifier: Modifier = Modifier) {
+    val goal = target?.kcal?.takeIf { it > 0 }
+    val left = goal?.let { it - consumed.kcal }
+    val track = Mf.colors.chip
+    val arcs = listOf(ratio(consumed.protein, target?.protein) to ProteinColor, ratio(consumed.fat, target?.fat) to FatColor, ratio(consumed.carbs, target?.carbs) to CarbsColor)
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(72.dp)) {
+            val w = 8.dp.toPx()
+            val box = Size(size.width - w, size.height - w); val tl = Offset(w / 2, w / 2)
+            arcs.forEachIndexed { i, (f, c) ->
+                val start = -90f + i * 120f + 9f
+                drawArc(track, start, 102f, false, tl, box, style = Stroke(w, cap = StrokeCap.Round))
+                if (f > 0f) drawArc(c, start, 102f * f.coerceAtMost(1f), false, tl, box, style = Stroke(w, cap = StrokeCap.Round))
+            }
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            val big = left?.let { energyValue(kotlin.math.abs(it)).roundToInt().toString() } ?: energyValue(consumed.kcal).roundToInt().toString()
+            val ink = CaloriesColor
+            Text(big, style = MaterialTheme.typography.headlineMedium.merge(TextStyle(brush = if (app.superhealth.ui.theme.Hues.gradient)
+                Brush.horizontalGradient(listOf(ink, ink.partner())) else androidx.compose.ui.graphics.SolidColor(ink))),
+                fontSize = 30.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(when { left == null -> trf("%1\$s mangées", unit); left < 0 -> trf("%1\$s en trop", unit); else -> trf("%1\$s restantes", unit) },
+                style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1)
+        }
+        Column(Modifier.width(140.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            listOf(Triple(tr("Prot."), consumed.protein to target?.protein, ProteinColor), Triple(tr("Lip."), consumed.fat to target?.fat, FatColor),
+                Triple(tr("Gluc."), consumed.carbs to target?.carbs, CarbsColor)).forEach { (name, vt, c) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.width(36.dp), maxLines = 1)
+                    ProgressBar(ratio(vt.first, vt.second), c, Modifier.weight(1f), height = 5.dp)
+                    Text(vt.first.roundToInt().toString(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.width(32.dp), maxLines = 1)
+                }
+            }
+        }
     }
 }
 
@@ -306,7 +358,7 @@ fun RowDivider(inset: Dp = 16.dp) = Box(Modifier.padding(start = inset).fillMaxW
 /** Groupe de lignes dans une carte (réglages). */
 @Composable
 fun GroupCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card), content = content)
+    Column(modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card).border(1.dp, Mf.colors.line, CardShape), content = content)
 }
 
 /** Bouton capsule de Material 3 : plein (accent, texte blanc) ou tonal (fond teinté d'accent). */

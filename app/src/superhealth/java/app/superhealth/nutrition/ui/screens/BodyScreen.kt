@@ -111,7 +111,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Couleur de l'écran Corps (famille « corps » des cartes). */
-private val BodyHue = HealthHues.Body
+private val BodyHue get() = HealthHues.Body
 
 /** Paires gauche / droite affichées ensemble (une tuile « Biceps » plutôt que deux). */
 private val pairs = listOf(

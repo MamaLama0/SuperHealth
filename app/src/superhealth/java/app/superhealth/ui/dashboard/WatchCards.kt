@@ -99,7 +99,7 @@ internal val DashCard.isWatchChart: Boolean get() = this in WATCH_CARDS
 /** Une source existe-t-elle pour la carte ? (sinon elle reste masquée, comme les autres cartes de montre) */
 internal fun watchSource(c: DashCard): Boolean = when (c) {
     DashCard.CHARGE, DashCard.HRV_STATUS -> Bridge.hasSource(Metric.HRV)
-    DashCard.EFFORT, DashCard.HR_ZONES, DashCard.LOAD -> HealthRepository.isSupported(Metric.HEART_RATE)
+    DashCard.EFFORT, DashCard.HR_ZONES, DashCard.LOAD -> HealthRepository.isSupported(Metric.HEART_RATE) || Bridge.hasSource(Metric.HEART_RATE)
     DashCard.SLEEP_STAGES -> Bridge.hasSource(Metric.SLEEP)
     DashCard.STRESS_DAY -> HealthRepository.isSupported(Metric.STRESS)
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY -> Bridge.hasSource(Metric.SLEEP)
@@ -122,12 +122,12 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
     }
     val efforts = async {
         // 28 jours d'avant + aujourd'hui : charge chronique (Charge d'entraînement, Effort à viser)
-        val n = if (has(DashCard.LOAD) || has(DashCard.EFFORT)) 29L else if (has(DashCard.SCORES)) 7L else 0L
+        val n = if (has(DashCard.LOAD, DashCard.EFFORT, DashCard.SCORES)) 29L else 0L
         (n - 1 downTo 0L).map { d -> async { runCatching { Scores.effortOf(ctx, today.minusDays(d)) }.getOrNull() } }.awaitAll()
     }
     val zones = async { if (has(DashCard.HR_ZONES)) runCatching { Scores.zonesOf(ctx, today) }.getOrNull() else null }
     val night = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Bridge.sleepNight(today) }.getOrNull() else null }
-    val debt = async { if (has(DashCard.SLEEP_STAGES)) runCatching { Scores.sleepDebtOf(ctx, today) }.getOrNull() else null }
+    val debt = async { if (has(DashCard.SLEEP_STAGES) || DashCard.SLEEP in cards) runCatching { Scores.sleepDebtOf(ctx, today) }.getOrNull() else null }
     val score = async { if (has(DashCard.SLEEP_STAGES, DashCard.SCORES)) runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, today) }.getOrNull() else null }
     val need = async { if (has(DashCard.SLEEP_STAGES, DashCard.SCORES)) runCatching { Scores.sleepHabits(ctx).needMin }.getOrNull() else null }
     val hrv = async {
@@ -135,7 +135,7 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
         else emptyList()
     }
     val stress = async { if (has(DashCard.STRESS_DAY)) runCatching { HealthRepository.intraday(Metric.STRESS, today) }.getOrDefault(emptyList()) else emptyList() }
-    val hourly = async { if (has(DashCard.DAY_TIMELINE)) runCatching { Bridge.hourlySteps(ctx, today) }.getOrDefault(emptyList()) else emptyList() }
+    val hourly = async { if (has(DashCard.DAY_TIMELINE) || DashCard.STEPS in cards) runCatching { Bridge.hourlySteps(ctx, today) }.getOrDefault(emptyList()) else emptyList() }
     // 2.1 : la carte Sommeil en grand empile les phases des 7 nuits ; Horaires en lit 14
     val sleepBig = DashCard.SLEEP in cards && Bridge.hasSource(Metric.SLEEP)
     val nightCount = when { has(DashCard.SLEEP_SCHEDULE) -> 14L; sleepBig || has(DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART) -> 7L; has(DashCard.SCORES) -> 1L; else -> 0L }
@@ -219,7 +219,7 @@ internal fun watchCompact(c: DashCard, w: WatchSnap, nav: NavHostController): Co
 }
 
 /** Pas des 24 heures du jour (null avant la première heure mesurée). */
-private fun hourlySteps(pts: List<Point>): List<Double?> {
+internal fun hourlySteps(pts: List<Point>): List<Double?> {
     val start = HealthRepository.startMs(LocalDate.now())
     val byHour = pts.associate { ((it.timestampMs - start) / 3_600_000).toInt() to it.value }
     return (0 until 24).map { byHour[it] }

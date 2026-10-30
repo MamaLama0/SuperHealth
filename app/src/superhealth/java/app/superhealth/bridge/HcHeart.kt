@@ -59,6 +59,22 @@ object HcWorkouts {
     fun idOf(s: app.superhealth.HcSession): Long = -(BASE + s.start / 1000)
     fun isHc(id: Long) = id <= -BASE
 
+    private val routes = ConcurrentHashMap<String, List<Pair<Double, Double>>>()
+
+    /**
+     * Tracé GPS (latitude, longitude) d'une séance Health Connect, quand Health Connect le donne sans demander d'accord
+     * (séance écrite par l'app, ou accès aux tracés accordé) ; null sinon.
+     */
+    suspend fun route(ctx: Context, s: app.superhealth.HcSession): List<Pair<Double, Double>>? {
+        val r = routes[s.id] ?: runCatching {
+            val rec = androidx.health.connect.client.HealthConnectClient.getOrCreate(ctx)
+                .readRecord(androidx.health.connect.client.records.ExerciseSessionRecord::class, s.id).record
+            (rec.exerciseRouteResult as? androidx.health.connect.client.records.ExerciseRouteResult.Data)?.exerciseRoute?.route
+                ?.map { it.latitude to it.longitude }
+        }.getOrNull().orEmpty().also { routes[s.id] = it }
+        return r.takeIf { it.size >= 2 }
+    }
+
     fun detail(id: Long): app.superhealth.health.data.WorkoutDetail? {
         val s = app.superhealth.SuperPrefs.hc.value.sessions.firstOrNull { idOf(it) == id } ?: return null
         val zone = java.time.ZoneId.systemDefault()

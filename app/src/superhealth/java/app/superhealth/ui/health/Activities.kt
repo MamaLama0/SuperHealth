@@ -1,6 +1,18 @@
 package app.superhealth.ui.health
 
 import android.content.Context
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import kotlin.math.roundToLong
+import app.superhealth.ui.formatNumber
+import app.superhealth.ui.theme.dashCardBackground
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -123,15 +135,16 @@ fun openActivity(ctx: Context, nav: NavHostController, a: Bridge.Activity) {
 }
 
 /** Activités lues pour l'onglet : [strength] garde la musculation, [health] les séances de la montre et de Health Connect. */
-private suspend fun tabActivities(fromMs: Long, strength: Boolean, health: Boolean): List<Bridge.Activity> =
+private suspend fun tabActivities(fromMs: Long, strength: Boolean, health: Boolean): List<Bridge.Activity> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
     runCatching { Bridge.activities(fromMs) }.getOrDefault(emptyList()).filter { a ->
         val gym = a.source == Bridge.Source.GYM || a.kind == Bridge.Kind.STRENGTH
         if (gym) strength && (a.source == Bridge.Source.GYM || health) else health
     }
+}
 
 /**
- * Semaine de l'onglet Activités : nombre de séances, durée et distance de toutes les activités, et les sept jours en
- * pastilles de la couleur de l'activité la plus longue du jour. Le toucher ouvre les performances.
+ * Semaine de l'onglet Activités, en une ligne : nombre d'activités et durée de la semaine à gauche, une barre par jour
+ * (minutes d'activité, en dégradé) à droite ; points pour les jours sans activité. Le toucher ouvre les performances.
  */
 @Composable
 fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean) {
@@ -151,49 +164,48 @@ fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strengt
         else -> null
     }
     val minutes = list.sumOf { it.minutes }
-    val dist = list.sumOf { it.distanceM ?: 0.0 } / 1000
-    val byDay = list.groupBy { localDate(it.start) }.mapValues { (_, l) -> l.maxBy { it.minutes } }
-    Column(Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card)
-        .then(if (route != null) Modifier.clickable { nav.navigate(route) } else Modifier).padding(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Cette semaine"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
-            if (route != null) {
-                Text(tr("Performances"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
-                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(18.dp), tint = Mf.colors.accent)
+    val byDay = list.groupBy { localDate(it.start) }.mapValues { (_, l) -> l.sumOf { it.minutes } }
+    val max = (byDay.values.maxOrNull() ?: 0L).coerceAtLeast(1L)
+    val hue = HealthHues.Fitness
+    val dot = Mf.colors.chip
+    val shape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp).clip(shape).dashCardBackground(hue)
+        .then(if (route != null) Modifier.clickable { nav.navigate(route) } else Modifier).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("${list.size}", style = MaterialTheme.typography.headlineMedium, fontSize = 22.sp, modifier = Modifier.alignByBaseline())
+                Text(" " + (if (list.size > 1) tr("activités") else tr("activité")), style = MaterialTheme.typography.bodyMedium,
+                    color = Mf.colors.textSecondary, modifier = Modifier.alignByBaseline())
             }
+            Text(trf("%1\$s cette semaine", formatDuration(minutes.toDouble())), style = MaterialTheme.typography.bodySmall,
+                color = Mf.colors.textSecondary, maxLines = 1)
         }
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 2.dp)) {
-            Text("${list.size}", style = MaterialTheme.typography.headlineMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                modifier = Modifier.alignByBaseline())
-            Text(" " + (if (list.size > 1) tr("activités") else tr("activité")), style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.alignByBaseline())
-            Text(listOfNotNull(minutes.takeIf { it > 0 }?.let { formatDuration(it.toDouble()) }, dist.takeIf { it >= 0.1 }?.let { km(it * 1000) + " km" })
-                .joinToString(" · ", prefix = if (minutes > 0) "  ·  " else ""), style = MaterialTheme.typography.bodyMedium,
-                color = Mf.colors.textSecondary, maxLines = 1, modifier = Modifier.alignByBaseline())
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth()) {
-            (0L..6L).forEach { i ->
-                val d = start.plusDays(i)
-                val a = byDay[d]
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    val hue = a?.kind?.hue()
-                    Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(hue ?: Mf.colors.chip)
-                        .then(if (d == today && a == null) Modifier.border(1.5.dp, Mf.colors.accent, androidx.compose.foundation.shape.CircleShape) else Modifier),
-                        contentAlignment = Alignment.Center) {
-                        if (a != null) Icon(a.kind.icon(), null, Modifier.size(17.dp), tint = Color.White)
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(app.superhealth.ui.dayLetter(d), style = MaterialTheme.typography.labelSmall,
-                        color = if (d == today) Mf.colors.text else Mf.colors.textSecondary)
+        (0L..6L).forEach { i ->
+            val d = start.plusDays(i)
+            val m = byDay[d] ?: 0L
+            Column(Modifier.width(26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Canvas(Modifier.width(7.dp).height(34.dp)) {
+                    val w = size.width
+                    if (m > 0) {
+                        val h = maxOf(w, size.height * m / max)
+                        drawRoundRect(app.superhealth.ui.theme.dataBrush(hue, Offset(0f, size.height), Offset(0f, size.height - h)),
+                            Offset(0f, size.height - h), Size(w, h), CornerRadius(w / 2))
+                    } else drawCircle(dot, w / 2, Offset(w / 2, size.height - w / 2), alpha = if (d.isAfter(today)) 0.5f else 1f)
                 }
+                Spacer(Modifier.height(4.dp))
+                Text(app.superhealth.ui.dayLetter(d), style = MaterialTheme.typography.labelMedium, fontSize = 12.sp,
+                    fontWeight = if (d == today) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (d == today) Mf.colors.text else Mf.colors.textSecondary)
             }
         }
     }
 }
 
-/** Activités récentes : musculation et cardio dans une seule liste, la plus récente en haut. */
+/**
+ * Activités récentes : la dernière sortie avec une distance en grand (distance, temps et allure, tracé du parcours quand
+ * il existe), puis les deux activités suivantes en petites tuiles (volume soulevé, distance ou durée).
+ */
 @Composable
 fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean) {
     val ctx = LocalContext.current
@@ -202,15 +214,21 @@ fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, str
     val devices by vm.devices.collectAsState()
     val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
     val history by vm.training.state.collectAsState()
-    val list by produceState(emptyList<Bridge.Activity>(), refresh, sh.watchModule, imported, history.history.size) {
-        // les dernières, quel que soit leur âge (historique rapatrié de la montre, pause hivernale…)
-        value = tabActivities(0L, strength, health)
+    // dernière lecture réaffichée dès l'ouverture ; lue à l'avance au démarrage (voir preloadRecent)
+    val recent by produceState(lastRecent, refresh, sh.watchModule, imported, history.history.size) {
+        // les dernières, quel que soit leur âge (historique rapatrié de la montre, pause hivernale…) : la liste tout de suite, les tracés ensuite
+        val l = tabActivities(0L, strength, health)
+        value = Recent(l, lastRecent.routes).also { lastRecent = it }
+        value = Recent(l, routesOf(ctx, l)).also { lastRecent = it }
     }
+    val list = recent.list
+    val routes = recent.routes
     SectionLabel(tr("Récentes")) {
         if (list.isNotEmpty()) Text(tr("Tout voir"), Modifier.clickable { nav.navigate(if (health) "h/activities" else "history") }, color = Mf.colors.accent,
             style = MaterialTheme.typography.labelLarge)
     }
-    if (list.isEmpty()) MfCard {
+    if (list.isEmpty()) {
+        MfCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Watch, null, Modifier.size(28.dp), tint = Mf.colors.accent)
             Spacer(Modifier.width(12.dp))
@@ -221,11 +239,133 @@ fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, str
                 else -> tr("Associez une montre ou Health Connect pour retrouver vos activités ici.")
             }, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         }
-    } else GroupCard {
-        list.take(5).forEachIndexed { i, a ->
-            if (i > 0) RowDivider()
-            ActivityRow(a) { openActivity(ctx, nav, a) }
         }
+        return
+    }
+    // en grand : la dernière course, sinon la dernière sortie avec une distance (choix stable : il ne dépend pas des tracés encore à lire)
+    val lead = list.take(5).let { l -> l.firstOrNull { it.kind == Bridge.Kind.RUN && (it.distanceM ?: 0.0) >= 100 } ?: l.firstOrNull { (it.distanceM ?: 0.0) >= 100 } }
+    val rest = list.filter { it != lead }.take(if (lead == null) 4 else 2)
+    lead?.let { a -> app.superhealth.ui.theme.CardTone(a.kind.hue()) { RouteTile(a, routes[a.key]) { openActivity(ctx, nav, a) } } }
+    rest.chunked(2).forEach { pair ->
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.height(IntrinsicSize.Min)) {
+            pair.forEach { a -> app.superhealth.ui.theme.CardTone(a.kind.hue()) { SmallActivityTile(a, history.history, routes[a.key], Modifier.weight(1f).fillMaxHeight()) { openActivity(ctx, nav, a) } } }
+            if (pair.size == 1) Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+/** Activités récentes et tracés des premières (clé de l'activité → tracé). */
+private class Recent(val list: List<Bridge.Activity>, val routes: Map<String, List<Pair<Double, Double>>>)
+private var lastRecent = Recent(emptyList(), emptyMap())
+
+private suspend fun routesOf(ctx: Context, l: List<Bridge.Activity>) =
+    l.take(5).filter { (it.distanceM ?: 0.0) >= 100 }.mapNotNull { a -> routeOf(ctx, a)?.let { a.key to it } }.toMap()
+
+/** Lit à l'avance les activités récentes et leurs tracés : l'onglet Activités les montre dès son ouverture. */
+suspend fun preloadRecent(ctx: Context, strength: Boolean, health: Boolean) {
+    val l = tabActivities(0L, strength, health)
+    lastRecent = Recent(l, lastRecent.routes)
+    lastRecent = Recent(l, routesOf(ctx, l))
+}
+
+/** Temps d'une activité : « 28:41 », ou « 1:05:12 » au-delà d'une heure. */
+internal fun clock(sec: Long): String = if (sec >= 3600) "%d:%02d:%02d".format(sec / 3600, sec / 60 % 60, sec % 60) else "%d:%02d".format(sec / 60, sec % 60)
+
+/** Allure (course, marche, randonnée) ou vitesse (vélo…) moyenne. */
+internal fun pace(a: Bridge.Activity): String? {
+    val m = a.distanceM?.takeIf { it >= 100 } ?: return null
+    val sec = (a.end - a.start) / 1000
+    if (sec <= 0) return null
+    return if (a.kind == Bridge.Kind.BIKE) formatNumber(m / 1000 / (sec / 3600.0), 1) + " km/h"
+    else (sec / (m / 1000)).roundToLong().let { "%d:%02d /km".format(it / 60, it % 60) }
+}
+
+/** Tuile de la dernière sortie : distance en grand, temps et allure, tracé à droite. */
+@Composable
+private fun RouteTile(a: Bridge.Activity, route: List<Pair<Double, Double>>?, onClick: () -> Unit) {
+    val hue = a.kind.hue()
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground(hue).clickable(onClick = onClick)
+        .padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            app.superhealth.ui.dashboard.TileLabel(a.kind.icon(), "${tr(a.title)} · ${relativeDay(localDate(a.start)).lowercase()}", hue)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(formatNumber((a.distanceM ?: 0.0) / 1000, 1), style = MaterialTheme.typography.headlineMedium, fontSize = 30.sp,
+                    modifier = Modifier.alignByBaseline())
+                Text(" km", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.alignByBaseline())
+            }
+            Text(listOfNotNull(clock((a.end - a.start) / 1000), pace(a)).joinToString(" · "), style = MaterialTheme.typography.bodySmall,
+                color = Mf.colors.textSecondary, maxLines = 1)
+        }
+        route?.let { RouteTrace(it, hue, Modifier.padding(start = 8.dp).size(118.dp, 74.dp)) }
+    }
+}
+
+/** Petite tuile d'activité : nom et jour, puis le volume soulevé (musculation), la distance ou la durée, et le tracé à droite s'il existe. */
+@Composable
+private fun SmallActivityTile(a: Bridge.Activity, history: List<app.superhealth.training.domain.Workout>, route: List<Pair<Double, Double>>?, modifier: Modifier, onClick: () -> Unit) {
+    val volume = a.gymId?.let { id -> history.firstOrNull { it.id == id } }
+        ?.exercises?.sumOf { app.superhealth.training.domain.Analytics.volume(it.sets) }?.takeIf { it > 0 }
+    val value = when {
+        volume != null -> if (volume >= 1000) formatNumber(volume / 1000, 1) + " t" else formatNumber(volume) + " kg"
+        (a.distanceM ?: 0.0) >= 100 -> formatNumber(a.distanceM!! / 1000, 1) + " km"
+        else -> formatDuration(a.minutes.toDouble())
+    }
+    Column(modifier.clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).dashCardBackground(a.kind.hue()).clickable(onClick = onClick).padding(14.dp)) {
+        app.superhealth.ui.dashboard.TileLabel(a.kind.icon(), "${tr(a.title)} · ${relativeDay(localDate(a.start)).lowercase()}", a.kind.hue())
+        Spacer(Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(value, style = MaterialTheme.typography.headlineMedium, fontSize = 22.sp, maxLines = 1, modifier = Modifier.weight(1f))
+            route?.let { RouteTrace(it, a.kind.hue(), Modifier.size(52.dp, 32.dp), stroke = 2.dp) }
+        }
+    }
+}
+
+private val routeCache = java.util.concurrent.ConcurrentHashMap<String, List<Pair<Double, Double>>>()
+
+/** Tracé GPS d'une activité (latitude, longitude), allégé à 150 points et gardé en mémoire et sur le disque (lire une séance de montre est long) ; null sans tracé. */
+suspend fun routeOf(ctx: Context, a: Bridge.Activity): List<Pair<Double, Double>>? {
+    routeCache[a.key]?.let { return it.takeIf { r -> r.isNotEmpty() } }
+    val file = java.io.File(java.io.File(ctx.filesDir, "routes").apply { mkdirs() }, a.key.replace('/', '_') + ".txt")
+    val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (file.exists()) runCatching { file.readLines().map { it.substringBefore(' ').toDouble() to it.substringAfter(' ').toDouble() } }.getOrNull()
+        else readRoute(ctx, a)?.also { pts -> runCatching { file.writeText(pts.joinToString("\n") { "${it.first} ${it.second}" }) } }
+    }
+    routeCache[a.key] = r.orEmpty()
+    return r
+}
+
+private suspend fun readRoute(ctx: Context, a: Bridge.Activity): List<Pair<Double, Double>>? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    val id = a.watch?.id ?: a.run?.id
+    val pts = runCatching {
+        when {
+            a.hc != null -> app.superhealth.bridge.HcWorkouts.route(ctx, a.hc)
+            id != null -> app.superhealth.health.data.WorkoutDetails.load(ctx, id)?.points?.mapNotNull { p -> p.lat?.let { la -> p.lon?.let { la to it } } }
+            else -> null
+        }
+    }.getOrNull()?.takeIf { it.size >= 2 } ?: return@withContext null
+    val step = (pts.size + 149) / 150
+    pts.filterIndexed { i, _ -> i % step == 0 || i == pts.lastIndex }
+}
+
+/** Parcours : tracé en dégradé de la couleur de l'activité, départ en point plein, arrivée cerclée. */
+@Composable
+fun RouteTrace(pts: List<Pair<Double, Double>>, hue: Color, modifier: Modifier, stroke: androidx.compose.ui.unit.Dp = 3.dp) {
+    val ink = Mf.colors.text
+    Canvas(modifier) {
+        val k = kotlin.math.cos(Math.toRadians(pts.map { it.first }.average()))
+        val xs = pts.map { it.second * k }; val ys = pts.map { -it.first }
+        val w = stroke.toPx(); val pad = w * 2
+        val sx = (xs.max() - xs.min()).coerceAtLeast(1e-9); val sy = (ys.max() - ys.min()).coerceAtLeast(1e-9)
+        val s = minOf((size.width - 2 * pad) / sx, (size.height - 2 * pad) / sy)
+        val ox = (size.width - sx * s) / 2 - xs.min() * s; val oy = (size.height - sy * s) / 2 - ys.min() * s
+        val o = pts.indices.map { Offset((xs[it] * s + ox).toFloat(), (ys[it] * s + oy).toFloat()) }
+        val path = androidx.compose.ui.graphics.Path().apply { moveTo(o[0].x, o[0].y); o.drop(1).forEach { lineTo(it.x, it.y) } }
+        drawPath(path, app.superhealth.ui.theme.dataBrush(hue, Offset.Zero, Offset(size.width, size.height)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        drawCircle(ink, w * 1.3f, o.first())
+        drawCircle(hue, w * 1.3f, o.last(), style = androidx.compose.ui.graphics.drawscope.Stroke(w * 0.7f))
     }
 }
 

@@ -59,6 +59,12 @@ import kotlin.reflect.KClass
  * Les données de la montre sont exportées par Gadgetbridge lui-même (Réglages > Montre > Health Connect).
  * Health Connect est un stockage local d'Android : rien ne sort du téléphone.
  */
+/** Préfixe des données de démonstration écrites par la version de test (app.superhealth.debug.DemoDataActivity). */
+const val DEMO_RECORD_PREFIX = "shdemo-"
+
+/** Enregistrement d'une autre app ; les données de démonstration écrites par l'app elle-même comptent aussi. */
+private fun Metadata.foreign(me: String) = dataOrigin.packageName != me || clientRecordId?.startsWith(DEMO_RECORD_PREFIX) == true
+
 object HealthConnectHub {
     private fun read(c: KClass<out androidx.health.connect.client.records.Record>) = HealthPermission.getReadPermission(c)
     private fun write(c: KClass<out androidx.health.connect.client.records.Record>) = HealthPermission.getWritePermission(c)
@@ -123,18 +129,23 @@ object HealthConnectHub {
                     val n = r.result[StepsRecord.COUNT_TOTAL] ?: return@mapNotNull null
                     BodyMetricEntity(r.startTime.toLocalDate().toEpochDay(), Repository.STEPS, n.toDouble())
                 }
-                repo.body.upsertMetrics(rows); readDays = rows.size
+                // l'agrégat ne compte que les apps de la liste de priorité de Health Connect : sans résultat, total des heures
+                val days = rows.ifEmpty {
+                    stepsHourly(client, range, me).entries.groupBy { Instant.ofEpochMilli(it.key).day() }
+                        .map { (d, l) -> BodyMetricEntity(d, Repository.STEPS, l.sumOf { it.value }.let(Math::round).toDouble()) }
+                }
+                repo.body.upsertMetrics(days); readDays = days.size
             }
             // Pesées d'autres apps (balance connectée…) ; les pesées saisies dans SuperHealth restent prioritaires.
             if (read(WeightRecord::class) in granted) {
                 val fat = if (read(BodyFatRecord::class) in granted)
                     client.readRecords(ReadRecordsRequest(BodyFatRecord::class, range)).records
-                        .filter { it.metadata.dataOrigin.packageName != me }
+                        .filter { it.metadata.foreign(me) }
                         .associate { it.time.day() to it.percentage.value }
                 else emptyMap()
                 val local = repo.weighIns.all().map { it.epochDay }.toSet()
                 val news = client.readRecords(ReadRecordsRequest(WeightRecord::class, range)).records
-                    .filter { it.metadata.dataOrigin.packageName != me }
+                    .filter { it.metadata.foreign(me) }
                     .sortedBy { it.time }
                     .associateBy { it.time.day() }
                     .filterKeys { it !in local }
@@ -241,7 +252,7 @@ object HealthConnectHub {
             rs.maxByOrNull(time)?.let { origins[metric.name] = sourceOf(it.metadata, pm) }
         }
         suspend fun <R : androidx.health.connect.client.records.Record> others(type: KClass<R>): List<R>? =
-            if (read(type) in granted) readAll(client, type, range).filter { it.metadata.dataOrigin.packageName != me } else null
+            if (read(type) in granted) readAll(client, type, range).filter { it.metadata.foreign(me) } else null
         // Pouls : moyenne du jour, et minute par minute dans des fichiers (Effort, zones, courbe du jour).
         val hrSamples = others(HeartRateRecord::class)?.noteOrigin(Metric.HEART_RATE) { it.endTime }
             ?.flatMap { r -> r.samples.map { it.time.toEpochMilli() to it.beatsPerMinute } }
@@ -290,9 +301,16 @@ object HealthConnectHub {
                 client.aggregate(AggregateRequest(setOf(DistanceRecord.DISTANCE_TOTAL, ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), sr, origin))
             }.getOrNull()
             val bpm = hrSamples?.filter { it.first in r.startTime.toEpochMilli()..r.endTime.toEpochMilli() && it.second in 30..230 }?.map { it.second }
+            // l'agrégat peut échouer (filtre d'origine refusé) : on additionne alors les mesures elles-mêmes
+            val dist = agg?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters ?: runCatching {
+                client.readRecords(androidx.health.connect.client.request.ReadRecordsRequest(DistanceRecord::class, sr, origin)).records.sumOf { it.distance.inMeters }
+            }.getOrNull()
+            val burned = agg?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories ?: runCatching {
+                client.readRecords(androidx.health.connect.client.request.ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, sr, origin)).records.sumOf { it.energy.inKilocalories }
+            }.getOrNull()
             HcSession(r.metadata.id, r.exerciseType, r.title, r.startTime.toEpochMilli(), r.endTime.toEpochMilli(), r.metadata.dataOrigin.packageName,
-                distanceM = agg?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters?.takeIf { it > 0 },
-                kcal = agg?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories?.takeIf { it > 0 },
+                distanceM = dist?.takeIf { it > 0 },
+                kcal = burned?.takeIf { it > 0 },
                 avgHr = bpm?.takeIf { it.isNotEmpty() }?.average()?.toInt(), maxHr = bpm?.maxOrNull()?.toInt())
         } ?: prev.sessions
         // règles : périodes et jours de flux des autres applis (les 30 jours relus remplacent l'import précédent sur cette fenêtre)
@@ -355,7 +373,7 @@ object HealthConnectHub {
         var token: String? = null
         do {
             val res = client.readRecords(ReadRecordsRequest(StepsRecord::class, range, pageSize = 5000, pageToken = token))
-            res.records.filter { it.metadata.dataOrigin.packageName != me && it.count > 0 }.forEach { r ->
+            res.records.filter { it.metadata.foreign(me) && it.count > 0 }.forEach { r ->
                 val start = r.startTime.toEpochMilli()
                 val end = maxOf(r.endTime.toEpochMilli(), start + 1)
                 val buckets = byOrigin.getOrPut(r.metadata.dataOrigin.packageName) { HashMap() }

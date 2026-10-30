@@ -14,7 +14,7 @@ class I18nTest {
     )
 
     @Test fun everyLabelIsTranslated() {
-        val dict = SuperStrings.map.keys + Strings11.map.keys + Strings12.map.keys + Strings13.map.keys + Strings14.map.keys + Strings15.map.keys + Strings16.map.keys + Strings17.map.keys + Strings18.map.keys + Strings21.map.keys + Strings22.map.keys + Strings23.map.keys + app.superhealth.nutrition.ui.EnStrings.map.keys + app.superhealth.training.ui.EnStrings.map.keys
+        val dict = SuperStrings.map.keys + Strings11.map.keys + Strings12.map.keys + Strings13.map.keys + Strings14.map.keys + Strings15.map.keys + Strings16.map.keys + Strings17.map.keys + Strings18.map.keys + Strings21.map.keys + Strings22.map.keys + Strings23.map.keys + Strings24.map.keys + app.superhealth.nutrition.ui.EnStrings.map.keys + app.superhealth.training.ui.EnStrings.map.keys
         val lit = Regex("""\btrf?\(\s*"([^"\\]*+(?:\\.[^"\\]*+)*+)"|"([^"\\]*+(?:\\.[^"\\]*+)*+)"\.tr\(\)""")
         val missing = File("src/superhealth/java").walk().filter { it.extension == "kt" && !it.name.endsWith("Strings.kt") }.flatMap { f ->
             lit.findAll(f.readText()).map { m ->
@@ -26,7 +26,7 @@ class I18nTest {
     }
 
     @Test fun dashboardCardLabelsAreTranslated() {
-        val dict = SuperStrings.map.keys + Strings11.map.keys + Strings12.map.keys + Strings13.map.keys + Strings14.map.keys + Strings15.map.keys + Strings16.map.keys + Strings17.map.keys + Strings18.map.keys + Strings21.map.keys + Strings22.map.keys + Strings23.map.keys + app.superhealth.nutrition.ui.EnStrings.map.keys + app.superhealth.training.ui.EnStrings.map.keys
+        val dict = SuperStrings.map.keys + Strings11.map.keys + Strings12.map.keys + Strings13.map.keys + Strings14.map.keys + Strings15.map.keys + Strings16.map.keys + Strings17.map.keys + Strings18.map.keys + Strings21.map.keys + Strings22.map.keys + Strings23.map.keys + Strings24.map.keys + app.superhealth.nutrition.ui.EnStrings.map.keys + app.superhealth.training.ui.EnStrings.map.keys
         val missing = app.superhealth.DashCard.entries.map { it.label }.filter { it !in dict } +
             app.superhealth.ui.dashboard.Rings.Kind.entries.map { it.label }.filter { it !in dict && it != "Body Battery" }
         assertTrue("Sans traduction : $missing", missing.isEmpty())
