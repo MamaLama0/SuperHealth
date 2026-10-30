@@ -16,7 +16,19 @@ fun main(args: Array<String>) {
         java.io.File(out, "$name.png").writeBytes(img.encodeToData(EncodedImageFormat.PNG)!!.bytes)
         scene.close(); println(name)
     }
-    if (round == "8") {
+    if (round == "9") {
+        val only = args.getOrNull(2)
+        val styles = listOf<Triple<String, String, @Composable (Boolean, Int) -> Unit>>(
+            Triple("score", "", { d, t -> when (t) { 0 -> ScoreHome(d); 1 -> ScoreFood(d); else -> ScoreAct(d) } }),
+            Triple("sante", "", { d, t -> when (t) { 0 -> SanteHome(d); 1 -> SanteFood(d); else -> SanteAct(d) } }),
+            Triple("doux", "", { d, t -> when (t) { 0 -> DouxHome(d); 1 -> DouxFood(d); else -> DouxAct(d) } }),
+        )
+        val tabs = listOf("1-accueil", "2-nutrition", "3-activites")
+        for ((name, _, c) in styles) for (dark in listOf(false, true)) for (t in 0..2) {
+            val n = "$name-${if (dark) "sombre" else "clair"}-${tabs[t]}"
+            if (only == null || n.startsWith(only)) shot(n) { c(dark, t) }
+        }
+    } else if (round == "8") {
         for (dark in listOf(false, true)) { val m = if (dark) "sombre" else "clair"
             shot("compact-$m-1-accueil") { CompactHome(dark) }; shot("compact-$m-2-nutrition") { CompactFood(dark) }; shot("compact-$m-3-activites") { CompactAct(dark) } }
     } else if (round == "7") {
