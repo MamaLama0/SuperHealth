@@ -1,0 +1,254 @@
+{
+ "sessions": [
+  {
+   "id": "souffle5",
+   "name": "Revenir au souffle",
+   "nameEn": "Back to the breath",
+   "summary": "5 min pour se poser",
+   "summaryEn": "5 min to settle",
+   "minutes": 5,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Installez-vous confortablement, le dos droit sans raideur. Fermez les yeux si vous le souhaitez.",
+     "en": "Sit comfortably, back straight but not stiff. Close your eyes if you like."
+    },
+    {
+     "at": 30,
+     "fr": "Laissez la respiration se faire toute seule. Observez simplement l'air qui entre et qui sort.",
+     "en": "Let the breath happen by itself. Simply notice the air coming in and going out."
+    },
+    {
+     "at": 70,
+     "fr": "Choisissez un endroit où vous la sentez le mieux : les narines, la poitrine, le ventre.",
+     "en": "Pick the place where you feel it best: the nostrils, the chest, the belly."
+    },
+    {
+     "at": 120,
+     "fr": "Quand une pensée vous emmène, c'est normal. Remarquez-le, puis revenez au souffle.",
+     "en": "When a thought carries you away, that's normal. Notice it, then come back to the breath."
+    },
+    {
+     "at": 190,
+     "fr": "Chaque retour au souffle est l'exercice lui-même. Il n'y a rien à réussir.",
+     "en": "Each return to the breath is the exercise itself. There is nothing to get right."
+    },
+    {
+     "at": 260,
+     "fr": "Encore quelques respirations. Puis élargissez l'attention à tout le corps.",
+     "en": "A few more breaths. Then widen your attention to the whole body."
+    }
+   ]
+  },
+  {
+   "id": "scan10",
+   "name": "Scan du corps",
+   "nameEn": "Body scan",
+   "summary": "10 min, de la tête aux pieds",
+   "summaryEn": "10 min, head to toe",
+   "minutes": 10,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Allongez-vous ou asseyez-vous. Laissez le poids du corps se déposer.",
+     "en": "Lie down or sit. Let the weight of your body settle."
+    },
+    {
+     "at": 40,
+     "fr": "Portez l'attention sur le sommet du crâne, puis le visage. Relâchez la mâchoire et le front.",
+     "en": "Bring your attention to the top of your head, then your face. Soften the jaw and forehead."
+    },
+    {
+     "at": 110,
+     "fr": "Descendez vers la nuque et les épaules. Si une tension est là, laissez-la être là, sans la forcer.",
+     "en": "Move down to the neck and shoulders. If there is tension, let it be there without forcing it."
+    },
+    {
+     "at": 190,
+     "fr": "Les bras, les coudes, les mains. Sentez la température, les fourmillements, ou rien du tout.",
+     "en": "Arms, elbows, hands. Feel the temperature, tingling, or nothing at all."
+    },
+    {
+     "at": 270,
+     "fr": "La poitrine et le ventre, qui bougent avec la respiration.",
+     "en": "The chest and belly, moving with the breath."
+    },
+    {
+     "at": 350,
+     "fr": "Le bas du dos, le bassin. Observez les points d'appui.",
+     "en": "The lower back and pelvis. Notice the points of contact."
+    },
+    {
+     "at": 430,
+     "fr": "Les cuisses, les genoux, les mollets. Ce sont souvent eux qui ont travaillé aujourd'hui.",
+     "en": "Thighs, knees, calves. They are often the ones that worked today."
+    },
+    {
+     "at": 510,
+     "fr": "Les pieds, jusqu'au bout des orteils.",
+     "en": "The feet, down to the tips of the toes."
+    },
+    {
+     "at": 560,
+     "fr": "Maintenant le corps entier, d'un seul bloc, qui respire.",
+     "en": "Now the whole body, as one, breathing."
+    }
+   ]
+  },
+  {
+   "id": "recup5",
+   "name": "Retour au calme",
+   "nameEn": "Cool-down",
+   "summary": "5 min après une séance",
+   "summaryEn": "5 min after a workout",
+   "minutes": 5,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "La séance est terminée. Asseyez-vous ou allongez-vous, et laissez le souffle ralentir à son rythme.",
+     "en": "The workout is over. Sit or lie down and let your breath slow at its own pace."
+    },
+    {
+     "at": 45,
+     "fr": "Allongez doucement l'expiration, sans forcer. L'expiration aide le corps à redescendre.",
+     "en": "Gently lengthen the exhale without forcing it. Exhaling helps the body come down."
+    },
+    {
+     "at": 110,
+     "fr": "Sentez les muscles qui viennent de travailler. Chaleur, lourdeur : rien à changer.",
+     "en": "Feel the muscles that just worked. Warmth, heaviness: nothing to change."
+    },
+    {
+     "at": 180,
+     "fr": "Remarquez un effort dont vous êtes content, même petit.",
+     "en": "Notice one effort you are glad of, however small."
+    },
+    {
+     "at": 250,
+     "fr": "Encore trois respirations lentes. Puis reprenez votre journée sans vous presser.",
+     "en": "Three more slow breaths. Then go back to your day without rushing."
+    }
+   ]
+  },
+  {
+   "id": "sommeil10",
+   "name": "Avant de dormir",
+   "nameEn": "Before sleep",
+   "summary": "10 min pour lâcher la journée",
+   "summaryEn": "10 min to let the day go",
+   "minutes": 10,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Allongez-vous dans votre lit. Rien d'autre à faire pour l'instant.",
+     "en": "Lie down in bed. Nothing else to do for now."
+    },
+    {
+     "at": 45,
+     "fr": "Laissez passer ce qui reste de la journée. Vous pourrez y revenir demain.",
+     "en": "Let what is left of the day pass by. You can come back to it tomorrow."
+    },
+    {
+     "at": 120,
+     "fr": "Respirez par le ventre. À chaque expiration, le corps s'enfonce un peu plus dans le matelas.",
+     "en": "Breathe into the belly. With each exhale, your body sinks a little deeper into the mattress."
+    },
+    {
+     "at": 210,
+     "fr": "Comptez les expirations de un à dix, puis recommencez. Si vous perdez le compte, reprenez à un.",
+     "en": "Count your exhales from one to ten, then start again. If you lose count, go back to one."
+    },
+    {
+     "at": 360,
+     "fr": "Les mains sont lourdes. Les épaules sont lourdes. Les jambes sont lourdes.",
+     "en": "Your hands are heavy. Your shoulders are heavy. Your legs are heavy."
+    },
+    {
+     "at": 480,
+     "fr": "Si le sommeil vient, laissez-le venir. Il n'y a plus rien à écouter.",
+     "en": "If sleep comes, let it come. There is nothing left to listen to."
+    }
+   ]
+  },
+  {
+   "id": "attention10",
+   "name": "Observer ses pensées",
+   "nameEn": "Watching thoughts",
+   "summary": "10 min de pleine conscience",
+   "summaryEn": "10 min of mindfulness",
+   "minutes": 10,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Asseyez-vous, le dos droit. Prenez trois respirations plus amples.",
+     "en": "Sit with a straight back. Take three deeper breaths."
+    },
+    {
+     "at": 50,
+     "fr": "Posez l'attention sur le souffle pendant une minute, pour vous stabiliser.",
+     "en": "Rest your attention on the breath for a minute to steady yourself."
+    },
+    {
+     "at": 120,
+     "fr": "Maintenant, élargissez à ce qui se passe dans l'esprit. Regardez les pensées comme des nuages.",
+     "en": "Now widen to what happens in the mind. Watch thoughts like clouds."
+    },
+    {
+     "at": 210,
+     "fr": "Vous pouvez les nommer d'un mot : souvenir, projet, inquiétude. Puis laissez-les passer.",
+     "en": "You can name them with one word: memory, plan, worry. Then let them pass."
+    },
+    {
+     "at": 330,
+     "fr": "Si une émotion est là, où se sent-elle dans le corps ? Restez avec elle quelques instants.",
+     "en": "If an emotion is here, where do you feel it in the body? Stay with it for a few moments."
+    },
+    {
+     "at": 450,
+     "fr": "Quand vous êtes pris par une histoire, remarquez-le sans vous juger. Revenez à l'observation.",
+     "en": "When you get caught in a story, notice it without judging yourself. Return to watching."
+    },
+    {
+     "at": 560,
+     "fr": "Revenez au souffle pour les dernières respirations.",
+     "en": "Come back to the breath for the last few breaths."
+    }
+   ]
+  },
+  {
+   "id": "gratitude5",
+   "name": "Gratitude",
+   "nameEn": "Gratitude",
+   "summary": "5 min pour finir la journée",
+   "summaryEn": "5 min to end the day",
+   "minutes": 5,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Fermez les yeux. Repensez à votre journée, sans la juger.",
+     "en": "Close your eyes. Think back over your day without judging it."
+    },
+    {
+     "at": 50,
+     "fr": "Trouvez une chose simple qui vous a fait du bien aujourd'hui.",
+     "en": "Find one simple thing that did you good today."
+    },
+    {
+     "at": 120,
+     "fr": "Restez avec ce souvenir. Où le sentez-vous dans le corps ?",
+     "en": "Stay with that memory. Where do you feel it in the body?"
+    },
+    {
+     "at": 190,
+     "fr": "Pensez à une personne qui a compté cette semaine. Adressez-lui un merci en silence.",
+     "en": "Think of someone who mattered this week. Send them a silent thank-you."
+    },
+    {
+     "at": 260,
+     "fr": "Gardez ça avec vous, et rouvrez les yeux quand vous voulez.",
+     "en": "Keep this with you, and open your eyes when you like."
+    }
+   ]
+  }
+ ]
+}

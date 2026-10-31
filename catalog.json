@@ -30,6 +30,36 @@
       "nameEn": "Medication reminder",
       "summary": "Tes médicaments et compléments à heure fixe : une notification au bon moment, « Pris » en un geste, et ce qui reste à prendre dans « À faire ».",
       "summaryEn": "Your medication and supplements on schedule: a notification at the right time, “Taken” in one tap, and what's left in the To-do card."
+    },
+    {
+      "id": "meditation",
+      "kind": "meditation",
+      "minApp": "2.5",
+      "color": "#7B8CDE",
+      "name": "Méditation",
+      "nameEn": "Meditation",
+      "summary": "Minuteur libre avec gongs, séances guidées lues à voix haute, séances écrites par le coach. Une section dans Activités et un widget.",
+      "summaryEn": "Free timer with gongs, guided sessions read aloud, sessions written by the coach. A section in Activities and a widget."
+    },
+    {
+      "id": "stretch",
+      "kind": "stretch",
+      "minApp": "2.5",
+      "color": "#3BBFA0",
+      "name": "Étirements",
+      "nameEn": "Stretching",
+      "summary": "311 exercices en vidéo avec leurs consignes. Routines selon le moment, les zones et votre matériel, ou après une séance selon les muscles travaillés.",
+      "summaryEn": "311 video exercises with instructions. Routines by moment, area and equipment, or after a workout from the muscles you trained."
+    },
+    {
+      "id": "league",
+      "kind": "league",
+      "minApp": "2.5",
+      "color": "#E8A33D",
+      "name": "Classement",
+      "nameEn": "Leaderboard",
+      "summary": "Un score de la semaine sur six parties, comparé entre amis par QR code ou message. Aucun serveur, cartes signées.",
+      "summaryEn": "A weekly score over six areas, compared with friends by QR code or message. No server, signed cards."
     }
   ]
 }
