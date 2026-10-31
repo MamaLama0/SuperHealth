@@ -1,5 +1,7 @@
 package app.superhealth.ui.coach
 
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -433,7 +435,7 @@ private fun ActionCard(a: app.superhealth.coach.CoachTools.Action, onApply: () -
     Row(Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(18.dp)).background(Mf.colors.card).padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(34.dp).clip(CircleShape).background(CoachHue.container()), contentAlignment = Alignment.Center) {
-            Icon(if (a.kind == "program") Icons.Rounded.FitnessCenter else Icons.Rounded.Restaurant, null, Modifier.size(18.dp), tint = CoachHue.onContainer())
+            Icon(when (a.kind) { "program" -> Icons.Rounded.FitnessCenter; "stretch" -> Icons.Rounded.AccessibilityNew; "meditation" -> Icons.Rounded.SelfImprovement; else -> Icons.Rounded.Restaurant }, null, Modifier.size(18.dp), tint = CoachHue.onContainer())
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -446,7 +448,7 @@ private fun ActionCard(a: app.superhealth.coach.CoachTools.Action, onApply: () -
         if (a.done) Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = Mf.colors.textSecondary)
             Text(tr("Fait"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
-        } else Text(if (a.kind == "program") (if ("replaces_program_id" in a.payload) tr("Mettre à jour") else tr("Créer")) else tr("Ajouter"), style = MaterialTheme.typography.labelLarge, color = Color.White,
+        } else Text(if (a.kind == "program") (if ("replaces_program_id" in a.payload) tr("Mettre à jour") else tr("Créer")) else if (a.kind == "stretch" || a.kind == "meditation") tr("Lancer") else tr("Ajouter"), style = MaterialTheme.typography.labelLarge, color = Color.White,
             modifier = Modifier.clip(CircleShape).background(CoachHue).clickable(onClick = onApply).padding(horizontal = 14.dp, vertical = 8.dp))
     }
 }

@@ -192,14 +192,15 @@ import kotlin.math.roundToInt
  */
 private enum class Step(val section: Int) {
     // le plus court possible : une page par décision, les parties non choisies (USES) sont sautées
-    WELCOME(0), USES(0), NAME(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
+    // l'ordre va du général au particulier : qui, quoi suivre, le corps, l'objectif, les activités (dont découle la musculation), les connexions
+    WELCOME(0), NAME(0), USES(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
     GOAL(1), TARGET(1), PACE(1), PREFS(1),
-    TRAINING(2), EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
+    ACTIVITIES(2), TRAINING(2), EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
     WATCH(3), HEALTH(3), AI(3),
     GENERATING(4), RESULT(4),
 }
 
-private val SECTIONS = listOf("Vous", "Objectif", "Entraînement", "Connexions")
+private val SECTIONS = listOf("Vous", "Objectif", "Activités", "Connexions")
 
 /** Choix pour la montre : l'associer maintenant, plus tard, ou désactiver le module LocalHealth. */
 private enum class WatchChoice(val label: String, val description: String) {
@@ -219,6 +220,7 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
     Step.HEALTH -> Icons.Rounded.Favorite to HealthHues.Heart
     Step.GOAL, Step.TARGET -> Icons.Rounded.Flag to HealthHues.Body
     Step.PACE -> Icons.Rounded.Speed to HealthHues.Body
+    Step.ACTIVITIES -> Icons.AutoMirrored.Rounded.DirectionsRun to HealthHues.Activity
     Step.TRAINING, Step.EXPERIENCE, Step.GYM -> Icons.Rounded.FitnessCenter to WorkoutBlue
     Step.LIFT_GOAL -> Icons.AutoMirrored.Rounded.TrendingUp to WorkoutBlue
     Step.RHYTHM -> Icons.Rounded.CalendarMonth to WorkoutBlue
@@ -292,8 +294,13 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var uses by rememberSaveable { mutableStateOf(shs.features.toList()) }
     val wantsNutrition = mode == OnboardingMode.NUTRITION_SIM || (mode == OnboardingMode.FULL && app.superhealth.Feature.NUTRITION.name in uses)
     val wantsHealth = mode == OnboardingMode.FULL && app.superhealth.Feature.HEALTH.name in uses
+    // activités voulues, proposées d'après les parties cochées ; la musculation et le type d'entraînement en découlent
+    val activitySection = app.superhealth.ui.activities.ActivitySection.entries
+    var picked by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    val activities = (picked ?: listOfNotNull("STRENGTH".takeIf { app.superhealth.Feature.TRAINING.name in uses }, "RUN".takeIf { app.superhealth.Feature.HEALTH.name in uses }))
+        .mapNotNull { n -> activitySection.firstOrNull { it.name == n } }.toSet()
     val lifts = when (mode) {
-        OnboardingMode.FULL -> app.superhealth.Feature.TRAINING.name in uses
+        OnboardingMode.FULL -> app.superhealth.ui.activities.ActivitySection.STRENGTH in activities
         OnboardingMode.TRAINING_SIM -> true
         OnboardingMode.NUTRITION_SIM -> training == Training.STRENGTH || training == Training.BOTH
     }
@@ -310,7 +317,11 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             Step.WATCH -> wantsHealth || mode != OnboardingMode.FULL
             // IA offerte : proposée à l'accueil quand le build l'embarque (sinon rien à proposer sans clé)
             Step.AI -> mode == OnboardingMode.FULL && app.superhealth.nutrition.data.AiGift.available
-            Step.HISTORY, Step.GOAL, Step.PREFS, Step.TRAINING -> wantsNutrition
+            Step.ACTIVITIES -> mode == OnboardingMode.FULL
+            // poids habituel et métabolisme ne servent qu'à la nutrition
+            Step.BODY_FAT, Step.ACTIVITY, Step.HISTORY, Step.GOAL, Step.PREFS -> wantsNutrition
+            // déduit des activités choisies dans l'accueil, encore demandé dans la simulation nutrition
+            Step.TRAINING -> wantsNutrition && mode != OnboardingMode.FULL
             Step.TARGET, Step.PACE -> wantsNutrition && goal != GoalType.MAINTENANCE
             Step.EXPERIENCE, Step.GYM, Step.LIFT_GOAL -> lifts
             Step.RHYTHM -> lifts && wantProgram
@@ -438,7 +449,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         Watch.setEnabled(wantsHealth && (watch == WatchChoice.PAIR || watch == WatchChoice.LATER))
         SuperPrefs.update {
             val cyc = app.superhealth.Feature.CYCLE.name in uses && app.superhealth.DashCard.CYCLE !in it.dashboard
-            it.copy(onboarded = true, healthConnect = health, features = uses.toSet(),
+            it.copy(onboarded = true, healthConnect = health, features = uses.toSet() + activities.mapNotNull { a -> a.feature?.name },
                 dashboard = if (cyc) it.dashboard + app.superhealth.DashCard.CYCLE else it.dashboard,
                 plus = if (cyc) (it.plus + app.superhealth.PlusAction.PERIOD.name).distinct() else it.plus)
         }
@@ -448,6 +459,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             prefs.setSettings(s.copy(onboarded = true))
         }
         if (health) svm.syncNow(ctx)
+        // sections de l'onglet Activités et plugins à installer
+        app.superhealth.ui.activities.applyActivities(ctx, activities)
     }
 
     // Montre : autorisations Bluetooth seules, puis recherche et association (ou Health Connect si son app reste).
@@ -535,6 +548,21 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                     }
                     Step.NAME -> Page(st, tr("Faisons connaissance"), tr("Votre prénom et votre couleur : elle teinte l'app et le cœur de son icône.")) {
+                        // photo facultative, au même endroit que le prénom
+                        val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
+                        val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+                            if (uri != null) app.superhealth.ui.ProfilePhoto.set(ctx, uri)
+                        }
+                        Row(Modifier.padding(bottom = 12.dp).clip(RoundedCornerShape(16.dp)).clickable {
+                            pick.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }, verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(56.dp).clip(CircleShape).background(Mf.colors.card), contentAlignment = Alignment.Center) {
+                                if (photo != null) androidx.compose.foundation.Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                else Icon(Icons.Rounded.PhotoCamera, null, tint = Mf.colors.textSecondary)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(tr("Ajouter une photo"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent, modifier = Modifier.padding(end = 8.dp))
+                        }
                         OutlinedTextField(name, { name = it.take(24) }, Modifier.fillMaxWidth(), singleLine = true,
                             placeholder = { Text(tr("Prénom"), color = Mf.colors.textTertiary) },
                             leadingIcon = { Icon(Icons.Rounded.Person, null, tint = Mf.colors.textSecondary) },
@@ -636,6 +664,13 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                                 HealthConnectHub.Status.UNAVAILABLE -> android.widget.Toast.makeText(ctx, tr("Health Connect n'est pas disponible sur ce téléphone"),
                                     android.widget.Toast.LENGTH_LONG).show()
                             }
+                        }
+                    }
+                    Step.ACTIVITIES -> Page(st, tr("Que voulez-vous faire ?"), tr("Une section par activité. Les plugins nécessaires s'installent tout seuls.")) {
+                        app.superhealth.ui.activities.ActivityChoices(activities) { c ->
+                            picked = c.map { it.name }
+                            val strength = app.superhealth.ui.activities.ActivitySection.STRENGTH in c; val run = app.superhealth.ui.activities.ActivitySection.RUN in c
+                            training = when { strength && run -> Training.BOTH; strength -> Training.STRENGTH; run -> Training.CARDIO; else -> Training.NONE }
                         }
                     }
                     Step.AI -> Page(st, tr("Activer l'IA offerte ?"), tr("Gratuite, sans clé.")) {

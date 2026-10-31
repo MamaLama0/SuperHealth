@@ -1,5 +1,6 @@
 package app.superhealth.ui.settings
 
+import androidx.compose.material.icons.rounded.Group
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.heightIn
 import android.content.Context
@@ -141,6 +142,17 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     var editName by remember { mutableStateOf(false) }
     var nameTick by remember { mutableIntStateOf(0) }
     val name = remember(nameTick) { app.superhealth.ui.userName() }
+    val photoCtx = LocalContext.current
+    var photoMenu by remember { mutableStateOf(false) }
+    val pickPhoto = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) app.superhealth.ui.ProfilePhoto.set(photoCtx, uri)
+    }
+    if (photoMenu) androidx.compose.material3.AlertDialog(onDismissRequest = { photoMenu = false }, title = { Text(tr("Photo de profil")) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = {
+            photoMenu = false
+            pickPhoto.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }) { Text(tr("Choisir")) } },
+        dismissButton = { if (app.superhealth.ui.ProfilePhoto.bitmap.value != null) androidx.compose.material3.TextButton(onClick = { photoMenu = false; app.superhealth.ui.ProfilePhoto.clear(photoCtx) }) { Text(tr("Retirer")) } })
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
         // onglet de la barre (« + » au milieu) : pas de retour
@@ -149,8 +161,11 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             // Profil : la seule source de sexe, âge, taille et poids pour la nutrition, la musculation et la montre.
             MfCard(onClick = { nav.go("profile") }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
-                        Text((name ?: "?").take(1).uppercase(Lang.locale), style = MaterialTheme.typography.titleLarge, color = Mf.colors.text)
+                    // photo de profil : toucher l'avatar (la galerie du système, sans autorisation)
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClickLabel = tr("Photo de profil")) { photoMenu = true }, contentAlignment = Alignment.Center) {
+                        val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
+                        if (photo != null) androidx.compose.foundation.Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                        else Text((name ?: "?").take(1).uppercase(Lang.locale), style = MaterialTheme.typography.titleLarge, color = Mf.colors.text)
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
@@ -165,6 +180,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
 
+            Group(tr("Amis")) {
+                val friends by app.superhealth.league.League.state.collectAsState()
+                SettingRow(tr("Amis"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Vous comparer sans serveur ni compte"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
+            }
             Group(tr("Accueil")) {
                 SettingRow(tr("Cartes"), trf("%1\$s affichées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider(56.dp)

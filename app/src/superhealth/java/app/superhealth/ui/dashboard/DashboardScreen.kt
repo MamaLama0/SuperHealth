@@ -1,5 +1,7 @@
 package app.superhealth.ui.dashboard
 
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -189,6 +191,9 @@ import kotlin.math.roundToInt
 internal fun DashCard.ink(): Color = app.superhealth.ui.theme.LocalCardInk.current ?: hue()
 
 internal fun DashCard.hue(): Color = when (this) {
+    DashCard.MEDITATION -> app.superhealth.ui.meditation.MeditationHue
+    DashCard.STRETCH -> app.superhealth.ui.stretch.StretchHue
+    DashCard.LEAGUE -> app.superhealth.ui.league.LeagueHue
     DashCard.CALORIES, DashCard.MEALS -> CaloriesColor
     DashCard.WEIGHT -> app.superhealth.ui.theme.Base.Pink
     DashCard.INTAKE -> HealthHues.Mind
@@ -271,6 +276,9 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.DAY_TIMELINE -> Icons.Rounded.Timeline
     DashCard.COACH -> Icons.Rounded.AutoAwesome
     DashCard.COACH_WEEK -> Icons.Rounded.DateRange
+    DashCard.MEDITATION -> Icons.Rounded.SelfImprovement
+    DashCard.STRETCH -> Icons.Rounded.AccessibilityNew
+    DashCard.LEAGUE -> Icons.Rounded.EmojiEvents
     DashCard.FORM -> Icons.Rounded.Speed
     DashCard.BEDTIME -> Icons.Rounded.Bedtime
     DashCard.CYCLE -> Icons.Rounded.CalendarMonth
@@ -897,7 +905,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     }
     when (c) {
         // dessinées par leur famille (ci-dessus)
-        DashCard.SCORES, DashCard.MEALS -> Unit
+        DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE -> Unit
         DashCard.CALORIES -> {
             val todayEntries by vm.nutrition.todayEntries.collectAsState()
             val consumed = todayEntries.fold(Macros.ZERO) { acc, e -> acc + e.macros() }

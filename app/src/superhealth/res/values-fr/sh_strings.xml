@@ -21,6 +21,8 @@
     <string name="widget_insight_desc">Constats calculés sur vos données</string>
     <string name="widget_vitals_name">Santé</string>
     <string name="widget_vitals_desc">Sommeil, pouls au repos, Body Battery</string>
+    <string name="widget_mind_name">Esprit et mobilité</string>
+    <string name="widget_mind_desc">Méditation, étirements et classement de la semaine</string>
     <string name="widget_steps_name">Pas</string>
     <string name="widget_steps_desc">Pas du jour et des 7 derniers jours</string>
     <string name="widget_chargeeffort_name">Charge et effort</string>

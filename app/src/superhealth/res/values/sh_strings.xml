@@ -20,6 +20,8 @@
     <string name="widget_insight_desc">Computed facts from your data</string>
     <string name="widget_vitals_name">Health</string>
     <string name="widget_vitals_desc">Sleep, resting heart rate, Body Battery</string>
+    <string name="widget_mind_name">Mind and mobility</string>
+    <string name="widget_mind_desc">Meditation, stretching and leaderboard this week</string>
     <string name="widget_steps_name">Steps</string>
     <string name="widget_steps_desc">Steps today and over 7 days</string>
     <string name="widget_chargeeffort_name">Charge &amp; effort</string>

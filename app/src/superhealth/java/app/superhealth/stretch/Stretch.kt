@@ -1,0 +1,219 @@
+package app.superhealth.stretch
+
+import android.content.Context
+import app.superhealth.modules.Modules
+import app.superhealth.training.domain.MuscleGroup
+import java.io.File
+import java.time.LocalDate
+import kotlin.random.Random
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+
+/**
+ * Plugin Étirements. Le moteur est ici ; le plugin apporte le catalogue (exercices, consignes, indicateurs avant / après séance
+ * et quotidien, zones) et les vignettes. Les vidéos sont lues en flux depuis les adresses données par le catalogue.
+ *
+ * Le choix des exercices d'une routine ([routine]) est propre à SuperHealth : GOWOD génère ses protocoles sur son serveur.
+ */
+object Stretch {
+    @Serializable
+    data class Ex(
+        val id: String, val name: String, val type: String, val area: String? = null,
+        val zones: List<String> = emptyList(), val gears: List<String> = emptyList(),
+        val uni: Boolean = false, val daily: Boolean = false, val pre: Boolean = false, val post: Boolean = false,
+        val recup: String? = null, val like: String? = null, val backup: String? = null,
+        /** Durée de référence en minutes (par côté pour un exercice unilatéral). */
+        val min: Int = 1, val thumb: Boolean = false,
+        val fr: List<String> = emptyList(), val frFeel: String? = null,
+        val en: List<String> = emptyList(), val enFeel: String? = null,
+    ) {
+        val steps get() = if (app.superhealth.ui.Lang.english) en else fr
+        val feel get() = if (app.superhealth.ui.Lang.english) enFeel else frFeel
+        /** Temps total en secondes, les deux côtés compris. */
+        val seconds get() = min * 60 * if (uni) 2 else 1
+    }
+
+    @Serializable data class Catalog(val video: String = "", val poster: String = "", val exercises: List<Ex> = emptyList())
+
+    enum class Kind(val label: String) { DAILY("Quotidien"), PRE("Avant séance"), POST("Après séance") }
+
+    /** Zones du catalogue regroupées pour le choix. */
+    enum class Group(val label: String, val zones: Set<String>) {
+        SHOULDERS("Épaules", setOf("Shoulders", "Rotators", "Traps")),
+        CHEST("Pectoraux", setOf("Pecs")),
+        BACK("Dos", setOf("Lats", "LumbarMuscles")),
+        CORE("Tronc", setOf("Abs", "Obliques")),
+        ARMS("Bras", setOf("Biceps", "Triceps", "Flexors", "Extensors")),
+        HIPS("Hanches", setOf("Hips", "Glutes", "Adductors")),
+        THIGHS("Cuisses", setOf("Quads", "Hamstrings", "ItBands")),
+        LOWER_LEGS("Mollets et chevilles", setOf("Calves", "Ankles", "Feet", "Shins", "PostShins")),
+    }
+
+    enum class Gear(val key: String, val label: String) {
+        BAND("Band", "Élastique"), ROLLER("MassageRoller", "Rouleau"), BALL("Lacrosse", "Balle"), PIPE("Pipe", "Tube"), BOX("Box", "Banc"),
+        BARBELL("Barbell", "Barre"), PLATE("Plate", "Disque"),
+    }
+
+    data class Routine(val name: String, val kind: Kind, val items: List<Ex>) {
+        val seconds get() = items.sumOf { it.seconds }
+    }
+
+    @Serializable data class Done(val day: Long, val at: Long, val minutes: Int, val kind: String, val zones: List<String> = emptyList())
+
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private var cache: Catalog? = null
+
+    fun available() = Modules.isActive(Modules.STRETCH)
+    fun catalog(): Catalog = cache ?: runCatching {
+        json.decodeFromString(Catalog.serializer(), Modules.file(Modules.STRETCH, "exercises.json")!!.readText())
+    }.getOrDefault(Catalog()).also { if (it.exercises.isNotEmpty()) cache = it }
+    fun invalidate() { cache = null; mobilityCache = null }
+
+    fun exercise(id: String) = catalog().exercises.firstOrNull { it.id == id }
+    fun videoUrl(id: String) = catalog().video.replace("{id}", id)
+    fun posterUrl(id: String) = catalog().poster.replace("{id}", id)
+    fun thumb(id: String): File? = Modules.file(Modules.STRETCH, "thumbs/$id.jpg")
+
+    /** Routine à jouer (écran de lecture), posée par l'écran de préparation ou le coach. */
+    val current = MutableStateFlow<Routine?>(null)
+
+    /**
+     * Routine de [minutes] sur les [groups] (toutes zones si vide). Filtre : indicateur du catalogue pour ce moment, matériel possédé.
+     * Choix glouton : à chaque tour, l'exercice qui couvre le mieux les zones les moins travaillées, la zone principale (première) comptant
+     * double. Le tirage du jour départage (une routine différente chaque jour, identique dans la journée).
+     */
+    fun routine(kind: Kind, groups: Set<Group>, minutes: Int, gears: Set<String>, day: Long = LocalDate.now().toEpochDay()): Routine {
+        val pool = catalog().exercises.filter { e ->
+            when (kind) { Kind.DAILY -> e.daily; Kind.PRE -> e.pre; Kind.POST -> e.post } &&
+                e.gears.all { it in gears } && (e.type != "Massage" || e.gears.isNotEmpty())
+        }
+        val target = groups.flatMap { it.zones }.toSet().ifEmpty { Group.entries.flatMap { it.zones }.toSet() }
+        val cover = HashMap<String, Int>()
+        val rnd = Random(day * 31 + kind.ordinal + groups.hashCode())
+        val left = pool.filter { e -> e.zones.any { it in target } }.toMutableList()
+        val picked = ArrayList<Ex>()
+        var budget = minutes * 60
+        while (left.isNotEmpty()) {
+            val best = left.maxByOrNull { e ->
+                e.zones.withIndex().sumOf { (i, z) -> if (z in target) (if (i == 0) 2.0 else 1.0) / (1 + (cover[z] ?: 0)) else 0.0 } + rnd.nextDouble() * 0.4
+            }!!
+            left.remove(best)
+            if (best.seconds > budget) { if (budget < 60) break else continue }
+            picked += best
+            budget -= best.seconds
+            best.zones.forEach { cover[it] = (cover[it] ?: 0) + 1 }
+        }
+        return Routine(if (groups.size == 1) groups.first().label else kind.label, kind, ordered(picked, kind))
+    }
+
+    /** Ordre de passage : le moins de changements de position possible ; avant séance on finit debout, après séance au sol. */
+    private fun ordered(list: List<Ex>, kind: Kind): List<Ex> {
+        val rank = listOf("Floor", "FloorWall", "FloorRack", "StandWall", "StandRack", "Stand")
+        val up = list.sortedBy { rank.indexOf(it.area).let { r -> if (r < 0) 0 else r } }
+        return if (kind == Kind.POST) up.reversed() else up
+    }
+
+    /** Zones à étirer après une séance : les groupes des muscles travaillés. */
+    fun groupsFor(muscles: Collection<MuscleGroup>): Set<Group> = muscles.mapNotNull {
+        when (it) {
+            MuscleGroup.CHEST -> Group.CHEST
+            MuscleGroup.FRONT_DELTS, MuscleGroup.SIDE_DELTS, MuscleGroup.REAR_DELTS, MuscleGroup.UPPER_TRAPS, MuscleGroup.NECK, MuscleGroup.SERRATUS -> Group.SHOULDERS
+            MuscleGroup.TRICEPS, MuscleGroup.BICEPS, MuscleGroup.FOREARMS -> Group.ARMS
+            MuscleGroup.LATS, MuscleGroup.UPPER_BACK, MuscleGroup.LOWER_BACK -> Group.BACK
+            MuscleGroup.ABS, MuscleGroup.OBLIQUES -> Group.CORE
+            MuscleGroup.QUADS, MuscleGroup.HAMSTRINGS -> Group.THIGHS
+            MuscleGroup.GLUTES, MuscleGroup.ADDUCTORS, MuscleGroup.ABDUCTORS, MuscleGroup.HIP_FLEXORS -> Group.HIPS
+            MuscleGroup.CALVES, MuscleGroup.TIBS -> Group.LOWER_LEGS
+            else -> null
+        }
+    }.toSet()
+
+    // ---- Test de mobilité (tests, niveaux et points de GOWOD) -----------------------------------------------
+
+    @Serializable data class MTest(val id: String, val focus: String, val coeff: Double = 1.0, val max: Double = 1.0, val uni: Boolean = false, val pts: List<Double> = emptyList(),
+                                   val images: Map<String, List<String>> = emptyMap(), val fr: List<String> = emptyList(), val en: List<String> = emptyList(),
+                                   val frAnat: String? = null, val enAnat: String? = null) {
+        val steps get() = if (app.superhealth.ui.Lang.english) en else fr
+        val anatomy get() = (if (app.superhealth.ui.Lang.english) enAnat else frAnat) ?: id
+        fun images(side: String): List<String> = images[side] ?: images["both"].orEmpty()
+        /** Taux d'un niveau : points du niveau / points maximum (getScoreByMobilityTest de GOWOD). */
+        fun pct(level: Int) = ((pts.getOrElse(level.coerceIn(0, pts.lastIndex)) { 0.0 } / max) * 100).coerceIn(0.0, 100.0)
+    }
+
+    @Serializable data class Mobility(val image: String = "", val tests: List<MTest> = emptyList(), val averages: List<List<Double>> = emptyList())
+
+    /** Résultat : pour chaque test, les niveaux choisis (un par côté). */
+    @Serializable data class MResult(val at: Long, val levels: Map<String, List<Int>>)
+
+    val FOCI = listOf("Shoulders", "Overhead", "Hips", "Postchain", "Ankles")
+    fun focusLabel(f: String) = when (f) { "Shoulders" -> "Épaules"; "Overhead" -> "Bras au-dessus de la tête"; "Hips" -> "Hanches"; "Postchain" -> "Chaîne postérieure"; "Ankles" -> "Chevilles"; else -> f }
+
+    private var mobilityCache: Mobility? = null
+    fun mobility(): Mobility = mobilityCache ?: runCatching {
+        json.decodeFromString(Mobility.serializer(), Modules.file(Modules.STRETCH, "mobility.json")!!.readText())
+    }.getOrDefault(Mobility()).also { if (it.tests.isNotEmpty()) mobilityCache = it }
+    fun imageUrl(name: String) = mobility().image.replace("{name}", name)
+
+    val results = MutableStateFlow<List<MResult>>(emptyList())
+    private fun resultsFile(ctx: Context) = File(ctx.filesDir, "stretch_mobility.json")
+    fun saveResult(ctx: Context, r: MResult) {
+        results.value = (results.value + r).takeLast(60)
+        runCatching { resultsFile(ctx).writeText(json.encodeToString(ListSerializer(MResult.serializer()), results.value)) }
+    }
+
+    private fun testPct(t: MTest, r: MResult) = r.levels[t.id]?.takeIf { it.isNotEmpty() }?.map { t.pct(it) }?.average()
+
+    /** Score d'une partie du corps : moyenne de ses tests pondérée par leur coefficient. */
+    fun focusScore(f: String, r: MResult): Int? {
+        val l = mobility().tests.filter { it.focus == f }.mapNotNull { t -> testPct(t, r)?.let { it to t.coeff } }
+        return if (l.isEmpty()) null else (l.sumOf { it.first * it.second } / l.sumOf { it.second }).toInt()
+    }
+
+    /**
+     * Score global sur 100 : moyenne de tous les tests pondérée par leur coefficient. Reconstitution : l'app GOWOD reçoit ce total de son
+     * serveur (le calcul n'est pas dans son binaire), seuls les points, coefficients et le taux par test en viennent.
+     */
+    fun globalScore(r: MResult): Int? {
+        val l = mobility().tests.mapNotNull { t -> testPct(t, r)?.let { it to t.coeff } }
+        return if (l.isEmpty()) null else (l.sumOf { it.first * it.second } / l.sumOf { it.second }).toInt()
+    }
+
+    /** Moyenne publiée par GOWOD pour cet âge et ce sexe (colonne 0 : global ; ensuite épaules, overhead, hanches, chaîne post., chevilles, thorax). */
+    fun average(age: Int, male: Boolean): List<Double>? {
+        val rows = mobility().averages.takeIf { it.size == 13 } ?: return null
+        val range = when (age) { in 18..33 -> 0; in 34..45 -> 1; in 46..55 -> 2; in 56..65 -> 3; else -> return rows[12] }
+        return rows[range * 3 + if (male) 0 else 1]
+    }
+
+    /** Les zones à travailler : les deux parties les plus faibles du dernier test. */
+    fun weakGroups(r: MResult): Set<Group> = FOCI.mapNotNull { f -> focusScore(f, r)?.let { f to it } }.sortedBy { it.second }.take(2).flatMap { (f, _) ->
+        when (f) {
+            "Shoulders" -> listOf(Group.SHOULDERS)
+            "Overhead" -> listOf(Group.SHOULDERS, Group.BACK)
+            "Hips" -> listOf(Group.HIPS)
+            "Postchain" -> listOf(Group.THIGHS, Group.BACK)
+            else -> listOf(Group.LOWER_LEGS)
+        }
+    }.toSet()
+
+    // ---- Journal : alimente la carte, le coach et le classement ----------------------------------------
+
+    val log = MutableStateFlow<List<Done>>(emptyList())
+    private fun file(ctx: Context) = File(ctx.filesDir, "stretch_log.json")
+
+    fun load(ctx: Context) {
+        log.value = runCatching { json.decodeFromString(ListSerializer(Done.serializer()), file(ctx).readText()) }.getOrDefault(emptyList())
+        results.value = runCatching { json.decodeFromString(ListSerializer(MResult.serializer()), resultsFile(ctx).readText()) }.getOrDefault(emptyList())
+    }
+
+    fun record(ctx: Context, r: Routine, seconds: Int) {
+        if (seconds < 30) return
+        val d = Done(LocalDate.now().toEpochDay(), System.currentTimeMillis(), (seconds + 30) / 60, r.kind.name, r.items.flatMap { it.zones }.distinct())
+        log.value = (log.value + d).takeLast(1000)
+        runCatching { file(ctx).writeText(json.encodeToString(ListSerializer(Done.serializer()), log.value)) }
+    }
+
+    fun minutes(from: Long, to: Long = Long.MAX_VALUE) = log.value.filter { it.day in from..to }.sumOf { it.minutes }
+}

@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
         vm.bind(nutrition, training)
         askNotificationsOnce()
         if (savedInstanceState == null) vm.pendingRoute.value = app.superhealth.ui.Routes.external(intent?.getStringExtra(EXTRA_ROUTE))
+        if (savedInstanceState == null) receiveLeagueCard(intent)
         enableEdgeToEdge()
         setContent {
             val s by vm.nutrition.settings.collectAsState()
@@ -69,10 +70,18 @@ class MainActivity : ComponentActivity() {
         requestPermissions(arrayOf(perm), 4202)
     }
 
+    /** Lien d'une carte de classement : seul le paramètre « c » est lu, vérifié puis soumis à confirmation (League.receive). */
+    private fun receiveLeagueCard(i: Intent?) {
+        val d = i?.data ?: return
+        if (i.action != Intent.ACTION_VIEW || d.scheme != "superhealth" || d.host != "league") return
+        app.superhealth.league.League.receive(this, d.getQueryParameter("c").orEmpty())
+    }
+
     /** Raccourcis des widgets et de la notification de séance : l'activité existe déjà. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         app.superhealth.ui.Routes.external(intent.getStringExtra(EXTRA_ROUTE))?.let { vm.pendingRoute.value = it }
+        receiveLeagueCard(intent)
     }
 
     /** En quittant l'app : widgets à jour (repas, pas et Body Battery de la synchro à l'ouverture). */

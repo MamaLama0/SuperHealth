@@ -49,7 +49,15 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/SuperHealth.Theme"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
+            <!-- Carte du classement reçue par message ou QR code : vérifiée et confirmée avant tout ajout (league/League.kt) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="superhealth" android:host="league" />
+            </intent-filter>
+        </activity>
 
         <!-- Icône du lanceur (alias : l'activité principale n'a pas de filtre LAUNCHER) -->
         <activity-alias
@@ -243,6 +251,10 @@
         <receiver android:name="app.superhealth.ui.widget.StepsWidgetReceiver" android:exported="true" android:label="@string/widget_steps_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_steps" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.MindWidgetReceiver" android:exported="true" android:label="@string/widget_mind_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_mind" />
         </receiver>
         <receiver android:name="app.superhealth.ui.widget.OverviewWidgetReceiver" android:exported="true" android:label="@string/widget_overview_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

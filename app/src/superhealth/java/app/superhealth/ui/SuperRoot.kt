@@ -124,6 +124,9 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.SelfImprovement
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -148,7 +151,7 @@ private fun isTabRoute(route: String?) = tabs.any { it.route == route } || (rout
 private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
     when (it.route) {
         "log" -> s.has(app.superhealth.Feature.NUTRITION)
-        "activities" -> s.has(app.superhealth.Feature.TRAINING) || s.has(app.superhealth.Feature.HEALTH)
+        "activities" -> s.has(app.superhealth.Feature.TRAINING) || s.has(app.superhealth.Feature.HEALTH) || s.activitySections.isNotEmpty()
         else -> true
     }
 }
@@ -226,16 +229,7 @@ fun SuperRoot(vm: SuperViewModel) {
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
-            composable("activities") {
-                // onglet adapté aux parties choisies : musculation, activités de la montre, ou l'endurance d'abord
-                val f by app.superhealth.SuperPrefs.settings.collectAsState()
-                val endurance = vm.nutrition.program.collectAsState().value.training == app.superhealth.nutrition.domain.Training.CARDIO
-                val strength = f.has(app.superhealth.Feature.TRAINING); val health = f.has(app.superhealth.Feature.HEALTH)
-                WorkoutTabScreen(vm.training, nav, strength = strength, cardioFirst = endurance && health,
-                    week = { ActivityWeek(vm, nav, strength, health) },
-                    recent = { RecentActivities(vm, nav, strength, health) },
-                    historyRoute = if (health) "h/activities" else "history")
-            }
+            composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
             composable("backup") { app.superhealth.ui.settings.BackupScreen(vm, nav) }
@@ -249,6 +243,15 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }
+            composable("stretch/play") { app.superhealth.ui.stretch.StretchPlayScreen(nav) }
+            composable("stretch/all") { app.superhealth.ui.stretch.StretchAllScreen(nav) }
+            composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
+            composable("friends") { app.superhealth.ui.league.FriendsScreen(nav) }
+            composable("stretch/ex/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
+                app.superhealth.ui.stretch.StretchExerciseScreen(nav, it.arguments?.getString("id").orEmpty())
+            }
+            composable("meditation/play") { app.superhealth.ui.meditation.MeditationPlayScreen(nav) }
+            composable("league") { app.superhealth.ui.league.LeagueScreen(nav) }
             composable("journal") { app.superhealth.ui.wellbeing.JournalScreen(vm, nav) }
             composable("form") { app.superhealth.ui.wellbeing.FormScreen(vm, nav) }
             composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }
@@ -304,6 +307,10 @@ fun SuperRoot(vm: SuperViewModel) {
             "sync" -> vm.syncNow(nav.context)
             "next" -> vm.training.activeProgram()?.let { p -> vm.training.startProgramDay(p, p.dayIndex, p.cycleIndex); nav.navigate("session") }
             "empty" -> { vm.training.startEmpty(); nav.navigate("session") }
+            "open:MEDITATION", "open:STRETCH" -> {
+                app.superhealth.SuperPrefs.update { it.copy(activityCurrent = action.removePrefix("open:")) }
+                nav.openTab("activities", fresh = true)
+            }
             else -> nav.go(action)
         }
     }
@@ -314,6 +321,7 @@ fun SuperRoot(vm: SuperViewModel) {
     }
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
     if (app.superhealth.ui.wellbeing.moodSheet) app.superhealth.ui.wellbeing.MoodSheet(nav)
+    app.superhealth.ui.league.LeagueIncomingDialog()
 }
 
 /** Courbe « emphasized decelerate » de Material. */
@@ -421,6 +429,9 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
         PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "mood")
         PlusAction.PERIOD -> QuickAction("Règles", Icons.Rounded.CalendarMonth, "cycle")
         PlusAction.BREATHE -> QuickAction("Respirer", Icons.Rounded.Air, "breathe")
+        PlusAction.MEDITATE -> if (app.superhealth.meditation.Meditation.available()) QuickAction("Méditer", Icons.Rounded.SelfImprovement, "open:MEDITATION") else null
+        PlusAction.STRETCH -> if (app.superhealth.stretch.Stretch.available()) QuickAction("S'étirer", Icons.Rounded.AccessibilityNew, "open:STRETCH") else null
+        PlusAction.LEAGUE -> if (app.superhealth.league.League.available()) QuickAction("Classement", Icons.Rounded.EmojiEvents, "league") else null
         PlusAction.SYNC -> if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null
     }
 }
@@ -492,6 +503,8 @@ private fun ActionTile(a: QuickAction, hue: Color, modifier: Modifier, onClick: 
 }
 
 /** Ouvre un écran depuis n'importe où (cartes du tableau de bord, réglages…) ; un onglet passe par [openTab]. */
+fun openTabFrom(nav: NavHostController, route: String) = nav.openTab(route)
+
 fun NavHostController.go(route: String) = runCatching { if (isTabRoute(route)) openTab(route) else navigate(route) }
 
 /**

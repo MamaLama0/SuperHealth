@@ -165,7 +165,9 @@ fun SettingsAvatar(onClick: () -> Unit) {
     val name = remember { app.superhealth.ui.userName() }
     Box(Modifier.size(38.dp).clip(CircleShape).background(Mf.colors.card).clickable(onClickLabel = tr("Réglages"), onClick = onClick),
         contentAlignment = Alignment.Center) {
-        Text((name ?: "?").take(1).uppercase(app.superhealth.ui.Lang.locale), style = MaterialTheme.typography.titleMedium, color = Mf.colors.text)
+        val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
+        if (photo != null) androidx.compose.foundation.Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else Text((name ?: "?").take(1).uppercase(app.superhealth.ui.Lang.locale), style = MaterialTheme.typography.titleMedium, color = Mf.colors.text)
     }
 }
 
@@ -188,7 +190,8 @@ fun GroupHeader(text: String, modifier: Modifier = Modifier) {
 /** Icône d'aliment associée au nom, toujours en pixel-art (pack, sinon générée) ; aliment non reconnu : le repas générique. */
 @Composable
 fun FoodIcon(name: String, size: Dp = 40.dp, modifier: Modifier = Modifier, corner: Dp? = null) {
-    val px = remember(name) { (FoodIcons.match(name)?.let { FoodIcons.pixel(it) }) ?: FoodIcons.pixel(FoodIcons.GENERIC) }
+    val chosen = androidx.compose.runtime.produceState(app.superhealth.SuperPrefs.settings.value.foodIcons) { app.superhealth.SuperPrefs.settings.collect { value = it.foodIcons } }.value
+    val px = remember(name, chosen) { (FoodIcons.match(name)?.let { FoodIcons.pixel(it) }) ?: FoodIcons.pixel(FoodIcons.GENERIC) }
     Box(modifier.size(size).clip(if (corner != null) RoundedCornerShape(corner) else CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
         if (px != null) Canvas(Modifier.size(size * 0.76f)) { drawPixelArt(px, center, this.size.minDimension) }
     }

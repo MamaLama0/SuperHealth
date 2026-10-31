@@ -35,6 +35,8 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "profile.jpg")
+
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
 
     /** Archive chiffrée, prête à écrire où l'on veut. */
@@ -54,6 +56,8 @@ object Archive {
                     "sante.json" to health).forEach { (name, text) ->
                     zip.putNextEntry(ZipEntry(name)); zip.write(text.toByteArray()); zip.closeEntry()
                 }
+                // 2.5 : journaux des plugins, classement et photo de profil
+                PLUGIN_FILES.forEach { name -> File(ctx.filesDir, name).takeIf { it.isFile }?.let { f -> zip.putNextEntry(ZipEntry(name.replace('/', '_'))); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry() } }
                 if (watch.length() > 0) { zip.putNextEntry(ZipEntry("montre.zip")); watch.inputStream().use { it.copyTo(zip) }; zip.closeEntry() }
             }
             watch.delete()
@@ -78,7 +82,10 @@ object Archive {
                 buildMap {
                     ZipInputStream(plain.inputStream()).use { zip ->
                         generateSequence { zip.nextEntry }.forEach { e ->
-                            if (e.name == "montre.zip") watch.outputStream().use { zip.copyTo(it) } else put(e.name, zip.readBytes().decodeToString())
+                            val plugin = PLUGIN_FILES.firstOrNull { it.replace('/', '_') == e.name }
+                            if (e.name == "montre.zip") watch.outputStream().use { zip.copyTo(it) }
+                            else if (plugin != null) File(ctx.filesDir, plugin).apply { parentFile?.mkdirs() }.outputStream().use { zip.copyTo(it) }
+                            else put(e.name, zip.readBytes().decodeToString())
                         }
                     }
                 }
@@ -87,6 +94,7 @@ object Archive {
                 if ("\"foods\"" in text && "\"entries\"" in text) mapOf("nutrition.json" to text) else mapOf("musculation.json" to text)
             }
         }
+        app.superhealth.stretch.Stretch.load(ctx); app.superhealth.meditation.Meditation.load(ctx); app.superhealth.league.League.load(ctx); app.superhealth.ui.ProfilePhoto.load(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }
         files["musculation.json"]?.let { WorkoutApp.store.import(it); done += tr("musculation") }

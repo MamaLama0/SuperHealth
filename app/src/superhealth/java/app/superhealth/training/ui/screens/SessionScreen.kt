@@ -899,6 +899,9 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
     }
     // carte flottante : fond surélevé, minuteur en grands chiffres, anneau d'accent
     val bg = if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card
+    // fond dégradé derrière la carte : un bouton ou une série à moitié recouverts ne dépassent plus en bandeau autour d'elle
+    val page = Mf.colors.background
+    Box(Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page.copy(alpha = 0f), 0.14f to page, 1f to page)).padding(top = 28.dp)) {
     Column(Modifier.fillMaxWidth().padding(12.dp).navigationBarsPadding()
         .shadow(20.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = 0.3f), spotColor = Color.Black.copy(alpha = 0.2f))
         .clip(RoundedCornerShape(28.dp)).background(bg).padding(14.dp)) {
@@ -947,6 +950,7 @@ private fun RestCard(s: Session, endsAt: Long, now: Long, settings: Settings, ex
                     style = MaterialTheme.typography.titleSmall, color = Mf.colors.text)
             }
         }
+    }
     }
 }
 

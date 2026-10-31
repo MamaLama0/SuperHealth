@@ -295,6 +295,24 @@ object Coach {
                         appendLine("- ${TrainingAnalytics.day(a.start).format(dayFmt)}: ${a.title} (${a.kind.name.lowercase()}), ${a.minutes} min$km$kcal")
                     }
                 }
+                // plugins Méditation, Étirements, Classement
+                if (shares(Share.ACTIVITIES)) {
+                    val fromDay = from.toEpochDay()
+                    val med = app.superhealth.meditation.Meditation
+                    val st = app.superhealth.stretch.Stretch
+                    if (med.available() || st.available()) {
+                        appendLine()
+                        appendLine("## Meditation and stretching (last 14 days, plugins)")
+                        if (med.available()) appendLine("Meditation: ${med.minutes(fromDay)} min, streak ${med.streak()} days")
+                        if (st.available()) appendLine("Stretching: ${st.minutes(fromDay)} min" + (st.log.value.lastOrNull()?.let { ", last on ${java.time.LocalDate.ofEpochDay(it.day).format(dayFmt)} (${it.kind.lowercase()})" } ?: ""))
+                        st.results.value.lastOrNull()?.let { r -> appendLine("Mobility test: ${st.globalScore(r)}/100; " + st.FOCI.joinToString { f -> "${f.lowercase()} ${st.focusScore(f, r) ?: "?"}" }) }
+                    }
+                    if (app.superhealth.league.League.available()) app.superhealth.league.League.mine.value?.let { s ->
+                        appendLine()
+                        appendLine("## Weekly leaderboard score (plugin)")
+                        appendLine("${s.total}/1000; " + s.pillars.entries.joinToString { (p, v) -> "${p.name.lowercase()} ${v?.let { "$it%" } ?: "not tracked"}" })
+                    }
+                }
                 if (shares(Share.WELLBEING)) wellbeing(ctx, today, from)?.let { appendLine(); append(it) }
                 if (shares(Share.CYCLE)) Cycle.info()?.let { c ->
                     appendLine()

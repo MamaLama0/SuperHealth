@@ -70,7 +70,11 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** 2.1 : constantes sur 30 jours avec leur plage habituelle. */
     VITALS_TRENDS("Tendances des constantes", Section.HEALTH, watch = true),
     /** 2.2 : Forme, Charge, Repos et Effort réunis en anneaux sur une carte sombre. */
-    SCORES("Scores du jour", Section.HEALTH, watch = true);
+    SCORES("Scores du jour", Section.HEALTH, watch = true),
+    /** 2.5 : cartes des plugins. */
+    MEDITATION("Méditation", Section.HEALTH),
+    STRETCH("Étirements", Section.TRAINING),
+    LEAGUE("Classement", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -112,13 +116,16 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
 
 /** Cartes conçues en demi-largeur. */
-val HALF = setOf(DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
+val HALF = setOf(DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
     DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD,
     DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART)
 
 /** Module téléchargeable dont dépend la carte (null : toujours disponible). */
 val DashCard.module: String? get() = when (this) {
     DashCard.COACH, DashCard.COACH_WEEK -> app.superhealth.modules.Modules.COACH
+    DashCard.MEDITATION -> app.superhealth.modules.Modules.MEDITATION
+    DashCard.STRETCH -> app.superhealth.modules.Modules.STRETCH
+    DashCard.LEAGUE -> app.superhealth.modules.Modules.LEAGUE
     else -> null
 }
 
@@ -176,7 +183,11 @@ enum class PlusAction(val label: String, val section: DashCard.Section) {
     /** 1.8 */
     MOOD("Noter mon moral", DashCard.Section.HEALTH),
     PERIOD("Règles", DashCard.Section.HEALTH),
-    BREATHE("Respirer", DashCard.Section.HEALTH);
+    BREATHE("Respirer", DashCard.Section.HEALTH),
+    /** 2.5 : plugins. */
+    MEDITATE("Méditer", DashCard.Section.HEALTH),
+    STRETCH("S'étirer", DashCard.Section.TRAINING),
+    LEAGUE("Classement", DashCard.Section.HEALTH);
 
     companion object {
         val defaults = listOf(SEARCH, SCAN, QUICK, AI, RECIPES, CUSTOM_FOOD, WORKOUT, EMPTY, EXERCISES, WEIGHT, VITALS, BODY, SYNC, COACH, MOOD, PERIOD, BREATHE)
@@ -242,6 +253,15 @@ data class SuperSettings(
     val plus: List<String> = PlusAction.defaults.map { it.name },
     /** Place du « + » dans la barre du bas : LEFT (gaucher), CENTER ou RIGHT (sous le pouce droit). */
     val plusSide: String = "RIGHT",
+    /** 2.5 : sections de l'onglet Activités (noms d'ActivitySection), choix déjà demandé, dernière section ouverte. */
+    val activitySections: List<String> = emptyList(),
+    val activityAsked: Boolean = false,
+    val activityCurrent: String = "",
+    /** 2.5 : matériel d'étirement possédé, bruit blanc du minuteur, icône choisie par aliment (nom normalisé → identifiant). */
+    val stretchGears: Set<String> = emptySet(),
+    val stretchFavorites: Set<String> = emptySet(),
+    val meditationNoise: Boolean = false,
+    val foodIcons: Map<String, String> = emptyMap(),
     /** 1.8 : rappels (minute du jour, −1 : coupé) et coucher conseillé. */
     val remindWeigh: Int = -1,
     val remindLog: Int = -1,

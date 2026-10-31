@@ -19,6 +19,8 @@ object Routes {
         "journal", "mood", "cycle", "breathe", "form", "checkin",
         // 2.1 : écran Constantes (widget)
         "h/vitals",
+        // 2.5 : widgets des plugins
+        "league",
     )
     private val patterns = listOf(Regex("search/[01]/-1"), Regex("h/metric/[A-Z0-9_]{1,32}"), Regex("exercise/[A-Za-z0-9_-]{1,64}"))
 

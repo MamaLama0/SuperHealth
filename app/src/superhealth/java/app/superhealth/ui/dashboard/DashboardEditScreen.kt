@@ -81,8 +81,8 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
             if (shown.size > 1) Text(tr("Réorganiser"), Modifier.clickable { reorder = true }, color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
         }
         if (shown.isEmpty()) Text(tr("Aucune carte affichée"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
-        GridPreview(shown, sh, selected?.takeIf { it in shown }) { c -> selected = if (selected == c) null else c }
-        selected?.takeIf { it in shown }?.let { c ->
+        // la barre de réglage s'ouvre juste sous la carte touchée
+        GridPreview(shown, sh, selected?.takeIf { it in shown }, onSelect = { c -> selected = if (selected == c) null else c }) { c ->
             CardToolbar(c, sh, onMove = { d ->
                 val i = shown.indexOf(c); val j = (i + d).coerceIn(0, shown.lastIndex)
                 if (i != j) set(shown.toMutableList().apply { add(j, removeAt(i)) })
@@ -111,8 +111,8 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
 /** Barre de la carte sélectionnée : taille, déplacer avant / après, retirer. */
 @Composable
 private fun CardToolbar(c: DashCard, sh: app.superhealth.SuperSettings, onMove: (Int) -> Unit, onRemove: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(Mf.colors.card)
-        .padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 8.dp)) {
+    Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(Mf.colors.background)
+        .padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(c.icon(), null, Modifier.size(18.dp), tint = c.hue())
             Spacer(Modifier.width(8.dp))
@@ -318,41 +318,41 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
 }
 
 
-/** Bloc de l'aperçu : toucher le sélectionne (sa barre de réglage s'ouvre dessous). */
+/** Bloc de l'aperçu, à la forme de la carte : toucher le sélectionne (sa barre de réglage s'ouvre juste dessous). */
 @Composable
 private fun Block(c: DashCard, z: app.superhealth.CardSize, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Row(modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+    Column(modifier.clip(shape)
         .background(if (selected) c.hue().container(1.6f) else Mf.colors.chip)
-        .then(if (selected) Modifier.border(1.5.dp, c.hue(), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)) else Modifier)
-        .clickable(onClick = onClick).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(c.icon(), null, Modifier.size(16.dp), tint = c.hue())
-        if (z != app.superhealth.CardSize.S) {
-            Spacer(Modifier.width(6.dp))
-            Text(tr(c.label), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = if (selected) c.hue().onContainer() else Mf.colors.text)
-        }
+        .then(if (selected) Modifier.border(2.dp, c.hue(), shape) else Modifier)
+        .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp), verticalArrangement = Arrangement.Center) {
+        Icon(c.icon(), null, Modifier.size(20.dp), tint = c.hue())
+        Spacer(Modifier.height(4.dp))
+        Text(tr(c.label), style = MaterialTheme.typography.labelMedium, maxLines = if (z == app.superhealth.CardSize.S) 2 else 1, overflow = TextOverflow.Ellipsis,
+            color = if (selected) c.hue().onContainer() else Mf.colors.text)
     }
 }
 
-/** Aperçu de la grille (3 blocs par rangée), tel que le tableau de bord la range. */
+/** Grand panneau : toutes les cartes affichées, rangées comme sur le tableau de bord, à leur proportion. */
 @Composable
-private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings, selected: DashCard?, onSelect: (DashCard) -> Unit) {
+private fun GridPreview(cards: List<DashCard>, sh: app.superhealth.SuperSettings, selected: DashCard?, onSelect: (DashCard) -> Unit, toolbar: @Composable (DashCard) -> Unit) {
     if (cards.isEmpty()) return
     Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(Mf.colors.card).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (selected == null) Text(tr("Touchez une carte pour la régler."), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp))
         app.superhealth.packRows(cards) { sh.sizeOf(it).span }.forEach { row ->
             val used = row.sumOf { sh.sizeOf(it).span }
             val squares = row.all { sh.sizeOf(it) == app.superhealth.CardSize.S }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { c ->
                     val z = sh.sizeOf(c)
                     val w = if (used == app.superhealth.GRID || squares || z == app.superhealth.CardSize.S) z.span.toFloat()
                         else z.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
-                    Block(c, z, c == selected, Modifier.weight(w).height(if (z == app.superhealth.CardSize.W) 28.dp else 40.dp)) { onSelect(c) }
+                    Block(c, z, c == selected, Modifier.weight(w).height(when (z) { app.superhealth.CardSize.L -> 96.dp; app.superhealth.CardSize.W -> 60.dp; else -> 78.dp })) { onSelect(c) }
                 }
                 if (squares && used < app.superhealth.GRID) Spacer(Modifier.weight((app.superhealth.GRID - used).toFloat()))
             }
+            if (selected != null && selected in row) toolbar(selected)
         }
-        if (selected == null) Text(tr("Touchez une carte pour la régler."), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
     }
 }

@@ -1,5 +1,8 @@
 package app.superhealth.ui.settings
 
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -96,12 +99,15 @@ import kotlinx.coroutines.launch
 
 /** Couleur et symbole d'un module (sa couleur d'index si elle est donnée). */
 internal fun moduleHue(kind: String, color: String?): Color = color?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
-    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); Modules.MEALS -> Color(0xFFF2994A); Modules.MEDS -> Color(0xFF3FA7D6); else -> Color(0xFF6B9BF2) }
+    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); Modules.MEALS -> Color(0xFFF2994A); Modules.MEDS -> Color(0xFF3FA7D6); Modules.MEDITATION -> Color(0xFF7B8CDE); Modules.STRETCH -> Color(0xFF3BBFA0); Modules.LEAGUE -> Color(0xFF4FA8E8); else -> Color(0xFF6B9BF2) }
 
 internal fun moduleIcon(kind: String): ImageVector = when (kind) {
     Modules.COACH -> Icons.Rounded.AutoAwesome
     Modules.MEALS -> Icons.Rounded.RestaurantMenu
     Modules.MEDS -> Icons.Rounded.Medication
+    Modules.MEDITATION -> Icons.Rounded.SelfImprovement
+    Modules.STRETCH -> Icons.Rounded.AccessibilityNew
+    Modules.LEAGUE -> Icons.Rounded.EmojiEvents
     else -> Icons.Rounded.Extension
 }
 
@@ -325,6 +331,14 @@ private fun openModule(kind: String, nav: NavHostController) {
         Modules.COACH -> nav.go("coach")
         Modules.MEALS -> nav.openTab("log")
         Modules.MEDS -> nav.go("meds")
+        Modules.MEDITATION, Modules.STRETCH -> {
+            app.superhealth.SuperPrefs.update { s ->
+                val section = if (kind == Modules.MEDITATION) "MEDITATION" else "STRETCH"
+                s.copy(activityCurrent = section, activitySections = (s.activitySections.ifEmpty { listOf("STRENGTH", "RUN") } + section).distinct())
+            }
+            nav.openTab("activities")
+        }
+        Modules.LEAGUE -> nav.go("league")
     }
 }
 

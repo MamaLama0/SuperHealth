@@ -394,6 +394,7 @@ private val patterns = listOf(
 
 @Composable
 fun BreatheScreen(nav: NavHostController) {
+    val breatheCtx = androidx.compose.ui.platform.LocalContext.current
     var pattern by remember { mutableIntStateOf(0) }
     var minutes by remember { mutableIntStateOf(5) }
     var running by remember { mutableStateOf(false) }
@@ -409,7 +410,11 @@ fun BreatheScreen(nav: NavHostController) {
         while (running) {
             withFrameMillis { }
             elapsed = System.currentTimeMillis() - start
-            if (elapsed >= total) { running = false; elapsed = total; haptic.performHapticFeedback(HapticFeedbackType.LongPress); break }
+            if (elapsed >= total) {
+                running = false; elapsed = total; haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (app.superhealth.meditation.Meditation.available()) app.superhealth.meditation.Meditation.record(breatheCtx, minutes, "breathing")
+                break
+            }
             val t = (elapsed / 1000.0) % cycle
             var acc = 0.0; var idx = 0
             for ((i, p) in phases.withIndex()) { if (t < acc + p.second) { idx = i; break }; acc += p.second }

@@ -25,7 +25,9 @@ import app.superhealth.SuperPrefs
 object StyleLab {
     /** Du plus neutre au plus coloré. */
     enum class Cards(val label: String) {
-        NEUTRAL("Neutre"), VIVID("Pastille pleine"), OUTLINE("Liseré"), SOFT("Teinte douce"), GRADIENT("Dégradé"), STRONG("Vif"), FULL("Plein")
+        NEUTRAL("Neutre"), VIVID("Pastille pleine"), OUTLINE("Liseré"), SOFT("Teinte douce"), GRADIENT("Dégradé"), STRONG("Vif"), FULL("Plein"),
+        /** 2.5 : proposition d'après Rolla : aplat profond de la couleur de la mesure sur fond noir ; teintes chaudes sur noir neutre (jamais de brun). */
+        DEEP("Profond")
     }
     enum class WorkoutColor(val label: String) { BLUE("Bleu"), ACCENT("Accent"), PROGRAM("Programme") }
     enum class Hero(val label: String) { LARGE("Grande"), COMPACT("Compacte"), NONE("Sans image") }
@@ -94,6 +96,7 @@ fun CardTone(hue: Color, rich: Boolean = false, night: Boolean = false, content:
         StyleLab.Cards.SOFT -> mix(if (d) 0.20f else 0.13f).let { it to it }
         StyleLab.Cards.GRADIENT -> mix(if (d) 0.46f else 0.36f) to mix(if (d) 0.16f else 0.10f)
         StyleLab.Cards.STRONG -> mix(if (d) 0.44f else 0.34f).let { it to it }
+        StyleLab.Cards.DEEP -> (if (!d) mix(0.14f) else if (warm) Color(0xFF1C1E24) else lerp(hue, Color(0xFF0A0E12), 0.74f)).let { it to it }
         // carte à plusieurs couleurs (anneaux, muscles, phases…) : version profonde de sa couleur, ses couleurs restent lisibles
         StyleLab.Cards.FULL -> if (rich) lerp(hue, Color.Black, if (d) 0.55f else 0.42f) to lerp(hue, Color.Black, if (d) 0.68f else 0.56f)
             else (if (d) lerp(hue, Color.Black, 0.22f) else hue) to (if (d) lerp(hue, Color.Black, 0.42f) else lerp(hue, Color.Black, 0.14f))
@@ -135,6 +138,6 @@ fun Modifier.dashCardBackground(@Suppress("UNUSED_PARAMETER") hue: Color = Color
 fun dashChipColors(hue: Color, style: StyleLab.Cards = StyleLab.cards()): Pair<Color, Color> = when (style) {
     StyleLab.Cards.VIVID -> hue to Color.White
     StyleLab.Cards.FULL -> lerp(Mf.colors.card, Color.White, 0.22f) to Color.White
-    StyleLab.Cards.SOFT, StyleLab.Cards.GRADIENT, StyleLab.Cards.STRONG -> Mf.colors.chip to hue.onContainer()
+    StyleLab.Cards.SOFT, StyleLab.Cards.GRADIENT, StyleLab.Cards.STRONG, StyleLab.Cards.DEEP -> Mf.colors.chip to hue.onContainer()
     else -> hue.container(1.2f) to hue.onContainer()
 }

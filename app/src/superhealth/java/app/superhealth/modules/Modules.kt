@@ -37,7 +37,10 @@ object Modules {
     const val COACH = "coach"
     const val MEALS = "meals"
     const val MEDS = "meds"
-    val engines = setOf(COACH, MEALS, MEDS)
+    const val STRETCH = "stretch"
+    const val MEDITATION = "meditation"
+    const val LEAGUE = "league"
+    val engines = setOf(COACH, MEALS, MEDS, STRETCH, MEDITATION, LEAGUE)
 
     @Serializable
     data class Module(
@@ -287,7 +290,24 @@ object Modules {
             }
             MEALS -> app.superhealth.meals.MealPlanner.invalidate()
             MEDS -> { app.superhealth.meds.Meds.invalidate(); app.superhealth.meds.Meds.schedule(ctx) }
+            STRETCH -> { app.superhealth.stretch.Stretch.invalidate(); if (on) addCard(app.superhealth.DashCard.STRETCH) }
+            MEDITATION -> { app.superhealth.meditation.Meditation.invalidate(); if (on) addCard(app.superhealth.DashCard.MEDITATION) }
+            LEAGUE -> if (on) addCard(app.superhealth.DashCard.LEAGUE)
         }
+    }
+
+    private fun addCard(c: app.superhealth.DashCard) = SuperPrefs.update { s -> if (c in s.dashboard) s else s.copy(dashboard = s.dashboard + c) }
+
+    /**
+     * Le plugin de ce type, installé et activé si besoin (choix des activités). Faux si le catalogue est injoignable ou l'installation échoue.
+     * Le catalogue est toujours relu : c'est un choix de la personne, pas une tâche de fond répétée.
+     */
+    suspend fun ensure(ctx: Context, kind: String): Boolean {
+        if (isActive(kind)) return true
+        _installed.value.firstOrNull { it.kind == kind }?.let { setEnabled(ctx, it.id, true); return true }
+        if (catalog.value.none { it.module.kind == kind }) refresh()
+        val e = catalog.value.filter { it.module.kind == kind && compatible(ctx, it.module) }.let { l -> l.firstOrNull { it.verified } ?: l.firstOrNull() } ?: return false
+        return install(ctx, e)
     }
 
     /** Mises à jour automatiques (vérification quotidienne) : modules installés dont une version plus récente est publiée. */

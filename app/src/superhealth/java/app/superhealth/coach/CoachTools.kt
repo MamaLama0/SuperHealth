@@ -7,6 +7,7 @@ import app.superhealth.health.data.Nights
 import app.superhealth.nutrition.NutriApp
 import app.superhealth.nutrition.data.Micros
 import app.superhealth.nutrition.domain.Macros
+import app.superhealth.stretch.Stretch
 import app.superhealth.training.WorkoutApp
 import app.superhealth.training.domain.Analytics as TrainingAnalytics
 import app.superhealth.training.domain.Periodization
@@ -55,6 +56,7 @@ object CoachTools {
         "get_food_log" to "Journal", "get_nutrition_targets" to "Cibles", "get_workouts" to "Séances", "get_exercise_history" to "Exercice",
         "get_programs" to "Programmes", "search_exercises" to "Exercices", "get_health" to "Mesures", "get_sleep" to "Sommeil",
         "get_body" to "Poids", "get_activities" to "Activités",
+        "get_mind_mobility" to "Méditation et étirements", "get_stretch_catalog" to "Étirements", "get_league" to "Classement",
     )
     fun label(tool: String) = labels[tool]
 
@@ -63,6 +65,7 @@ object CoachTools {
         "sleep" to "h/metric/SLEEP", "vitals" to "h/vitals", "food_log" to "log", "nutrients" to "nutrients", "weight" to "weight",
         "expenditure" to "expenditure", "strategy" to "strategy", "activities" to "activities", "training_insights" to "t/insights",
         "form" to "form", "journal" to "journal", "body" to "body", "performance" to "h/performance", "history" to "history",
+        "leaderboard" to "league",
     )
 
     // ---- Définitions envoyées au modèle -----------------------------------------------------------------
@@ -139,6 +142,23 @@ object CoachTools {
                     putJsonArray("required") { listOf("name", "kcal", "protein", "fat", "carbs").forEach { add(JsonPrimitive(it)) } }
                 }
             }), listOf("items")))
+        if (app.superhealth.meditation.Meditation.available() || app.superhealth.stretch.Stretch.available())
+            add(fn("get_mind_mobility", "Meditation and stretching sessions of the last days: date, minutes, kind.", props("days" to p("integer", "Number of days back")), listOf("days")))
+        if (app.superhealth.stretch.Stretch.available()) {
+            add(fn("get_stretch_catalog", "Stretching exercises available for an area: ids, names, areas, equipment, moment (pre/post/daily).",
+                props("group" to p("string", "Body area", app.superhealth.stretch.Stretch.Group.entries.map { it.name }), "limit" to p("integer", "Max results, default 20"))))
+            add(fn("propose_stretch_routine", "Propose a stretching routine with a 'Start' button. Give either exercise_ids (from get_stretch_catalog), or moment, areas and minutes and the app composes it.",
+                props("moment" to p("string", "When", app.superhealth.stretch.Stretch.Kind.entries.map { it.name }), "minutes" to p("integer", "5 to 30"),
+                    "areas" to buildJsonObject { put("type", "array"); putJsonObject("items") { put("type", "string"); putJsonArray("enum") { app.superhealth.stretch.Stretch.Group.entries.forEach { add(JsonPrimitive(it.name)) } } } },
+                    "exercise_ids" to buildJsonObject { put("type", "array"); putJsonObject("items") { put("type", "string") } },
+                    "title" to p("string", "Short title in the user's language")), listOf("moment")))
+        }
+        if (app.superhealth.meditation.Meditation.available())
+            add(fn("propose_meditation", "Propose a guided meditation written by you for today, with a 'Start' button. Lines are shown and read aloud.",
+                props("title" to p("string", "Short title in the user's language"), "minutes" to p("integer", "3 to 30"),
+                    "script" to p("string", "One line per sentence, format mm:ss | sentence, in the user's language, first at 00:05, spaced 30 to 90 s, last at least 30 s before the end")), listOf("minutes", "script")))
+        if (app.superhealth.league.League.available())
+            add(fn("get_league", "The user's weekly leaderboard score by area and friends' scores (first names are shared by the friends themselves)."))
         add(fn("show_screen", "Add a button under your answer that opens a screen of the app, when looking at it helps.",
             props("screen" to p("string", "Screen", SCREENS.keys.toList()), "label" to p("string", "Short button label in the user's language")), listOf("screen")))
     }
@@ -148,7 +168,8 @@ object CoachTools {
         "(exact meals, micronutrients, every set, an exercise's history, nights, programs). To build or change a training program, " +
         "first read get_programs and search_exercises (available_only true), then call propose_program; to log food the user describes, call " +
         "propose_food_log; when a screen of the app shows what you talk about, call show_screen. The user confirms proposals with a button: " +
-        "never say something was created or logged, say you propose it. Keep answers short."
+        "never say something was created or logged, say you propose it. When the user has the plugins, use propose_stretch_routine and propose_meditation " +
+        "instead of describing a session in text. Keep answers short."
 
     // ---- Exécution -------------------------------------------------------------------------------
 
@@ -312,12 +333,53 @@ object CoachTools {
                 Outcome("Proposal shown to the user with an 'Add' button.", Action("food", items.joinToString(", ") { it.str("name") ?: "?" },
                     "${n(kcal)} kcal · P ${n(items.sumOf { it.dbl("protein") ?: 0.0 })} · L ${n(items.sumOf { it.dbl("fat") ?: 0.0 })} · G ${n(items.sumOf { it.dbl("carbs") ?: 0.0 })}", a.toString()))
             }
+            "get_mind_mobility" -> {
+                val days = (a.int("days") ?: 14).coerceIn(1, 180)
+                val from = LocalDate.now().toEpochDay() - days
+                val lines = app.superhealth.meditation.Meditation.log.value.filter { it.day >= from }.map { "${LocalDate.ofEpochDay(it.day)} meditation ${it.kind} ${it.minutes} min" } +
+                    app.superhealth.stretch.Stretch.log.value.filter { it.day >= from }.map { "${LocalDate.ofEpochDay(it.day)} stretching ${it.kind.lowercase()} ${it.minutes} min" }
+                Outcome(lines.sorted().joinToString("\n").ifEmpty { "No session." })
+            }
+            "get_stretch_catalog" -> {
+                val g = app.superhealth.stretch.Stretch.Group.entries.firstOrNull { it.name == a.str("group") }
+                val list = app.superhealth.stretch.Stretch.catalog().exercises.filter { e -> g == null || e.zones.any { it in g.zones } }.take((a.int("limit") ?: 20).coerceIn(1, 60))
+                Outcome(list.joinToString("\n") { e -> "${e.id} | ${e.name} | ${e.zones.joinToString("/")} | gear: ${e.gears.joinToString("/").ifEmpty { "none" }} | ${listOfNotNull("pre".takeIf { _ -> e.pre }, "post".takeIf { _ -> e.post }, "daily".takeIf { _ -> e.daily }).joinToString("/")} | ${e.seconds / 60} min" })
+            }
+            "propose_stretch_routine" -> {
+                val r = stretchRoutine(a) ?: return Outcome("Error: no exercise matches. Use get_stretch_catalog.")
+                Outcome("Proposal shown to the user with a 'Start' button.", Action("stretch", a.str("title")?.take(40) ?: r.name,
+                    app.superhealth.ui.trf("%1\$s exercices · %2\$s min", r.items.size, r.seconds / 60), a.toString()))
+            }
+            "propose_meditation" -> {
+                val lines = app.superhealth.meditation.Meditation.parseScript(a.str("script").orEmpty())
+                val minutes = (a.int("minutes") ?: 10).coerceIn(3, 30)
+                if (lines.size < 2) return Outcome("Error: script must have lines in the form mm:ss | sentence.")
+                Outcome("Proposal shown to the user with a 'Start' button.", Action("meditation", a.str("title")?.take(40) ?: app.superhealth.ui.tr("Séance du coach"),
+                    app.superhealth.ui.trf("%1\$s min", minutes), a.toString()))
+            }
+            "get_league" -> {
+                val s = app.superhealth.league.League.compute(ctx)
+                val week = s.week
+                val friends = app.superhealth.league.League.state.value.friends.filter { it.week == week }
+                Outcome("Me: ${s.total}/1000; " + s.pillars.entries.joinToString { (p, v) -> "${p.name.lowercase()} ${v ?: "not tracked"}" } +
+                    "\nFriends this week: " + friends.joinToString { "${it.name} ${it.score}" }.ifEmpty { "none" })
+            }
             "show_screen" -> {
                 val key = a.str("screen")?.takeIf { it in SCREENS } ?: return Outcome("Unknown screen.")
                 Outcome("Button added.", Action("open", a.str("label")?.take(40) ?: key, "", a.toString()))
             }
             else -> Outcome("Unknown tool.")
         }
+    }
+
+    /** Routine proposée par le coach : ses exercices s'il les a nommés, sinon composée par l'app. */
+    private fun stretchRoutine(a: JsonObject): Stretch.Routine? {
+        val kind = Stretch.Kind.entries.firstOrNull { it.name == a.str("moment") } ?: Stretch.Kind.DAILY
+        val ids = (a["exercise_ids"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
+        val named = ids.mapNotNull { Stretch.exercise(it) }
+        if (named.isNotEmpty()) return Stretch.Routine(kind.label, kind, named)
+        val areas = (a["areas"] as? JsonArray)?.mapNotNull { e -> Stretch.Group.entries.firstOrNull { it.name == (e as? JsonPrimitive)?.contentOrNull } }.orEmpty().toSet()
+        return Stretch.routine(kind, areas, (a.int("minutes") ?: 10).coerceIn(5, 30), app.superhealth.SuperPrefs.settings.value.stretchGears).takeIf { it.items.isNotEmpty() }
     }
 
     // ---- Application d'une proposition (bouton de l'utilisateur) -----------------------------------------
@@ -361,6 +423,15 @@ object CoachTools {
                 "log"
             }
             "open" -> SCREENS[a.str("screen")]
+            "stretch" -> stretchRoutine(a)?.let { r ->
+                app.superhealth.stretch.Stretch.current.value = r.copy(name = action.title)
+                "stretch/play"
+            }
+            "meditation" -> {
+                app.superhealth.meditation.Meditation.current.value = app.superhealth.meditation.Meditation.Play(action.title, (a.int("minutes") ?: 10).coerceIn(3, 30),
+                    app.superhealth.meditation.Meditation.parseScript(a.str("script").orEmpty()), kind = "coach")
+                "meditation/play"
+            }
             else -> null
         }
     }

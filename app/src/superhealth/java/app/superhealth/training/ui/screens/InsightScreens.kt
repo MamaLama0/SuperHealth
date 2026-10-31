@@ -2,6 +2,7 @@ package app.superhealth.training.ui.screens
 
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -286,6 +287,14 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
         WorkoutSummary(vm, w, tr("Séance terminée"), onClose, onEdit = { nav.navigate("workoutedit/${w.id}") },
             onDuration = { editDuration = true }, onDelete = { vm.deleteWorkout(w.id); onClose() }, rpeFirst = true, nav = nav)
+        // plugin Étirements : une routine sur les muscles qui viennent de travailler
+        if (app.superhealth.stretch.Stretch.available()) app.superhealth.training.ui.components.PillButton(tr("S'étirer"),
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(16.dp), icon = Icons.Rounded.SelfImprovement) {
+            app.superhealth.ui.stretch.preset.value = app.superhealth.stretch.Stretch.groupsFor(w.exercises.flatMap { db?.exercise(it.exerciseId)?.muscleGroups.orEmpty() })
+            app.superhealth.SuperPrefs.update { s -> s.copy(activityCurrent = "STRETCH", activitySections = (s.activitySections.ifEmpty { listOf("STRENGTH") } + "STRETCH").distinct()) }
+            onClose()
+            runCatching { app.superhealth.ui.openTabFrom(nav, "activities") }
+        }
         // Confettis de fin de séance, une seule fois
         var confetti by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
         LaunchedEffect(Unit) { if (confetti) { kotlinx.coroutines.delay(4500); confetti = false } }

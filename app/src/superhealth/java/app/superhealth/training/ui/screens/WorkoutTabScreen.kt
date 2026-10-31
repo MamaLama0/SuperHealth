@@ -91,13 +91,14 @@ fun WorkoutTabScreen(
     week: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
     recent: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
     historyRoute: String = "history",
+    title: String = tr("Activités"),
 ) {
     val st by vm.state.collectAsState()
     val db by vm.db.collectAsState()
     val active = st.programs.firstOrNull { it.id == st.settings.activeProgramId }
     var create by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
-        app.superhealth.nutrition.ui.components.TabHeader(app.superhealth.ui.longToday(), tr("Activités")) {
+        app.superhealth.nutrition.ui.components.TabHeader(app.superhealth.ui.longToday(), title) {
             app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate(historyRoute) }
             app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
         }
@@ -138,7 +139,8 @@ fun WorkoutTabScreen(
             }
             if (strength && !cardioFirst) recent()
             if (strength) Programs(st, active, nav) { create = true }
-            Spacer(Modifier.height(24.dp))
+            // place laissée aux bulles flottantes
+            Spacer(Modifier.height(96.dp))
         }
     }
 }
