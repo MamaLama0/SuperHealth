@@ -52,10 +52,10 @@
       "nameEn": "Meditation",
       "summary": "Minuteur libre avec gongs, séances guidées lues à voix haute, séances écrites par le coach. Une section dans Activités et un widget.",
       "summaryEn": "Free timer with gongs, guided sessions read aloud, sessions written by the coach. A section in Activities and a widget.",
-      "version": "1.0.0",
-      "size": 1502706,
-      "sha256": "a9ffcf59b2d3c2626174c698bcb30c36a27e9f82d073909da2715100f64a5c7e",
-      "url": "meditation-1.0.0.zip"
+      "version": "1.1.0",
+      "size": 1504188,
+      "sha256": "64aeba6874368c8a19c0a4b3311e53c416c3423ad95fe1fa2ee1180078e50bec",
+      "url": "meditation-1.1.0.zip"
     },
     {
       "id": "stretch",
@@ -66,10 +66,10 @@
       "nameEn": "Stretching",
       "summary": "311 exercices en vidéo avec leurs consignes. Routines selon le moment, les zones et votre matériel, ou après une séance selon les muscles travaillés.",
       "summaryEn": "311 video exercises with instructions. Routines by moment, area and equipment, or after a workout from the muscles you trained.",
-      "version": "1.0.0",
-      "size": 2484864,
-      "sha256": "e9bcb6fc7f82c65a357099bd5e30d7c6511ed0bc46f04bfa02b16a118ecf4675",
-      "url": "stretch-1.0.0.zip"
+      "version": "1.1.0",
+      "size": 2487650,
+      "sha256": "0aff9bcd6efcb0cafd24eb4c80e75ad6fa1726fc5e6c35d9e5018c57f4dded55",
+      "url": "stretch-1.1.0.zip"
     },
     {
       "id": "league",
@@ -80,10 +80,10 @@
       "nameEn": "Leaderboard",
       "summary": "Un score de la semaine sur six parties, comparé entre amis par QR code ou message. Aucun serveur, cartes signées.",
       "summaryEn": "A weekly score over six areas, compared with friends by QR code or message. No server, signed cards.",
-      "version": "1.0.0",
-      "size": 334,
-      "sha256": "bb3b66c2988d882ae30a9fb93356a99f1c89ead671f62d43f4adbf3ff4d4b103",
-      "url": "league-1.0.0.zip"
+      "version": "1.0.1",
+      "size": 331,
+      "sha256": "732ac3c888d62fb1d946ac36c35e6b097979afa5e917390568106b5bb6b12cf6",
+      "url": "league-1.0.1.zip"
     }
   ]
 }

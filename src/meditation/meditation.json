@@ -249,6 +249,196 @@
      "en": "Keep this with you, and open your eyes when you like."
     }
    ]
+  },
+  {
+   "id": "stress3",
+   "name": "Pause anti-stress",
+   "nameEn": "Stress break",
+   "summary": "3 min quand ça déborde",
+   "summaryEn": "3 min when it overflows",
+   "minutes": 3,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Arrêtez ce que vous faites. Posez les deux pieds au sol.",
+     "en": "Stop what you are doing. Put both feet on the floor."
+    },
+    {
+     "at": 30,
+     "fr": "Inspirez par le nez sur quatre temps, expirez par la bouche sur six.",
+     "en": "Breathe in through the nose for four counts, out through the mouth for six."
+    },
+    {
+     "at": 80,
+     "fr": "Continuez ce rythme. Laissez les épaules descendre à chaque expiration.",
+     "en": "Keep this rhythm. Let your shoulders drop with each exhale."
+    },
+    {
+     "at": 130,
+     "fr": "Nommez ce qui vous occupe en un mot. Rien de plus pour l'instant.",
+     "en": "Name what is on your mind in one word. Nothing more for now."
+    },
+    {
+     "at": 160,
+     "fr": "Une dernière respiration, puis choisissez la prochaine petite action.",
+     "en": "One last breath, then choose the next small action."
+    }
+   ]
+  },
+  {
+   "id": "midi5",
+   "name": "Pause de midi",
+   "nameEn": "Midday pause",
+   "summary": "5 min pour couper la journée",
+   "summaryEn": "5 min to break up the day",
+   "minutes": 5,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Asseyez-vous, sans écran devant les yeux. Laissez la matinée derrière vous.",
+     "en": "Sit down with no screen in front of you. Leave the morning behind."
+    },
+    {
+     "at": 50,
+     "fr": "Écoutez les sons autour de vous, proches puis lointains, sans les nommer.",
+     "en": "Listen to the sounds around you, near then far, without naming them."
+    },
+    {
+     "at": 120,
+     "fr": "Sentez les points d'appui : les pieds, les cuisses, le dos.",
+     "en": "Feel the points of contact: feet, thighs, back."
+    },
+    {
+     "at": 190,
+     "fr": "Comment est votre énergie maintenant ? Observez, sans chercher à la changer.",
+     "en": "How is your energy now? Notice it without trying to change it."
+    },
+    {
+     "at": 260,
+     "fr": "Choisissez une intention simple pour l'après-midi.",
+     "en": "Choose one simple intention for the afternoon."
+    }
+   ]
+  },
+  {
+   "id": "bienveillance10",
+   "name": "Bienveillance",
+   "nameEn": "Loving-kindness",
+   "summary": "10 min pour soi et les autres",
+   "summaryEn": "10 min for yourself and others",
+   "minutes": 10,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Installez-vous et laissez le visage se détendre.",
+     "en": "Settle in and let your face soften."
+    },
+    {
+     "at": 45,
+     "fr": "Pensez à vous avec la douceur que vous auriez pour un ami.",
+     "en": "Think of yourself with the gentleness you would have for a friend."
+    },
+    {
+     "at": 120,
+     "fr": "Répétez intérieurement : que j'aille bien, que je sois en paix.",
+     "en": "Repeat inwardly: may I be well, may I be at peace."
+    },
+    {
+     "at": 230,
+     "fr": "Pensez à quelqu'un que vous aimez. Adressez-lui les mêmes mots.",
+     "en": "Think of someone you love. Offer them the same words."
+    },
+    {
+     "at": 340,
+     "fr": "Pensez à une personne que vous connaissez à peine, puis à une personne difficile, si c'est possible aujourd'hui.",
+     "en": "Think of someone you barely know, then someone difficult, if that feels possible today."
+    },
+    {
+     "at": 470,
+     "fr": "Élargissez à tous ceux qui vous entourent, sans effort.",
+     "en": "Widen to everyone around you, without effort."
+    },
+    {
+     "at": 560,
+     "fr": "Revenez à vous, et au souffle.",
+     "en": "Come back to yourself and the breath."
+    }
+   ]
+  },
+  {
+   "id": "reveil5",
+   "name": "Bien commencer",
+   "nameEn": "Good morning",
+   "summary": "5 min au réveil",
+   "summaryEn": "5 min on waking",
+   "minutes": 5,
+   "lines": [
+    {
+     "at": 5,
+     "fr": "Avant de prendre le téléphone, restez assis un instant.",
+     "en": "Before picking up your phone, stay seated for a moment."
+    },
+    {
+     "at": 40,
+     "fr": "Étirez doucement le cou et les épaules, puis revenez à l'immobilité.",
+     "en": "Gently stretch your neck and shoulders, then return to stillness."
+    },
+    {
+     "at": 100,
+     "fr": "Prenez cinq respirations amples en comptant chacune.",
+     "en": "Take five full breaths, counting each one."
+    },
+    {
+     "at": 180,
+     "fr": "Quelle est la chose qui compte le plus aujourd'hui ? Une seule.",
+     "en": "What matters most today? Just one thing."
+    },
+    {
+     "at": 250,
+     "fr": "Gardez-la en tête et commencez votre journée.",
+     "en": "Keep it in mind and start your day."
+    }
+   ]
+  }
+ ],
+ "programs": [
+  {
+   "id": "decouverte",
+   "name": "Découvrir en 7 jours",
+   "nameEn": "Discover in 7 days",
+   "sessions": [
+    "souffle5",
+    "reveil5",
+    "midi5",
+    "scan10",
+    "attention10",
+    "gratitude5",
+    "bienveillance10"
+   ]
+  },
+  {
+   "id": "dormir",
+   "name": "Mieux dormir",
+   "nameEn": "Sleep better",
+   "sessions": [
+    "gratitude5",
+    "scan10",
+    "sommeil10",
+    "souffle5",
+    "sommeil10"
+   ]
+  },
+  {
+   "id": "sport",
+   "name": "Récupérer",
+   "nameEn": "Recover",
+   "sessions": [
+    "recup5",
+    "stress3",
+    "scan10",
+    "recup5",
+    "sommeil10"
+   ]
   }
  ]
 }
