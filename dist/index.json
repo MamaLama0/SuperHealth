@@ -75,7 +75,7 @@
       "id": "league",
       "kind": "league",
       "minApp": "2.5",
-      "color": "#E8A33D",
+      "color": "#4FA8E8",
       "name": "Classement",
       "nameEn": "Leaderboard",
       "summary": "Un score de la semaine sur six parties, comparé entre amis par QR code ou message. Aucun serveur, cartes signées.",
