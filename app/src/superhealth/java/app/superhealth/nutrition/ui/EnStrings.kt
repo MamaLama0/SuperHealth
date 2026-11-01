@@ -704,5 +704,7 @@ object EnStrings {
         "Garder mes cibles actuelles" to "Keep my current targets",
         "Cibles conservées. Prochain check-in le %1\$s." to "Targets kept. Next check-in on %1\$s.",
         "Cibles actuelles : %1\$s kcal et %2\$s g de protéines par jour." to "Current targets: %1\$s kcal and %2\$s g protein per day.",
+        "Quotidien" to "Daily",
+        "Poids analysé et calories recalculées ce jour-là" to "Weight analysed and calories recalculated that day",
     )
 }

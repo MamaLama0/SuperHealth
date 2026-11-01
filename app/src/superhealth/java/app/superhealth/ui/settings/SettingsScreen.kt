@@ -189,23 +189,6 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Cartes"), trf("%1\$s affichées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider(56.dp)
                 SettingRow(tr("Bouton +"), trf("%1\$s raccourcis", sh.plus.size), icon = Icons.Rounded.AddCircle, hue = HealthHues.Activity) { nav.go("plus/edit") }
-                RowDivider(56.dp)
-                var hours by remember { mutableStateOf(false) }
-                SettingRow(tr("Horaires des repas"), sh.mealEnds.joinToString(" · ") { "%d:%02d".format(it / 60, it % 60) }, icon = Icons.Rounded.Schedule, hue = app.superhealth.ui.theme.CaloriesColor) { hours = true }
-                if (hours) app.superhealth.nutrition.ui.screens.MealHoursDialog { hours = false }
-                RowDivider(56.dp)
-                IconSwitchRow(tr("Bandeau de pesée"), tr("Tant que la pesée du jour manque"), Icons.Rounded.MonitorWeight, HealthHues.Body, sh.weighPrompt) { v ->
-                    SuperPrefs.update { it.copy(weighPrompt = v) }
-                }
-                RowDivider(56.dp)
-                val program by vm.nutrition.program.collectAsState()
-                var checkInDayOpen by remember { mutableStateOf(false) }
-                SettingRow(tr("Jour du check-in"), trf("%1\$s · chaque semaine", app.superhealth.nutrition.ui.screens.checkInDayName(program.checkInDay)),
-                    icon = Icons.Rounded.CalendarMonth, hue = HealthHues.Body) { checkInDayOpen = true }
-                if (checkInDayOpen) CheckInDayDialog(program.checkInDay, onDismiss = { checkInDayOpen = false }) { d ->
-                    checkInDayOpen = false
-                    vm.nutrition.repo.prefs.setProgram(program.copy(checkInDay = d))
-                }
             }
 
             Group(tr("Fonctions")) {
@@ -271,11 +254,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Health Connect"), if (sh.healthConnect) tr("Activé") else tr("Désactivé"), icon = Icons.Rounded.Favorite, hue = HealthHues.Heart) {
                     nav.go("settings/hc")
                 }
-                RowDivider(56.dp)
-                SettingRow(tr("Mes activités"), tr("Sections de l'onglet Activités"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) {
-                    app.superhealth.SuperPrefs.update { it.copy(activityAsked = false) }
-                    nav.go("activities")
-                }
+
                 RowDivider(56.dp)
                 SettingRow(tr("Import d'activités"), tr("Fichiers GPX, TCX, FIT ou ZIP, historique de la montre"), icon = Icons.Rounded.FileOpen,
                     hue = HealthHues.Fitness) { nav.go("settings/activities") }
@@ -523,23 +502,4 @@ private fun HealthConnectSection(vm: SuperViewModel, syncing: Boolean) {
             }
         }
     }
-}
-
-/** Jour du check-in : le poids est analysé et les calories recalculées ce jour-là. */
-@Composable
-private fun CheckInDayDialog(current: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
-    var pick by remember { mutableStateOf(current) }
-    AlertDialog(onDismissRequest = onDismiss, containerColor = Mf.colors.card,
-        title = { Text(tr("Jour du check-in")) },
-        text = {
-            Column {
-                Text(tr("Ce jour-là, votre poids est analysé et vos calories recalculées pour la semaine."),
-                    style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
-                Spacer(Modifier.height(14.dp))
-                app.superhealth.nutrition.ui.components.ChipChoice((1..7).toList(), pick,
-                    { app.superhealth.nutrition.ui.screens.checkInDayName(it) }) { pick = it }
-            }
-        },
-        confirmButton = { TextButton(onClick = { onPick(pick) }) { Text(tr("OK")) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Annuler")) } })
 }

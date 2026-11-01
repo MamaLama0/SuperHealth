@@ -3,6 +3,9 @@ package app.superhealth.ui.activities
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -189,25 +192,40 @@ private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, star
     val dark = Mf.colors.dark
     LaunchedEffect(Unit) { bubblesShown = true }
     LaunchedEffect(open, current) { if (open) { delay(4000); open = false } }
+    // le libellé sort de la bulle (et y rentre) au lieu d'apparaître d'un coup
+    val labelFrom = if (start) Alignment.Start else Alignment.End
     @Composable
-    fun Bubble(a: ActivitySection) {
+    fun Bubble(a: ActivitySection, animateLabel: Boolean) {
         val on = a == current
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
-            if (open) Text(tr(a.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
-                modifier = Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
-                    .clickable { onSelect(a); open = false }.padding(horizontal = 12.dp, vertical = 7.dp))
+            AnimatedVisibility(visible = if (animateLabel) open else true,
+                enter = expandHorizontally(expandFrom = labelFrom, animationSpec = tween(200)) + fadeIn(tween(160)),
+                exit = shrinkHorizontally(shrinkTowards = labelFrom, animationSpec = tween(150)) + fadeOut(tween(120))) {
+                Text(tr(a.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
+                    modifier = Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
+                        .clickable { onSelect(a); open = false }.padding(horizontal = 12.dp, vertical = 7.dp))
+            }
             if (!start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
         }
     }
-    Column(modifier, horizontalAlignment = if (start) Alignment.Start else Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        AnimatedVisibility(open, enter = expandVertically(expandFrom = Alignment.Bottom, animationSpec = tween(240)) + fadeIn(tween(180)),
-            exit = shrinkVertically(shrinkTowards = Alignment.Bottom, animationSpec = tween(180)) + fadeOut(tween(140))) {
-            Column(horizontalAlignment = if (start) Alignment.Start else Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                list.filter { it != current }.forEach { Bubble(it) }
+    // chaque bulle monte du bouton + vers le haut, l'une après l'autre (les plus proches d'abord)
+    val others = list.filter { it != current }
+    Column(modifier, horizontalAlignment = if (start) Alignment.Start else Alignment.End) {
+        others.forEachIndexed { i, a ->
+            val step = (others.lastIndex - i) * 45
+            AnimatedVisibility(open,
+                enter = expandVertically(expandFrom = Alignment.Bottom, animationSpec = tween(240, delayMillis = step)) +
+                    fadeIn(tween(180, delayMillis = step)) +
+                    slideInVertically(initialOffsetY = { it / 3 }, animationSpec = tween(280, delayMillis = step)),
+                exit = shrinkVertically(shrinkTowards = Alignment.Bottom, animationSpec = tween(160)) + fadeOut(tween(110))) {
+                Column(horizontalAlignment = if (start) Alignment.Start else Alignment.End) {
+                    Bubble(a, animateLabel = false)
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
-        Bubble(current)
+        Bubble(current, animateLabel = true)
     }
 }
 
