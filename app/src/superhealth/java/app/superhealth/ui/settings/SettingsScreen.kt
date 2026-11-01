@@ -197,6 +197,15 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 IconSwitchRow(tr("Bandeau de pesée"), tr("Tant que la pesée du jour manque"), Icons.Rounded.MonitorWeight, HealthHues.Body, sh.weighPrompt) { v ->
                     SuperPrefs.update { it.copy(weighPrompt = v) }
                 }
+                RowDivider(56.dp)
+                val program by vm.nutrition.program.collectAsState()
+                var checkInDayOpen by remember { mutableStateOf(false) }
+                SettingRow(tr("Jour du check-in"), trf("%1\$s · chaque semaine", app.superhealth.nutrition.ui.screens.checkInDayName(program.checkInDay)),
+                    icon = Icons.Rounded.CalendarMonth, hue = HealthHues.Body) { checkInDayOpen = true }
+                if (checkInDayOpen) CheckInDayDialog(program.checkInDay, onDismiss = { checkInDayOpen = false }) { d ->
+                    checkInDayOpen = false
+                    vm.nutrition.repo.prefs.setProgram(program.copy(checkInDay = d))
+                }
             }
 
             Group(tr("Fonctions")) {
@@ -516,3 +525,21 @@ private fun HealthConnectSection(vm: SuperViewModel, syncing: Boolean) {
     }
 }
 
+/** Jour du check-in : le poids est analysé et les calories recalculées ce jour-là. */
+@Composable
+private fun CheckInDayDialog(current: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+    var pick by remember { mutableStateOf(current) }
+    AlertDialog(onDismissRequest = onDismiss, containerColor = Mf.colors.card,
+        title = { Text(tr("Jour du check-in")) },
+        text = {
+            Column {
+                Text(tr("Ce jour-là, votre poids est analysé et vos calories recalculées pour la semaine."),
+                    style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+                Spacer(Modifier.height(14.dp))
+                app.superhealth.nutrition.ui.components.ChipChoice((1..7).toList(), pick,
+                    { app.superhealth.nutrition.ui.screens.checkInDayName(it) }) { pick = it }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onPick(pick) }) { Text(tr("OK")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Annuler")) } })
+}

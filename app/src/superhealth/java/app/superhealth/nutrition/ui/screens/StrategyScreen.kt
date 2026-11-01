@@ -92,6 +92,7 @@ import app.superhealth.ui.theme.CaloriesColor
 import app.superhealth.ui.theme.CarbsColor
 import app.superhealth.ui.theme.FatColor
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.ProteinColor
 import app.superhealth.nutrition.ui.toKcal
 import app.superhealth.nutrition.ui.toKg
@@ -414,6 +415,11 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 }
 
+/** Nom d'un jour de la semaine (1 = lundi) dans la langue de l'interface. */
+fun checkInDayName(day: Int): String =
+    java.time.DayOfWeek.of(day.coerceIn(1, 7)).getDisplayName(java.time.format.TextStyle.FULL, app.superhealth.ui.Lang.locale)
+        .replaceFirstChar { it.uppercase(app.superhealth.ui.Lang.locale) }
+
 /** Check-in hebdomadaire, en plein écran (depuis Stratégie ou « À faire »). */
 @Composable
 fun CheckInScreen(vm: AppViewModel, onBack: () -> Unit) {
@@ -429,16 +435,27 @@ fun CheckInScreen(vm: AppViewModel, onBack: () -> Unit) {
 fun CheckInSheet(vm: AppViewModel, onDismiss: () -> Unit) {
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background,
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        val a by vm.analytics.collectAsState()
+        val day = a?.program?.checkInDay ?: 1
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp).navigationBarsPadding().verticalScroll(rememberScrollState())) {
-            Text(tr("Check-in de la semaine"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
+            Row(Modifier.padding(start = 2.dp, end = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(app.superhealth.ui.theme.HealthHues.Body.container(1.3f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.EventAvailable, null, Modifier.size(22.dp), tint = app.superhealth.ui.theme.HealthHues.Body)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(tr("Check-in de la semaine"), style = MaterialTheme.typography.titleLarge)
+                    Text(trf("Chaque %1\$s : poids analysé, calories recalculées.", checkInDayName(day).lowercase()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                }
+            }
             CheckInForm(vm, onDismiss)
         }
     }
 }
 
 /**
- * Poids du jour et revue de la semaine (jeûne / incomplet) ; valider lance le calcul et applique tout de suite les nouvelles cibles,
- * affichées face aux anciennes.
+ * Poids du jour et revue de la semaine ; valider calcule les nouvelles cibles et les montre face aux anciennes, sans
+ * les appliquer : on accepte le nouveau programme, ou on garde ses cibles et le check-in revient la semaine suivante.
  */
 @Composable
 private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
@@ -446,15 +463,29 @@ private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
     val s by vm.settings.collectAsState()
     val flags by vm.dayFlags.collectAsState()
     val an = a ?: return
+    val ctx = LocalContext.current
     val todayWeight = an.days.firstOrNull { it.epochDay == an.today }?.weightKg
     var weight by remember(todayWeight == null) { mutableStateOf(todayWeight?.let { num(s.weightValue(it), 1) } ?: "") }
     var busy by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<Pair<CheckIn?, CheckIn>?>(null) }
-    val done = result
-    if (done != null) {
-        val (prev, next) = done
-        SectionLabel(tr("Nouvelles cibles"))
+    // cibles en vigueur, puis proposition calculée mais pas encore appliquée
+    val current = an.checkInFor(an.today) ?: an.checkIns.firstOrNull()
+    var proposal by remember { mutableStateOf<Pair<CheckIn?, CheckIn>?>(null) }
+    val p = proposal
+    if (p != null) {
+        val (prev, next) = p
+        val delta = prev?.let { next.forDayOfWeek(1).kcal - it.forDayOfWeek(1).kcal }
+        SectionLabel(tr("Ce que ça changerait"))
         MfCard {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("${s.energyValue(next.forDayOfWeek(1).kcal).roundToInt()}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(" ${s.energyUnit.label.tr()}", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
+                Spacer(Modifier.weight(1f))
+                if (delta != null && abs(delta) >= 1) Text("${if (delta > 0) "+" else "−"}${abs(delta).roundToInt()}",
+                    style = MaterialTheme.typography.titleMedium, color = if (delta > 0) Mf.colors.text else Mf.colors.accent,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+            Text(tr("par jour"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            Spacer(Modifier.height(12.dp))
             Row {
                 GoalStat("${s.energyValue(next.tdee).roundToInt()}", tr("Dépense estimée"), Modifier.weight(1f))
                 GoalStat(next.trendKg?.let { s.weight(it) } ?: "—", tr("Tendance"), Modifier.weight(1f))
@@ -467,13 +498,30 @@ private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
             if (next.limitedByFloor) Text(tr("Cible limitée par le plancher calorique."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             ageLimitText(next, LocalDate.now().year - an.profile.birthYear)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
         }
-        Spacer(Modifier.height(16.dp))
-        PillButton(tr("OK"), Modifier.fillMaxWidth(), onClick = onDone)
+        Text(tr("Votre pesée est enregistrée. Les cibles ne changent qu'après votre accord."), style = MaterialTheme.typography.bodySmall,
+            color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+        Spacer(Modifier.height(14.dp))
+        PillButton(tr("Appliquer ces cibles"), Modifier.fillMaxWidth()) {
+            vm.repo.saveCheckIn(next)
+            android.widget.Toast.makeText(ctx, tr("Nouvelles cibles appliquées"), android.widget.Toast.LENGTH_SHORT).show()
+            onDone()
+        }
+        Spacer(Modifier.height(8.dp))
+        PillButton(tr("Garder mes cibles actuelles"), Modifier.fillMaxWidth(), strong = false) {
+            // rien ne change : le check-in est daté d'aujourd'hui, le prochain tombe dans une semaine
+            vm.repo.saveCheckIn(current?.copy(day = an.today) ?: next.copy(day = an.today))
+            android.widget.Toast.makeText(ctx, trf("Cibles conservées. Prochain check-in le %1\$s.", checkInDayName(an.program.checkInDay).lowercase()),
+                android.widget.Toast.LENGTH_LONG).show()
+            onDone()
+        }
         return
     }
     val week = (an.today - 7 until an.today).toList()
     val byDay = an.days.associateBy { it.epochDay }
-    Spacer(Modifier.height(10.dp))
+    val target = an.targetFor(an.today).macros
+    Text(trf("Cibles actuelles : %1\$s kcal et %2\$s g de protéines par jour.", s.energyValue(target.kcal).roundToInt(), target.protein.roundToInt()),
+        style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+    Spacer(Modifier.height(12.dp))
     MfCard { NumberField(tr("Poids du jour"), weight, { weight = it }, suffix = s.weightUnit.label.tr()) }
     SectionLabel(tr("Revue de la semaine"))
     GroupCard {
@@ -498,15 +546,13 @@ private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
     Spacer(Modifier.height(14.dp))
     PillButton(tr(if (busy) "Calcul en cours…" else "Calculer mes calories"), Modifier.fillMaxWidth(), enabled = !busy) {
         busy = true
-        val prev = an.checkInFor(an.today - 1)
         val typed = weight.toNum()
         vm.launch {
             if (typed != null && (todayWeight == null || abs(s.toKg(typed) - todayWeight) > 0.01)) weighIns.upsert(WeighInEntity(an.today, s.toKg(typed), weighIns.all().firstOrNull { it.epochDay == an.today }?.bodyFatPct))
             // tout est relu après l'écriture : le poids et les jours marqués comptent dans ce calcul
             val fresh = analytics().first()
-            val next = fresh.provisionalCheckIn(fresh.today)
-            saveCheckIn(next)
-            result = prev to next
+            proposal = (fresh.checkInFor(fresh.today) ?: fresh.checkIns.firstOrNull()) to fresh.provisionalCheckIn(fresh.today)
+            busy = false
         }
     }
 }

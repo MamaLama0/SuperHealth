@@ -194,7 +194,7 @@ private enum class Step(val section: Int) {
     // le plus court possible : une page par décision, les parties non choisies (USES) sont sautées
     // l'ordre va du général au particulier : qui, quoi suivre, le corps, l'objectif, les activités (dont découle la musculation), les connexions
     WELCOME(0), NAME(0), USES(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
-    GOAL(1), TARGET(1), PACE(1), PREFS(1),
+    GOAL(1), TARGET(1), PACE(1), PREFS(1), CHECKIN(1),
     ACTIVITIES(2), TRAINING(2), EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
     WATCH(3), HEALTH(3), AI(3),
     GENERATING(4), RESULT(4),
@@ -225,6 +225,7 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
     Step.LIFT_GOAL -> Icons.AutoMirrored.Rounded.TrendingUp to WorkoutBlue
     Step.RHYTHM -> Icons.Rounded.CalendarMonth to WorkoutBlue
     Step.PREFS -> Icons.Rounded.Restaurant to Base.Green
+    Step.CHECKIN -> Icons.Rounded.CalendarMonth to HealthHues.Body
     Step.WATCH -> Icons.Rounded.Watch to HealthHues.Respiration
     Step.AI -> Icons.Rounded.AutoAwesome to app.superhealth.ui.coach.CoachHue
     Step.GENERATING, Step.RESULT -> Icons.Rounded.CheckCircle to Base.Green
@@ -277,6 +278,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var floor by rememberSaveable { mutableStateOf(program.calorieFloor) }
     var shift by rememberSaveable { mutableStateOf(false) }
     var highDays by rememberSaveable { mutableStateOf(setOf(6, 7)) }
+    var checkInDay by rememberSaveable { mutableIntStateOf(program.checkInDay) }
     var health by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable { mutableStateOf(if (sim) "" else app.superhealth.ui.userName() ?: "") }
     var experience by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Experience.INTERMEDIATE) }
@@ -320,6 +322,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             Step.ACTIVITIES -> mode == OnboardingMode.FULL
             // poids habituel et métabolisme ne servent qu'à la nutrition
             Step.BODY_FAT, Step.ACTIVITY, Step.HISTORY, Step.GOAL, Step.PREFS -> wantsNutrition
+            // le jour du check-in est un réglage du quotidien : proposé à l'accueil, pas dans les simulations
+            Step.CHECKIN -> wantsNutrition && mode == OnboardingMode.FULL
             // déduit des activités choisies dans l'accueil, encore demandé dans la simulation nutrition
             Step.TRAINING -> wantsNutrition && mode != OnboardingMode.FULL
             Step.TARGET, Step.PACE -> wantsNutrition && goal != GoalType.MAINTENANCE
@@ -400,7 +404,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     }
     fun draftProgram() = program.copy(goalType = goal, ratePctPerWeek = if (goal == GoalType.MAINTENANCE) 0.0 else rate,
         targetWeightKg = draftTarget(), startEpochDay = today, training = training, dietPreference = diet, proteinPreference = protein,
-        calorieFloor = floor, highDays = if (shift) highDays else emptySet())
+        calorieFloor = floor, highDays = if (shift) highDays else emptySet(), checkInDay = checkInDay)
     fun draftGoal() = Goal(startDay = today, type = goal, startWeightKg = weightKg, targetWeightKg = draftTarget(),
         ratePctPerWeek = if (goal == GoalType.MAINTENANCE) 0.0 else rate)
     fun draftCheckIn(): Pair<Double, app.superhealth.nutrition.domain.CheckIn> {
@@ -816,6 +820,12 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         SmallLabel(tr("Diète"))
                         Options(DietPreference.entries, diet, { it.label.tr() }, { it.description.tr() }) { diet = it }
                     }
+                    Step.CHECKIN -> Page(st, tr("Votre jour de check-in"), tr("Ce jour-là, votre poids est analysé et vos calories recalculées pour la semaine.")) {
+                        SmallLabel(tr("Jour de la semaine"))
+                        ChipChoice((1..7).toList(), checkInDay, { app.superhealth.nutrition.ui.screens.checkInDayName(it) }) { checkInDay = it }
+                        Text(tr("Vous pourrez le changer dans Réglages > Accueil."), style = MaterialTheme.typography.bodySmall,
+                            color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, top = 12.dp))
+                    }
                     Step.GENERATING -> Generating { next() }
                     Step.RESULT -> if (mode == OnboardingMode.TRAINING_SIM) {
                         Spacer(Modifier.height(16.dp))
@@ -848,6 +858,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                         Feature(Icons.Rounded.Dashboard, tr("Tableau de bord : appui long sur une carte pour la régler"))
                         if (wantsNutrition) Feature(Icons.Rounded.AddAPhoto, tr("Photo de départ proposée sur l'accueil, puis à chaque palier de l'objectif"))
+                        if (wantsNutrition) Feature(Icons.Rounded.CalendarMonth, trf("Check-in le %1\$s", app.superhealth.nutrition.ui.screens.checkInDayName(checkInDay).lowercase()))
                     }
                 }
             }

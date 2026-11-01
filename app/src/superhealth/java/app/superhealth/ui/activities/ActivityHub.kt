@@ -2,6 +2,7 @@ package app.superhealth.ui.activities
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -52,7 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -184,6 +186,7 @@ private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, star
     val border = Mf.colors.edge
     val bg = if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card
     var open by remember { mutableStateOf(!bubblesShown) }
+    val dark = Mf.colors.dark
     LaunchedEffect(Unit) { bubblesShown = true }
     LaunchedEffect(open, current) { if (open) { delay(4000); open = false } }
     @Composable
@@ -192,13 +195,14 @@ private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, star
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
             if (open) Text(tr(a.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
-                modifier = Modifier.shadow(if (Mf.colors.dark) 0.dp else 4.dp, CircleShape).clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
+                modifier = Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
                     .clickable { onSelect(a); open = false }.padding(horizontal = 12.dp, vertical = 7.dp))
             if (!start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
         }
     }
     Column(modifier, horizontalAlignment = if (start) Alignment.Start else Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        AnimatedVisibility(open, enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(), exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut()) {
+        AnimatedVisibility(open, enter = expandVertically(expandFrom = Alignment.Bottom, animationSpec = tween(240)) + fadeIn(tween(180)),
+            exit = shrinkVertically(shrinkTowards = Alignment.Bottom, animationSpec = tween(180)) + fadeOut(tween(140))) {
             Column(horizontalAlignment = if (start) Alignment.Start else Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 list.filter { it != current }.forEach { Bubble(it) }
             }
@@ -207,9 +211,23 @@ private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, star
     }
 }
 
+/**
+ * Ombre douce en dégradé radial, dessinée derrière une bulle. `Modifier.shadow` ressortait en carré gris pendant
+ * l'ouverture des bulles en mode clair (l'ombre suit la forme avec une trame de retard) ; un dégradé reste rond.
+ */
+private fun Modifier.bubbleShadow(dark: Boolean): Modifier = if (dark) this else drawBehind {
+    val center = this.center
+    val halo = size.minDimension / 2 + 9.dp.toPx()
+    drawCircle(
+        Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.20f), Color.Black.copy(alpha = 0.08f), Color.Black.copy(alpha = 0f)),
+            center = center, radius = halo),
+        radius = halo, center = center,
+    )
+}
+
 @Composable
 private fun BubbleIcon(a: ActivitySection, on: Boolean, bg: Color, border: Color, onClick: () -> Unit) {
-    Box(Modifier.size(58.dp).shadow(if (Mf.colors.dark) 0.dp else 6.dp, CircleShape).clip(CircleShape).background(if (on) a.hue else bg)
+    Box(Modifier.size(58.dp).bubbleShadow(Mf.colors.dark).clip(CircleShape).background(if (on) a.hue else bg)
         .border(1.dp, if (on) a.hue else border, CircleShape).clickable(onClickLabel = tr(a.label), onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(a.icon, tr(a.label), Modifier.size(28.dp), tint = if (on) Color.White else a.hue)
     }
