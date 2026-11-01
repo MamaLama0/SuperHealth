@@ -96,6 +96,7 @@ import app.superhealth.nutrition.ui.num
 import app.superhealth.nutrition.ui.openSearch
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.dashCardBackground
+import app.superhealth.ui.theme.edge
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -393,7 +394,7 @@ private fun SearchPill(modifier: Modifier, onSearch: () -> Unit, onScan: () -> U
         Row(
             Modifier.weight(1f).height(52.dp).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.16f),
                 spotColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.12f))
-                .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, CircleShape)
+                .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.edge, CircleShape)
                 .clickable(onClick = onSearch).padding(start = 16.dp, end = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

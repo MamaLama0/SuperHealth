@@ -122,6 +122,7 @@ import app.superhealth.ui.onboarding.OnboardingScreen
 import app.superhealth.ui.settings.SettingsScreen
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.edge
 import app.superhealth.ui.theme.onContainer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.rounded.AccessibilityNew
@@ -342,7 +343,7 @@ private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> U
     val shape = RoundedCornerShape(26.dp)
     val pill = Modifier.height(68.dp)
         .shadow(if (dark) 0.dp else 12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
-        .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, shape).padding(horizontal = 4.dp)
+        .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.edge, shape).padding(horizontal = 4.dp)
     Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
         when (sh.plusSide) {

@@ -225,10 +225,7 @@ object Modules {
             save(others + Installed(m.id, m.kind, m.name, m.version, e.source, e.verified, enabled = prev?.enabled ?: true,
                 installedAt = prev?.installedAt ?: System.currentTimeMillis()))
             onChanged(ctx, m.kind)
-            // plugin d'activité tout juste téléchargé (depuis Réglages > Plugins) : sa section rejoint l'onglet Activités
-            if (prev == null) when (m.kind) { MEDITATION -> "MEDITATION"; STRETCH -> "STRETCH"; else -> null }?.let { section ->
-                SuperPrefs.update { s -> if (s.activitySections.isEmpty()) s else s.copy(activitySections = (s.activitySections + section).distinct()) }
-            }
+            if (prev == null) addSection(m.kind)
             // l'animation de téléchargement a le temps de se voir, même pour une petite archive
             kotlinx.coroutines.delay((1600 - (System.currentTimeMillis() - started)).coerceAtLeast(0))
         }.fold({ setJob(m.id, Job.Done); true }, { setJob(m.id, Job.Failed(it.message ?: "?")); false })
@@ -266,6 +263,12 @@ object Modules {
         onChanged(ctx, m.kind)
     }
 
+    /** Plugin d'activité téléchargé ou réactivé : sa section rejoint l'onglet Activités. */
+    private fun addSection(kind: String) {
+        val section = when (kind) { MEDITATION -> "MEDITATION"; STRETCH -> "STRETCH"; else -> return }
+        SuperPrefs.update { s -> if (s.activitySections.isEmpty()) s else s.copy(activitySections = (s.activitySections + section).distinct()) }
+    }
+
     fun setEnabled(ctx: Context, id: String, on: Boolean) {
         val m = _installed.value.firstOrNull { it.id == id } ?: return
         save(_installed.value.map {
@@ -275,6 +278,8 @@ object Modules {
                 else -> it
             }
         })
+        // réactivé : sa section revient dans l'onglet Activités (désactivé ou désinstallé, elle n'y est plus)
+        if (on) addSection(m.kind)
         onChanged(ctx, m.kind)
     }
 

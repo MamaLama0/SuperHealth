@@ -36,7 +36,6 @@ import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,6 +83,7 @@ import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.WorkoutBlue
 import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.edge
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 import kotlinx.coroutines.CoroutineScope
@@ -113,10 +113,11 @@ enum class ActivitySection(val label: String, val summary: String, val plugin: S
     }
 }
 
-/** Sections affichées ; avant le premier choix, ce que les parties activées donnent déjà. */
+/** Sections affichées ; avant le premier choix, ce que les parties activées donnent déjà. Sans son plugin installé et activé, une section n'apparaît pas. */
 fun SuperSettings.sections(): List<ActivitySection> =
-    if (activitySections.isNotEmpty()) ActivitySection.entries.filter { it.name in activitySections }
-    else listOfNotNull(ActivitySection.STRENGTH.takeIf { has(Feature.TRAINING) }, ActivitySection.RUN.takeIf { has(Feature.HEALTH) })
+    (if (activitySections.isNotEmpty()) ActivitySection.entries.filter { it.name in activitySections }
+    else listOfNotNull(ActivitySection.STRENGTH.takeIf { has(Feature.TRAINING) }, ActivitySection.RUN.takeIf { has(Feature.HEALTH) }))
+        .filter { it.plugin == null || Modules.isActive(it.plugin) }
 
 private val hubScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -126,7 +127,9 @@ fun applyActivities(ctx: Context, chosen: Set<ActivitySection>) {
         s.copy(activitySections = chosen.map { it.name }, activityAsked = true, features = s.features + chosen.mapNotNull { it.feature?.name })
     }
     val app = ctx.applicationContext
-    chosen.mapNotNull { it.plugin }.forEach { kind -> hubScope.launch { Modules.ensure(app, kind) } }
+    chosen.mapNotNull { it.plugin }.forEach { kind ->
+        hubScope.launch { if (!Modules.ensure(app, kind)) android.widget.Toast.makeText(app, tr("Plugin non installé"), android.widget.Toast.LENGTH_LONG).show() }
+    }
 }
 
 /** Le choix des activités : même présentation à l'ouverture de l'onglet et dans l'accueil. */
@@ -178,7 +181,7 @@ private var bubblesShown = false
 private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, start: Boolean, modifier: Modifier, onSelect: (ActivitySection) -> Unit) {
     if (list.size < 2 || current == null) return
     // fond surélevé et filet : les bulles se détachent de ce qui défile dessous
-    val border = Mf.colors.line
+    val border = Mf.colors.edge
     val bg = if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card
     var open by remember { mutableStateOf(!bubblesShown) }
     LaunchedEffect(Unit) { bubblesShown = true }
@@ -212,31 +215,6 @@ private fun BubbleIcon(a: ActivitySection, on: Boolean, bg: Color, border: Color
     }
 }
 
-/** Plugin d'une section absent : installation en cours, ou nouvel essai. */
-@Composable
-private fun PluginGate(a: ActivitySection, content: @Composable () -> Unit) {
-    val ctx = LocalContext.current
-    val kind = a.plugin ?: return content()
-    val installed by Modules.installed.collectAsState()
-    val jobs by Modules.jobs.collectAsState()
-    if (installed.any { it.kind == kind && it.enabled }) return content()
-    val busy = jobs.values.any { it is Modules.Job.Downloading || it is Modules.Job.Installing }
-    val failed = jobs.values.filterIsInstance<Modules.Job.Failed>().firstOrNull()
-    LaunchedEffect(kind) { if (!busy) hubScope.launch { Modules.ensure(ctx.applicationContext, kind) } }
-    MfCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = a.hue, strokeWidth = 2.5.dp)
-            else Icon(a.icon, null, tint = a.hue)
-            Spacer(Modifier.width(12.dp))
-            Text(if (busy) tr("Installation du plugin…") else failed?.message ?: tr("Plugin non installé"), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        }
-        if (!busy) {
-            Spacer(Modifier.height(10.dp))
-            PillButton(tr("Réessayer"), Modifier.fillMaxWidth(), strong = false) { hubScope.launch { Modules.ensure(ctx.applicationContext, kind) } }
-        }
-    }
-}
-
 /**
  * Onglet Activités : une section à la fois, choisie par les bulles flottantes (à droite ou à gauche, du côté du bouton +). Le choix des sections reste dans Réglages.
  * À la première ouverture (ou après la mise à jour qui l'apporte), on demande ce que la personne veut faire.
@@ -244,7 +222,9 @@ private fun PluginGate(a: ActivitySection, content: @Composable () -> Unit) {
 @Composable
 fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
     val sh by SuperPrefs.settings.collectAsState()
-    val list = sh.sections()
+    // relu à chaque changement de plugin : désactivé ou désinstallé, sa section disparaît aussitôt
+    val modules = Modules.installed.collectAsState().value
+    val list = remember(sh, modules) { sh.sections() }
     var ask by remember { mutableStateOf(false) }
     LaunchedEffect(sh.activityAsked) { if (!sh.activityAsked) ask = true }
     val current = list.firstOrNull { it.name == sh.activityCurrent } ?: list.firstOrNull()
@@ -268,8 +248,8 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
                 }
                 RecentActivities(vm, nav, false, true)
             }
-            ActivitySection.MEDITATION -> Frame(tr("Méditation"), nav, null) { PluginGate(current) { MeditationSection(nav) } }
-            ActivitySection.STRETCH -> Frame(tr("Étirements"), nav, null) { PluginGate(current) { StretchSection(nav) } }
+            ActivitySection.MEDITATION -> Frame(tr("Méditation"), nav, null) { MeditationSection(nav) }
+            ActivitySection.STRETCH -> Frame(tr("Étirements"), nav, null) { StretchSection(nav) }
             null -> Frame(tr("Activités"), nav, null) {
                 MfCard(onClick = { ask = true }) { Text(tr("Choisissez vos activités"), style = MaterialTheme.typography.titleMedium) }
             }
