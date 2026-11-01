@@ -1,6 +1,11 @@
 package app.superhealth.ui.activities
 
 import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +29,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.History
@@ -85,6 +89,7 @@ import app.superhealth.ui.tr
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Sections de l'onglet Activités. Musculation et course sont dans l'app ; méditation et étirements viennent de leur plugin. */
@@ -153,7 +158,7 @@ private fun ChooserSheet(initial: Set<ActivitySection>, onDismiss: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 16.dp).navigationBarsPadding()) {
             Text(tr("Que voulez-vous faire ?"), style = MaterialTheme.typography.headlineSmall)
-            Text(tr("Une section par activité. Les plugins nécessaires s'installent tout seuls."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary,
+            Text(tr("Une section par activité. Les plugins nécessaires s'installent tout seuls, et vous pourrez toujours les télécharger dans Réglages > Plugins."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary,
                 modifier = Modifier.padding(top = 4.dp, bottom = 10.dp))
             ActivityChoices(chosen) { chosen = it }
             Spacer(Modifier.height(10.dp))
@@ -162,24 +167,48 @@ private fun ChooserSheet(initial: Set<ActivitySection>, onDismiss: () -> Unit) {
     }
 }
 
-/** Bulles flottantes, du côté du bouton + : une par section, puis celle qui en ajoute. */
+/** Ouvertes une seule fois par lancement : ensuite, seule la bulle du coin reste. */
+private var bubblesShown = false
+
+/**
+ * Bulles flottantes, du côté du bouton + : la section en cours dans le coin, les autres au-dessus d'elle. Elles se rétractent après
+ * quelques secondes pour laisser voir la page ; toucher la bulle du coin les rouvre.
+ */
 @Composable
-private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, modifier: Modifier, onSelect: (ActivitySection) -> Unit, onManage: () -> Unit) {
+private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, start: Boolean, modifier: Modifier, onSelect: (ActivitySection) -> Unit) {
+    if (list.size < 2 || current == null) return
     // fond surélevé et filet : les bulles se détachent de ce qui défile dessous
     val border = Mf.colors.line
     val bg = if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        list.forEach { a ->
-            val on = a == current
-            Box(Modifier.size(46.dp).shadow(if (Mf.colors.dark) 0.dp else 6.dp, CircleShape).clip(CircleShape).background(if (on) a.hue else bg)
-                .border(1.dp, if (on) a.hue else border, CircleShape).clickable(onClickLabel = tr(a.label)) { onSelect(a) }, contentAlignment = Alignment.Center) {
-                Icon(a.icon, tr(a.label), Modifier.size(23.dp), tint = if (on) Color.White else a.hue)
+    var open by remember { mutableStateOf(!bubblesShown) }
+    LaunchedEffect(Unit) { bubblesShown = true }
+    LaunchedEffect(open, current) { if (open) { delay(4000); open = false } }
+    @Composable
+    fun Bubble(a: ActivitySection) {
+        val on = a == current
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
+            if (open) Text(tr(a.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
+                modifier = Modifier.shadow(if (Mf.colors.dark) 0.dp else 4.dp, CircleShape).clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
+                    .clickable { onSelect(a); open = false }.padding(horizontal = 12.dp, vertical = 7.dp))
+            if (!start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
+        }
+    }
+    Column(modifier, horizontalAlignment = if (start) Alignment.Start else Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AnimatedVisibility(open, enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(), exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut()) {
+            Column(horizontalAlignment = if (start) Alignment.Start else Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                list.filter { it != current }.forEach { Bubble(it) }
             }
         }
-        Box(Modifier.size(46.dp).shadow(if (Mf.colors.dark) 0.dp else 6.dp, CircleShape).clip(CircleShape).background(bg).border(1.dp, border, CircleShape).clickable(onClickLabel = tr("Choisir mes activités"), onClick = onManage),
-            contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Add, tr("Choisir mes activités"), Modifier.size(21.dp), tint = Mf.colors.textSecondary)
-        }
+        Bubble(current)
+    }
+}
+
+@Composable
+private fun BubbleIcon(a: ActivitySection, on: Boolean, bg: Color, border: Color, onClick: () -> Unit) {
+    Box(Modifier.size(58.dp).shadow(if (Mf.colors.dark) 0.dp else 6.dp, CircleShape).clip(CircleShape).background(if (on) a.hue else bg)
+        .border(1.dp, if (on) a.hue else border, CircleShape).clickable(onClickLabel = tr(a.label), onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(a.icon, tr(a.label), Modifier.size(28.dp), tint = if (on) Color.White else a.hue)
     }
 }
 
@@ -209,7 +238,7 @@ private fun PluginGate(a: ActivitySection, content: @Composable () -> Unit) {
 }
 
 /**
- * Onglet Activités : une section à la fois, choisie par les bulles flottantes (à droite ou à gauche, du côté du bouton +).
+ * Onglet Activités : une section à la fois, choisie par les bulles flottantes (à droite ou à gauche, du côté du bouton +). Le choix des sections reste dans Réglages.
  * À la première ouverture (ou après la mise à jour qui l'apporte), on demande ce que la personne veut faire.
  */
 @Composable
@@ -245,8 +274,9 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
                 MfCard(onClick = { ask = true }) { Text(tr("Choisissez vos activités"), style = MaterialTheme.typography.titleMedium) }
             }
         }
-        Bubbles(list, current, Modifier.align(if (sh.plusSide == "LEFT") Alignment.BottomStart else Alignment.BottomEnd).padding(horizontal = 14.dp, vertical = 10.dp),
-            onSelect = { a -> SuperPrefs.update { it.copy(activityCurrent = a.name) } }, onManage = { ask = true })
+        Bubbles(list, current, sh.plusSide == "LEFT", Modifier.align(if (sh.plusSide == "LEFT") Alignment.BottomStart else Alignment.BottomEnd)
+            .padding(start = 14.dp, end = 14.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 10.dp),
+            onSelect = { a -> SuperPrefs.update { it.copy(activityCurrent = a.name) } })
     }
     if (ask) ChooserSheet(list.toSet()) { ask = false }
 }
@@ -260,8 +290,8 @@ private fun Frame(title: String, nav: NavHostController, historyRoute: String?, 
         }
         Column(Modifier.padding(horizontal = 16.dp)) {
             content()
-            // place laissée aux bulles flottantes en bas de page
-            Spacer(Modifier.height(96.dp))
+            // place laissée à la barre et à la bulle flottantes
+            Spacer(Modifier.height(app.superhealth.ui.LocalTabBarInset.current + 72.dp))
         }
     }
 }

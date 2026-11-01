@@ -21,7 +21,7 @@ import java.util.Base64
 @Serializable
 enum class AiProvider(val label: String, val baseUrl: String, val defaultModel: String, val keyHelp: String) {
     /** Offerte par SuperHealth : adresse, modèle et clé intégrés à la compilation (voir [AiGift]). */
-    OFFERED("IA offerte", "", "", "Sans clé à créer. Modèle GPT-5.4 au maximum."),
+    OFFERED("IA offerte", "", "", "Sans clé à créer. GPT-5.4 max."),
     GEMINI("Google AI Studio", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-flash-lite-latest",
         "Clé gratuite sur aistudio.google.com."),
     OPENROUTER("OpenRouter", "https://openrouter.ai/api/v1", "google/gemini-3.1-flash-lite",

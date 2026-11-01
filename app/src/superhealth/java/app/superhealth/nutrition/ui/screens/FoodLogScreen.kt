@@ -131,7 +131,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
 
     if (mealHours) MealHoursDialog { mealHours = false }
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 110.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = app.superhealth.ui.LocalTabBarInset.current + 76.dp)) {
             item {
                 Column(Modifier.fillMaxWidth().statusBarsPadding()) {
                     // grand titre du jour (toucher : revenir à aujourd'hui), calendrier et options en boutons ronds
@@ -228,11 +228,11 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        SearchPill(Modifier.align(Alignment.BottomCenter), onSearch = { nav.openSearch() }, onScan = { nav.openSearch(SearchMode.SCAN) },
+        SearchPill(Modifier.align(Alignment.BottomCenter).padding(bottom = app.superhealth.ui.LocalTabBarInset.current), onSearch = { nav.openSearch() }, onScan = { nav.openSearch(SearchMode.SCAN) },
             onAi = if (s.aiEnabled) ({ nav.navigate("ai") }) else null)
         if (undo.isNotEmpty()) {
             val gone = undo
-            Row(Modifier.align(Alignment.BottomCenter).padding(start = 14.dp, end = 14.dp, bottom = 74.dp).fillMaxWidth()
+            Row(Modifier.align(Alignment.BottomCenter).padding(start = 14.dp, end = 14.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 74.dp).fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp)).background(Mf.colors.text).padding(start = 16.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(if (gone.size == 1) tr("Aliment supprimé") else trf("%1\$s aliments supprimés", gone.size), color = Mf.colors.background,
@@ -388,9 +388,8 @@ private fun EmptyLog(onAdd: () -> Unit) {
 
 @Composable
 private fun SearchPill(modifier: Modifier, onSearch: () -> Unit, onScan: () -> Unit, onAi: (() -> Unit)?) {
-    // flotte au-dessus de la liste (qui défile dessous et s'efface en bas), toujours à portée de pouce
-    Row(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background.copy(alpha = 0.92f))))
-        .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    // flotte au-dessus de la liste, qui défile dessous, toujours à portée de pouce
+    Row(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
             Modifier.weight(1f).height(52.dp).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.16f),
                 spotColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.12f))

@@ -3,7 +3,7 @@ package app.superhealth.ui
 /** Libellés ajoutés en 2.5 : français → anglais. */
 object Strings25 {
     val map: Map<String, String> = hashMapOf(
-        "Sans clé à créer. Modèle GPT-5.4 au maximum." to "No key needed. GPT-5.4 at most.",
+        "Sans clé à créer. GPT-5.4 max." to "No key needed. GPT-5.4 max.",
         "portion" to "serving",
         "Changer l'icône" to "Change icon",
         "Icône de l'aliment" to "Food icon",

@@ -164,6 +164,7 @@ object Coach {
         return buildString {
             appendLine("## Wellbeing (mood journal 1-5, morning check-in)")
             lines.forEach { appendLine(it) }
+            if (runCatching { app.superhealth.health.data.Scores.persistentDebtOf(ctx, today) }.getOrDefault(false)) appendLine("Lasting sleep debt: most nights of the last two weeks are over 45 min short of the sleep need.")
             form?.let { a ->
                 appendLine("Today's readiness (app): ${a.verdict.name.lowercase()}" + (a.score?.let { ", score $it/100" } ?: "") +
                     (a.cause?.let { ", ${it.name.lowercase()} fatigue" } ?: "") +

@@ -472,7 +472,7 @@ fun CheckinPickers() {
  */
 @Composable
 fun CheckinCard(c: DashCard, size: CardSize, first: Boolean, modifier: Modifier, nav: NavHostController) {
-    val open: () -> Unit = { nav.go("checkin") }
+    val open: () -> Unit = { nav.go("feel") }
     if (first && size == CardSize.L) Tile(c, tr("Ressenti du matin"), modifier, onClick = null) { CheckinPickers() }
     else if (first) {
         val d = CompactData(tr("Ressenti"), null, tr("Avez-vous bien dormi ?"), null, onClick = open)

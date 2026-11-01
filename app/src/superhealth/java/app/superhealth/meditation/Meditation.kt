@@ -10,8 +10,8 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * Plugin Méditation : minuteur libre (gongs et bruit blanc du plugin), séances guidées (texte affiché et lu par la voix du téléphone)
- * et séances écrites par le coach. Les minutes alimentent la carte, le coach et le classement.
+ * Plugin Méditation : séance du jour, minuteur libre (gongs et ambiances du plugin), séances guidées (voix enregistrées du plugin, voix
+ * du téléphone pour celles du coach) et programmes. Les minutes alimentent la carte, le coach et le classement.
  */
 object Meditation {
     /** Phrase d'une séance : dite à [at] secondes du début. */
@@ -20,7 +20,7 @@ object Meditation {
     }
 
     @Serializable data class Session(val id: String, val name: String, val nameEn: String = name, val summary: String = "", val summaryEn: String = summary,
-                                     val minutes: Int, val lines: List<Line>) {
+                                     val minutes: Int, val lines: List<Line>, val theme: String = "") {
         val title get() = if (app.superhealth.ui.Lang.english) nameEn else name
         val about get() = if (app.superhealth.ui.Lang.english) summaryEn else summary
     }
@@ -30,7 +30,8 @@ object Meditation {
         val title get() = if (app.superhealth.ui.Lang.english) nameEn else name
     }
 
-    @Serializable data class Content(val sessions: List<Session> = emptyList(), val programs: List<Program> = emptyList())
+    /** [sos] : séance courte proposée sous « Besoin de calme ». */
+    @Serializable data class Content(val sessions: List<Session> = emptyList(), val programs: List<Program> = emptyList(), val sos: String? = null)
     @Serializable data class Done(val day: Long, val at: Long, val minutes: Int, val kind: String)
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -42,10 +43,27 @@ object Meditation {
     }.getOrDefault(Content()).also { if (it.sessions.isNotEmpty()) cache = it }
     fun invalidate() { cache = null }
     fun audio(name: String): File? = Modules.file(Modules.MEDITATION, "audio/$name.mp3")
+    /** Ambiance en boucle (Ogg : bouclage sans blanc). */
+    fun ambience(name: String): File? = Modules.file(Modules.MEDITATION, "audio/$name.ogg")
+    /** Phrase enregistrée d'une séance ; absente pour les séances du coach. */
+    fun voice(session: String, line: Int): File? =
+        Modules.file(Modules.MEDITATION, "audio/voice/${if (app.superhealth.ui.Lang.english) "en" else "fr"}/${session}_$line.mp3")
 
     /** Séance à jouer (guidée, libre ou du coach). */
-    data class Play(val title: String, val minutes: Int, val lines: List<Line> = emptyList(), val intervalMin: Int = 0, val noise: Boolean = false, val kind: String = "free")
+    data class Play(val title: String, val minutes: Int, val lines: List<Line> = emptyList(), val intervalMin: Int = 0, val kind: String = "free", val session: String? = null)
     val current = MutableStateFlow<Play?>(null)
+
+    fun play(s: Session, kind: String = "guided") { current.value = Play(s.title, s.minutes, s.lines, kind = kind, session = s.id) }
+
+    /** Séance du jour : la suite du programme commencé, sinon une séance différente chaque jour. */
+    fun daily(today: Long = LocalDate.now().toEpochDay()): Pair<Session, String>? {
+        content().programs.forEach { p ->
+            val done = programDone(p)
+            if (done in 1 until p.sessions.size) session(p.sessions[done])?.let { return it to "program:${p.id}:$done" }
+        }
+        val all = content().sessions.ifEmpty { return null }
+        return all[(today % all.size).toInt()] to "guided"
+    }
 
     /** Séance écrite par le coach : « mm:ss | phrase » par ligne, tout le reste est ignoré. */
     fun parseScript(raw: String): List<Line> = raw.lines().mapNotNull { l ->

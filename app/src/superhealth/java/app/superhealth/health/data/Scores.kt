@@ -268,6 +268,26 @@ object Scores {
         return if (debt < 10) 0.0 else debt
     }
 
+    /**
+     * Dette installée, règle décodée d'Oura (libecore, sleep_debt_calculate, configuration par défaut) sur 14 nuits : somme des écarts au besoin,
+     * pondérés de 1 (dernière nuit) à 0,25 (la plus ancienne), bornée entre 0 et 10 h. Installée si elle atteint 4 h, avec au moins 7 nuits
+     * connues et au moins 70 % de nuits à plus de 45 min sous le besoin. [nights] : de la plus ancienne à la dernière.
+     */
+    fun persistentDebt(nights: List<Double?>, needMin: Double): Boolean {
+        val latest = nights.takeLast(14).reversed()
+        val known = latest.count { it != null && it > 0 }
+        if (known < 7) return false
+        val step = 0.75 / (latest.size - 1)
+        val debt = latest.withIndex().sumOf { (i, v) -> if (v != null && v > 0) (needMin - v) * (1 - i * step) else 0.0 }.coerceIn(0.0, 600.0)
+        val short = latest.count { it != null && it > 0 && needMin - it > 45 }
+        return debt >= 240 && short * 100.0 / known >= 70
+    }
+
+    suspend fun persistentDebtOf(ctx: Context, date: LocalDate): Boolean {
+        if (!Bridge.hasSource(Metric.SLEEP)) return false
+        return persistentDebt((13L downTo 0L).map { Bridge.healthValue(ctx, Metric.SLEEP, date.minusDays(it)) }, sleepHabits(ctx).needMin)
+    }
+
     // ---- Charge acquise / aiguë (Effort) --------------------------------------------------
 
     /**

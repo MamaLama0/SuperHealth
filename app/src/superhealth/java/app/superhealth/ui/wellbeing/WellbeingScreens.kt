@@ -388,6 +388,7 @@ fun CycleScreen(vm: SuperViewModel, nav: NavHostController) {
 private val patterns = listOf(
     // 6 respirations par minute : la fréquence de résonance de la plupart des adultes (Lehrer 2000)
     "Cohérence" to listOf(Triple("Inspirez", 5.0, 1f), Triple("Expirez", 5.0, 0f)),
+    "4-6" to listOf(Triple("Inspirez", 4.0, 1f), Triple("Expirez", 6.0, 0f)),
     "4-7-8" to listOf(Triple("Inspirez", 4.0, 1f), Triple("Retenez", 7.0, 1f), Triple("Expirez", 8.0, 0f)),
     "Carré" to listOf(Triple("Inspirez", 4.0, 1f), Triple("Retenez", 4.0, 1f), Triple("Expirez", 4.0, 0f), Triple("Retenez", 4.0, 0f)),
 )
@@ -529,7 +530,7 @@ fun RemindersScreen(vm: SuperViewModel, nav: NavHostController) {
 fun CheckinScreen(nav: NavHostController) {
     val days by Checkin.days.collectAsState()
     val done = days[LocalDate.now().toEpochDay()] != null
-    LaunchedEffect(done) { if (done && nav.currentBackStackEntry?.destination?.route == "checkin") nav.popBackStack() }
+    LaunchedEffect(done) { if (done && nav.currentBackStackEntry?.destination?.route == "feel") nav.popBackStack() }
     DetailScaffold(tr("Ressenti du matin"), onBack = { nav.popBackStack() }) {
         GroupCard { Column(Modifier.padding(16.dp)) { CheckinPickers() } }
         Text(tr("Noté avant de voir vos scores, pour qu'ils n'influencent pas votre ressenti."), style = MaterialTheme.typography.bodySmall,

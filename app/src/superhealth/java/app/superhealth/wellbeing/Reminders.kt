@@ -73,12 +73,17 @@ object Reminders {
         }
     }
 
+    /** Check-in de la semaine en attente : le rappel de pesée l'annonce. */
+    private suspend fun checkInDue() = runCatching {
+        app.superhealth.nutrition.NutriApp.repository.analytics().first().checkInState == app.superhealth.nutrition.data.CheckInState.NOW
+    }.getOrDefault(false)
+
     /** Le rappel sert-il encore aujourd'hui ? */
     private suspend fun useful(ctx: Context, k: Kind): Boolean {
         val today = LocalDate.now().toEpochDay()
         val repo = app.superhealth.nutrition.NutriApp.repository
         return when (k) {
-            Kind.WEIGH -> repo.weighIns.all().none { it.epochDay == today }
+            Kind.WEIGH -> repo.weighIns.all().none { it.epochDay == today } || checkInDue()
             Kind.LOG -> repo.entries.forDay(today).first().none { System.currentTimeMillis() - it.createdAt < 4 * 3_600_000L }
             Kind.JOURNAL -> Journal.today() == null
             Kind.BEDTIME -> true
@@ -94,13 +99,13 @@ object Reminders {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Rappels"), NotificationManager.IMPORTANCE_DEFAULT))
         val body = when (k) {
-            Kind.WEIGH -> tr("Montez sur la balance avant de manger.")
+            Kind.WEIGH -> if (checkInDue()) tr("Check-in de la semaine : votre poids, et vos calories se mettent à jour.") else tr("Montez sur la balance avant de manger.")
             Kind.LOG -> tr("Notez vos repas de la journée.")
             Kind.JOURNAL -> tr("Une note d'humeur, dix secondes.")
             Kind.BEDTIME -> Bedtime.tonight(ctx)?.let { trf("Coucher conseillé à %1\$s.", Bedtime.clock(it.bedMinute)) } ?: return
         }
         val open = PendingIntent.getActivity(ctx, 7400 + k.ordinal, Intent(ctx, MainActivity::class.java)
-            .putExtra(MainActivity.EXTRA_ROUTE, k.route).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            .putExtra(MainActivity.EXTRA_ROUTE, if (k == Kind.WEIGH && checkInDue()) "checkin" else k.route).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         nm.notify(7500 + k.ordinal, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_notification)
             .setContentTitle(tr(k.title)).setContentText(body).setContentIntent(open).setAutoCancel(true)

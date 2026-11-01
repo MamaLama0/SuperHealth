@@ -420,7 +420,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     androidx.activity.compose.BackHandler(arranging) { arranging = false }
     // Liste paresseuse : seules les rangées à l'écran sont composées (premier affichage plus rapide, moins de mémoire).
     androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(bottom = 24.dp)) {
+        contentPadding = PaddingValues(bottom = app.superhealth.ui.LocalTabBarInset.current + 16.dp)) {
         item(key = "header") {
             // En-tête : salutation et date, réglages du tableau de bord, avatar (profil).
             app.superhealth.nutrition.ui.components.TabHeader(longToday(), name?.let { trf("Bonjour %1\$s", it) } ?: tr("Aujourd'hui")) {
@@ -443,6 +443,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                 if (arranging) Text(tr("Touchez une carte pour la régler, maintenez-la pour la déplacer."), style = MaterialTheme.typography.bodySmall,
                     color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                 else {
+                    CheckInBanner(vm, an)
                     WeighBanner(vm, an)
                     MoodBanner(sh)
                 }
@@ -534,6 +535,22 @@ private fun EditCell(c: DashCard, a: Arrange, modifier: Modifier, onTap: () -> U
 }
 
 /**
+ * Check-in de la semaine : remplace le bandeau de pesée le jour venu et revient chaque jour tant qu'il n'est pas rempli (la flèche le replie
+ * jusqu'à demain, comme les autres). Rempli, il calcule et applique les nouvelles calories.
+ */
+@Composable
+private fun CheckInBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics) {
+    val sh by vm.settings.collectAsState()
+    val today = LocalDate.now().toEpochDay()
+    var sheet by remember { mutableStateOf(false) }
+    val due = sh.has(app.superhealth.Feature.NUTRITION) && an.checkInState == CheckInState.NOW
+    PromptBanner(due && sh.checkInSkipDay != today, Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in de la semaine"), { sheet = true }) {
+        app.superhealth.SuperPrefs.update { it.copy(checkInSkipDay = today) }
+    }
+    if (sheet) app.superhealth.nutrition.ui.screens.CheckInSheet(vm.nutrition) { sheet = false }
+}
+
+/**
  * Bandeau de pesée, tout en haut du tableau de bord, tant qu'aucune pesée n'est saisie aujourd'hui. Toucher : saisir la
  * pesée sans quitter l'écran ; flèche : le replier jusqu'à demain. Désactivable dans Réglages > Tableau de bord.
  */
@@ -545,7 +562,9 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     val today = LocalDate.now().toEpochDay()
     val weighed = an.days.any { it.epochDay == today && it.weightKg != null }
     var sheet by remember { mutableStateOf(false) }
-    PromptBanner(sh.weighPrompt && !weighed && sh.weighSkipDay != today, Icons.Rounded.MonitorWeight, DashCard.WEIGHT.hue(), tr("Pesée du jour"), { sheet = true }) {
+    // le check-in en attente demande déjà le poids
+    val checkInShown = sh.has(app.superhealth.Feature.NUTRITION) && an.checkInState == CheckInState.NOW && sh.checkInSkipDay != today
+    PromptBanner(sh.weighPrompt && !weighed && sh.weighSkipDay != today && !checkInShown, Icons.Rounded.MonitorWeight, DashCard.WEIGHT.hue(), tr("Pesée du jour"), { sheet = true }) {
         app.superhealth.SuperPrefs.update { it.copy(weighSkipDay = today) }
     }
     if (sheet) app.superhealth.nutrition.ui.screens.WeighInSheet(null, s, profile.sex, onDismiss = { sheet = false }, onDelete = null) { w ->

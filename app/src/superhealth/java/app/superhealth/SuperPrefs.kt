@@ -260,7 +260,8 @@ data class SuperSettings(
     /** 2.5 : matériel d'étirement possédé, bruit blanc du minuteur, icône choisie par aliment (nom normalisé → identifiant). */
     val stretchGears: Set<String> = emptySet(),
     val stretchFavorites: Set<String> = emptySet(),
-    val meditationNoise: Boolean = false,
+    /** Ambiance des séances : rain, ocean, brown ; vide : aucune. */
+    val meditationAmbience: String = "",
     val foodIcons: Map<String, String> = emptyMap(),
     /** 1.8 : rappels (minute du jour, −1 : coupé) et coucher conseillé. */
     val remindWeigh: Int = -1,
@@ -304,6 +305,8 @@ data class SuperSettings(
     /** Demande de pesée à l'ouverture tant qu'aucune pesée n'est saisie aujourd'hui ; [weighSkipDay] : « pas aujourd'hui ». */
     val weighPrompt: Boolean = true,
     val weighSkipDay: Long = 0,
+    /** Check-in en attente replié pour aujourd'hui : il revient demain, tant qu'il n'est pas fait. */
+    val checkInSkipDay: Long = 0,
     /** Bandeau du moral replié jusqu'au lendemain. */
     val moodSkipDay: Long = 0,
     /** Fonds de carte OpenStreetMap des activités (seule connexion liée à vos parcours ; sans eux, le tracé seul). */

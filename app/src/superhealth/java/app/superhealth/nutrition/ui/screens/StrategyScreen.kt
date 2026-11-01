@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,6 +58,7 @@ import app.superhealth.nutrition.domain.Activity
 import app.superhealth.nutrition.domain.Athlete
 import app.superhealth.nutrition.domain.BmrEquation
 import app.superhealth.nutrition.domain.CalorieFloor
+import app.superhealth.nutrition.domain.CheckIn
 import app.superhealth.nutrition.domain.DietPreference
 import app.superhealth.nutrition.domain.ExerciseLevel
 import app.superhealth.nutrition.domain.Goal
@@ -101,6 +103,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.first
 
 val DAY_NAMES = listOf(tr("Lundi"), tr("Mardi"), tr("Mercredi"), tr("Jeudi"), tr("Vendredi"), tr("Samedi"), tr("Dimanche"))
 private val longFmt get() = DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.nutrition.ui.Lang.locale)
@@ -411,83 +414,100 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 }
 
-/** Parcours de check-in hebdomadaire : pesée, revue de la semaine (jeûne / incomplet), mise à jour du programme. */
+/** Check-in hebdomadaire, en plein écran (depuis Stratégie ou « À faire »). */
 @Composable
 fun CheckInScreen(vm: AppViewModel, onBack: () -> Unit) {
+    DetailScaffold(tr("Check-in de la semaine"), onBack) {
+        CheckInForm(vm, onBack)
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Le même, en fenêtre par-dessus l'accueil. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun CheckInSheet(vm: AppViewModel, onDismiss: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp).navigationBarsPadding().verticalScroll(rememberScrollState())) {
+            Text(tr("Check-in de la semaine"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 4.dp))
+            CheckInForm(vm, onDismiss)
+        }
+    }
+}
+
+/**
+ * Poids du jour et revue de la semaine (jeûne / incomplet) ; valider lance le calcul et applique tout de suite les nouvelles cibles,
+ * affichées face aux anciennes.
+ */
+@Composable
+private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
     val a by vm.analytics.collectAsState()
     val s by vm.settings.collectAsState()
     val flags by vm.dayFlags.collectAsState()
-    var step by remember { mutableIntStateOf(0) }
-    var weight by remember { mutableStateOf("") }
     val an = a ?: return
+    val todayWeight = an.days.firstOrNull { it.epochDay == an.today }?.weightKg
+    var weight by remember(todayWeight == null) { mutableStateOf(todayWeight?.let { num(s.weightValue(it), 1) } ?: "") }
+    var busy by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<Pair<CheckIn?, CheckIn>?>(null) }
+    val done = result
+    if (done != null) {
+        val (prev, next) = done
+        SectionLabel(tr("Nouvelles cibles"))
+        MfCard {
+            Row {
+                GoalStat("${s.energyValue(next.tdee).roundToInt()}", tr("Dépense estimée"), Modifier.weight(1f))
+                GoalStat(next.trendKg?.let { s.weight(it) } ?: "—", tr("Tendance"), Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(14.dp))
+            CompareRow(tr("Calories"), prev?.kcal?.let(s::energyValue), s.energyValue(next.kcal), CaloriesColor)
+            CompareRow(tr("Protéines (g)"), prev?.protein, next.protein, ProteinColor)
+            CompareRow(tr("Lipides (g)"), prev?.fat, next.fat, FatColor)
+            CompareRow(tr("Glucides (g)"), prev?.carbs, next.carbs, CarbsColor)
+            if (next.limitedByFloor) Text(tr("Cible limitée par le plancher calorique."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            ageLimitText(next, LocalDate.now().year - an.profile.birthYear)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
+        }
+        Spacer(Modifier.height(16.dp))
+        PillButton(tr("OK"), Modifier.fillMaxWidth(), onClick = onDone)
+        return
+    }
     val week = (an.today - 7 until an.today).toList()
     val byDay = an.days.associateBy { it.epochDay }
-    val recentWeigh = an.days.any { it.epochDay > an.today - 7 && it.weightKg != null }
-    DetailScaffold(tr("Check-in hebdomadaire"), onBack) {
-        ProgressBar((step + 1) / 3f, Mf.colors.accent, height = 5.dp)
-        Spacer(Modifier.height(12.dp))
-        when (step) {
-            0 -> {
-                SectionLabel(tr("Pesée"))
-                MfCard {
-                    Text(if (recentWeigh) tr("Vous avez des pesées récentes. Vous pouvez en ajouter une pour aujourd'hui.")
-                         else tr("Aucune pesée depuis 7 jours."),
-                        style = MaterialTheme.typography.bodyMedium)
-                    NumberField(tr("Poids du jour (facultatif)"), weight, { weight = it }, suffix = s.weightUnit.label.tr())
+    Spacer(Modifier.height(10.dp))
+    MfCard { NumberField(tr("Poids du jour"), weight, { weight = it }, suffix = s.weightUnit.label.tr()) }
+    SectionLabel(tr("Revue de la semaine"))
+    GroupCard {
+        week.forEachIndexed { i, d ->
+            val f = flags[d]
+            val kcal = byDay[d]?.intakeKcal
+            if (i > 0) RowDivider()
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(LocalDate.ofEpochDay(d).format(DateTimeFormatter.ofPattern("EEEE d", app.superhealth.nutrition.ui.Lang.locale)).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium)
+                    Text(kcal?.let { "${s.energyValue(it).roundToInt()} ${s.energyUnit.label.tr()}" } ?: tr("Rien de journalisé"), style = MaterialTheme.typography.bodySmall,
+                        color = if (kcal == null) MaterialTheme.colorScheme.error else Mf.colors.textSecondary)
                 }
-                Spacer(Modifier.height(16.dp))
-                PillButton(tr("Continuer"), Modifier.fillMaxWidth()) {
-                    weight.toNum()?.let { w -> vm.launch { weighIns.upsert(WeighInEntity(an.today, s.toKg(w), null)) } }
-                    step = 1
-                }
-            }
-            1 -> {
-                SectionLabel(tr("Revue de la semaine"))
-                Text(tr("Marquez les jours de jeûne et ceux mal journalisés."),
-                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp))
-                Spacer(Modifier.height(8.dp))
-                GroupCard {
-                    week.forEachIndexed { i, d ->
-                        val f = flags[d]
-                        val kcal = byDay[d]?.intakeKcal
-                        if (i > 0) RowDivider()
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(LocalDate.ofEpochDay(d).format(DateTimeFormatter.ofPattern("EEEE d", app.superhealth.nutrition.ui.Lang.locale)).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium)
-                                Text(kcal?.let { "${s.energyValue(it).roundToInt()} ${s.energyUnit.label.tr()}" } ?: tr("Rien de journalisé"), style = MaterialTheme.typography.bodySmall,
-                                    color = if (kcal == null) MaterialTheme.colorScheme.error else Mf.colors.textSecondary)
-                            }
-                            FlagChip(tr("Jeûne"), f?.fasted == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(fasted = !it.fasted) }) } }
-                            Spacer(Modifier.width(6.dp))
-                            FlagChip(tr("Incomplet"), f?.partial == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(partial = !it.partial) }) } }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                PillButton(tr("Continuer"), Modifier.fillMaxWidth()) { step = 2 }
-            }
-            else -> {
-                val next = an.provisionalCheckIn(an.today)
-                val prev = an.checkInFor(an.today - 1)
-                SectionLabel(tr("Mise à jour du programme"))
-                MfCard {
-                    Row {
-                        GoalStat("${s.energyValue(next.tdee).roundToInt()}", tr("Dépense estimée"), Modifier.weight(1f))
-                        GoalStat(next.trendKg?.let { s.weight(it) } ?: "—", tr("Tendance"), Modifier.weight(1f))
-                    }
-                    Spacer(Modifier.height(14.dp))
-                    CompareRow(tr("Calories"), prev?.kcal?.let(s::energyValue), s.energyValue(next.kcal), CaloriesColor)
-                    CompareRow(tr("Protéines (g)"), prev?.protein, next.protein, ProteinColor)
-                    CompareRow(tr("Lipides (g)"), prev?.fat, next.fat, FatColor)
-                    CompareRow(tr("Glucides (g)"), prev?.carbs, next.carbs, CarbsColor)
-                    if (next.limitedByFloor) Text(tr("Cible limitée par le plancher calorique."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-                    ageLimitText(next, LocalDate.now().year - an.profile.birthYear)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
-                }
-                Spacer(Modifier.height(16.dp))
-                PillButton(tr("Appliquer le nouveau programme"), Modifier.fillMaxWidth()) { vm.repo.saveCheckIn(next); onBack() }
+                FlagChip(tr("Jeûne"), f?.fasted == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(fasted = !it.fasted) }) } }
+                Spacer(Modifier.width(6.dp))
+                FlagChip(tr("Incomplet"), f?.partial == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(partial = !it.partial) }) } }
             }
         }
-        Spacer(Modifier.height(24.dp))
+    }
+    Text(tr("Marquez les jours de jeûne et ceux mal journalisés : ils ne faussent pas le calcul."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+        modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+    Spacer(Modifier.height(14.dp))
+    PillButton(tr(if (busy) "Calcul en cours…" else "Calculer mes calories"), Modifier.fillMaxWidth(), enabled = !busy) {
+        busy = true
+        val prev = an.checkInFor(an.today - 1)
+        val typed = weight.toNum()
+        vm.launch {
+            if (typed != null && (todayWeight == null || abs(s.toKg(typed) - todayWeight) > 0.01)) weighIns.upsert(WeighInEntity(an.today, s.toKg(typed), weighIns.all().firstOrNull { it.epochDay == an.today }?.bodyFatPct))
+            // tout est relu après l'écriture : le poids et les jours marqués comptent dans ce calcul
+            val fresh = analytics().first()
+            val next = fresh.provisionalCheckIn(fresh.today)
+            saveCheckIn(next)
+            result = prev to next
+        }
     }
 }
 

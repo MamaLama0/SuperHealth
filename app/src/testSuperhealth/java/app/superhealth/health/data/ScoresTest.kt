@@ -30,6 +30,17 @@ class ScoresTest {
         assertEquals(61.0, Scores.zones(hr, 50.0, 195.0)[5].toDouble(), 1.0)
     }
 
+    @Test fun persistentDebtFollowsOuraRule() {
+        // 14 nuits à 1 h sous le besoin : dette pondérée = 60 × (somme des poids de 1 à 0,25 = 8,75) = 525 min, 100 % de nuits courtes
+        assertTrue(Scores.persistentDebt(List(14) { 420.0 }, 480.0))
+        // même écart, moins de 7 nuits connues : pas de conclusion
+        assertTrue(!Scores.persistentDebt(List(8) { null } + List(6) { 420.0 }, 480.0))
+        // 30 min sous le besoin : dette élevée mais nuits pas assez courtes (45 min)
+        assertTrue(!Scores.persistentDebt(List(14) { 450.0 }, 480.0))
+        // nuits courtes seulement les plus anciennes, rattrapées ensuite : dette sous 4 h
+        assertTrue(!Scores.persistentDebt(List(7) { 420.0 } + List(7) { 540.0 }, 480.0))
+    }
+
     @Test fun sleepDebtConvergesWithoutCredit() {
         // 7 h chaque nuit pour 8 h de besoin : d = 0,55 (60 + d) → 73 min
         assertEquals(73.3, Scores.sleepDebt(List(14) { 420.0 }, 480.0), 0.5)

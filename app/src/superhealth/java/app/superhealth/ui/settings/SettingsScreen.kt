@@ -154,7 +154,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
         }) { Text(tr("Choisir")) } },
         dismissButton = { if (app.superhealth.ui.ProfilePhoto.bitmap.value != null) androidx.compose.material3.TextButton(onClick = { photoMenu = false; app.superhealth.ui.ProfilePhoto.clear(photoCtx) }) { Text(tr("Retirer")) } })
 
-    Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())
+        .padding(bottom = if (app.superhealth.ui.settingsIsTab(sh)) app.superhealth.ui.LocalTabBarInset.current else 0.dp)) {
         // onglet de la barre (« + » au milieu) : pas de retour
         ScreenTitle(tr("Réglages"), onBack = if (app.superhealth.ui.settingsIsTab(sh)) null else ({ nav.popBackStack() }))
         Column(Modifier.padding(horizontal = 16.dp)) {
@@ -260,6 +261,11 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             Group(tr("Données")) {
                 SettingRow(tr("Health Connect"), if (sh.healthConnect) tr("Activé") else tr("Désactivé"), icon = Icons.Rounded.Favorite, hue = HealthHues.Heart) {
                     nav.go("settings/hc")
+                }
+                RowDivider(56.dp)
+                SettingRow(tr("Mes activités"), tr("Sections de l'onglet Activités"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) {
+                    app.superhealth.SuperPrefs.update { it.copy(activityAsked = false) }
+                    nav.go("activities")
                 }
                 RowDivider(56.dp)
                 SettingRow(tr("Import d'activités"), tr("Fichiers GPX, TCX, FIT ou ZIP, historique de la montre"), icon = Icons.Rounded.FileOpen,

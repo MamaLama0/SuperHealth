@@ -218,9 +218,12 @@ fun SuperRoot(vm: SuperViewModel) {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Mf.colors.background)) {
+    // la barre flotte au-dessus du contenu, qui défile dessous jusqu'au bas de l'écran ; rien autour d'elle
+    var barPx by remember { mutableStateOf(0) }
+    val barInset = with(androidx.compose.ui.platform.LocalDensity.current) { barPx.toDp() }
+    androidx.compose.runtime.CompositionLocalProvider(LocalTabBarInset provides barInset) { Box(Modifier.fillMaxSize().background(Mf.colors.background)) {
         NavHost(
-            nav, startDestination = "home", modifier = Modifier.weight(1f),
+            nav, startDestination = "home", modifier = Modifier.fillMaxSize(),
             // Axe partagé horizontal de Material : glissement court et fondu ; les onglets changent sans transition (le fondu croisé accrochait pendant la construction de l'écran).
             enterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { it / 5 } + fadeIn(tween(220, 60)) },
             exitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { -it / 5 } + fadeOut(tween(120)) },
@@ -256,7 +259,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("form") { app.superhealth.ui.wellbeing.FormScreen(vm, nav) }
             composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }
             composable("breathe") { app.superhealth.ui.wellbeing.BreatheScreen(nav) }
-            composable("checkin") { app.superhealth.ui.wellbeing.CheckinScreen(nav) }
+            composable("feel") { app.superhealth.ui.wellbeing.CheckinScreen(nav) }
             composable("settings/reminders") { app.superhealth.ui.wellbeing.RemindersScreen(vm, nav) }
             composable("settings/sleep") { app.superhealth.ui.settings.SleepSettingsScreen(nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
@@ -283,18 +286,15 @@ fun SuperRoot(vm: SuperViewModel) {
             nutritionGraph(vm.nutrition, nav)
             trainingGraph(vm.training, nav)
         }
-        if (isTab) Box(Modifier.fillMaxWidth().height(0.dp)) {
-            // fondu au-dessus de la barre flottante : le contenu s'efface au lieu d'être coupé net
-            Box(Modifier.fillMaxWidth().height(22.dp).offset(y = (-22).dp)
-                .background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background))))
+        if (isTab) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { barPx = it.height }) {
+            if (tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
+            BottomBar(current, onTab = { route -> nav.openTab(route) }, onPlus = {
+                // Un seul raccourci choisi : le « + » l'ouvre directement.
+                val single = sh.plusActions.mapNotNull { it.resolve(vm) }.singleOrNull()
+                if (single != null) plusAction = single.action else plus = true
+            })
         }
-        if (isTab && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
-        if (isTab) BottomBar(current, onTab = { route -> nav.openTab(route) }, onPlus = {
-            // Un seul raccourci choisi : le « + » l'ouvre directement.
-            val single = sh.plusActions.mapNotNull { it.resolve(vm) }.singleOrNull()
-            if (single != null) plusAction = single.action else plus = true
-        })
-    }
+    } }
 
     fun runAction(action: String) {
         when (action) {
@@ -327,6 +327,9 @@ fun SuperRoot(vm: SuperViewModel) {
 /** Courbe « emphasized decelerate » de Material. */
 private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
 
+/** Place prise par la barre flottante en bas de l'écran : à laisser au bas des listes des onglets. */
+val LocalTabBarInset = androidx.compose.runtime.compositionLocalOf { 0.dp }
+
 /**
  * Barre de navigation : une pilule flottante bordée d'un filet, les onglets à parts égales (symbole et nom, l'actif sur une
  * pastille d'encre) et, à côté, le « + » rond sous le pouce (ou au milieu de la barre).
@@ -340,8 +343,7 @@ private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> U
     val pill = Modifier.height(68.dp)
         .shadow(if (dark) 0.dp else 12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
         .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, shape).padding(horizontal = 4.dp)
-    Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background), endY = 40f))
-        .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
+    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
         when (sh.plusSide) {
             // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre

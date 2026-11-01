@@ -139,8 +139,8 @@ fun WorkoutTabScreen(
             }
             if (strength && !cardioFirst) recent()
             if (strength) Programs(st, active, nav) { create = true }
-            // place laissée aux bulles flottantes
-            Spacer(Modifier.height(96.dp))
+            // place laissée à la barre et à la bulle flottantes
+            Spacer(Modifier.height(app.superhealth.ui.LocalTabBarInset.current + 72.dp))
         }
     }
 }

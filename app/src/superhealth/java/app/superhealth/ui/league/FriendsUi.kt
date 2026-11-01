@@ -79,7 +79,7 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 
 @Composable
-private fun Initial(name: String, size: androidx.compose.ui.unit.Dp = 40.dp) {
+internal fun Initial(name: String, size: androidx.compose.ui.unit.Dp = 40.dp) {
     Box(Modifier.size(size).clip(CircleShape).background(LeagueHue.container()), contentAlignment = Alignment.Center) {
         Text(name.take(1).uppercase(app.superhealth.ui.Lang.locale), style = MaterialTheme.typography.titleMedium, color = LeagueHue.onContainer())
     }
@@ -149,8 +149,6 @@ fun FriendsScreen(nav: NavHostController) {
         }
         Spacer(Modifier.height(10.dp))
         GroupCard {
-            SwitchRow(tr("Détail par partie"), tr("Sinon, seul le total est partagé"), st.sharePillars) { League.setSharePillars(ctx, it) }
-            RowDivider()
             SwitchRow(tr("À proximité, même Wi-Fi"), tr("Tant que cet écran est ouvert : met aussi à jour vos amis présents"), nearbyOn) { nearbyOn = it }
             val found = nearby?.found?.collectAsState()?.value.orEmpty().filter { !League.isFriend(it.k) }
             found.forEach { c ->
@@ -205,52 +203,60 @@ fun FriendsScreen(nav: NavHostController) {
             }
         }
     }
-    opened?.let { f0 ->
-        val f = st.friends.firstOrNull { it.id == f0.id } ?: f0
-        var alias by remember(f.id) { mutableStateOf(f.alias ?: "") }
-        var removing by remember { mutableStateOf(false) }
-        ModalBottomSheet(onDismissRequest = { League.rename(ctx, f.id, alias); opened = null }, containerColor = Mf.colors.background) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp).navigationBarsPadding()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Initial(f.shown, 48.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(f.shown, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(trf("Empreinte : %1\$s", League.fingerprint(f.key)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-                    }
-                    if (f.week == week) Text(f.score.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = LeagueHue.onContainer())
+    opened?.let { f0 -> FriendSheet(f0) { opened = null } }
+}
+
+/** Fiche d'un ami : son score, ses parties, ses semaines, son surnom. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val st by League.state.collectAsState()
+    val week = League.weekKey()
+    val f = st.friends.firstOrNull { it.id == f0.id } ?: f0
+    var alias by remember(f.id) { mutableStateOf(f.alias ?: "") }
+    var removing by remember { mutableStateOf(false) }
+    ModalBottomSheet(onDismissRequest = { League.rename(ctx, f.id, alias); onDismiss() }, containerColor = Mf.colors.background) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp).navigationBarsPadding()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Initial(f.shown, 48.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(f.shown, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(trf("Empreinte : %1\$s", League.fingerprint(f.key)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
-                if (f.streak > 1) Text(trf("%1\$s semaines d'affilée", f.streak), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
-                if (f.pillars.isNotEmpty() && f.week == week) {
-                    Spacer(Modifier.height(10.dp))
-                    League.Pillar.entries.forEachIndexed { i, p ->
-                        val v = f.pillars.getOrNull(i)
-                        Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(tr(p.label), style = MaterialTheme.typography.bodySmall, maxLines = 1, color = if (v == null) Mf.colors.textTertiary else Mf.colors.text, modifier = Modifier.width(124.dp))
-                            Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(Mf.colors.chip)) {
-                                if (v != null && v > 0) Box(Modifier.fillMaxWidth(v / 100f).height(8.dp).clip(CircleShape).background(LeagueHue))
-                            }
-                            Text(v?.let { "$it %" } ?: "—", style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 8.dp).width(44.dp))
-                        }
-                    }
-                }
-                if (f.history.size > 1) {
-                    SectionLabel(tr("Semaines"))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        f.history.entries.sortedBy { it.key }.takeLast(6).forEach { (w, s) ->
-                            Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Mf.colors.card).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$s", style = MaterialTheme.typography.titleSmall)
-                                Text(w.substringAfter('-'), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
-                            }
-                        }
-                    }
-                }
-                TextInput(tr("Surnom"), alias, { alias = it.take(24) }, placeholder = f.name)
-                TextButton(onClick = { removing = true }) { Text(tr("Retirer"), color = Mf.colors.textSecondary) }
+                if (f.week == week) Text(f.score.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = LeagueHue.onContainer())
             }
+            if (f.streak > 1) Text(trf("%1\$s semaines d'affilée", f.streak), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
+            if (f.pillars.isNotEmpty() && f.week == week) {
+                Spacer(Modifier.height(10.dp))
+                League.Pillar.entries.forEachIndexed { i, p ->
+                    val v = f.pillars.getOrNull(i)
+                    Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr(p.label), style = MaterialTheme.typography.bodySmall, maxLines = 1, color = if (v == null) Mf.colors.textTertiary else Mf.colors.text, modifier = Modifier.width(124.dp))
+                        Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(Mf.colors.chip)) {
+                            if (v != null && v > 0) Box(Modifier.fillMaxWidth(v / 100f).height(8.dp).clip(CircleShape).background(LeagueHue))
+                        }
+                        Text(v?.let { "$it %" } ?: "—", style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 8.dp).width(44.dp))
+                    }
+                }
+            }
+            if (f.history.size > 1) {
+                SectionLabel(tr("Semaines"))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    f.history.entries.sortedBy { it.key }.takeLast(6).forEach { (w, s) ->
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Mf.colors.card).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("$s", style = MaterialTheme.typography.titleSmall)
+                            Text(w.substringAfter('-'), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                        }
+                    }
+                }
+            }
+            TextInput(tr("Surnom"), alias, { alias = it.take(24) }, placeholder = f.name)
+            TextButton(onClick = { removing = true }) { Text(tr("Retirer"), color = Mf.colors.textSecondary) }
         }
-        if (removing) AlertDialog(onDismissRequest = { removing = false }, title = { Text(trf("Retirer %1\$s ?", f.shown)) },
-            confirmButton = { TextButton(onClick = { League.remove(ctx, f.id); removing = false; opened = null }) { Text(tr("Retirer")) } },
-            dismissButton = { TextButton(onClick = { removing = false }) { Text(tr("Annuler")) } })
     }
+    if (removing) AlertDialog(onDismissRequest = { removing = false }, title = { Text(trf("Retirer %1\$s ?", f.shown)) },
+        confirmButton = { TextButton(onClick = { League.remove(ctx, f.id); removing = false; onDismiss() }) { Text(tr("Retirer")) } },
+        dismissButton = { TextButton(onClick = { removing = false }) { Text(tr("Annuler")) } })
 }
