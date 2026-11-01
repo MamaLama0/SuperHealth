@@ -34,12 +34,12 @@
     {
       "id": "meditation",
       "kind": "meditation",
-      "minApp": "2.5",
+      "minApp": "2.6",
       "color": "#7B8CDE",
       "name": "Méditation",
       "nameEn": "Meditation",
-      "summary": "Minuteur libre avec gongs, séances guidées lues à voix haute, séances écrites par le coach. Une section dans Activités et un widget.",
-      "summaryEn": "Free timer with gongs, guided sessions read aloud, sessions written by the coach. A section in Activities and a widget."
+      "summary": "Séance du jour, minuteur avec gongs et ambiances, respiration, programmes et séances guidées avec voix enregistrée, séance écrite par le coach.",
+      "summaryEn": "Today's session, timer with gongs and ambiences, breathing, programs and guided sessions with a recorded voice, a session written by the coach."
     },
     {
       "id": "stretch",

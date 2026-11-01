@@ -1,0 +1,3 @@
+Voix française : Piper, fr_FR-siwis-medium, entraînée sur SIWIS French Speech Synthesis Database (Yamagishi, Honnet, Garner, Komatsu ; University of Edinburgh), CC BY 4.0.
+English voice: Piper, en_US-ljspeech-medium, trained on the LJ Speech Dataset, public domain.
+Gongs and ambiences: synthesised for SuperHealth (tools/plugins/build_meditation_audio.py).
