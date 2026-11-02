@@ -71,6 +71,12 @@ Les ports NAS 8080/8443 évitent de reprendre ceux de l'interface TrueNAS. Ils r
 
 Pour Caddy dans l'interface TrueNAS, utiliser directement `compose.truenas.https.yaml` : remplacer les trois chemins `POOL` et le domaine `amis.exemple.fr`, puis coller ce fichier complet dans Install via YAML. Il combine le relais et HTTPS, sans `.env` ni chemin relatif. Faire les mêmes redirections 80→8080 et 443→8443 sur le routeur. Une configuration de proxy existante peut aussi être utilisée avec le fichier TrueNAS minimal.
 
+## Compatibilité SuperHealth 2.8
+
+Le client Android 2.8 utilise le contrat chiffré v2 ci-dessous, y compris avec le nouveau calcul de progression modèle 2. Ce modèle reste à l'intérieur de la carte chiffrée : le serveur ne lit ni les XP, ni les pourcentages nutritionnels, ni les objectifs de séances. Aucun changement de base ou de conteneur n'est nécessaire pour ces règles. Les anciens relais v1 ne sont pas compatibles.
+
+Le test croisé Android → Node → second Android vérifie le chiffrement AES-GCM, la signature et les GET conditionnels. Les tests HTTP sont relançables avec `node --test server.test.mjs`. Les fichiers TrueNAS visent le moteur Compose de SCALE/Community 24.10+ ; les chemins, ACL et HTTPS restent à configurer sur le NAS.
+
 ## Contrat du client Android
 
 **Route :** `/v2/cards/<mailbox64hex>/<readCapability64hex>`, deux valeurs aléatoires indépendantes. Ni nom ni empreinte de clé dans ce chemin. Le chemin entier est une capacité de lecture à protéger.
