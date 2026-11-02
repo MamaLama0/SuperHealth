@@ -15,3 +15,14 @@ fun GameArt(kind: GameArtKind, modifier: Modifier = Modifier, animated: Boolean 
     if (animated && kind == GameArtKind.FLAME) StreakAnimation(count, modifier)
     else AssetImage(kind.asset, modifier, crop = false)
 }
+
+/** Visuel de la catégorie de série, partagé par les missions, le parcours et les profils amis. */
+@Composable
+internal fun TrackArt(track: String, count: Int, modifier: Modifier = Modifier) {
+    val asset = when (track) {
+        "FOOD" -> "food"; "STRENGTH" -> "strength"; "RUN" -> "run"; "SLEEP" -> "sleep"; "MIND" -> "mind"
+        "STEPS" -> when { count >= 60 -> "steps-60"; count >= 30 -> "steps-30"; count >= 7 -> "steps"; else -> "steps-3" }
+        else -> "steps"
+    }
+    AssetImage("game/garmin/$asset.png", modifier, crop = false)
+}

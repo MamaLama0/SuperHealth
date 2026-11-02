@@ -14,6 +14,14 @@ object Analytics {
 
     fun workingSets(ex: SessionExercise) = ex.sets.filter { it.done && it.type != SetType.WARMUP }
 
+    /** Valeur comparable pour un même exercice : 1RM estimé (1–12 reps) ou nombre de répétitions. */
+    fun bestPerformance(exercise: Exercise, workingSets: List<SetLog>): Double? = workingSets.mapNotNull { set ->
+        val reps = set.reps ?: return@mapNotNull null
+        if (!exercise.usesWeight) reps.toDouble().takeIf { reps > 0 }
+        else set.weight?.takeIf { it.isFinite() && it > 0 && reps in 1..12 }
+            ?.let { Strength.e1rm(it, reps, set.rir, exercise.upperBody, set.partialReps) }
+    }.filter { it.isFinite() }.maxOrNull()
+
     fun setsByMuscle(workouts: List<Workout>, db: ExerciseDb): Map<MuscleGroup, Double> {
         val out = mutableMapOf<MuscleGroup, Double>()
         for (w in workouts) for (ex in w.exercises) {

@@ -29,6 +29,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -41,6 +44,10 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import app.superhealth.nutrition.ui.components.GroupCard
+import app.superhealth.nutrition.ui.components.RowDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -153,6 +160,35 @@ fun ColumnScope.StretchSection(nav: NavHostController) {
     val chosen = groups.mapNotNull { n -> Stretch.Group.entries.firstOrNull { it.name == n } }.toSet()
     val routine = remember(kind, minutes, groups, sh.stretchGears) { Stretch.routine(kind, chosen, minutes, sh.stretchGears) }
     val last = results.lastOrNull()
+    val saved by Stretch.saved.collectAsState()
+    val ctx = LocalContext.current
+    var allSaved by remember { mutableStateOf(false) }
+    var deletingSaved by remember { mutableStateOf<String?>(null) }
+    PillButton(tr("Composer ma séance"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Add) {
+        Stretch.prepare(); nav.go("stretch/edit")
+    }
+    Spacer(Modifier.height(10.dp))
+    if (saved.isNotEmpty()) {
+        SectionLabel(tr("Mes séances"))
+        GroupCard {
+            (if (allSaved) saved else saved.take(4)).forEachIndexed { i, personal ->
+                if (i > 0) RowDivider()
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).clickable { Stretch.prepare(personal); nav.go("stretch/edit") }.padding(vertical = 10.dp)) {
+                        Text(personal.name, style = MaterialTheme.typography.titleSmall)
+                        Text(trf("%1\$s exercices · %2\$s", personal.items.size, stretchTime(personal.seconds)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    }
+                    IconButton(onClick = { Stretch.current.value = personal; nav.go("stretch/play") }) { Icon(Icons.Rounded.PlayArrow, tr("Lancer")) }
+                    IconButton(onClick = { deletingSaved = personal.id }) { Icon(Icons.Rounded.DeleteOutline, tr("Supprimer")) }
+                }
+            }
+            if (saved.size > 4) TextButton(onClick = { allSaved = !allSaved }) { Text(tr(if (allSaved) "Réduire" else "Tout voir")) }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+    deletingSaved?.let { id -> AlertDialog(onDismissRequest = { deletingSaved = null }, title = { Text(tr("Supprimer cette séance ?")) },
+        confirmButton = { TextButton(onClick = { Stretch.removeSaved(ctx, id); deletingSaved = null }) { Text(tr("Supprimer")) } },
+        dismissButton = { TextButton(onClick = { deletingSaved = null }) { Text(tr("Annuler")) } }) }
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Stretch.Kind.entries.forEach { k ->
@@ -183,7 +219,8 @@ fun ColumnScope.StretchSection(nav: NavHostController) {
                 routine.items.forEach { e -> StretchThumb(e.id, Modifier.size(62.dp).clickable { nav.go("stretch/ex/${e.id}") }) }
             }
             Spacer(Modifier.height(12.dp))
-            PillButton(tr("Lancer"), Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow) { Stretch.current.value = routine; nav.go("stretch/play") }
+            PillButton(tr("Personnaliser cette sélection"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Tune) { Stretch.prepare(routine); nav.go("stretch/edit") }
+            TextButton(onClick = { Stretch.current.value = routine; nav.go("stretch/play") }, modifier = Modifier.align(Alignment.End)) { Text(tr("Lancer directement")) }
         }
     }
     SectionLabel(tr("Situations"))
@@ -191,7 +228,7 @@ fun ColumnScope.StretchSection(nav: NavHostController) {
         situations.forEach { s ->
             val r = remember(s, minutes, sh.stretchGears) { Stretch.routine(s.kind, s.groups, minutes, sh.stretchGears) }
             PhotoTile(r.items.firstOrNull()?.id, tr(s.label), trf("%1\$s min", r.seconds / 60), false, Modifier.width(138.dp).height(92.dp)) {
-                if (r.items.isNotEmpty()) { Stretch.current.value = r.copy(name = tr(s.label)); nav.go("stretch/play") }
+                if (r.items.isNotEmpty()) { Stretch.prepare(r.copy(name = tr(s.label))); nav.go("stretch/edit") }
             }
         }
     }
@@ -203,7 +240,7 @@ fun ColumnScope.StretchSection(nav: NavHostController) {
         }
         MfCard(Modifier.weight(1f), onClick = { nav.go("stretch/all") }) {
             Text(tr("Bibliothèque"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(trf("%1\$s exercices", Stretch.catalog().exercises.size), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+            Text(trf("%1\$s exercices", Stretch.exercises().size), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
         }
     }
     if (coachAvailable()) {
@@ -255,7 +292,7 @@ fun StretchAllScreen(nav: NavHostController) {
     val sh by SuperPrefs.settings.collectAsState()
     val list = remember(q, group, favOnly, sh.stretchFavorites) {
         val g = Stretch.Group.entries.firstOrNull { it.name == group }
-        Stretch.catalog().exercises.filter { e ->
+        Stretch.exercises().filter { e ->
             (g == null || e.zones.any { it in g.zones }) && (q.isBlank() || e.name.contains(q, true) || e.steps.any { it.contains(q, true) }) && (!favOnly || e.id in sh.stretchFavorites)
         }
     }
@@ -282,7 +319,7 @@ fun StretchExerciseScreen(nav: NavHostController, id: String) {
     val e = remember(id) { Stretch.exercise(id) } ?: return
     val sh by SuperPrefs.settings.collectAsState()
     val fav = id in sh.stretchFavorites
-    var minutes by rememberSaveable(id) { mutableIntStateOf(e.min) }
+    var seconds by rememberSaveable(id) { mutableIntStateOf(e.sideSeconds) }
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f)) {
             StretchVideo(e.id, Modifier.fillMaxSize())
@@ -295,12 +332,16 @@ fun StretchExerciseScreen(nav: NavHostController, id: String) {
             Text(e.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(zoneLabel(e), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             Spacer(Modifier.height(10.dp))
-            ChipRow { listOf(1, 2, 3).forEach { m -> Chip(if (e.uni) trf("%1\$s min par côté", m) else trf("%1\$s min", m), m == minutes) { minutes = m } } }
+            ChipRow { listOf(15, 30, 45, 60, 90, 120, 180).forEach { sec -> Chip(stretchTime(sec) + if (e.uni) " × 2" else "", sec == seconds) { seconds = sec } } }
             Spacer(Modifier.height(10.dp))
             Steps(e)
+            TextButton(onClick = {
+                val draft = Stretch.draft.value ?: Stretch.Routine("", Stretch.Kind.DAILY, emptyList())
+                Stretch.prepare(draft.copy(items = draft.items + e.copy(secondsPerSide = seconds))); nav.go("stretch/edit")
+            }, modifier = Modifier.fillMaxWidth()) { Text(tr("Ajouter à ma séance")) }
         }
         PillButton(tr("Lancer"), Modifier.padding(16.dp).fillMaxWidth(), icon = Icons.Rounded.PlayArrow) {
-            Stretch.current.value = Stretch.Routine(e.name, Stretch.Kind.DAILY, listOf(e.copy(min = minutes))); nav.go("stretch/play")
+            Stretch.current.value = Stretch.Routine(e.name, Stretch.Kind.DAILY, listOf(e.copy(secondsPerSide = seconds))); nav.go("stretch/play")
         }
     }
 }
@@ -329,7 +370,7 @@ private fun Steps(e: Stretch.Ex) {
 fun StretchPlayScreen(nav: NavHostController) {
     val ctx = LocalContext.current
     val routine by Stretch.current.collectAsState()
-    val r = routine ?: return
+    val r = routine?.takeIf { it.items.isNotEmpty() } ?: return
     val haptic = LocalHapticFeedback.current
     val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val foreground = lifecycleState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
@@ -338,6 +379,8 @@ fun StretchPlayScreen(nav: NavHostController) {
     var running by rememberSaveable { mutableStateOf(true) }
     var spent by rememberSaveable { mutableIntStateOf(0) }
     var finished by rememberSaveable { mutableStateOf(false) }
+    var swapping by remember { mutableStateOf(false) }
+    var resumeAfterSwap by remember { mutableStateOf(false) }
     if (running && foreground && !finished) KeepScreenOn()
     val e = r.items[index.coerceIn(0, r.items.lastIndex)]
     // fermer ou revenir en arrière garde le temps déjà fait
@@ -379,6 +422,7 @@ fun StretchPlayScreen(nav: NavHostController) {
             Text(listOfNotNull(if (e.uni) tr(if (left > e.seconds / 2) "Premier côté" else "Second côté") else null, zoneLabel(e).ifEmpty { null }).joinToString(" · "),
                 style = MaterialTheme.typography.labelLarge, color = StretchHue.onContainer(), modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
             Steps(e)
+            TextButton(onClick = { resumeAfterSwap = running; running = false; swapping = true }) { Text(tr("Remplacer cet exercice")) }
         }
         r.items.getOrNull(index + 1)?.let { n ->
             Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -395,5 +439,10 @@ fun StretchPlayScreen(nav: NavHostController) {
             }
             IconButton(onClick = { next() }) { Icon(Icons.Rounded.SkipNext, tr("Suivant"), tint = Mf.colors.text) }
         }
+    }
+    if (swapping) StretchExercisePicker(r.kind, e, onDismiss = { swapping = false; running = resumeAfterSwap }) { replacement ->
+        val updated = Stretch.replace(r, index, replacement)
+        Stretch.current.value = updated
+        left = updated.items[index].seconds
     }
 }

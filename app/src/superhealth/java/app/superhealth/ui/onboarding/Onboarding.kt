@@ -1,5 +1,7 @@
 package app.superhealth.ui.onboarding
 
+import app.superhealth.nutrition.ui.energyValue
+import app.superhealth.nutrition.ui.toKcal
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.draw.shadow
 import app.superhealth.ui.theme.WorkoutBlue
@@ -194,7 +196,7 @@ private enum class Step(val section: Int) {
     // le plus court possible : une page par décision, les parties non choisies (USES) sont sautées
     // l'ordre va du général au particulier : qui, quoi suivre, le corps, l'objectif, les activités (dont découle la musculation), les connexions
     WELCOME(0), NAME(0), USES(0), ACTIVITIES(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
-    PROGRAM(1), GOAL(1), TARGET(1), PACE(1), TRAINING(1), PREFS(1), MANUAL_TARGETS(1), CHECKIN(1),
+    PROGRAM(1), GOAL(1), TARGET(1), PACE(1), TRAINING(1), PREFS(1), MANUAL_TARGETS(1), ENERGY(1), CHECKIN(1),
     EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
     WATCH(3), HEALTH(3), AI(3), PLUGINS(3),
     GENERATING(4), RESULT(4),
@@ -224,7 +226,7 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
     Step.TRAINING, Step.EXPERIENCE, Step.GYM -> Icons.Rounded.FitnessCenter to WorkoutBlue
     Step.LIFT_GOAL -> Icons.AutoMirrored.Rounded.TrendingUp to WorkoutBlue
     Step.RHYTHM -> Icons.Rounded.CalendarMonth to WorkoutBlue
-    Step.PROGRAM, Step.MANUAL_TARGETS, Step.PREFS -> Icons.Rounded.Restaurant to Base.Green
+    Step.PROGRAM, Step.MANUAL_TARGETS, Step.PREFS, Step.ENERGY -> Icons.Rounded.Restaurant to Base.Green
     Step.CHECKIN -> Icons.Rounded.CalendarMonth to HealthHues.Body
     Step.WATCH -> Icons.Rounded.Watch to HealthHues.Respiration
     Step.PLUGINS -> androidx.compose.material.icons.Icons.Rounded.Tune to HealthHues.Sleep
@@ -272,6 +274,14 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var programStyle by rememberSaveable { mutableStateOf(program.style) }
     var weightGoal by rememberSaveable { mutableStateOf(program.weightGoalEnabled) }
     var manualTarget by remember { mutableStateOf<app.superhealth.nutrition.domain.DayTarget?>(app.superhealth.nutrition.domain.ManualTargets.base(program)) }
+    var individualDays by rememberSaveable { mutableStateOf(program.manualDays.size == 7) }
+    var manualDays by remember { mutableStateOf((1..7).map { app.superhealth.nutrition.domain.ManualTargets.forDay(program, it) }) }
+    var editDay by rememberSaveable { mutableIntStateOf(1) }
+    var manualValid by remember { mutableStateOf(true) }
+    var tdeeMode by rememberSaveable { mutableStateOf(program.tdeeMode) }
+    var staticTdee by rememberSaveable { mutableStateOf(num(settings.energyValue(program.staticTdee), 0)) }
+    var initialTdee by rememberSaveable { mutableStateOf(program.initialTdeeOverride?.let { num(settings.energyValue(it), 0) } ?: "") }
+    var bmrEquation by rememberSaveable { mutableStateOf(profile.bmrEquation) }
     var goal by rememberSaveable { mutableStateOf(if (rerun) program.goalType else GoalType.CUT) }
     var targetKg by rememberSaveable { mutableDoubleStateOf(if (rerun) program.targetWeightKg ?: 0.0 else 0.0) }
     var rate by rememberSaveable { mutableDoubleStateOf(if (rerun) program.ratePctPerWeek else 0.5) }
@@ -334,8 +344,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             Step.AI -> mode == OnboardingMode.FULL && app.superhealth.nutrition.data.AiGift.available
             Step.ACTIVITIES, Step.PLUGINS -> mode == OnboardingMode.FULL
             // poids habituel et métabolisme ne servent qu'à la nutrition
-            Step.BODY_FAT, Step.ACTIVITY, Step.HISTORY, Step.GOAL, Step.PROGRAM -> wantsNutrition
-            Step.PREFS -> wantsNutrition && programStyle == app.superhealth.nutrition.domain.ProgramStyle.COACHED
+            Step.BODY_FAT, Step.ACTIVITY, Step.HISTORY, Step.GOAL, Step.PROGRAM, Step.ENERGY -> wantsNutrition
+            Step.PREFS -> wantsNutrition && programStyle != app.superhealth.nutrition.domain.ProgramStyle.MANUAL
             Step.MANUAL_TARGETS -> wantsNutrition && programStyle != app.superhealth.nutrition.domain.ProgramStyle.COACHED
             // le jour du check-in est un réglage du quotidien : proposé à l'accueil, pas dans les simulations
             Step.CHECKIN -> wantsNutrition && !sim && programStyle != app.superhealth.nutrition.domain.ProgramStyle.MANUAL
@@ -392,7 +402,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             targetKg = ((app.superhealth.nutrition.domain.Senior.suggestedTargetKg(age(), weightKg, heightCm.toDouble(), goal) ?: weightKg) * 10).roundToInt() / 10.0
     }
     /** Objectif conseillé par l'âge et l'IMC (null = au choix). */
-    fun suggestedGoal() = app.superhealth.nutrition.domain.Senior.suggestedGoal(age(), weightKg, heightCm.toDouble())
+    fun suggestedGoal() = app.superhealth.nutrition.domain.Senior.suggestedGoal(age(), weightKg, heightCm.toDouble()).takeIf { app.superhealth.nutrition.domain.Senior.showBmiGuidance(age(), weightKg, heightCm.toDouble()) }
     /** Rythme maximal : 1 % en perte (0,5 % en prise), moins dès 60 ans (Senior : déficit borné). */
     fun maxPace() = if (goal == GoalType.BULK) 0.5 else minOf(1.0, app.superhealth.nutrition.domain.Senior.maxCutRatePct(age(), weightKg, heightCm.toDouble()) ?: 1.0)
     fun paceWeeks(): List<Int> {
@@ -414,13 +424,16 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         rate = rateFor(weeks)
     }
     fun draftProfile() = profile.copy(sex = sex, birthYear = birthYear, heightCm = heightCm.toDouble(), activity = activity,
-        bodyFatPct = bodyFat?.toDouble(), weightChange = change, lifetimeWeight = lifetime, exercise = exercise, athlete = athlete)
+        bodyFatPct = bodyFat?.toDouble(), bmrEquation = bmrEquation, weightChange = change, lifetimeWeight = lifetime, exercise = exercise, athlete = athlete)
     fun draftTarget() = when {
         goal == GoalType.MAINTENANCE -> weightKg
         targetKg > 0 -> targetKg
         else -> null
     }
     fun draftProgram() = program.copy(style = programStyle, weightGoalEnabled = weightGoal,
+        manualDays = if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL && individualDays) manualDays else emptyList(),
+        tdeeMode = tdeeMode, staticTdee = staticTdee.replace(',', '.').toDoubleOrNull()?.let(settings::toKcal) ?: program.staticTdee,
+        initialTdeeOverride = initialTdee.replace(',', '.').toDoubleOrNull()?.let(settings::toKcal),
         manualKcal = manualTarget?.kcal ?: program.manualKcal, manualProtein = manualTarget?.protein ?: program.manualProtein,
         manualFat = manualTarget?.fat ?: program.manualFat, manualCarbs = manualTarget?.carbs ?: program.manualCarbs,
         goalType = goal, ratePctPerWeek = if (goal == GoalType.MAINTENANCE) 0.0 else rate,
@@ -771,8 +784,30 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             app.superhealth.nutrition.domain.ProgramStyle.MANUAL -> tr("Vos calories et macros, sans ajustement automatique")
                         } }) { programStyle = it }
                     }
-                    Step.MANUAL_TARGETS -> Page(st, tr("Vos cibles personnelles"), tr("Saisissez les calories ou les macros. Vous pourrez personnaliser chaque jour dans les paramètres Nutrition.")) {
-                        app.superhealth.nutrition.ui.screens.TargetEditor(app.superhealth.nutrition.domain.ManualTargets.base(program), settings.copy(weightUnit = unit)) { manualTarget = it }
+                    Step.MANUAL_TARGETS -> Page(st, tr("Vos cibles personnelles"), tr("Choisissez une cible commune ou réglez les calories et les trois macros de chaque jour.")) {
+                        if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
+                            app.superhealth.nutrition.ui.components.SwitchRow(tr("Cibles différentes selon le jour"), tr("Du lundi au dimanche"), individualDays) { on ->
+                                if (on && !individualDays) manualDays = List(7) { manualTarget ?: app.superhealth.nutrition.domain.ManualTargets.base(program) }
+                                individualDays = on
+                            }
+                            if (individualDays) ChipChoice((1..7).toList(), editDay, { app.superhealth.nutrition.ui.screens.DAY_NAMES[it - 1].take(3) }) { editDay = it }
+                        } else Text(tr("Les calories seront ajustées au check-in ; les proportions choisies sont conservées."), color = Mf.colors.textSecondary)
+                        androidx.compose.runtime.key(individualDays, editDay) {
+                            app.superhealth.nutrition.ui.screens.TargetEditor(if (individualDays && programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) manualDays[editDay - 1] else manualTarget ?: app.superhealth.nutrition.domain.ManualTargets.base(program), settings.copy(weightUnit = unit)) { t ->
+                                manualValid = t != null
+                                if (individualDays && programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
+                                    if (t != null) manualDays = manualDays.toMutableList().also { it[editDay - 1] = t }
+                                } else manualTarget = t
+                            }
+                        }
+                    }
+                    Step.ENERGY -> Page(st, tr("Votre dépense énergétique"), tr("Ces paramètres restent modifiables dans le programme nutrition.")) {
+                        Options(app.superhealth.nutrition.domain.TdeeMode.entries, tdeeMode, { it.label.tr() }) { tdeeMode = it }
+                        if (tdeeMode == app.superhealth.nutrition.domain.TdeeMode.STATIC)
+                            app.superhealth.nutrition.ui.components.NumberField(tr("Dépense fixe"), staticTdee, { staticTdee = it }, suffix = settings.energyUnit.label)
+                        SmallLabel(tr("Équation du métabolisme de base"))
+                        ChipChoice(app.superhealth.nutrition.domain.BmrEquation.entries, bmrEquation, { it.label.tr() }) { bmrEquation = it }
+                        app.superhealth.nutrition.ui.components.NumberField(tr("Dépense initiale imposée (facultatif)"), initialTdee, { initialTdee = it }, suffix = settings.energyUnit.label)
                     }
                     Step.GOAL -> Page(st, tr("Quel est votre objectif ?"), null) {
                         val h = heightCm.toDouble()
@@ -903,10 +938,12 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                     }
                     Step.PREFS -> Page(st, tr("Vos préférences"), tr("Plancher calorique et répartition : réglables plus tard dans Stratégie.")) {
+                        if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.COACHED) {
                         SmallLabel(tr("Protéines"))
                         ChipChoice(ProteinPreference.entries, protein, { it.label.tr() }) { protein = it }
                         SmallLabel(tr("Diète"))
                         Options(DietPreference.entries, diet, { it.label.tr() }, { it.description.tr() }) { diet = it }
+                        }
                         SmallLabel(tr("Plancher calorique"))
                         ChipChoice(CalorieFloor.entries, floor, { it.label.tr() }) { floor = it }
                         app.superhealth.nutrition.ui.components.SwitchRow(tr("Jours plus élevés"), tr("Même moyenne sur la semaine"), shift) { shift = it }
@@ -968,7 +1005,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                 Step.BODY_FAT -> if (bodyFat == null) tr("Passer") else tr("Continuer")
                 else -> tr("Continuer")
             }
-            val ok = (step != Step.RHYTHM || generationTargets.isValid) && (step != Step.TARGET || targetOk()) && (step != Step.MANUAL_TARGETS || manualTarget != null)
+            val ok = (step != Step.RHYTHM || generationTargets.isValid) && (step != Step.TARGET || targetOk()) && (step != Step.MANUAL_TARGETS || (manualValid && manualTarget != null)) &&
+                (step != Step.ENERGY || ((tdeeMode != app.superhealth.nutrition.domain.TdeeMode.STATIC || (staticTdee.replace(',', '.').toDoubleOrNull() ?: 0.0) > 0) && (initialTdee.isBlank() || (initialTdee.replace(',', '.').toDoubleOrNull() ?: 0.0) > 0)))
             Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 PillButton(tr(label), Modifier.fillMaxWidth(), enabled = ok) {
                     when {
@@ -1092,6 +1130,7 @@ private fun BmiZone(age: Int, kg: Double, heightCm: Double, targetKg: Double?) {
     val S = app.superhealth.nutrition.domain.Senior
     val zone = S.rules(age).zone
     val now = S.bmi(kg, heightCm)
+    if (!S.showBmiGuidance(age, kg, heightCm)) return
     val target = targetKg?.takeIf { it > 0 }?.let { S.bmi(it, heightCm) }
     val lo = 15.0; val hi = 40.0
     fun x(b: Double) = ((b - lo) / (hi - lo)).toFloat().coerceIn(0f, 1f)

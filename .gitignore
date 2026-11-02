@@ -76,3 +76,6 @@ app/.cxx/
 *.patch
 
 __pycache__/
+
+# Distribution relay (local only)
+local.server.properties

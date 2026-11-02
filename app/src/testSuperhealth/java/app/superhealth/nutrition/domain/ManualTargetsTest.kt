@@ -85,4 +85,30 @@ class ManualTargetsTest {
         assertNull(ManualTargets.overrideAt(sameDay, today + 3))
     }
 
+
+    @Test fun refusingFirstCheckInKeepsEveryDayAndNextCheckInIsDeferred() {
+        val p = Program(highDays = setOf(6, 7), startEpochDay = today - 14)
+        val before = analytics(p)
+        val kept = ManualTargets.keepCurrent(before)
+        assertEquals(today, kept.day)
+        for (dow in 1..7) {
+            val day = today + ((dow - java.time.LocalDate.ofEpochDay(today).dayOfWeek.value + 7) % 7)
+            val expected = before.targetFor(day).macros
+            val actual = kept.forDayOfWeek(dow)
+            assertEquals(expected.kcal, actual.kcal, 1e-8)
+            assertEquals(expected.protein, actual.protein, 1e-8)
+            assertEquals(expected.fat, actual.fat, 1e-8)
+            assertEquals(expected.carbs, actual.carbs, 1e-8)
+        }
+        val after = analytics(p, listOf(kept))
+        assertTrue(after.nextCheckInDay > today)
+        assertEquals(app.superhealth.nutrition.data.CheckInState.FUTURE, after.checkInState)
+    }
+
+    @Test fun bmiTargetsAreShownForObesityAndSeniorsOnly() {
+        assertFalse(Senior.showBmiGuidance(30, 80.0, 180.0))
+        assertTrue(Senior.showBmiGuidance(30, 110.0, 180.0))
+        assertTrue(Senior.showBmiGuidance(70, 70.0, 180.0))
+        assertEquals(76.0, Senior.suggestedTargetKg(30, 80.0, 180.0, GoalType.CUT)!!, 1e-8)
+    }
 }

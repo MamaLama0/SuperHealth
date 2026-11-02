@@ -1,0 +1,56 @@
+[
+  {
+    "asset": "food.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_A04F58EED62745A6B63ECBB7B5EB84F1_sml.png",
+    "catalogId": 2736,
+    "name": "Photo Foodie"
+  },
+  {
+    "asset": "strength.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_1139_sml.png",
+    "catalogId": 1139,
+    "name": "Super Strength"
+  },
+  {
+    "asset": "run.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_7A8EC17814F4425181FBF8CFEDC59AD2_sml.png",
+    "catalogId": 1830,
+    "name": "Run Streak"
+  },
+  {
+    "asset": "steps.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_104_sml.png",
+    "catalogId": 104,
+    "name": "7-Day Goal Getter"
+  },
+  {
+    "asset": "steps-3.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_103_sml.png",
+    "catalogId": 103,
+    "name": "3-Day Goal Getter"
+  },
+  {
+    "asset": "steps-30.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_105_sml.png",
+    "catalogId": 105,
+    "name": "30-Day Goal Getter"
+  },
+  {
+    "asset": "steps-60.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_106_sml.png",
+    "catalogId": 106,
+    "name": "60-Day Goal Getter"
+  },
+  {
+    "asset": "sleep.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_71CC5F04D0664183B0CAED3B6CF27031_sml.png",
+    "catalogId": 1823,
+    "name": "Sleep Streak"
+  },
+  {
+    "asset": "mind.png",
+    "source": "https://api.garminbadges.com/storage/badges/badge_1138_sml.png",
+    "catalogId": 1138,
+    "name": "Zen Master"
+  }
+]

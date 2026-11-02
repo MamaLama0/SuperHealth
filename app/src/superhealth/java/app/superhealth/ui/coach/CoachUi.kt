@@ -472,7 +472,7 @@ private fun ActionCard(a: app.superhealth.coach.CoachTools.Action, onApply: () -
         if (a.done) Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Check, null, Modifier.size(16.dp), tint = Mf.colors.textSecondary)
             Text(tr("Fait"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
-        } else Text(if (a.kind == "program") (if ("replaces_program_id" in a.payload) tr("Mettre à jour") else tr("Créer")) else if (a.kind == "stretch" || a.kind == "meditation") tr("Lancer") else tr("Ajouter"), style = MaterialTheme.typography.labelLarge, color = Color.White,
+        } else Text(if (a.kind == "program") (if ("replaces_program_id" in a.payload) tr("Mettre à jour") else tr("Créer")) else if (a.kind == "stretch") tr("Personnaliser") else if (a.kind == "meditation") tr("Lancer") else tr("Ajouter"), style = MaterialTheme.typography.labelLarge, color = Color.White,
             modifier = Modifier.clip(CircleShape).background(CoachHue).clickable(onClick = onApply).padding(horizontal = 14.dp, vertical = 8.dp))
     }
 }

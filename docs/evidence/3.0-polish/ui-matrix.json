@@ -1,0 +1,978 @@
+{
+  "device-1": [
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Classement"
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Quêtes de la semaine"
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Amis"
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Social"
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Classement"
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Quêtes de la semaine"
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Amis"
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Social"
+    },
+    {
+      "kind": "dashboard",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "league",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "progress",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "quests",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "social",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "widgets",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "settings/find",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "stretch/edit",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "league",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "progress",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "quests",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "social",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "widgets",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "settings/find",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "stretch/edit",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "quests",
+      "mode": "english",
+      "rendered": true
+    }
+  ],
+  "device-2": [
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Classement"
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Quêtes de la semaine"
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Amis"
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true,
+      "tapDestination": "Social"
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "league",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Classement"
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "progress",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "streak",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Ma progression"
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "quest",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Quêtes de la semaine"
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "friends",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Amis"
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "android",
+      "widget": "social",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true,
+      "tapDestination": "Social"
+    },
+    {
+      "kind": "dashboard",
+      "size": "S",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "M",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "W",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "L",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "league",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "progress",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "quests",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "social",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "widgets",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "settings/find",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "stretch/edit",
+      "mode": "dark",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "S",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "M",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "W",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "dashboard",
+      "size": "L",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "league",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "progress",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "quests",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "social",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "widgets",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "settings/find",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "stretch/edit",
+      "mode": "light-large",
+      "rendered": true
+    },
+    {
+      "kind": "screen",
+      "route": "quests",
+      "mode": "english",
+      "rendered": true
+    }
+  ]
+}

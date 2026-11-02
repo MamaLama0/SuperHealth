@@ -1,5 +1,8 @@
 package app.superhealth.ui.league
 
+import app.superhealth.league.Achievements
+import androidx.compose.ui.graphics.graphicsLayer
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,16 +63,17 @@ internal fun ProgressSummaryCard(summary: Progression.Summary) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Niveau"), style = MaterialTheme.typography.titleMedium, color = Mf.colors.textSecondary)
                 Text(summary.level.toString(), fontSize = 64.sp, lineHeight = 68.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(8.dp))
                 Text(trf("%1\$s XP cette semaine", summary.weekXp), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             }
-            GameArt(GameArtKind.XP, Modifier.size(124.dp))
+            GameArt(GameArtKind.XP, Modifier.size(104.dp))
         }
         Spacer(Modifier.height(16.dp))
         ProgressBar(((summary.totalXp - start).toFloat() / (next - start)).coerceIn(0f, 1f), GameGreen, Modifier.fillMaxWidth(), height = 16.dp,
             track = Mf.colors.background.copy(alpha = 0.45f))
         Text(trf("%1\$s / %2\$s XP vers le niveau %3\$s", summary.totalXp - start, next - start, summary.level + 1),
             style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
-        Text(trf("%1\$s XP au total", summary.totalXp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        Text(trf("%1\$s XP au total", summary.totalXp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
     }
 }
 
@@ -90,59 +94,40 @@ private fun streakCount(s: Progression.Streak, count: Int = s.current): String =
     if (s.weekly) { if (count == 1) "%1\$s semaine" else "%1\$s semaines" } else { if (count == 1) "%1\$s jour" else "%1\$s jours" },
     count.toString() + if (s.capped && count == s.current) "+" else "")
 
-@Composable
-internal fun StreakRows(summary: Progression.Summary) {
-    summary.streaks.forEach { s ->
-        val track = Progression.Track.entries.firstOrNull { it.name == s.track } ?: return@forEach
-        MfCard(Modifier.padding(top = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                GameArt(if (s.current > 0) GameArtKind.FLAME else GameArtKind.FLAME_INACTIVE, Modifier.size(44.dp))
-                Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text(tr(track.label), style = MaterialTheme.typography.titleSmall)
-                    Text(streakCount(s), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (s.current > 0) GameOrange else Mf.colors.textSecondary)
-                }
-                Text(trf("Record : %1\$s", streakCount(s, s.best)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-            }
-        }
-    }
-}
-
 /** Paliers de la référence : une étape est colorée uniquement si le record du suivi atteint ce seuil. */
 @Composable
 private fun StreakJourney(s: Progression.Streak) {
-    val goals = if (s.weekly) listOf(1, 2, 4, 8) else listOf(7, 14, 30, 50)
-    val lanes = listOf(0.28f, 0.68f, 0.35f, 0.68f)
+    val badges = Achievements.catalog.filter { it.metric == "streak:${s.track}" }.sortedBy { it.threshold }
+    var all by remember(s.track) { mutableStateOf(false) }
+    val nextIndex = badges.indexOfFirst { it.threshold > s.best }.let { if (it < 0) badges.size else it }
+    val first = (nextIndex - 1).coerceIn(0, (badges.size - 4).coerceAtLeast(0))
+    val visible = if (all) badges else badges.drop(first).take(4)
     var detail by remember(s.track) { mutableStateOf<Int?>(null) }
     val neutral = Mf.colors.chip
     MfCard {
         Text(tr("Le chemin de votre régularité"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(trf("Record : %1\$s", streakCount(s, s.best)), style = MaterialTheme.typography.bodyMedium, color = GameOrange,
             modifier = Modifier.padding(top = 4.dp))
-        BoxWithConstraints(Modifier.fillMaxWidth().height(408.dp)) {
-            val width = maxWidth
-            Canvas(Modifier.fillMaxSize()) {
-                goals.zipWithNext().forEachIndexed { i, _ ->
-                    val from = Offset(size.width * lanes[i], 48.dp.toPx() + 98.dp.toPx() * i)
-                    val to = Offset(size.width * lanes[i + 1], 48.dp.toPx() + 98.dp.toPx() * (i + 1))
-                    val p = Path().apply { moveTo(from.x, from.y); cubicTo(from.x, from.y + 50.dp.toPx(), to.x, to.y - 50.dp.toPx(), to.x, to.y) }
-                    drawPath(p, if (s.best >= goals[i + 1]) GameGreen else neutral, style = Stroke(9.dp.toPx(), cap = StrokeCap.Round,
-                        pathEffect = if (s.best >= goals[i + 1]) null else PathEffect.dashPathEffect(floatArrayOf(11.dp.toPx(), 9.dp.toPx()))))
-                }
-            }
-            goals.forEachIndexed { i, goal ->
+        Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            visible.forEach { badge ->
+                val goal = badge.threshold.toInt()
                 val reached = s.best >= goal
-                Column(Modifier.offset(x = width * lanes[i] - 40.dp, y = (8 + 98 * i).dp).width(80.dp).clickable { detail = goal }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(76.dp).background(if (reached) GameGreen.copy(alpha = 0.22f) else Mf.colors.background, CircleShape)
-                        .border(3.dp, if (reached) GameGreen else neutral, CircleShape), contentAlignment = Alignment.Center) {
-                        GameArt(if (reached) GameArtKind.FLAME else GameArtKind.FLAME_INACTIVE, Modifier.size(52.dp))
-                        if (reached) Icon(Icons.Rounded.CheckCircle, null, Modifier.align(Alignment.BottomEnd).size(23.dp).background(Mf.colors.card, CircleShape), tint = GameGreen)
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { detail = goal }.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(58.dp).background(if (reached) GameGreen.copy(alpha = 0.15f) else Mf.colors.background, CircleShape), contentAlignment = Alignment.Center) {
+                        app.superhealth.nutrition.ui.components.AssetImage(
+                            badge.asset,
+                            Modifier.size(42.dp).graphicsLayer { alpha = if (reached) 1f else .35f }, crop = false)
                     }
-                    Text(trf(if (s.weekly) "%1\$s sem." else "%1\$s j", goal), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.background(Mf.colors.card, RoundedCornerShape(8.dp)).padding(horizontal = 5.dp))
+                    Column(Modifier.weight(1f).padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(streakCount(s, goal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(tr(if (reached) "Jalon débloqué !" else "Continuez votre série pour débloquer ce jalon."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    }
+                    if (reached) Icon(Icons.Rounded.CheckCircle, tr("Accompli"), tint = GameGreen, modifier = Modifier.size(24.dp))
                 }
             }
         }
-        Text(tr("Atteignez ces durées pour débloquer les jalons."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        TextButton({ all = !all }, Modifier.fillMaxWidth()) { Text(tr(if (all) "Voir moins" else "Tous les jalons")) }
     }
     detail?.let { goal ->
         AlertDialog(onDismissRequest = { detail = null }, containerColor = Mf.colors.card,
@@ -159,19 +144,22 @@ private fun TrackingMissions(summary: Progression.Summary, nav: NavHostControlle
         val complete = s.progress >= s.target
         MfCard(Modifier.padding(bottom = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                GameArt(if (complete) GameArtKind.FLAME else GameArtKind.FLAME_INACTIVE, Modifier.size(42.dp))
+                TrackArt(s.track, s.best, Modifier.size(42.dp))
                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                     Text(tr(track.label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Text(trackingGoal(track) + " · " + trackingProgress(s),
-                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    Text(trackingGoal(track), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    Text(trackingProgress(s), style = MaterialTheme.typography.titleMedium,
+                        color = Mf.colors.accent, modifier = Modifier.padding(top = 4.dp))
                 }
                 if (complete) Icon(Icons.Rounded.CheckCircle, tr("Accompli"), tint = GameGreen, modifier = Modifier.size(28.dp))
-                else Text(trf("%1\$s XP / jour actif", track.xp), color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
             }
+            Text(streakCount(s) + " · " + trf("Record : %1\$s", streakCount(s, s.best)),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
             ProgressBar(trackingFraction(s), if (complete) GameGreen else GameGold, Modifier.padding(top = 12.dp), height = 8.dp)
-            if (!complete) TextButton({ nav.go(when (track) {
-                Progression.Track.FOOD -> "log"; Progression.Track.SLEEP -> "h/metric/SLEEP"; Progression.Track.STEPS -> "h/metric/STEPS"; else -> "activities"
-            }) }, modifier = Modifier.align(Alignment.End)) { Text(tr("Continuer mon suivi")) }
+            if (!complete) Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(trf("%1\$s XP / jour actif", track.xp), Modifier.weight(1f).padding(end = 8.dp), color = Mf.colors.accent, style = MaterialTheme.typography.labelMedium)
+                TextButton({ nav.continueTracking(track) }) { Text(tr("Continuer mon suivi")) }
+            }
         }
     }
 }
@@ -193,7 +181,7 @@ private fun WeekCalendar(summary: Progression.Summary) {
                 }
             }
         }
-        Text(tr("XP gagnés chaque jour, plafonnés à 120."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
+        Text(tr("XP de suivi plafonnés à 120 par jour ; bonus de quête en plus."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
     }
 }
 
@@ -229,7 +217,7 @@ fun ProgressScreen(nav: NavHostController) {
     val ctx = LocalContext.current
     val enabled by app.superhealth.SuperPrefs.settings.collectAsState()
     if (!enabled.leagueEnabled) {
-        DetailScaffold(tr("Ma progression"), onBack = { nav.popBackStack() }) {
+        DetailScaffold(tr("Ma progression"), onBack = { nav.popBackStack() }, contentSpacing = 12.dp) {
             PillButton(tr("Activer le classement"), Modifier.fillMaxWidth()) { app.superhealth.SuperPrefs.update { it.copy(leagueEnabled = true) } }
         }
         return
@@ -246,11 +234,14 @@ fun ProgressScreen(nav: NavHostController) {
     val p = result?.summary
     val ids = data.history.flatMap { it.exercises }.map { it.exerciseId }.distinct()
     val selected = exercise?.takeIf { it in ids } ?: ids.firstOrNull()
-    DetailScaffold(tr("Ma progression"), onBack = { nav.popBackStack() }, action = {
+    DetailScaffold(tr("Ma progression"), onBack = { nav.popBackStack() }, contentSpacing = 12.dp, action = {
         IconButton({ nav.go("league/settings") }) { Icon(Icons.Rounded.Settings, tr("Réglages du classement")) }
     }) {
         if (p != null) {
             ProgressSummaryCard(p)
+            GroupCard { SettingRow(tr("Quêtes de la semaine"), subtitle = tr("Objectifs et récompenses")) { nav.go("quests") } }
+            SectionLabel(tr("Mes défis de suivi"))
+            TrackingMissions(p, nav)
             SectionLabel(tr("Votre chemin"))
             val streak = p.streaks.firstOrNull { it.track == trackId } ?: p.streaks.firstOrNull()
             if (streak != null) {
@@ -260,12 +251,9 @@ fun ProgressScreen(nav: NavHostController) {
                 Spacer(Modifier.height(10.dp))
                 StreakJourney(streak)
             } else SettingRow(tr("Choisir mes suivis")) { nav.go("league/settings") }
-            SectionLabel(tr("Mes défis de suivi"))
-            TrackingMissions(p, nav)
-            SectionLabel(tr("Mes séries"))
-            StreakRows(p)
             SectionLabel(tr("Cette semaine"))
             WeekCalendar(p)
+            SettingRow(tr("Profil et social")) { nav.go("social") }
             SectionLabel(tr("Mes badges"))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MfCard(Modifier.weight(1f)) {
@@ -295,7 +283,7 @@ fun ProgressScreen(nav: NavHostController) {
                     val best = history.maxOf { if (weighted) it.e1rm else it.reps.toDouble() }
                     val format: (Double) -> String = { value -> if (weighted) data.settings.weight(value) else trf("%1\$s reps", value.toInt()) }
                     Text(trf("Dernier : %1\$s · record : %2\$s", format(values.last()), format(best)), style = MaterialTheme.typography.bodyMedium)
-                    Text(trf("Du %1\$s au %2\$s", Analytics.day(points.first().time).toString(), Analytics.day(points.last().time).toString()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    Text(trf("Du %1\$s au %2\$s", Analytics.day(points.first().time).toString(), Analytics.day(points.last().time).toString()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp))
                 }
             }
         } else Text(tr("Vos séances enregistrées feront apparaître vos courbes et vos records."), color = Mf.colors.textSecondary)
@@ -318,7 +306,7 @@ internal fun FriendProgressDetails(friend: League.Friend) {
             val track = Progression.Track.entries.firstOrNull { it.name == s.track } ?: return@forEach
             val own = mine?.summary?.streaks?.firstOrNull { it.track == s.track && it.weekly == s.weekly && it.target == s.target }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                GameArt(if (s.current > 0) GameArtKind.FLAME else GameArtKind.FLAME_INACTIVE, Modifier.size(28.dp))
+                TrackArt(s.track, s.best, Modifier.size(28.dp))
                 Text(tr(track.label) + " · " + streakCount(s) + (own?.let { " · " + trf("vous : %1\$s", it.current) } ?: ""),
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp))
             }

@@ -1,7 +1,8 @@
 package app.superhealth.ui.meditation
 
+import app.superhealth.nutrition.ui.components.MfCard
+
 import android.media.MediaPlayer
-import android.speech.tts.TextToSpeech
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +34,8 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.Slider
+import app.superhealth.nutrition.ui.components.SwitchRow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -129,77 +132,27 @@ fun ColumnScope.MeditationSection(nav: NavHostController) {
     val monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toEpochDay()
     val week = remember(log) { Meditation.minutes(monday) }
     val streak = remember(log) { Meditation.streak() }
-    val daily = remember(log) { Meditation.daily() }
-    val content = Meditation.content()
-
-    daily?.let { (s, kind) ->
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF2C3566), Color(0xFF4A5AA8))))
-            .clickable { Meditation.play(s, kind); nav.go("meditation/play") }.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(tr("Séance du jour"), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.75f))
-                Text(s.title, style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
-                Text(listOfNotNull(trf("%1\$s min", s.minutes), if (week > 0) trf("%1\$s min cette semaine", week) else null, if (streak > 1) trf("%1\$s jours d'affilée", streak) else null).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.padding(top = 4.dp), maxLines = 2)
-            }
-            Spacer(Modifier.width(12.dp))
-            Box(Modifier.size(58.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.PlayArrow, tr("Commencer"), tint = Color(0xFF2C3566), modifier = Modifier.size(34.dp))
-            }
-        }
-        Spacer(Modifier.height(10.dp))
+    val sessions = Meditation.simpleSessions()
+    MfCard {
+        Text(tr("Un moment pour vous"), style = MaterialTheme.typography.headlineSmall)
+        Text(tr("Du silence, une ambiance si vous le souhaitez, et quelques repères à lire. Aucune voix automatique."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+        Spacer(Modifier.height(14.dp))
+        PillButton(tr("Ouvrir le minuteur"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Timer) { timer = true }
+        if (week > 0) Text(trf("%1\$s min cette semaine", week), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Tile(Icons.Rounded.Timer, tr("Minuteur"), MeditationHue, Modifier.weight(1f)) { timer = true }
-        Tile(Icons.Rounded.Air, tr("Respirer"), HealthHues.Respiration, Modifier.weight(1f)) { nav.go("breathe") }
-        content.sos?.let { Meditation.session(it) }?.let { s ->
-            Tile(Icons.Rounded.Spa, tr("Vite, du calme"), HealthHues.Mind, Modifier.weight(1f)) { Meditation.play(s); nav.go("meditation/play") }
-        }
-    }
-
-    if (content.programs.isNotEmpty()) {
-        SectionLabel(tr("Programmes"))
-        GroupCard {
-            content.programs.forEachIndexed { i, pr ->
-                if (i > 0) RowDivider()
-                val done = remember(log) { Meditation.programDone(pr) }
-                val next = pr.sessions.getOrNull(done)?.let { Meditation.session(it) }
-                Row(Modifier.fillMaxWidth().clickable(enabled = next != null) { next?.let { s -> Meditation.play(s, "program:${pr.id}:$done"); nav.go("meditation/play") } }
-                    .padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // étape du parcours : le nombre fait, ou la coche à la fin
-                    Box(Modifier.size(38.dp).clip(CircleShape).background(if (next == null) MeditationHue else MeditationHue.container()), contentAlignment = Alignment.Center) {
-                        if (next == null) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                        else Text("${done + 1}", style = MaterialTheme.typography.titleSmall, color = MeditationHue.onContainer())
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(pr.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(if (next != null) trf("%1\$s sur %2\$s · Ensuite : %3\$s", done, pr.sessions.size, next.title) else tr("Terminé"), style = MaterialTheme.typography.bodySmall,
-                            color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    if (next != null) Icon(Icons.Rounded.PlayArrow, tr("Commencer"), tint = MeditationHue.onContainer())
-                }
-            }
-        }
-    }
-
-    SectionLabel(tr("Séances guidées"))
-    ChipRow { themes.forEach { (id, label) -> Chip(tr(label), id == theme) { theme = id } } }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(10.dp))
+    Tile(Icons.Rounded.Air, tr("Respirer"), HealthHues.Respiration, Modifier.fillMaxWidth()) { nav.go("breathe") }
+    SectionLabel(tr("Quelques repères"))
     GroupCard {
-        content.sessions.filter { it.theme == theme }.forEachIndexed { i, s ->
+        sessions.forEachIndexed { i, session ->
             if (i > 0) RowDivider()
-            Row(Modifier.fillMaxWidth().clickable { Meditation.play(s); nav.go("meditation/play") }.padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(38.dp).clip(CircleShape).background(MeditationHue.container()), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.SelfImprovement, null, Modifier.size(21.dp), tint = MeditationHue.onContainer())
-                }
-                Spacer(Modifier.width(12.dp))
+            Row(Modifier.fillMaxWidth().clickable { Meditation.play(session); nav.go("meditation/play") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(s.about, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(session.title, style = MaterialTheme.typography.titleSmall)
+                    Text(session.about, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
-                Spacer(Modifier.width(8.dp))
-                Text(trf("%1\$s min", s.minutes), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+                Text(trf("%1\$s min", session.minutes), color = Mf.colors.textSecondary)
+                Icon(Icons.Rounded.PlayArrow, tr("Lancer"), Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -215,9 +168,10 @@ fun ColumnScope.MeditationSection(nav: NavHostController) {
             Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp).navigationBarsPadding()) {
                 Text(tr("Minuteur"), style = MaterialTheme.typography.titleLarge)
                 SectionLabel(tr("Durée"))
-                ChipRow { listOf(3, 5, 10, 15, 20, 30).forEach { m -> Chip(trf("%1\$s min", m), m == minutes) { minutes = m } } }
+                ChipRow { listOf(1, 3, 5, 10, 15, 20, 30, 45, 60).forEach { m -> Chip(trf("%1\$s min", m), m == minutes) { minutes = m } } }
                 SectionLabel(tr("Gong intermédiaire"))
                 ChipRow { listOf(0, 1, 5, 10).forEach { m -> Chip(if (m == 0) tr("Aucun") else trf("%1\$s min", m), m == interval) { interval = m } } }
+                SwitchRow(tr("Gong au début et à la fin"), null, sh.meditationGongs) { on -> SuperPrefs.update { it.copy(meditationGongs = on) } }
                 SectionLabel(tr("Ambiance"))
                 ChipRow { ambiences.forEach { (id, label) -> Chip(tr(label), id == sh.meditationAmbience) { SuperPrefs.update { it.copy(meditationAmbience = id) } } } }
                 Spacer(Modifier.height(16.dp))
@@ -245,8 +199,8 @@ private fun CoachSessionButton(onReady: () -> Unit) {
             runCatching {
                 val p = Coach.prompts() ?: error(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
                 val lang = if (app.superhealth.ui.Lang.english) "English" else "French"
-                val raw = Coach.once(ctx, p, "Write a guided meditation of exactly $minutes minutes adapted to my day (use my sleep, form and mood if available). " +
-                    "Output ONLY lines in the form mm:ss | sentence, in $lang, one short calm sentence per line, spaced by 30 to 90 seconds, first line at 00:05, last line at least 30 seconds before the end. " +
+                val raw = Coach.once(ctx, p, "Write a quiet meditation of exactly $minutes minutes adapted to my day, with at most four short on-screen prompts and long silent intervals. Use only context I share. These are read as text; no voice will play. " +
+                    "Output ONLY lines in the form mm:ss | sentence, in $lang, one short calm sentence per line, spaced by at least 120 seconds, first line at 00:05, last line at least 30 seconds before the end. " +
                     "No title, no list, no medical claim.")
                 val lines = Meditation.parseScript(raw).filter { it.at < minutes * 60 }
                 if (lines.size < 2) error(tr("Réponse inattendue du coach, réessayez."))
@@ -274,34 +228,18 @@ fun MeditationPlayScreen(nav: NavHostController) {
     var elapsed by rememberSaveable { mutableIntStateOf(0) }
     var running by rememberSaveable { mutableStateOf(true) }
     var finished by rememberSaveable { mutableStateOf(false) }
-    var ttsReady by remember { mutableStateOf(false) }
-    val recorded = p.session != null && Meditation.voice(p.session, 0) != null
-    val needsTts = p.lines.isNotEmpty() && !recorded
-    val tts = remember { arrayOfNulls<TextToSpeech>(1) }
     val loop = remember { arrayOfNulls<MediaPlayer>(1) }
     val sounds = remember { ArrayList<MediaPlayer>() }
     fun sound(path: String) {
         runCatching {
-            val mp = MediaPlayer().apply { setDataSource(path); prepare(); setOnCompletionListener { it.release(); sounds.remove(it) }; start() }
+            val mp = MediaPlayer().apply { setDataSource(path); setVolume(sh.meditationVolume, sh.meditationVolume); prepare(); setOnCompletionListener { it.release(); sounds.remove(it) }; start() }
             sounds += mp
         }
     }
-    fun gong(name: String) { Meditation.audio(name)?.let { sound(it.path) } }
-    fun say(i: Int) {
-        val file = p.session?.let { Meditation.voice(it, i) }
-        if (file != null) sound(file.path) else tts[0]?.speak(p.lines[i].text, TextToSpeech.QUEUE_FLUSH, null, "l$i")
-    }
+    fun gong(name: String) { if (sh.meditationGongs) Meditation.audio(name)?.let { sound(it.path) } }
     DisposableEffect(Unit) {
-        if (needsTts) tts[0] = TextToSpeech(ctx.applicationContext) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                val ok = tts[0]?.setLanguage(app.superhealth.ui.Lang.locale)
-                ttsReady = ok != null && ok >= TextToSpeech.LANG_AVAILABLE
-                tts[0]?.setSpeechRate(0.85f)
-            }
-        }
         gong("gong_timer")
         onDispose {
-            tts[0]?.stop(); tts[0]?.shutdown()
             loop[0]?.runCatching { stop(); release() }
             sounds.toList().forEach { it.runCatching { release() } }
         }
@@ -310,16 +248,16 @@ fun MeditationPlayScreen(nav: NavHostController) {
     LaunchedEffect(sh.meditationAmbience) {
         loop[0]?.runCatching { stop(); release() }
         loop[0] = Meditation.ambience(sh.meditationAmbience)?.let { f ->
-            runCatching { MediaPlayer().apply { setDataSource(f.path); isLooping = true; setVolume(0.28f, 0.28f); prepare(); if (running && !finished) start() } }.getOrNull()
+            runCatching { MediaPlayer().apply { setDataSource(f.path); isLooping = true; setVolume(sh.meditationVolume, sh.meditationVolume); prepare(); if (running && !finished) start() } }.getOrNull()
         }
     }
+    LaunchedEffect(sh.meditationVolume) { loop[0]?.setVolume(sh.meditationVolume, sh.meditationVolume) }
     LaunchedEffect(running, finished) {
         loop[0]?.runCatching { if (running && !finished) start() else pause() }
         sounds.toList().forEach { it.runCatching { if (running) start() else if (isPlaying) pause() } }
         while (running && !finished) {
             delay(1000)
             elapsed++
-            p.lines.indexOfFirst { it.at == elapsed }.takeIf { it >= 0 }?.let { say(it) }
             if (p.intervalMin > 0 && elapsed < total && elapsed % (p.intervalMin * 60) == 0) gong("gong_timer_inter")
             if (elapsed >= total) {
                 finished = true
@@ -351,8 +289,6 @@ fun MeditationPlayScreen(nav: NavHostController) {
         }
         Text(current?.text ?: "", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().height(110.dp).padding(horizontal = 24.dp))
-        if (needsTts && !ttsReady) Text(tr("Pas de voix sur ce téléphone : le texte reste affiché."), color = Color.White.copy(alpha = 0.5f),
-            style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp))
         // ambiance : un seul rang, au-dessus du bouton
         Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
             ambiences.forEach { (id, label) ->
@@ -361,6 +297,10 @@ fun MeditationPlayScreen(nav: NavHostController) {
                     modifier = Modifier.clip(CircleShape).background(if (on) Color.White else Color.White.copy(alpha = 0.12f))
                         .clickable { SuperPrefs.update { it.copy(meditationAmbience = id) } }.padding(horizontal = 12.dp, vertical = 7.dp))
             }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Volume"), color = Color.White, style = MaterialTheme.typography.labelMedium)
+            Slider(sh.meditationVolume, { volume -> SuperPrefs.update { it.copy(meditationVolume = volume) } }, modifier = Modifier.weight(1f).padding(start = 12.dp))
         }
         Box(Modifier.fillMaxWidth().padding(bottom = 22.dp), contentAlignment = Alignment.Center) {
             if (finished) PillButton(tr("Terminer"), Modifier.padding(horizontal = 24.dp).fillMaxWidth()) { Meditation.current.value = null; nav.popBackStack() }

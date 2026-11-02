@@ -49,6 +49,8 @@ internal fun Initial(name: String, size: Dp = 40.dp) {
 /** Ajouter est toujours visible ; la liste conserve sa place et les réglages ont leur propre écran. */
 @Composable
 fun FriendsScreen(nav: NavHostController) {
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) { runCatching { app.superhealth.league.InvitationCodes.collectResponses(ctx) } }
     val st by League.state.collectAsState()
     var opened by remember { mutableStateOf<League.Friend?>(null) }
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
@@ -99,7 +101,7 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
     var metrics by remember(f.id) { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = { League.rename(ctx, f.id, alias); onDismiss() }, containerColor = Mf.colors.background,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 20.dp).navigationBarsPadding()) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Initial(f.shown, 48.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
@@ -112,6 +114,7 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(12.dp))
+            ProfileDecor(f.profileTitle, f.profileBadges)
             FriendProgressDetails(f)
             if (f.pillars.isNotEmpty()) {
                 SectionLabel(tr("Indice global de santé"))
@@ -133,8 +136,8 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                     f.history.entries.sortedBy { it.key }.takeLast(6).forEach { (date, score) ->
                         Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Mf.colors.card).padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(score.toString(), style = MaterialTheme.typography.titleSmall)
-                            val day = date.removePrefix("v2:").substringBefore(':').toLongOrNull()
-                            Text(if (date.startsWith("v2:") && day != null) LocalDate.ofEpochDay(day).toString().takeLast(5) else date.substringAfter('-'),
+                            val day = date.substringAfter(':').substringBefore(':').toLongOrNull()
+                            Text(if (date.startsWith("v") && day != null) LocalDate.ofEpochDay(day).toString().takeLast(5) + " · " + date.substringBefore(':') else date.substringAfter('-'),
                                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                         }
                     }

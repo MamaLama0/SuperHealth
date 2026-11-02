@@ -20,6 +20,16 @@ object ManualTargets {
         else fromCalories(kcal, 30.0, 30.0, 40.0)
     }
 
+    fun keepCurrent(an: app.superhealth.nutrition.data.Analytics): CheckIn {
+        val days = (1..7).map { dow ->
+            val day = an.today + ((dow - java.time.LocalDate.ofEpochDay(an.today).dayOfWeek.value + 7) % 7)
+            an.targetFor(day).macros.let { DayTarget(it.kcal, it.protein, it.fat, it.carbs) }
+        }
+        val current = an.targetFor(an.today).macros
+        return CheckIn(an.today, an.currentTdee, an.checkInFor(an.today)?.trendKg, current.kcal, current.protein, current.fat, current.carbs,
+            an.currentGoal?.type ?: GoalType.MAINTENANCE, an.currentGoal?.ratePctPerWeek ?: 0.0, days = days)
+    }
+
     fun base(p: Program) = DayTarget(p.manualKcal, p.manualProtein, p.manualFat, p.manualCarbs)
     fun forDay(p: Program, dow: Int) = p.manualDays.getOrNull(dow - 1) ?: base(p)
     /** Un nouveau remplacement ferme celui en cours, sans réécrire les jours passés. */

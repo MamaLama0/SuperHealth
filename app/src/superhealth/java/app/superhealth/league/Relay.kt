@@ -33,14 +33,19 @@ object Relay {
             (it.encodedPath.matches(Regex("/v2/cards/[a-f0-9]{64}/[a-f0-9]{64}")) || it.encodedPath.matches(Regex("/v1/cards/[a-f0-9]{16}/[a-f0-9]{64}")))
     } ?: false
     fun encryptedEndpoint(raw: String) = validEndpoint(raw) && raw.toHttpUrlOrNull()?.encodedPath?.startsWith("/v2/") == true
+    fun base(): String? {
+        val state = League.state.value
+        return (if (state.customRelay) state.relayUrl else RelayDefaults.url).trimEnd('/').takeIf { state.relayEnabled && validBase(it) }
+    }
+    internal fun publicationKey(ctx: Context) = if (League.state.value.customRelay) Secrets.get(ctx, "league_publish_key").orEmpty() else RelayDefaults.key
+    internal fun defaultBase() = RelayDefaults.url.takeIf(::validBase)
     fun myEndpoint(ctx: Context): String? {
-        val base = League.state.value.relayUrl.trimEnd('/')
-        if (!validBase(base)) return null
+        val base = base() ?: return null
         val mailbox = secret(ctx, "league_mailbox_v2", ::token)
         val read = secret(ctx, "league_read_capability_v2", ::token)
         return "$base/v2/cards/$mailbox/$read"
     }
-    private fun auth(ctx: Context, request: Request.Builder) = request.header("Authorization", "Bearer " + Secrets.get(ctx, "league_publish_key").orEmpty())
+    private fun auth(ctx: Context, request: Request.Builder) = request.header("Authorization", "Bearer " + publicationKey(ctx))
         .header("X-Write-Token", secret(ctx, "league_owner_token_v2", ::token))
     private fun readBounded(r: Response): String = r.body.byteStream().use { input ->
         val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
@@ -48,8 +53,11 @@ object Relay {
         out.toString("UTF-8")
     }
     suspend fun sync(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
-        if (!League.available()) return@withContext
+        if (!League.available() || !League.state.value.relayEnabled) return@withContext
         val errors = java.util.Collections.synchronizedList(mutableListOf<String>())
+        try { InvitationCodes.collectResponses(ctx) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { errors += "Invitations indisponibles. Réessayez plus tard." }
         myEndpoint(ctx)?.let { endpoint ->
             try {
                 val raw = League.myCard(ctx, detailed = true, includeRelayKey = false)
@@ -66,7 +74,7 @@ object Relay {
                     Secrets.put(ctx, "league_published_hash_v2", digest); Secrets.put(ctx, "league_published_at_v2", System.currentTimeMillis().toString())
                 }
             } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { errors += e.message ?: "publication impossible" }
+            catch (e: Exception) { errors += "Publication impossible. Vérifiez la connexion ou les réglages du serveur." }
         }
         val permits = Semaphore(3)
         coroutineScope {
@@ -93,7 +101,7 @@ object Relay {
                             }
                         }
                     } catch (e: CancellationException) { throw e }
-                    catch (e: Exception) { errors += "${friend.shown} : ${e.message ?: "lecture impossible"}" }
+                    catch (e: Exception) { errors += "${friend.shown} : lecture impossible. Réessayez plus tard." }
                 }
             } }.awaitAll()
         }

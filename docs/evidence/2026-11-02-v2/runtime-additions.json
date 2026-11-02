@@ -3,14 +3,14 @@
   "qaPackage": "app.superhealth.qa",
   "personalAppsUntouched": true,
   "freeSession": {
-    "device": "Pixel 8 Pro",
+    "device": "appareil Android A",
     "allExistingSetsCompleted": true,
     "automaticFinishPopup": false,
     "secondExerciseAdded": true,
     "sessionFreeFormPersisted": true
   },
   "foodRemaining": {
-    "device": "OnePlus 9",
+    "device": "appareil Android B",
     "consumedKcal": 650,
     "targetKcal": 2500,
     "remainingKcal": 1850,
@@ -19,7 +19,7 @@
     "carbsRemainingGrams": 269
   },
   "generationTargets": {
-    "device": "Pixel 8 Pro",
+    "device": "appareil Android A",
     "expandedOnPeriodizationStep": true,
     "primaryCustomFieldsVisible": [
       "minReps",
@@ -34,7 +34,7 @@
     "wizardAbandonedWithoutSaving": true
   },
   "homeRetap": {
-    "device": "Pixel 8 Pro",
+    "device": "appareil Android A",
     "taps": 8,
     "screenRecordingSeconds": 5,
     "ffmpegLumaMin": 49.91,
@@ -53,7 +53,7 @@
     "No Google Drive account provider installed on test phones"
   ],
   "gameUi": {
-    "device": "OnePlus 9",
+    "device": "appareil Android B",
     "streakHeroAtTop": true,
     "streakDays": 21,
     "level": 4,
@@ -70,17 +70,17 @@
     "defaultLeagueTab": "XP semaine"
   },
   "finalKnownFriendExchange": {
-    "38251FDJG002ZM": [
+    "test-device-a": [
       {
-        "name": "QA LE2110",
+        "name": "QA appareil B",
         "ageSeconds": 76,
         "progressXp": 710,
         "progressWeekXp": 20
       }
     ],
-    "2c494e6b": [
+    "test-device-b": [
       {
-        "name": "QA Pixel 8 Pro",
+        "name": "QA appareil Android A",
         "ageSeconds": 73,
         "progressXp": 710,
         "progressWeekXp": 20
@@ -88,7 +88,7 @@
     ]
   },
   "originalPersonalAppsAfterQa": {
-    "Pixel 8 Pro": "2.63 (29)",
-    "OnePlus 9": "2.6 (26)"
+    "appareil Android A": "2.63 (29)",
+    "appareil Android B": "2.6 (26)"
   }
 }

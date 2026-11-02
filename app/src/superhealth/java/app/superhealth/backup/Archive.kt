@@ -35,7 +35,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "profile.jpg")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "profile.jpg")
 
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
 

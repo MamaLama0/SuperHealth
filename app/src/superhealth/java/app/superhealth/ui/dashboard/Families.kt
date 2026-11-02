@@ -544,9 +544,10 @@ internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: Na
         c == DashCard.MEDITATION -> WMeditation(size, i, m) { openSection("MEDITATION", tab) }
         c == DashCard.STRETCH -> WEtirements(size, i, m) { openSection("STRETCH", tab) }
         c == DashCard.LEAGUE -> WClassement(size, i, m, refresh) { nav.go("league") }
+        c == DashCard.QUESTS -> WQuests(size, i, m, refresh) { nav.go("quests") }
         c == DashCard.PROGRESSION -> WProgression(size, i, m, refresh) { nav.go("progress") }
-        c == DashCard.FRIENDS -> WFriends(size, i, m, { nav.go("friends") }, { nav.go("friends/add") })
-        c == DashCard.STREAKS -> WStreaksHero(size, m, refresh, { nav.go("progress") }, { nav.go("league") }, { nav.go("friends/add") })
+        c == DashCard.FRIENDS -> WFriends(size, i, m) { nav.go("friends") }
+        c == DashCard.STREAKS -> WStreaksHero(size, m, refresh) { nav.go("progress") }
         else -> return false
     }
     return true
@@ -1322,39 +1323,28 @@ private fun WEtirements(sz: CardSize, icon: ImageVector, m: Modifier, onClick: (
 private fun WClassement(sz: CardSize, icon: ImageVector, m: Modifier, refresh: Int, onClick: () -> Unit) {
     val ctx = LocalContext.current
     val mine by app.superhealth.league.League.mine.collectAsState()
-    val progress by app.superhealth.league.ProgressRepository.current.collectAsState()
     val st by app.superhealth.league.League.state.collectAsState()
     androidx.compose.runtime.LaunchedEffect(refresh) { runCatching { app.superhealth.league.League.compute(ctx) } }
-    val summary = progress?.summary ?: mine?.progress
     val hue = DashCard.LEAGUE.hue()
-    val entries = dashboardXpEntries(summary, st.friends, System.currentTimeMillis() / 1000, tr("Vous"))
+    val entries = dashboardScoreEntries(mine, st.friends, System.currentTimeMillis() / 1000, tr("Vous"))
     val me = entries.firstOrNull { it.me }
-    val rankText = when {
-        me == null -> tr("Chargement de la progression…")
-        entries.size == 1 -> tr("Ajoutez des amis")
-        else -> trf("Place %1\$s sur %2\$s", dashboardXpRank(entries, me), entries.size)
+    val score = me?.score?.toString() ?: "—"
+    val rank = when {
+        mine == null -> tr("Score en préparation")
+        me == null -> tr("3 domaines requis")
+        entries.size == 1 -> tr("En solo")
+        else -> trf("%1\$s sur %2\$s", dashboardRank(entries, me), entries.size)
     }
-    val shown = summary?.weekXp?.toString() ?: "—"
-    val index = mine?.takeIf { it.ready }?.total?.toString() ?: "—"
-    when (sz) {
-        CardSize.S -> RingTile(m, onClick, hue, null, ring = false) { RingCenter(icon, hue, shown, tr("XP semaine")) }
-        CardSize.M -> MediumShell(m, onClick, icon, tr("Classement"), hue, value = shown, unit = tr("XP"), caption = rankText) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-                Tq(trf("Indice santé : %1\$s", index), 12.sp, sub)
-                Tq(tr("XP de la semaine"), 11.sp, sub, modifier = Modifier.padding(top = 5.dp))
-            }
-        }
-        CardSize.W -> Wide(m, onClick, icon, hue, tr("Classement XP"), { V(shown, tr("XP"), 20.sp) }, 130.dp) {
-            Column(horizontalAlignment = Alignment.End) {
-                Tq(rankText, 12.sp, sub)
-                Tq(trf("Santé : %1\$s", index), 11.sp, sub)
-            }
-        }
-        CardSize.L -> Large(m, onClick, icon, tr("Classement"), hue, rankText, sub) {
-            V(shown, tr("XP cette semaine"), 30.sp)
-            HeroXpRanking(entries, hue)
-            Spacer(Modifier.height(10.dp))
-            Tq(trf("Indice global de santé : %1\$s / 1000", index), 12.sp, sub)
+    val ahead = me?.let { self -> entries.lastOrNull { it.score > self.score } }
+    val detail = ahead?.let { trf("%1\$s points pour rejoindre %2\$s", it.score - (me?.score ?: 0), it.name) }
+        ?: if (entries.size > 1) tr("Vous êtes en tête") else tr("Comparez avec vos amis")
+    if (sz == CardSize.W) SocialStrip(m, icon, tr("Classement"), rank, score, hue, onClick)
+    else SocialCard(sz, m, icon, tr("Classement"), hue, onClick) {
+        SocialValue(score, if (me != null) "/ 1000 · $rank" else rank, hue, sz == CardSize.S)
+        if (sz != CardSize.S && me != null) {
+            SocialBar(me.score / 1000f, hue)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

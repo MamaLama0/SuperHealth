@@ -1,0 +1,86 @@
+{
+  "scope": "Two separate Android QA installations with synthetic data; personal app data untouched.",
+  "appTests": {
+    "tests": 222,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "serverHttpTests": {
+    "tests": 9,
+    "failures": 0
+  },
+  "runtime": {
+    "flame": "Native tips and embers run continuously at 0.4/0.25, half the original speeds and one-third slower than the previous 2.9 build; exit transitions remain disabled.",
+    "setEditing": "Cancel preserves original 40 kg/done; save persists 42.5 kg with done=true and 10 reps.",
+    "nutritionGuide": "Independent Monday 2500 and Tuesday 2100 kcal remain distinct when revisiting Monday.",
+    "friendCodes": "Default and custom HTTPS QA relays; encrypted lookup and reciprocal confirmation; title plus 3 equipped badges received by friend.",
+    "stretching": "Generated quadriceps selection, same-type replacement, saved routine roundtrip, custom exercise with instructions persisted; in-player replacement resets to chosen per-side duration; after-workout action opens editable POST selection. Generated focus groups and muscle chips remain selected when opening the POST editor.",
+    "meditation": "Three curated written pauses and player verified with optional ambience and no spoken voice.",
+    "settings": "Compact search/sparkles header action opens local settings search; contextual coach action is also in header; large search/coach rows removed.",
+    "notifications": "Heart status icon visible for QA workout notification.",
+    "weeklyQuests": {
+      "onboarding": "First opening asks Nutrition, Strength, Running and Everyday preferences; saved across restarts.",
+      "personalization": "14-day diary, workout adherence, perceived-effort feedback, runs, steps and pauses; conservative plateau detection with comparable workout history.",
+      "primaryAndOptionalSide": "Main + different-focus side on one QA installation; nutrition-only main with no side on the other. All four card sizes designed for optional secondary.",
+      "reward": "Main completed from a synthetic 5-minute pause; UI claimed 80 XP; duplicate claim after restart leaves exactly 80 XP and one completed quest.",
+      "tests": "Focus filtering, weakness selection, optional side quests, variety, plateau, missing health data, Sunday feasibility, frozen weekly plan, Monday renewal, persisted once-only claims.",
+      "widgets": "Small, medium, strip and large layouts visually verified on device; primary retained, secondary conditional and compact."
+    },
+    "socialProfile": "Settings avatar opens Settings; Profile and social lives inside Settings → Social. Social, badges, progression, leaderboard, invitation and server screens use separated cards; fixed-height milestones replaced by adaptive rows.",
+    "liveDefaultServer": {
+      "health": "HTTPS 200, protocol 2, using app HTTP headers",
+      "friendCode": "Created on default server, looked up by peer, reciprocal confirmation collected",
+      "sync": [
+        {
+          "defaultServer": true,
+          "friends": 1,
+          "syncError": null,
+          "receivedScore": 875,
+          "encryptedMailboxFetched": true,
+          "profileDecorMatchesPeer": true
+        },
+        {
+          "defaultServer": true,
+          "friends": 1,
+          "syncError": null,
+          "receivedScore": 875,
+          "encryptedMailboxFetched": true,
+          "profileDecorMatchesPeer": true
+        }
+      ],
+      "privacy": "Synthetic QA data only; endpoint and device identities omitted."
+    }
+  },
+  "packaging": {
+    "moduleHashes": "All archive sizes and SHA256 match generated index. Meditation archive contains no voice directory.",
+    "yaml": "5 Compose YAML files parsed.",
+    "privateDefault": "Absent from all publishable source files; injected by ignored local config/CI secret.",
+    "apk": {
+      "version": "2.9",
+      "versionCode": 32,
+      "optimized": true,
+      "sha256": "0044d1a4a0e0430f17c367e79cd5ad26cb8a7437465435e7ae5a72bfb988ecd2",
+      "bytes": 56504766,
+      "signatureMatchesPrevious": true
+    },
+    "standaloneCompose": "Compose uses the public GHCR image from server/homeserver; no embedded source or bootstrap code remains.",
+    "containerImage": {
+      "image": "ghcr.io/mamalama0/superhealth-server:server-homeserver",
+      "branch": "server/homeserver",
+      "revision": "ea873546f0d384663a55db5027ab8af5666aecfc",
+      "digest": "sha256:8fd8391bbc736a234095840229ca9322d7df21cc8cbb93dab643218524f1bf10",
+      "architectures": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "anonymousPull": true,
+      "workflow": "https://github.com/MamaLama0/SuperHealth/actions/runs/41531585854",
+      "containerSmokeTest": "passed in GitHub Actions"
+    }
+  },
+  "limits": [
+    "The user deployed the NAS service; public HTTPS app operations verified. NAS administration and filesystem ACLs not inspected remotely.",
+    "Live AI provider was not called for these UI checks."
+  ]
+}

@@ -26,13 +26,15 @@ object Stretch {
         val recup: String? = null, val like: String? = null, val backup: String? = null,
         /** Durée de référence en minutes (par côté pour un exercice unilatéral). */
         val min: Int = 1, val thumb: Boolean = false,
+        val secondsPerSide: Int? = null,
         val fr: List<String> = emptyList(), val frFeel: String? = null,
         val en: List<String> = emptyList(), val enFeel: String? = null,
     ) {
         val steps get() = if (app.superhealth.ui.Lang.english) en else fr
         val feel get() = if (app.superhealth.ui.Lang.english) enFeel else frFeel
         /** Temps total en secondes, les deux côtés compris. */
-        val seconds get() = min * 60 * if (uni) 2 else 1
+        val sideSeconds get() = (secondsPerSide ?: min * 60).coerceIn(15, 600)
+        val seconds get() = sideSeconds * if (uni) 2 else 1
     }
 
     @Serializable data class Catalog(val video: String = "", val poster: String = "", val exercises: List<Ex> = emptyList())
@@ -56,7 +58,9 @@ object Stretch {
         BARBELL("Barbell", "Barre"), PLATE("Plate", "Disque"),
     }
 
-    data class Routine(val name: String, val kind: Kind, val items: List<Ex>) {
+    @Serializable data class Routine(val name: String, val kind: Kind, val items: List<Ex>, val id: String? = null,
+        val focusGroups: Set<Group> = emptySet(), val focusZones: Set<String> = emptySet(),
+        val plannedMinutes: Int? = null, val defaultSeconds: Int? = null) {
         val seconds get() = items.sumOf { it.seconds }
     }
 
@@ -71,7 +75,40 @@ object Stretch {
     }.getOrDefault(Catalog()).also { if (it.exercises.isNotEmpty()) cache = it }
     fun invalidate() { cache = null; mobilityCache = null }
 
-    fun exercise(id: String) = catalog().exercises.firstOrNull { it.id == id }
+    val customExercises = MutableStateFlow<List<Ex>>(emptyList())
+    val saved = MutableStateFlow<List<Routine>>(emptyList())
+    val draft = MutableStateFlow<Routine?>(null)
+    fun exercises() = catalog().exercises + customExercises.value
+    fun exercise(id: String) = exercises().firstOrNull { it.id == id }
+    fun prepare(routine: Routine? = null) { draft.value = routine ?: Routine("", Kind.DAILY, emptyList()) }
+    fun save(ctx: Context, routine: Routine): Routine {
+        require(routine.name.isNotBlank() && routine.items.isNotEmpty() && routine.items.size <= 64)
+        val next = routine.copy(id = routine.id ?: java.util.UUID.randomUUID().toString(), name = routine.name.trim().take(80))
+        saved.value = (saved.value.filterNot { it.id == next.id } + next).takeLast(64)
+        writePersonal(ctx)
+        return next
+    }
+    fun removeSaved(ctx: Context, id: String) { saved.value = saved.value.filterNot { it.id == id }; writePersonal(ctx) }
+    fun saveExercise(ctx: Context, ex: Ex) {
+        require(ex.id.startsWith("custom-") && ex.name.isNotBlank() && ex.zones.isNotEmpty())
+        customExercises.value = (customExercises.value.filterNot { it.id == ex.id } + ex).takeLast(200)
+        writePersonal(ctx)
+    }
+    @Serializable private data class Personal(val routines: List<Routine> = emptyList(), val exercises: List<Ex> = emptyList())
+    private fun writePersonal(ctx: Context) {
+        val atomic = android.util.AtomicFile(File(ctx.filesDir, "stretch_personal.json"))
+        val stream = atomic.startWrite()
+        try { stream.write(json.encodeToString(Personal.serializer(), Personal(saved.value, customExercises.value)).toByteArray()); atomic.finishWrite(stream) }
+        catch (e: Exception) { atomic.failWrite(stream); throw e }
+    }
+    fun alternatives(ex: Ex, pool: List<Ex>, gears: Set<String>, sameType: Boolean = true): List<Ex> = pool.filter { e ->
+        e.id != ex.id && e.gears.all { it in gears } && (!sameType || e.type == ex.type) && e.zones.any { it in ex.zones }
+    }.sortedWith(compareByDescending<Ex> { e -> e.zones.count { it in ex.zones } }.thenBy { it.name })
+    fun replace(routine: Routine, index: Int, replacement: Ex): Routine {
+        require(index in routine.items.indices)
+        val original = routine.items[index]
+        return routine.copy(items = routine.items.toMutableList().also { it[index] = replacement.copy(secondsPerSide = original.sideSeconds) })
+    }
     fun videoUrl(id: String) = catalog().video.replace("{id}", id)
     fun posterUrl(id: String) = catalog().poster.replace("{id}", id)
     fun thumb(id: String): File? = Modules.file(Modules.STRETCH, "thumbs/$id.jpg")
@@ -84,28 +121,33 @@ object Stretch {
      * Choix glouton : à chaque tour, l'exercice qui couvre le mieux les zones les moins travaillées, la zone principale (première) comptant
      * double. Le tirage du jour départage (une routine différente chaque jour, identique dans la journée).
      */
-    fun routine(kind: Kind, groups: Set<Group>, minutes: Int, gears: Set<String>, day: Long = LocalDate.now().toEpochDay()): Routine {
-        val pool = catalog().exercises.filter { e ->
+    fun routine(kind: Kind, groups: Set<Group>, minutes: Int, gears: Set<String>, day: Long = LocalDate.now().toEpochDay(), zones: Set<String> = emptySet(), favorites: Set<String> = emptySet(), secondsPerSide: Int? = null, availableExercises: List<Ex> = exercises()): Routine {
+        val pool = availableExercises.filter { e ->
             when (kind) { Kind.DAILY -> e.daily; Kind.PRE -> e.pre; Kind.POST -> e.post } &&
-                e.gears.all { it in gears } && (e.type != "Massage" || e.gears.isNotEmpty())
+                e.gears.all { it in gears } && (e.type != "Massage" || e.gears.isNotEmpty() || e.id.startsWith("custom-"))
         }
-        val target = groups.flatMap { it.zones }.toSet().ifEmpty { Group.entries.flatMap { it.zones }.toSet() }
+        val target = zones.ifEmpty { groups.flatMap { it.zones }.toSet() }.ifEmpty { Group.entries.flatMap { it.zones }.toSet() }
         val cover = HashMap<String, Int>()
         val rnd = Random(day * 31 + kind.ordinal + groups.hashCode())
-        val left = pool.filter { e -> e.zones.any { it in target } }.toMutableList()
+        val left = pool.filter { e -> e.zones.any { it in target } }.map { if (secondsPerSide == null) it else it.copy(secondsPerSide = secondsPerSide.coerceIn(15, 600)) }.toMutableList()
         val picked = ArrayList<Ex>()
-        var budget = minutes * 60
+        var budget = minutes.coerceIn(1, 60) * 60
         while (left.isNotEmpty()) {
             val best = left.maxByOrNull { e ->
-                e.zones.withIndex().sumOf { (i, z) -> if (z in target) (if (i == 0) 2.0 else 1.0) / (1 + (cover[z] ?: 0)) else 0.0 } + rnd.nextDouble() * 0.4
+                e.zones.withIndex().sumOf { (i, z) -> if (z in target) (if (i == 0) 2.0 else 1.0) / (1 + (cover[z] ?: 0)) else 0.0 } + (if (e.id in favorites) 0.3 else 0.0) + rnd.nextDouble() * 0.4
             }!!
             left.remove(best)
-            if (best.seconds > budget) { if (budget < 60) break else continue }
-            picked += best
-            budget -= best.seconds
+            val item = if (best.seconds <= budget) best else {
+                val perSide = budget / if (best.uni) 2 else 1
+                if (perSide < 15) break
+                best.copy(secondsPerSide = perSide.coerceAtMost(best.sideSeconds))
+            }
+            picked += item
+            budget -= item.seconds
             best.zones.forEach { cover[it] = (cover[it] ?: 0) + 1 }
         }
-        return Routine(if (groups.size == 1) groups.first().label else kind.label, kind, ordered(picked, kind))
+        return Routine(if (groups.size == 1) groups.first().label else kind.label, kind, ordered(picked, kind),
+            focusGroups = groups, focusZones = zones, plannedMinutes = minutes.coerceIn(1, 60), defaultSeconds = secondsPerSide)
     }
 
     /** Ordre de passage : le moins de changements de position possible ; avant séance on finit debout, après séance au sol. */
@@ -204,6 +246,8 @@ object Stretch {
     private fun file(ctx: Context) = File(ctx.filesDir, "stretch_log.json")
 
     fun load(ctx: Context) {
+        val personal = runCatching { json.decodeFromString(Personal.serializer(), android.util.AtomicFile(File(ctx.filesDir, "stretch_personal.json")).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(Personal())
+        saved.value = personal.routines.takeLast(64); customExercises.value = personal.exercises.takeLast(200)
         log.value = runCatching { json.decodeFromString(ListSerializer(Done.serializer()), file(ctx).readText()) }.getOrDefault(emptyList())
         results.value = runCatching { json.decodeFromString(ListSerializer(MResult.serializer()), resultsFile(ctx).readText()) }.getOrDefault(emptyList())
     }

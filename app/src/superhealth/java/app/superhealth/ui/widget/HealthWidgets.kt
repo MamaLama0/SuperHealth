@@ -391,21 +391,31 @@ class MindWidget : GlanceAppWidget() {
         val monday = LocalDate.now().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).toEpochDay()
         val med = app.superhealth.meditation.Meditation.minutes(monday)
         val st = app.superhealth.stretch.Stretch.minutes(monday)
-        val score = if (app.superhealth.league.League.available()) runCatching { app.superhealth.league.League.compute(context).total }.getOrNull() else null
+        val score = if (app.superhealth.league.League.available()) runCatching { app.superhealth.league.League.compute(context).takeIf { it.ready }?.total }.getOrNull() else null
         val hue = androidx.compose.ui.graphics.Color(0xFF7B8CDE)
         val ring = WK.ring(((med + st) / 70f).coerceIn(0f, 1f), hue, WK.px(context, 72.dp), 0.12f)
         provideContent {
             val size = WK.size(LocalSize.current)
-            WidgetCard(WK.open(context, "activities"), hue, padding = if (size == WK.Size.SMALL) 6.dp else 12.dp,
+            val compact = size == WK.Size.SMALL || size == WK.Size.STRIP
+            WidgetCard(WK.open(context, "activities"), hue, padding = if (compact) 6.dp else 12.dp,
                 horizontal = if (size == WK.Size.SMALL) Alignment.CenterHorizontally else Alignment.Start) {
-                if (size == WK.Size.SMALL) Disc(ring, R.drawable.ic_w_mind, hue, 44.dp)
-                else Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Disc(ring, R.drawable.ic_w_mind, hue, 44.dp)
-                    Spacer(GlanceModifier.width(10.dp))
-                    Column(GlanceModifier.defaultWeight()) {
-                        WidgetValue("${med + st}", tr("min"), hue, 20)
-                        Text(listOfNotNull(trf("Méditation %1\$s", med), trf("Étirements %1\$s", st)).joinToString(" · "), style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
-                        if (score != null) Text(trf("Classement %1\$s", score), style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
+                if (size == WK.Size.SMALL) {
+                    Disc(ring, R.drawable.ic_w_mind, hue, 24.dp)
+                    WidgetValue((med + st).toString(), tr("min"), hue, 13)
+                } else {
+                    if (size == WK.Size.MEDIUM) WidgetHeader(R.drawable.ic_w_mind, hue, tr("Cette semaine"))
+                    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        if (size != WK.Size.MEDIUM) {
+                            Disc(ring, R.drawable.ic_w_mind, hue, 40.dp)
+                            Spacer(GlanceModifier.width(8.dp))
+                        }
+                        Column(GlanceModifier.defaultWeight()) {
+                            WidgetValue((med + st).toString(), tr("min"), hue, 20)
+                            if (!compact) Text(trf("Méditation %1\$s", med) + " · " + trf("Étirements %1\$s", st),
+                                style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 2)
+                            if (score != null) Text(trf("Score %1\$s / 1000", score),
+                                style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1)
+                        }
                     }
                 }
             }

@@ -405,11 +405,11 @@ fun PillButton(text: String, modifier: Modifier = Modifier, strong: Boolean = tr
     val fg = if (strong) Mf.colors.onStrong else Mf.colors.accent.onContainer()
     Row(
         modifier.heightIn(min = 48.dp).clip(CircleShape).background(bg).graphicsLayer { alpha = if (enabled) 1f else 0.4f }
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
         icon?.let { Icon(it, null, Modifier.size(19.dp), tint = fg); Spacer(Modifier.width(7.dp)) }
-        Text(tr(text), style = MaterialTheme.typography.labelLarge, fontSize = 15.sp, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(tr(text), style = MaterialTheme.typography.labelLarge, fontSize = 15.sp, color = fg, maxLines = 2, textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
     }
 }
 

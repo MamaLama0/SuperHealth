@@ -56,6 +56,7 @@ object CoachTools {
         "get_food_log" to "Journal", "get_nutrition_targets" to "Cibles", "get_workouts" to "Séances", "get_exercise_history" to "Exercice",
         "get_programs" to "Programmes", "search_exercises" to "Exercices", "get_health" to "Mesures", "get_sleep" to "Sommeil",
         "get_body" to "Poids", "get_activities" to "Activités",
+        "find_setting" to "Réglages", "get_stretch_plan" to "Séance d'étirements",
         "get_mind_mobility" to "Méditation et étirements", "get_stretch_catalog" to "Étirements", "get_league" to "Classement",
     )
     fun label(tool: String) = labels[tool]
@@ -66,7 +67,7 @@ object CoachTools {
         "expenditure" to "expenditure", "strategy" to "strategy", "activities" to "activities", "training_insights" to "t/insights",
         "form" to "form", "journal" to "journal", "body" to "body", "performance" to "h/performance", "history" to "history",
         "leaderboard" to "league",
-    )
+    ) + SettingsHelp.destinations.associate { it.key to it.route }
 
     // ---- Définitions envoyées au modèle -----------------------------------------------------------------
 
@@ -90,6 +91,8 @@ object CoachTools {
         Metric.BODY_ENERGY, Metric.STRESS, Metric.RECOVERY, Metric.EFFORT, Metric.CARDIO_WEEK, Metric.HYDRATION, Metric.TEMPERATURE)
 
     fun definitions(): JsonArray = buildJsonArray {
+        add(fn("find_setting", "Find a setting by natural-language query. Returns allowed show_screen keys and page labels. Use it to help users find options, then offer show_screen; never claim to have changed a setting.",
+            props("query" to p("string", "What the user wants to configure, in any language")), listOf("query")))
         val date = "Date YYYY-MM-DD"
         add(fn("get_food_log", "Food diary between two dates (max 31 days): every item with grams, kcal, protein, fat, carbs, plus daily vitamins, minerals, fiber, sugar, sodium, caffeine and alcohol totals.",
             props("from" to p("string", date), "to" to p("string", date)), listOf("from", "to")))
@@ -145,18 +148,22 @@ object CoachTools {
         if (app.superhealth.meditation.Meditation.available() || app.superhealth.stretch.Stretch.available())
             add(fn("get_mind_mobility", "Meditation and stretching sessions of the last days: date, minutes, kind.", props("days" to p("integer", "Number of days back")), listOf("days")))
         if (app.superhealth.stretch.Stretch.available()) {
+            add(fn("get_stretch_plan", "Current editable stretching plan: exact exercise ids, types, durations per side and equipment. Use it when the user asks to modify their selection."))
             add(fn("get_stretch_catalog", "Stretching exercises available for an area: ids, names, areas, equipment, moment (pre/post/daily).",
                 props("group" to p("string", "Body area", app.superhealth.stretch.Stretch.Group.entries.map { it.name }), "limit" to p("integer", "Max results, default 20"))))
-            add(fn("propose_stretch_routine", "Propose a stretching routine with a 'Start' button. Give either exercise_ids (from get_stretch_catalog), or moment, areas and minutes and the app composes it.",
-                props("moment" to p("string", "When", app.superhealth.stretch.Stretch.Kind.entries.map { it.name }), "minutes" to p("integer", "5 to 30"),
+            add(fn("propose_stretch_routine", "Propose an editable stretching routine. The user reviews, swaps exercises and changes durations before starting. Give either exercise_ids (from get_stretch_catalog), or moment, areas and minutes and the app composes it.",
+                props("moment" to p("string", "When", app.superhealth.stretch.Stretch.Kind.entries.map { it.name }), "minutes" to p("integer", "1 to 30"),
+                    "seconds_per_side" to p("integer", "Duration per exercise per side, 15 to 600 seconds"),
+                    "replaces_routine_id" to p("string", "Existing saved routine id only when explicitly editing it"),
+                    "zones" to buildJsonObject { put("type", "array"); putJsonObject("items") { put("type", "string"); putJsonArray("enum") { Stretch.Group.entries.flatMap { it.zones }.distinct().forEach { add(JsonPrimitive(it)) } } } },
                     "areas" to buildJsonObject { put("type", "array"); putJsonObject("items") { put("type", "string"); putJsonArray("enum") { app.superhealth.stretch.Stretch.Group.entries.forEach { add(JsonPrimitive(it.name)) } } } },
                     "exercise_ids" to buildJsonObject { put("type", "array"); putJsonObject("items") { put("type", "string") } },
                     "title" to p("string", "Short title in the user's language")), listOf("moment")))
         }
         if (app.superhealth.meditation.Meditation.available())
-            add(fn("propose_meditation", "Propose a guided meditation written by you for today, with a 'Start' button. Lines are shown and read aloud.",
+            add(fn("propose_meditation", "Propose a guided meditation written by you for today, with a 'Start' button. Lines are displayed as text only, with no synthesized voice. Use at most four prompts and long silent intervals.",
                 props("title" to p("string", "Short title in the user's language"), "minutes" to p("integer", "3 to 30"),
-                    "script" to p("string", "One line per sentence, format mm:ss | sentence, in the user's language, first at 00:05, spaced 30 to 90 s, last at least 30 s before the end")), listOf("minutes", "script")))
+                    "script" to p("string", "One line per sentence, format mm:ss | sentence, in the user's language, first at 00:05, at most four prompts, spaced at least 120 seconds, last at least 30 seconds before the end")), listOf("minutes", "script")))
         if (app.superhealth.league.League.available())
             add(fn("get_league", "The user's weekly leaderboard score by area and friends' scores (first names are shared by the friends themselves)."))
         add(fn("show_screen", "Add a button under your answer that opens a screen of the app, when looking at it helps.",
@@ -168,8 +175,8 @@ object CoachTools {
         "(exact meals, micronutrients, every set, an exercise's history, nights, programs). To build or change a training program, " +
         "first read get_programs and search_exercises (available_only true), then call propose_program; to log food the user describes, call " +
         "propose_food_log; when a screen of the app shows what you talk about, call show_screen. The user confirms proposals with a button: " +
-        "never say something was created or logged, say you propose it. When the user has the plugins, use propose_stretch_routine and propose_meditation " +
-        "instead of describing a session in text. Keep answers short."
+        "never say something was created or logged, say you propose it. When the user has the plugins, use propose_stretch_routine for an editable draft and propose_meditation for short written prompts. Use find_setting and show_screen for configuration help. Never start a session or change settings without the user's button press. " +
+        "Prefer these actions to an unstructured session description. Keep answers short."
 
     // ---- Exécution -------------------------------------------------------------------------------
 
@@ -190,6 +197,12 @@ object CoachTools {
     private suspend fun exec(ctx: Context, name: String, a: JsonObject): Outcome {
         val today = LocalDate.now()
         return when (name) {
+            "find_setting" -> Outcome(SettingsHelp.search(a.str("query").orEmpty()).take(8).joinToString("\n") { "${it.key} | ${it.label} | ${it.keywords}" }.ifBlank { "No matching setting. Ask for a more specific query." })
+            "get_stretch_plan" -> {
+                if (!Coach.shares(Coach.Share.ACTIVITIES)) return Outcome(HIDDEN)
+                val r = Stretch.draft.value ?: return Outcome("No stretching plan in preparation.")
+                Outcome("${r.name} | id=${r.id ?: "unsaved"} | ${r.kind}\n" + r.items.joinToString("\n") { "${it.id} | ${it.name} | ${it.type} | ${it.sideSeconds}s per side | unilateral=${it.uni} | ${it.gears.joinToString()}" })
+            }
             "get_food_log" -> {
                 if (!Coach.shares(Coach.Share.FOOD)) return Outcome(HIDDEN)
                 val to = date(a.str("to"), today); val from = date(a.str("from"), to.minusDays(6)).let { if (it.isBefore(to.minusDays(30))) to.minusDays(30) else it }
@@ -334,6 +347,7 @@ object CoachTools {
                     "${n(kcal)} kcal · P ${n(items.sumOf { it.dbl("protein") ?: 0.0 })} · L ${n(items.sumOf { it.dbl("fat") ?: 0.0 })} · G ${n(items.sumOf { it.dbl("carbs") ?: 0.0 })}", a.toString()))
             }
             "get_mind_mobility" -> {
+                if (!Coach.shares(Coach.Share.ACTIVITIES)) return Outcome(HIDDEN)
                 val days = (a.int("days") ?: 14).coerceIn(1, 180)
                 val from = LocalDate.now().toEpochDay() - days
                 val lines = app.superhealth.meditation.Meditation.log.value.filter { it.day >= from }.map { "${LocalDate.ofEpochDay(it.day)} meditation ${it.kind} ${it.minutes} min" } +
@@ -342,12 +356,12 @@ object CoachTools {
             }
             "get_stretch_catalog" -> {
                 val g = app.superhealth.stretch.Stretch.Group.entries.firstOrNull { it.name == a.str("group") }
-                val list = app.superhealth.stretch.Stretch.catalog().exercises.filter { e -> g == null || e.zones.any { it in g.zones } }.take((a.int("limit") ?: 20).coerceIn(1, 60))
-                Outcome(list.joinToString("\n") { e -> "${e.id} | ${e.name} | ${e.zones.joinToString("/")} | gear: ${e.gears.joinToString("/").ifEmpty { "none" }} | ${listOfNotNull("pre".takeIf { _ -> e.pre }, "post".takeIf { _ -> e.post }, "daily".takeIf { _ -> e.daily }).joinToString("/")} | ${e.seconds / 60} min" })
+                val list = app.superhealth.stretch.Stretch.exercises().filter { !it.id.startsWith("custom-") || Coach.shares(Coach.Share.ACTIVITIES) }.filter { e -> g == null || e.zones.any { it in g.zones } }.take((a.int("limit") ?: 20).coerceIn(1, 60))
+                Outcome(list.joinToString("\n") { e -> "${e.id} | ${e.name} | ${e.zones.joinToString("/")} | gear: ${e.gears.joinToString("/").ifEmpty { "none" }} | ${listOfNotNull("pre".takeIf { _ -> e.pre }, "post".takeIf { _ -> e.post }, "daily".takeIf { _ -> e.daily }).joinToString("/")} | type=${e.type} | ${e.sideSeconds}s per side | unilateral=${e.uni}" })
             }
             "propose_stretch_routine" -> {
                 val r = stretchRoutine(a) ?: return Outcome("Error: no exercise matches. Use get_stretch_catalog.")
-                Outcome("Proposal shown to the user with a 'Start' button.", Action("stretch", a.str("title")?.take(40) ?: r.name,
+                Outcome("Editable proposal shown to the user; nothing has started.", Action("stretch", a.str("title")?.take(40) ?: r.name,
                     app.superhealth.ui.trf("%1\$s exercices · %2\$s min", r.items.size, r.seconds / 60), a.toString()))
             }
             "propose_meditation" -> {
@@ -375,11 +389,19 @@ object CoachTools {
     /** Routine proposée par le coach : ses exercices s'il les a nommés, sinon composée par l'app. */
     private fun stretchRoutine(a: JsonObject): Stretch.Routine? {
         val kind = Stretch.Kind.entries.firstOrNull { it.name == a.str("moment") } ?: Stretch.Kind.DAILY
-        val ids = (a["exercise_ids"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
+        val ids = (a["exercise_ids"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty().take(64)
+        val seconds = a.int("seconds_per_side")?.coerceIn(15, 600)
+        val prefs = app.superhealth.SuperPrefs.settings.value
         val named = ids.mapNotNull { Stretch.exercise(it) }
-        if (named.isNotEmpty()) return Stretch.Routine(kind.label, kind, named)
+        if (ids.isNotEmpty()) {
+            if (named.size != ids.size || named.any { e -> e.gears.any { it !in prefs.stretchGears } }) return null
+            return Stretch.Routine(kind.label, kind, named.map { if (seconds == null) it else it.copy(secondsPerSide = seconds) })
+        }
         val areas = (a["areas"] as? JsonArray)?.mapNotNull { e -> Stretch.Group.entries.firstOrNull { it.name == (e as? JsonPrimitive)?.contentOrNull } }.orEmpty().toSet()
-        return Stretch.routine(kind, areas, (a.int("minutes") ?: 10).coerceIn(5, 30), app.superhealth.SuperPrefs.settings.value.stretchGears).takeIf { it.items.isNotEmpty() }
+        val allowedZones = Stretch.Group.entries.flatMap { it.zones }.toSet()
+        val zones = (a["zones"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf { zone -> zone in allowedZones } }.orEmpty().toSet()
+        return Stretch.routine(kind, areas, (a.int("minutes") ?: prefs.stretchRoutineMinutes).coerceIn(1, 30), prefs.stretchGears,
+            zones = zones, favorites = prefs.stretchFavorites, secondsPerSide = seconds ?: prefs.stretchSecondsPerSide).takeIf { it.items.isNotEmpty() }
     }
 
     // ---- Application d'une proposition (bouton de l'utilisateur) -----------------------------------------
@@ -424,8 +446,9 @@ object CoachTools {
             }
             "open" -> SCREENS[a.str("screen")]
             "stretch" -> stretchRoutine(a)?.let { r ->
-                app.superhealth.stretch.Stretch.current.value = r.copy(name = action.title)
-                "stretch/play"
+                val existingId = a.str("replaces_routine_id")?.takeIf { id -> Stretch.saved.value.any { it.id == id } }
+                Stretch.prepare(r.copy(name = action.title, id = existingId))
+                "stretch/edit"
             }
             "meditation" -> {
                 app.superhealth.meditation.Meditation.current.value = app.superhealth.meditation.Meditation.Play(action.title, (a.int("minutes") ?: 10).coerceIn(3, 30),

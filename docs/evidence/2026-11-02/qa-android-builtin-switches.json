@@ -1,5 +1,5 @@
 {
-  "device": "Pixel 8 Pro",
+  "device": "appareil Android A",
   "package": "app.superhealth.qa",
   "scope": "UI-only; no build, installation, seed or clear. Personal app untouched.",
   "baseline": {

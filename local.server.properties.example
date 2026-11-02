@@ -1,0 +1,4 @@
+# Copy to local.server.properties (ignored), or set CI secrets SUPERHEALTH_RELAY_URL / SUPERHEALTH_RELAY_KEY.
+url=
+# Optional, only when the custom relay requires a shared publication code.
+key=

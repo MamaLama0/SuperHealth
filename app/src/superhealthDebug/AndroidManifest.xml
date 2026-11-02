@@ -12,11 +12,16 @@
     <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
     <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
     <application>
+        <activity android:name="app.superhealth.debug.FlowPreviewActivity" android:exported="true" android:theme="@style/SuperHealth.Theme" />
+        <activity android:name="app.superhealth.debug.StreakPreviewActivity" android:exported="true" android:theme="@style/SuperHealth.Theme" />
         <activity android:name="app.superhealth.debug.RegressionProbeActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <!-- debug seulement : galerie des graphiques (adb shell am start -n app.superhealth/app.superhealth.debug.ChartGalleryActivity) -->
         <activity android:name="app.superhealth.debug.ChartGalleryActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <!-- debug seulement : 30 jours de données de démo (adb shell am start -n app.superhealth/app.superhealth.debug.DemoDataActivity) -->
+        <activity android:name="app.superhealth.debug.HomeWidgetPreviewActivity" android:launchMode="singleTask" android:exported="true" />
+        <activity android:name="app.superhealth.debug.MindWidgetPreviewActivity" android:exported="true" />
         <activity android:name="app.superhealth.debug.WidgetPreviewActivity" android:exported="true" />
+        <activity android:name="app.superhealth.debug.InterfaceLabActivity" android:exported="true" android:theme="@style/SuperHealth.Theme" />
         <activity android:name="app.superhealth.debug.DemoDataActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
     </application>
 </manifest>

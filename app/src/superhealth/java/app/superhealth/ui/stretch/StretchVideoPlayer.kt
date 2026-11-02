@@ -1,5 +1,7 @@
 package app.superhealth.ui.stretch
 
+import app.superhealth.ui.theme.Mf
+
 import android.content.Context
 import android.view.accessibility.AccessibilityManager
 import android.view.LayoutInflater
@@ -56,6 +58,12 @@ internal fun StretchVideo(
     onPlayingChange: ((Boolean) -> Unit)? = null,
     status: String? = null,
 ) {
+    if (id.startsWith("custom-")) {
+        Box(modifier.background(Mf.colors.card), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.AccessibilityNew, app.superhealth.ui.tr("Exercice personnel"), Modifier.size(72.dp), tint = Mf.colors.accent)
+        }
+        return
+    }
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val lifecycleState by owner.lifecycle.currentStateFlow.collectAsState()

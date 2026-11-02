@@ -234,6 +234,8 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
             composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
+            composable("widgets") { app.superhealth.ui.settings.HomeWidgetsScreen(nav) }
+            composable("settings/find") { app.superhealth.ui.settings.FindSettingScreen(nav) }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
             composable("backup") { app.superhealth.ui.settings.BackupScreen(vm, nav) }
@@ -249,10 +251,15 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("coach/settings") { app.superhealth.ui.coach.CoachSettingsScreen(nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }
+            composable("stretch/edit") { app.superhealth.ui.stretch.StretchEditorScreen(nav) }
+            composable("stretch/custom") { app.superhealth.ui.stretch.CustomStretchScreen(nav) }
             composable("stretch/play") { app.superhealth.ui.stretch.StretchPlayScreen(nav) }
             composable("stretch/all") { app.superhealth.ui.stretch.StretchAllScreen(nav) }
             composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
             composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
+            composable("social") { app.superhealth.ui.league.SocialProfileScreen(nav) }
+            composable("social/badges") { app.superhealth.ui.league.ProfileBadgesScreen(nav) }
+            composable("quests") { app.superhealth.ui.league.WeeklyQuestsScreen(nav) }
             composable("progress") { app.superhealth.ui.league.ProgressScreen(nav) }
             composable("league/settings") { app.superhealth.ui.league.LeagueSettingsScreen(nav) }
             composable("friends/add") { app.superhealth.ui.league.AddFriendScreen(nav) }
@@ -471,10 +478,12 @@ private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> U
                     app.superhealth.DashCard.Section.NUTRITION -> "Nutrition"
                     app.superhealth.DashCard.Section.TRAINING -> "Entraînement"
                     app.superhealth.DashCard.Section.HEALTH -> "Santé"
+                    app.superhealth.DashCard.Section.SOCIAL -> "Social"
                 }), when (section) {
                     app.superhealth.DashCard.Section.NUTRITION -> app.superhealth.ui.theme.Base.Green
                     app.superhealth.DashCard.Section.TRAINING -> app.superhealth.ui.theme.WorkoutBlue
                     app.superhealth.DashCard.Section.HEALTH -> app.superhealth.ui.theme.HealthHues.Heart
+                    app.superhealth.DashCard.Section.SOCIAL -> app.superhealth.ui.theme.HealthHues.Fitness
                 }, actions, onAction)
             }
             if (chosen.isEmpty()) Text(tr("Aucun raccourci : touchez l'icône de réglage pour en choisir."), style = MaterialTheme.typography.bodyMedium,

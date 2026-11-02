@@ -22,7 +22,7 @@ class WidgetPreviewActivity : Activity() {
             ?: DashCard.entries.map { it.name to default }
         DashPreview.cards = names.mapNotNull { (n, _) -> DashCard.entries.firstOrNull { it.name == n } }
         DashPreview.sizes = names.toMap()
-        startActivity(Intent(this, MainActivity::class.java))
+        startActivity(Intent(this, MainActivity::class.java).putExtra(MainActivity.EXTRA_ROUTE, "home"))
         finish()
     }
 }

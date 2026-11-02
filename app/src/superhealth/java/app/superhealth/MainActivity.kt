@@ -75,7 +75,11 @@ class MainActivity : ComponentActivity() {
     private fun receiveLeagueCard(i: Intent?) {
         val d = i?.data ?: return
         if (i.action != Intent.ACTION_VIEW || d.scheme != "superhealth" || d.host != "league") return
-        app.superhealth.league.League.receive(this, d.getQueryParameter("c").orEmpty())
+        if (d.getQueryParameter("code") != null) lifecycleScope.launch {
+            try { app.superhealth.league.InvitationCodes.receive(this@MainActivity, d.toString()) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { app.superhealth.league.League.incomingError.value = true }
+        } else app.superhealth.league.League.receive(this, d.getQueryParameter("c").orEmpty())
     }
 
     /** Raccourcis des widgets et de la notification de séance : l'activité existe déjà. */

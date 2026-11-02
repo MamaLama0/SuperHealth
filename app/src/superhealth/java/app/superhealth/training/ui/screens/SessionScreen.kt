@@ -49,6 +49,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Add
@@ -429,7 +431,7 @@ private fun StripItem(index: Int, ex: SessionExercise, e: Exercise?, selected: B
 
 // ----- Page d'un exercice -----
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun ExercisePage(
     vm: AppViewModel, settings: Settings, s: Session, index: Int, ex: SessionExercise, e: Exercise?, previous: List<SetLog>?, best: Double?,
@@ -437,8 +439,27 @@ private fun ExercisePage(
 ) {
     fun edit(f: (SessionExercise) -> SessionExercise) = vm.session { ss -> ss.copy(exercises = ss.exercises.toMutableList().also { it[index] = f(it[index]) }) }
     var more by remember { mutableStateOf(false) }
-    /** Séries validées rouvertes pour correction. */
-    val expanded = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    var editing by remember(ex.id) { mutableStateOf<SetLog?>(null) }
+    editing?.let { original ->
+        var draft by remember(original.id) { mutableStateOf(original) }
+        ModalBottomSheet(onDismissRequest = { editing = null }, containerColor = Mf.colors.background,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(bottom = 16.dp)) {
+                Text(tr("Corriger la série"), Modifier.padding(horizontal = 24.dp, vertical = 8.dp), style = MaterialTheme.typography.titleLarge)
+                Text(tr("La série reste validée. Enregistrez pour appliquer vos corrections."), Modifier.padding(horizontal = 24.dp, vertical = 8.dp), color = Mf.colors.textSecondary)
+                SetCard(settings, draft, tr("Série"), null, e?.usesWeight != false, current = false,
+                    onChange = { draft = it }, onToggle = {}, onPlates = onPlates, onNudge = {},
+                    onType = { draft = draft.copy(type = it) }, onDelete = {})
+                Row(Modifier.padding(horizontal = 24.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PillButton(tr("Annuler"), Modifier.weight(1f), strong = false) { editing = null }
+                    PillButton(tr("Enregistrer"), Modifier.weight(1f), enabled = (draft.reps ?: 0) > 0 && (e?.usesWeight == false || (draft.weight ?: -1.0) >= 0)) {
+                        edit { cur -> cur.copy(sets = cur.sets.map { if (it.id == original.id) draft.copy(done = true) else it }) }
+                        editing = null
+                    }
+                }
+            }
+        }
+    }
     val inSuperset = ex.supersetGroup != null
     val groupSize = if (inSuperset) s.exercises.count { it.supersetGroup == ex.supersetGroup } else 0
 
@@ -506,13 +527,13 @@ private fun ExercisePage(
         }
         indexed.forEach { (si, set) ->
             androidx.compose.runtime.key(set.id) {
-                val compact = set.done && set.id !in expanded
+                val compact = set.done
                 val tracked = if (si == firstTodo) Modifier.bringIntoViewRequester(bring).onSizeChanged { currentSize = it } else Modifier
                 Box(tracked.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 500f))) {
                     if (compact) DoneSetRow(settings, set, labels[si]!!, e?.usesWeight != false,
                         record = best != null && set.type != SetType.WARMUP && (set.weight ?: 0.0) > 0 && (set.reps ?: 0) > 0 &&
                             Strength.e1rm(set.weight!!, set.reps!!, set.rir, e?.upperBody == true, set.partialReps) > best * 1.001,
-                        onOpen = { expanded.add(set.id) }, onToggle = { onToggle(si) })
+                        onOpen = { editing = set }, onToggle = { onToggle(si) })
                     else SetCard(settings, set, labels[si]!!, prevByIndex[si], e?.usesWeight != false, current = si == firstTodo,
                         showTarget = set.target != null && set.target != ex.sets.getOrNull(si - 1)?.target,
                         onChange = { ns ->
@@ -520,7 +541,7 @@ private fun ExercisePage(
                             if (ns.weight != set.weight && ns.copy(weight = set.weight) == set) vm.setWeight(index, si, ns.weight)
                             else edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns }) }
                         },
-                        onToggle = { expanded.remove(set.id); onToggle(si) }, onPlates = onPlates, onNudge = { up -> vm.nudgeWeight(index, si, up) },
+                        onToggle = { onToggle(si) }, onPlates = onPlates, onNudge = { up -> vm.nudgeWeight(index, si, up) },
                         onType = { t -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = set.copy(type = t) }) } },
                         onDelete = { edit { it.copy(sets = it.sets.filterIndexed { j, _ -> j != si }) } })
                 }
@@ -697,7 +718,7 @@ private fun SetCard(
                     if (!warm) DropdownMenuItem({ Text(if (partials) tr("Retirer les partielles") else tr("Répétitions partielles")) }, onClick = {
                         menu = false; partials = !partials; if (!partials) onChange(set.copy(partialReps = 0))
                     })
-                    DropdownMenuItem({ Text(tr("Supprimer la série"), color = Danger) }, onClick = { menu = false; onDelete() })
+                    if (!set.done) DropdownMenuItem({ Text(tr("Supprimer la série"), color = Danger) }, onClick = { menu = false; onDelete() })
                 }
             }
             Spacer(Modifier.width(8.dp))
@@ -709,7 +730,7 @@ private fun SetCard(
             }
             if (!warm) RirField(set.rir, set.target?.rir, Modifier.weight(0.75f)) { onChange(set.copy(rir = it)) }
             val scale by animateFloatAsState(if (set.done) 1f else 0.92f, spring(dampingRatio = 0.45f), label = "check")
-            Box(Modifier.padding(start = 6.dp).size(44.dp).scale(scale).clip(CircleShape)
+            if (!set.done) Box(Modifier.padding(start = 6.dp).size(44.dp).scale(scale).clip(CircleShape)
                 .background(if (bold) Color.White else if (set.done) WorkoutBlue else if (current) WorkoutBlue.container(1.6f) else Mf.colors.chip).clickable(onClick = onToggle),
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Check, tr("Valider"), tint = if (set.done && !bold) Color.White else if (current) WorkoutBlue else Mf.colors.textTertiary, modifier = Modifier.size(24.dp))
@@ -775,7 +796,8 @@ private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeigh
                 Text(tr("Record"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
-        Box(Modifier.size(30.dp).clip(CircleShape).background(WorkoutBlue).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.Edit, tr("Corriger la série"), Modifier.padding(end = 10.dp).size(18.dp), tint = Mf.colors.textSecondary)
+        Box(Modifier.size(40.dp).clip(CircleShape).background(WorkoutBlue).clickable(onClick = onToggle), contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.Check, tr("Dévalider"), tint = Color.White, modifier = Modifier.size(18.dp))
         }
     }
@@ -791,13 +813,15 @@ private fun NudgeButton(t: String, onBold: Boolean = false, onClick: () -> Unit)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BigField(value: String, hint: String?, unit: String, modifier: Modifier, onLongPress: (() -> Unit)? = null, next: Boolean = false, onChange: (String) -> Unit) {
-    var text by remember(value) { mutableStateOf(value) }
+    var text by remember { mutableStateOf(value) }
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(value, focused) { if (!focused) text = value }
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Column(modifier.padding(horizontal = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(Mf.colors.background)
             .let { if (onLongPress != null) it.combinedClickable(onClick = {}, onLongClick = onLongPress) else it }, contentAlignment = Alignment.Center) {
             if (text.isEmpty() && hint != null) Text(hint, color = Mf.colors.textTertiary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-            BasicTextField(text, { text = it; onChange(it) }, Modifier.fillMaxWidth().padding(horizontal = 4.dp), singleLine = true,
+            BasicTextField(text, { text = it; onChange(it) }, Modifier.fillMaxWidth().padding(horizontal = 4.dp).onFocusChanged { focused = it.isFocused }, singleLine = true,
                 textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Mf.colors.text, textAlign = TextAlign.Center),
                 cursorBrush = SolidColor(Mf.colors.accent),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal,

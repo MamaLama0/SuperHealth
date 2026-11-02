@@ -290,10 +290,15 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
         // plugin Étirements : une routine sur les muscles qui viennent de travailler
         if (app.superhealth.stretch.Stretch.available()) app.superhealth.training.ui.components.PillButton(tr("S'étirer"),
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(16.dp), icon = Icons.Rounded.SelfImprovement) {
-            app.superhealth.ui.stretch.preset.value = app.superhealth.stretch.Stretch.groupsFor(w.exercises.flatMap { db?.exercise(it.exerciseId)?.muscleGroups.orEmpty() })
-            app.superhealth.SuperPrefs.update { s -> s.copy(activityCurrent = "STRETCH", activitySections = (s.activitySections.ifEmpty { listOf("STRENGTH") } + "STRETCH").distinct()) }
+            val muscles = w.exercises.filter { ex -> ex.sets.any { it.done && it.type != app.superhealth.training.domain.SetType.WARMUP } }
+                .flatMap { ex -> db?.exercise(ex.exerciseId)?.let { it.muscleGroups + it.secondaryMuscleGroups }.orEmpty() }
+            val prefs = app.superhealth.SuperPrefs.settings.value
+            val routine = app.superhealth.stretch.Stretch.routine(app.superhealth.stretch.Stretch.Kind.POST,
+                app.superhealth.stretch.Stretch.groupsFor(muscles), prefs.stretchRoutineMinutes, prefs.stretchGears,
+                favorites = prefs.stretchFavorites, secondsPerSide = prefs.stretchSecondsPerSide)
+            app.superhealth.stretch.Stretch.prepare(routine.copy(name = tr("Après ma séance")))
             onClose()
-            runCatching { app.superhealth.ui.openTabFrom(nav, "activities") }
+            nav.navigate("stretch/edit")
         }
         // Confettis de fin de séance, une seule fois
         var confetti by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }

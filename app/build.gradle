@@ -193,8 +193,8 @@ android {
             applicationId shAppId
             manifestPlaceholders += [shPebbleAuthority: shAppId == "app.superhealth" ? "com.getpebble.android.nopebble.superhealth.provider" : "${shAppId}.pebble.provider",
                 superhealthLabel: shAppId == "app.superhealth" ? "@string/app_name" : "SuperHealth QA"]
-            versionName "2.8"
-            versionCode 31
+            versionName "3.0"
+            versionCode 33
             // Navigation Compose, Room et Health Connect côté nutrition/musculation : Android 8.0 minimum (comme La Bouffe et La Salle)
             minSdk = 26
             // Interface en français et en anglais seulement : les ~70 langues de Gadgetbridge sont retirées (resources.arsc).
@@ -513,3 +513,32 @@ internal object AiGiftValues {
     }
 }
 tasks.named("preBuild") { dependsOn generateAiGift }
+
+// Optional distribution defaults. Values come from CI secrets or an ignored local file.
+def relayLocal = new Properties()
+def relayFile = rootProject.file("local.server.properties")
+if (relayFile.exists()) relayFile.withInputStream { relayLocal.load(it) }
+def relayValues = [url: (System.getenv("SUPERHEALTH_RELAY_URL") ?: relayLocal.getProperty("url", "")),
+                   key: (System.getenv("SUPERHEALTH_RELAY_KEY") ?: relayLocal.getProperty("key", ""))]
+def generateRelayDefaults = tasks.register("generateRelayDefaults") {
+    def out = file("build/generated/sources/aigift/app/superhealth/league/RelayDefaults.kt")
+    inputs.property("digest", relayValues.values().join("\n").digest("SHA-256"))
+    outputs.file(out)
+    doLast {
+        def rnd = new java.security.SecureRandom()
+        def enc = { String value ->
+            def pad = (0..<value.length()).collect { rnd.nextInt(0xffff) }
+            def data = (0..<value.length()).collect { ((int)value.charAt(it)) ^ pad[it] }
+            "decode(intArrayOf(${data.join(',')}), intArrayOf(${pad.join(',')}))"
+        }
+        out.parentFile.mkdirs()
+        out.text = """package app.superhealth.league
+internal object RelayDefaults {
+    val url: String get() = ${enc(relayValues.url)}
+    val key: String get() = ${enc(relayValues.key)}
+    private fun decode(a: IntArray, b: IntArray) = CharArray(a.size) { (a[it] xor b[it]).toChar() }.concatToString()
+}
+"""
+    }
+}
+tasks.named("preBuild") { dependsOn generateRelayDefaults }

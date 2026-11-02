@@ -20,8 +20,11 @@ import kotlinx.coroutines.launch
 fun LeagueSettingsScreen(nav: NavHostController) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
     val st by League.state.collectAsState(); val sh by SuperPrefs.settings.collectAsState()
-    val progress by ProgressRepository.current.collectAsState()
-    val selected = st.tracked ?: progress?.summary?.streaks?.map { it.track }?.toSet() ?: setOf("FOOD", "STRENGTH")
+    val training by app.superhealth.training.WorkoutApp.store.state.collectAsState()
+    val planTarget = training.programs.firstOrNull { it.id == training.settings.activeProgramId }?.leagueTarget()
+    val modules by app.superhealth.modules.Modules.installed.collectAsState()
+    val available = remember(sh.features, modules) { ProgressRepository.availableTracks(sh) }
+    val selected = st.tracked ?: available.map { it.name }.toSet()
     var healthRules by remember { mutableStateOf(false) }
     var confirmRotate by remember { mutableStateOf(false) }; var message by remember { mutableStateOf<String?>(null) }
     DetailScaffold(tr("Classement et progression"), onBack = { nav.popBackStack() }) {
@@ -33,14 +36,14 @@ fun LeagueSettingsScreen(nav: NavHostController) {
         SectionLabel(tr("Mes séries"))
         Text(tr("Chaque suivi a un objectif. La musculation suit les séances du programme ; les jours de repos restent libres."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         GroupCard {
-            Progression.Track.entries.forEachIndexed { i, t ->
+            available.forEachIndexed { i, t ->
                 if (i > 0) RowDivider()
                 SwitchRow(tr(t.label), trackingGoal(t), t.name in selected) { on ->
                     League.configure(ctx) { it.copy(tracked = if (on) selected + t.name else selected - t.name) }
                     scope.launch { ProgressRepository.compute(ctx) }
                 }
-                if (t == Progression.Track.STRENGTH && t.name in selected && app.superhealth.training.WorkoutApp.store.state.value.let { data -> data.programs.any { it.id == data.settings.activeProgramId && it.days.any { day -> !day.isRestAt(it.cycleIndex) } } }) {
-                    Text(trf("%1\$s séances prévues", progress?.summary?.streaks?.firstOrNull { it.track == t.name }?.target ?: 2), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                if (t == Progression.Track.STRENGTH && t.name in selected && planTarget != null) {
+                    Text(trf("%1\$s séances prévues", planTarget), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 } else if (t.weekly && t.name in selected) {
                     ChipChoice((1..7).toList(), st.weeklyTargets[t.name] ?: 2, { if (t == Progression.Track.STRENGTH) trf("%1\$s séances", it) else trf("%1\$s j", it) }) { days ->
                         League.configure(ctx) { it.copy(weeklyTargets = it.weeklyTargets + (t.name to days)) }; scope.launch { ProgressRepository.compute(ctx) }
@@ -64,10 +67,11 @@ fun LeagueSettingsScreen(nav: NavHostController) {
         }
         GroupCard { SettingRow(tr("Comment c'est calculé"), subtitle = tr("Indice global de santé")) { healthRules = !healthRules } }
         if (healthRules) MfCard {
-            Text(tr("Indice SuperHealth v2 : moyenne pondérée sur 1000, calculée sur les 7 derniers jours terminés, sans remise à zéro le lundi. Au moins 3 parties renseignées ; leurs poids sont renormalisés. Les sources absentes restent inconnues. C’est un indice d’habitudes de l’app, pas une mesure médicale. Comparez aussi les parties renseignées, car leur couverture peut différer."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Le score porte sur les sept derniers jours terminés. Il faut au moins trois domaines. La moyenne sur 1 000 utilise uniquement leurs poids."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Chaque pourcent de progrès vaut un point sur 100 dans le domaine sportif. La référence est votre meilleur résultat des 28 jours précédant la période. Sans référence, seuls les points de volume comptent."), style = MaterialTheme.typography.bodySmall)
             listOf(
-                "Séances sur 7 jours terminés, plafonnées à 2. Poids : 20 %.",
-                "Minutes hors musculation face à 150 min sur 7 jours. Poids : 20 %.",
+                "Musculation (20 %) · Jusqu’à 90 points pour deux séances et 10 pour un gain de force estimée ou de répétitions sur le même exercice.",
+                "Cardio (20 %) · Jusqu’à 90 points pour 150 minutes et 10 pour un gain de vitesse sur une course d’au moins 1 km de distance comparable (±10 %).",
                 "Moyenne des jours renseignés face à votre objectif de pas. Au moins 4 jours. Poids : 15 %.",
                 "Moyenne des nuits renseignées face à 7 h. Au moins 4 nuits. Poids : 25 %.",
                 "Écart relatif entre apports et cibles, évalué progressivement. Au moins 4 jours renseignés. Poids : 15 %.",

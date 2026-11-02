@@ -10,8 +10,8 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * Plugin Méditation : séance du jour, minuteur libre (gongs et ambiances du plugin), séances guidées (voix enregistrées du plugin, voix
- * du téléphone pour celles du coach) et programmes. Les minutes alimentent la carte, le coach et le classement.
+ * Plugin Méditation : minuteur, ambiances locales et courtes pauses avec des repères écrits.
+ * Les minutes alimentent la carte, le coach et le classement.
  */
 object Meditation {
     /** Phrase d'une séance : dite à [at] secondes du début. */
@@ -45,24 +45,18 @@ object Meditation {
     fun audio(name: String): File? = Modules.file(Modules.MEDITATION, "audio/$name.mp3")
     /** Ambiance en boucle (Ogg : bouclage sans blanc). */
     fun ambience(name: String): File? = Modules.file(Modules.MEDITATION, "audio/$name.ogg")
-    /** Phrase enregistrée d'une séance ; absente pour les séances du coach. */
-    fun voice(session: String, line: Int): File? =
-        Modules.file(Modules.MEDITATION, "audio/voice/${if (app.superhealth.ui.Lang.english) "en" else "fr"}/${session}_$line.mp3")
-
     /** Séance à jouer (guidée, libre ou du coach). */
     data class Play(val title: String, val minutes: Int, val lines: List<Line> = emptyList(), val intervalMin: Int = 0, val kind: String = "free", val session: String? = null)
     val current = MutableStateFlow<Play?>(null)
 
     fun play(s: Session, kind: String = "guided") { current.value = Play(s.title, s.minutes, s.lines, kind = kind, session = s.id) }
 
-    /** Séance du jour : la suite du programme commencé, sinon une séance différente chaque jour. */
+    /** Pauses sobres, sans voix ; le catalogue garde les identifiants pour l'historique. */
+    fun simpleSessions(): List<Session> = simple.sessions
+    private val simple: Content by lazy { json.decodeFromString(Content.serializer(), """{"sessions":[{"id":"stress3","name":"Une pause de trois minutes","nameEn":"A three-minute pause","summary":"Quelques repères, puis du silence.","summaryEn":"A few prompts, then quiet.","minutes":3,"theme":"calm","lines":[{"at":5,"fr":"Prenez une position confortable. Laissez les épaules se relâcher.","en":"Find a comfortable position. Let your shoulders soften."},{"at":45,"fr":"Remarquez les points de contact avec le sol ou le siège. Rien à réussir.","en":"Notice where your body touches the floor or seat. There is nothing to achieve."},{"at":120,"fr":"Si votre attention part ailleurs, revenez simplement à une sensation présente.","en":"If your attention wanders, gently return to one sensation in the present."}]},{"id":"souffle5","name":"Revenir au présent","nameEn":"Back to the present","summary":"Cinq minutes avec trois repères discrets.","summaryEn":"Five minutes with three gentle prompts.","minutes":5,"theme":"focus","lines":[{"at":5,"fr":"Installez-vous comme vous êtes. Vous pouvez garder les yeux ouverts.","en":"Settle in as you are. You can keep your eyes open."},{"at":60,"fr":"Observez votre respiration naturelle, sans chercher à la modifier.","en":"Notice your natural breathing without trying to change it."},{"at":180,"fr":"Un bruit, une pensée, une sensation : remarquez-les, puis revenez tranquillement au moment présent.","en":"A sound, a thought, a sensation: notice it, then gently return to the present moment."}]},{"id":"sommeil10","name":"Ralentir avant la nuit","nameEn":"Wind down for the night","summary":"Dix minutes calmes, sans voix ni rythme imposé.","summaryEn":"Ten quiet minutes, with no voice or imposed rhythm.","minutes":10,"theme":"sleep","lines":[{"at":5,"fr":"Choisissez une position confortable et une lumière qui vous convient.","en":"Choose a comfortable position and lighting that suits you."},{"at":120,"fr":"Laissez le visage et les mains se détendre, à votre rythme.","en":"Let your face and hands soften at your own pace."},{"at":300,"fr":"Vous n'avez rien à terminer ici. Laissez simplement un peu de place au calme.","en":"There is nothing to finish here. Simply leave a little room for quiet."}]}],"programs":[],"sos":"stress3"}""") }
     fun daily(today: Long = LocalDate.now().toEpochDay()): Pair<Session, String>? {
-        content().programs.forEach { p ->
-            val done = programDone(p)
-            if (done in 1 until p.sessions.size) session(p.sessions[done])?.let { return it to "program:${p.id}:$done" }
-        }
-        val all = content().sessions.ifEmpty { return null }
-        return all[(today % all.size).toInt()] to "guided"
+        val all = simpleSessions()
+        return all[Math.floorMod(today, all.size.toLong()).toInt()] to "guided"
     }
 
     /** Séance écrite par le coach : « mm:ss | phrase » par ligne, tout le reste est ignoré. */
@@ -88,7 +82,7 @@ object Meditation {
 
     /** Séances déjà faites d'un programme : [kind] = « program:id:n ». */
     fun programDone(p: Program) = log.value.mapNotNull { d -> d.kind.takeIf { it.startsWith("program:${p.id}:") }?.substringAfterLast(':')?.toIntOrNull() }.toSet().size.coerceAtMost(p.sessions.size)
-    fun session(id: String) = content().sessions.firstOrNull { it.id == id }
+    fun session(id: String) = simpleSessions().firstOrNull { it.id == id } ?: content().sessions.firstOrNull { it.id == id }
 
     /** Plus longue série de jours. */
     fun bestStreak(): Int {

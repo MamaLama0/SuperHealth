@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-03",
+  "scope": "Android; separate app.superhealth.qa installations and synthetic existing QA data",
+  "devices": [
+    "OnePlus 9 / Android 16",
+    "Pixel 8 Pro / Android 17"
+  ],
+  "unitTests": {
+    "tests": 2810,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 39,
+    "applicationTests": 229
+  },
+  "finalApplicationTests": {
+    "tests": 229,
+    "failures": 0,
+    "errors": 0
+  },
+  "serverHttpTests": {
+    "tests": 9,
+    "failures": 0
+  },
+  "ui": {
+    "uniqueScenarios": 142,
+    "androidWidgetRenders": 96,
+    "androidWidgetTapDestinations": 24,
+    "dashboardRenders": 16,
+    "pageAndLanguageScenarios": 30,
+    "sizes": [
+      "S: 57 x 57 dp",
+      "M: 130 x 130 dp",
+      "W: 270 x 57 dp",
+      "L: 270 x 130 dp"
+    ],
+    "themes": [
+      "dark / normal font",
+      "light / system font 1.25 and app font LARGE"
+    ],
+    "widgetFamilies": [
+      "leaderboard",
+      "progress",
+      "streak",
+      "quest",
+      "friends",
+      "social overview"
+    ]
+  },
+  "nativePin": {
+    "nativeConfirmationShown": true,
+    "cancelledWithoutAddingWidget": true
+  },
+  "optimizedQaColdStarts": {
+    "OnePlus 9": "dashboard rendered",
+    "Pixel 8 Pro": "dashboard rendered"
+  },
+  "signatureMatchesPreviousRelease": true,
+  "personalInstallations": "No personal package installed, reset or modified; test package only.",
+  "limits": [
+    "Native RemoteViews rendered by AppWidgetHost; native launcher pin confirmation displayed and cancelled.",
+    "Periodic refresh intervals were not observed over 30 minutes or 6/12 hours.",
+    "No live watch acquisition or iOS validation in this pass."
+  ]
+}

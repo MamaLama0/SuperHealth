@@ -1,5 +1,6 @@
 package app.superhealth.ui.settings
 
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.heightIn
@@ -157,7 +158,9 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(bottom = if (app.superhealth.ui.settingsIsTab(sh)) app.superhealth.ui.LocalTabBarInset.current else 0.dp)) {
         // onglet de la barre (« + » au milieu) : pas de retour
-        ScreenTitle(tr("Réglages"), onBack = if (app.superhealth.ui.settingsIsTab(sh)) null else ({ nav.popBackStack() }))
+        ScreenTitle(tr("Réglages"), onBack = if (app.superhealth.ui.settingsIsTab(sh)) null else ({ nav.popBackStack() }), actions = {
+            SettingsSearchAction { nav.go("settings/find") }
+        })
         Column(Modifier.padding(horizontal = 16.dp)) {
             // Profil : la seule source de sexe, âge, taille et poids pour la nutrition, la musculation et la montre.
             MfCard(onClick = { nav.go("profile") }) {
@@ -198,6 +201,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             Group(tr("Accueil")) {
                 SettingRow(tr("Cartes"), trf("%1\$s configurées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider(56.dp)
+                SettingRow(tr("Widgets Android"), subtitle = tr("Ajouter mes suivis sur l'écran d'accueil"), icon = Icons.Rounded.Dashboard) { nav.go("widgets") }
+                RowDivider(56.dp)
                 SettingRow(tr("Bouton +"), trf("%1\$s raccourcis", sh.plus.size), icon = Icons.Rounded.AddCircle, hue = HealthHues.Activity) { nav.go("plus/edit") }
                 RowDivider(56.dp)
                 SettingRow(tr("Activités affichées"), subtitle = tr("Choisir les sections et leur ordre"), icon = Icons.Rounded.FitnessCenter) { nav.go("settings/activities") }
@@ -224,6 +229,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
 
             // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
             Group(tr("Social")) {
+                SettingRow(tr("Profil et social"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social") }
+                RowDivider(56.dp)
                 val friends by app.superhealth.league.League.state.collectAsState()
                 SettingRow(tr("Groupe d'amis"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Comparer mes progrès et ajouter un ami"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
                 RowDivider(56.dp)

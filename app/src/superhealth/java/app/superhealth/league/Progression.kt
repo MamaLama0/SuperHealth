@@ -16,7 +16,7 @@ object Progression {
         val progress: Int = 0, val capped: Boolean = false, val percent: Int? = null)
     @Serializable data class DayXp(val day: Long, val xp: Int)
     @Serializable data class Summary(val model: Int = MODEL, val totalXp: Long = 0, val weekXp: Int = 0, val level: Int = 1,
-        val weekStart: Long = 0, val throughDay: Long = 0, val days: List<DayXp> = emptyList(), val streaks: List<Streak> = emptyList(), val records: Int = 0)
+        val weekStart: Long = 0, val throughDay: Long = 0, val days: List<DayXp> = emptyList(), val streaks: List<Streak> = emptyList(), val records: Int = 0, val totals: Map<String, Long> = emptyMap())
     data class Result(val summary: Summary, val since: Long) {
         val intoLevel get() = summary.totalXp - threshold(summary.level)
         val nextLevel get() = threshold(summary.level + 1) - threshold(summary.level)

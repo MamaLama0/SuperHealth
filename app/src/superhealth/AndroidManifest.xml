@@ -264,6 +264,30 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_overview" />
         </receiver>
+        <receiver android:name="app.superhealth.ui.widget.LeagueWidgetReceiver" android:exported="true" android:label="@string/widget_league_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_league" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.ProgressWidgetReceiver" android:exported="true" android:label="@string/widget_progress_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_progress" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.StreakWidgetReceiver" android:exported="true" android:label="@string/widget_streak_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_streak" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.QuestWidgetReceiver" android:exported="true" android:label="@string/widget_quest_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_quest" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.FriendsWidgetReceiver" android:exported="true" android:label="@string/widget_friends_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_friends" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.SocialOverviewWidgetReceiver" android:exported="true" android:label="@string/widget_social_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_social" />
+        </receiver>
         <receiver android:name="app.superhealth.training.widget.NextWorkoutWidgetReceiver" android:exported="true" android:label="@string/widget_next_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next" />

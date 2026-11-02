@@ -74,12 +74,13 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** 2.5 : cartes des plugins. */
     MEDITATION("Méditation", Section.HEALTH),
     STRETCH("Étirements", Section.TRAINING),
-    LEAGUE("Classement", Section.HEALTH),
-    PROGRESSION("Progression", Section.HEALTH),
-    FRIENDS("Amis", Section.HEALTH),
-    STREAKS("Mes séries", Section.HEALTH);
+    LEAGUE("Classement", Section.SOCIAL),
+    PROGRESSION("Progression", Section.SOCIAL),
+    QUESTS("Quêtes de la semaine", Section.SOCIAL),
+    FRIENDS("Amis", Section.SOCIAL),
+    STREAKS("Mes séries", Section.SOCIAL);
 
-    enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
+    enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement"), SOCIAL("Social") }
 
     companion object {
         /** Cartes ajoutées avec la reprise des tableaux de bord MacroFactor et MacroFactor Workouts. */
@@ -89,7 +90,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
         val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
 
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
-        val defaults = listOf(STREAKS, RINGS, VITALS, PROGRESSION, LEAGUE, FRIENDS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
+        val defaults = listOf(STREAKS, RINGS, VITALS, PROGRESSION, QUESTS, LEAGUE, FRIENDS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
     }
 }
 
@@ -119,7 +120,7 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
 
 /** Cartes conçues en demi-largeur. */
-val HALF = setOf(DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
+val HALF = setOf(DashCard.QUESTS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
     DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD,
     DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART)
 
@@ -135,7 +136,7 @@ val DashCard.module: String? get() = when (this) {
 /** Carte affichable : son module (s'il en faut un) est installé et activé. */
 val DashCard.available: Boolean get() = when (this) {
     DashCard.COACH, DashCard.COACH_WEEK -> SuperPrefs.settings.value.coachEnabled
-    DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> SuperPrefs.settings.value.leagueEnabled
+    DashCard.QUESTS, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> SuperPrefs.settings.value.leagueEnabled
     else -> module?.let { app.superhealth.modules.Modules.isActive(it) } ?: true
 }
 
@@ -194,7 +195,7 @@ enum class PlusAction(val label: String, val section: DashCard.Section) {
     /** 2.5 : plugins. */
     MEDITATE("Méditer", DashCard.Section.HEALTH),
     STRETCH("S'étirer", DashCard.Section.TRAINING),
-    LEAGUE("Classement", DashCard.Section.HEALTH);
+    LEAGUE("Classement", DashCard.Section.SOCIAL);
 
     companion object {
         val defaults = listOf(SEARCH, SCAN, QUICK, AI, RECIPES, CUSTOM_FOOD, WORKOUT, EMPTY, EXERCISES, WEIGHT, VITALS, BODY, SYNC, COACH, MOOD, PERIOD, BREATHE)
@@ -268,10 +269,14 @@ data class SuperSettings(
     val activityAsked: Boolean = false,
     val activityCurrent: String = "",
     /** 2.5 : matériel d'étirement possédé, bruit blanc du minuteur, icône choisie par aliment (nom normalisé → identifiant). */
+    val stretchRoutineMinutes: Int = 5,
+    val stretchSecondsPerSide: Int = 45,
     val stretchGears: Set<String> = emptySet(),
     val stretchFavorites: Set<String> = emptySet(),
     /** Ambiance des séances : rain, ocean, brown ; vide : aucune. */
     val meditationAmbience: String = "",
+    val meditationGongs: Boolean = true,
+    val meditationVolume: Float = .28f,
     val foodIcons: Map<String, String> = emptyMap(),
     /** 1.8 : rappels (minute du jour, −1 : coupé) et coucher conseillé. */
     val remindWeigh: Int = -1,
@@ -292,6 +297,7 @@ data class SuperSettings(
     val healthIndexAdded: Boolean = false,
     /** Progression et Amis proposés une seule fois, sans rétablir les cartes retirées ensuite. */
     val socialCardsAdded: Boolean = false,
+    val questsCardAdded: Boolean = false,
     /** Grand accès séries/XP proposé en tête une seule fois. */
     val streakHeroAdded: Boolean = false,
     /** 1.8 : journal du moral, forme du jour et coucher conseillé déjà proposés (migration unique). */
@@ -534,6 +540,11 @@ object SuperPrefs {
         }
         if (!_settings.value.socialCardsAdded) update { s ->
             s.copy(dashboard = withSocialCards(s.dashboard), socialCardsAdded = true)
+        }
+        if (!_settings.value.questsCardAdded) update { s ->
+            s.copy(dashboard = if (DashCard.QUESTS in s.dashboard) s.dashboard else s.dashboard.toMutableList().also {
+                it.add((it.indexOf(DashCard.PROGRESSION) + 1).coerceAtLeast(0), DashCard.QUESTS)
+            }, questsCardAdded = true)
         }
         if (!_settings.value.streakHeroAdded) update { s ->
             s.copy(dashboard = withStreakHero(s.dashboard), streakHeroAdded = true)

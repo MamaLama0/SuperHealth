@@ -54,7 +54,7 @@ class FriendMergeTest {
         assertEquals(revision(1), f.revision)
         assertEquals(progress(), f.progress)
         assertEquals(listOf(metric()), f.metrics)
-        assertEquals(700, f.history["v2:$day:11"])
+        assertEquals(700, f.history[HealthIndex.historyKey(day, 11)])
         assertEquals("New friend name", f.name)
         assertEquals(endpointNew, f.remote)
         assertEquals(readNew, f.relayKey)

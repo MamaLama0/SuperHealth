@@ -4,6 +4,8 @@ import android.app.Activity
 import android.os.Bundle
 import android.widget.TextView
 import app.superhealth.*
+import app.superhealth.league.League
+import app.superhealth.league.HealthIndex
 import app.superhealth.nutrition.NutriApp
 import app.superhealth.nutrition.domain.*
 import app.superhealth.training.WorkoutApp
@@ -26,7 +28,87 @@ class RegressionProbeActivity : Activity() {
         scope.launch {
             try {
                 when (intent.getStringExtra("op")) {
+                    "widget-cleanup" -> {
+                        android.appwidget.AppWidgetHost(this@RegressionProbeActivity, 3002).deleteHost()
+                    }
+                    "appearance-save" -> {
+                        val saved = File(filesDir, "qa/appearance-original.json")
+                        check(!saved.exists()) { "Restore the previous QA appearance first" }
+                        saved.parentFile?.mkdirs()
+                        saved.writeText(kotlinx.serialization.json.Json.encodeToString(
+                            Settings.serializer(), NutriApp.repository.prefs.settings.value))
+                    }
+                    "appearance" -> {
+                        val prefs = NutriApp.repository.prefs
+                        val current = prefs.settings.value
+                        prefs.setSettings(current.copy(
+                            themeMode = intent.getStringExtra("theme")?.let { ThemeMode.valueOf(it) } ?: current.themeMode,
+                            textSize = intent.getStringExtra("textSize")?.let { app.superhealth.nutrition.domain.TextSize.valueOf(it) } ?: current.textSize,
+                            language = intent.getStringExtra("language")?.let { Language.valueOf(it) } ?: current.language))
+                    }
+                    "appearance-restore" -> {
+                        val saved = File(filesDir, "qa/appearance-original.json")
+                        // Changer la langue peut recréer cette activité et rejouer le même Intent.
+                        if (saved.exists()) {
+                            NutriApp.repository.prefs.setSettings(kotlinx.serialization.json.Json.decodeFromString(Settings.serializer(), saved.readText()))
+                            saved.delete()
+                        }
+                    }
                     "seed" -> seed()
+                    "relay-live-reset" -> {
+                        app.superhealth.league.League.configure(this@RegressionProbeActivity) { it.copy(friends = emptyList(), customRelay = false, relayUrl = "", relayEnabled = true, syncsPerDay = 0, refreshOnOpen = false, syncError = null) }
+                        listOf("friend_invitation_code", "friend_invitation_base", "friend_invitation_expiry", "friend_invitation_owner", "league_published_hash_v2", "league_published_at_v2").forEach {
+                            app.superhealth.backup.Secrets.put(this@RegressionProbeActivity, it, "")
+                        }
+                    }
+                    "quest-complete" -> app.superhealth.meditation.Meditation.record(this@RegressionProbeActivity, 5, "qa")
+                    "quest-claim-again" -> {
+                        val q = app.superhealth.league.League.state.value.questWeeks.lastOrNull()?.quests?.firstOrNull { !it.secondary }
+                        if (q != null) app.superhealth.league.League.claimQuest(this@RegressionProbeActivity, q.metric)
+                    }
+                    "code-create" -> {
+                        val result = app.superhealth.league.InvitationCodes.publish(this@RegressionProbeActivity, intent.getBooleanExtra("renew", false))
+                        File(filesDir, "qa/code.txt").apply { parentFile?.mkdirs(); writeText(result.text) }
+                    }
+                    "code-lookup" -> {
+                        app.superhealth.league.InvitationCodes.lookup(this@RegressionProbeActivity, intent.getStringExtra("code").orEmpty(), intent.getStringExtra("server"))
+                        val card = app.superhealth.league.League.incoming.value ?: error("No invitation")
+                        app.superhealth.league.InvitationCodes.confirm(this@RegressionProbeActivity, card)
+                        app.superhealth.league.League.incoming.value = null
+                    }
+                    "equip" -> {
+                        app.superhealth.league.ProgressRepository.compute(this@RegressionProbeActivity)
+                        app.superhealth.league.League.configure(this@RegressionProbeActivity) { state ->
+                            val unlocked = app.superhealth.league.Achievements.catalog.filter { it.id in state.earnedBadges }
+                            state.copy(profileTitle = unlocked.lastOrNull { it.title != null }?.id, profileBadges = unlocked.take(3).map { it.id })
+                        }
+                    }
+                    "sync" -> app.superhealth.league.Relay.sync(this@RegressionProbeActivity)
+                    "code-poll" -> app.superhealth.league.InvitationCodes.collectResponses(this@RegressionProbeActivity)
+                    "code-custom" -> {
+                        app.superhealth.league.League.configure(this@RegressionProbeActivity) { it.copy(customRelay = true, relayUrl = intent.getStringExtra("server").orEmpty(), relayEnabled = true) }
+                    }
+                    "code-default" -> app.superhealth.league.League.configure(this@RegressionProbeActivity) { it.copy(customRelay = false, relayUrl = "", relayEnabled = true) }
+                    "free-done" -> {
+                        val db = WorkoutApp.db.first { it != null }!!
+                        val e = db.exercises.first { it.usesWeight && it.usesReps }
+                        val set = app.superhealth.training.domain.SetLog("qa-done-set", weight = 40.0, reps = 10, rir = 2, done = true)
+                        WorkoutApp.store.update { it.copy(session = app.superhealth.training.domain.Session("qa-done", "Correction QA", System.currentTimeMillis(), listOf(app.superhealth.training.domain.SessionExercise("qa-done-ex", e.id, listOf(set))), freeForm = true)) }
+                    }
+                    "ranking-fixture", "ranking-cleanup" -> {
+                        val score = League.compute(this@RegressionProbeActivity)
+                        val now = System.currentTimeMillis() / 1000
+                        // Identités locales sans adresse, retirables sans toucher aux vrais amis QA.
+                        val fixtures = if (intent.getStringExtra("op") == "ranking-cleanup") emptyList() else
+                            listOf(980, 980, 920, 910, 999).mapIndexed { i, points ->
+                                val id = "qa-v3-ranking-$i"
+                                val name = listOf("Zoé", "Léon", "Charlie", "Camille du club du lundi", "Carte expirée")[i]
+                                League.Friend(id, id, name, score.week, if (i == 4) now - 49 * 3600 else now,
+                                    points, model = HealthIndex.MODEL, ready = true, endDay = score.endDay, coverage = score.coverage)
+                            }
+                        League.configure(this@RegressionProbeActivity) { it.copy(friends =
+                            it.friends.filterNot { f -> f.id.startsWith("qa-v3-ranking-") } + fixtures) }
+                    }
                     "socialseed" -> socialSeed()
                     "free" -> {
                         val db = WorkoutApp.db.first { it != null }!!
@@ -154,7 +236,7 @@ class RegressionProbeActivity : Activity() {
         ), numCycles = 1)
         WorkoutApp.store.update { it.copy(programs = listOf(p), settings = it.settings.copy(onboarded = true, activeProgramId = p.id)) }
         nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().preferences.edit()
-            .putString(nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_NAME, "QA " + android.os.Build.MODEL).apply()
+            .putString(nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_NAME, "QA Android").apply()
         app.superhealth.league.League.configure(this) { it.copy(shareActivities = true, syncsPerDay = 0) }
     }
 

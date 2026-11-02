@@ -6,7 +6,9 @@
     "license": "CC BY 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
     "asset": "game/streak.riv",
-    "sha256": "ce55b290e2e0b2380b5d64872a3b0a2baf0a3458f30506049edf6d9c6f440de1"
+    "sha256": "428ffbd3a3ce3bfa8652bec64eacfaf336899561726b1870c75148459b17caf4",
+    "originalSha256": "ce55b290e2e0b2380b5d64872a3b0a2baf0a3458f30506049edf6d9c6f440de1",
+    "modifications": "SuperHealth: disabled automatic exit and pointer-interruption transitions; native tip and ember speeds halved relative to original. Reproduce with tools/prepare_streak_asset.py."
   },
   "badges": [
     {

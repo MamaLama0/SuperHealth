@@ -1,15 +1,15 @@
 {
   "qaPackage": "app.superhealth.qa",
   "devices": [
-    "Pixel 8 Pro",
-    "OnePlus 9"
+    "appareil Android A",
+    "appareil Android B"
   ],
   "originalPackagesUnchanged": {
-    "Pixel 8 Pro": {
+    "appareil Android A": {
       "versionName": "2.63",
       "versionCode": 29
     },
-    "OnePlus 9": {
+    "appareil Android B": {
       "versionName": "2.6",
       "versionCode": 26
     }

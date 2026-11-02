@@ -14,6 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      SUPERHEALTH_RELAY_URL: ${{ secrets.SUPERHEALTH_RELAY_URL }}
+      SUPERHEALTH_RELAY_KEY: ${{ secrets.SUPERHEALTH_RELAY_KEY }}
       # IA offerte : valeurs injectées depuis les secrets du dépôt (absentes du code, masquées dans l'app)
       SUPERHEALTH_AI_URL: ${{ secrets.SUPERHEALTH_AI_URL }}
       SUPERHEALTH_AI_MODEL: ${{ secrets.SUPERHEALTH_AI_MODEL }}

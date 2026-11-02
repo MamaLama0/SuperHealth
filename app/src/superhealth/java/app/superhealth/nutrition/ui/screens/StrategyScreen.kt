@@ -522,7 +522,7 @@ private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         PillButton(tr("Garder mes cibles actuelles"), Modifier.fillMaxWidth(), strong = false) {
             // rien ne change : le check-in est daté d'aujourd'hui, le prochain tombe dans une semaine
-            vm.repo.saveCheckIn(current?.copy(day = an.today) ?: next.copy(day = an.today))
+            vm.repo.saveCheckIn(prev?.copy(day = an.today) ?: app.superhealth.nutrition.domain.ManualTargets.keepCurrent(an))
             android.widget.Toast.makeText(ctx, trf("Cibles conservées. Prochain check-in le %1\$s.", checkInDayName(an.program.checkInDay).lowercase()),
                 android.widget.Toast.LENGTH_LONG).show()
             onDone()
@@ -560,11 +560,12 @@ private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
     PillButton(tr(if (busy) "Calcul en cours…" else "Calculer mes calories"), Modifier.fillMaxWidth(), enabled = !busy) {
         busy = true
         val typed = weight.toNum()
+        val kept = current ?: app.superhealth.nutrition.domain.ManualTargets.keepCurrent(an)
         vm.launch {
             if (typed != null && (todayWeight == null || abs(s.toKg(typed) - todayWeight) > 0.01)) weighIns.upsert(WeighInEntity(an.today, s.toKg(typed), weighIns.all().firstOrNull { it.epochDay == an.today }?.bodyFatPct))
             // tout est relu après l'écriture : le poids et les jours marqués comptent dans ce calcul
             val fresh = analytics().first()
-            proposal = (fresh.checkInFor(fresh.today) ?: fresh.checkIns.firstOrNull()) to fresh.provisionalCheckIn(fresh.today)
+            proposal = kept to fresh.provisionalCheckIn(fresh.today)
             busy = false
         }
     }
@@ -669,6 +670,12 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 ChipChoice((1..7).toList(), p.checkInDay, { DAY_NAMES[it - 1] }) { p = p.copy(checkInDay = it) }
             } else {
                 if (p.style == ProgramStyle.COLLABORATIVE) {
+                    FieldTitle(tr("Plancher calorique"))
+                    ChipChoice(CalorieFloor.entries, p.calorieFloor, { it.label.tr() }) { p = p.copy(calorieFloor = it) }
+                    app.superhealth.nutrition.ui.components.SwitchRow(tr("Jours plus élevés"), tr("Même moyenne sur la semaine"), p.highDays.isNotEmpty()) { on -> p = p.copy(highDays = if (on) setOf(6, 7) else emptySet()) }
+                    if (p.highDays.isNotEmpty()) ChipChoice((1..7).toList(), 0, { d -> (if (d in p.highDays) "✓ " else "") + DAY_NAMES[d - 1].take(3) }) { d ->
+                        p = p.copy(highDays = if (d in p.highDays) p.highDays - d else p.highDays + d)
+                    }
                     Text(tr("Les calories s'ajustent au check-in. Vous choisissez les proportions des macros à partir de ce modèle."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     ChipChoice((1..7).toList(), p.checkInDay, { DAY_NAMES[it - 1] }) { p = p.copy(checkInDay = it) }
                 } else {
@@ -726,6 +733,8 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
     var height by remember { mutableStateOf(num(profile.heightCm, 0)) }
     var bf by remember { mutableStateOf(profile.bodyFatPct?.let { num(it, 1) } ?: "") }
     DetailScaffold(tr("Profil"), onBack) {
+
+        Spacer(Modifier.height(12.dp))
         MfCard {
             FieldTitle(tr("Sexe"))
             ChipChoice(Sex.entries, pr.sex, { if (it == Sex.MALE) tr("Homme") else tr("Femme") }) { pr = pr.copy(sex = it) }

@@ -195,6 +195,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.MEDITATION -> app.superhealth.ui.meditation.MeditationHue
     DashCard.STRETCH -> app.superhealth.ui.stretch.StretchHue
     DashCard.LEAGUE, DashCard.FRIENDS -> app.superhealth.ui.league.LeagueHue
+    DashCard.QUESTS -> Color(0xFF9074DD)
     DashCard.PROGRESSION -> app.superhealth.ui.theme.Base.Green
     DashCard.STREAKS -> app.superhealth.ui.theme.Base.Orange
     DashCard.CALORIES, DashCard.MEALS -> CaloriesColor
@@ -282,6 +283,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.MEDITATION -> Icons.Rounded.SelfImprovement
     DashCard.STRETCH -> Icons.Rounded.AccessibilityNew
     DashCard.LEAGUE -> Icons.Rounded.EmojiEvents
+    DashCard.QUESTS -> Icons.Rounded.Flag
     DashCard.PROGRESSION -> Icons.AutoMirrored.Rounded.TrendingUp
     DashCard.STREAKS -> Icons.Rounded.LocalFireDepartment
     DashCard.FRIENDS -> Icons.Rounded.Group
@@ -930,7 +932,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     }
     when (c) {
         // dessinées par leur famille (ci-dessus)
-        DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> Unit
+        DashCard.QUESTS, DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> Unit
         DashCard.CALORIES -> {
             val todayEntries by vm.nutrition.todayEntries.collectAsState()
             val consumed = todayEntries.fold(Macros.ZERO) { acc, e -> acc + e.macros() }
