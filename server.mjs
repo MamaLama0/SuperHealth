@@ -1,0 +1,192 @@
+import { createServer } from 'node:http';
+import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
+import { mkdir, readFile, writeFile, rename, unlink, readdir, stat } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+export const MAX_BODY = 98_304;
+export const TTL_MS = 35 * 86_400_000;
+const ROUTE = /^\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64}$/;
+const HEX_SECRET = /^[a-f0-9]{64}$/;
+const digest = value => createHash('sha256').update(value).digest('hex');
+const equal = (a, b) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const integer = (value, min, max, name) => {
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(name);
+  return value;
+};
+
+/** The server validates transport bounds, never a person's identity or decrypted health data. */
+export function validateEnvelope(raw, now = Date.now()) {
+  if (Buffer.byteLength(raw) > MAX_BODY) throw new Error('size');
+  const envelope = JSON.parse(raw);
+  if (!envelope || Array.isArray(envelope) || typeof envelope !== 'object' ||
+      Object.keys(envelope).sort().join(',') !== 'ciphertext,nonce,revision,v' || envelope.v !== 2) throw new Error('format');
+  integer(envelope.revision, Math.max(1, now - 7 * 86_400_000), now + 300_000, 'revision');
+  const decode = (text, min, max) => {
+    if (typeof text !== 'string' || !/^[A-Za-z0-9_-]+$/.test(text)) throw new Error('base64');
+    const bytes = Buffer.from(text, 'base64url');
+    if (bytes.length < min || bytes.length > max || bytes.toString('base64url') !== text) throw new Error('base64');
+    return text;
+  };
+  return { v: 2, revision: envelope.revision,
+    nonce: decode(envelope.nonce, 12, 12), ciphertext: decode(envelope.ciphertext, 17, 73_000) };
+}
+
+export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLimitPerMinute = 240,
+  maxInFlight = 8, now = Date.now, sweepIntervalMs = 3_600_000 } = {}) {
+  if (typeof publishKey !== 'string' || publishKey.length < 32 || publishKey.length > 512 || /[\r\n]/.test(publishKey))
+    throw new Error('PUBLISH_KEY must have 32..512 characters');
+  integer(maxCards, 1, 10_000, 'MAX_CARDS');
+  integer(rateLimitPerMinute, 1, 10_000, 'RATE_LIMIT_PER_MINUTE');
+  integer(maxInFlight, 1, 64, 'MAX_IN_FLIGHT');
+  await mkdir(dataDir, { recursive: true, mode: 0o700 });
+  const secret = `Bearer ${publishKey}`;
+  const index = new Map();
+  const rates = new Map();
+  let writes = Promise.resolve();
+  let inFlight = 0;
+  const fileFor = id => join(dataDir, id + '.json');
+
+  // Metadata-only index: a conditional GET needs no disk read, no decrypt and no history query.
+  for (const name of await readdir(dataDir)) {
+    if (/^[a-f0-9]{64}\.json\.[\w-]+\.tmp$/.test(name)) { await unlink(join(dataDir, name)); continue; }
+    if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
+    const path = join(dataDir, name);
+    if ((await stat(path)).size > MAX_BODY + 2048) throw new Error('invalid stored record');
+    const record = JSON.parse(await readFile(path, 'utf8'));
+    if (record.format !== 2 || !HEX_SECRET.test(record.writeHash) || !Number.isSafeInteger(record.updatedAt) ||
+        typeof record.raw !== 'string' || Buffer.byteLength(record.raw) > MAX_BODY ||
+        record.etag !== `"${digest(record.raw)}"`) throw new Error('invalid stored record');
+    const envelope = validateEnvelope(record.raw, record.updatedAt);
+    if (record.revision !== envelope.revision) throw new Error('invalid stored revision');
+    if (record.updatedAt <= now() - TTL_MS) { await unlink(path); continue; }
+    if (index.size >= maxCards) throw new Error('stored mailboxes exceed MAX_CARDS');
+    index.set(name.slice(0, -5), { writeHash: record.writeHash, updatedAt: record.updatedAt,
+      revision: record.revision, etag: record.etag });
+  }
+
+  const prune = async () => {
+    for (const [id, record] of index) if (record.updatedAt <= now() - TTL_MS) {
+      await unlink(fileFor(id)).catch(e => { if (e.code !== 'ENOENT') throw e; });
+      index.delete(id);
+    }
+  };
+  const serialized = task => {
+    const result = writes.then(task);
+    writes = result.catch(() => {});
+    return result;
+  };
+  const send = (res, status, body = '', headers = {}) => {
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', ...headers });
+    res.end(body);
+  };
+  const readBody = req => new Promise((resolveBody, reject) => {
+    let size = 0;
+    const chunks = [];
+    const cleanup = () => { req.off('data', data); req.off('end', end); req.off('error', fail); req.off('aborted', abort); };
+    const fail = error => { cleanup(); reject(error); };
+    const abort = () => { const error = new Error('aborted'); error.status = 400; fail(error); };
+    const data = chunk => {
+      size += chunk.length;
+      if (size > MAX_BODY) {
+        const error = new Error('size'); error.status = 413;
+        fail(error); req.resume();
+      } else chunks.push(chunk);
+    };
+    const end = () => { cleanup(); resolveBody(Buffer.concat(chunks).toString('utf8')); };
+    req.on('data', data); req.once('end', end); req.once('error', fail); req.once('aborted', abort);
+  });
+  const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
+    // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, '{"status":"ok","protocol":2}');
+    if (!ROUTE.test(req.url || '')) return send(res, 404);
+    if (!['GET', 'PUT', 'DELETE'].includes(req.method)) return send(res, 405, '', { Allow: 'GET, PUT, DELETE' });
+    if (inFlight >= maxInFlight) { req.resume(); return send(res, 503, '', { 'Retry-After': '2' }); }
+    // Bound all connections, including unauthenticated attempts; behind a proxy this is a shared limit.
+    const bucket = digest(req.socket.remoteAddress || '?');
+    const minute = Math.floor(now() / 60_000);
+    const previous = rates.get(bucket);
+    const requests = previous?.minute === minute ? previous.requests + 1 : 1;
+    if (!rates.has(bucket) && rates.size >= 1024) rates.clear();
+    rates.set(bucket, { minute, requests });
+    if (requests > rateLimitPerMinute) { req.resume(); return send(res, 429, '', { 'Retry-After': '60' }); }
+    inFlight++;
+    try {
+      const id = digest(req.url);
+      const record = index.get(id);
+      const expired = !record || record.updatedAt <= now() - TTL_MS;
+      if (req.method === 'GET') {
+        if (expired) return send(res, 404);
+        if (req.headers['if-none-match'] === record.etag) return send(res, 304, '', { ETag: record.etag });
+        try {
+          const saved = JSON.parse(await readFile(fileFor(id), 'utf8'));
+          return send(res, 200, saved.raw, { ETag: saved.etag });
+        } catch (e) { if (e.code === 'ENOENT') return send(res, 404); throw e; }
+      }
+      if (!equal(req.headers.authorization || '', secret)) { req.resume(); return send(res, 401); }
+      const token = req.headers['x-write-token'];
+      if (typeof token !== 'string' || !HEX_SECRET.test(token)) { req.resume(); return send(res, 401); }
+      const writeHash = digest(token);
+      if (req.headers['content-length'] && Number(req.headers['content-length']) > MAX_BODY) {
+        req.resume(); return send(res, 413);
+      }
+      const body = await readBody(req);
+      if (req.method === 'DELETE') {
+        if (body.length) return send(res, 400);
+        return await serialized(async () => {
+          const existing = index.get(id);
+          if (existing && !equal(existing.writeHash, writeHash)) return send(res, 403);
+          await unlink(fileFor(id)).catch(e => { if (e.code !== 'ENOENT') throw e; });
+          index.delete(id);
+          send(res, 204);
+        });
+      }
+      let envelope;
+      try { envelope = validateEnvelope(body, now()); } catch { return send(res, 400); }
+      const raw = JSON.stringify(envelope);
+      const etag = `"${digest(raw)}"`;
+      return await serialized(async () => {
+        await prune();
+        const existing = index.get(id);
+        if (existing) {
+          if (!equal(existing.writeHash, writeHash)) return send(res, 403);
+          if (envelope.revision < existing.revision || (envelope.revision === existing.revision && etag !== existing.etag))
+            return send(res, 409);
+          // Retrying an identical PUT does not refresh expiry or rewrite a disk block.
+          if (etag === existing.etag) return send(res, 204, '', { ETag: etag });
+        } else if (index.size >= maxCards) return send(res, 507);
+        const updatedAt = now();
+        const tmp = fileFor(id) + '.' + randomUUID() + '.tmp';
+        try {
+          await writeFile(tmp, JSON.stringify({ format: 2, raw, writeHash, updatedAt, revision: envelope.revision, etag }), { mode: 0o600, flag: 'wx' });
+          await rename(tmp, fileFor(id));
+        } finally { await unlink(tmp).catch(() => {}); }
+        index.set(id, { writeHash, updatedAt, revision: envelope.revision, etag });
+        send(res, 204, '', { ETag: etag });
+      });
+    } catch (e) {
+      if (!res.headersSent) send(res, e.status || 500, '', e.status === 413 ? { Connection: 'close' } : {}); else res.end();
+    } finally { inFlight--; }
+  });
+  const sweep = setInterval(() => { serialized(prune).catch(() => {}); }, sweepIntervalMs);
+  sweep.unref();
+  server.on('close', () => clearInterval(sweep));
+  server.requestTimeout = 15_000;
+  server.headersTimeout = 10_000;
+  server.keepAliveTimeout = 5_000;
+  server.maxRequestsPerSocket = 100;
+  server.maxConnections = 32;
+  return server;
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const publishKey = process.env.PUBLISH_KEY_FILE
+    ? (await readFile(process.env.PUBLISH_KEY_FILE, 'utf8')).trim() : process.env.PUBLISH_KEY;
+  const server = await createRelay({ dataDir: process.env.DATA_DIR || './data', publishKey,
+    maxCards: Number(process.env.MAX_CARDS || 500), rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE || 240),
+    maxInFlight: Number(process.env.MAX_IN_FLIGHT || 8) });
+  server.listen(Number(process.env.PORT || 8787), process.env.HOST || '127.0.0.1', () => console.log('SuperHealth encrypted relay ready'));
+  const shutdown = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(1), 10_000).unref(); };
+  process.once('SIGTERM', shutdown); process.once('SIGINT', shutdown);
+}

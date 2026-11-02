@@ -1,0 +1,90 @@
+# TrueNAS standalone HTTPS variant. Replace POOL paths and amis.exemple.fr.
+services:
+  friend-relay:
+    image: superhealth-friend-relay:2
+    pull_policy: never
+    restart: unless-stopped
+    init: true
+    user: 568:568
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    mem_limit: 256m
+    cpus: 0.5
+    ulimits:
+      nofile:
+        soft: 256
+        hard: 256
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8787"
+      DATA_DIR: /data
+      PUBLISH_KEY_FILE: /run/secrets/publish_key
+      MAX_CARDS: "500"
+      RATE_LIMIT_PER_MINUTE: "240"
+      MAX_IN_FLIGHT: "8"
+    secrets:
+      - publish_key
+    volumes:
+      - /mnt/POOL/apps/superhealth/data:/data
+    ports:
+      - 127.0.0.1:8787:8787
+    networks:
+      - relay
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "2"
+  https:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 32
+    environment:
+      DOMAIN: amis.exemple.fr
+    ports:
+      - ${HTTP_PORT:-8080}:80
+      - ${HTTPS_PORT:-8443}:443
+    volumes:
+      - /mnt/POOL/apps/superhealth/source/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - relay
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "2"
+networks:
+  relay:
+    name: superhealth-relay
+secrets:
+  publish_key:
+    file: /mnt/POOL/apps/superhealth/secrets/publish_key
+volumes:
+  caddy_data: null
+  caddy_config: null

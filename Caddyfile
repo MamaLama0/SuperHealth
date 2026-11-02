@@ -1,0 +1,13 @@
+{
+    admin off
+    # No request logging: capability URLs must not be retained.
+    log default {
+        output discard
+    }
+}
+{$DOMAIN} {
+    request_body {
+        max_size 96KB
+    }
+    reverse_proxy friend-relay:8787
+}

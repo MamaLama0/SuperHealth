@@ -1,0 +1,32 @@
+# Optional HTTPS proxy, combined with compose.yaml or compose.truenas.yaml.
+# Set DOMAIN and forward WAN TCP 80 -> NAS 8080, TCP 443 -> NAS 8443.
+services:
+  https:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 32
+    environment:
+      DOMAIN: ${DOMAIN:?Set your public DNS name in DOMAIN}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [relay]
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "2"
+volumes:
+  caddy_data:
+  caddy_config:
