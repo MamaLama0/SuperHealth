@@ -242,14 +242,20 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("settings/style") { app.superhealth.ui.settings.StyleLabScreen(vm, nav) }
             composable("settings/units") { app.superhealth.ui.settings.UnitsSettingsScreen(vm, nav) }
             composable("settings/hc") { app.superhealth.ui.settings.HealthConnectSettingsScreen(vm, nav) }
-            composable("settings/activities") { app.superhealth.ui.health.ActivityImportScreen(vm, nav) }
+            composable("settings/activity-import") { app.superhealth.ui.health.ActivityImportScreen(vm, nav) }
+            composable("settings/sources") { app.superhealth.ui.settings.SourcesScreen(nav) }
             composable("settings/security") { app.superhealth.ui.settings.SecurityScreen(nav) }
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
+            composable("coach/settings") { app.superhealth.ui.coach.CoachSettingsScreen(nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }
             composable("stretch/play") { app.superhealth.ui.stretch.StretchPlayScreen(nav) }
             composable("stretch/all") { app.superhealth.ui.stretch.StretchAllScreen(nav) }
             composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
+            composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
+            composable("progress") { app.superhealth.ui.league.ProgressScreen(nav) }
+            composable("league/settings") { app.superhealth.ui.league.LeagueSettingsScreen(nav) }
+            composable("friends/add") { app.superhealth.ui.league.AddFriendScreen(nav) }
             composable("friends") { app.superhealth.ui.league.FriendsScreen(nav) }
             composable("stretch/ex/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
                 app.superhealth.ui.stretch.StretchExerciseScreen(nav, it.arguments?.getString("id").orEmpty())
@@ -266,6 +272,8 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
+            composable("setup/nutrition") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.NUTRITION_SETUP) { nav.popBackStack() } }
+            composable("setup/training") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.TRAINING_SETUP) { nav.popBackStack() } }
             composable("sim/nutrition") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.NUTRITION_SIM) { nav.popBackStack() } }
             composable("sim/training") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.TRAINING_SIM) { nav.popBackStack() } }
             composable("h/metric/{metric}", listOf(navArgument("metric") { type = NavType.StringType })) {
@@ -387,7 +395,7 @@ private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: ()
     val accent = Mf.colors.accent
     val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
     Column(
-        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { if (!selected) onClick() }),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent), contentAlignment = Alignment.Center) {
@@ -515,6 +523,9 @@ fun NavHostController.go(route: String) = runCatching { if (isTabRoute(route)) o
  * s'ouvre à sa racine au lieu de retrouver l'écran où on l'avait laissé.
  */
 fun NavHostController.openTab(route: String, fresh: Boolean = false) {
+    // Ne pas dépiler/recréer l'écran visible quand on retouche son onglet : défilement et états sont conservés.
+    // Un raccourci explicitement fresh garde son comportement de retour à la racine.
+    if (!fresh && currentBackStackEntry?.destination?.route == route) return
     val start = graph.findStartDestination()
     navigate(route) {
         popUpTo(start.id) { saveState = !fresh }

@@ -60,16 +60,6 @@ class WhoopCoordinator : AbstractBLEDeviceCoordinator() {
     override fun supports(candidate: GBDeviceCandidate): Boolean =
         candidate.supportsService(WhoopUuids.W4_SERVICE) || candidate.supportsService(WhoopUuids.W5_SERVICE) || super.supports(candidate)
 
-    override fun getAllDeviceDao(session: DaoSession): MutableMap<AbstractDao<*, *>, Property> = hashMapOf(
-        session.whoopActivitySampleDao to WhoopActivitySampleDao.Properties.DeviceId,
-        session.genericHeartRateSampleDao to GenericHeartRateSampleDao.Properties.DeviceId,
-        session.genericHrvValueSampleDao to GenericHrvValueSampleDao.Properties.DeviceId,
-        session.genericTemperatureSampleDao to GenericTemperatureSampleDao.Properties.DeviceId,
-        session.genericRespiratoryRateSampleDao to GenericRespiratoryRateSampleDao.Properties.DeviceId,
-        session.genericStressSampleDao to GenericStressSampleDao.Properties.DeviceId,
-        session.genericSleepScoreSampleDao to GenericSleepScoreSampleDao.Properties.DeviceId,
-    )
-
     override fun getSampleProvider(device: GBDevice, session: DaoSession): SampleProvider<out nodomain.freeyourgadget.gadgetbridge.entities.AbstractActivitySample> = WhoopActivitySampleProvider(device, session)
     override fun getHeartRateRestingSampleProvider(device: GBDevice, session: DaoSession): TimeSampleProvider<out HeartRateSample> = GenericHeartRateSampleProvider(device, session)
     override fun getHrvValueSampleProvider(device: GBDevice, session: DaoSession): TimeSampleProvider<out HrvValueSample> = GenericHrvValueSampleProvider(device, session)

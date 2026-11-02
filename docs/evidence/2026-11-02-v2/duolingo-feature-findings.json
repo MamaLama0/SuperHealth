@@ -1,0 +1,131 @@
+{
+  "target": {
+    "package": "com.duolingo",
+    "version": "6.103.6",
+    "versionCode": 2488,
+    "apkPath": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/base.apk",
+    "apkSha256": "3bf0a946b375c4cbc94205b0157189a0a469e4df6c1c11ec426b768dc785bf60"
+  },
+  "reaInventoryEvidenceId": "ev_6a4965eec13e4bed0466693fa586d020f4e879e366e1cb7cc74c8ed7f4d55a21",
+  "analysisMethod": "REA artifact inventory plus existing JADX CLI 1.5.6 exact-class decompilation; APK never installed/launched; no network APIs contacted",
+  "reaAndroidProviderLimit": "jadx-headless-mcp 0.7.1 JAR not configured; error retained in duolingo-streak-classes.json; no provider installed",
+  "sources": {
+    "League": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/League.java",
+      "sha256": "f08e43c58baeab99d2605ef38f111fdf7c924924600641d9369d083da05a4e57",
+      "jadxWarnings": true
+    },
+    "LeaguesRuleset": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/LeaguesRuleset.java",
+      "sha256": "672529f53712cb6bf275c322b7bd08f3b3ac869318c6210fd63788dd3272b138",
+      "jadxWarnings": true
+    },
+    "LeaguesContest": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/LeaguesContest.java",
+      "sha256": "6ed43a70d43a327b3b759b029b719a288b7f51dbd651fa5f5712267f8348b104",
+      "jadxWarnings": true
+    },
+    "LeaguesUserScore": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/LeaguesUserScore.java",
+      "sha256": "5c1b798951a0c3472119c2500e5a62ce39ccd5a30cdc4a129f15f369d4a04867",
+      "jadxWarnings": false
+    },
+    "StreakData": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/StreakData.java",
+      "sha256": "6d0d50c06e9df2a742741d4811dec933f28c42d78ce70cef1da4b27bf842e22b",
+      "jadxWarnings": true
+    },
+    "FreezesToUse": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/FreezesToUse.java",
+      "sha256": "ceb27b0a97fce914d5c06641b12119589ae950f6b46cc5ba8f528a403e5d0f93",
+      "jadxWarnings": false
+    },
+    "StreakGoalsToPick": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/StreakGoalsToPick.java",
+      "sha256": "9cb1b0a0f0dd10a3ca1d19d19dcf17eb8f9699d2514f103d37b5e6131023d2f9",
+      "jadxWarnings": true
+    },
+    "XpSummary": {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Reference/Duolingo/analyse/XpSummary.java",
+      "sha256": "aa623daba5aa77b7f0504196685f1603f98b169e5f31dfb22ae3a9fb3fd5a1e0",
+      "jadxWarnings": true
+    }
+  },
+  "findings": [
+    {
+      "claim": "Ten league tiers Bronze/Silver/Gold/Sapphire/Ruby/Emerald/Amethyst/Pearl/Obsidian/Diamond indexed 0..9 with separate labels, images, colors.",
+      "source": "League.java:51-75",
+      "confidence": "observed static decompilation; enum reconstruction warning retained"
+    },
+    {
+      "claim": "LeaguesRuleset contains cohortSize, cohortType, numDemoted, numLosers, numPromoted, numWinners, rewards, scoreType, tiered and winnerBreakPeriod; ScoreType includes XP and CROWNS.",
+      "source": "LeaguesRuleset.java:68-81,174",
+      "confidence": "observed static model; actual configured thresholds not recovered"
+    },
+    {
+      "claim": "LeaguesContest uses rank and ruleset-provided promotion/demotion counts to return PROMOTION/SAME/DEMOTION; current-user server status flags can override inferred zone.",
+      "source": "LeaguesContest.java:166-253",
+      "confidence": "observed static logic; no runtime/server response observed"
+    },
+    {
+      "claim": "StreakData records length, startTimestamp, updatedTimestamp, updatedTimeZone and nullable xpGoal, deriving a ZonedDateTime from Instant and ZoneId.",
+      "source": "StreakData.java:79-102,151-161",
+      "confidence": "observed static model; one JADX enum error, these shown methods retained"
+    },
+    {
+      "claim": "LifetimeStreak has achieveDate, endDate, length and startDate.",
+      "source": "StreakData.java:242-243",
+      "confidence": "observed static model"
+    },
+    {
+      "claim": "FreezesToUse splits gift/society/standard freeze counts and sums them; exact award/consumption policy not established.",
+      "source": "FreezesToUse.java:35-36,65-66",
+      "confidence": "observed static model and sum"
+    },
+    {
+      "claim": "XpSummary records gainedXp, timestamp, frozen, repaired, streakExtended, numSessions and totalSessionTime; continuity flag is frozen OR repaired OR streakExtended.",
+      "source": "XpSummary.java:88-119,158-177",
+      "confidence": "observed static model and boolean logic"
+    },
+    {
+      "claim": "Selectable streak goal constants expose 7, 14, 30 and 50 days.",
+      "source": "StreakGoalsToPick.java:28-31,71-72",
+      "confidence": "observed static constants; JADX enum reconstruction warning retained"
+    },
+    {
+      "claim": "Global XP-to-level curve, universal daily cap, effective server league cohort policy, remote experiments and full streak-credit algorithm are not established by this bounded eight-class pass.",
+      "source": "bounded coverage of selected classes",
+      "confidence": "unknown; must remain own SuperHealth design rather than claimed Duolingo algorithm"
+    }
+  ],
+  "selectedDrawableEntries": [
+    "res/drawable/achievement_badge_perfect_streak_weeks.xml",
+    "res/drawable/achievement_badge_perfect_streak_weeks_empty.xml",
+    "res/drawable/achievement_badge_xp.xml",
+    "res/drawable/achievement_badge_xp_empty.xml",
+    "res/drawable/friends_streak_flame.xml",
+    "res/drawable/friends_streak_flame_inactive.xml",
+    "res/drawable/friends_streak_flame_v2.xml",
+    "res/drawable/leagues_league_amethyst_v2.xml",
+    "res/drawable/leagues_league_bronze_v2.xml",
+    "res/drawable/leagues_league_diamond_v2.xml",
+    "res/drawable/leagues_league_emerald_v2.xml",
+    "res/drawable/leagues_league_gold_v2.xml",
+    "res/drawable/leagues_league_obsidian_v2.xml",
+    "res/drawable/leagues_league_pearl_v2.xml",
+    "res/drawable/leagues_league_ruby_v2.xml",
+    "res/drawable/leagues_league_sapphire_v2.xml",
+    "res/drawable/leagues_league_silver_v2.xml",
+    "res/drawable/personal_best_badge_xp.xml",
+    "res/drawable/streak_calendar_checkmark.xml",
+    "res/drawable/streak_freeze_cal.xml",
+    "res/drawable/streak_freeze_cal_checkmark.xml"
+  ],
+  "integrationSuggestions": [
+    "Show one compact progress bar (total XP to next level) separately from weekly comparable scores.",
+    "Keep history of personal records, current streak and personal best as distinct facts.",
+    "Use explicit local calendar/day boundaries, a completed-day calendar and optional per-tracker cadence.",
+    "Treat rest days and missing data according to the selected tracker cadence rather than requiring daily strength training.",
+    "Use SuperHealth-specific bounded XP rules and disclose that thresholds are its own design."
+  ]
+}

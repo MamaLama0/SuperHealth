@@ -27,6 +27,9 @@ public class FindMyPhoneCancelMessage extends GFDIMessage {
 
     @Override
     protected boolean generateOutgoing() {
-        return false;
+        final MessageWriter writer = new MessageWriter(response);
+        writer.writeShort(0); // length and CRC are added by GFDIMessage
+        writer.writeShort(garminMessage.getId());
+        return true;
     }
 }

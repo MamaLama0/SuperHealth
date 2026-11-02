@@ -1,0 +1,3820 @@
+{
+  "totals": {
+    "tests": 2779,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 39
+  },
+  "suites": [
+    {
+      "name": "app.superhealth.analysis.AlgorithmComparisonTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:25.425Z",
+      "hostname": "Badland",
+      "time": "0.053"
+    },
+    {
+      "name": "app.superhealth.backup.BackupCryptoTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:25.482Z",
+      "hostname": "Badland",
+      "time": "0.078"
+    },
+    {
+      "name": "app.superhealth.backup.PropfindTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:25.561Z",
+      "hostname": "Badland",
+      "time": "0.012"
+    },
+    {
+      "name": "app.superhealth.coach.CoachDisabledTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:25.737Z",
+      "hostname": "Badland",
+      "time": "3.427"
+    },
+    {
+      "name": "app.superhealth.coach.CoachTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.165Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "app.superhealth.health.data.ScoresTest",
+      "tests": "21",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.174Z",
+      "hostname": "Badland",
+      "time": "0.043"
+    },
+    {
+      "name": "app.superhealth.health.data.WatchCompatibilityTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.218Z",
+      "hostname": "Badland",
+      "time": "0.011"
+    },
+    {
+      "name": "app.superhealth.health.data.WatchMigrationTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.231Z",
+      "hostname": "Badland",
+      "time": "0.112"
+    },
+    {
+      "name": "app.superhealth.insights.InsightsTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.345Z",
+      "hostname": "Badland",
+      "time": "0.008"
+    },
+    {
+      "name": "app.superhealth.insights.StrainSignalsTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.353Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "app.superhealth.league.FriendMergeTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.357Z",
+      "hostname": "Badland",
+      "time": "0.223"
+    },
+    {
+      "name": "app.superhealth.league.HealthIndexTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.581Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "app.superhealth.league.ProgressionTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.584Z",
+      "hostname": "Badland",
+      "time": "0.008"
+    },
+    {
+      "name": "app.superhealth.league.RelayCryptoTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.594Z",
+      "hostname": "Badland",
+      "time": "0.056"
+    },
+    {
+      "name": "app.superhealth.meals.PortionsTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.651Z",
+      "hostname": "Badland",
+      "time": "0.01"
+    },
+    {
+      "name": "app.superhealth.nutrition.SeniorTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.662Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "app.superhealth.nutrition.data.AiImportTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.667Z",
+      "hostname": "Badland",
+      "time": "0.007"
+    },
+    {
+      "name": "app.superhealth.nutrition.data.WeekTargetsTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.675Z",
+      "hostname": "Badland",
+      "time": "0.022"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.BalanceHabitsTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.698Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.DomainTest",
+      "tests": "23",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.702Z",
+      "hostname": "Badland",
+      "time": "0.029"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.ManualTargetsTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.733Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.V4Test",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.736Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "app.superhealth.training.DomainTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:29.739Z",
+      "hostname": "Badland",
+      "time": "0.287"
+    },
+    {
+      "name": "app.superhealth.training.PlanDiffTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.027Z",
+      "hostname": "Badland",
+      "time": "0.018"
+    },
+    {
+      "name": "app.superhealth.training.ProgramEditTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.046Z",
+      "hostname": "Badland",
+      "time": "0.021"
+    },
+    {
+      "name": "app.superhealth.training.ProgramTransferTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.068Z",
+      "hostname": "Badland",
+      "time": "0.039"
+    },
+    {
+      "name": "app.superhealth.training.SessionAndGenerationPreferencesTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.108Z",
+      "hostname": "Badland",
+      "time": "0.175"
+    },
+    {
+      "name": "app.superhealth.training.TrainingTrendsTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.285Z",
+      "hostname": "Badland",
+      "time": "0.023"
+    },
+    {
+      "name": "app.superhealth.ui.DashboardSocialTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.309Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "app.superhealth.ui.I18nTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.316Z",
+      "hostname": "Badland",
+      "time": "0.112"
+    },
+    {
+      "name": "app.superhealth.ui.ShellTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.429Z",
+      "hostname": "Badland",
+      "time": "0.01"
+    },
+    {
+      "name": "app.superhealth.ui.charts.ChartsTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.440Z",
+      "hostname": "Badland",
+      "time": "0.005"
+    },
+    {
+      "name": "app.superhealth.update.UpdaterTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.445Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.XMarkerLabelLayoutTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.449Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.sleep.SleepSessionChartDataTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.453Z",
+      "hostname": "Badland",
+      "time": "0.017"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.steps.StepsDailyChartDataTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:30.478Z",
+      "hostname": "Badland",
+      "time": "2.259"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.weight.WeightChartDataTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:32.739Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.dashboard.DashboardViewModelTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:32.743Z",
+      "hostname": "Badland",
+      "time": "0.203"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.dashboard.StackedGridLayoutManagerTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:32.948Z",
+      "hostname": "Badland",
+      "time": "0.145"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.dashboard.data.DashboardRepositoryImplTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:33.095Z",
+      "hostname": "Badland",
+      "time": "0.265"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.hipee.XiaomiHipeeP1HistoryActivityTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:33.361Z",
+      "hostname": "Badland",
+      "time": "0.021"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutBatchExporterTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:33.385Z",
+      "hostname": "Badland",
+      "time": "0.414"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutEditorSaveTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:33.801Z",
+      "hostname": "Badland",
+      "time": "0.058"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutUploaderSyncTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:33.861Z",
+      "hostname": "Badland",
+      "time": "0.153"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.schema.GadgetbridgeUpdate156Test",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:34.017Z",
+      "hostname": "Badland",
+      "time": "0.035"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.FallbackSleepSessionProviderTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:34.053Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.cycling_sensor.activity.LiveValueTimeoutTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:34.056Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminEstimatedSleepTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:34.059Z",
+      "hostname": "Badland",
+      "time": "0.058"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminPrgInstallHandlerTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:34.121Z",
+      "hostname": "Badland",
+      "time": "1.016"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminRawSleepFitImportTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.145Z",
+      "hostname": "Badland",
+      "time": "0.382"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminWorkoutParserElevationTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.532Z",
+      "hostname": "Badland",
+      "time": "0.244"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.qnscale.QnScaleProtocolTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.778Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.sony.reonpocket.SonyReonPocketConstantsTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.788Z",
+      "hostname": "Badland",
+      "time": "0.009"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.sony.reonpocket.SonyReonPocketTelemetryTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.799Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.ugreen.hitunemax5c.UgreenHituneMax5cCoordinatorTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.804Z",
+      "hostname": "Badland",
+      "time": "0.019"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.zeblaze.stratos4pro.Stratos4ProActivitySampleProviderTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.829Z",
+      "hostname": "Badland",
+      "time": "0.046"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.notifications.apps.NotificationAppRulesTest",
+      "tests": "34",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.880Z",
+      "hostname": "Badland",
+      "time": "0.025"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalservices.ExternalServiceRegistryTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.906Z",
+      "hostname": "Badland",
+      "time": "0.005"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalservices.endurain.EndurainApiClientTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:35.915Z",
+      "hostname": "Badland",
+      "time": "0.269"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.install.InstallStateMachineTest",
+      "tests": "21",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.187Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.FitActivityTrackProviderCadenceTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.195Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.FitActivityTrackProviderSetTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.198Z",
+      "hostname": "Badland",
+      "time": "0.038"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.WeatherSpecTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.239Z",
+      "hostname": "Badland",
+      "time": "0.192"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoCallSequenceTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.433Z",
+      "hostname": "Badland",
+      "time": "0.098"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoDeviceStateAndStringMessagesTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.532Z",
+      "hostname": "Badland",
+      "time": "0.105"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoRequestsTest",
+      "tests": "16",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.640Z",
+      "hostname": "Badland",
+      "time": "0.32"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoSupportTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:36.961Z",
+      "hostname": "Badland",
+      "time": "0.082"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.ConfigAudioModeTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.044Z",
+      "hostname": "Badland",
+      "time": "0.072"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.ConfigSchemaTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.125Z",
+      "hostname": "Badland",
+      "time": "0.243"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.SubscribeMessageTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.370Z",
+      "hostname": "Badland",
+      "time": "0.02"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.VolumesMaxMinTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.391Z",
+      "hostname": "Badland",
+      "time": "0.111"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5CaptureDecodeAuditTest",
+      "tests": "2",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.503Z",
+      "hostname": "Badland",
+      "time": "0.016"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5ErgKindTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.519Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5MessageDecoderTest",
+      "tests": "23",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.520Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5RecordingDecodeTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.523Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cycling_sensor.support.CrankCadenceTrackerTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.530Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cycling_sensor.support.CyclingSpeedCadenceMeasurementTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.531Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.RawSleepNightsTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:37.534Z",
+      "hostname": "Badland",
+      "time": "0.978"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.RawSleepStreamTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:38.514Z",
+      "hostname": "Badland",
+      "time": "0.01"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSleepDataRawTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:38.525Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.workouts.GarminExerciseCatalogTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:38.527Z",
+      "hostname": "Badland",
+      "time": "0.307"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.workouts.GarminWorkoutFitEncoderTest",
+      "tests": "16",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:38.838Z",
+      "hostname": "Badland",
+      "time": "0.341"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.gloryfit.GloryFitSupportTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.181Z",
+      "hostname": "Badland",
+      "time": "0.02"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsDeviceSourcesTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.202Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.workouts.ZeppOsExerciseCatalogTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.204Z",
+      "hostname": "Badland",
+      "time": "0.082"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.workouts.ZeppOsWorkoutTemplateEncoderTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.289Z",
+      "hostname": "Badland",
+      "time": "0.226"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.workouts.ZeppOsWorkoutTemplateImportTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.517Z",
+      "hostname": "Badland",
+      "time": "0.082"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.innovo.InnovoPlxMeasurementTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.600Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ninebot.NinebotCryptoTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.601Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearDeviceSyncTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.606Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearHistorySyncTest",
+      "tests": "14",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.608Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearPacketTest",
+      "tests": "51",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.613Z",
+      "hostname": "Badland",
+      "time": "0.005"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearProtocolTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.619Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearSleepReadingTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.620Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearSpo2ReadingTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.622Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearWorkoutTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.623Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeActivityRecordsTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.627Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeAlarmTest",
+      "tests": "14",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.629Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeFacesTableTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.630Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeProtocolTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.632Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.WeekdayRegisterComposerTest",
+      "tests": "15",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.634Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.onetouch.OneTouchMessageTest",
+      "tests": "36",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:39.638Z",
+      "hostname": "Badland",
+      "time": "0.653"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.shokz.ShokzSupportTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.291Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ugreen.UgreenProtocolTest",
+      "tests": "14",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.295Z",
+      "hostname": "Badland",
+      "time": "0.011"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaCansProtocolTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.306Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaCcsEventProtocolTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.309Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaDailyHealthFileTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.310Z",
+      "hostname": "Badland",
+      "time": "0.01"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaDailyHealthProtocolTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.321Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaFtsProtocolTest",
+      "tests": "15",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.322Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaHourlyHrProtocolTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.323Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaHrRunsTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.324Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaNotificationStoreTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.324Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaReadWindowTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.325Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.viatom.F8ScaleTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.329Z",
+      "hostname": "Badland",
+      "time": "0.036"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.whoop.WhoopAnalysisTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.366Z",
+      "hostname": "Badland",
+      "time": "0.626"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.whoop.WhoopProtocolTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:40.993Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_hipee.XiaomiHipeeP1SupportTest",
+      "tests": "25",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.002Z",
+      "hostname": "Badland",
+      "time": "0.005"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterCryptoTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.007Z",
+      "hostname": "Badland",
+      "time": "0.013"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterProtocolTest",
+      "tests": "27",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.021Z",
+      "hostname": "Badland",
+      "time": "0.005"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterRideHistoryTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.028Z",
+      "hostname": "Badland",
+      "time": "0.237"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterTransportTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.266Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProBatteryLogTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.268Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProLightsTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.274Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProHistoryParserTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.270Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProProtocolTest",
+      "tests": "20",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.276Z",
+      "hostname": "Badland",
+      "time": "0.01"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProRecordingsTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.287Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProRouteTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.291Z",
+      "hostname": "Badland",
+      "time": "0.194"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProWeatherTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.487Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProWorkoutParserTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.491Z",
+      "hostname": "Badland",
+      "time": "0.028"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationCorrectionTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.520Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationGainTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.525Z",
+      "hostname": "Badland",
+      "time": "0.007"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationTilesSummaryTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.533Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationTilesTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.536Z",
+      "hostname": "Badland",
+      "time": "0.143"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.HgtTileLibraryTest",
+      "tests": "16",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.681Z",
+      "hostname": "Badland",
+      "time": "0.142"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.HgtTileTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.824Z",
+      "hostname": "Badland",
+      "time": "0.11"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectWorkoutDeletionTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.936Z",
+      "hostname": "Badland",
+      "time": "0.027"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectWorkoutSyncTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:41.965Z",
+      "hostname": "Badland",
+      "time": "0.093"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.OversizedRouteTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.059Z",
+      "hostname": "Badland",
+      "time": "0.026"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.SyncTimestampAdvancementTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.086Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.SyncTimestampRangeTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.087Z",
+      "hostname": "Badland",
+      "time": "0.041"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.ActivitySampleMinuteBucketingTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.129Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.ActivitySampleSliceBoundaryTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.135Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.HealthConnectSyncerTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.136Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.HeartRateSyncerTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.137Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerCadenceTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.142Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerElevationTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.144Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerRouteTest",
+      "tests": "14",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.145Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerSegmentsTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.146Z",
+      "hostname": "Badland",
+      "time": "0.475"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RespiratoryRateSyncerTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.625Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.SleepSessionIdentityTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.629Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.SyncerRangeValidationTest",
+      "tests": "37",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.639Z",
+      "hostname": "Badland",
+      "time": "0.019"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.TemperatureSyncerCursorTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.660Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WeightSyncerTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.668Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WorkoutDistanceTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.671Z",
+      "hostname": "Badland",
+      "time": "0.027"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WorkoutSyncerUtilsTest",
+      "tests": "36",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.701Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.kotlin.IntExtensionsTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.705Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.sleep.SleepStageEstimatorTest",
+      "tests": "18",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.709Z",
+      "hostname": "Badland",
+      "time": "0.15"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetGridTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.860Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetLayoutStoreTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:42.864Z",
+      "hostname": "Badland",
+      "time": "0.373"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetPreviewRenderTest",
+      "tests": "1",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:43.241Z",
+      "hostname": "Badland",
+      "time": "2.503"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetRegistryTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:45.746Z",
+      "hostname": "Badland",
+      "time": "0.023"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.BmiWidgetTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:45.771Z",
+      "hostname": "Badland",
+      "time": "0.29"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.BodyCompositionWidgetsTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.063Z",
+      "hostname": "Badland",
+      "time": "0.101"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.HeartRateWidgetTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.166Z",
+      "hostname": "Badland",
+      "time": "0.187"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.LastActivityFormatTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.354Z",
+      "hostname": "Badland",
+      "time": "0.01"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.PaiWidgetTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.366Z",
+      "hostname": "Badland",
+      "time": "0.126"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepScoreWidgetTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.493Z",
+      "hostname": "Badland",
+      "time": "0.069"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepWidgetTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.563Z",
+      "hostname": "Badland",
+      "time": "0.05"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.Spo2WidgetTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.614Z",
+      "hostname": "Badland",
+      "time": "0.048"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.WeightWidgetTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.664Z",
+      "hostname": "Badland",
+      "time": "0.103"
+    },
+    {
+      "name": "com.google.gson.typeadapters.RuntimeTypeAdapterFactoryTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.768Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "lineageos.weather.util.TemperatureUtilsTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.769Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.CaloriesDailyFragmentTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.772Z",
+      "hostname": "Badland",
+      "time": "0.015"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.DecimalValueFormatterTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.787Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.WeightChartFragmentTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.899Z",
+      "hostname": "Badland",
+      "time": "0.187"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.IntervalChartUtilsTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:46.790Z",
+      "hostname": "Badland",
+      "time": "0.108"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.licenses.LicensesActivityTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.201Z",
+      "hostname": "Badland",
+      "time": "0.023"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.marker.ValueMarkerTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.088Z",
+      "hostname": "Badland",
+      "time": "0.111"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutUploadStatusTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.226Z",
+      "hostname": "Badland",
+      "time": "0.15"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutUploadStoreTest",
+      "tests": "15",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.378Z",
+      "hostname": "Badland",
+      "time": "0.251"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutValueFormatterTest",
+      "tests": "17",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.631Z",
+      "hostname": "Badland",
+      "time": "0.307"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.DefaultWorkoutChartsTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.939Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.GappedSeriesTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.942Z",
+      "hostname": "Badland",
+      "time": "0.033"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.WorkoutChartUnitsTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.976Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.ZeroRateGapTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:47.978Z",
+      "hostname": "Badland",
+      "time": "0.052"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.DBHelperUserAttributesTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:48.032Z",
+      "hostname": "Badland",
+      "time": "0.082"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.DeviceDataTablesTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:48.115Z",
+      "hostname": "Badland",
+      "time": "0.068"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.EntitiesTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:48.184Z",
+      "hostname": "Badland",
+      "time": "2.075"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.SampleProviderTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:50.261Z",
+      "hostname": "Badland",
+      "time": "0.117"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.AbstractSampleProviderTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:50.380Z",
+      "hostname": "Badland",
+      "time": "0.279"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.BluetoothNameTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:50.661Z",
+      "hostname": "Badland",
+      "time": "0.168"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.CsvSampleProviderTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:50.832Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.DefaultSleepSessionProviderTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:50.834Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.GenericImpedanceSampleProviderTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:50.837Z",
+      "hostname": "Badland",
+      "time": "0.085"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.SleepSessionProviderRegressionTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:50.923Z",
+      "hostname": "Badland",
+      "time": "0.188"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.SleepSessionSegmenterTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.112Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.WorkoutVo2MaxSampleProviderTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.114Z",
+      "hostname": "Badland",
+      "time": "0.096"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.banglejs.BangleJSActivityPointTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.210Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.banglejs.BangleJSWorkoutParserTest",
+      "tests": "1",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.212Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.samples.CmfSleepSessionProviderTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.214Z",
+      "hostname": "Badland",
+      "time": "0.098"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.workout.CmfWorkoutSummaryParserTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.313Z",
+      "hostname": "Badland",
+      "time": "0.072"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminActivitySampleProviderTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.387Z",
+      "hostname": "Badland",
+      "time": "0.108"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminSleepSessionProviderTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.497Z",
+      "hostname": "Badland",
+      "time": "0.094"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiExtendedSampleProviderTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.613Z",
+      "hostname": "Badland",
+      "time": "0.077"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiActivitySummaryParserTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.593Z",
+      "hostname": "Badland",
+      "time": "0.018"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiSleepSessionProviderTest",
+      "tests": "14",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.693Z",
+      "hostname": "Badland",
+      "time": "0.252"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsActivitySummaryParserTest",
+      "tests": "1",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.947Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiCrypto",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.947Z",
+      "hostname": "Badland",
+      "time": "0.012"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiPacket",
+      "tests": "15",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.961Z",
+      "hostname": "Badland",
+      "time": "0.005"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiTLV",
+      "tests": "35",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.966Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiTruSleepParser",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.968Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestVarInt",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.969Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestAlarms",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.969Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestCalls",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.970Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestDeviceConfig",
+      "tests": "19",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.972Z",
+      "hostname": "Badland",
+      "time": "0.013"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestDisconnectNotification",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.985Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestFindPhone",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.986Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestFitnessData",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.987Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestLocaleConfig",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.989Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestMusicControl",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.990Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestNotifications",
+      "tests": "3",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.992Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestWorkMode",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.992Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.moyoung.BettdowFB051CoordinatorTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.995Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestWorkout",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.993Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.moyoung.MoyoungSettingTimeRangeTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:51.998Z",
+      "hostname": "Badland",
+      "time": "0.035"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.moyoung.MoyoungWorkoutSummaryParserTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:52.034Z",
+      "hostname": "Badland",
+      "time": "0.036"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.sennheiser.SennheiserMomentumBatteryTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:52.071Z",
+      "hostname": "Badland",
+      "time": "0.052"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiFWHelperTest",
+      "tests": "15",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:52.125Z",
+      "hostname": "Badland",
+      "time": "0.379"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiHeartRateRestingSampleProviderTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:52.506Z",
+      "hostname": "Badland",
+      "time": "0.107"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiInstallHandlerTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:52.614Z",
+      "hostname": "Badland",
+      "time": "0.325"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiSampleProviderTest",
+      "tests": "11",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.009Z",
+      "hostname": "Badland",
+      "time": "0.188"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiRawFileAvailabilityTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:52.947Z",
+      "hostname": "Badland",
+      "time": "0.061"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterCadenceTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.198Z",
+      "hostname": "Badland",
+      "time": "0.012"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterGpsDistanceTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.211Z",
+      "hostname": "Badland",
+      "time": "0.012"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterPaceTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.224Z",
+      "hostname": "Badland",
+      "time": "0.033"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterReadmeRoundTripTest",
+      "tests": "2",
+      "skipped": "2",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.259Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterSwimTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.262Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.GPXExporterTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.268Z",
+      "hostname": "Badland",
+      "time": "0.29"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.DeviceAlarmReceiverTest",
+      "tests": "23",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:53.561Z",
+      "hostname": "Badland",
+      "time": "0.437"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.IntentApiReceiverTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54Z",
+      "hostname": "Badland",
+      "time": "0.095"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.NotificationListenerTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.097Z",
+      "hostname": "Badland",
+      "time": "0.16"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.gps.GBLocationListenerTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.259Z",
+      "hostname": "Badland",
+      "time": "0.052"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.gps.GBLocationServiceTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.313Z",
+      "hostname": "Badland",
+      "time": "0.119"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.sleepasandroid.SleepAsAndroidReceiverTest",
+      "tests": "15",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.434Z",
+      "hostname": "Badland",
+      "time": "0.249"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.ActivityKindTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.684Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryDataTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.685Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.DailyTotalsTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.687Z",
+      "hostname": "Badland",
+      "time": "0.076"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.DeviceTypeTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.763Z",
+      "hostname": "Badland",
+      "time": "0.03"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.PendingSleepAsAndroidActionTest",
+      "tests": "23",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:54.795Z",
+      "hostname": "Badland",
+      "time": "0.359"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidAlarmControllerTest",
+      "tests": "24",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.156Z",
+      "hostname": "Badland",
+      "time": "0.425"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidCreateAlarmTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.582Z",
+      "hostname": "Badland",
+      "time": "0.033"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidReceiverRegistrationTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.616Z",
+      "hostname": "Badland",
+      "time": "0.096"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderAccelTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.713Z",
+      "hostname": "Badland",
+      "time": "0.054"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderSensorsTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.768Z",
+      "hostname": "Badland",
+      "time": "0.065"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderSessionTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.835Z",
+      "hostname": "Badland",
+      "time": "0.069"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderTest",
+      "tests": "9",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.905Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidVibrationTest",
+      "tests": "16",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:55.908Z",
+      "hostname": "Badland",
+      "time": "0.271"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.TestBtBRQueue",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.182Z",
+      "hostname": "Badland",
+      "time": "0.24"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.btle.BtLEQueueTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.424Z",
+      "hostname": "Badland",
+      "time": "0.016"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.weightScale.WeightScaleScaleProfileTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.445Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.bose.BoseProtocolTest",
+      "tests": "31",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.448Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioIntervalTimerCodecTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.451Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioIntervalTimerLibraryTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.452Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioIntervalTimerTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.456Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioWorldClockCodecTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.457Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cmfwatchpro.CmfActivityTypeTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.459Z",
+      "hostname": "Badland",
+      "time": "0.019"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cmfwatchpro.CmfCommandTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.478Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunPacketEncoderTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.480Z",
+      "hostname": "Badland",
+      "time": "0.079"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunProtocolTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.561Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunPacketTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.560Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunResponseHandlerTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.562Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.evenrealities.G1NotificationPayloadTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.564Z",
+      "hostname": "Badland",
+      "time": "0.021"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.fitcloud.ak102.Ak102DeviceSupportTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.586Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.ExploreSyncHandlerTest",
+      "tests": "24",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.605Z",
+      "hostname": "Badland",
+      "time": "0.613"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.fitpro.FitProDeviceSupportTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.592Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.fitcloud.ak102.Ak102SyncParserTest",
+      "tests": "13",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.590Z",
+      "hostname": "Badland",
+      "time": "0.002"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.Development",
+      "tests": "5",
+      "skipped": "5",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:56.595Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupportTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:57.220Z",
+      "hostname": "Badland",
+      "time": "0.151"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.communicator.CobsCoDecTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:57.372Z",
+      "hostname": "Badland",
+      "time": "2.063"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.GpxRouteFileConverterTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.437Z",
+      "hostname": "Badland",
+      "time": "0.133"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitWeatherTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.627Z",
+      "hostname": "Badland",
+      "time": "0.024"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.enums.GarminSportTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.574Z",
+      "hostname": "Badland",
+      "time": "0.053"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.baseTypes.BaseTypeEncodeRoundTripTest",
+      "tests": "17",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.571Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.http.GarminHttpRequestTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.653Z",
+      "hostname": "Badland",
+      "time": "0.098"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.FindMyPhoneTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.754Z",
+      "hostname": "Badland",
+      "time": "0.004"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.http.GarminJsonTest",
+      "tests": "8",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.752Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.generic_headphones.GenericHeadphonesSupportTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.759Z",
+      "hostname": "Badland",
+      "time": "0.192"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.HuamiSupportTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:28:59.954Z",
+      "hostname": "Badland",
+      "time": "0.087"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.UIHHContainerTest",
+      "tests": "1",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:00.042Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsActivityDetailsParserTest",
+      "tests": "5",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:00.043Z",
+      "hostname": "Badland",
+      "time": "0.065"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsActivityTypeTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:00.109Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsBitmapFormatTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:00.111Z",
+      "hostname": "Badland",
+      "time": "1.988"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsMenuTypeTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.101Z",
+      "hostname": "Badland",
+      "time": "0.08"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.ZeppOsNotificationServiceTest",
+      "tests": "22",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.183Z",
+      "hostname": "Badland",
+      "time": "0.367"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.http.HttpAppsSettingsHandlerTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.551Z",
+      "hostname": "Badland",
+      "time": "0.019"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.HuaweiActivityTrackMergeTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.571Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestDebugRequestParser",
+      "tests": "14",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.574Z",
+      "hostname": "Badland",
+      "time": "0.013"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestHuaweiSupportProvider",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.660Z",
+      "hostname": "Badland",
+      "time": "0.061"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestHiChainPakeUtils",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.588Z",
+      "hostname": "Badland",
+      "time": "0.071"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestResponseManager",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.722Z",
+      "hostname": "Badland",
+      "time": "0.208"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.igpsport.IGPSportNotificationTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.931Z",
+      "hostname": "Badland",
+      "time": "0.02"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.miband.FirmwareTest",
+      "tests": "4",
+      "skipped": "4",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.951Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.moyoung.MoyoungBatteryLevelTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:02.954Z",
+      "hostname": "Badland",
+      "time": "0.058"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.moyoung.MoyoungDeviceSupportTest",
+      "tests": "1",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.013Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.moyoung.MoyoungSpo2RefreshTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.014Z",
+      "hostname": "Badland",
+      "time": "0.027"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nothing.NothingProtocolTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.043Z",
+      "hostname": "Badland",
+      "time": "0.052"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nut.NutUtilsTest",
+      "tests": "16",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.095Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.oppo.OppoHeadphonesSupportTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.099Z",
+      "hostname": "Badland",
+      "time": "0.178"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.oppo.modules.FirmwareVersionModuleTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.278Z",
+      "hostname": "Badland",
+      "time": "0.027"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.oppo.modules.MiscConfigModuleTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.306Z",
+      "hostname": "Badland",
+      "time": "0.057"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sennheiser.SennheiserMomentumProtocolTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.365Z",
+      "hostname": "Badland",
+      "time": "0.144"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sennheiser.SennheiserMomentumSupportTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.510Z",
+      "hostname": "Badland",
+      "time": "0.091"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v1.SonyProtocolImplV1Test",
+      "tests": "61",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.603Z",
+      "hostname": "Badland",
+      "time": "0.016"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v2.SonyProtocolImplV2Test",
+      "tests": "59",
+      "skipped": "16",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.621Z",
+      "hostname": "Badland",
+      "time": "0.006"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.protocol.impl.v1.SoundcoreV1ResponseTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.628Z",
+      "hostname": "Badland",
+      "time": "0.007"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.MessageBuilderTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.637Z",
+      "hostname": "Badland",
+      "time": "0.173"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.ChallengeTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.811Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.DataStructureFactoryTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:03.811Z",
+      "hostname": "Badland",
+      "time": "0.856"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.ProbeReplyTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.667Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.TimeTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.668Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.message.AbstractMessageTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.669Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.notification.NotificationAttributeTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.669Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.notification.RequestedNotificationAttributeTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.670Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiAuthServiceTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.670Z",
+      "hostname": "Badland",
+      "time": "0.02"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiNotificationDismissTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.692Z",
+      "hostname": "Badland",
+      "time": "0.11"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiNotificationSendTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.804Z",
+      "hostname": "Badland",
+      "time": "0.027"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiNotificationServiceTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.832Z",
+      "hostname": "Badland",
+      "time": "0.08"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiRealtimeStatsTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:04.913Z",
+      "hostname": "Badland",
+      "time": "0.085"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSleepAsAndroidWorkoutTest",
+      "tests": "36",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:05.001Z",
+      "hostname": "Badland",
+      "time": "0.745"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSppPacketV2Test",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:05.748Z",
+      "hostname": "Badland",
+      "time": "0.075"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSppProtocolV2Test",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:05.825Z",
+      "hostname": "Badland",
+      "time": "0.284"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSppV2SendWindowTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.110Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiWorkoutStatsWatchTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.112Z",
+      "hostname": "Badland",
+      "time": "0.232"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityFileIdTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.344Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityTrackProviderRawFileTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.347Z",
+      "hostname": "Badland",
+      "time": "0.065"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityParserTest",
+      "tests": "1",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.346Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.DailySummaryParserTest",
+      "tests": "10",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.413Z",
+      "hostname": "Badland",
+      "time": "0.003"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.ManualSamplesParserTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.416Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.WorkoutDetailsParserTest",
+      "tests": "42",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.418Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.WorkoutDetailsSummaryConsistencyTest",
+      "tests": "4",
+      "skipped": "1",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.421Z",
+      "hostname": "Badland",
+      "time": "0.008"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.WorkoutSummaryParserTest",
+      "tests": "17",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.429Z",
+      "hostname": "Badland",
+      "time": "0.013"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHealthServiceGpsTest",
+      "tests": "21",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.445Z",
+      "hostname": "Badland",
+      "time": "0.396"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHealthServiceTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.842Z",
+      "hostname": "Badland",
+      "time": "0.009"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHeartRateIntervalRoundTripTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.851Z",
+      "hostname": "Badland",
+      "time": "0.022"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHeartRateTogglesTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.874Z",
+      "hostname": "Badland",
+      "time": "0.068"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiRpkMessageFlowTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:06.943Z",
+      "hostname": "Badland",
+      "time": "0.132"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiRpkServiceTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.076Z",
+      "hostname": "Badland",
+      "time": "0.079"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiSpo2ModeTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.157Z",
+      "hostname": "Badland",
+      "time": "0.071"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.ArmenianTransliteratorTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.230Z",
+      "hostname": "Badland",
+      "time": "0.012"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.ArrayUtilsTest",
+      "tests": "22",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.243Z",
+      "hostname": "Badland",
+      "time": "0.35"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.BLETypeConversionsTest",
+      "tests": "17",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.594Z",
+      "hostname": "Badland",
+      "time": "0.276"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.CalendarEventTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.871Z",
+      "hostname": "Badland",
+      "time": "0.038"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.FileUtilsTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.910Z",
+      "hostname": "Badland",
+      "time": "0.047"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.FitProTests",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.958Z",
+      "hostname": "Badland",
+      "time": "0.032"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.GBZipFileTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:07.991Z",
+      "hostname": "Badland",
+      "time": "0.112"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.HexToBinaryInputStreamTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.104Z",
+      "hostname": "Badland",
+      "time": "0.035"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.HuamiActivityDetailsParserTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.141Z",
+      "hostname": "Badland",
+      "time": "0.076"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.KhmerTransliteratorTest",
+      "tests": "8",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.219Z",
+      "hostname": "Badland",
+      "time": "0.005"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.LoggingTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.226Z",
+      "hostname": "Badland",
+      "time": "0.119"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.MiscTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.346Z",
+      "hostname": "Badland",
+      "time": "0.016"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.PebbleUtilsTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.362Z",
+      "hostname": "Badland",
+      "time": "0.033"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.ProtobufTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.396Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.RtlUtilsTest",
+      "tests": "17",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.398Z",
+      "hostname": "Badland",
+      "time": "0.274"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.StringUtilsTest",
+      "tests": "27",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:08.674Z",
+      "hostname": "Badland",
+      "time": "0.423"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.Tryout",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.098Z",
+      "hostname": "Badland",
+      "time": "0.251"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.BitmapUtilTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.351Z",
+      "hostname": "Badland",
+      "time": "0.05"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.BodyCompositionCalculatorTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.402Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.BundleUtilsTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.403Z",
+      "hostname": "Badland",
+      "time": "0.036"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.EmojiConverterTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.440Z",
+      "hostname": "Badland",
+      "time": "0.034"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.FindPhoneSoundTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.476Z",
+      "hostname": "Badland",
+      "time": "0.049"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.GBLazyHexdumpTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.525Z",
+      "hostname": "Badland",
+      "time": "0.0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.ImportExportSharedPreferencesTest",
+      "tests": "1",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.526Z",
+      "hostname": "Badland",
+      "time": "0.02"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.LEB128UtilsTest",
+      "tests": "3",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.546Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.NavigationUtilsTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.547Z",
+      "hostname": "Badland",
+      "time": "0.032"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.OpenLocationCodeTest",
+      "tests": "5",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.580Z",
+      "hostname": "Badland",
+      "time": "0.007"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.RangeMapTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.587Z",
+      "hostname": "Badland",
+      "time": "0.037"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.SleepRangeUtilsTest",
+      "tests": "6",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.625Z",
+      "hostname": "Badland",
+      "time": "0.001"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.XTimePreferenceTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.755Z",
+      "hostname": "Badland",
+      "time": "0.016"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.gpx.GPXParserTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.773Z",
+      "hostname": "Badland",
+      "time": "0.214"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.language.LanguageUtilsTest",
+      "tests": "16",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.989Z",
+      "hostname": "Badland",
+      "time": "0.27"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.WaypointHelperTest",
+      "tests": "7",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:29:09.628Z",
+      "hostname": "Badland",
+      "time": "0.124"
+    }
+  ]
+}

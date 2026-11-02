@@ -159,8 +159,15 @@ interface FoodDao {
     suspend fun clear()
 }
 
+data class DailyCalories(val epochDay: Long, val kcal: Double)
+
 @Dao
 interface EntryDao {
+    @Query("SELECT epochDay, SUM(kcal) AS kcal FROM food_entries GROUP BY epochDay ORDER BY epochDay")
+    suspend fun dailyCalories(): List<DailyCalories>
+    @Query("SELECT DISTINCT epochDay FROM food_entries WHERE kcal > 0 OR protein > 0 OR fat > 0 OR carbs > 0 ORDER BY epochDay")
+    suspend fun loggedDays(): List<Long>
+
     @Query("SELECT * FROM food_entries WHERE epochDay = :day ORDER BY minuteOfDay, createdAt")
     fun forDay(day: Long): Flow<List<FoodEntryEntity>>
 

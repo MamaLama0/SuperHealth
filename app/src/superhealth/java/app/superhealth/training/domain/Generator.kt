@@ -28,9 +28,24 @@ object Generator {
         val color: Int = 0,
         val gymId: String? = null,
         val numCycles: Int = 6,
+        /** Cibles choisies par famille ; uniquement pour les exercices répétitions + charge. */
+        val targetPreferences: Map<Template, TargetPreference> = emptyMap(),
     )
 
     enum class Template { PRIMARY, SECONDARY, ACCESSORY }
+
+    data class TargetPreference(val minReps: Int, val maxReps: Int, val rir: Int) {
+        init { require(minReps in 1..50 && maxReps in minReps..50 && rir in 0..10) }
+    }
+
+    /** Les cibles de répétitions/effort ne remplacent jamais un exercice chronométré ou de gainage. */
+    fun acceptsTargetPreference(e: Exercise) = e.usesReps && e.usesWeight && !e.usesDuration && e.type != "core"
+
+    fun chosenTarget(input: Input, e: Exercise, template: Template): TargetSet {
+        val base = baseTarget(input.goal, template)
+        val preference = input.targetPreferences[template]?.takeIf { acceptsTargetPreference(e) } ?: return base
+        return base.copy(minReps = preference.minReps, maxReps = preference.maxReps, rir = preference.rir)
+    }
 
     /** Emplacement d'un jour : schémas de mouvement acceptés (noms de la base) ou groupe musculaire visé. */
     data class Slot(val template: Template, val patterns: List<String>, val group: MuscleGroup? = null)
@@ -216,7 +231,7 @@ object Generator {
                 }
                 val pool = cands.filter { level(it, input.goal, slot.template) != null }.ifEmpty { cands }
                 val pick = pool.maxByOrNull { score(it, input.goal, slot.template) - used.getOrDefault(it.id, 0) * 1.5 } ?: continue
-                val base = baseTarget(input.goal, slot.template)
+                val base = chosenTarget(input, pick, slot.template)
                 val focus = pick.muscleGroups.sumOf { input.focus[it] ?: 0 }.coerceIn(-1, 2)
                 val sets = (baseSets(slot.template, input.experience) + focus).coerceIn(1, 5)
                 val cost = minutes(sets, base.restSec)
@@ -224,7 +239,7 @@ object Generator {
                 budget -= cost
                 chosenToday += pick.id
                 used[pick.id] = used.getOrDefault(pick.id, 0) + 1
-                exercises += ProgramExercise(UUID.randomUUID().toString(), pick.id, cycles(input, base, sets))
+                exercises += ProgramExercise(UUID.randomUUID().toString(), pick.id, cycles(input, base, sets, fixedTargets = slot.template in input.targetPreferences && acceptsTargetPreference(pick)))
             }
             trainingDays += ProgramDay(UUID.randomUUID().toString(), dayName(sd, dayTypes, idx), exercises)
         }
@@ -270,16 +285,16 @@ object Generator {
      * Cibles par cycle. Linéaire : plage décalée d'une répétition par cycle (0xed55ec) et RIR décroissant vers 0-1 ;
      * décharge : moitié des séries, RIR +2.
      */
-    fun cycles(input: Input, base: TargetSet, sets: Int): List<List<TargetSet>> {
+    fun cycles(input: Input, base: TargetSet, sets: Int, fixedTargets: Boolean = false): List<List<TargetSet>> {
         val n = input.numCycles.coerceAtLeast(1)
         if (input.periodization == Periodization.STATIC && input.deload == Deload.NONE) return listOf(List(sets) { base })
         return (0 until n).map { c ->
             val isDeload = (input.deload == Deload.FIRST && c == 0) || (input.deload == Deload.LAST && c == n - 1)
             val work = (0 until n).filter { !((input.deload == Deload.FIRST && it == 0) || (input.deload == Deload.LAST && it == n - 1)) }
-            if (isDeload) List(max(1, (sets + 1) / 2)) { base.copy(rir = min(5, base.rir + 2)) }
+            if (isDeload) List(max(1, (sets + 1) / 2)) { base.copy(rir = min(10, base.rir + 2)) }
             else {
                 val k = work.indexOf(c)
-                val t = if (input.periodization == Periodization.LINEAR && work.size > 1) {
+                val t = if (!fixedTargets && input.periodization == Periodization.LINEAR && work.size > 1) {
                     val shift = (work.size - 1 - k).coerceAtMost(2) - 1  // de +1 à −1 répétition au fil du bloc
                     val rir = (base.rir + 1 - (k * (base.rir + 1) / (work.size - 1))).coerceIn(0, base.rir + 1)
                     base.copy(minReps = max(1, base.minReps + shift), maxReps = max(2, base.maxReps + shift), rir = rir)
@@ -290,9 +305,9 @@ object Generator {
     }
 
     /** Index du cycle de cibles pour un programme (périodisation désactivée = cycle unique). */
-    fun targetsFor(pe: ProgramExercise, cycle: Int): List<TargetSet> = pe.cycles[cycle.coerceIn(0, pe.cycles.lastIndex)]
+    fun targetsFor(pe: ProgramExercise, cycle: Int): List<TargetSet> = if (cycle in pe.skippedCycles || pe.cycles.isEmpty()) emptyList() else pe.cycles[cycle.coerceIn(0, pe.cycles.lastIndex)]
 
     /** Durée estimée d'un jour (minutes). */
     fun estimateMinutes(day: ProgramDay, cycle: Int) =
-        day.exercises.sumOf { pe -> targetsFor(pe, cycle).let { s -> minutes(s.size, s.firstOrNull()?.restSec ?: 120) } }.roundToInt()
+        day.exercises.filter { cycle !in it.skippedCycles }.sumOf { pe -> targetsFor(pe, cycle).let { s -> minutes(s.size, s.firstOrNull()?.restSec ?: 120) } }.roundToInt()
 }

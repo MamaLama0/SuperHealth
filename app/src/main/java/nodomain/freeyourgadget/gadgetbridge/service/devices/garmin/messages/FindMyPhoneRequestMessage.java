@@ -26,6 +26,7 @@ public class FindMyPhoneRequestMessage extends GFDIMessage {
     public List<GBDeviceEvent> getGBDeviceEvent() {
         final GBDeviceEventFindPhone findPhoneEvent = new GBDeviceEventFindPhone();
         findPhoneEvent.event = GBDeviceEventFindPhone.Event.START;
+        findPhoneEvent.durationSeconds = duration > 0 ? Math.min(duration, 255) : 256;
         return Collections.singletonList(findPhoneEvent);
     }
 

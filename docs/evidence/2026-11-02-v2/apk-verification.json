@@ -1,0 +1,18 @@
+{
+  "production": {
+    "packageLine": "package: name='app.superhealth' versionCode='31' versionName='2.8' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+    "debuggable": false,
+    "certificateSha256": "699b4a00f2e0860da657e6f5477264936cd8f0e6686917905d852e75c26345c2",
+    "apkSha256": "2a3af04278cc46c4f6b3e1014935a28dbc97f4e3b5d6c8e7606d43d7a28f5d63",
+    "bytes": 41907252
+  },
+  "qa": {
+    "packageLine": "package: name='app.superhealth.qa' versionCode='31' versionName='2.8' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+    "debuggable": true,
+    "certificateSha256": "699b4a00f2e0860da657e6f5477264936cd8f0e6686917905d852e75c26345c2",
+    "apkSha256": "0c72c7ea1a67fb5d1da19914997f4c1ef92e0cbdc1dc0928c5cc7207a4267389",
+    "bytes": 85825804
+  },
+  "previousProductionCertificateMatches": true,
+  "productionCopiedTo": "/home/bad/Documents/REA/SuperHealth copie/SuperHealth-2.8.apk"
+}

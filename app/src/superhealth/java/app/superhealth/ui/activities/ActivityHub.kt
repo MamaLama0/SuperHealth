@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -120,9 +121,9 @@ enum class ActivitySection(val label: String, val summary: String, val plugin: S
 
 /** Sections affichées ; avant le premier choix, ce que les parties activées donnent déjà. Sans son plugin installé et activé, une section n'apparaît pas. */
 fun SuperSettings.sections(): List<ActivitySection> =
-    (if (activitySections.isNotEmpty()) ActivitySection.entries.filter { it.name in activitySections }
+    (if (activityAsked || activitySections.isNotEmpty()) activitySections.mapNotNull { n -> ActivitySection.entries.firstOrNull { it.name == n } }.distinct()
     else listOfNotNull(ActivitySection.STRENGTH.takeIf { has(Feature.TRAINING) }, ActivitySection.RUN.takeIf { has(Feature.HEALTH) }))
-        .filter { it.plugin == null || Modules.isActive(it.plugin) }
+        .filter { (it.feature == null || has(it.feature)) && (it.plugin == null || Modules.isActive(it.plugin)) }
 
 private val hubScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -139,8 +140,8 @@ fun applyActivities(ctx: Context, chosen: Set<ActivitySection>) {
 
 /** Le choix des activités : même présentation à l'ouverture de l'onglet et dans l'accueil. */
 @Composable
-fun ActivityChoices(chosen: Set<ActivitySection>, onChange: (Set<ActivitySection>) -> Unit) {
-    ActivitySection.entries.forEach { a ->
+fun ActivityChoices(chosen: Set<ActivitySection>, includePlugins: Boolean = true, onChange: (Set<ActivitySection>) -> Unit) {
+    ActivitySection.entries.filter { includePlugins || it.plugin == null }.forEach { a ->
         val on = a in chosen
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(18.dp))
             .background(if (on) a.hue.container() else Mf.colors.card)
@@ -302,6 +303,7 @@ private fun Frame(title: String, nav: NavHostController, historyRoute: String?, 
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         TabHeader(longToday(), title) {
             historyRoute?.let { r -> CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate(r) } }
+            CircleAction(androidx.compose.material.icons.Icons.Rounded.Tune, tr("Activités affichées")) { nav.go("settings/activities") }
             SettingsAvatar { nav.go("settings") }
         }
         Column(Modifier.padding(horizontal = 16.dp)) {

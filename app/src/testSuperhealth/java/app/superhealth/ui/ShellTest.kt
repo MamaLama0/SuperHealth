@@ -5,6 +5,8 @@ import app.superhealth.SuperSettings
 import app.superhealth.nutrition.data.Net
 import app.superhealth.ui.dashboard.Rings
 import app.superhealth.withRings
+import app.superhealth.withSocialCards
+import app.superhealth.withStreakHero
 import app.superhealth.CardSize
 import app.superhealth.packRows
 import app.superhealth.sizeOf
@@ -35,6 +37,27 @@ class ShellTest {
         val l = listOf(DashCard.VITALS, DashCard.RINGS)
         assertEquals(l, withRings(l))
         assertTrue(DashCard.defaults.indexOf(DashCard.RINGS) == DashCard.defaults.indexOf(DashCard.VITALS) - 1)
+    }
+
+    @Test fun socialCardsPreserveTheChosenOrderAndDoNotRestoreRemovedLeagueCard() {
+        val chosen = listOf(DashCard.CALORIES, DashCard.RINGS, DashCard.VITALS, DashCard.LEAGUE, DashCard.NEXT_WORKOUT)
+        val next = withSocialCards(chosen)
+        assertEquals(chosen, next.filter { it != DashCard.PROGRESSION && it != DashCard.FRIENDS })
+        assertEquals(next.indexOf(DashCard.RINGS) + 1, next.indexOf(DashCard.VITALS))
+        assertEquals(1, next.count { it == DashCard.PROGRESSION })
+        assertEquals(1, next.count { it == DashCard.FRIENDS })
+        assertEquals(next, withSocialCards(next))
+        assertFalse(DashCard.LEAGUE in withSocialCards(listOf(DashCard.CALORIES)))
+    }
+
+    @Test fun streakHeroIsProposedFirstOnceWithoutReorderingExistingCards() {
+        val chosen = listOf(DashCard.CALORIES, DashCard.RINGS, DashCard.VITALS, DashCard.LEAGUE)
+        val next = withStreakHero(chosen)
+        assertEquals(DashCard.STREAKS, next.first())
+        assertEquals(chosen, next.drop(1))
+        assertEquals(next, withStreakHero(next))
+        assertEquals(DashCard.STREAKS, DashCard.defaults.first())
+        assertEquals(CardSize.L, SuperSettings().sizeOf(DashCard.STREAKS))
     }
 
     @Test fun unknownDashboardCardsDoNotWipeSettings() {

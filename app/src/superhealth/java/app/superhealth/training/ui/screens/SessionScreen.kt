@@ -191,7 +191,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     var sessionNote by remember { mutableStateOf(false) }
     var reorder by remember { mutableStateOf(false) }
     var targetsFor by remember { mutableStateOf<Int?>(null) }
-    // « Terminer la séance ? » proposé une fois quand la dernière série est cochée
+    // Une séance planifiée peut proposer sa fin ; une séance libre continue à accueillir des exercices.
     var allDonePrompt by remember { mutableStateOf(false) }
     val previous = remember(st.history) { previousSets(st.history) }
     /** Meilleur 1RM estimé de chaque exercice avant cette séance : une série qui le dépasse est un record, signalé tout de suite. */
@@ -223,7 +223,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
                                 else androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm)
                             vm.toggleSet(page, si)
                             if (!wasDone) vm.state.value.session?.let { ns ->
-                                if (ns.exercises.isNotEmpty() && ns.exercises.all { e -> e.sets.all { it.done } }) allDonePrompt = true
+                                if (ns.shouldSuggestFinish()) allDonePrompt = true
                                 else vm.nextFocus(ns, page)?.let { n -> scope.launch { delay(350); pager.animateScrollToPage(n) } }
                             }
                         })

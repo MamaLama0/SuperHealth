@@ -81,7 +81,7 @@ private fun snapshot(st: app.superhealth.training.data.AppState): Snap {
     val day = p?.days?.getOrNull(p.dayIndex)
     return when {
         p == null || day == null -> Snap(tr("Aucun programme actif"), tr("Séance libre ou nouveau programme"), tr("Séance vide"), "startempty", week, st.settings.onboarded)
-        day.isRest -> Snap(day.name, tr("Jour de repos"), tr("Ouvrir"), "workout", week, st.settings.onboarded)
+        day.isRestAt(p.cycleIndex) -> Snap(day.name, tr("Jour de repos"), tr("Ouvrir"), "workout", week, st.settings.onboarded)
         else -> Snap(day.name, trf("%1\$d exercices · ≈ %2\$d min", day.exercises.size, Generator.estimateMinutes(day, p.cycleIndex)),
             tr("Commencer"), "startnext", week, st.settings.onboarded)
     }

@@ -1,6 +1,5 @@
 package app.superhealth.ui.stretch
 
-import android.widget.VideoView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -74,7 +73,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.ui.components.MfCard
@@ -326,34 +324,6 @@ private fun Steps(e: Stretch.Ex) {
     }
 }
 
-/**
- * Vidéo de l'exercice, en flux et en boucle, sans le son (consignes à l'écran). Sans réseau : la vignette reste, avec un message.
- * VideoView : une seule vue à la fois, recréée à chaque exercice.
- */
-@Composable
-internal fun StretchVideo(id: String, modifier: Modifier, playing: Boolean = true) {
-    var failed by remember(id) { mutableStateOf(false) }
-    var ready by remember(id) { mutableStateOf(false) }
-    Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
-        if (!failed) key(id) {
-            var view by remember { mutableStateOf<VideoView?>(null) }
-            AndroidView({ c ->
-                VideoView(c).apply {
-                    setOnPreparedListener { mp -> mp.isLooping = true; mp.setVolume(0f, 0f); ready = true; start() }
-                    setOnErrorListener { _, _, _ -> failed = true; true }
-                    setVideoURI(android.net.Uri.parse(Stretch.videoUrl(id)))
-                    view = this
-                }
-            }, Modifier.fillMaxSize())
-            LaunchedEffect(playing, ready) { view?.let { v -> if (ready) { if (playing) v.start() else v.pause() } } }
-            DisposableEffect(Unit) { onDispose { view?.stopPlayback() } }
-        }
-        if (!ready) StretchThumb(id, Modifier.fillMaxSize())
-        if (failed) Text(tr("Vidéo indisponible hors connexion"), color = Color.White, style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(10.dp))
-    }
-}
-
 /** Lecture d'une routine : vidéo en haut, temps restant, consignes, changement de côté signalé par une vibration. */
 @Composable
 fun StretchPlayScreen(nav: NavHostController) {
@@ -361,12 +331,14 @@ fun StretchPlayScreen(nav: NavHostController) {
     val routine by Stretch.current.collectAsState()
     val r = routine ?: return
     val haptic = LocalHapticFeedback.current
-    KeepScreenOn()
+    val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    val foreground = lifecycleState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
     var index by rememberSaveable { mutableIntStateOf(0) }
     var left by rememberSaveable { mutableIntStateOf(r.items.first().seconds) }
     var running by rememberSaveable { mutableStateOf(true) }
     var spent by rememberSaveable { mutableIntStateOf(0) }
     var finished by rememberSaveable { mutableStateOf(false) }
+    if (running && foreground && !finished) KeepScreenOn()
     val e = r.items[index.coerceIn(0, r.items.lastIndex)]
     // fermer ou revenir en arrière garde le temps déjà fait
     fun close() { if (!finished && spent >= 30) Stretch.record(ctx, r, spent); Stretch.current.value = null; nav.popBackStack() }
@@ -375,8 +347,8 @@ fun StretchPlayScreen(nav: NavHostController) {
         if (index >= r.items.lastIndex) { finished = true; Stretch.record(ctx, r, spent) }
         else { index++; left = r.items[index].seconds; haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
     }
-    LaunchedEffect(running, finished) {
-        while (running && !finished) {
+    LaunchedEffect(running, finished, foreground, index) {
+        while (running && !finished && foreground) {
             delay(1000)
             left--; spent++
             if (e.uni && left == e.seconds / 2) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -394,7 +366,7 @@ fun StretchPlayScreen(nav: NavHostController) {
         }
         // la vidéo d'un bord à l'autre, le temps de la routine juste dessous : rien ne se perd autour
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f)) {
-            StretchVideo(e.id, Modifier.fillMaxSize(), running)
+            StretchVideo(e.id, Modifier.fillMaxSize(), running, onPlayingChange = { running = it }, status = "%d:%02d".format(left / 60, left % 60))
             OverlayButton(Icons.Rounded.Close, tr("Fermer"), Modifier.align(Alignment.TopStart).padding(8.dp)) { close() }
             Text(trf("%1\$s sur %2\$s", index + 1, r.items.size), style = MaterialTheme.typography.labelLarge, color = Color.White,
                 modifier = Modifier.align(Alignment.TopEnd).padding(14.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 5.dp))

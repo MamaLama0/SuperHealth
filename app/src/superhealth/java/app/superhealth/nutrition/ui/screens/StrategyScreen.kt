@@ -132,6 +132,10 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
             Spacer(Modifier.height(12.dp))
             GoalCard(an, s, onEdit = { nav.navigate("goal") })
 
+            Spacer(Modifier.height(10.dp))
+            PillButton(tr("Remplacer mes cibles"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("targets/override") }
+            if (app.superhealth.nutrition.domain.ManualTargets.overrideAt(p, an.today) != null)
+                Text(tr("Remplacement actif"), color = Mf.colors.accent, modifier = Modifier.padding(6.dp))
             SectionLabel(tr("Cibles de la semaine"))
             val monday = an.today - LocalDate.ofEpochDay(an.today).dayOfWeek.value + 1
             GroupCard {
@@ -151,7 +155,7 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
 
             SectionLabel(tr("Programme"))
             GroupCard {
-                SettingRow(tr("Style"), when (p.style) { ProgramStyle.COACHED -> tr("Coaché"); ProgramStyle.MANUAL -> tr("Manuel") }) { nav.navigate("program") }
+                SettingRow(tr("Style"), when (p.style) { ProgramStyle.COACHED -> tr("Coaché"); ProgramStyle.MANUAL -> tr("Manuel"); ProgramStyle.COLLABORATIVE -> tr("Collaboratif") }) { nav.navigate("program") }
                 RowDivider()
                 SettingRow(tr("Diète"), p.dietPreference.label.tr()) { nav.navigate("program") }
                 RowDivider()
@@ -405,6 +409,15 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), trend, an.lbmAt(an.today), an.program, g, an.profile.heightCm, java.time.LocalDate.now().year - an.profile.birthYear, an.profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE))
             onBack()
         }
+        if (an.program.weightGoalEnabled) {
+            Spacer(Modifier.height(10.dp))
+            PillButton(tr("Désactiver l'objectif de poids"), Modifier.fillMaxWidth(), strong = false) {
+                val np = an.program.copy(weightGoalEnabled = false)
+                vm.repo.prefs.setProgram(np)
+                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.currentTdee, trend, an.lbmAt(an.today), np, null, an.profile.heightCm))
+                onBack()
+            }
+        }
         current?.let { cur ->
             Spacer(Modifier.height(10.dp))
             if (cur.status == GoalStatus.IN_PROGRESS) PillButton(tr("Marquer l'objectif comme atteint"), Modifier.fillMaxWidth(), strong = false) {
@@ -587,16 +600,15 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     var bmr by remember { mutableStateOf(profile.bmrEquation) }
     var staticTdee by remember { mutableStateOf(num(s.energyValue(program.staticTdee), 0)) }
     var initTdee by remember { mutableStateOf(program.initialTdeeOverride?.let { num(s.energyValue(it), 0) } ?: "") }
-    var mk by remember { mutableStateOf(num(s.energyValue(program.manualKcal), 0)) }
-    var mp by remember { mutableStateOf(num(program.manualProtein, 0)) }
-    var mf by remember { mutableStateOf(num(program.manualFat, 0)) }
-    var mc by remember { mutableStateOf(num(program.manualCarbs, 0)) }
+    var validTargets by remember { mutableStateOf(true) }
+    var individualDays by remember { mutableStateOf(program.manualDays.size == 7) }
+    var editDay by remember { mutableIntStateOf(1) }
     val goalType = a?.currentGoal?.type ?: GoalType.MAINTENANCE
 
     DetailScaffold(tr("Programme"), onBack) {
         MfCard {
             FieldTitle(tr("Style de programme"))
-            ChipChoice(ProgramStyle.entries, p.style, { if (it == ProgramStyle.COACHED) tr("Coaché") else tr("Manuel") }) { p = p.copy(style = it) }
+            ChipChoice(listOf(ProgramStyle.COACHED, ProgramStyle.COLLABORATIVE, ProgramStyle.MANUAL), p.style, { it.label.tr() }) { p = p.copy(style = it) }
             Text(if (p.style == ProgramStyle.COACHED) tr("Cibles recalculées à chaque check-in.")
                  else tr("Vous fixez vos cibles ; la dépense et la progression restent suivies."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
@@ -656,12 +668,28 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 FieldTitle(tr("Jour du check-in"))
                 ChipChoice((1..7).toList(), p.checkInDay, { DAY_NAMES[it - 1] }) { p = p.copy(checkInDay = it) }
             } else {
-                NumberField(tr("Énergie"), mk, { mk = it }, suffix = s.energyUnit.label.tr())
-                Row {
-                    NumberField(tr("Protéines"), mp, { mp = it }, Modifier.weight(1f).padding(end = 6.dp), suffix = "g")
-                    NumberField(tr("Lipides"), mf, { mf = it }, Modifier.weight(1f).padding(horizontal = 3.dp), suffix = "g")
-                    NumberField(tr("Glucides"), mc, { mc = it }, Modifier.weight(1f).padding(start = 6.dp), suffix = "g")
+                if (p.style == ProgramStyle.COLLABORATIVE) {
+                    Text(tr("Les calories s'ajustent au check-in. Vous choisissez les proportions des macros à partir de ce modèle."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    ChipChoice((1..7).toList(), p.checkInDay, { DAY_NAMES[it - 1] }) { p = p.copy(checkInDay = it) }
+                } else {
+                    app.superhealth.nutrition.ui.components.SwitchRow(tr("Cibles différentes selon le jour"), null, individualDays) { on ->
+                        individualDays = on
+                        p = p.copy(manualDays = if (on) List(7) { app.superhealth.nutrition.domain.ManualTargets.base(p) } else emptyList())
+                    }
+                    if (individualDays) ChipChoice((1..7).toList(), editDay, { DAY_NAMES[it - 1].take(3) }) { editDay = it }
                 }
+                androidx.compose.runtime.key(p.style, individualDays, editDay) {
+                    TargetEditor(if (individualDays && p.style == ProgramStyle.MANUAL) app.superhealth.nutrition.domain.ManualTargets.forDay(p, editDay) else app.superhealth.nutrition.domain.ManualTargets.base(p), s) { t ->
+                        validTargets = t != null
+                        if (t != null) {
+                            p = p.copy(manualKcal = t.kcal, manualProtein = t.protein, manualFat = t.fat, manualCarbs = t.carbs,
+                                manualDays = if (individualDays && p.style == ProgramStyle.MANUAL) p.manualDays.toMutableList().also { it[editDay - 1] = t } else p.manualDays)
+                        }
+                    }
+                }
+            }
+            app.superhealth.nutrition.ui.components.SwitchRow(tr("Objectif de poids"), tr("Désactivez pour suivre seulement vos calories et macros"), p.weightGoalEnabled) {
+                p = p.copy(weightGoalEnabled = it)
             }
         }
         SectionLabel(tr("Dépense énergétique"))
@@ -673,20 +701,18 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             NumberField(tr("Dépense initiale imposée (facultatif)"), initTdee, { initTdee = it }, suffix = s.energyUnit.label.tr())
         }
         Spacer(Modifier.height(16.dp))
-        PillButton(tr("Enregistrer et mettre à jour les cibles"), Modifier.fillMaxWidth()) {
+        PillButton(tr("Enregistrer et mettre à jour les cibles"), Modifier.fillMaxWidth(), enabled = p.style == ProgramStyle.COACHED || validTargets) {
             val newP = p.copy(
                 staticTdee = staticTdee.toNum()?.let { s.toKcal(it) } ?: p.staticTdee,
                 initialTdeeOverride = initTdee.toNum()?.let { s.toKcal(it) },
-                manualKcal = mk.toNum()?.let { s.toKcal(it) } ?: p.manualKcal,
-                manualProtein = mp.toNum() ?: p.manualProtein, manualFat = mf.toNum() ?: p.manualFat, manualCarbs = mc.toNum() ?: p.manualCarbs,
             )
             vm.repo.prefs.setProgram(newP)
             vm.repo.prefs.setProfile(profile.copy(bmrEquation = bmr))
-            a?.let { an ->
-                val w = an.currentTrendKg ?: Analytics.DEFAULT_WEIGHT
-                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), w, an.lbmAt(an.today), newP, an.currentGoal, an.profile.heightCm, java.time.LocalDate.now().year - an.profile.birthYear, an.profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE))
+            vm.launch {
+                val fresh = analytics().first()
+                saveCheckIn(fresh.provisionalCheckIn(fresh.today))
+                onBack()
             }
-            onBack()
         }
         Spacer(Modifier.height(24.dp))
     }

@@ -174,8 +174,11 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                     Spacer(Modifier.height(12.dp))
                     val box = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
                     Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(box).dashCardBackground(app.superhealth.ui.theme.CaloriesColor)
-                        .clickable(enabled = entries.isNotEmpty()) { nutrients = !nutrients }.padding(14.dp)) {
-                        app.superhealth.nutrition.ui.components.EnergySummary(total, target, { s.energyValue(it) }, tr(s.energyUnit.label))
+                        .clickable(onClickLabel = tr(if (s.foodSummaryCollapsed) "Déplier le résumé" else "Replier le résumé")) {
+                            nutrients = false
+                            vm.repo.prefs.setSettings(vm.repo.prefs.settings.value.let { it.copy(foodSummaryCollapsed = !it.foodSummaryCollapsed) })
+                        }.padding(horizontal = 12.dp, vertical = if (s.foodSummaryCollapsed) 9.dp else 10.dp)) {
+                        app.superhealth.nutrition.ui.components.EnergySummary(total, target, { s.energyValue(it) }, tr(s.energyUnit.label), collapsed = s.foodSummaryCollapsed)
                     }
                 }
             }

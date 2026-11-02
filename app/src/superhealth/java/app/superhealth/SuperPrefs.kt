@@ -74,7 +74,10 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** 2.5 : cartes des plugins. */
     MEDITATION("Méditation", Section.HEALTH),
     STRETCH("Étirements", Section.TRAINING),
-    LEAGUE("Classement", Section.HEALTH);
+    LEAGUE("Classement", Section.HEALTH),
+    PROGRESSION("Progression", Section.HEALTH),
+    FRIENDS("Amis", Section.HEALTH),
+    STREAKS("Mes séries", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement") }
 
@@ -86,7 +89,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
         val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
 
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
-        val defaults = listOf(RINGS, VITALS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
+        val defaults = listOf(STREAKS, RINGS, VITALS, PROGRESSION, LEAGUE, FRIENDS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
     }
 }
 
@@ -116,26 +119,30 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
 
 /** Cartes conçues en demi-largeur. */
-val HALF = setOf(DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
+val HALF = setOf(DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
     DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD,
     DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART)
 
 /** Module téléchargeable dont dépend la carte (null : toujours disponible). */
 val DashCard.module: String? get() = when (this) {
-    DashCard.COACH, DashCard.COACH_WEEK -> app.superhealth.modules.Modules.COACH
+    DashCard.COACH, DashCard.COACH_WEEK -> null
     DashCard.MEDITATION -> app.superhealth.modules.Modules.MEDITATION
     DashCard.STRETCH -> app.superhealth.modules.Modules.STRETCH
-    DashCard.LEAGUE -> app.superhealth.modules.Modules.LEAGUE
+    DashCard.LEAGUE -> null
     else -> null
 }
 
 /** Carte affichable : son module (s'il en faut un) est installé et activé. */
-val DashCard.available: Boolean get() = module?.let { app.superhealth.modules.Modules.isActive(it) } ?: true
+val DashCard.available: Boolean get() = when (this) {
+    DashCard.COACH, DashCard.COACH_WEEK -> SuperPrefs.settings.value.coachEnabled
+    DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> SuperPrefs.settings.value.leagueEnabled
+    else -> module?.let { app.superhealth.modules.Modules.isActive(it) } ?: true
+}
 
 /** Toutes les cartes ont les quatre tailles, sauf les phrases (Insights) qui n'ont pas de version petite. */
 val DashCard.sizes: List<CardSize> get() = if (this == DashCard.INSIGHTS) listOf(CardSize.M, CardSize.W, CardSize.L) else CardSize.entries
 
-val DashCard.defaultSize: CardSize get() = if (this in HALF) CardSize.M else CardSize.L
+val DashCard.defaultSize: CardSize get() = if (this == DashCard.FRIENDS) CardSize.W else if (this in HALF) CardSize.M else CardSize.L
 
 /** Taille choisie (ou par défaut) d'une carte, toujours parmi celles qu'elle accepte. */
 fun SuperSettings.sizeOf(c: DashCard): CardSize =
@@ -238,6 +245,9 @@ object DashCardList : kotlinx.serialization.KSerializer<List<DashCard>> {
 data class SuperSettings(
     /** Questionnaire d'accueil terminé. */
     val onboarded: Boolean = false,
+    val coachEnabled: Boolean = true,
+    val leagueEnabled: Boolean = true,
+    val builtinsAdded: Boolean = false,
     /** 2.31 : verrouillage de l'app (empreinte ou code du téléphone), délai avant de redemander (s), écran masqué dans les Récents. */
     val appLock: Boolean = false,
     val lockDelaySec: Int = 0,
@@ -279,6 +289,11 @@ data class SuperSettings(
     val nightCardsAdded: Boolean = false,
     /** 2.2 : carte Scores du jour ajoutée une fois, en tête. */
     val scoresAdded: Boolean = false,
+    val healthIndexAdded: Boolean = false,
+    /** Progression et Amis proposés une seule fois, sans rétablir les cartes retirées ensuite. */
+    val socialCardsAdded: Boolean = false,
+    /** Grand accès séries/XP proposé en tête une seule fois. */
+    val streakHeroAdded: Boolean = false,
     /** 1.8 : journal du moral, forme du jour et coucher conseillé déjà proposés (migration unique). */
     val wellbeingAdded: Boolean = false,
     /** Mesures de la carte Constantes (pièce maîtresse du tableau de bord), noms de [app.superhealth.health.data.Metric]. */
@@ -316,6 +331,8 @@ data class SuperSettings(
     val webdavUrl: String = "",
     val webdavUser: String = "",
     val backupFolder: String? = null,
+    /** Document choisi dans Google Drive via le sélecteur Android (accès persistant). */
+    val backupDocument: String? = null,
     val backupEvery: Int = 0,
     val lastBackup: Long = 0,
     val lastBackupError: String? = null,
@@ -416,6 +433,26 @@ fun withRings(cards: List<DashCard>): List<DashCard> {
     return cards.toMutableList().also { it.add(i, DashCard.RINGS) }
 }
 
+/** Ajoute les nouveaux accès sociaux en conservant l'ordre relatif des cartes déjà choisies. */
+fun withSocialCards(cards: List<DashCard>): List<DashCard> {
+    val out = cards.toMutableList()
+    if (DashCard.PROGRESSION !in out) {
+        val league = out.indexOf(DashCard.LEAGUE)
+        val vitals = out.indexOf(DashCard.VITALS)
+        out.add(if (league >= 0) league else if (vitals >= 0) vitals + 1 else out.size, DashCard.PROGRESSION)
+    }
+    if (DashCard.FRIENDS !in out) {
+        val league = out.indexOf(DashCard.LEAGUE)
+        val progression = out.indexOf(DashCard.PROGRESSION)
+        out.add(if (league >= 0) league + 1 else progression + 1, DashCard.FRIENDS)
+    }
+    return out
+}
+
+/** La série devient le premier accès du nouvel accueil ; l'ordre choisi des autres cartes reste intact. */
+fun withStreakHero(cards: List<DashCard>): List<DashCard> =
+    if (DashCard.STREAKS in cards) cards else listOf(DashCard.STREAKS) + cards
+
 /** Réglages propres à SuperHealth (les modules gardent les leurs). */
 object SuperPrefs {
     private lateinit var sp: android.content.SharedPreferences
@@ -426,8 +463,13 @@ object SuperPrefs {
 
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("superhealth", Context.MODE_PRIVATE)
+        val newProfile = !sp.contains("settings")
         _settings.value = sp.getString("settings", null)?.let { runCatching { SuperJson.decodeFromString(SuperSettings.serializer(), it) }.getOrNull() }
             ?: SuperSettings()
+        if (!_settings.value.builtinsAdded) update { it.copy(builtinsAdded = true,
+            coachBrief = if (DashCard.COACH in it.dashboard) it.coachBrief else false,
+            dashboard = (it.dashboard + DashCard.COACH).distinct(),
+            plus = (it.plus + PlusAction.COACH.name + PlusAction.LEAGUE.name).distinct()) }
         // Constantes devenues la pièce maîtresse : placées une fois en tête (l'utilisateur peut ensuite les déplacer ou les retirer).
         _settings.value.let { s ->
             if (!s.vitalsHero) update { it.copy(dashboard = listOf(DashCard.VITALS) + (it.dashboard - DashCard.VITALS), vitalsHero = true) }
@@ -485,6 +527,18 @@ object SuperPrefs {
         if (!_settings.value.scoresAdded) update { s ->
             s.copy(dashboard = if (DashCard.SCORES in s.dashboard) s.dashboard else listOf(DashCard.SCORES) + s.dashboard, scoresAdded = true)
         }
+        if (!_settings.value.healthIndexAdded) update { s ->
+            s.copy(dashboard = if (DashCard.LEAGUE in s.dashboard) s.dashboard else s.dashboard.toMutableList().also {
+                it.add((it.indexOf(DashCard.SCORES) + 1).coerceAtLeast(0), DashCard.LEAGUE)
+            }, healthIndexAdded = true)
+        }
+        if (!_settings.value.socialCardsAdded) update { s ->
+            s.copy(dashboard = withSocialCards(s.dashboard), socialCardsAdded = true)
+        }
+        if (!_settings.value.streakHeroAdded) update { s ->
+            s.copy(dashboard = withStreakHero(s.dashboard), streakHeroAdded = true)
+        }
+        if (newProfile) update { it.copy(dashboard = listOf(DashCard.STREAKS, DashCard.RINGS, DashCard.VITALS) + it.dashboard.filter { c -> c !in setOf(DashCard.STREAKS, DashCard.RINGS, DashCard.VITALS) }) }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }
 

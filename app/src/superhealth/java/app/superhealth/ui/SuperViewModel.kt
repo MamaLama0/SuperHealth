@@ -43,7 +43,12 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     fun bind(n: NutritionViewModel, t: TrainingViewModel) {
+        if (::nutrition.isInitialized && nutrition === n && training === t) return
         nutrition = n; training = t
+        n.analytics.drop(1).onEach { bump() }.launchIn(viewModelScope)
+        t.state.map { it.history }.distinctUntilChanged().drop(1).onEach { bump() }.launchIn(viewModelScope)
+        app.superhealth.meditation.Meditation.log.drop(1).onEach { bump() }.launchIn(viewModelScope)
+        app.superhealth.stretch.Stretch.log.drop(1).onEach { bump() }.launchIn(viewModelScope)
     }
 
     val settings = SuperPrefs.settings

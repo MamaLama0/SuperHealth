@@ -49,7 +49,7 @@ object Archive {
         val health = AppJson.encodeToString(kotlinx.serialization.builtins.ListSerializer(LogRow.serializer()), logs)
         return withContext(Dispatchers.IO) {
             val watch = File(ctx.cacheDir, "montre-backup.zip").apply { delete() }
-            runCatching { runGbJob { cb -> ZipBackupExportJob(ctx, cb, Uri.fromFile(watch)) } }
+            runGbJob { cb -> ZipBackupExportJob(ctx, cb, Uri.fromFile(watch)) }
             val out = ByteArrayOutputStream()
             ZipOutputStream(out).use { zip ->
                 listOf("nutrition.json" to nutrition, "musculation.json" to training, "superhealth.json" to app.superhealth.SuperPrefs.exportSettings(),
@@ -123,6 +123,7 @@ object Archive {
             override fun onProgress(progress: Int, message: String?) {}
             override fun onSuccess(warnings: String?) { ok = true }
             override fun onFailure(errorMessage: String?) { error = errorMessage }
+            override fun onConfirmationRequired(message: String) { throw IllegalArgumentException(message) }
         }).run()
         if (!ok) error(error ?: "montre")
     }

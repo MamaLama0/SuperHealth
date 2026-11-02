@@ -2,6 +2,7 @@ package app.superhealth
 
 import android.content.Intent
 import android.os.Bundle
+import kotlinx.coroutines.flow.first
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -84,9 +85,33 @@ class MainActivity : ComponentActivity() {
         receiveLeagueCard(intent)
     }
 
+    private var nearbyJob: kotlinx.coroutines.Job? = null
+    private var nearby: app.superhealth.league.Nearby? = null
+
+    override fun onStart() {
+        super.onStart()
+        app.superhealth.security.AppLock.returned()
+        if (!app.superhealth.league.League.available() || !app.superhealth.league.League.state.value.refreshOnOpen) return
+        app.superhealth.league.LeagueWorker.onOpen(applicationContext)
+        if (app.superhealth.league.League.state.value.friends.isEmpty()) return
+        nearbyJob = lifecycleScope.launch {
+            var peer: app.superhealth.league.Nearby? = null
+            try {
+                peer = app.superhealth.league.Nearby.create(applicationContext, knownOnly = true)
+                nearby = peer
+                if (!app.superhealth.league.League.available() || !app.superhealth.league.League.state.value.refreshOnOpen) return@launch
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { peer.start() }
+                // Découverte seulement pendant que l'app est visible ; pas de polling permanent.
+                kotlinx.coroutines.flow.combine(app.superhealth.SuperPrefs.settings, app.superhealth.league.League.state) { settings, league -> settings.leagueEnabled && league.refreshOnOpen }.first { !it }
+            } finally { peer?.stop(); if (nearby === peer) nearby = null }
+        }
+    }
+
     /** En quittant l'app : widgets à jour (repas, pas et Body Battery de la synchro à l'ouverture). */
     override fun onStop() {
         super.onStop()
+        nearbyJob?.cancel(); nearbyJob = null
+        nearby?.stop(); nearby = null
         // départ (Accueil, Récents, écran éteint) : pas l'ouverture d'une activité par l'app
         if (!openingActivity && !isChangingConfigurations) app.superhealth.security.AppLock.left()
         val ctx = applicationContext
@@ -117,11 +142,6 @@ class MainActivity : ComponentActivity() {
     override fun startActivity(intent: Intent, options: Bundle?) {
         openingActivity = true
         super.startActivity(intent, options)
-    }
-
-    override fun onStart() {
-        super.onStart()
-        app.superhealth.security.AppLock.returned()
     }
 
     override fun onResume() {

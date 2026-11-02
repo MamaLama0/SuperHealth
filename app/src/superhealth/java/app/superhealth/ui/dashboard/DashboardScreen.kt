@@ -80,6 +80,7 @@ import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.MonitorWeight
@@ -193,7 +194,9 @@ internal fun DashCard.ink(): Color = app.superhealth.ui.theme.LocalCardInk.curre
 internal fun DashCard.hue(): Color = when (this) {
     DashCard.MEDITATION -> app.superhealth.ui.meditation.MeditationHue
     DashCard.STRETCH -> app.superhealth.ui.stretch.StretchHue
-    DashCard.LEAGUE -> app.superhealth.ui.league.LeagueHue
+    DashCard.LEAGUE, DashCard.FRIENDS -> app.superhealth.ui.league.LeagueHue
+    DashCard.PROGRESSION -> app.superhealth.ui.theme.Base.Green
+    DashCard.STREAKS -> app.superhealth.ui.theme.Base.Orange
     DashCard.CALORIES, DashCard.MEALS -> CaloriesColor
     DashCard.WEIGHT -> app.superhealth.ui.theme.Base.Pink
     DashCard.INTAKE -> HealthHues.Mind
@@ -279,6 +282,9 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.MEDITATION -> Icons.Rounded.SelfImprovement
     DashCard.STRETCH -> Icons.Rounded.AccessibilityNew
     DashCard.LEAGUE -> Icons.Rounded.EmojiEvents
+    DashCard.PROGRESSION -> Icons.AutoMirrored.Rounded.TrendingUp
+    DashCard.STREAKS -> Icons.Rounded.LocalFireDepartment
+    DashCard.FRIENDS -> Icons.Rounded.Group
     DashCard.FORM -> Icons.Rounded.Speed
     DashCard.BEDTIME -> Icons.Rounded.Bedtime
     DashCard.CYCLE -> Icons.Rounded.CalendarMonth
@@ -405,7 +411,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
 
     val name = remember(refresh) { app.superhealth.ui.userName() }
     val modules by app.superhealth.modules.Modules.installed.collectAsState()
-    val visible = remember(cards, sh.watchModule, sh.healthConnect, devices.size, refresh, modules) {
+    val visible = remember(cards, sh.watchModule, sh.healthConnect, sh.leagueEnabled, sh.coachEnabled, devices.size, refresh, modules) {
         cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) }
     }
     // ressenti du matin : les questions sur la première carte à score visible, en grand de préférence
@@ -924,7 +930,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     }
     when (c) {
         // dessinées par leur famille (ci-dessus)
-        DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE -> Unit
+        DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> Unit
         DashCard.CALORIES -> {
             val todayEntries by vm.nutrition.todayEntries.collectAsState()
             val consumed = todayEntries.fold(Macros.ZERO) { acc, e -> acc + e.macros() }

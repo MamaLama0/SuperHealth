@@ -21,13 +21,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.AssetFileDescriptor;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.View;
@@ -42,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
+import nodomain.freeyourgadget.gadgetbridge.util.FindPhoneSound;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
 
 
@@ -53,10 +52,16 @@ public class FindPhoneActivity extends AbstractGBActivity {
     public static final String ACTION_RING = "nodomain.freeyourgadget.gadgetbridge.findphone.action.ring";
 
     public static final String EXTRA_RING = "extra_ring";
+    public static final String EXTRA_DURATION_SECONDS = "duration_seconds";
+    private final Handler timeout = new Handler(Looper.getMainLooper());
+    private GBDevice requestingDevice;
+    private FindPhoneSound sound;
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            final GBDevice source = intent.getParcelableExtra(GBDevice.EXTRA_DEVICE);
+            if (source != null && requestingDevice != null && !source.getAddress().equals(requestingDevice.getAddress())) return;
             String action = intent.getAction();
             if (action != null) {
                 LOG.info("Got action: {}", action);
@@ -77,9 +82,6 @@ public class FindPhoneActivity extends AbstractGBActivity {
     };
 
     Vibrator mVibrator;
-    AudioManager mAudioManager;
-    int userVolume;
-    MediaPlayer mp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,20 +115,26 @@ public class FindPhoneActivity extends AbstractGBActivity {
 
     private void handleIntent(Intent intent) {
         final boolean ring = intent.getBooleanExtra(EXTRA_RING, true);
+        final GBDevice nextDevice = intent.getParcelableExtra(GBDevice.EXTRA_DEVICE);
+        if (requestingDevice != null && nextDevice != null && !requestingDevice.getAddress().equals(nextDevice.getAddress()))
+            GBApplication.deviceService(requestingDevice).onFindPhone(false);
+        requestingDevice = nextDevice;
+        timeout.removeCallbacksAndMessages(null);
+        final int duration = intent.getIntExtra(EXTRA_DURATION_SECONDS, 0);
+        if (duration > 0) timeout.postDelayed(this::finish, Math.min(duration, 256) * 1000L);
 
         GB.removeNotification(GB.NOTIFICATION_ID_PHONE_FIND, this);
 
         vibrate();
-        if (ring) {
-            playRingtone();
-        }
-        GBApplication.deviceService().onFindPhone(true);
+        if (ring) playRingtone(); else stopSound();
+        if (requestingDevice == null) GBApplication.deviceService().onFindPhone(true);
+        else GBApplication.deviceService(requestingDevice).onFindPhone(true);
     }
 
     private void vibrate() {
         mVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
-        long[] vibrationPattern = new long[]{1000, 1000};
+        long[] vibrationPattern = new long[]{0, 1000, 600};
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             VibrationEffect vibrationEffect = VibrationEffect.createWaveform(vibrationPattern, 0);
@@ -138,90 +146,28 @@ public class FindPhoneActivity extends AbstractGBActivity {
     }
 
     private void playRingtone() {
-        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (mAudioManager != null) {
-            userVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_ALARM);
-        }
-        if (mp != null && mp.isPlaying()) {
-            LOG.warn("Already playing");
-            return;
-        } else if (mp == null) {
-            mp = new MediaPlayer();
-        }
-
-        if (!playConfiguredRingtone()) {
-            playFallbackRingtone();
-        }
-
-        if (mAudioManager != null) {
-            userVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_ALARM);
-            mAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, mAudioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM), AudioManager.FLAG_PLAY_SOUND);
-        }
+        if (sound == null) sound = new FindPhoneSound(this);
+        sound.start(GBApplication.getPrefs().getString(GBPrefs.PING_TONE, null));
     }
 
     private void stopVibration() {
-        mVibrator.cancel();
-    }
-
-    /**
-     * Attempt to play the configured ringtone. This fails to get the default ringtone on some ROMs
-     * (<a href="https://codeberg.org/Freeyourgadget/Gadgetbridge/pulls/2697">#2697</a>)
-     *
-     * @return whether playing the configured ringtone was successful or not.
-     */
-    private boolean playConfiguredRingtone() {
-        try {
-            Uri ringtoneUri = Uri.parse(GBApplication.getPrefs().getString(GBPrefs.PING_TONE, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE).toString()));
-            mp.setDataSource(this, ringtoneUri);
-            mp.setAudioStreamType(AudioManager.STREAM_ALARM);
-            mp.setLooping(true);
-            mp.prepare();
-            mp.start();
-        } catch (final Exception e) {
-            LOG.warn("Failed to play configured ringtone", e);
-            return false;
-        }
-
-        return true;
-    }
-
-    private void playFallbackRingtone() {
-        try {
-            final AssetFileDescriptor afd = getBaseContext().getResources().openRawResourceFd(R.raw.ping_tone);
-            if (afd == null) {
-                LOG.error("Failed to load fallback ringtone");
-                return;
-            }
-
-            mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-            mp.setAudioStreamType(AudioManager.STREAM_ALARM);
-            mp.setLooping(true);
-            mp.prepare();
-            mp.start();
-        } catch (final Exception e) {
-            LOG.warn("Failed to play fallback ringtone", e);
-        }
+        if (mVibrator != null) mVibrator.cancel();
     }
 
     private void stopSound() {
-        if (mAudioManager != null) {
-            mAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, userVolume, AudioManager.FLAG_PLAY_SOUND);
-        }
-        if (mp != null) {
-            mp.stop();
-            mp.reset();
-            mp.release();
-            mp = null;
-        }
+        if (sound != null) sound.stop();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
+        timeout.removeCallbacksAndMessages(null);
         stopVibration();
         stopSound();
-        GBApplication.deviceService().onFindPhone(false);
+        if (!isChangingConfigurations()) {
+            if (requestingDevice == null) GBApplication.deviceService().onFindPhone(false);
+            else GBApplication.deviceService(requestingDevice).onFindPhone(false);
+        }
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mReceiver);
         unregisterReceiver(mReceiver);

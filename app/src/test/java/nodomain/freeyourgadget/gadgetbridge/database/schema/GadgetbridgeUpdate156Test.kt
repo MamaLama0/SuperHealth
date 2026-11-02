@@ -1,5 +1,6 @@
 package nodomain.freeyourgadget.gadgetbridge.database.schema
 
+import android.app.Application
 import android.database.sqlite.SQLiteDatabase
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper
 import org.junit.After
@@ -13,7 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [23])
+@Config(sdk = [26], application = Application::class, manifest = Config.NONE)
 class GadgetbridgeUpdate156Test {
 
     private lateinit var db: SQLiteDatabase

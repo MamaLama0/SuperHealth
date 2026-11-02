@@ -1,0 +1,40 @@
+{
+  "totals": {
+    "tests": 16,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "app.superhealth.ui.DashboardSocialTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:33:13.316Z",
+      "hostname": "Badland",
+      "time": "0.026"
+    },
+    {
+      "name": "app.superhealth.ui.I18nTest",
+      "tests": "2",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:33:13.344Z",
+      "hostname": "Badland",
+      "time": "0.204"
+    },
+    {
+      "name": "app.superhealth.ui.ShellTest",
+      "tests": "12",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-11-02T14:33:13.552Z",
+      "hostname": "Badland",
+      "time": "0.034"
+    }
+  ]
+}

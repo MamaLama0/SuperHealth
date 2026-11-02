@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -99,6 +100,7 @@ fun WorkoutTabScreen(
     var create by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
         app.superhealth.nutrition.ui.components.TabHeader(app.superhealth.ui.longToday(), title) {
+            app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Tune, tr("Activités affichées")) { nav.go("settings/activities") }
             app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.History, tr("Historique")) { nav.navigate(historyRoute) }
             app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
         }
@@ -198,7 +200,7 @@ private fun ProgramRow(p: Program, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(p.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(trf("%1\$s séances · %2\$s cycles", (p.days.count { !it.isRest }), p.numCycles), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            Text(trf("%1\$s séances · %2\$s cycles", (p.days.count { !it.isRestAt(p.cycleIndex) }), p.numCycles), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
     }
@@ -210,7 +212,7 @@ private fun ProgramRow(p: Program, onClick: () -> Unit) {
  */
 @Composable
 private fun ActiveProgramCard(p: Program, db: ExerciseDb, sex: app.superhealth.training.domain.Sex, nav: NavHostController, resume: Boolean, onStart: (Int) -> Unit, onAdjusted: (Int) -> Unit) {
-    val train = p.days.filter { !it.isRest }
+    val train = p.days.filter { !it.isRestAt(p.cycleIndex) }
     val done = train.count { it.id in p.doneDayIds }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(app.superhealth.ui.theme.CardRadius)).background(Mf.colors.card).padding(16.dp)) {
         Row(Modifier.clickable { nav.navigate("program/${p.id}") }, verticalAlignment = Alignment.CenterVertically) {
@@ -238,7 +240,7 @@ private fun ActiveProgramCard(p: Program, db: ExerciseDb, sex: app.superhealth.t
 internal fun ProgramPicker(p: Program, db: ExerciseDb?, sex: app.superhealth.training.domain.Sex, resume: Boolean, bodyH: androidx.compose.ui.unit.Dp, onResume: () -> Unit,
                            onStart: (Int) -> Unit, onEdit: (Int) -> Unit, oneLine: Boolean = false, below: @Composable (Int) -> Unit = {}) {
     val color = ProgramColors[p.color % ProgramColors.size]
-    val train = p.days.withIndex().filter { !it.value.isRest }
+    val train = p.days.withIndex().filter { !it.value.isRestAt(p.cycleIndex) }
     var selected by androidx.compose.runtime.saveable.rememberSaveable(p.id) { androidx.compose.runtime.mutableStateOf(-1) }
     // toutes visibles, sans défilement : jusqu'à 4 sur une ligne, puis deux lignes égales (plus basses) ; carte à demi-largeur : les corps seuls
     val half = oneLine
@@ -251,7 +253,7 @@ internal fun ProgramPicker(p: Program, db: ExerciseDb?, sex: app.superhealth.tra
                 line.forEach { (i, d) ->
                     val isDone = d.id in p.doneDayIds
                     val sel = i == selected
-                    val muscles = androidx.compose.runtime.remember(d, db) { d.exercises.flatMap { db?.exercise(it.exerciseId)?.muscleGroups.orEmpty() }.toSet() }
+                    val muscles = androidx.compose.runtime.remember(d, db, p.cycleIndex) { d.exercises.filter { p.cycleIndex !in it.skippedCycles }.flatMap { db?.exercise(it.exerciseId)?.muscleGroups.orEmpty() }.toSet() }
                     val shape = RoundedCornerShape(22.dp)
                     Column(Modifier.weight(1f).clip(shape).background(if (sel) color.container(1.4f) else Mf.colors.chip)
                         .then(if (sel) Modifier.border(2.dp, color, shape) else Modifier)
@@ -269,7 +271,7 @@ internal fun ProgramPicker(p: Program, db: ExerciseDb?, sex: app.superhealth.tra
             }
         }
     }
-    val day = p.days.getOrNull(selected)?.takeIf { !it.isRest }
+    val day = p.days.getOrNull(selected)?.takeIf { !it.isRestAt(p.cycleIndex) }
     if (resume) {
         Spacer(Modifier.height(12.dp))
         PillButton(tr("Reprendre la séance"), Modifier.fillMaxWidth(), icon = Icons.Rounded.PlayArrow, onClick = onResume)

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "SuperHealth-2.63.apk",
+    "sha256": "a340bdc524f11b248b06fc9be7be0f8d348f9dfaa8622b13f818f50c26ac78fe",
+    "size": 40135519,
+    "package": "package: name='app.superhealth' versionCode='29' versionName='2.63' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+    "debuggable": false,
+    "certificateSha256": "699b4a00f2e0860da657e6f5477264936cd8f0e6686917905d852e75c26345c2"
+  },
+  {
+    "name": "SuperHealth-2.7.apk",
+    "sha256": "bcd6c31c608d5e8c76e180f986f64b98c6dd2d43ad01d4fe8723aaa29962d669",
+    "size": 41615300,
+    "package": "package: name='app.superhealth' versionCode='30' versionName='2.7' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+    "debuggable": false,
+    "certificateSha256": "699b4a00f2e0860da657e6f5477264936cd8f0e6686917905d852e75c26345c2"
+  },
+  {
+    "name": "SuperHealth-2.7-QA.apk",
+    "sha256": "1d19cad2f5dcca877976a3e60d95c774f6b3abd6e1708e7f0dbfa30471b21703",
+    "size": 88872005,
+    "package": "package: name='app.superhealth.qa' versionCode='30' versionName='2.7' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+    "debuggable": true,
+    "certificateSha256": "699b4a00f2e0860da657e6f5477264936cd8f0e6686917905d852e75c26345c2"
+  }
+]

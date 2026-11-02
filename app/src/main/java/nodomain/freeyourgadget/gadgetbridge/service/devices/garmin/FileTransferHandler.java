@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.garmin;
 
+import static nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.FilterMessage.FilterType.ONLY_NEW_3;
+
 import android.content.Intent;
 
 import androidx.annotation.NonNull;
@@ -138,12 +140,12 @@ public class FileTransferHandler implements MessageHandler {
 
     public DownloadRequestMessage downloadDirectoryEntry(DirectoryEntry directoryEntry) {
         download.setCurrentlyDownloading(new FileFragment(directoryEntry));
-        return new DownloadRequestMessage(directoryEntry.getFileIndex(), 0, DownloadRequestMessage.REQUEST_TYPE.NEW, 0, 0);
+        return new DownloadRequestMessage(directoryEntry.getFileIndex(), 0, DownloadRequestMessage.REQUEST_TYPE.NEW, 0, 0, 0);
     }
 
     public DownloadRequestMessage initiateDownload() {
         download.setCurrentlyDownloading(new FileFragment(new DirectoryEntry(0, FileType.FILETYPE.DIRECTORY, 0, 0, 0, 0, null)));
-        return new DownloadRequestMessage(0, 0, DownloadRequestMessage.REQUEST_TYPE.NEW, 0, 0);
+        return new DownloadRequestMessage(0, 0, DownloadRequestMessage.REQUEST_TYPE.NEW, 0, 0, 0);
     }
 
     public DirectoryEntry getDeviceXmlDirectoryEntry() {

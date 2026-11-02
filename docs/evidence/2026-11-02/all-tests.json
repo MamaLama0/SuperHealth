@@ -1,0 +1,2622 @@
+{
+  "androidTestBaseSdk": 26,
+  "totals": {
+    "tests": 2735,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 39
+  },
+  "suites": [
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.schema.GadgetbridgeUpdate156Test",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.analysis.AlgorithmComparisonTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.backup.BackupCryptoTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.backup.PropfindTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.coach.CoachTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.health.data.ScoresTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.health.data.WatchCompatibilityTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.health.data.WatchMigrationTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.insights.InsightsTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.league.HealthIndexTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.insights.StrainSignalsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.nutrition.SeniorTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.meals.PortionsTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.nutrition.data.AiImportTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.nutrition.data.WeekTargetsTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.BalanceHabitsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.DomainTest",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.ManualTargetsTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.nutrition.domain.V4Test",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.training.DomainTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.training.PlanDiffTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.training.ProgramTransferTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.training.ProgramEditTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.training.TrainingTrendsTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.ui.I18nTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.ui.ShellTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.ui.charts.ChartsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "app.superhealth.update.UpdaterTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.XMarkerLabelLayoutTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.sleep.SleepSessionChartDataTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.steps.StepsDailyChartDataTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.weight.WeightChartDataTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.dashboard.DashboardViewModelTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.dashboard.StackedGridLayoutManagerTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.dashboard.data.DashboardRepositoryImplTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.hipee.XiaomiHipeeP1HistoryActivityTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutBatchExporterTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutEditorSaveTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutUploaderSyncTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.FallbackSleepSessionProviderTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.cycling_sensor.activity.LiveValueTimeoutTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminEstimatedSleepTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminRawSleepFitImportTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminPrgInstallHandlerTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminWorkoutParserElevationTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.sony.reonpocket.SonyReonPocketConstantsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.sony.reonpocket.SonyReonPocketTelemetryTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.ugreen.hitunemax5c.UgreenHituneMax5cCoordinatorTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.zeblaze.stratos4pro.Stratos4ProActivitySampleProviderTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.notifications.apps.NotificationAppRulesTest",
+      "tests": "34",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalservices.endurain.EndurainApiClientTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalservices.ExternalServiceRegistryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.install.InstallStateMachineTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.FitActivityTrackProviderCadenceTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.FitActivityTrackProviderSetTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.WeatherSpecTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoCallSequenceTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoDeviceStateAndStringMessagesTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoRequestsTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoSupportTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.ConfigAudioModeTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.ConfigSchemaTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.SubscribeMessageTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.VolumesMaxMinTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5CaptureDecodeAuditTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5ErgKindTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5MessageDecoderTest",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.protocol.PM5RecordingDecodeTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cycling_sensor.support.CrankCadenceTrackerTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.RawSleepNightsTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cycling_sensor.support.CyclingSpeedCadenceMeasurementTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.RawSleepStreamTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSleepDataRawTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.workouts.GarminExerciseCatalogTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.workouts.GarminWorkoutFitEncoderTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.gloryfit.GloryFitSupportTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsDeviceSourcesTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.workouts.ZeppOsExerciseCatalogTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.workouts.ZeppOsWorkoutTemplateEncoderTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.workouts.ZeppOsWorkoutTemplateImportTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ninebot.NinebotCryptoTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.innovo.InnovoPlxMeasurementTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearDeviceSyncTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearHistorySyncTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearPacketTest",
+      "tests": "51",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearProtocolTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearSleepReadingTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearSpo2ReadingTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearWorkoutTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeActivityRecordsTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeAlarmTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeFacesTableTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeProtocolTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.WeekdayRegisterComposerTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.onetouch.OneTouchMessageTest",
+      "tests": "36",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.shokz.ShokzSupportTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.ugreen.UgreenProtocolTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaCansProtocolTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaCcsEventProtocolTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaDailyHealthProtocolTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaDailyHealthFileTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaFtsProtocolTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaHourlyHrProtocolTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaHrRunsTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaNotificationStoreTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaReadWindowTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.viatom.F8ScaleTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.whoop.WhoopAnalysisTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.whoop.WhoopProtocolTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_hipee.XiaomiHipeeP1SupportTest",
+      "tests": "25",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterCryptoTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterProtocolTest",
+      "tests": "27",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterRideHistoryTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProBatteryLogTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_scooters.XiaomiScooterTransportTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProHistoryParserTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProLightsTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProProtocolTest",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProRecordingsTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProRouteTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProWeatherTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProWorkoutParserTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationCorrectionTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationGainTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationTilesSummaryTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.ElevationTilesTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.HgtTileLibraryTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.elevation.HgtTileTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectWorkoutDeletionTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.HealthConnectWorkoutSyncTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.OversizedRouteTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.SyncTimestampAdvancementTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.SyncTimestampRangeTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.ActivitySampleMinuteBucketingTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.ActivitySampleSliceBoundaryTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.HealthConnectSyncerTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.HeartRateSyncerTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerCadenceTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerElevationTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerRouteTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RecordedWorkoutSyncerSegmentsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.RespiratoryRateSyncerTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.SleepSessionIdentityTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WeightSyncerTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.TemperatureSyncerCursorTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.SyncerRangeValidationTest",
+      "tests": "37",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WorkoutDistanceTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WorkoutSyncerUtilsTest",
+      "tests": "36",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.kotlin.IntExtensionsTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.sleep.SleepStageEstimatorTest",
+      "tests": "18",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetGridTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetLayoutStoreTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetPreviewRenderTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.WidgetRegistryTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.BodyCompositionWidgetsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.BmiWidgetTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.HeartRateWidgetTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.LastActivityFormatTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.PaiWidgetTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepScoreWidgetTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepWidgetTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.Spo2WidgetTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.widgets.impl.WeightWidgetTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.google.gson.typeadapters.RuntimeTypeAdapterFactoryTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "lineageos.weather.util.TemperatureUtilsTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.CaloriesDailyFragmentTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.DecimalValueFormatterTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.IntervalChartUtilsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.WeightChartFragmentTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.charts.marker.ValueMarkerTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.licenses.LicensesActivityTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutUploadStatusTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutUploadStoreTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutValueFormatterTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.DefaultWorkoutChartsTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.GappedSeriesTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.WorkoutChartUnitsTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.ZeroRateGapTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.DBHelperUserAttributesTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.DeviceDataTablesTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.EntitiesTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.database.SampleProviderTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.AbstractSampleProviderTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.CsvSampleProviderTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.DefaultSleepSessionProviderTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.GenericImpedanceSampleProviderTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.SleepSessionProviderRegressionTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.SleepSessionSegmenterTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.WorkoutVo2MaxSampleProviderTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.banglejs.BangleJSActivityPointTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.banglejs.BangleJSWorkoutParserTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.samples.CmfSleepSessionProviderTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.workout.CmfWorkoutSummaryParserTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminActivitySampleProviderTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminSleepSessionProviderTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiExtendedSampleProviderTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiActivitySummaryParserTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiSleepSessionProviderTest",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsActivitySummaryParserTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiCrypto",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiPacket",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiTLV",
+      "tests": "35",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestHuaweiTruSleepParser",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.TestVarInt",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestAlarms",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestCalls",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestDeviceConfig",
+      "tests": "19",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestDisconnectNotification",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestFindPhone",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestFitnessData",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestLocaleConfig",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestMusicControl",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestNotifications",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestWorkMode",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.TestWorkout",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.moyoung.BettdowFB051CoordinatorTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.moyoung.MoyoungSettingTimeRangeTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.moyoung.MoyoungWorkoutSummaryParserTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.sennheiser.SennheiserMomentumBatteryTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiFWHelperTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiHeartRateRestingSampleProviderTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiInstallHandlerTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiRawFileAvailabilityTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterCadenceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiSampleProviderTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterPaceTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterGpsDistanceTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterSwimTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.FitExporterReadmeRoundTripTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "2"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.export.GPXExporterTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.DeviceAlarmReceiverTest",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.IntentApiReceiverTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.NotificationListenerTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.gps.GBLocationListenerTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.gps.GBLocationServiceTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.externalevents.sleepasandroid.SleepAsAndroidReceiverTest",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.ActivityKindTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryDataTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.DailyTotalsTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.model.DeviceTypeTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.PendingSleepAsAndroidActionTest",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidAlarmControllerTest",
+      "tests": "24",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidCreateAlarmTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidReceiverRegistrationTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderAccelTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderSensorsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderSessionTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSenderTest",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidVibrationTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.TestBtBRQueue",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.btle.BtLEQueueTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.weightScale.WeightScaleScaleProfileTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.bose.BoseProtocolTest",
+      "tests": "31",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioIntervalTimerCodecTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioIntervalTimerLibraryTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioIntervalTimerTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.casio.CasioWorldClockCodecTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cmfwatchpro.CmfActivityTypeTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.cmfwatchpro.CmfCommandTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunPacketEncoderTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunPacketTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunProtocolTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.EarFunResponseHandlerTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.evenrealities.G1NotificationPayloadTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.fitcloud.ak102.Ak102DeviceSupportTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.fitcloud.ak102.Ak102SyncParserTest",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.fitpro.FitProDeviceSupportTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.Development",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "5"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.ExploreSyncHandlerTest",
+      "tests": "24",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupportTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.communicator.CobsCoDecTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.GpxRouteFileConverterTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.baseTypes.BaseTypeEncodeRoundTripTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.enums.GarminSportTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitWeatherTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.http.GarminHttpRequestTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.http.GarminJsonTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.generic_headphones.GenericHeadphonesSupportTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.HuamiSupportTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.UIHHContainerTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsActivityDetailsParserTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsActivityTypeTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.qnscale.QnScaleProtocolTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsBitmapFormatTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsMenuTypeTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.ZeppOsNotificationServiceTest",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.http.HttpAppsSettingsHandlerTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestDebugRequestParser",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.HuaweiActivityTrackMergeTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestResponseManager",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestHuaweiSupportProvider",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.TestHiChainPakeUtils",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.igpsport.IGPSportNotificationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.miband.FirmwareTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "4"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.moyoung.MoyoungBatteryLevelTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.moyoung.MoyoungDeviceSupportTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.moyoung.MoyoungSpo2RefreshTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nothing.NothingProtocolTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.oppo.OppoHeadphonesSupportTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.nut.NutUtilsTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.oppo.modules.FirmwareVersionModuleTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.oppo.modules.MiscConfigModuleTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sennheiser.SennheiserMomentumProtocolTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v1.SonyProtocolImplV1Test",
+      "tests": "61",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sennheiser.SennheiserMomentumSupportTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v2.SonyProtocolImplV2Test",
+      "tests": "59",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "16"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.protocol.impl.v1.SoundcoreV1ResponseTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.MessageBuilderTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.ChallengeTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.ProbeReplyTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.DataStructureFactoryTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.datastructures.TimeTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.message.AbstractMessageTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.notification.NotificationAttributeTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.communication.notification.RequestedNotificationAttributeTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiAuthServiceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiNotificationSendTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiNotificationDismissTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiNotificationServiceTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiRealtimeStatsTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSleepAsAndroidWorkoutTest",
+      "tests": "36",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSppPacketV2Test",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSppProtocolV2Test",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSppV2SendWindowTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiWorkoutStatsWatchTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityFileIdTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityParserTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityTrackProviderRawFileTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.ManualSamplesParserTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.WorkoutDetailsParserTest",
+      "tests": "42",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.WorkoutDetailsSummaryConsistencyTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHealthServiceGpsTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.WorkoutSummaryParserTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHealthServiceTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHeartRateIntervalRoundTripTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHeartRateTogglesTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiRpkMessageFlowTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiRpkServiceTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiSpo2ModeTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.ArmenianTransliteratorTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.BLETypeConversionsTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.ArrayUtilsTest",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.CalendarEventTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.FileUtilsTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.FitProTests",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.GBZipFileTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.HexToBinaryInputStreamTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.HuamiActivityDetailsParserTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.KhmerTransliteratorTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.LoggingTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.MiscTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.PebbleUtilsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.RtlUtilsTest",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.ProtobufTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.StringUtilsTest",
+      "tests": "27",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.test.Tryout",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.BitmapUtilTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.BodyCompositionCalculatorTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.EmojiConverterTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.BundleUtilsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.GBLazyHexdumpTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.ImportExportSharedPreferencesTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.LEB128UtilsTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.NavigationUtilsTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.OpenLocationCodeTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.RangeMapTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.SleepRangeUtilsTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.WaypointHelperTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.XTimePreferenceTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.gpx.GPXParserTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.util.language.LanguageUtilsTest",
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.devices.BluetoothNameTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.impl.DailySummaryParserTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ]
+}

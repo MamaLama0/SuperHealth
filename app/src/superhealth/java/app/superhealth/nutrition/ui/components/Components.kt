@@ -41,6 +41,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
@@ -248,39 +250,59 @@ fun MacroSummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Dou
  * barres de macros à droite.
  */
 @Composable
-fun EnergySummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Double, unit: String, modifier: Modifier = Modifier) {
-    val goal = target?.kcal?.takeIf { it > 0 }
-    val left = goal?.let { it - consumed.kcal }
-    val track = Mf.colors.chip
-    val arcs = listOf(ratio(consumed.protein, target?.protein) to ProteinColor, ratio(consumed.fat, target?.fat) to FatColor, ratio(consumed.carbs, target?.carbs) to CarbsColor)
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Canvas(Modifier.size(72.dp)) {
-            val w = 8.dp.toPx()
-            val box = Size(size.width - w, size.height - w); val tl = Offset(w / 2, w / 2)
-            arcs.forEachIndexed { i, (f, c) ->
-                val start = -90f + i * 120f + 9f
-                drawArc(track, start, 102f, false, tl, box, style = Stroke(w, cap = StrokeCap.Round))
-                if (f > 0f) drawArc(c, start, 102f * f.coerceAtMost(1f), false, tl, box, style = Stroke(w, cap = StrokeCap.Round))
+fun EnergySummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Double, unit: String, modifier: Modifier = Modifier, collapsed: Boolean = false) {
+    val left = target?.kcal?.takeIf { it > 0 }?.minus(consumed.kcal)
+    val amount = energyValue(kotlin.math.abs(left ?: consumed.kcal)).roundToInt()
+    val label = tr(when { left == null -> "Consommés"; left < 0 -> "Dépassement"; else -> "Restants" })
+    val values = listOf(consumed.protein to target?.protein, consumed.fat to target?.fat, consumed.carbs to target?.carbs)
+    val colors = listOf(ProteinColor, FatColor, CarbsColor)
+    val letters = if (app.superhealth.ui.Lang.english) listOf("P", "F", "C") else listOf("P", "L", "G")
+    fun remaining(index: Int): String {
+        val (taken, goal) = values[index]
+        val value = goal?.minus(taken) ?: taken
+        return (if (goal != null && value < 0) "+" else "") + kotlin.math.abs(value).roundToInt() + "g"
+    }
+    if (collapsed) {
+        Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("$amount $unit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = CaloriesColor)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+            letters.forEachIndexed { i, letter -> Text("$letter ${remaining(i)}", style = MaterialTheme.typography.labelSmall, color = colors[i]) }
+            Icon(Icons.Rounded.ExpandMore, tr("Déplier le résumé"), Modifier.size(16.dp), tint = Mf.colors.textSecondary)
+        }
+        return
+    }
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            val track = Mf.colors.chip
+            Canvas(Modifier.size(42.dp)) {
+                val w = 5.dp.toPx(); val box = Size(size.width - w, size.height - w); val tl = Offset(w / 2, w / 2)
+                values.forEachIndexed { i, (taken, goal) ->
+                    val start = -90f + i * 120f + 9f
+                    drawArc(track, start, 102f, false, tl, box, style = Stroke(w, cap = StrokeCap.Round))
+                    val fraction = ratio(taken, goal)
+                    if (fraction > 0) drawArc(colors[i], start, 102f * fraction.coerceAtMost(1f), false, tl, box, style = Stroke(w, cap = StrokeCap.Round))
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(amount.toString(), fontSize = 23.sp, fontWeight = FontWeight.Bold, color = CaloriesColor, maxLines = 1)
+                Text("$unit · ${label.lowercase(app.superhealth.ui.Lang.locale)}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1)
+                Text(target?.let { "${energyValue(consumed.kcal).roundToInt()} / ${energyValue(it.kcal).roundToInt()}" } ?: unit,
+                    style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, maxLines = 1)
             }
         }
-        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            val big = left?.let { energyValue(kotlin.math.abs(it)).roundToInt().toString() } ?: energyValue(consumed.kcal).roundToInt().toString()
-            val ink = CaloriesColor
-            Text(big, style = MaterialTheme.typography.headlineMedium.merge(TextStyle(brush = if (app.superhealth.ui.theme.Hues.gradient)
-                Brush.horizontalGradient(listOf(ink, ink.partner())) else androidx.compose.ui.graphics.SolidColor(ink))),
-                fontSize = 30.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text(when { left == null -> trf("%1\$s mangées", unit); left < 0 -> trf("%1\$s en trop", unit); else -> trf("%1\$s restantes", unit) },
-                style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1)
-        }
-        Column(Modifier.width(140.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            listOf(Triple(tr("Prot."), consumed.protein to target?.protein, ProteinColor), Triple(tr("Lip."), consumed.fat to target?.fat, FatColor),
-                Triple(tr("Gluc."), consumed.carbs to target?.carbs, CarbsColor)).forEach { (name, vt, c) ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.width(36.dp), maxLines = 1)
-                    ProgressBar(ratio(vt.first, vt.second), c, Modifier.weight(1f), height = 5.dp)
-                    Text(vt.first.roundToInt().toString(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.End, modifier = Modifier.width(32.dp), maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.width(16.dp))
+                Text(tr("Pris"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+                Text(tr("Restants"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                Icon(Icons.Rounded.ExpandLess, tr("Replier le résumé"), Modifier.size(14.dp), tint = Mf.colors.textTertiary)
+            }
+            letters.forEachIndexed { i, letter ->
+                Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(letter, style = MaterialTheme.typography.labelSmall, color = colors[i], fontWeight = FontWeight.Bold, modifier = Modifier.width(16.dp))
+                    Text("${values[i].first.roundToInt()}g", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+                    Text(if (values[i].second == null) "—" else remaining(i), style = MaterialTheme.typography.labelSmall, color = colors[i], fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(end = 14.dp))
                 }
             }
         }

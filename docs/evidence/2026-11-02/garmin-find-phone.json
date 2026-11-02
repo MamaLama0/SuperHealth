@@ -1,0 +1,57 @@
+{
+  "source": "Garmin Connect 5.30.1 APK provided by user",
+  "method": "REA ZIP inventory; JADX CLI 1.5.6 focused static decompilation of four classes; reference app not executed",
+  "files": [
+    {
+      "file": "/home/bad/Documents/REA/SuperHealth copie/Update/Garmin1/reference/base.apk",
+      "sha256": "0f3cc53a4d92c4427ca60ffd181ae0ada9fb0516600b4fc010b70afb75e0bf6b"
+    },
+    {
+      "file": "/home/bad/Documents/REA/SuperHealth copie/Update/Garmin1/reference/FindMyPhoneActivity.java",
+      "sha256": "a306ae79e7e108d680d25849ba4727563e23b7208ee75681860164fecfacaa36"
+    },
+    {
+      "file": "/home/bad/Documents/REA/SuperHealth copie/Update/Garmin1/reference/FindPhoneAudio.java",
+      "sha256": "89476d22e374bb949cd3865b15000a0933997585d594851b62cb7a7f466dd2cd"
+    },
+    {
+      "file": "/home/bad/Documents/REA/SuperHealth copie/Update/Garmin1/reference/FindPhoneHandler.java",
+      "sha256": "766ebe8baf023e6e20743208a35cd458769de31e1f68357b02c6fd69d21a0587"
+    },
+    {
+      "file": "/home/bad/Documents/REA/SuperHealth copie/Update/Garmin1/reference/CancelFindPhone.java",
+      "sha256": "270c89da3a688b66f8798d329afecce110981d4fc4dbc5a0e09655b51bfd7a3f"
+    }
+  ],
+  "observations": [
+    {
+      "class": "com.garmin.android.apps.connectmobile.smartrequest.FindMyPhoneActivity",
+      "methods": [
+        "onCreate",
+        "P9"
+      ],
+      "fact": "Requested audible duration converted to milliseconds; default 256 seconds, explicit cancel handler called when found."
+    },
+    {
+      "class": "vn1.f",
+      "method": "b",
+      "fact": "Alarm stream at maximum and preferred output TYPE_BUILTIN_SPEAKER; previous volumes restored by a()."
+    },
+    {
+      "class": "ia2.a",
+      "method": "onMessageReceived",
+      "fact": "Incoming find phone message 5039, incoming cancel 5040, one unsigned duration byte."
+    },
+    {
+      "class": "ia2.b",
+      "method": "invokeSuspend",
+      "fact": "Phone found cancellation sends message 5040 with empty byte array."
+    }
+  ],
+  "limitations": [
+    "REA Android adapter unavailable because the headless JADX MCP jar is not configured; no engine or registration installed/changed.",
+    "Decompiled code is static evidence, not a runtime trace.",
+    "No Garmin watch connected to validate watch display or physical acoustic loudness.",
+    "New two-tone alarm is original PCM audio, not a copied Garmin resource."
+  ]
+}

@@ -109,7 +109,7 @@ private suspend fun read(ctx: Context, uri: Uri): String = withContext(Dispatche
 }
 
 @Composable
-fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
+fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null) {
     val s by vm.settings.collectAsState()
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -138,28 +138,60 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
         uri?.let { safely { val rows = Csv.parseWeights(read(ctx, it)); vm.repo.weighIns.upsertAll(rows); trf("%1\$s pesée(s) importée(s)", rows.size) } }
     }
 
-    DetailScaffold(tr("Nutrition"), onBack = { nav.popBackStack() }) {
+    val title = tr(when (section) { "program" -> "Programme et objectifs"; "daily" -> "Journal et repas"; "calculations" -> "Calculs et dépense"; "food" -> "Aliments et IA"; "data" -> "Données nutrition"; else -> "Nutrition" })
+    DetailScaffold(title, onBack = { nav.popBackStack() }) {
         Column {
+            if (section == null) {
+
+            app.superhealth.ui.settings.GuidedSetupCard(tr("Ma nutrition, pas à pas"), tr("Objectif, calories et macros : un parcours adapté à vos choix.")) { nav.navigate("setup/nutrition") }
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Mes réglages"))
+            GroupCard {
+                SettingRow(tr("Programme et objectifs"), subtitle = tr("Mode, poids, cibles et remplacements")) { nav.navigate("n/settings/program") }
+                RowDivider()
+                SettingRow(tr("Journal et repas"), subtitle = tr("Recettes, habitudes, horaires et pesées")) { nav.navigate("n/settings/daily") }
+                RowDivider()
+                SettingRow(tr("Calculs et dépense"), subtitle = tr("Ajustements et activité quotidienne")) { nav.navigate("n/settings/calculations") }
+                RowDivider()
+                SettingRow(tr("Aliments et IA"), subtitle = tr("Bases de recherche et saisie assistée")) { nav.navigate("n/settings/food") }
+                RowDivider()
+                SettingRow(tr("Données nutrition"), subtitle = tr("Importer, exporter et restaurer")) { nav.navigate("n/settings/data") }
+            }
+            }
+            if (section == "program") {
+
             GroupCard {
                 SettingRow(tr("Programme et objectif"), icon = Icons.Rounded.Flag) { nav.navigate("strategy") }
                 RowDivider()
+                SettingRow(tr("Cibles manuelles et répartition"), subtitle = tr("Calories, macros, jours personnalisés")) { nav.navigate("program") }
+                RowDivider()
+                SettingRow(tr("Remplacer mes cibles"), subtitle = tr("Aujourd'hui, 7 jours ou sans date de fin")) { nav.navigate("targets/override") }
+
+
+            }
+            }
+            if (section == "daily") {
+            // réglages du quotidien, avec le programme : horaires des repas, pesée du matin, jour du check-in
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Quotidien"), Modifier.padding(start = 0.dp))
+            val sh = SuperPrefs.settings.collectAsState().value
+            val program = vm.program.collectAsState().value
+            GroupCard {
+                SwitchRow(tr("Résumé du journal replié"), tr("Touchez le résumé pour le replier ou le déplier"), s.foodSummaryCollapsed) { v -> set { it.copy(foodSummaryCollapsed = v) } }
+            }
+            Spacer(Modifier.height(8.dp))
+            GroupCard {
                 SettingRow(tr("Recettes"), icon = Icons.AutoMirrored.Rounded.MenuBook) { nav.navigate("search/5/-1") }
                 RowDivider()
                 SettingRow(tr("Habitudes"), icon = Icons.Rounded.EventAvailable) { nav.navigate("habits") }
                 RowDivider()
                 SettingRow(tr("Mesures et photos"), icon = Icons.Rounded.Straighten) { nav.navigate("body") }
             }
-
-            // réglages du quotidien, avec le programme : horaires des repas, pesée du matin, jour du check-in
-            app.superhealth.nutrition.ui.components.GroupHeader(tr("Quotidien"), Modifier.padding(start = 0.dp))
-            val sh = SuperPrefs.settings.collectAsState().value
-            val program = vm.program.collectAsState().value
             GroupCard {
                 var hours by remember { mutableStateOf(false) }
                 SettingRow(tr("Horaires des repas"), sh.mealEnds.joinToString(" · ") { "%d:%02d".format(it / 60, it % 60) }, icon = Icons.Rounded.Schedule) { hours = true }
                 if (hours) MealHoursDialog { hours = false }
                 RowDivider()
                 SwitchRow(tr("Bandeau de pesée"), tr("Tant que la pesée du jour manque"), sh.weighPrompt) { v -> SuperPrefs.update { it.copy(weighPrompt = v) } }
+                if (program.style != app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
                 RowDivider()
                 var checkInDayOpen by remember { mutableStateOf(false) }
                 SettingRow(tr("Jour du check-in"), checkInDayName(program.checkInDay), subtitle = tr("Poids analysé et calories recalculées ce jour-là"), icon = Icons.Rounded.CalendarMonth) { checkInDayOpen = true }
@@ -167,8 +199,11 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                     checkInDayOpen = false
                     vm.repo.prefs.setProgram(program.copy(checkInDay = d))
                 }
+                }
             }
 
+            }
+            if (section == "food") {
             app.superhealth.nutrition.ui.components.GroupHeader("IA", Modifier.padding(start = 0.dp))
             GroupCard {
                 SwitchRow(tr("Fonctions IA"), tr("Décrire ou photographier un repas"), s.aiEnabled) { v -> set { it.copy(aiEnabled = v) } }
@@ -180,6 +215,16 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 }
             }
 
+            // bases où sont cherchés les aliments et les codes-barres
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Bases d'aliments"), Modifier.padding(start = 0.dp))
+            GroupCard {
+                SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
+                RowDivider()
+                SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
+            }
+
+            }
+            if (section == "calculations") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Calculs"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SwitchRow(tr("Ajustement prédictif"), tr("Anticipe un changement d'objectif"), s.predictiveGoalAdjustment) { v ->
@@ -189,14 +234,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SwitchRow(tr("Pas dans la dépense"), tr("Réagit plus vite aux changements d'activité"), s.useSteps) { v -> set { it.copy(useSteps = v) } }
             }
 
-            // bases où sont cherchés les aliments et les codes-barres
-            app.superhealth.nutrition.ui.components.GroupHeader(tr("Bases d'aliments"), Modifier.padding(start = 0.dp))
-            GroupCard {
-                SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
-                RowDivider()
-                SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
             }
-
+            if (section == "data") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Données"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SettingRow(tr("Exporter une sauvegarde"), subtitle = tr("JSON complet"), icon = Icons.Rounded.Backup) { exportJson.launch("superhealth-nutrition-${stamp}.json") }
@@ -210,6 +249,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SettingRow(tr("Effacer les données nutrition"), icon = Icons.Rounded.DeleteForever, danger = true) { confirmWipe = true }
             }
 
+            }
             Spacer(Modifier.height(24.dp))
         }
     }

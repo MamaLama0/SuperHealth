@@ -129,6 +129,25 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
         SuperPrefs.update { it.copy(backupFolder = uri.toString(), backupDest = Remote.Kind.FOLDER.name) }
     }
 
+    val pickDriveFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(Archive.MIME)) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val provider = uri.authority?.let { ctx.packageManager.resolveContentProvider(it, 0) }
+        if (provider?.packageName != "com.google.android.apps.docs") {
+            toast(tr("Choisissez Google Drive dans le sélecteur. Si Drive n'apparaît pas, installez son app et connectez votre compte."))
+            return@rememberLauncherForActivityResult
+        }
+        runCatching {
+            ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }.onFailure { toast(err(it)) }.onSuccess {
+            SuperPrefs.update { it.copy(backupDocument = uri.toString(), backupDest = Remote.Kind.GOOGLE_DRIVE.name, lastBackup = 0, lastBackupError = null) }
+            scope.launch {
+                busy = true
+                runCatching { BackupWorker.now(ctx) }.onSuccess { toast(tr("Sauvegarde envoyée")) }.onFailure { toast(err(it)) }
+                busy = false
+            }
+        }
+    }
+
     DetailScaffold(tr("Sauvegarde"), onBack = { nav.popBackStack() }) {
         app.superhealth.nutrition.ui.components.GroupHeader(tr("Code de récupération"), Modifier.padding(start = 0.dp))
         MfCard {
@@ -151,10 +170,18 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
         app.superhealth.nutrition.ui.components.GroupHeader(tr("Sauvegarde automatique"), Modifier.padding(start = 0.dp))
         MfCard {
             ChipChoice(Remote.Kind.entries, Remote.kind(), { tr(it.label) }) { k ->
-                if (k == Remote.Kind.FOLDER && sh.backupFolder == null) pickFolder.launch(null)
+                if (k == Remote.Kind.GOOGLE_DRIVE && sh.backupDocument == null) pickDriveFile.launch("superhealth-latest.${Archive.EXT}")
+                else if (k == Remote.Kind.FOLDER && sh.backupFolder == null) pickFolder.launch(null)
                 else SuperPrefs.update { it.copy(backupDest = k.name) }
             }
             when (Remote.kind()) {
+                Remote.Kind.GOOGLE_DRIVE -> {
+                    SettingRow(tr("Fichier Google Drive"), if (sh.backupDocument == null) tr("Choisir") else tr("Changer"), icon = Icons.Rounded.CloudUpload) {
+                        pickDriveFile.launch("superhealth-latest.${Archive.EXT}")
+                    }
+                    Text(tr("Dans le sélecteur Android, ouvrez Google Drive puis choisissez le dossier. L'app Drive doit être installée et connectée. Ce fichier chiffré est remplacé à chaque sauvegarde ; une seule copie est conservée par l'app. La mise en ligne dépend de Drive."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+                }
                 Remote.Kind.NEXTCLOUD, Remote.Kind.WEBDAV -> {
                     Spacer(Modifier.height(8.dp))
                     val nc = Remote.kind() == Remote.Kind.NEXTCLOUD
@@ -172,7 +199,7 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
                     Spacer(Modifier.height(8.dp))
                     val name = sh.backupFolder?.let { android.net.Uri.parse(it).lastPathSegment?.substringAfterLast(':') }
                     SettingRow(tr("Dossier"), name ?: tr("Choisir"), icon = Icons.Rounded.Folder) { pickFolder.launch(null) }
-                    Text(tr("Téléphone, carte SD, Syncthing ou app de cloud qui ouvre ses dossiers (Nextcloud, Proton Drive, Google Drive…)."),
+                    Text(tr("Téléphone, carte SD, Syncthing ou app de cloud qui ouvre ses dossiers (Nextcloud, Proton Drive…)."),
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
                 }
                 Remote.Kind.NONE -> {}

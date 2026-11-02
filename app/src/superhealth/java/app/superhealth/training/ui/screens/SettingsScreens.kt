@@ -74,13 +74,28 @@ import app.superhealth.training.ui.toNum
 import app.superhealth.training.ui.w
 import app.superhealth.training.ui.weight
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 
 /** Plus : profil, réglages d'entraînement (Smart Progression, échauffements, repos), salles, données. */
 @Composable
-fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
+fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null) {
     val st by vm.state.collectAsState()
     val s = st.settings
     val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val importProgram = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val result = runCatching {
+                val known = vm.db.value?.exercises?.map { it.id }?.toSet() ?: error(tr("Base d'exercices en cours de chargement"))
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { app.superhealth.training.domain.ProgramTransfer.read(it, known) }
+                        ?: error(tr("Fichier illisible"))
+                }
+            }
+            result.onSuccess { vm.saveProgram(it) }
+            Toast.makeText(ctx, if (result.isSuccess) tr("Programme ajouté à la bibliothèque") else result.exceptionOrNull()?.message ?: tr("Fichier illisible"), Toast.LENGTH_LONG).show()
+        }
+    }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let { runCatching { ctx.contentResolver.openOutputStream(it)?.use { o -> o.write(vm.exportJson().toByteArray()) } }
             .onSuccess { Toast.makeText(ctx, tr("Sauvegarde exportée"), Toast.LENGTH_SHORT).show() } }
@@ -90,11 +105,44 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
             val ok = txt != null && vm.importJson(txt).isSuccess
             Toast.makeText(ctx, if (ok) tr("Sauvegarde restaurée") else tr("Fichier illisible"), Toast.LENGTH_SHORT).show() }
     }
-    DetailScaffold(tr("Musculation"), nav) {
+    val title = tr(when (section) { "program" -> "Programme et expérience"; "gyms" -> "Salles et matériel"; "progression" -> "Progression et séries"; "session" -> "Échauffements et repos"; "data" -> "Données musculation"; else -> "Musculation" })
+    DetailScaffold(title, nav) {
         Column {
+            if (section == null) {
+
+            app.superhealth.ui.settings.GuidedSetupCard(tr("Mon programme, pas à pas"), tr("Un assistant pour créer, choisir ou composer votre entraînement.")) { nav.navigate("t/setup") }
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Mes réglages"))
+            GroupCard {
+                SettingRow(tr("Programme et expérience"), subtitle = tr("Bibliothèque, création et niveau")) { nav.navigate("t/settings/program") }
+                RowDivider()
+                SettingRow(tr("Salles et matériel"), subtitle = tr("Équipement, charges et salle active")) { nav.navigate("t/settings/gyms") }
+                RowDivider()
+                SettingRow(tr("Progression et séries"), subtitle = tr("Pré-remplissage et ajustements en séance")) { nav.navigate("t/settings/progression") }
+                RowDivider()
+                SettingRow(tr("Échauffements et repos"), subtitle = tr("Séries préparatoires, minuteurs et sons")) { nav.navigate("t/settings/session") }
+                RowDivider()
+                SettingRow(tr("Données musculation"), subtitle = tr("Importer, exporter et restaurer")) { nav.navigate("t/settings/data") }
+            }
+            }
+            if (section == "program") {
+
+            GroupCard {
+                SettingRow(tr("Programme actif"), subtitle = vm.activeProgram()?.name ?: tr("Aucun programme")) {
+                    val p = vm.activeProgram()
+                    nav.navigate(if (p == null) "t/setup" else "program/${p.id}")
+                }
+                RowDivider()
+                SettingRow(tr("Choisir un programme"), subtitle = tr("Reprendre ma bibliothèque ou découvrir les modèles")) { nav.navigate("t/setup/library") }
+                RowDivider()
+                SettingRow(tr("Programmes additionnels"), subtitle = tr("Parcourir des programmes prêts à personnaliser")) { nav.navigate("t/programs/bonus") }
+                RowDivider()
+                SettingRow(tr("Créer un programme manuellement"), subtitle = tr("Choisir mes jours, exercices et séries")) { nav.navigate("t/setup/manual") }
+            }
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Expérience"), Modifier.padding(start = 0.dp))
             MfCard { ChipChoice(app.superhealth.training.domain.Experience.entries, s.experience, { it.label.tr() }) { v -> vm.settings { it.copy(experience = v) } } }
 
+            }
+            if (section == "gyms") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Salles"), Modifier.padding(start = 0.dp))
             GroupCard {
                 st.gyms.forEachIndexed { i, g ->
@@ -107,6 +155,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SettingRow(tr("Gérer les salles"), icon = Icons.Rounded.Add) { nav.navigate("gyms") }
             }
 
+            }
+            if (section == "progression") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Progression intelligente"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SwitchRow(tr("Appliquer en séance"), tr("Ajuste les séries suivantes"), s.smartProgression) { v -> vm.settings { it.copy(smartProgression = v) } }
@@ -118,6 +168,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SwitchRow(tr("Garder la même charge"), tr("Weight Match"), s.weightMatch) { v -> vm.settings { it.copy(weightMatch = v) } }
             }
 
+            }
+            if (section == "session") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Échauffements"), Modifier.padding(start = 0.dp))
             MfCard {
                 ChipChoice(WarmUpMode.entries, s.warmUp, { it.label.tr() }) { v -> vm.settings { it.copy(warmUp = v) } }
@@ -125,6 +177,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                     style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 6.dp))
             }
             GroupCard(Modifier.padding(top = 8.dp)) {
+                SettingRow(tr("Personnaliser le schéma"), subtitle = tr("Pourcentages et répétitions par série")) { nav.navigate("t/warmups") }
+                RowDivider()
                 SwitchRow(tr("Masquer les échauffements faits"), null, s.hideCompletedWarmUps) { v -> vm.settings { it.copy(hideCompletedWarmUps = v) } }
                 RowDivider()
                 SwitchRow(tr("Simplifier les disques"), tr("Pas de petits disques à l'échauffement"), s.simplifyWarmUpPlates) { v -> vm.settings { it.copy(simplifyWarmUpPlates = v) } }
@@ -141,11 +195,16 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController) {
                 SwitchRow(tr("Son de fin de repos"), null, s.restSound) { v -> vm.settings { it.copy(restSound = v) } }
             }
 
+            }
+            if (section == "data") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Données"), Modifier.padding(start = 0.dp))
             GroupCard {
+                SettingRow(tr("Importer un programme"), subtitle = tr("JSON SuperHealth ou Workouts ; ajouté sans remplacer vos données"), icon = Icons.Rounded.Download) { importProgram.launch(arrayOf("application/json", "*/*")) }
+                RowDivider()
                 SettingRow(tr("Exporter une sauvegarde"), subtitle = tr("JSON complet"), icon = Icons.Rounded.Download) { export.launch("superhealth-musculation-${LocalDate.now()}.json") }
                 RowDivider()
                 SettingRow(tr("Restaurer une sauvegarde"), subtitle = tr("Remplace toutes les données"), icon = Icons.Rounded.Upload) { import.launch(arrayOf("application/json", "*/*")) }
+            }
             }
             Spacer(Modifier.height(24.dp))
         }

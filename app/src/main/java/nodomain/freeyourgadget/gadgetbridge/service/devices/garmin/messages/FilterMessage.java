@@ -1,18 +1,39 @@
+/*  Copyright (C) 2024-2026 Daniele Gobbetti, Thomas Kuehne
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages;
 
-public class FilterMessage extends GFDIMessage {
+import androidx.annotation.NonNull;
 
+public class FilterMessage extends GFDIMessage {
 
     private final FilterType filterType;
 
     public FilterMessage() {
-        this(false);
+        this(FilterType.ONLY_NEW_3);
     }
 
-    /** @param allFiles also list the files already synced (archived), to recover the activity history kept on the watch */
+    /** Also lists archived files when recovering the history kept on the watch. */
     public FilterMessage(final boolean allFiles) {
+        this(allFiles ? FilterType.ALL_FILES_0 : FilterType.ONLY_NEW_3);
+    }
+
+    public FilterMessage(@NonNull FilterType filterType) {
         this.garminMessage = GarminMessage.FILTER;
-        this.filterType = allFiles ? FilterType.ALL_FILES_0 : FilterType.ONLY_NEW_3;
+        this.filterType = filterType;
     }
 
     @Override

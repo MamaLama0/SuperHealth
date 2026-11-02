@@ -93,6 +93,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         s.copy(programs = programs, settings = s.settings.copy(activeProgramId = id))
     }
 
+    fun jumpToCycle(id: String, cycle: Int) = update { s ->
+        s.copy(programs = s.programs.map { if (it.id == id) app.superhealth.training.domain.ProgramEdit.jumpToCycle(it, cycle) else it })
+    }
+
     fun deleteProgram(id: String) = update { s ->
         s.copy(programs = s.programs.filter { it.id != id }, settings = s.settings.copy(activeProgramId = s.settings.activeProgramId.takeIf { it != id }))
     }
@@ -256,7 +260,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startNext(): Boolean {
         if (state.value.session != null) return true
         val p = activeProgram() ?: return false
-        if (p.days.getOrNull(p.dayIndex)?.isRest != false) return false
+        if (p.days.getOrNull(p.dayIndex)?.isRestAt(p.cycleIndex) != false) return false
         startProgramDay(p, p.dayIndex, p.cycleIndex)
         return true
     }
@@ -355,9 +359,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val program = s0.programs.firstOrNull { it.id == sess.programId }
         val day = program?.days?.firstOrNull { it.id == sess.dayId }
         planChange.value = if (program != null && day != null && sess.adjust == 0) PlanDiff.compute(day, sess).takeUnless { it.isEmpty }?.let { PlanChange(program.id, day, sess, it) } else null
-        val w = e.finish(sess, System.currentTimeMillis(), gym(sess.gymId), program?.name, logAll)
+        val w = e.finish(sess, System.currentTimeMillis(), gym(sess.gymId), program?.name, logAll).copy(
+            plannedSessions = program?.days?.count { !it.isRestAt(sess.cycleIndex ?: program.cycleIndex) }?.takeIf { it > 0 })
         update { s ->
-            val programs = if (program != null) s.programs.map { if (it.id == program.id) e.advance(it, sess.dayId) else it } else s.programs
+            val programs = if (program != null && w.exercises.isNotEmpty()) s.programs.map { if (it.id == program.id) e.advance(it, sess.dayId, sess.cycleIndex ?: it.cycleIndex) else it } else s.programs
             s.copy(session = null, history = if (w.exercises.isEmpty()) s.history else s.history + w, programs = programs)
         }
         if (w.exercises.isNotEmpty()) completed.value = w

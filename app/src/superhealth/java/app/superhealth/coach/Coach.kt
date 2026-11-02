@@ -6,7 +6,6 @@ import app.superhealth.bridge.Bridge
 import app.superhealth.health.data.Metric
 import app.superhealth.insights.InsightData
 import app.superhealth.insights.text
-import app.superhealth.modules.Modules
 import app.superhealth.nutrition.NutriApp
 import app.superhealth.nutrition.data.AiConfig
 import app.superhealth.nutrition.data.Anon
@@ -28,6 +27,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -50,11 +51,11 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
 /**
- * Module Coach IA. Comme WHOOP Coach, Oura Advisor ou le coach Gemini de Google Health, il répond à partir de vos propres
+ * Coach IA intégré. Comme WHOOP Coach, Oura Advisor ou le coach Gemini de Google Health, il répond à partir de vos propres
  * données ; ici elles sont résumées sur l'appareil (14 derniers jours, programme, constats déjà calculés par l'app) et
  * seul ce résumé part vers le fournisseur IA choisi, visible à tout moment (« Ce que voit le coach »).
  *
- * Les consignes (prompts) viennent du module téléchargé (prompts.json) : elles évoluent sans mise à jour de l'app.
+ * Les consignes (prompts) sont embarquées dans l'app ; aucun plugin ni téléchargement n'est requis.
  * Ce qu'il retient est une liste écrite ou validée par l'utilisateur, jamais ajoutée sans son accord.
  */
 object Coach {
@@ -88,9 +89,10 @@ object Coach {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    private lateinit var appContext: Context
     @Volatile private var prompts: Prompts? = null
     fun prompts(): Prompts? = prompts ?: runCatching {
-        json.decodeFromString(Prompts.serializer(), Modules.file(Modules.COACH, "prompts.json")!!.readText())
+        json.decodeFromString(Prompts.serializer(), appContext.assets.open("coach/prompts.json").bufferedReader().use { it.readText() })
     }.getOrNull()?.also { prompts = it }
 
     fun invalidate() { prompts = null }
@@ -102,6 +104,9 @@ object Coach {
     private lateinit var dir: File
 
     fun init(ctx: Context) {
+        appContext = ctx.applicationContext
+        prompts = null
+        toolsOff = false
         dir = File(ctx.filesDir, "coach").apply { mkdirs() }
         chat.value = runCatching { json.decodeFromString(ListSerializer(Msg.serializer()), File(dir, "chat.json").readText()) }.getOrDefault(emptyList())
         brief.value = runCatching { json.decodeFromString(Brief.serializer(), File(dir, "brief.json").readText()) }.getOrNull()
@@ -296,7 +301,7 @@ object Coach {
                         appendLine("- ${TrainingAnalytics.day(a.start).format(dayFmt)}: ${a.title} (${a.kind.name.lowercase()}), ${a.minutes} min$km$kcal")
                     }
                 }
-                // plugins Méditation, Étirements, Classement
+                // Méditation, étirements et indice de santé intégré
                 if (shares(Share.ACTIVITIES)) {
                     val fromDay = from.toEpochDay()
                     val med = app.superhealth.meditation.Meditation
@@ -310,8 +315,8 @@ object Coach {
                     }
                     if (app.superhealth.league.League.available()) app.superhealth.league.League.mine.value?.let { s ->
                         appendLine()
-                        appendLine("## Weekly leaderboard score (plugin)")
-                        appendLine("${s.total}/1000; " + s.pillars.entries.joinToString { (p, v) -> "${p.name.lowercase()} ${v?.let { "$it%" } ?: "not tracked"}" })
+                        appendLine("## Health habits index (7 completed days)")
+                        appendLine((if (s.ready) "${s.total}/1000; " else "Insufficient tracked domains for a global score; ") + s.pillars.entries.joinToString { (p, v) -> "${p.name.lowercase()} ${v?.let { "$it%" } ?: "not tracked"}" })
                     }
                 }
                 if (shares(Share.WELLBEING)) wellbeing(ctx, today, from)?.let { appendLine(); append(it) }
@@ -345,7 +350,11 @@ object Coach {
         return if (m.isNotEmpty() && cfg.provider != app.superhealth.nutrition.data.AiProvider.OFFERED) cfg.copy(model = m) else cfg
     }
 
-    fun ready(): Boolean = config().ready && prompts() != null
+    private fun requireEnabled() {
+        if (!SuperPrefs.settings.value.coachEnabled) throw CoachException(app.superhealth.ui.tr("Le coach est désactivé."))
+    }
+
+    fun ready(): Boolean = SuperPrefs.settings.value.coachEnabled && config().ready && prompts() != null
 
     private fun system(p: Prompts, context: String): String {
         val tone = runCatching { Tone.valueOf(SuperPrefs.settings.value.coachTone) }.getOrDefault(Tone.WARM)
@@ -370,6 +379,8 @@ object Coach {
      * et leurs résultats lui sont renvoyés ; les propositions s'accumulent sous la réponse finale.
      */
     private suspend fun converse(ctx: Context?, p: Prompts, system: String, messages: List<Msg>, tools: Boolean): Reply = withContext(Dispatchers.IO) {
+        requireEnabled()
+        currentCoroutineContext().ensureActive()
         val cfg = config()
         if (!cfg.ready) throw CoachException(app.superhealth.ui.tr("Configurez d'abord une clé API (Nutrition > Intelligence artificielle)."))
         val endpoint = cfg.effectiveUrl + "/chat/completions"
@@ -383,6 +394,8 @@ object Coach {
         val used = linkedSetOf<String>()
         var withTools = useTools
         repeat(7) { round ->
+            requireEnabled()
+            currentCoroutineContext().ensureActive()
             val body = buildJsonObject {
                 put("model", cfg.effectiveModel)
                 put("temperature", p.temperature)
@@ -412,6 +425,8 @@ object Coach {
                 put("tool_calls", kotlinx.serialization.json.JsonArray(calls))
             }
             calls.forEach { c ->
+                requireEnabled()
+                currentCoroutineContext().ensureActive()
                 val call = c.jsonObject
                 val fn = call["function"]?.jsonObject
                 val name = fn?.get("name")?.jsonPrimitive?.contentOrNull.orEmpty()
@@ -428,7 +443,9 @@ object Coach {
         throw CoachException(app.superhealth.ui.tr("Pas de réponse du modèle."))
     }
 
-    private fun post(cfg: AiConfig, endpoint: String, body: String): Pair<Int, String> {
+    private suspend fun post(cfg: AiConfig, endpoint: String, body: String): Pair<Int, String> {
+        requireEnabled()
+        currentCoroutineContext().ensureActive()
         val conn = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"; doOutput = true; connectTimeout = 15000; readTimeout = 90000
             setRequestProperty("Content-Type", "application/json")
@@ -438,7 +455,10 @@ object Coach {
         try {
             conn.outputStream.use { it.write(body.toByteArray()) }
             val code = conn.responseCode
-            return code to (if (code in 200..299) conn.inputStream else conn.errorStream)?.use { Net.readCapped(it) }.orEmpty()
+            val response = (if (code in 200..299) conn.inputStream else conn.errorStream)?.use { Net.readCapped(it) }.orEmpty()
+            currentCoroutineContext().ensureActive()
+            requireEnabled()
+            return code to response
         } finally { conn.disconnect() }
     }
 
@@ -452,13 +472,15 @@ object Coach {
 
     /** Pose une question (avec les 12 derniers messages) ; la réponse est ajoutée à la conversation. */
     suspend fun ask(ctx: Context, question: String): Msg {
+        requireEnabled()
         saveChat(chat.value + Msg("user", question.trim()))
         return answer(ctx)
     }
 
     /** Répond au dernier message de l'utilisateur (après une erreur, ou pour une autre réponse). */
     suspend fun answer(ctx: Context): Msg {
-        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
+        requireEnabled()
+        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Les consignes du coach sont indisponibles."))
         val history = chat.value.takeLast(12)
         if (history.lastOrNull()?.role != "user") throw CoachException(app.superhealth.ui.tr("Pas de question à laquelle répondre."))
         val r = converse(ctx, p, system(p, context(ctx)), history, tools = true)
@@ -467,6 +489,7 @@ object Coach {
 
     /** Proposition appliquée (bouton touché) : marquée faite dans la conversation ; renvoie l'écran à ouvrir. */
     suspend fun apply(msg: Msg, action: CoachTools.Action): String? {
+        requireEnabled()
         val route = CoachTools.apply(action)
         if (action.kind != "open") saveChat(chat.value.map { m -> if (m.time == msg.time && m.role == msg.role)
             m.copy(actions = m.actions.map { if (it == action) it.copy(done = true) else it }) else m })
@@ -475,6 +498,7 @@ object Coach {
 
     /** Autre réponse à la dernière question : la dernière réponse est retirée puis redemandée. */
     suspend fun regenerate(ctx: Context): Msg {
+        requireEnabled()
         if (chat.value.lastOrNull()?.role == "assistant") saveChat(chat.value.dropLast(1))
         return answer(ctx)
     }
@@ -484,7 +508,8 @@ object Coach {
 
     /** Point du jour (comme le Daily Outlook de WHOOP) : préparé une fois par jour, gardé jusqu'au lendemain. */
     suspend fun makeBrief(ctx: Context): Brief {
-        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
+        requireEnabled()
+        val p = prompts() ?: throw CoachException(app.superhealth.ui.tr("Les consignes du coach sont indisponibles."))
         // 2.2 : le point du jour peut aller chercher le détail (repas, nuit, séances) avec les outils de lecture
         val raw = split(converse(ctx, p, system(p, context(ctx)), listOf(Msg("user", p.brief)), tools = true).text).first
         val lines = raw.lines().map { it.trim() }.filter { it.isNotEmpty() }
@@ -498,7 +523,10 @@ object Coach {
     }
 
     /** Une question isolée (hors conversation), réponse sans balise mémoire. */
-    suspend fun once(ctx: Context, p: Prompts, question: String): String = split(complete(p, system(p, context(ctx)), listOf(Msg("user", question)))).first
+    suspend fun once(ctx: Context, p: Prompts, question: String): String {
+        requireEnabled()
+        return split(complete(p, system(p, context(ctx)), listOf(Msg("user", question)))).first
+    }
 
     fun briefIsToday(): Boolean = brief.value?.day == LocalDate.now().toEpochDay()
 

@@ -1,0 +1,15 @@
+{
+  "androidEncryptionToNodeDecryption": true,
+  "androidSignatureVerifiedByNode": true,
+  "httpPut": 204,
+  "httpGet": 200,
+  "conditionalGet": 304,
+  "noPlaintextOrReadKeyOnDisk": true,
+  "nodeEncryptionProducedForSecondAndroid": true,
+  "cardProgressModel": 2,
+  "cardXp": 500,
+  "plaintextSha256": "65a5df5a4af66bffd27be4a523895902b54efdb1a14ffd8e9dbe8dcd746446aa",
+  "secondAndroidDecryptionAndSignatureVerified": true,
+  "secondAndroidHealthModel": 2,
+  "secondAndroidTotalXp": 500
+}

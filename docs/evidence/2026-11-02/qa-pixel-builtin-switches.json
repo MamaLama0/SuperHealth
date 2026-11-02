@@ -1,0 +1,87 @@
+{
+  "device": "Pixel 8 Pro",
+  "package": "app.superhealth.qa",
+  "scope": "UI-only; no build, installation, seed or clear. Personal app untouched.",
+  "baseline": {
+    "coachEnabled": true,
+    "leagueEnabled": true,
+    "dashboard": [
+      "PROGRESSION",
+      "LEAGUE",
+      "FRIENDS",
+      "CALORIES",
+      "NEXT_WORKOUT"
+    ],
+    "plus": [
+      "SEARCH",
+      "SCAN",
+      "QUICK",
+      "AI",
+      "RECIPES",
+      "CUSTOM_FOOD",
+      "WORKOUT",
+      "EMPTY",
+      "EXERCISES",
+      "WEIGHT",
+      "VITALS",
+      "BODY",
+      "SYNC",
+      "COACH",
+      "MOOD",
+      "PERIOD",
+      "BREATHE",
+      "LEAGUE"
+    ],
+    "sessionId": "qa-free",
+    "historyCount": 6
+  },
+  "disabledFlags": {
+    "coachEnabled": false,
+    "leagueEnabled": false
+  },
+  "restored": {
+    "coachEnabled": true,
+    "leagueEnabled": true,
+    "dashboard": [
+      "PROGRESSION",
+      "LEAGUE",
+      "FRIENDS",
+      "CALORIES",
+      "NEXT_WORKOUT"
+    ],
+    "plus": [
+      "SEARCH",
+      "SCAN",
+      "QUICK",
+      "AI",
+      "RECIPES",
+      "CUSTOM_FOOD",
+      "WORKOUT",
+      "EMPTY",
+      "EXERCISES",
+      "WEIGHT",
+      "VITALS",
+      "BODY",
+      "SYNC",
+      "COACH",
+      "MOOD",
+      "PERIOD",
+      "BREATHE",
+      "LEAGUE"
+    ],
+    "sessionId": "qa-free",
+    "historyCount": 6
+  },
+  "observations": [
+    "Temporarily added Coach card through dashboard personalization because it was not present in initial QA configuration.",
+    "Both settings switches off: no Coach/Progression/Leaderboard/Friends cards remained on Home.",
+    "Both off: Plus omitted Demander au coach and Classement.",
+    "Direct coach route while disabled showed Coach désactivé and explicit Activer le coach, with no question input.",
+    "Coach enabled alone, leaderboard still disabled: Coach card returned and Plus contained Demander au coach but not Classement.",
+    "Both re-enabled: Progression/Leaderboard/Friends cards and both Plus shortcuts returned.",
+    "Temporary Coach card removed; original dashboard order and configured shortcuts restored exactly.",
+    "Existing free workout qa-free and history count 6 preserved."
+  ],
+  "nonBlockingUiFinding": "Settings rows still say 6 affichées / 18 raccourcis while functions are disabled; counts reflect configured rather than currently visible entries. Reported to root before any edit.",
+  "codeEdits": false
+}

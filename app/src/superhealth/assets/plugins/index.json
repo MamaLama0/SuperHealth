@@ -1,0 +1,89 @@
+{
+  "name": "SuperHealth",
+  "modules": [
+    {
+      "id": "coach",
+      "kind": "coach",
+      "minApp": "1.2",
+      "color": "#8E7CF0",
+      "name": "Coach IA",
+      "nameEn": "AI Coach",
+      "summary": "Un coach qui répond à partir de tes repas, de ton poids, de tes séances et de ta montre : point du jour, bilan de la semaine, analyse des séances, questions libres. Utilise ta clé IA.",
+      "summaryEn": "A coach that answers from your meals, weight, workouts and watch: daily brief, weekly review, workout analysis, free questions. Uses your AI key.",
+      "version": "1.1.0",
+      "size": 2762,
+      "sha256": "6c6ee274af6ee757a8e2fcd6f2f89db1b45c1691825387e995decf34b10f2f38",
+      "url": "coach-1.1.0.zip"
+    },
+    {
+      "id": "meals",
+      "kind": "meals",
+      "minApp": "1.4",
+      "color": "#F2994A",
+      "name": "Repas",
+      "nameEn": "Meal planner",
+      "summary": "Propose les repas qui restent pour finir la journée pile sur tes cibles, en haut du journal : recettes Spoonacular (clé gratuite), repas composés par ton IA, ou portions calculées pour les aliments que tu choisis.",
+      "summaryEn": "Suggests the meals left to finish the day right on your targets, at the top of the food log: Spoonacular recipes (free key), meals built by your AI, or portions worked out for the foods you pick.",
+      "version": "1.0.0",
+      "size": 1341,
+      "sha256": "c9159ca5dc5c0b88fc7fb9ff958e91f87c5b981f895155870b73efb7546d5fe6",
+      "url": "meals-1.0.0.zip"
+    },
+    {
+      "id": "meds",
+      "kind": "meds",
+      "minApp": "1.7.5",
+      "color": "#3FA7D6",
+      "name": "Rappel médication",
+      "nameEn": "Medication reminder",
+      "summary": "Tes médicaments et compléments à heure fixe : une notification au bon moment, « Pris » en un geste, et ce qui reste à prendre dans « À faire ».",
+      "summaryEn": "Your medication and supplements on schedule: a notification at the right time, “Taken” in one tap, and what's left in the To-do card.",
+      "version": "1.0.0",
+      "size": 544,
+      "sha256": "52ee2162cacf4dc63392fea23c69fb0b366b69be50ec5f170e51b82cf8ebd7fc",
+      "url": "meds-1.0.0.zip"
+    },
+    {
+      "id": "meditation",
+      "kind": "meditation",
+      "minApp": "2.6",
+      "color": "#7B8CDE",
+      "name": "Méditation",
+      "nameEn": "Meditation",
+      "summary": "Séance du jour, minuteur avec gongs et ambiances, respiration, programmes et séances guidées avec voix enregistrée, séance écrite par le coach.",
+      "summaryEn": "Today's session, timer with gongs and ambiences, breathing, programs and guided sessions with a recorded voice, a session written by the coach.",
+      "version": "1.2.0",
+      "size": 4064193,
+      "sha256": "3b11d23b7752523444ebfdd2cb1a259fd963f1336c412363cb276f77b7b50467",
+      "url": "meditation-1.2.0.zip"
+    },
+    {
+      "id": "stretch",
+      "kind": "stretch",
+      "minApp": "2.5",
+      "color": "#3BBFA0",
+      "name": "Étirements",
+      "nameEn": "Stretching",
+      "summary": "311 exercices en vidéo avec leurs consignes. Routines selon le moment, les zones et votre matériel, ou après une séance selon les muscles travaillés.",
+      "summaryEn": "311 video exercises with instructions. Routines by moment, area and equipment, or after a workout from the muscles you trained.",
+      "version": "1.1.0",
+      "size": 2487650,
+      "sha256": "0aff9bcd6efcb0cafd24eb4c80e75ad6fa1726fc5e6c35d9e5018c57f4dded55",
+      "url": "stretch-1.1.0.zip"
+    },
+    {
+      "id": "league",
+      "kind": "league",
+      "minApp": "2.5",
+      "color": "#4FA8E8",
+      "name": "Classement",
+      "nameEn": "Leaderboard",
+      "summary": "Un score de la semaine sur six parties, comparé entre amis par QR code ou message. Aucun serveur, cartes signées.",
+      "summaryEn": "A weekly score over six areas, compared with friends by QR code or message. No server, signed cards.",
+      "version": "1.0.1",
+      "size": 331,
+      "sha256": "732ac3c888d62fb1d946ac36c35e6b097979afa5e917390568106b5bb6b12cf6",
+      "url": "league-1.0.1.zip"
+    }
+  ]
+}

@@ -35,41 +35,51 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Plugin Classement : un score hebdomadaire comparé entre amis, sans serveur.
- *
- * Score : six parties, chacune entre 0 et 100 % de l'objectif personnel de la semaine (lundi à dimanche). Les parties sans source
- * (pas de montre, nutrition coupée…) sortent du calcul : personne n'est pénalisé pour ce qu'il ne suit pas. Total sur 1000.
- *
- * Partage : une carte signée (clé EC P-256 du Keystore, jamais exportable) passe par un QR code ou un message. L'app n'ouvre aucun port
- * et ne contacte personne. Un inconnu n'est ajouté qu'après confirmation (empreinte à comparer) ; ensuite seule sa clé peut mettre à
- * jour sa ligne, avec une carte plus récente. Limite assumée : sans serveur, rien n'empêche quelqu'un de modifier sa propre app pour
- * annoncer un faux score ; la signature protège l'identité, pas la sincérité.
+ * Indice d'habitudes v2 sur sept jours terminés et comparaisons sportives entre amis.
+ * Cartes EC P-256 : QR/message, proximité NSD ou relais personnel facultatif.
+ * Les parties inconnues restent nulles ; le score nécessite au moins trois parties.
+ * La signature protège l'identité, pas la sincérité des statistiques déclarées.
  */
 object League {
     enum class Pillar(val label: String) { STRENGTH("Musculation"), CARDIO("Cardio"), STEPS("Pas"), SLEEP("Sommeil"), FOOD("Nutrition"), MIND("Esprit et mobilité") }
 
     /** Partie : son taux de 0 à 100, null si elle ne compte pas pour cette personne. */
-    data class Score(val week: String, val total: Int, val pillars: Map<Pillar, Int?>)
+    data class Score(val week: String, val total: Int, val pillars: Map<Pillar, Int?>,
+        val ready: Boolean = false, val endDay: Long = 0, val metrics: List<Comparison> = emptyList(), val progress: Progression.Summary? = null) {
+        val coverage get() = Pillar.entries.fold(0) { mask, p -> if (pillars[p] != null) mask or (1 shl p.ordinal) else mask }
+    }
 
-    @Serializable data class Card(val v: Int = 1, val k: String, val n: String, val w: String, val t: Long, val s: Int, val p: List<Int?> = emptyList(), val st: Int = 0)
+    @Serializable data class Comparison(val key: String, val label: String, val unit: String, val value: Double,
+        val lowerWins: Boolean = false, val scope: String = "7d")
+
+    @Serializable data class Card(val v: Int = 1, val k: String, val n: String, val w: String, val t: Long, val s: Int, val p: List<Int?> = emptyList(), val st: Int = 0,
+        val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
+        val metrics: List<Comparison> = emptyList(), val detailSnapshot: Boolean = false, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val hello: Boolean = false, val relayKey: String? = null, val progress: Progression.Summary? = null, val invite: Boolean = false)
 
     @Serializable data class Friend(val id: String, val key: String, val name: String, val week: String, val time: Long, val score: Int,
                                     val pillars: List<Int?> = emptyList(), val streak: Int = 0,
                                     /** Nom choisi par moi pour cet ami (le sien reste dans [name]) ; scores reçus par semaine ; date d'ajout. */
-                                    val alias: String? = null, val history: Map<String, Int> = emptyMap(), val addedAt: Long = 0) {
+                                    val alias: String? = null, val history: Map<String, Int> = emptyMap(), val addedAt: Long = 0,
+                                    val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
+                                    val metrics: List<Comparison> = emptyList(), val metricsTime: Long = 0, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val metricsEndDay: Long = 0, val relayKey: String? = null, val progress: Progression.Summary? = null,
+                                    val trends: Map<String, List<TrendPoint>> = emptyMap(), val relayEtag: String? = null, val inviteRevision: Long = 0) {
         val shown get() = alias?.takeIf { it.isNotBlank() } ?: name
     }
 
-    @Serializable data class State(val friends: List<Friend> = emptyList(), val best: Map<String, Int> = emptyMap(), val sharePillars: Boolean = true)
+    @Serializable data class TrendPoint(val day: Long, val value: Double)
+
+    @Serializable data class State(val friends: List<Friend> = emptyList(), val best: Map<String, Int> = emptyMap(), val sharePillars: Boolean = true,
+        val shareActivities: Boolean = false, val relayUrl: String = "", val syncsPerDay: Int = 4,
+        val lastSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap())
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private const val ALIAS = "superhealth_league"
     private const val PREFIX = "SH1"
-    private const val MAX_CARD = 1500
+    const val MAX_CARD = 65_536
     /** Semaine « tenue » pour la série : au moins la moitié du score. */
     private const val STREAK_MIN = 500
 
-    fun available() = Modules.isActive(Modules.LEAGUE)
+    fun available() = SuperPrefs.settings.value.leagueEnabled
     val state = MutableStateFlow(State())
     val mine = MutableStateFlow<Score?>(null)
     /** Carte reçue par un lien ou un QR, en attente de confirmation. */
@@ -77,10 +87,16 @@ object League {
     val incomingError = MutableStateFlow(false)
 
     private fun file(ctx: Context) = File(File(ctx.filesDir, "league").apply { mkdirs() }, "state.json")
-    fun load(ctx: Context) { state.value = runCatching { json.decodeFromString(State.serializer(), file(ctx).readText()) }.getOrDefault(State()) }
-    private fun save(ctx: Context, s: State) { state.value = s; runCatching { file(ctx).writeText(json.encodeToString(State.serializer(), s)) } }
-    fun setSharePillars(ctx: Context, on: Boolean) = save(ctx, state.value.copy(sharePillars = on))
-    fun remove(ctx: Context, id: String) = save(ctx, state.value.copy(friends = state.value.friends.filter { it.id != id }))
+    fun load(ctx: Context) { state.value = runCatching { json.decodeFromString(State.serializer(), android.util.AtomicFile(file(ctx)).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(State()) }
+    @Synchronized private fun save(ctx: Context, s: State) { state.value = s; runCatching {
+        val atomic = android.util.AtomicFile(file(ctx))
+        val out = atomic.startWrite()
+        try { out.write(json.encodeToString(State.serializer(), s).toByteArray()); atomic.finishWrite(out) }
+        catch (e: Exception) { atomic.failWrite(out); throw e }
+    } }
+    fun setSharePillars(ctx: Context, on: Boolean) = configure(ctx) { it.copy(sharePillars = on) }
+    @Synchronized fun configure(ctx: Context, f: (State) -> State) = save(ctx, f(state.value))
+    fun remove(ctx: Context, id: String) = configure(ctx) { it.copy(friends = it.friends.filter { f -> f.id != id }) }
 
     fun weekKey(d: LocalDate = LocalDate.now()) = "%d-W%02d".format(d.get(IsoFields.WEEK_BASED_YEAR), d.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))
 
@@ -90,55 +106,74 @@ object League {
     private fun pct(v: Double, target: Double) = ((v / target).coerceIn(0.0, 1.0) * 100).toInt()
 
     suspend fun compute(ctx: Context, today: LocalDate = LocalDate.now()): Score = withContext(Dispatchers.Default) {
-        val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val days = generateSequence(monday) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.toList()
+        val exerciseDb = WorkoutApp.db.first { it != null }!!
+        val end = today.minusDays(1)
+        val start = today.minusDays(7)
+        val days = (0L..6L).map { start.plusDays(it) }
         val zone = ZoneId.systemDefault()
-        val fromMs = monday.atStartOfDay(zone).toInstant().toEpochMilli()
-        val toMs = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val fromMs = start.atStartOfDay(zone).toInstant().toEpochMilli()
+        val toMs = today.atStartOfDay(zone).toInstant().toEpochMilli()
         val sh = SuperPrefs.settings.value
         val p = linkedMapOf<Pillar, Int?>()
-
-        // Musculation : séances faites face aux séances du programme actif (3 sans programme)
-        p[Pillar.STRENGTH] = if (!sh.has(Feature.TRAINING)) null else {
-            val st = WorkoutApp.store.state.value
-            val planned = st.programs.firstOrNull { it.id == st.settings.activeProgramId }?.days?.count { !it.isRest }?.takeIf { it > 0 } ?: 3
-            pct(st.history.count { it.startTime in fromMs until toMs }.toDouble(), planned.toDouble())
-        }
-        // Cardio : 150 minutes par semaine, repère de l'OMS
-        p[Pillar.CARDIO] = if (!sh.has(Feature.HEALTH)) null else {
-            val acts = runCatching { Bridge.activities(fromMs, toMs) }.getOrDefault(emptyList()).filter { it.source != Bridge.Source.GYM }
-            pct(acts.sumOf { it.minutes }.toDouble(), 150.0)
-        }
-        // Pas et sommeil : chaque jour compte pour un septième, plafonné à l'objectif du jour
-        p[Pillar.STEPS] = if (!sh.has(Feature.HEALTH) || !Bridge.hasSource(Metric.STEPS)) null else {
-            val goal = NutriApp.repository.prefs.settings.first().stepGoal.coerceAtLeast(1000).toDouble()
-            (days.sumOf { d -> ((runCatching { Bridge.healthValue(ctx, Metric.STEPS, d) }.getOrNull() ?: 0.0) / goal).coerceIn(0.0, 1.0) } / 7 * 100).toInt()
-        }
-        // Sommeil : 7 h par nuit, repère de l'AASM pour un adulte
-        p[Pillar.SLEEP] = if (!sh.has(Feature.HEALTH) || !Bridge.hasSource(Metric.SLEEP)) null else
-            (days.sumOf { d -> ((runCatching { Bridge.healthValue(ctx, Metric.SLEEP, d) }.getOrNull() ?: 0.0) / 420.0).coerceIn(0.0, 1.0) } / 7 * 100).toInt()
-        // Nutrition : jours journalisés à ±10 % de la cible
+        val history = WorkoutApp.store.state.value.history
+        val workouts = history.filter { it.startTime in fromMs until toMs }
+        val acts = if (sh.has(Feature.HEALTH)) runCatching { Bridge.activities(fromMs, toMs - 1) }.getOrDefault(emptyList()) else emptyList()
+        val cardio = acts.filter { it.kind != Bridge.Kind.STRENGTH }
+        p[Pillar.STRENGTH] = if (!sh.has(Feature.TRAINING)) null else pct(workouts.size.toDouble(), 2.0)
+        p[Pillar.CARDIO] = if (!sh.has(Feature.HEALTH) || acts.isEmpty()) null else pct(cardio.sumOf { it.minutes }.toDouble(), 150.0)
+        val steps = days.map { runCatching { Bridge.healthValue(ctx, Metric.STEPS, it) }.getOrNull()?.takeIf { v -> v > 0 } }
+        val sleep = days.map { runCatching { Bridge.healthValue(ctx, Metric.SLEEP, it) }.getOrNull()?.takeIf { v -> v > 0 } }
+        val settings = NutriApp.repository.prefs.settings.first()
+        p[Pillar.STEPS] = if (sh.has(Feature.HEALTH)) HealthIndex.daily(steps, settings.stepGoal.takeIf { it > 0 }?.toDouble() ?: 8000.0) else null
+        p[Pillar.SLEEP] = if (sh.has(Feature.HEALTH)) HealthIndex.daily(sleep, 420.0) else null
         p[Pillar.FOOD] = if (!sh.has(Feature.NUTRITION)) null else {
             val repo = NutriApp.repository
             val an = repo.analytics().first()
-            val eaten = repo.entries.rangeFlow(monday.toEpochDay(), today.toEpochDay()).first().groupBy { it.epochDay }
-            val ok = days.count { d ->
-                val kcal = eaten[d.toEpochDay()].orEmpty().sumOf { it.kcal }
+            val eaten = repo.entries.rangeFlow(start.toEpochDay(), end.toEpochDay()).first().groupBy { it.epochDay }
+            val values = days.map { d ->
+                val kcal = eaten[d.toEpochDay()]?.sumOf { it.kcal }
                 val target = an.targetFor(d.toEpochDay()).macros.kcal
-                kcal > 0 && target > 0 && kotlin.math.abs(kcal / target - 1) <= 0.10
+                if (kcal == null || kcal <= 0 || target <= 0) null else (100 - kotlin.math.abs(kcal / target - 1) * 200).coerceIn(0.0, 100.0)
             }
-            pct(ok.toDouble(), 7.0)
+            HealthIndex.daily(values, 100.0)
         }
-        // Esprit et mobilité : 10 minutes par jour de méditation ou d'étirements
         p[Pillar.MIND] = if (!Meditation.available() && !Stretch.available()) null else
-            pct((Meditation.minutes(monday.toEpochDay()) + Stretch.minutes(monday.toEpochDay())).toDouble(), 70.0)
-
-        val counted = p.values.filterNotNull()
-        val total = if (counted.isEmpty()) 0 else counted.sumOf { it * 10 } / counted.size
-        val key = weekKey(today)
-        val s = Score(key, total, p)
+            pct((Meditation.minutes(start.toEpochDay(), end.toEpochDay()) + Stretch.minutes(start.toEpochDay(), end.toEpochDay())).toDouble(), 70.0)
+        val index = HealthIndex.total(Pillar.entries.map { p[it] })
+        val metrics = mutableListOf<Comparison>()
+        metrics += Comparison("activities:count", "Activités", "séances", acts.size.toDouble() + workouts.count { w -> acts.none { it.gymId == w.id } })
+        metrics += Comparison("training:count", "Musculation", "séances", workouts.size.toDouble())
+        metrics += Comparison("training:volume", "Volume de musculation", "kg·reps", workouts.sumOf { w -> w.exercises.sumOf { app.superhealth.training.domain.Analytics.volume(it.sets) } })
+        val runs = acts.filter { it.kind == Bridge.Kind.RUN }
+        metrics += Comparison("running:count", "Courses", "courses", runs.size.toDouble())
+        metrics += Comparison("running:km", "Distance courue", "km", runs.sumOf { it.distanceM ?: 0.0 } / 1000)
+        metrics += Comparison("running:minutes", "Temps de course", "min", runs.sumOf { it.minutes }.toDouble())
+        runs.mapNotNull { a -> a.distanceM?.takeIf { it >= 1000 && a.end > a.start }?.let { (a.end - a.start) / 1000.0 / (it / 1000) } }.minOrNull()?.let {
+            metrics += Comparison("running:pace", "Meilleure allure moyenne (course ≥ 1 km)", "s/km", it, lowerWins = true)
+        }
+        runs.mapNotNull { it.distanceM }.maxOrNull()?.let { metrics += Comparison("running:longest", "Course la plus longue", "km", it / 1000) }
+        val db = exerciseDb
+        // PR : même exercice et même métrique seulement, hors échauffements. Pas de positions GPS ou de journal brut.
+        history.flatMap { it.exercises }.groupBy { it.exerciseId }.entries.sortedByDescending { it.value.size }.take(30).forEach { (id, entries) ->
+            val e = db?.exercise(id) ?: return@forEach
+            val sets = entries.flatMap { app.superhealth.training.domain.Analytics.workingSets(it) }
+            if (e.usesWeight) sets.mapNotNull { it.weight }.maxOrNull()?.takeIf { it > 0 }?.let {
+                metrics += Comparison("pr:$id:weight", e.name + " · charge maximale", "kg", it, scope = "all")
+            }
+            if (e.usesWeight) sets.filter { (it.weight ?: 0.0) > 0 && (it.reps ?: 0) in 1..12 }.maxOfOrNull {
+                app.superhealth.training.domain.Strength.e1rm(it.weight!!, it.reps!!, it.rir, e.upperBody, it.partialReps)
+            }?.let { metrics += Comparison("pr:$id:e1rm", e.name + " · 1RM estimé", "kg", it, scope = "all") }
+            if (!e.usesWeight) sets.mapNotNull { it.reps }.maxOrNull()?.takeIf { it > 0 }?.let {
+                metrics += Comparison("pr:$id:reps", e.name + " · répétitions", "reps", it.toDouble(), scope = "all")
+            }
+        }
+        val key = weekKey(end)
+        val progress = try { ProgressRepository.compute(ctx, today).summary }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { null }
+        val s = Score(key, index ?: 0, p, index != null, end.toEpochDay(), metrics, progress)
         mine.value = s
-        if ((state.value.best[key] ?: -1) != total) save(ctx, state.value.copy(best = (state.value.best + (key to total)).entries.sortedBy { it.key }.takeLast(60).associate { it.key to it.value }))
+        if (index != null) configure(ctx) { st -> st.copy(best = (st.best + ("v2:${end.toEpochDay()}:${s.coverage}" to index)).entries.sortedBy { it.key }.takeLast(60).associate { it.key to it.value }) }
         s
     }
 
@@ -156,7 +191,7 @@ object League {
 
     private fun keyStore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
-    private fun ensureKey() {
+    @Synchronized private fun ensureKey() {
         if (keyStore().containsAlias(ALIAS)) return
         KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore").apply {
             initialize(KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY)
@@ -177,15 +212,37 @@ object League {
     // ---- Carte ------------------------------------------------------------------------------------------
 
     /** Carte signée de la semaine, prête à partager. */
-    fun card(name: String, s: Score): String {
+    private var lastRevision = 0L
+    @Synchronized fun card(name: String, s: Score, remote: String? = null, detailed: Boolean = false, hello: Boolean = false, relayKey: String? = null, invite: Boolean = false): String {
         val pub = myPublic()
-        val c = Card(k = pub, n = clean(name).ifBlank { "?" }, w = s.week, t = System.currentTimeMillis() / 1000, s = s.total,
-            p = if (state.value.sharePillars) Pillar.entries.map { s.pillars[it] } else emptyList(), st = streak())
+        val revision = maxOf(System.currentTimeMillis(), lastRevision + 1).also { lastRevision = it }
+        val c = Card(v = 2, k = pub, n = clean(name).ifBlank { "?" }, w = s.week, t = revision / 1000, s = s.total,
+            p = if (state.value.sharePillars) Pillar.entries.map { s.pillars[it] } else emptyList(), st = 0,
+            model = HealthIndex.MODEL, ready = s.ready, endDay = s.endDay,
+            metrics = if (detailed && state.value.shareActivities) s.metrics else emptyList(), detailSnapshot = detailed,
+            remote = remote, revision = revision, coverage = s.coverage, hello = hello, relayKey = relayKey, progress = if (state.value.shareProgress && !hello) s.progress else null, invite = invite)
         val body = json.encodeToString(Card.serializer(), c).toByteArray()
         val key = keyStore().getKey(ALIAS, null) as java.security.PrivateKey
         val sig = Signature.getInstance("SHA256withECDSA").run { initSign(key); update(body); sign() }
         return "$PREFIX.${b64(body)}.${b64(sig)}"
     }
+
+    /** Preuve éphémère : une carte interceptée ne suffit pas à obtenir les détails d'un ami. */
+    fun proof(challenge: String): String {
+        require(challenge.matches(Regex("[a-f0-9]{64}")))
+        ensureKey()
+        return b64(Signature.getInstance("SHA256withECDSA").run {
+            initSign(keyStore().getKey(ALIAS, null) as java.security.PrivateKey)
+            update(("SuperHealth nearby v2:" + challenge).toByteArray()); sign()
+        })
+    }
+    fun verifyProof(key: String, challenge: String, proof: String): Boolean = runCatching {
+        require(challenge.matches(Regex("[a-f0-9]{64}")) && proof.length <= 200)
+        val pub = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(unb64(key)))
+        Signature.getInstance("SHA256withECDSA").run {
+            initVerify(pub); update(("SuperHealth nearby v2:" + challenge).toByteArray()); verify(unb64(proof))
+        }
+    }.getOrDefault(false)
 
     fun link(card: String) = "superhealth://league?c=$card"
 
@@ -200,35 +257,102 @@ object League {
         val c = json.decodeFromString(Card.serializer(), body.decodeToString())
         val pub = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(unb64(c.k)))
         val ok = Signature.getInstance("SHA256withECDSA").run { initVerify(pub); update(body); verify(unb64(m.groupValues[2])) }
-        if (!ok || c.v != 1 || c.s !in 0..1000 || c.st !in 0..1000 || c.p.size > Pillar.entries.size || c.p.any { it != null && it !in 0..100 }) return null
+        if (!ok || c.v !in 1..2 || c.s !in 0..1000 || c.st !in 0..1000 || c.p.size > Pillar.entries.size || c.p.any { it != null && it !in 0..100 }) return null
         if (!c.w.matches(Regex("""\d{4}-W\d{2}""")) || c.t > System.currentTimeMillis() / 1000 + 86_400) return null
+        if (c.metrics.size > 128 || c.metrics.any { !it.value.isFinite() || it.value < 0 || it.key.length > 160 || it.label.length > 160 || it.unit.length > 16 || it.scope !in setOf("7d", "all") }) return null
+        if (c.relayKey != null && (!RelayCrypto.validKey(c.relayKey) || c.remote == null || !Relay.encryptedEndpoint(c.remote))) return null
+        if (c.invite && (c.ready || c.s != 0 || c.p.any { it != null } || c.metrics.isNotEmpty() || c.progress != null)) return null
+        c.progress?.let { g ->
+            if (g.model != Progression.MODEL || g.totalXp !in 0..1_000_000_000L || g.level != Progression.level(g.totalXp) || g.weekXp !in 0..840 ||
+                g.days.size > 7 || g.days.any { it.xp !in 0..120 } || g.streaks.size > 6 || g.streaks.any { it.track !in Progression.Track.entries.map { t -> t.name } || it.current !in 0..100000 || it.best < it.current || it.target !in 1..7 || it.progress !in 0..1000 || (it.percent != null && it.percent !in 0..1000) }) return null
+        }
+        if (c.coverage !in 0..63) return null
+        if (c.hello && (c.s != 0 || c.ready || c.remote != null || c.metrics.isNotEmpty() || c.relayKey != null || c.progress != null || c.p.any { it != null })) return null
+        if (c.revision < 0 || (c.revision > 0 && c.revision / 1000 != c.t)) return null
+        if (c.v == 2 && (c.model != HealthIndex.MODEL || c.endDay !in 1..LocalDate.now().toEpochDay())) return null
+        if (c.remote != null && !Relay.validEndpoint(c.remote)) return null
         c.copy(n = clean(c.n).ifBlank { "?" })
     }.getOrNull()
 
     /** Carte reçue : un ami connu est mis à jour directement, un inconnu attend la confirmation. */
     fun receive(ctx: Context, raw: String): Boolean {
         val c = parse(raw)
-        if (c == null) { incomingError.value = true; return false }
+        if (c == null || c.hello) { incomingError.value = true; return false }
         if (c.k == runCatching { myPublic() }.getOrNull()) return true
         if (state.value.friends.any { it.key == c.k }) accept(ctx, c) else incoming.value = c
         return true
     }
 
-    /** Applique une carte vérifiée ; une carte plus ancienne que celle déjà reçue est ignorée (rejeu). */
-    fun accept(ctx: Context, c: Card) {
+    /**
+     * Fusion déterministe des données déjà vérifiées. Le compteur santé est indépendant du compteur d'identité/relais :
+     * une invitation récente ne bloque pas une carte santé utile, et une carte santé différée ne rétablit pas un ancien relais.
+     */
+    internal fun mergeFriend(old: Friend?, c: Card, now: Long): Friend? {
+        if (c.hello || (old != null && old.key != c.k)) return null
+        val base = old ?: Friend(idOf(c.k), c.k, c.n, c.w, 0, 0, addedAt = now, model = c.model)
+        // Les anciennes versions ne mettaient ce compteur à jour que sur invitation : leur dernière carte santé
+        // peut donc aussi être la dernière source du nom et du relais.
+        val metadataRevision = maxOf(base.inviteRevision, base.revision)
+        if (c.invite) {
+            if (old != null && c.revision <= metadataRevision) return null
+            val sameRelay = c.remote == base.remote && c.relayKey == base.relayKey
+            return base.copy(name = c.n, remote = c.remote, relayKey = c.relayKey,
+                inviteRevision = maxOf(metadataRevision, c.revision), relayEtag = base.relayEtag.takeIf { sameRelay })
+        }
+        if (old != null && (if (c.revision > 0 && old.revision > 0) c.revision <= old.revision else c.t <= old.time)) return null
+        val updateMetadata = old == null || c.revision >= metadataRevision
+        val remote = if (updateMetadata && c.v == 2) c.remote else base.remote
+        val relayKey = when {
+            !updateMetadata || c.v != 2 -> base.relayKey
+            c.remote == null -> null
+            c.relayKey != null -> c.relayKey
+            c.remote == base.remote -> base.relayKey // les cartes stockées sur le relais n'embarquent jamais cette clé
+            else -> null
+        }
+        val sameRelay = remote == base.remote && relayKey == base.relayKey
+        val history = if (c.model == HealthIndex.MODEL && c.ready) base.history + ("v2:${c.endDay}:${c.coverage}" to c.s) else base.history
+        val trends = base.trends.toMutableMap()
+        if (c.detailSnapshot) c.metrics.forEach { m ->
+            trends[m.key] = (trends[m.key].orEmpty().filter { it.day != c.endDay } + TrendPoint(c.endDay, m.value)).sortedBy { it.day }.takeLast(60)
+        }
+        return base.copy(name = if (updateMetadata) c.n else base.name, week = c.w, time = c.t, score = c.s,
+            pillars = c.p, streak = c.st,
+            history = history.entries.sortedBy { it.key }.takeLast(60).associate { it.key to it.value },
+            model = c.model, ready = c.ready, endDay = c.endDay,
+            metrics = if (c.detailSnapshot) c.metrics else base.metrics,
+            metricsTime = if (c.detailSnapshot) c.t else base.metricsTime,
+            remote = remote, revision = c.revision, coverage = c.coverage,
+            metricsEndDay = if (c.detailSnapshot) c.endDay else base.metricsEndDay,
+            relayKey = relayKey, progress = c.progress, trends = trends,
+            relayEtag = base.relayEtag.takeIf { sameRelay },
+            inviteRevision = if (updateMetadata) maxOf(metadataRevision, c.revision) else metadataRevision)
+    }
+
+    /** Applique une carte vérifiée ; les rejeux et les cartes sans mise à jour utile sont ignorés. */
+    @Synchronized fun accept(ctx: Context, c: Card) {
         val id = idOf(c.k)
         val old = state.value.friends.firstOrNull { it.id == id }
-        if (old != null && c.t <= old.time) return
-        val f = Friend(id, c.k, c.n, c.w, c.t, c.s, c.p, c.st, old?.alias, ((old?.history.orEmpty()) + (c.w to c.s)).entries.sortedBy { it.key }.takeLast(12).associate { it.key to it.value },
-            old?.addedAt ?: System.currentTimeMillis())
-        save(ctx, state.value.copy(friends = state.value.friends.filter { it.id != id } + f))
+        val next = mergeFriend(old, c, System.currentTimeMillis()) ?: return
+        save(ctx, state.value.copy(friends = state.value.friends.filter { it.id != id } + next))
+        LeagueWorker.schedule(ctx)
     }
 
     fun rename(ctx: Context, id: String, alias: String) =
-        save(ctx, state.value.copy(friends = state.value.friends.map { if (it.id == id) it.copy(alias = clean(alias).ifBlank { null }) else it }))
+        configure(ctx) { s -> s.copy(friends = s.friends.map { if (it.id == id) it.copy(alias = clean(alias).ifBlank { null }) else it }) }
 
     fun isFriend(key: String) = state.value.friends.any { it.key == key }
 
     /** Ma carte du moment : score recalculé. */
-    suspend fun myCard(ctx: Context): String = card(app.superhealth.ui.userName() ?: "?", compute(ctx))
+    suspend fun myCard(ctx: Context, detailed: Boolean = false, includeRelayKey: Boolean = true): String = card(app.superhealth.ui.userName() ?: "?", compute(ctx), Relay.myEndpoint(ctx), detailed,
+        relayKey = if (includeRelayKey && Relay.myEndpoint(ctx) != null) Relay.readKey(ctx) else null)
+    fun inviteCard(ctx: Context): String {
+        val end = LocalDate.now().minusDays(1)
+        return card(app.superhealth.ui.userName() ?: "?", Score(weekKey(end), 0, emptyMap(), endDay = end.toEpochDay()), Relay.myEndpoint(ctx),
+            relayKey = if (Relay.myEndpoint(ctx) != null) Relay.readKey(ctx) else null, invite = true)
+    }
+    fun myId() = idOf(myPublic())
+    fun helloCard(): String {
+        val end = LocalDate.now().minusDays(1)
+        return card("?", Score(weekKey(end), 0, emptyMap(), endDay = end.toEpochDay()), hello = true)
+    }
 }

@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-02",
+  "qaPackage": "app.superhealth.qa",
+  "personalAppsUntouched": true,
+  "freeSession": {
+    "device": "Pixel 8 Pro",
+    "allExistingSetsCompleted": true,
+    "automaticFinishPopup": false,
+    "secondExerciseAdded": true,
+    "sessionFreeFormPersisted": true
+  },
+  "foodRemaining": {
+    "device": "OnePlus 9",
+    "consumedKcal": 650,
+    "targetKcal": 2500,
+    "remainingKcal": 1850,
+    "proteinRemainingGrams": 51,
+    "fatRemainingGrams": 63,
+    "carbsRemainingGrams": 269
+  },
+  "generationTargets": {
+    "device": "Pixel 8 Pro",
+    "expandedOnPeriodizationStep": true,
+    "primaryCustomFieldsVisible": [
+      "minReps",
+      "maxReps",
+      "rir"
+    ],
+    "min51Max10Rejected": true,
+    "nextButtonParentEnabledWhenInvalid": false,
+    "invalidClickDidNotAdvance": true,
+    "min5Max10Accepted": true,
+    "advancedToMusclePriorityStep": true,
+    "wizardAbandonedWithoutSaving": true
+  },
+  "homeRetap": {
+    "device": "Pixel 8 Pro",
+    "taps": 8,
+    "screenRecordingSeconds": 5,
+    "ffmpegLumaMin": 49.91,
+    "ffmpegLumaMax": 49.93,
+    "whiteFlashObserved": false,
+    "captureScope": "small sampled variable-rate screen recording; code also guards selected tab"
+  },
+  "serverHttpTests": {
+    "passed": 7,
+    "failed": 0,
+    "method": "node --test server.test.mjs, ephemeral localhost server"
+  },
+  "limits": [
+    "No physical Garmin watch or acoustic loudness measurement",
+    "No real TrueNAS Docker deployment",
+    "No Google Drive account provider installed on test phones"
+  ],
+  "gameUi": {
+    "device": "OnePlus 9",
+    "streakHeroAtTop": true,
+    "streakDays": 21,
+    "level": 4,
+    "totalXp": 710,
+    "intoLevelXp": 185,
+    "weeklyXp": 20,
+    "missions": [
+      "FOOD 1/1",
+      "STRENGTH 0/2"
+    ],
+    "nativeFlameAndTrophyRendered": true,
+    "levelJourneyRendered": true,
+    "unlockedMilestone7DaysDialog": "Jalon débloqué !",
+    "defaultLeagueTab": "XP semaine"
+  },
+  "finalKnownFriendExchange": {
+    "38251FDJG002ZM": [
+      {
+        "name": "QA LE2110",
+        "ageSeconds": 76,
+        "progressXp": 710,
+        "progressWeekXp": 20
+      }
+    ],
+    "2c494e6b": [
+      {
+        "name": "QA Pixel 8 Pro",
+        "ageSeconds": 73,
+        "progressXp": 710,
+        "progressWeekXp": 20
+      }
+    ]
+  },
+  "originalPersonalAppsAfterQa": {
+    "Pixel 8 Pro": "2.63 (29)",
+    "OnePlus 9": "2.6 (26)"
+  }
+}

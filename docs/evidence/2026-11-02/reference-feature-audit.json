@@ -1,0 +1,159 @@
+{
+  "method": "Static ZIP/JSON inspection and bounded ASCII strings, not execution of reference apps",
+  "packages": [
+    {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Update/02⁄11/MacroFactor+-+Macro+Tracker_5.8.10_APKPure.xapk",
+      "sha256": "173c8df6c3ec8dc716a9dd00773954799d42ebe58807eda6be2437ed0f3510c1",
+      "entries": [
+        "com.sbs.diet.apk",
+        "icon.png",
+        "config.en.apk",
+        "config.ja.apk",
+        "config.xxhdpi.apk",
+        "config.arm64_v8a.apk",
+        "manifest.json"
+      ]
+    },
+    {
+      "path": "/home/bad/Documents/REA/SuperHealth copie/Update/02⁄11/MacroFactor+Workouts+-+Tracker_1.4.2_APKPure.xapk",
+      "sha256": "cd8fbea5ad90c4cac94d88a78153cc8b7f8df2288e50fe2301a774d044d4f508",
+      "entries": [
+        "com.sbs.train.apk",
+        "icon.png",
+        "config.arm64_v8a.apk",
+        "config.en.apk",
+        "config.ja.apk",
+        "config.xhdpi.apk",
+        "manifest.json"
+      ]
+    }
+  ],
+  "workoutsBonus": {
+    "assetSha256": "0d99d93dbd8ec3c91bc96dddb2bac7ac4708fd1342f35c07ffa31dcb5f6f8016",
+    "sourceApk": "reference-workouts/com.sbs.train.apk",
+    "entry": "assets/flutter_assets/packages/macrofactor/assets/bonus_programs/30_day_arm_program.json",
+    "cycles": 5,
+    "days": 7,
+    "exerciseSlots": 33,
+    "skippedExerciseCycles": 24,
+    "nativeRestDurationUnit": "microseconds; observed restTimer 150000000 becomes 150 sec"
+  },
+  "strings": {
+    "nutrition": {
+      "sha256": "7ece9aecb2ed0f06746285952952a914cf9a97a621bb321bf72e03e51f0f0a2a",
+      "matches": [
+        {
+          "offset": "0x5ce50",
+          "value": "_ReviewExistingCollaborativeProgramState@2344183704"
+        },
+        {
+          "offset": "0xb1d75",
+          "value": "package:macrofactor/src/coaching_modules/program_module/edit/edit_manual_program/edit_manual_module_view.dart"
+        },
+        {
+          "offset": "0xc83b9",
+          "value": "editCollaborativeProgramModuleViewModelProvider"
+        },
+        {
+          "offset": "0xe3ea0",
+          "value": "package:macrofactor/src/coaching_modules/program_module/edit/edit_collaborative_program/edit_collaborative_module_viewmodel.dart"
+        },
+        {
+          "offset": "0xe446c",
+          "value": "Collaborative"
+        },
+        {
+          "offset": "0xe95c8",
+          "value": "package:macrofactor/src/coaching_modules/program_module/widgets/review_manual_program.dart"
+        },
+        {
+          "offset": "0xfa9ee",
+          "value": "Edit Collaborative Program"
+        },
+        {
+          "offset": "0xfedd9",
+          "value": "EditCollaborativeProgramModuleViewState"
+        },
+        {
+          "offset": "0x10d8d2",
+          "value": "ReviewExistingCollaborativeProgram"
+        },
+        {
+          "offset": "0x11fd5a",
+          "value": "package:macrofactor/src/coaching_modules/program_module/widgets/review_collaborative_program.dart"
+        },
+        {
+          "offset": "0x125e82",
+          "value": "package:macrofactor/src/coaching_modules/program_module/edit/edit_collaborative_program/edit_collaborative_module_view.dart"
+        },
+        {
+          "offset": "0x135788",
+          "value": "resetCollaborativeProgram"
+        },
+        {
+          "offset": "0x14b602",
+          "value": "EditCollaborativeProgramModuleViewModel"
+        },
+        {
+          "offset": "0x15740f",
+          "value": "EditCollaborativeProgramModuleView"
+        },
+        {
+          "offset": "0x1663c6",
+          "value": "CollaborativeSetupStep"
+        },
+        {
+          "offset": "0x178af8",
+          "value": "edit-collaborative-program-module"
+        },
+        {
+          "offset": "0x181afd",
+          "value": "package:macrofactor/src/enums/manual_program_editor.dart"
+        },
+        {
+          "offset": "0x1a34d7",
+          "value": "package:macrofactor/src/coaching_modules/program_module/edit/edit_manual_program/edit_manual_module_viewmodel.dart"
+        },
+        {
+          "offset": "0x1a7b28",
+          "value": "_CollaborativeSetupStepState@2321505134"
+        },
+        {
+          "offset": "0x1b0777",
+          "value": "Collaborative Program"
+        },
+        {
+          "offset": "0x1b933b",
+          "value": "packages/macrofactor/assets/bonus_programs/30_day_arm_program.json"
+        },
+        {
+          "offset": "0x1c79ac",
+          "value": "/edit-collaborative-program-module"
+        },
+        {
+          "offset": "0x1cd021",
+          "value": "package:macrofactor/src/coaching_modules/program_module/steps/collaborative/collaborative_setup_step.dart"
+        },
+        {
+          "offset": "0x1fdd8a",
+          "value": "init:editCollaborativeProgramModuleViewModelProvider"
+        }
+      ],
+      "coverage": "bounded lexical evidence only; labels do not prove implementation"
+    },
+    "workouts": {
+      "sha256": "03f8c07752876f786b62a4ebfb92d08adadf111a93b98b4293f279ad5f0099cb",
+      "matches": [
+        {
+          "offset": "0x17ee12",
+          "value": "package:macrofactor/src/ui/more/bonus_programs_view.dart"
+        },
+        {
+          "offset": "0x187839",
+          "value": "packages/macrofactor/assets/bonus_programs/30_day_arm_program.json"
+        }
+      ],
+      "coverage": "bounded lexical evidence only; labels do not prove implementation"
+    }
+  }
+}

@@ -46,7 +46,11 @@ object Assets {
 @Composable
 fun AsyncAsset(path: String?, modifier: Modifier, crop: Boolean = true, fallback: String? = null, sample: Int = 1) {
     // image déjà en cache : affichée tout de suite, sans passer par les initiales
-    val bmp by produceState(path?.let { Assets.cached(it, sample) }, path) { if (value == null) value = path?.let { withContext(Dispatchers.IO) { Assets.bitmap(it, sample) } } }
+    val bmp by androidx.compose.runtime.key(path, sample) {
+        produceState(path?.let { Assets.cached(it, sample) }, path, sample) {
+            value = path?.let { Assets.cached(it, sample) ?: withContext(Dispatchers.IO) { Assets.bitmap(it, sample) } }
+        }
+    }
     val b = bmp
     if (b != null) Image(b, null, modifier, contentScale = if (crop) ContentScale.Crop else ContentScale.Fit)
     else Box(modifier.background(Mf.colors.chip), contentAlignment = Alignment.Center) {

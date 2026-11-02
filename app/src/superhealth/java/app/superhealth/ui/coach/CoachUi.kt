@@ -106,7 +106,7 @@ import app.superhealth.ui.tr
 import kotlinx.coroutines.launch
 import app.superhealth.ui.theme.dashCardBackground
 
-/** Violet du coach : la même teinte que sa carte et son module. */
+/** Violet du coach : la même teinte que sa carte et ses raccourcis. */
 internal val CoachHue = Color(0xFF8E7CF0)
 
 /** Question à poser en ouvrant le coach (depuis une mesure, une séance…), consommée par l'écran. */
@@ -115,8 +115,8 @@ object CoachRequest { val pending = mutableStateOf<String?>(null) }
 /** Ouvre le coach avec une question déjà posée. */
 fun NavHostController.askCoach(question: String) { CoachRequest.pending.value = question; go("coach") }
 
-/** Le coach peut-il répondre ? (module actif et IA configurée) */
-fun coachAvailable(): Boolean = app.superhealth.modules.Modules.isActive(app.superhealth.modules.Modules.COACH)
+/** Le coach intégré est-il activé ? La configuration du fournisseur est vérifiée au moment de répondre. */
+fun coachAvailable(): Boolean = SuperPrefs.settings.value.coachEnabled
 
 /** Pastille du coach : étincelle blanche sur un dégradé violet. */
 @Composable
@@ -249,11 +249,35 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
         }
     }
     fun send(q: String) {
-        if (q.isBlank() || thinking) return
+        if (!ready || q.isBlank() || thinking) return
         input = ""
         run { Coach.ask(ctx, q) }
     }
     fun stop() { job?.cancel(); job = null; thinking = false }
+    LaunchedEffect(sh.coachEnabled) {
+        if (!sh.coachEnabled) {
+            stop()
+            settings = false; showContext = null; proposal = null; error = null
+            CoachRequest.pending.value?.let { input = it; CoachRequest.pending.value = null }
+        }
+    }
+    if (!sh.coachEnabled) {
+        Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().navigationBarsPadding()) {
+            app.superhealth.nutrition.ui.components.NavBar(tr("Coach"), { nav.popBackStack() }) {}
+            Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                CoachAvatar(64.dp)
+                Spacer(Modifier.height(16.dp))
+                Text(tr("Coach désactivé"), style = MaterialTheme.typography.headlineSmall)
+                Text(tr("Activez le coach pour poser une question. Votre conversation est conservée."), style = MaterialTheme.typography.bodyMedium,
+                    color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 16.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                PillButton(tr("Activer le coach"), Modifier.fillMaxWidth()) {
+                    CoachRequest.pending.value?.let { input = it; CoachRequest.pending.value = null }
+                    SuperPrefs.update { it.copy(coachEnabled = true) }
+                }
+            }
+        }
+        return
+    }
     LaunchedEffect(Unit) { CoachRequest.pending.value?.let { q -> CoachRequest.pending.value = null; if (ready) send(q) else input = q } }
     // séparateurs de jour, erreur et proposition : on descend jusqu'au dernier élément réel de la liste
     LaunchedEffect(chat.size, thinking, error) { kotlinx.coroutines.yield(); val n = list.layoutInfo.totalItemsCount; if (n > 1) list.animateScrollToItem(n - 1) }
@@ -329,9 +353,9 @@ fun CoachScreen(vm: SuperViewModel, nav: NavHostController) {
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { send(input) }))
             }
             Spacer(Modifier.width(8.dp))
-            Box(Modifier.size(48.dp).clip(CircleShape).background(if (input.isNotBlank() && !thinking) CoachHue else Mf.colors.chip)
-                .clickable(enabled = input.isNotBlank() && !thinking) { send(input) }, contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Rounded.Send, tr("Envoyer"), tint = if (input.isNotBlank() && !thinking) Color.White else Mf.colors.textTertiary)
+            Box(Modifier.size(48.dp).clip(CircleShape).background(if (ready && input.isNotBlank() && !thinking) CoachHue else Mf.colors.chip)
+                .clickable(enabled = ready && input.isNotBlank() && !thinking) { send(input) }, contentAlignment = Alignment.Center) {
+                Icon(Icons.AutoMirrored.Rounded.Send, tr("Envoyer"), tint = if (ready && input.isNotBlank() && !thinking) Color.White else Mf.colors.textTertiary)
             }
         }
     }
@@ -477,13 +501,16 @@ private fun Thinking(onStop: () -> Unit) {
 /** Réglages du coach : ton, point du jour, mémoire (lire, retirer, ajouter), modèle, effacer la conversation. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
+private fun CoachSettings(nav: NavHostController, fullPage: Boolean = false, onDismiss: () -> Unit) {
     val sh by SuperPrefs.settings.collectAsState()
     var fact by remember { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp).verticalScroll(rememberScrollState())) {
-            Text(tr("Réglages du coach"), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(14.dp))
+    val content: @Composable () -> Unit = {
+        Column(Modifier.padding(horizontal = if (fullPage) 0.dp else 20.dp).padding(bottom = 24.dp)
+            .then(if (fullPage) Modifier else Modifier.verticalScroll(rememberScrollState()))) {
+            if (!fullPage) {
+                Text(tr("Réglages du coach"), style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(14.dp))
+            }
             Text(tr("Ton"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
             Spacer(Modifier.height(6.dp))
             ChipChoice(Coach.Tone.entries, runCatching { Coach.Tone.valueOf(sh.coachTone) }.getOrDefault(Coach.Tone.WARM), { tr(it.label) }) { t ->
@@ -535,11 +562,16 @@ private fun CoachSettings(nav: NavHostController, onDismiss: () -> Unit) {
                 dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmClear = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
         }
     }
+    if (fullPage) app.superhealth.nutrition.ui.screens.DetailScaffold(tr("Coach IA"), onBack = onDismiss) { content() }
+    else ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background) { content() }
 }
+
+@Composable
+fun CoachSettingsScreen(nav: NavHostController) = CoachSettings(nav, fullPage = true) { nav.popBackStack() }
 
 /**
  * Pastille du coach posée dans un écran (séance, programme, journal, constantes…) : une question prête, envoyée au coach
- * qui va chercher lui-même les données utiles avec ses outils. Absente quand le plugin Coach n'est pas installé.
+ * qui va chercher lui-même les données utiles avec ses outils. Absente quand le coach est désactivé.
  */
 @Composable
 fun CoachChip(label: String, question: String, nav: NavHostController, modifier: Modifier = Modifier) {

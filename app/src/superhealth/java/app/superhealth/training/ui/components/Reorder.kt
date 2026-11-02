@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import app.superhealth.training.domain.Exercise
 import app.superhealth.training.ui.tr
 import app.superhealth.ui.theme.Mf
@@ -64,14 +65,15 @@ fun ReorderSheet(
 ) {
     val rowH = 64.dp
     val rowPx = with(LocalDensity.current) { rowH.toPx() }
-    var dragging by remember { mutableStateOf<Int?>(null) }
+    var dragging by remember { mutableStateOf<String?>(null) }
     var offset by remember { mutableFloatStateOf(0f) }
     val letters = groups.filterNotNull().distinct().mapIndexed { n, g -> g to ('A' + n) }.toMap()
     // relu à chaque événement : le gestionnaire de glissement vit plus longtemps qu'une composition
-    val lastIndex by rememberUpdatedState(items.lastIndex)
+    val currentItems by rememberUpdatedState(items)
     val move by rememberUpdatedState(onMove)
-    fun targetOf(from: Int) = (from + (offset / rowPx).roundToInt()).coerceIn(0, lastIndex)
-    val target = dragging?.let(::targetOf)
+    fun targetOf(from: Int) = if (currentItems.isEmpty()) null else (from + (offset / rowPx).roundToInt()).coerceIn(0, currentItems.lastIndex)
+    val fromIndex = items.indexOfFirst { it.first == dragging }.takeIf { it >= 0 }
+    val target = fromIndex?.let(::targetOf)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Mf.colors.background) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp).navigationBarsPadding()) {
             Text(title, style = MaterialTheme.typography.titleLarge)
@@ -82,14 +84,15 @@ fun ReorderSheet(
                     androidx.compose.runtime.key(key) {
                         // décalage des autres lignes pendant le glissement : elles laissent la place à la ligne déplacée
                         val shift = when {
-                            dragging == null || target == null || i == dragging -> 0f
-                            i in (dragging!! + 1)..target -> -rowPx
-                            i in target until dragging!! -> rowPx
+                            fromIndex == null || target == null || i == fromIndex -> 0f
+                            i in (fromIndex!! + 1)..target -> -rowPx
+                            i in target until fromIndex!! -> rowPx
                             else -> 0f
                         }
                         val animShift by animateFloatAsState(shift, label = "shift")
-                        val isDragged = i == dragging
+                        val isDragged = key == dragging
                         Row(Modifier.fillMaxWidth().height(rowH).padding(vertical = 3.dp)
+                            .then(if (isDragged) Modifier.zIndex(1f) else Modifier)
                             .graphicsLayer { translationY = if (isDragged) offset else animShift }
                             .then(if (isDragged) Modifier.shadow(8.dp, RoundedCornerShape(16.dp)) else Modifier)
                             .clip(RoundedCornerShape(16.dp)).background(if (isDragged) Mf.colors.elevated else Mf.colors.card)
@@ -110,11 +113,11 @@ fun ReorderSheet(
                                 Icon(Icons.Rounded.KeyboardDoubleArrowDown, tr("En bas"), tint = if (i < items.lastIndex) Mf.colors.textSecondary else Mf.colors.divider)
                             }
                             Icon(Icons.Rounded.DragHandle, tr("Déplacer"), tint = Mf.colors.text, modifier = Modifier.size(40.dp).padding(8.dp)
-                                .pointerInput(i, items.size) {
+                                .pointerInput(key) {
                                     detectDragGestures(
-                                        onDragStart = { dragging = i; offset = 0f },
+                                        onDragStart = { dragging = key; offset = 0f },
                                         onDragEnd = {
-                                            val from = dragging; val to = from?.let(::targetOf)
+                                            val from = currentItems.indexOfFirst { it.first == dragging }.takeIf { it >= 0 }; val to = from?.let(::targetOf)
                                             dragging = null; offset = 0f
                                             if (from != null && to != null && from != to) move(from, to)
                                         },

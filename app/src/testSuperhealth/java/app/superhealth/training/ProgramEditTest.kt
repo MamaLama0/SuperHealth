@@ -28,6 +28,33 @@ class ProgramEditTest {
         Program("p", "P", days = days.toList(), dayIndex = cursor, doneDayIds = done)
     private fun Program.current() = days[dayIndex].id
 
+    @Test fun canJumpFromIncompleteCycleTwoToThreeOrLaterWithoutChangingThePlan() {
+        val p = program(day("A"), day("R", true), day("B"), cursor = 2, done = listOf("A")).copy(cycleIndex = 1, numCycles = 6)
+        for (target in listOf(2, 4, 5)) {
+            val next = ProgramEdit.jumpToCycle(p, target)
+            assertEquals(target, next.cycleIndex)
+            assertEquals("A", next.current())
+            assertTrue(next.doneDayIds.isEmpty())
+            assertEquals(p.days, next.days)
+        }
+        assertSame(p, ProgramEdit.jumpToCycle(p, 1))
+        assertSame(p, ProgramEdit.jumpToCycle(p, 6))
+    }
+
+    @Test fun jumpSkipsDaysNotScheduledInTheSelectedCycle() {
+        val skipped = ex.map { it.copy(skippedCycles = setOf(2)) }
+        val p = program(ProgramDay("A", "A", skipped), day("B")).copy(numCycles = 4, cycleIndex = 1)
+        assertEquals("B", ProgramEdit.jumpToCycle(p, 2).current())
+    }
+
+    @Test fun finishingAnOldSessionAfterAJumpDoesNotAdvanceTheNewCycle() {
+        val db = ExerciseDb.parse(File("src/superhealth/assets/db/exercises.json").readText())
+        val engine = app.superhealth.training.domain.SessionEngine(db)
+        val p = program(day("A"), day("B")).copy(cycleIndex = 2)
+        assertSame(p, engine.advance(p, "A", completedCycle = 1))
+        assertEquals(listOf("A"), engine.advance(p, "A", completedCycle = 2).doneDayIds)
+    }
+
     @Test fun movedKeepsOtherItemsAndIgnoresBadIndices() {
         assertEquals(listOf("b", "c", "a"), listOf("a", "b", "c").moved(0, 2))
         assertEquals(listOf("c", "a", "b"), listOf("a", "b", "c").moved(2, 0))

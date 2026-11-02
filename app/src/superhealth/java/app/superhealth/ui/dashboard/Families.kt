@@ -523,6 +523,7 @@ private fun DayAxis(modifier: Modifier = Modifier) =
 @Composable
 internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, an: Analytics, s: NutritionSettings, m: Modifier, tab: (String) -> Unit): Boolean {
     val i = c.icon()
+    val refresh by vm.refresh.collectAsState()
     val large = size == CardSize.L
     when {
         c == DashCard.SCORES -> WForme(size, i, h.watch, m) { nav.go("form") }
@@ -542,7 +543,10 @@ internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: Na
         c == DashCard.RUNNING -> WCourse(size, i, h, m) { nav.go("h/activities") }
         c == DashCard.MEDITATION -> WMeditation(size, i, m) { openSection("MEDITATION", tab) }
         c == DashCard.STRETCH -> WEtirements(size, i, m) { openSection("STRETCH", tab) }
-        c == DashCard.LEAGUE -> WClassement(size, i, m) { nav.go("league") }
+        c == DashCard.LEAGUE -> WClassement(size, i, m, refresh) { nav.go("league") }
+        c == DashCard.PROGRESSION -> WProgression(size, i, m, refresh) { nav.go("progress") }
+        c == DashCard.FRIENDS -> WFriends(size, i, m, { nav.go("friends") }, { nav.go("friends/add") })
+        c == DashCard.STREAKS -> WStreaksHero(size, m, refresh, { nav.go("progress") }, { nav.go("league") }, { nav.go("friends/add") })
         else -> return false
     }
     return true
@@ -1315,37 +1319,42 @@ private fun WEtirements(sz: CardSize, icon: ImageVector, m: Modifier, onClick: (
 }
 
 @Composable
-private fun WClassement(sz: CardSize, icon: ImageVector, m: Modifier, onClick: () -> Unit) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+private fun WClassement(sz: CardSize, icon: ImageVector, m: Modifier, refresh: Int, onClick: () -> Unit) {
+    val ctx = LocalContext.current
     val mine by app.superhealth.league.League.mine.collectAsState()
+    val progress by app.superhealth.league.ProgressRepository.current.collectAsState()
     val st by app.superhealth.league.League.state.collectAsState()
-    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { app.superhealth.league.League.compute(ctx) } }
+    androidx.compose.runtime.LaunchedEffect(refresh) { runCatching { app.superhealth.league.League.compute(ctx) } }
+    val summary = progress?.summary ?: mine?.progress
     val hue = DashCard.LEAGUE.hue()
-    val score = mine?.total ?: 0
-    val week = app.superhealth.league.League.weekKey()
-    val rank = 1 + st.friends.count { it.week == week && it.score > score }
-    val rankText = if (st.friends.isEmpty()) tr("Seul pour l'instant") else trf("%1\$se sur %2\$s", rank, st.friends.size + 1)
+    val entries = dashboardXpEntries(summary, st.friends, System.currentTimeMillis() / 1000, tr("Vous"))
+    val me = entries.firstOrNull { it.me }
+    val rankText = when {
+        me == null -> tr("Chargement de la progression…")
+        entries.size == 1 -> tr("Ajoutez des amis")
+        else -> trf("Place %1\$s sur %2\$s", dashboardXpRank(entries, me), entries.size)
+    }
+    val shown = summary?.weekXp?.toString() ?: "—"
+    val index = mine?.takeIf { it.ready }?.total?.toString() ?: "—"
     when (sz) {
-        CardSize.S -> RingTile(m, onClick, hue, score / 1000f) { RingCenter(icon, hue, score.toString(), tr("points")) }
-        CardSize.M -> MediumShell(m, onClick, icon, tr("Classement"), hue, value = score.toString(), unit = tr("pts"), caption = rankText) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)) {
-                mine?.pillars?.values?.filterNotNull()?.take(4)?.forEach { v ->
-                    Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(faint)) {
-                        if (v > 0) Box(Modifier.fillMaxWidth(v / 100f).height(5.dp).clip(CircleShape).background(hue))
-                    }
-                }
+        CardSize.S -> RingTile(m, onClick, hue, null, ring = false) { RingCenter(icon, hue, shown, tr("XP semaine")) }
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Classement"), hue, value = shown, unit = tr("XP"), caption = rankText) {
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
+                Tq(trf("Indice santé : %1\$s", index), 12.sp, sub)
+                Tq(tr("XP de la semaine"), 11.sp, sub, modifier = Modifier.padding(top = 5.dp))
             }
         }
-        CardSize.W -> Wide(m, onClick, icon, hue, tr("Classement"), { V(score.toString(), tr("pts"), 20.sp) }, 120.dp) { Tq(rankText, 12.sp, sub) }
-        else -> Large(m, onClick, icon, tr("Classement"), hue, rankText, sub) {
-            val rows = (st.friends.filter { it.week == week }.map { it.name to it.score } + (tr("Vous") to score)).sortedByDescending { it.second }.take(5)
-            rows.forEachIndexed { i, (n, s) ->
-                Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Tq("${i + 1}", 13.sp, sub, modifier = Modifier.width(22.dp))
-                    Box(Modifier.weight(1f)) { Tq(n, 14.sp) }
-                    Tq(s.toString(), 14.sp, weight = FontWeight.SemiBold)
-                }
+        CardSize.W -> Wide(m, onClick, icon, hue, tr("Classement XP"), { V(shown, tr("XP"), 20.sp) }, 130.dp) {
+            Column(horizontalAlignment = Alignment.End) {
+                Tq(rankText, 12.sp, sub)
+                Tq(trf("Santé : %1\$s", index), 11.sp, sub)
             }
+        }
+        CardSize.L -> Large(m, onClick, icon, tr("Classement"), hue, rankText, sub) {
+            V(shown, tr("XP cette semaine"), 30.sp)
+            HeroXpRanking(entries, hue)
+            Spacer(Modifier.height(10.dp))
+            Tq(trf("Indice global de santé : %1\$s / 1000", index), 12.sp, sub)
         }
     }
 }

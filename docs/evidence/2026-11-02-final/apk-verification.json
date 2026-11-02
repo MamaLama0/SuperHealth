@@ -1,0 +1,24 @@
+{
+  "production": {
+    "packageLine": "package: name='app.superhealth' versionCode='31' versionName='2.8' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+    "debuggable": false,
+    "certificateSha256": "699b4a00f2e0860da657e6f5477264936cd8f0e6686917905d852e75c26345c2",
+    "sha256": "20755a70f6fb047c8da947d24986259fd056e67545e4388d204a894072300739",
+    "bytes": 56351302
+  },
+  "qaOptimized": {
+    "packageLine": "package: name='app.superhealth.qa' versionCode='31' versionName='2.8' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+    "debuggable": false,
+    "certificateSha256": "699b4a00f2e0860da657e6f5477264936cd8f0e6686917905d852e75c26345c2",
+    "sha256": "3f155b41806061f5eaca663ae2aa209af1b5b97fe1cbb5e475dc39957cd603cb",
+    "bytes": 56351554
+  },
+  "sameCertificateAs263": true,
+  "riveBundled": true,
+  "duolingoGameWebpRemoved": true,
+  "qaDebug": {
+    "sha256": "97a0c1bbc5fe54ea477a9ae38a6e76835eaa38fcb1887adb524e753287abd001",
+    "package": "app.superhealth.qa",
+    "bytes": 107574859
+  }
+}

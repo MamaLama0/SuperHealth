@@ -1,0 +1,9 @@
+{
+  "source": "/home/bad/.gradle/caches/modules-2/files-2.1/androidx.media3/media3-exoplayer/1.11.1/dbd6edc8c5eb12e6ef2ff119d9580b0b5eca221f/media3-exoplayer-1.11.1.aar",
+  "sha256": "588592baec110837c33ce0c82bb76464203e6b0621177bbe5d88779001a6f1ed",
+  "entry": "proguard.txt",
+  "observation": "Media3 core consumer rules keep the HLS factory constructor used reflectively by DefaultMediaSourceFactory. Adding the matching HLS module makes the class available; no broad application keep rule is needed.",
+  "rule": "-dontnote androidx.media3.exoplayer.hls.HlsMediaSource$Factory\n-keepclasseswithmembers class androidx.media3.exoplayer.hls.HlsMediaSource$Factory {\n  <init>(androidx.media3.datasource.DataSource$Factory);\n}",
+  "dependencyAdded": "androidx.media3:media3-exoplayer-hls:1.11.1",
+  "validationPending": "Build and actual HLS playback/R8 packaging handled by root."
+}

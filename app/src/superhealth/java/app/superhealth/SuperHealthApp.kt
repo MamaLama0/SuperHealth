@@ -40,6 +40,7 @@ class SuperHealthApp : GBApplication() {
         WorkoutApp.init(this)
         Bridge.start(this)
         SyncWorker.schedule(this)
+        app.superhealth.league.LeagueWorker.schedule(this)
         app.superhealth.backup.BackupWorker.schedule(this)
         app.superhealth.update.UpdateWorker.schedule(this)
         // icône du lanceur : l'icône pixel-art de l'Aventure (1.2) avait pu désactiver l'alias de base

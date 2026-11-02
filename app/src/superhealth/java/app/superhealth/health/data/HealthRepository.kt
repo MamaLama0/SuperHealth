@@ -39,14 +39,14 @@ import nodomain.freeyourgadget.gadgetbridge.widgets.WidgetDataScope
 import nodomain.freeyourgadget.gadgetbridge.widgets.WidgetInstance
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.ActiveTimeWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.BodyEnergyWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.CaloriesActiveWidget
+import nodomain.freeyourgadget.gadgetbridge.widgets.impl.ActiveCaloriesWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.DistanceWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.PaiWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepWidget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.Spo2Widget
 import nodomain.freeyourgadget.gadgetbridge.widgets.impl.StepsWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.StressSimpleWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.Vo2MaxAnyWidget
+import nodomain.freeyourgadget.gadgetbridge.widgets.impl.StressWidget
+import nodomain.freeyourgadget.gadgetbridge.widgets.impl.Vo2MaxWidget
 import org.slf4j.LoggerFactory
 
 data class Workout(
@@ -94,7 +94,9 @@ object HealthRepository {
     private const val NONE = Double.NaN
     private val dbPermits = Semaphore(4)
 
-    fun invalidate() { cache.clear(); Scores.invalidate() }
+    private val revisionCounter = java.util.concurrent.atomic.AtomicLong()
+    val revision: Long get() = revisionCounter.get()
+    fun invalidate() { cache.clear(); Scores.invalidate(); revisionCounter.incrementAndGet() }
 
     /** Montres gérées par le module LocalHealth ; vide quand le module est désactivé. */
     fun devices(): List<GBDevice> = app.superhealth.bridge.Watch.devices()
@@ -169,23 +171,22 @@ object HealthRepository {
     }
 
     private suspend fun computeDayValue(context: Context, metric: Metric, date: LocalDate): Double? {
-        val endOfDay = (endMs(date) / 1000).toInt() - 1
-        val query = DashboardQuery(endOfDay - 86400, endOfDay)
         val from = startMs(date)
         val to = endMs(date)
+        val query = DashboardQuery((from / 1000).toInt(), (to / 1000).toInt() - 1)
         val manual = ManualLogStore.get(context)
         return when (metric) {
             Metric.STEPS -> widget(StepsWidget, query)?.total?.toDouble()?.takeIf { it > 0 }
             Metric.DISTANCE -> widget(DistanceWidget, query)?.total?.toDouble()?.takeIf { it > 0 }?.div(1000.0)
-            Metric.CALORIES -> widget(CaloriesActiveWidget, query)?.total?.toDouble()?.takeIf { it > 0 }
+            Metric.CALORIES -> widget(ActiveCaloriesWidget, query)?.active?.toDouble()?.takeIf { it > 0 }
             Metric.ACTIVE_MINUTES -> widget(ActiveTimeWidget, query)?.total?.toDouble()?.takeIf { it > 0 }
             Metric.CARDIO_WEEK -> cardioWeek(date)?.total?.toDouble()
             Metric.SLEEP -> widget(SleepWidget, query)?.total?.toDouble()?.takeIf { it > 0 }
             Metric.SLEEP_SCORE -> sleepScore(date)?.first
             Metric.BODY_ENERGY -> widget(BodyEnergyWidget, query)?.value?.toDouble()?.takeIf { it >= 0 }
-            Metric.STRESS -> widget(StressSimpleWidget, query)?.value?.toDouble()?.takeIf { it > 0 }
+            Metric.STRESS -> widget(StressWidget, query)?.value?.toDouble()?.takeIf { it > 0 }
             Metric.SPO2 -> widget(Spo2Widget, query)?.spo2?.toDouble()?.takeIf { it > 0 }
-            Metric.VO2MAX -> widget(Vo2MaxAnyWidget, query)?.value?.toDouble()?.takeIf { it > 0 }
+            Metric.VO2MAX -> widget(Vo2MaxWidget, query)?.value?.toDouble()?.takeIf { it > 0 }
             Metric.HEART_RATE -> intraday(Metric.HEART_RATE, date).map { it.value }.averageOrNull()
             Metric.RESTING_HR -> samples(from, to) { d, s -> d.deviceCoordinator.getHeartRateRestingSampleProvider(d, s) }
                 .map { it.heartRate.toDouble() }.filter { it > 0 }.averageOrNull()
@@ -401,7 +402,7 @@ object HealthRepository {
     private suspend fun <D> widget(widget: GBWidget<D>, query: DashboardQuery): D? {
         val instanceId = "localhealth_" + widget.id
         val config = WidgetConfig(
-            WidgetInstance(instanceId, widget.id, 1),
+            WidgetInstance(instanceId, widget.id),
             Prefs(GBApplication.getWidgetSharedPrefs(instanceId)),
             true,
             emptySet(),

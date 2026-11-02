@@ -44,16 +44,18 @@ public class GBDeviceEventFindPhone extends GBDeviceEvent {
     private static final Logger LOG = LoggerFactory.getLogger(GBDeviceEventFindPhone.class);
 
     public Event event = Event.UNKNOWN;
+    /** Optional watch-requested timeout, in seconds; zero leaves other devices unchanged. */
+    public int durationSeconds;
 
     @Override
     public void evaluate(@NonNull final Context context, @NonNull final GBDevice device) {
         LOG.info("Got GBDeviceEventFindPhone: {}", this.event);
         switch (this.event) {
             case START:
-                handleGBDeviceEventFindPhoneStart(context, true);
+                handleGBDeviceEventFindPhoneStart(context, device, true);
                 break;
             case START_VIBRATE:
-                handleGBDeviceEventFindPhoneStart(context, false);
+                handleGBDeviceEventFindPhoneStart(context, device, false);
                 break;
             case VIBRATE:
                 final Intent intentVibrate = new Intent(FindPhoneActivity.ACTION_VIBRATE);
@@ -68,6 +70,7 @@ public class GBDeviceEventFindPhone extends GBDeviceEvent {
             case STOP:
                 final Intent intentStop = new Intent(FindPhoneActivity.ACTION_FOUND);
                 intentStop.setPackage(BuildConfig.APPLICATION_ID);
+                intentStop.putExtra(GBDevice.EXTRA_DEVICE, device);
                 LocalBroadcastManager.getInstance(context).sendBroadcast(intentStop);
                 break;
             default:
@@ -81,19 +84,21 @@ public class GBDeviceEventFindPhone extends GBDeviceEvent {
         return super.toString() + "event: " + event;
     }
 
-    private void handleGBDeviceEventFindPhoneStart(final Context context, final boolean ring) {
+    private void handleGBDeviceEventFindPhoneStart(final Context context, final GBDevice device, final boolean ring) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) { // this could be used if app in foreground // TODO: Below Q?
             final Intent startIntent = new Intent(context, FindPhoneActivity.class);
             startIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startIntent.putExtra(FindPhoneActivity.EXTRA_RING, ring);
+            startIntent.putExtra(GBDevice.EXTRA_DEVICE, device);
+            startIntent.putExtra(FindPhoneActivity.EXTRA_DURATION_SECONDS, durationSeconds);
             context.startActivity(startIntent);
         } else {
-            handleGBDeviceEventFindPhoneStartNotification(context, ring);
+            handleGBDeviceEventFindPhoneStartNotification(context, device, ring);
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    private void handleGBDeviceEventFindPhoneStartNotification(final Context context, final boolean ring) {
+    private void handleGBDeviceEventFindPhoneStartNotification(final Context context, final GBDevice device, final boolean ring) {
         LOG.info("Got handleGBDeviceEventFindPhoneStartNotification");
         if (CompanionDeviceUtil.getCompanionAssociations(context).isEmpty()) {
             // On Android Q and above, we need the device to be paired as companion. If it is not, display a notification
@@ -122,6 +127,8 @@ public class GBDeviceEventFindPhone extends GBDeviceEvent {
         final Intent intent = new Intent(context, FindPhoneActivity.class);
         intent.setPackage(BuildConfig.APPLICATION_ID);
         intent.putExtra(FindPhoneActivity.EXTRA_RING, ring);
+        intent.putExtra(GBDevice.EXTRA_DEVICE, device);
+        intent.putExtra(FindPhoneActivity.EXTRA_DURATION_SECONDS, durationSeconds);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         final PendingIntent pi = PendingIntent.getActivity(

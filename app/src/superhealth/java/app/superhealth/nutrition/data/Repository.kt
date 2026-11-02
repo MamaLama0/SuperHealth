@@ -62,8 +62,9 @@ data class Analytics(
     }
 
     /** Objectif actif à une date (le dernier commencé). */
-    fun goalAt(day: Long): Goal? = goals.lastOrNull { it.startDay <= day && (it.closedDay == null || it.closedDay >= day) }
-        ?: goals.lastOrNull { it.startDay <= day }
+    fun goalAt(day: Long): Goal? = if (!program.weightGoalEnabled) null else goals.lastOrNull {
+        it.startDay <= day && (it.closedDay == null || day <= it.closedDay)
+    }
     val currentGoal: Goal? get() = goalAt(today)
 
     fun lbmAt(day: Long): Double {
@@ -74,6 +75,7 @@ data class Analytics(
 
     /** Cibles de la semaine en cours : le programme en vigueur aujourd'hui, appliqué à chaque jour (jours hauts compris). */
     fun weekTarget(epochDay: Long): Targets.DailyTarget {
+        overrideTarget(epochDay)?.let { return it }
         val c = checkInFor(today) ?: checkIns.firstOrNull() ?: return targetFor(epochDay)
         if (program.style == ProgramStyle.MANUAL) return targetFor(epochDay)
         val t = c.forDayOfWeek(LocalDate.ofEpochDay(epochDay).dayOfWeek.value)
@@ -89,10 +91,15 @@ data class Analytics(
      * on reprend ce premier check-in plutôt qu'un calcul provisoire jour par jour — sinon le jour du premier
      * check-in ressort avec une cible différente des autres.
      */
+    private fun overrideTarget(day: Long): Targets.DailyTarget? = app.superhealth.nutrition.domain.ManualTargets.overrideAt(program, day)?.let {
+        Targets.DailyTarget(Macros(it.kcal, it.protein, it.fat, it.carbs), tdeeAt(day), false, null)
+    }
+
     fun targetFor(epochDay: Long): Targets.DailyTarget {
+        overrideTarget(epochDay)?.let { return it }
         val c = checkInFor(epochDay) ?: checkIns.firstOrNull()
         val dow = LocalDate.ofEpochDay(epochDay).dayOfWeek.value
-        if (c != null && program.style != ProgramStyle.MANUAL) {
+        if (c != null) {
             val t = c.forDayOfWeek(dow)
             return Targets.DailyTarget(Macros(t.kcal, t.protein, t.fat, t.carbs), c.tdee, c.limitedByFloor, c.day)
         }
@@ -244,7 +251,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
 
     /** Migration v2 → v3 : l'objectif stocké dans Program devient un Goal daté. */
     fun migrateGoals() {
-        if (prefs.goals.value.isNotEmpty() || !prefs.settings.value.onboarded) return
+        if (prefs.goals.value.isNotEmpty() || !prefs.settings.value.onboarded || !prefs.program.value.weightGoalEnabled) return
         val p = prefs.program.value
         val start = p.startEpochDay ?: LocalDate.now().toEpochDay()
         prefs.setGoals(listOf(Goal(startDay = start, type = p.goalType, startWeightKg = p.targetWeightKg ?: Analytics.DEFAULT_WEIGHT,
@@ -253,6 +260,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
 
     /** Démarre un nouvel objectif (l'objectif en cours est clos la veille). */
     fun startGoal(goal: Goal) {
+        prefs.setProgram(prefs.program.value.copy(weightGoalEnabled = true, goalType = goal.type, targetWeightKg = goal.targetWeightKg, ratePctPerWeek = goal.ratePctPerWeek))
         val closed = prefs.goals.value.map {
             if (it.status == GoalStatus.IN_PROGRESS && it.startDay < goal.startDay) it.copy(status = GoalStatus.COMPLETED, closedDay = goal.startDay - 1)
             else it

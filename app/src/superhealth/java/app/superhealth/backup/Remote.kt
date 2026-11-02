@@ -19,7 +19,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * Google Drive selon les versions…). Les [KEEP] dernières sauvegardes sont gardées, les plus anciennes effacées.
  */
 object Remote {
-    enum class Kind(val label: String) { NONE("Aucune"), NEXTCLOUD("Nextcloud"), WEBDAV("WebDAV"), FOLDER("Dossier") }
+    enum class Kind(val label: String) { NONE("Aucune"), GOOGLE_DRIVE("Google Drive"), NEXTCLOUD("Nextcloud"), WEBDAV("WebDAV"), FOLDER("Dossier") }
 
     const val KEEP = 10
     private const val FOLDER_NAME = "SuperHealth"
@@ -51,6 +51,11 @@ object Remote {
     /** Envoie [bytes] sous [name], puis efface les sauvegardes au-delà des [KEEP] plus récentes. */
     suspend fun upload(ctx: Context, name: String, bytes: ByteArray) = withContext(Dispatchers.IO) {
         when (kind()) {
+            Kind.GOOGLE_DRIVE -> {
+                val uri = Uri.parse(SuperPrefs.settings.value.backupDocument ?: error("choisissez un fichier dans Google Drive"))
+                ctx.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
+                    ?: error("Google Drive ne permet pas l'écriture de ce fichier")
+            }
             Kind.NEXTCLOUD, Kind.WEBDAV -> {
                 val dir = davFolder() ?: error("adresse du serveur manquante")
                 // dossier créé au besoin (405 : il existe déjà)
@@ -77,6 +82,12 @@ object Remote {
     /** Sauvegardes présentes à destination, de la plus récente à la plus ancienne. */
     suspend fun list(ctx: Context): List<Entry> = withContext(Dispatchers.IO) {
         when (kind()) {
+            Kind.GOOGLE_DRIVE -> {
+                val uri = SuperPrefs.settings.value.backupDocument ?: return@withContext emptyList()
+                ctx.contentResolver.query(Uri.parse(uri), arrayOf(android.provider.OpenableColumns.DISPLAY_NAME, android.provider.OpenableColumns.SIZE), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) listOf(Entry(c.getString(0) ?: "superhealth.shbak", uri, if (c.isNull(1)) 0 else c.getLong(1))) else emptyList()
+                } ?: error("fichier Google Drive inaccessible ; sélectionnez-le à nouveau")
+            }
             Kind.NEXTCLOUD, Kind.WEBDAV -> {
                 val dir = davFolder() ?: return@withContext emptyList()
                 val body = """<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getcontentlength/></d:prop></d:propfind>"""
@@ -108,7 +119,7 @@ object Remote {
     }
 
     suspend fun download(ctx: Context, e: Entry): ByteArray = withContext(Dispatchers.IO) {
-        if (kind() == Kind.FOLDER) ctx.contentResolver.openInputStream(Uri.parse(e.uri))!!.use { it.readBytes() }
+        if (kind() == Kind.FOLDER || kind() == Kind.GOOGLE_DRIVE) ctx.contentResolver.openInputStream(Uri.parse(e.uri))!!.use { it.readBytes() }
         else http.newCall(Request.Builder().url(e.uri).header("Authorization", auth(ctx)).build()).execute().use { r ->
             if (!r.isSuccessful) error("téléchargement refusé (${r.code})")
             r.body.bytes()
@@ -116,6 +127,7 @@ object Remote {
     }
 
     private fun delete(ctx: Context, e: Entry) {
+        if (kind() == Kind.GOOGLE_DRIVE) return
         if (kind() == Kind.FOLDER) DocumentsContract.deleteDocument(ctx.contentResolver, Uri.parse(e.uri))
         else http.newCall(Request.Builder().url(e.uri).header("Authorization", auth(ctx)).delete().build()).execute().close()
     }

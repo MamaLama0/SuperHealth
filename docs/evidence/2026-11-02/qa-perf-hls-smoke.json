@@ -1,0 +1,24 @@
+{
+  "device": "OnePlus 9 (LE2110)",
+  "package": "app.superhealth.qa",
+  "versionName": "2.8",
+  "versionCode": 31,
+  "build": "superhealthPerf (R8 optimized, non-debuggable)",
+  "apkSha256": "6098a8295a928b998c77e490b7be0dc763c9092868d2c5cde943c7ab06707a2f",
+  "scope": "Only the separate QA package was installed. No Gradle run. Original app.superhealth retained version 2.6 code 26.",
+  "observations": [
+    "Routine HLS playback rendered moving frames, with 40-second and 41-second media durations.",
+    "Fullscreen opened; it remained active when the routine advanced to the next exercise.",
+    "Pause froze both routine countdown (1:31) and media position (0:29), confirmed by consecutive UI snapshots.",
+    "Instructions appeared in fullscreen while playback was paused.",
+    "Forward 10 seconds changed media position from 0:29 to 0:39 without changing paused routine countdown.",
+    "HOME then reorder-to-front restored fullscreen, instructions, pause state, media position 0:39 and countdown 1:31.",
+    "Exit fullscreen returned to inline playback controls with the same paused position and countdown.",
+    "QA app left on Home at the end.",
+    "Filtered logcat for AndroidRuntime errors and StretchVideo warnings was empty after this test."
+  ],
+  "limitations": [
+    "Physical rotation and TalkBack were not toggled during this smoke test.",
+    "This is a test of the installed APK hash, not a guarantee for APKs built later."
+  ]
+}

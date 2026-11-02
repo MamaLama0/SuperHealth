@@ -40,7 +40,7 @@ object Modules {
     const val STRETCH = "stretch"
     const val MEDITATION = "meditation"
     const val LEAGUE = "league"
-    val engines = setOf(COACH, MEALS, MEDS, STRETCH, MEDITATION, LEAGUE)
+    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION)
 
     @Serializable
     data class Module(
@@ -67,6 +67,7 @@ object Modules {
     data class Index(val name: String = "", val modules: List<Module> = emptyList())
 
     /** Module disponible dans une source, avec l'adresse absolue de son archive. */
+    @Serializable
     data class Entry(val module: Module, val source: String, val verified: Boolean, val archive: String)
 
     @Serializable
@@ -110,6 +111,12 @@ object Modules {
         root = File(ctx.filesDir, "modules").apply { mkdirs() }
         val saved = runCatching { json.decodeFromString(ListSerializer(Installed.serializer()), File(root, "installed.json").readText()) }
             .getOrDefault(emptyList()).filter { File(root, it.id).isDirectory }
+        catalog.value = runCatching {
+            json.decodeFromString(ListSerializer(Entry.serializer()), File(root, "catalog.json").readText())
+        }.getOrElse {
+            runCatching { json.decodeFromString(Index.serializer(), ctx.assets.open("plugins/index.json").bufferedReader().use { it.readText() }) }
+                .getOrDefault(Index()).modules.filter { it.kind in engines }.map { Entry(it, OFFICIAL, true, URI(OFFICIAL).resolve(it.url).toString()) }
+        }.filter { it.module.kind in engines && it.source in sources().map { source -> source.first } }
         // module dont le moteur a quitté l'app (l'Aventure, retirée en 1.3) : effacé
         val (kept, gone) = saved.partition { it.kind in engines }
         gone.forEach { File(root, it.id).deleteRecursively() }
@@ -123,7 +130,11 @@ object Modules {
 
     /** Module du type [kind] installé et activé (le premier s'il y en a plusieurs : un seul est activé à la fois). */
     fun active(kind: String): Installed? = _installed.value.firstOrNull { it.kind == kind && it.enabled }
-    fun isActive(kind: String) = active(kind) != null
+    fun isActive(kind: String) = when (kind) {
+        COACH -> SuperPrefs.settings.value.coachEnabled
+        LEAGUE -> SuperPrefs.settings.value.leagueEnabled
+        else -> active(kind) != null
+    }
 
     /** Dossier du module actif du type [kind] (contenu décompressé), ou null. */
     fun dir(kind: String): File? = active(kind)?.let { File(root, it.id) }?.takeIf { it.isDirectory }
@@ -140,6 +151,7 @@ object Modules {
         loading.value = true
         val errors = HashMap<String, String>()
         val out = ArrayList<Entry>()
+        val previous = catalog.value
         for ((src, verified) in sources()) {
             runCatching {
                 if (!acceptable(src)) error(tr("adresse refusée (HTTPS requis)"))
@@ -147,15 +159,16 @@ object Modules {
                     if (!r.isSuccessful) error("HTTP ${r.code}")
                     json.decodeFromString(Index.serializer(), Net.readCapped(r.body.byteStream(), 512 * 1024))
                 }
-                idx.modules.filter { it.id.matches(Regex("[a-z0-9_-]{1,40}")) }.forEach { m ->
+                idx.modules.filter { it.kind in engines && it.id.matches(Regex("[a-z0-9_-]{1,40}")) }.forEach { m ->
                     out += Entry(m, src, verified, URI(src).resolve(m.url).toString())
                 }
-            }.onFailure { errors[src] = it.message ?: "?" }
+            }.onFailure { errors[src] = it.message ?: "?"; out += previous.filter { it.source == src } }
         }
         // un module vérifié l'emporte sur une copie du même id venue d'une source non vérifiée
         catalog.value = out.groupBy { it.module.id }.map { (_, l) -> l.firstOrNull { it.verified } ?: l.first() }
+        File(root, "catalog.json").writeText(json.encodeToString(ListSerializer(Entry.serializer()), catalog.value))
         sourceErrors.value = errors
-        if (out.isNotEmpty() || errors.isEmpty()) lastRefresh.value = System.currentTimeMillis()
+        if (errors.size < sources().size) lastRefresh.value = System.currentTimeMillis()
         loading.value = false
     }
 

@@ -1,0 +1,32 @@
+{
+  "qaPackage": "app.superhealth.qa",
+  "devices": [
+    "Pixel 8 Pro",
+    "OnePlus 9"
+  ],
+  "originalPackagesUnchanged": {
+    "Pixel 8 Pro": {
+      "versionName": "2.63",
+      "versionCode": 29
+    },
+    "OnePlus 9": {
+      "versionName": "2.6",
+      "versionCode": 26
+    }
+  },
+  "checks": {
+    "gadgetbridgeMigration": {
+      "before": 158,
+      "after": 160,
+      "xiaomiIntoBedTime": true,
+      "whoopTableRetained": true
+    },
+    "nearbyExchange": "Both known friends received newer signed revisions and detailed snapshot timestamps",
+    "cycles": "Incomplete cycle 2 → 3 → 5 confirmed in UI; stored cycleIndex 4, doneDayIds empty",
+    "backupRoundtrip": "Encrypted; nutrition, training, settings, health and montre.zip present; restore succeeded and training export unchanged",
+    "plugins": "Install medication plugin, installed filter, detail sheet and compact catalog verified",
+    "onboarding": "Manual 2150 kcal / 150 P / 70 F / 230 C, weight goal off; plugin page and back from summary verified",
+    "driveProvider": "Not installed on either QA device; local document selection rejected without enabling Google Drive backup"
+  },
+  "physicalWatchCoverage": "No connected watch was used to certify all models"
+}

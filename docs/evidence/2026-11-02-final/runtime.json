@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-02",
+  "qaPackage": "app.superhealth.qa",
+  "personalPackagesUntouched": true,
+  "nutritionGuide": {
+    "nutritionStyle": "MANUAL",
+    "manualKcal": 2000.0,
+    "weightGoalEnabled": false,
+    "weightQuestionShown": false,
+    "trainingPreserved": true,
+    "activeTrainingProgram": "qa-tracking-plan"
+  },
+  "foodSummary": {
+    "caloriesLeft": 1850,
+    "consumedKcal": 650,
+    "targetKcal": 2500,
+    "macrosOnRight": true,
+    "collapsedOnTap": true,
+    "singleRowWhenCollapsed": true,
+    "expandedOnSecondTap": true,
+    "nutrientsStillInDayMenu": true
+  },
+  "settingsOrder": [
+    "Général",
+    "Accueil",
+    "Fonctionnalités",
+    "Social",
+    "Bien-être",
+    "Données",
+    "Outils",
+    "À propos"
+  ],
+  "trainingGuideChoices": [
+    "generated",
+    "library",
+    "manual",
+    "import"
+  ],
+  "strengthQualification": {
+    "currentWeekCompletedSessions": 3,
+    "displayedFullGoal": 4,
+    "currentWeekCheckmark": false,
+    "previousStreakWeeks": 3,
+    "nextWeekForgivenessVerifiedByUnitTest": true
+  },
+  "streakModel": 2,
+  "relayEnvelopeVersion": 2,
+  "serverHttpTestsPassed": 7,
+  "limits": [
+    "No physical Garmin watch to verify acoustics/display",
+    "No actual Docker/TrueNAS deployment",
+    "No connected Google Drive provider on test phones"
+  ],
+  "riveOptimized": {
+    "package": "app.superhealth.qa",
+    "apkSha256": "3f155b41806061f5eaca663ae2aa209af1b5b97fe1cbb5e475dc39957cd603cb",
+    "nativeAnimationRendered": true,
+    "numberRenderedInsideFlame": 3,
+    "pixelRegionIdenticalAcrossCaptures": true,
+    "captureRegion": [
+      96,
+      524,
+      389,
+      817
+    ],
+    "displayedWeekGoal": "3 / 4 séances",
+    "uncompletedGoalIndicator": true,
+    "noAndroidRuntimeErrorObserved": true
+  }
+}
