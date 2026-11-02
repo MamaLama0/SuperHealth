@@ -5,7 +5,7 @@ import { request } from 'node:http';
 import { mkdtemp, rm, readFile, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createRelay, validateEnvelope, MAX_BODY, TTL_MS } from './server.mjs';
+import { createRelay, validateEnvelope, MAX_BODY, TTL_MS, INVITE_TTL_MS } from './server.mjs';
 
 const publishKey = 'test-only-'.repeat(5);
 const token = 'a'.repeat(64);
@@ -168,5 +168,52 @@ test('expired records are pruned before enforcing a reduced startup quota', asyn
     assert.equal((await readdir(f.dataDir)).length, 1);
     assert.equal((await fetch(f.base + route)).status, 404);
     assert.equal((await fetch(f.base + otherRoute)).status, 200);
+  } finally { await f.close(); }
+});
+
+
+test('standard server needs no shared secret but still enforces mailbox ownership', async () => {
+  const f = await fixture({ publishKey: undefined });
+  try {
+    const body = encrypt(f.now);
+    assert.equal((await fetch(f.base + route, { method: 'PUT', body })).status, 401);
+    assert.equal((await fetch(f.base + route, { method: 'PUT', body, headers: { 'X-Write-Token': token } })).status, 204);
+    assert.equal((await fetch(f.base + route, { method: 'PUT', body: encrypt(f.now + 1), headers: { 'X-Write-Token': 'f'.repeat(64) } })).status, 403);
+    assert.equal((await fetch(f.base + route, { method: 'DELETE', headers: { 'X-Write-Token': 'f'.repeat(64) } })).status, 403);
+    await f.restart();
+    assert.equal((await fetch(f.base + route, { method: 'PUT', body: encrypt(f.now + 2), headers: { 'X-Write-Token': token } })).status, 204);
+    assert.equal((await fetch(f.base + route, { method: 'DELETE', headers: { 'X-Write-Token': token } })).status, 204);
+  } finally { await f.close(); }
+});
+
+
+test('short invitations expire after 24h and reciprocal requests stay opaque, bounded and owner-readable', async () => {
+  const f = await fixture({ publishKey: undefined });
+  const invite = '/v2/invites/' + 'a'.repeat(64);
+  const responses = invite + '/responses';
+  const sender = 'e'.repeat(64);
+  const ownerHeaders = { 'X-Write-Token': token };
+  try {
+    const envelope = encrypt(f.now, invite);
+    assert.equal((await fetch(f.base + invite, { method: 'PUT', body: envelope, headers: ownerHeaders })).status, 204);
+    assert.equal((await fetch(f.base + invite)).status, 200);
+    const requestBody = encrypt(f.now, responses + '/' + sender);
+    assert.equal((await fetch(f.base + responses + '/' + sender, { method: 'POST', body: requestBody })).status, 204);
+    assert.equal((await fetch(f.base + responses)).status, 401);
+    assert.equal((await fetch(f.base + responses, { headers: { 'X-Write-Token': 'f'.repeat(64) } })).status, 401);
+    let result = await (await fetch(f.base + responses, { headers: ownerHeaders })).json();
+    assert.equal(result[sender], requestBody);
+    await f.restart();
+    result = await (await fetch(f.base + responses, { headers: ownerHeaders })).json();
+    assert.equal(result[sender], requestBody);
+    const disk = (await Promise.all((await readdir(f.dataDir)).map(n => readFile(join(f.dataDir, n), 'utf8')))).join('');
+    assert.equal(disk.includes(secretPlaintext), false);
+    assert.equal((await fetch(f.base + responses + '/' + sender, { method: 'DELETE', headers: ownerHeaders })).status, 204);
+    assert.deepEqual(await (await fetch(f.base + responses, { headers: ownerHeaders })).json(), {});
+    f.advance(INVITE_TTL_MS + 1);
+    assert.equal((await fetch(f.base + invite)).status, 404);
+    assert.equal((await fetch(f.base + responses + '/' + sender, { method: 'POST', body: encrypt(f.now, responses + '/' + sender) })).status, 404);
+    await f.restart();
+    assert.equal((await readdir(f.dataDir)).length, 0);
   } finally { await f.close(); }
 });

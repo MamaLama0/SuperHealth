@@ -1,8 +1,8 @@
 name: superhealth-friends
 services:
   friend-relay:
-    image: superhealth-friend-relay:2
-    build: .
+    image: ghcr.io/mamalama0/superhealth-server:server-homeserver
+    pull_policy: always
     restart: unless-stopped
     init: true
     user: "${PUID:-568}:${PGID:-568}"
@@ -12,24 +12,19 @@ services:
     pids_limit: 32
     mem_limit: 256m
     cpus: 0.50
-    ulimits:
-      nofile:
-        soft: 256
-        hard: 256
     environment:
       HOST: 0.0.0.0
       PORT: "8787"
       DATA_DIR: /data
-      PUBLISH_KEY_FILE: /run/secrets/publish_key
+      # Optional restriction for a private custom server; leave empty for the standard service.
+      PUBLISH_KEY: "${PUBLISH_KEY:-}"
       MAX_CARDS: "${MAX_CARDS:-500}"
       RATE_LIMIT_PER_MINUTE: "${RATE_LIMIT_PER_MINUTE:-240}"
       MAX_IN_FLIGHT: "${MAX_IN_FLIGHT:-8}"
-    secrets: [publish_key]
     volumes:
-      - ${DATA_PATH:-./data}:/data
-    # HTTP is local only. An existing HTTPS reverse proxy must front this port.
+      - ${DATA_PATH:-relay-data}:/data
     ports:
-      - "127.0.0.1:${RELAY_PORT:-8787}:8787"
+      - "${RELAY_BIND:-0.0.0.0}:${RELAY_PORT:-8787}:8787"
     networks: [relay]
     healthcheck:
       test: [CMD, node, -e, "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -42,9 +37,8 @@ services:
       options:
         max-size: 1m
         max-file: "2"
+volumes:
+  relay-data:
 networks:
   relay:
     name: superhealth-relay
-secrets:
-  publish_key:
-    file: ${PUBLISH_KEY_PATH:-./secrets/publish_key}

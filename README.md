@@ -1,10 +1,21 @@
 # Relais amis SuperHealth — serveur chiffré
 
-Branche autonome `server/homeserver` : uniquement le petit serveur et son déploiement, sans l'application Android. Aucun serveur n'est déployé automatiquement.
+Branche autonome `server/homeserver` : uniquement le petit serveur et son déploiement, sans l'application Android. L’image GHCR est publiée depuis cette branche ; aucun serveur n’est déployé automatiquement.
 
 Le téléphone calcule son score et chiffre sa carte signée avant envoi. Le relais garde **un seul objet opaque par boîte**, sans compte, adresse e-mail, nom, clé publique, score, PR, journal ou parcours GPS en clair. La clé AES-256 de lecture est transmise à un ami dans le QR signé ; elle n'est jamais envoyée au relais. Les URL utilisent deux valeurs aléatoires de 256 bits, sans empreinte d'identité. Les IP et horaires de connexion restent nécessairement visibles dans le transport réseau en cours ; aucune promesse d'anonymat réseau n'est faite.
 
 Le processus n'enregistre ni requêtes, ni IP, ni URL, ni secrets. Désactiver aussi les journaux d'accès du reverse proxy et des outils d'observabilité placés devant lui. Le disque contient des noms de fichiers hachés, le dernier chiffré, sa révision, un horodatage d'expiration, un ETag et le hash du secret d'écriture. Le gestionnaire du NAS peut supprimer ou retarder une carte, mais ne peut pas la déchiffrer sans la clé détenue par les amis ; les téléphones vérifient aussi la signature interne et refusent les révisions anciennes.
+
+## Image GitHub et branche
+
+Le workflow `.github/workflows/homeserver-image.yml` ne publie que la branche `server/homeserver`, après les tests HTTP et un démarrage réel du conteneur. L’image multiarchitecture `linux/amd64` et `linux/arm64` est :
+
+```yaml
+image: ghcr.io/mamalama0/superhealth-server:server-homeserver
+pull_policy: always
+```
+
+Le tag `server-homeserver` suit cette branche. Chaque publication fournit aussi un tag `sha-<commit complet>` et l’étiquette OCI de révision. La première publication GHCR peut être privée : dans les paramètres du package GitHub, sélectionner la visibilité publique pour permettre le téléchargement anonyme depuis le NAS. L’image ne contient ni adresse de service privé ni secret.
 
 ## Charge et limites
 
@@ -17,59 +28,33 @@ Le processus n'enregistre ni requêtes, ni IP, ni URL, ni secrets. Désactiver a
 
 Pour un petit groupe qui actualise 2 à 4 fois par jour et à l'ouverture, le trafic reste de simples petites lectures HTTP. Les clients doivent limiter la fréquence, envoyer `If-None-Match`, conserver les clés en stockage sécurisé et ne publier que les statistiques que leur utilisateur veut partager. Aucune mesure sur un vrai TrueNAS n'a encore été effectuée.
 
-## Déploiement TrueNAS
+## Démarrer
 
-Cible : TrueNAS SCALE/Community **24.10 ou ultérieur**, avec moteur Apps Docker Compose. TrueNAS CORE et les anciennes Apps Kubernetes ne sont pas couverts. Le mode **Apps → Discover → Install via YAML** accepte les configurations Compose ; voir la [documentation TrueNAS](https://apps.truenas.com/managing-apps/installing-custom-apps/).
-
-1. Copier/cloner cette branche dans un dataset dédié, par exemple `/mnt/tank/apps/superhealth/source`. Le nom `tank` est un exemple à remplacer.
-2. Créer des répertoires/datasets `data` et `secrets` à côté de `source`, hors partage SMB public. Dans les ACL TrueNAS, donner au UID/GID utilisé dans Compose (568:568 par défaut) le droit de modifier `data` et de lire le fichier secret. Le fichier secret doit rester inaccessible aux autres comptes. Les parents doivent permettre la traversée. Ne pas rendre ces dossiers accessibles à tous pour contourner une erreur d'ACL.
-3. Générer le code de publication, sans l'afficher dans les logs :
-
-   ```sh
-   cd /mnt/tank/apps/superhealth/source
-   node scripts/create-secret.mjs /mnt/tank/apps/superhealth/secrets/publish_key
-   ```
-
-   Si Node n'est pas installé sur l'hôte, utiliser son conteneur existant sans monter les données :
-
-   ```sh
-   docker run --rm --user 568:568 -v /mnt/tank/apps/superhealth/secrets:/secrets node:24-alpine node -e "require('node:fs').writeFileSync('/secrets/publish_key',require('node:crypto').randomBytes(32).toString('hex')+'\\n',{mode:0o600,flag:'wx'})"
-   ```
-
-   La commande refuse d'écraser un secret existant. Si le premier script tourne sous un autre UID, ajuster l'ACL du fichier ensuite pour le UID 568 ; les paramètres `uid/mode` d'un secret Compose ne remplacent pas les permissions du fichier hôte.
-4. Construire l'image locale sur le NAS (ou sur une autre machine et l'importer dans le moteur Docker du NAS) :
-
-   ```sh
-   docker build -t superhealth-friend-relay:2 /mnt/tank/apps/superhealth/source
-   ```
-
-5. Dans `compose.truenas.yaml`, remplacer les deux chemins `/mnt/POOL/apps/superhealth` par les chemins réels. Coller le fichier dans **Install via YAML**. Il n'a pas besoin d'un `.env`, d'un contexte de build relatif ni d'une image publiée. `pull_policy: never` utilise l'image locale construite à l'étape précédente.
-6. Le service HTTP est lié à `127.0.0.1:8787` et accessible aux conteneurs du réseau Docker `superhealth-relay` sous `friend-relay:8787`. Placer un reverse proxy HTTPS devant, sur un domaine dédié sans sous-chemin. Un proxy dans un autre conteneur doit rejoindre ce réseau via sa propre configuration ; son `127.0.0.1` désigne son propre conteneur, pas le NAS.
-7. Tester `GET /health` : réponse `{"status":"ok","protocol":2}`. Le contrôle de santé ne teste ni un compte ni une carte personnelle. Configurer ensuite l'adresse HTTPS et le code de publication dans l'app, puis échanger les nouveaux QR entre amis.
-
-Ne pas ouvrir directement le port HTTP sur Internet. Le code de publication autorise les personnes invitées à créer des boîtes ; chaque boîte a en plus son secret d'écriture privé, absent du QR. Un utilisateur qui connaît seulement la capacité de lecture et le code global ne peut pas écraser une boîte existante.
-
-La validation YAML est syntaxique dans TrueNAS ; elle ne certifie pas les chemins, ACL, DNS, pare-feu ou reverse proxy. Le lancement réel doit encore être vérifié sur le NAS de l'utilisateur.
-
-## Docker Compose classique et HTTPS facultatif
+Depuis ce dossier :
 
 ```sh
-cp .env.example .env
-node scripts/create-secret.mjs
-# Préparer data et les ACL pour le UID choisi avant le démarrage.
-docker compose config --quiet
-docker compose up -d --build
+docker compose up -d
 ```
 
-Si aucun reverse proxy n'existe, `compose.https.yaml` ajoute Caddy. Définir `DOMAIN` dans `.env`, monter le `Caddyfile` fourni, faire pointer le DNS public vers le domicile, puis rediriger les ports du routeur **WAN 80 → NAS 8080** et **WAN 443 → NAS 8443** :
+Le service écoute sur le port 8787. Le volume Docker `relay-data` est créé avec les droits du conteneur : aucun répertoire ni fichier secret à préparer. `GET /health` renvoie `{"status":"ok","protocol":2}`. Les données persistent après un redémarrage ou `docker compose down` (sans `-v`). Pour mettre à jour une installation existante qui utilisait un dossier monté, conserver ce dossier en définissant `DATA_PATH` vers son chemin absolu et, si nécessaire, `PUID`/`PGID` avec ses propriétaires actuels. Ne pas remplacer ce dossier par un volume vide si ses cartes doivent être conservées.
+
+Un Compose adapté au NAS peut aussi utiliser directement `node:24-alpine`, monter `server.mjs` en lecture seule et le dossier de données en écriture. Cette variante ne nécessite aucune construction d’image ; les chemins, le port et les UID/GID se règlent dans le fichier de déploiement local.
+
+Placer votre reverse proxy HTTPS habituel devant le port choisi. Pour limiter l'écoute à la machine locale, définir `RELAY_BIND=127.0.0.1`. Sans proxy existant, définir `DOMAIN` dans un fichier `.env` local puis lancer :
 
 ```sh
-docker compose -f compose.yaml -f compose.https.yaml up -d --build
+docker compose -f compose.yaml -f compose.https.yaml up -d
 ```
 
-Les ports NAS 8080/8443 évitent de reprendre ceux de l'interface TrueNAS. Ils restent à adapter si déjà occupés. Caddy utilise deux petits volumes pour ses certificats/configurations ; sa limite mémoire est 128 Mio et CPU 0,25 cœur. Les logs de requêtes et les logs globaux de Caddy sont désactivés pour ne pas conserver les URL de capacité. L'accès HTTPS public et la validation ACME demandent DNS/routage corrects ; un accès résidentiel derrière CGNAT nécessite une autre solution réseau fournie par l'hébergeur. Le fichier HTTPS est un complément Compose CLI, pas un YAML autonome à coller seul dans TrueNAS.
+Les ports externes du proxy sont 8080/8443 par défaut, configurables avec `HTTP_PORT` et `HTTPS_PORT`. DNS et routage HTTPS doivent pointer vers l'hôte. Docker démarre le service ; il ne configure pas le DNS ni le routeur.
 
-Pour Caddy dans l'interface TrueNAS, utiliser directement `compose.truenas.https.yaml` : remplacer les trois chemins `POOL` et le domaine `amis.exemple.fr`, puis coller ce fichier complet dans Install via YAML. Il combine le relais et HTTPS, sans `.env` ni chemin relatif. Faire les mêmes redirections 80→8080 et 443→8443 sur le routeur. Une configuration de proxy existante peut aussi être utilisée avec le fichier TrueNAS minimal.
+### Serveur par défaut et serveur personnalisé
+
+L'app propose le serveur SuperHealth sans en afficher l'adresse. La configuration de distribution vient de `SUPERHEALTH_RELAY_URL` (et éventuellement `SUPERHEALTH_RELAY_KEY`) dans les secrets CI, ou de `local.server.properties` exclu de Git dans le projet Android. Le fichier `.example` contient uniquement les noms des paramètres. Les sources générées sont dans `build/`, également exclu de Git. Une adresse embarquée dans un client reste récupérable techniquement ; elle ne constitue pas un secret d'authentification.
+
+Un serveur personnalisé se règle dans l'app avec une adresse HTTPS et, facultativement, un code de publication. Le serveur standard accepte la création de boîtes sans code partagé ; chaque boîte reste protégée par son secret propriétaire de 256 bits. Pour réserver un serveur privé à un groupe, définir `PUBLISH_KEY` dans le `.env` du serveur (32 à 512 caractères) et saisir ce code dans les clients. Les limites de débit, de capacité et de taille restent actives dans les deux modes.
+
+Les fichiers `compose.truenas*.yaml` restent disponibles pour les installations TrueNAS à chemins et ACL spécifiques ; ils conservent leur configuration de secret explicite.
 
 ## Compatibilité SuperHealth 2.8
 
@@ -89,7 +74,7 @@ SuperHealth relay v2:/v2/cards/<mailbox64hex>/<readCapability64hex>
 
 Le texte chiffré est la carte SH1 signée, avec l'identité et les statistiques. La clé AES de 32 octets est incluse seulement dans le partage signé vers un ami, jamais dans la route, les en-têtes ou l'enveloppe HTTP.
 
-**PUT** : deux en-têtes : `Authorization: Bearer <code de publication>` et `X-Write-Token: <secret propriétaire 64hex>`. Ce dernier est généré sur le téléphone, distinct de la capacité de lecture et de la clé AES ; il ne quitte pas le téléphone sauf pour les opérations d'écriture sur son relais HTTPS. Corps exact :
+**PUT** : `X-Write-Token: <secret propriétaire 64hex>` obligatoire. `Authorization: Bearer <code de publication>` est requis uniquement si `PUBLISH_KEY` est configuré. Ce dernier est généré sur le téléphone, distinct de la capacité de lecture et de la clé AES ; il ne quitte pas le téléphone sauf pour les opérations d'écriture sur son relais HTTPS. Corps exact :
 
 ```json
 {"v":2,"revision":1793628000000,"nonce":"base64url-12-octets","ciphertext":"base64url-ciphertext-et-tag"}
@@ -113,6 +98,14 @@ Les tests lancent de vrais clients HTTP locaux et chiffrent/déchiffrent en AES-
 
 Le protocole et les fichiers Compose sont livrés sans déploiement ni compte réel. Les tests Node ne prouvent pas le fonctionnement d'un vrai reverse proxy, du moteur Docker d'un NAS, des ACL TrueNAS ou de la connexion Internet entre deux téléphones.
 
-Références consultées : [Apps personnalisées TrueNAS](https://apps.truenas.com/managing-apps/installing-custom-apps/), [stockage Apps](https://apps.truenas.com/getting-started/app-storage/), [services Compose et limites](https://docs.docker.com/reference/compose-file/services/), [secrets Compose](https://docs.docker.com/compose/how-tos/use-secrets/). Aucun secret, image ni donnée utilisateur n'est fourni dans cette branche.
+Références consultées : [Apps personnalisées TrueNAS](https://apps.truenas.com/managing-apps/installing-custom-apps/), [stockage Apps](https://apps.truenas.com/getting-started/app-storage/), [services Compose et limites](https://docs.docker.com/reference/compose-file/services/), [secrets Compose](https://docs.docker.com/compose/how-tos/use-secrets/). Aucun secret ni donnée utilisateur n’est fourni dans cette branche. L’image contient uniquement Node, le serveur et sa licence.
 
 Licence : AGPL-3.0-or-later, comme le projet SuperHealth ; voir `LICENSE`.
+
+## Codes amis
+
+Les codes comportent 12 caractères base32 sans `I`, `O`, `0` ou `1`, affichés par groupes de quatre. Ils sont générés sur le client, valables 24 heures et renouvelables. Le code lui-même n'est jamais transmis au serveur : une dérivation SHA-256 désigne `/v2/invites/<hash64hex>`, et une dérivation distincte chiffre la carte d'invitation. Les invitations expirent aussi côté serveur.
+
+La confirmation dépose une réponse signée, chiffrée pour l'auteur de l'invitation, dans `/v2/invites/<hash64hex>/responses/<sender64hex>`. Seul le secret propriétaire de l'invitation permet de lire et supprimer ces réponses. Leur collecte permet l'ajout réciproque sans second code. Le serveur conserve au plus 16 réponses de 16 Kio par invitation, limite les routes d'invitation à 12 requêtes/minute par connexion réseau directe et supprime le tout à l'expiration. Les boîtes et invitations partagent le quota `MAX_CARDS`.
+
+Le client consulte les réponses quand son code est affiché, à l'ouverture de la liste d'amis et pendant les synchronisations. La consultation du code s'arrête quand l'écran passe en arrière-plan. Les statistiques et badges restent transmis séparément dans les cartes amis chiffrées.

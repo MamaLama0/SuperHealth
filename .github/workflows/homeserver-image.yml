@@ -1,0 +1,83 @@
+name: Publish homeserver image
+
+on:
+  push:
+    branches: [server/homeserver]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homeserver-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/server/homeserver'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Test encrypted relay
+        run: node --test server.test.mjs
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build native image for smoke test
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: superhealth-homeserver:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Verify container starts without a shared publication key
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker rm -fv superhealth-image-smoke >/dev/null 2>&1 || true' EXIT
+          docker run -d --name superhealth-image-smoke --read-only --cap-drop ALL --volume /data \
+            --security-opt no-new-privileges:true --memory 256m \
+            -p 127.0.0.1:18787:8787 superhealth-homeserver:ci
+          node --input-type=module <<'JS'
+          for (let attempt = 0; attempt < 30; attempt++) {
+            try {
+              const r = await fetch('http://127.0.0.1:18787/health');
+              const body = await r.json();
+              if (r.ok && body.status === 'ok' && body.protocol === 2) process.exit(0);
+            } catch {}
+            await new Promise(resolve => setTimeout(resolve, 250));
+          }
+          throw new Error('Container health check failed');
+          JS
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the server branch for amd64 and arm64
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/mamalama0/superhealth-server:server-homeserver
+            ghcr.io/mamalama0/superhealth-server:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/MamaLama0/SuperHealth
+            org.opencontainers.image.url=https://github.com/MamaLama0/SuperHealth/tree/server/homeserver
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.ref.name=server/homeserver
+            org.opencontainers.image.licenses=AGPL-3.0-only
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

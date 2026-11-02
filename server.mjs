@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 export const MAX_BODY = 98_304;
 export const TTL_MS = 35 * 86_400_000;
-const ROUTE = /^\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64}$/;
+const ROUTE = /^\/v2\/(?:cards\/[a-f0-9]{64}\/[a-f0-9]{64}|invites\/[a-f0-9]{64}(?:\/responses(?:\/[a-f0-9]{64})?)?)$/;
+export const INVITE_TTL_MS = 24 * 3_600_000;
+const ttl = record => record.kind === 'invite' ? INVITE_TTL_MS : TTL_MS;
 const HEX_SECRET = /^[a-f0-9]{64}$/;
 const digest = value => createHash('sha256').update(value).digest('hex');
 const equal = (a, b) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -34,13 +36,13 @@ export function validateEnvelope(raw, now = Date.now()) {
 
 export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLimitPerMinute = 240,
   maxInFlight = 8, now = Date.now, sweepIntervalMs = 3_600_000 } = {}) {
-  if (typeof publishKey !== 'string' || publishKey.length < 32 || publishKey.length > 512 || /[\r\n]/.test(publishKey))
+  if (publishKey != null && publishKey !== '' && (typeof publishKey !== 'string' || publishKey.length < 32 || publishKey.length > 512 || /[\r\n]/.test(publishKey)))
     throw new Error('PUBLISH_KEY must have 32..512 characters');
   integer(maxCards, 1, 10_000, 'MAX_CARDS');
   integer(rateLimitPerMinute, 1, 10_000, 'RATE_LIMIT_PER_MINUTE');
   integer(maxInFlight, 1, 64, 'MAX_IN_FLIGHT');
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
-  const secret = `Bearer ${publishKey}`;
+  const secret = publishKey ? `Bearer ${publishKey}` : null;
   const index = new Map();
   const rates = new Map();
   let writes = Promise.resolve();
@@ -52,21 +54,23 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
     if (/^[a-f0-9]{64}\.json\.[\w-]+\.tmp$/.test(name)) { await unlink(join(dataDir, name)); continue; }
     if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
     const path = join(dataDir, name);
-    if ((await stat(path)).size > MAX_BODY + 2048) throw new Error('invalid stored record');
+    if ((await stat(path)).size > MAX_BODY * 4 + 2048) throw new Error('invalid stored record');
     const record = JSON.parse(await readFile(path, 'utf8'));
     if (record.format !== 2 || !HEX_SECRET.test(record.writeHash) || !Number.isSafeInteger(record.updatedAt) ||
         typeof record.raw !== 'string' || Buffer.byteLength(record.raw) > MAX_BODY ||
         record.etag !== `"${digest(record.raw)}"`) throw new Error('invalid stored record');
+    if (record.responses != null && (record.kind !== 'invite' || typeof record.responses !== 'object' || Array.isArray(record.responses) || Object.keys(record.responses).length > 16 || Object.entries(record.responses).some(([key, value]) => !HEX_SECRET.test(key) || typeof value !== 'string' || Buffer.byteLength(value) > 16384))) throw new Error('invalid responses');
     const envelope = validateEnvelope(record.raw, record.updatedAt);
     if (record.revision !== envelope.revision) throw new Error('invalid stored revision');
-    if (record.updatedAt <= now() - TTL_MS) { await unlink(path); continue; }
+    if (record.kind != null && record.kind !== 'invite') throw new Error('invalid stored kind');
+    if (record.updatedAt <= now() - ttl(record)) { await unlink(path); continue; }
     if (index.size >= maxCards) throw new Error('stored mailboxes exceed MAX_CARDS');
     index.set(name.slice(0, -5), { writeHash: record.writeHash, updatedAt: record.updatedAt,
-      revision: record.revision, etag: record.etag });
+      revision: record.revision, etag: record.etag, kind: record.kind });
   }
 
   const prune = async () => {
-    for (const [id, record] of index) if (record.updatedAt <= now() - TTL_MS) {
+    for (const [id, record] of index) if (record.updatedAt <= now() - ttl(record)) {
       await unlink(fileFor(id)).catch(e => { if (e.code !== 'ENOENT') throw e; });
       index.delete(id);
     }
@@ -101,21 +105,66 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
     if (req.url === '/health' && req.method === 'GET') return send(res, 200, '{"status":"ok","protocol":2}');
     if (!ROUTE.test(req.url || '')) return send(res, 404);
-    if (!['GET', 'PUT', 'DELETE'].includes(req.method)) return send(res, 405, '', { Allow: 'GET, PUT, DELETE' });
+    if (!['GET', 'PUT', 'POST', 'DELETE'].includes(req.method)) return send(res, 405, '', { Allow: 'GET, PUT, DELETE' });
     if (inFlight >= maxInFlight) { req.resume(); return send(res, 503, '', { 'Retry-After': '2' }); }
     // Bound all connections, including unauthenticated attempts; behind a proxy this is a shared limit.
-    const bucket = digest(req.socket.remoteAddress || '?');
+    const invitation = req.url.startsWith('/v2/invites/');
+    const bucket = digest((req.socket.remoteAddress || '?') + (invitation ? ':invites' : ':cards'));
     const minute = Math.floor(now() / 60_000);
     const previous = rates.get(bucket);
     const requests = previous?.minute === minute ? previous.requests + 1 : 1;
     if (!rates.has(bucket) && rates.size >= 1024) rates.clear();
     rates.set(bucket, { minute, requests });
-    if (requests > rateLimitPerMinute) { req.resume(); return send(res, 429, '', { 'Retry-After': '60' }); }
+    if (requests > (invitation ? Math.min(12, rateLimitPerMinute) : rateLimitPerMinute)) { req.resume(); return send(res, 429, '', { 'Retry-After': '60' }); }
     inFlight++;
     try {
-      const id = digest(req.url);
+      const responseRoute = req.url.match(/^(\/v2\/invites\/[a-f0-9]{64})\/responses(?:\/([a-f0-9]{64}))?$/);
+      const id = digest(responseRoute ? responseRoute[1] : req.url);
       const record = index.get(id);
-      const expired = !record || record.updatedAt <= now() - TTL_MS;
+      const expired = !record || record.updatedAt <= now() - ttl(record);
+      if (responseRoute) {
+        if (expired || record.kind !== 'invite') { req.resume(); return send(res, 404); }
+        const responseId = responseRoute[2];
+        const authorized = typeof req.headers['x-write-token'] === 'string' && HEX_SECRET.test(req.headers['x-write-token']) && equal(record.writeHash, digest(req.headers['x-write-token']));
+        if (req.method === 'GET' && !responseId) {
+          if (!authorized) return send(res, 401);
+          const saved = JSON.parse(await readFile(fileFor(id), 'utf8'));
+          return send(res, 200, JSON.stringify(saved.responses || {}));
+        }
+        if (req.method === 'POST' && responseId) {
+          if (Number(req.headers['content-length'] || 0) > 16384) { req.resume(); return send(res, 413); }
+          const raw = await readBody(req);
+          if (Buffer.byteLength(raw) > 16384) return send(res, 413);
+          let envelope;
+          try { envelope = validateEnvelope(raw, now()); } catch { return send(res, 400); }
+          return await serialized(async () => {
+            const saved = JSON.parse(await readFile(fileFor(id), 'utf8'));
+            const responses = saved.responses || {};
+            if (!responses[responseId] && Object.keys(responses).length >= 16) return send(res, 429);
+            // A retry keeps the first response; another request cannot replace it.
+            if (responses[responseId]) return send(res, 204);
+            responses[responseId] = JSON.stringify(envelope);
+            const tmp = fileFor(id) + '.' + randomUUID() + '.tmp';
+            try { await writeFile(tmp, JSON.stringify({ ...saved, responses }), { mode: 0o600, flag: 'wx' }); await rename(tmp, fileFor(id)); }
+            finally { await unlink(tmp).catch(() => {}); }
+            send(res, 204);
+          });
+        }
+        if (req.method === 'DELETE' && responseId) {
+          if (!authorized) { req.resume(); return send(res, 401); }
+          req.resume();
+          return await serialized(async () => {
+            const saved = JSON.parse(await readFile(fileFor(id), 'utf8'));
+            const responses = saved.responses || {}; delete responses[responseId];
+            const tmp = fileFor(id) + '.' + randomUUID() + '.tmp';
+            try { await writeFile(tmp, JSON.stringify({ ...saved, responses }), { mode: 0o600, flag: 'wx' }); await rename(tmp, fileFor(id)); }
+            finally { await unlink(tmp).catch(() => {}); }
+            send(res, 204);
+          });
+        }
+        req.resume(); return send(res, 405);
+      }
+      if (req.method === 'POST') { req.resume(); return send(res, 405); }
       if (req.method === 'GET') {
         if (expired) return send(res, 404);
         if (req.headers['if-none-match'] === record.etag) return send(res, 304, '', { ETag: record.etag });
@@ -124,7 +173,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
           return send(res, 200, saved.raw, { ETag: saved.etag });
         } catch (e) { if (e.code === 'ENOENT') return send(res, 404); throw e; }
       }
-      if (!equal(req.headers.authorization || '', secret)) { req.resume(); return send(res, 401); }
+      if (secret && !equal(req.headers.authorization || '', secret)) { req.resume(); return send(res, 401); }
       const token = req.headers['x-write-token'];
       if (typeof token !== 'string' || !HEX_SECRET.test(token)) { req.resume(); return send(res, 401); }
       const writeHash = digest(token);
@@ -159,10 +208,10 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
         const updatedAt = now();
         const tmp = fileFor(id) + '.' + randomUUID() + '.tmp';
         try {
-          await writeFile(tmp, JSON.stringify({ format: 2, raw, writeHash, updatedAt, revision: envelope.revision, etag }), { mode: 0o600, flag: 'wx' });
+          await writeFile(tmp, JSON.stringify({ format: 2, raw, writeHash, updatedAt, revision: envelope.revision, etag, ...(invitation ? { kind: 'invite' } : {}) }), { mode: 0o600, flag: 'wx' });
           await rename(tmp, fileFor(id));
         } finally { await unlink(tmp).catch(() => {}); }
-        index.set(id, { writeHash, updatedAt, revision: envelope.revision, etag });
+        index.set(id, { writeHash, updatedAt, revision: envelope.revision, etag, kind: invitation ? 'invite' : undefined });
         send(res, 204, '', { ETag: etag });
       });
     } catch (e) {
