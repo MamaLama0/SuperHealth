@@ -27,6 +27,7 @@ const decrypt = (raw, path = route) => {
   decipher.setAAD(Buffer.from('SuperHealth relay v2:' + path)); decipher.setAuthTag(bytes.subarray(-16));
   return Buffer.concat([decipher.update(bytes.subarray(0, -16)), decipher.final()]).toString();
 };
+const cardFiles = async dir => (await readdir(dir)).filter(n => /^[a-f0-9]{64}\.json$/.test(n));
 async function fixture(options = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), 'sh-encrypted-relay-'));
   let current = Date.now();
@@ -55,7 +56,7 @@ test('opaque cards: encrypted roundtrip, owner authorization, conditional GET, n
     const got = await fetch(f.base + route); assert.equal(got.status, 200); assert.equal(decrypt(await got.text()), secretPlaintext);
     const notModified = await fetch(f.base + route, { headers: { 'If-None-Match': etag } });
     assert.equal(notModified.status, 304); assert.equal(await notModified.text(), '');
-    const files = await readdir(f.dataDir); assert.equal(files.length, 1); assert.match(files[0], /^[a-f0-9]{64}\.json$/);
+    const files = await cardFiles(f.dataDir); assert.equal(files.length, 1); assert.match(files[0], /^[a-f0-9]{64}\.json$/);
     const stored = await readFile(join(f.dataDir, files[0]), 'utf8');
     for (const hidden of [secretPlaintext, key.toString('base64url'), token, route, publishKey, '127.0.0.1']) assert.equal(stored.includes(hidden), false);
     assert.equal((await stat(join(f.dataDir, files[0]))).mode & 0o777, 0o600);
@@ -106,7 +107,7 @@ test('capacity, expiry, no plaintext compatibility, malformed envelopes and body
     f.advance(TTL_MS + 1);
     assert.equal((await fetch(f.base + route)).status, 404);
     assert.equal((await put(encrypt(f.now, otherRoute), otherRoute)).status, 204);
-    assert.equal((await readdir(f.dataDir)).length, 1);
+    assert.equal((await cardFiles(f.dataDir)).length, 1);
     await f.restart(); assert.equal((await fetch(f.base + route)).status, 404);
     const delivered = await (await fetch(f.base + otherRoute)).text();
     assert.equal(decrypt(delivered, otherRoute), secretPlaintext);
@@ -122,7 +123,7 @@ test('chunked oversized body returns 413 without retaining it', async () => {
       req.on('error', reject);
       req.write('a'.repeat(MAX_BODY)); req.end('x');
     });
-    assert.equal(status, 413); assert.deepEqual(await readdir(f.dataDir), []);
+    assert.equal(status, 413); assert.deepEqual(await cardFiles(f.dataDir), []);
   } finally { await f.close(); }
 });
 
@@ -165,7 +166,7 @@ test('expired records are pruned before enforcing a reduced startup quota', asyn
     assert.equal((await fetch(f.base + otherRoute, { method: 'PUT', headers: headers(), body: encrypt(f.now, otherRoute) })).status, 204);
     f.advance(TTL_MS / 2 + 1); options.maxCards = 1;
     await f.restart();
-    assert.equal((await readdir(f.dataDir)).length, 1);
+    assert.equal((await cardFiles(f.dataDir)).length, 1);
     assert.equal((await fetch(f.base + route)).status, 404);
     assert.equal((await fetch(f.base + otherRoute)).status, 200);
   } finally { await f.close(); }
@@ -206,7 +207,7 @@ test('short invitations expire after 24h and reciprocal requests stay opaque, bo
     await f.restart();
     result = await (await fetch(f.base + responses, { headers: ownerHeaders })).json();
     assert.equal(result[sender], requestBody);
-    const disk = (await Promise.all((await readdir(f.dataDir)).map(n => readFile(join(f.dataDir, n), 'utf8')))).join('');
+    const disk = (await Promise.all((await cardFiles(f.dataDir)).map(n => readFile(join(f.dataDir, n), 'utf8')))).join('');
     assert.equal(disk.includes(secretPlaintext), false);
     assert.equal((await fetch(f.base + responses + '/' + sender, { method: 'DELETE', headers: ownerHeaders })).status, 204);
     assert.deepEqual(await (await fetch(f.base + responses, { headers: ownerHeaders })).json(), {});
@@ -214,6 +215,65 @@ test('short invitations expire after 24h and reciprocal requests stay opaque, bo
     assert.equal((await fetch(f.base + invite)).status, 404);
     assert.equal((await fetch(f.base + responses + '/' + sender, { method: 'POST', body: encrypt(f.now, responses + '/' + sender) })).status, 404);
     await f.restart();
-    assert.equal((await readdir(f.dataDir)).length, 0);
+    assert.equal((await cardFiles(f.dataDir)).length, 0);
+  } finally { await f.close(); }
+});
+
+test('media remain opaque, owned by an existing mailbox, bounded, persistent and expiring', async () => {
+  const f = await fixture();
+  const mediaRoute = route + '/media/' + '1'.repeat(64);
+  const otherMedia = route + '/media/' + '2'.repeat(64);
+  const nonce = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, nonce);
+  cipher.setAAD(Buffer.from('SuperHealth media v1:' + '1'.repeat(64)));
+  const plain = Buffer.from('a private photo or video never readable by the relay');
+  const opaque = Buffer.concat([nonce, cipher.update(plain), cipher.final(), cipher.getAuthTag()]);
+  const put = (path, body, auth = headers()) => fetch(f.base + path, { method: 'PUT', body, headers: auth });
+  try {
+    assert.equal((await put(mediaRoute, opaque)).status, 404);
+    assert.equal((await put(route, encrypt(f.now))).status, 204);
+    assert.equal((await put(mediaRoute, opaque, headers('f'.repeat(64)))).status, 403);
+    assert.equal((await put(mediaRoute, opaque)).status, 204);
+    assert.equal((await put(mediaRoute, opaque)).status, 409);
+    assert.equal((await put(otherMedia, Buffer.alloc(20))).status, 413);
+    assert.equal((await put(otherMedia, Buffer.alloc(16 * 1024 * 1024 + 1))).status, 413);
+    const response = await fetch(f.base + mediaRoute);
+    assert.equal(response.headers.get('content-type'), 'application/octet-stream');
+    const downloaded = Buffer.from(await response.arrayBuffer()); assert.deepEqual(downloaded, opaque);
+    const decipher = createDecipheriv('aes-256-gcm', key, downloaded.subarray(0, 12));
+    decipher.setAAD(Buffer.from('SuperHealth media v1:' + '1'.repeat(64))); decipher.setAuthTag(downloaded.subarray(-16));
+    assert.deepEqual(Buffer.concat([decipher.update(downloaded.subarray(12, -16)), decipher.final()]), plain);
+    const files = await readdir(join(f.dataDir, 'media'));
+    assert.equal(files.length, 2);
+    for (const name of files) {
+      assert.match(name, /^[a-f0-9]{64}\.(json|bin)$/);
+      const stored = await readFile(join(f.dataDir, 'media', name));
+      assert.equal(stored.includes(plain), false); assert.equal(stored.includes(Buffer.from(mediaRoute)), false);
+    }
+    await f.restart(); assert.equal((await fetch(f.base + mediaRoute)).status, 200);
+    assert.equal((await fetch(f.base + mediaRoute + '?x=1')).status, 404);
+    assert.equal((await fetch(f.base + mediaRoute, { method: 'DELETE', headers: headers('f'.repeat(64)) })).status, 403);
+    assert.equal((await fetch(f.base + mediaRoute, { method: 'DELETE', headers: headers() })).status, 204);
+    assert.equal((await fetch(f.base + mediaRoute)).status, 404);
+    assert.equal((await put(mediaRoute, opaque)).status, 204);
+    f.advance(TTL_MS + 1); await f.restart();
+    assert.equal((await fetch(f.base + mediaRoute)).status, 404);
+    assert.deepEqual(await readdir(join(f.dataDir, 'media')), []);
+  } finally { await f.close(); }
+});
+
+test('chunked media overflow returns 413, leaves no partial files, then accepts another upload', async () => {
+  const f = await fixture();
+  const path = route + '/media/' + '3'.repeat(64);
+  try {
+    await fetch(f.base + route, { method: 'PUT', body: encrypt(f.now), headers: headers() });
+    const status = await new Promise((resolveStatus, reject) => {
+      const req = request(f.base + path, { method: 'PUT', headers: headers() }, res => { res.resume(); resolveStatus(res.statusCode); });
+      req.on('error', reject);
+      req.end(Buffer.alloc(16 * 1024 * 1024 + 100));
+    });
+    assert.equal(status, 413);
+    assert.deepEqual(await readdir(join(f.dataDir, 'media')), []);
+    assert.equal((await fetch(f.base + path, { method: 'PUT', body: Buffer.alloc(50), headers: headers() })).status, 204);
   } finally { await f.close(); }
 });

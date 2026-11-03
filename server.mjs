@@ -1,3 +1,4 @@
+import { createMediaStore } from './media.mjs';
 import { createServer } from 'node:http';
 import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, unlink, readdir, stat } from 'node:fs/promises';
@@ -6,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 export const MAX_BODY = 98_304;
 export const TTL_MS = 35 * 86_400_000;
-const ROUTE = /^\/v2\/(?:cards\/[a-f0-9]{64}\/[a-f0-9]{64}|invites\/[a-f0-9]{64}(?:\/responses(?:\/[a-f0-9]{64})?)?)$/;
+const ROUTE = /^\/v2\/(?:cards\/[a-f0-9]{64}\/[a-f0-9]{64}(?:\/media\/[a-f0-9]{64})?|invites\/[a-f0-9]{64}(?:\/responses(?:\/[a-f0-9]{64})?)?)$/;
 export const INVITE_TTL_MS = 24 * 3_600_000;
 const ttl = record => record.kind === 'invite' ? INVITE_TTL_MS : TTL_MS;
 const HEX_SECRET = /^[a-f0-9]{64}$/;
@@ -42,6 +43,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   integer(rateLimitPerMinute, 1, 10_000, 'RATE_LIMIT_PER_MINUTE');
   integer(maxInFlight, 1, 64, 'MAX_IN_FLIGHT');
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
+  const media = await createMediaStore(dataDir, { now });
   const secret = publishKey ? `Bearer ${publishKey}` : null;
   const index = new Map();
   const rates = new Map();
@@ -103,7 +105,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
-    if (req.url === '/health' && req.method === 'GET') return send(res, 200, '{"status":"ok","protocol":2}');
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, '{"status":"ok","protocol":2,"media":1}');
     if (!ROUTE.test(req.url || '')) return send(res, 404);
     if (!['GET', 'PUT', 'POST', 'DELETE'].includes(req.method)) return send(res, 405, '', { Allow: 'GET, PUT, DELETE' });
     if (inFlight >= maxInFlight) { req.resume(); return send(res, 503, '', { 'Retry-After': '2' }); }
@@ -118,6 +120,15 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
     if (requests > (invitation ? Math.min(12, rateLimitPerMinute) : rateLimitPerMinute)) { req.resume(); return send(res, 429, '', { 'Retry-After': '60' }); }
     inFlight++;
     try {
+      const mediaRoute = req.url.match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/media\/[a-f0-9]{64}$/);
+      if (mediaRoute) {
+        const parent = index.get(digest(mediaRoute[1]));
+        const exists = parent && parent.updatedAt > now() - TTL_MS;
+        const token = req.headers['x-write-token'];
+        const authorized = exists && (!secret || equal(req.headers.authorization || '', secret)) &&
+          typeof token === 'string' && HEX_SECRET.test(token) && equal(parent.writeHash, digest(token));
+        return await media(req, res, { exists, authorized });
+      }
       const responseRoute = req.url.match(/^(\/v2\/invites\/[a-f0-9]{64})\/responses(?:\/([a-f0-9]{64}))?$/);
       const id = digest(responseRoute ? responseRoute[1] : req.url);
       const record = index.get(id);
@@ -218,10 +229,10 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
       if (!res.headersSent) send(res, e.status || 500, '', e.status === 413 ? { Connection: 'close' } : {}); else res.end();
     } finally { inFlight--; }
   });
-  const sweep = setInterval(() => { serialized(prune).catch(() => {}); }, sweepIntervalMs);
+  const sweep = setInterval(() => { serialized(async () => { await prune(); await media.prune(); }).catch(() => {}); }, sweepIntervalMs);
   sweep.unref();
   server.on('close', () => clearInterval(sweep));
-  server.requestTimeout = 15_000;
+  server.requestTimeout = 120_000;
   server.headersTimeout = 10_000;
   server.keepAliveTimeout = 5_000;
   server.maxRequestsPerSocket = 100;
