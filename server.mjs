@@ -250,7 +250,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const publishKey = process.env.PUBLISH_KEY_FILE
     ? (await readFile(process.env.PUBLISH_KEY_FILE, 'utf8')).trim() : process.env.PUBLISH_KEY;
   const feedbackToken = process.env.FEEDBACK_GITHUB_TOKEN_FILE
-    ? (await readFile(process.env.FEEDBACK_GITHUB_TOKEN_FILE, 'utf8')).trim() : process.env.FEEDBACK_GITHUB_TOKEN;
+    ? await readFile(process.env.FEEDBACK_GITHUB_TOKEN_FILE, 'utf8').then(value => value.trim()).catch(error => {
+      // Optional feedback must not prevent existing cards/media from starting when its secret is not installed yet.
+      if (['ENOENT', 'EACCES', 'EISDIR'].includes(error.code)) return undefined;
+      throw error;
+    }) : process.env.FEEDBACK_GITHUB_TOKEN;
   const server = await createRelay({ dataDir: process.env.DATA_DIR || './data', publishKey,
     maxCards: Number(process.env.MAX_CARDS || 500), rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE || 240),
     maxInFlight: Number(process.env.MAX_IN_FLIGHT || 8), maxMediaFiles: Number(process.env.MAX_MEDIA_FILES || MAX_MEDIA_FILES),
