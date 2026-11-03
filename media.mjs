@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 
-export const MAX_MEDIA = 16 * 1024 * 1024;
+export const MAX_MEDIA = 50 * 1024 * 1024 + 28;
 export const MAX_MEDIA_FILES = 10_000;
 export const DEFAULT_MEDIA_QUOTA = 100_000_000_000;
 export const MEDIA_TTL = 35 * 86400000;

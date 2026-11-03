@@ -5,6 +5,7 @@ import { request } from 'node:http';
 import { mkdtemp, rm, readFile, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { MAX_MEDIA } from './media.mjs';
 import { createRelay, validateEnvelope, MAX_BODY, TTL_MS, INVITE_TTL_MS } from './server.mjs';
 
 const publishKey = 'test-only-'.repeat(5);
@@ -236,7 +237,7 @@ test('media remain opaque, owned by an existing mailbox, bounded, persistent and
     assert.equal((await put(mediaRoute, opaque)).status, 204);
     assert.equal((await put(mediaRoute, opaque)).status, 409);
     assert.equal((await put(otherMedia, Buffer.alloc(20))).status, 413);
-    assert.equal((await put(otherMedia, Buffer.alloc(16 * 1024 * 1024 + 1))).status, 413);
+    assert.equal((await put(otherMedia, Buffer.alloc(MAX_MEDIA + 1))).status, 413);
     const response = await fetch(f.base + mediaRoute);
     assert.equal(response.headers.get('content-type'), 'application/octet-stream');
     const downloaded = Buffer.from(await response.arrayBuffer()); assert.deepEqual(downloaded, opaque);
@@ -272,7 +273,7 @@ test('chunked media overflow returns 413, leaves no partial files, then accepts 
       req.on('error', reject);
       req.flushHeaders(); // Force Transfer-Encoding: chunked rather than an inferred Content-Length.
       req.write(Buffer.alloc(8 * 1024 * 1024));
-      req.end(Buffer.alloc(8 * 1024 * 1024 + 100));
+      req.end(Buffer.alloc(MAX_MEDIA - 8 * 1024 * 1024 + 100));
     });
     assert.equal(status, 413);
     assert.deepEqual(await readdir(join(f.dataDir, 'media')), []);
@@ -320,5 +321,36 @@ test('invalid media byte quotas fail before startup', async () => {
     for (const mediaQuotaBytes of [0, -1, 28, 99.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
       await assert.rejects(createRelay({ dataDir: f.dataDir, mediaQuotaBytes }), /MEDIA_QUOTA_BYTES/);
     }
+  } finally { await f.close(); }
+});
+
+
+test('anonymous feedback is private, minimal and idempotent, and refuses public destinations', async () => {
+  let privateRepo = true; const created = [];
+  const f = await fixture({ feedback: { repo: 'owner/private-feedback', token: 'test-token-not-real-'.repeat(2), githubFetch: async (url, options) => {
+    if (url.endsWith('/issues')) { created.push(JSON.parse(options.body)); return { status: 201 }; }
+    return { ok: true, json: async () => ({ private: privateRepo }) };
+  } } });
+  const report = { id: '12345678-1234-1234-1234-123456789012', kind: 'BUG', message: 'The update button remains visible', version: '3.0.4', rating: 4 };
+  const submit = body => fetch(f.base + '/v2/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  try {
+    assert.equal((await submit(report)).status, 201);
+    assert.equal((await submit(report)).status, 201);
+    assert.equal(created.length, 1);
+    assert.equal(created[0].body.includes(report.message), true);
+    assert.equal(created[0].body.includes('test-token'), false);
+    assert.equal((await submit({ ...report, id: '22345678-1234-1234-1234-123456789012', message: 'short' })).status, 400);
+    privateRepo = false;
+    assert.equal((await submit({ ...report, id: '32345678-1234-1234-1234-123456789012' })).status, 503);
+    assert.equal(created.length, 1);
+  } finally { await f.close(); }
+});
+
+test('feedback is disabled without server credentials and relay remains available', async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await fetch(f.base + '/v2/feedback', { method: 'POST' })).status, 503);
+    assert.equal((await fetch(f.base + '/health')).status, 200);
+    assert.equal((await (await fetch(f.base + '/health')).json()).feedback, 0);
   } finally { await f.close(); }
 });

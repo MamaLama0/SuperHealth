@@ -2,4 +2,5 @@
 !Dockerfile
 !server.mjs
 !media.mjs
+!feedback.mjs
 !LICENSE

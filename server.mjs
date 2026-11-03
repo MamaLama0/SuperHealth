@@ -1,4 +1,5 @@
 import { createMediaStore, DEFAULT_MEDIA_QUOTA, MAX_MEDIA_FILES } from './media.mjs';
+import { createFeedbackHandler } from './feedback.mjs';
 import { createServer } from 'node:http';
 import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, unlink, readdir, stat } from 'node:fs/promises';
@@ -37,7 +38,7 @@ export function validateEnvelope(raw, now = Date.now()) {
 
 export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLimitPerMinute = 240,
   maxInFlight = 8, maxMediaFiles = MAX_MEDIA_FILES, mediaQuotaBytes = DEFAULT_MEDIA_QUOTA,
-  now = Date.now, sweepIntervalMs = 3_600_000 } = {}) {
+  now = Date.now, sweepIntervalMs = 3_600_000, feedback: feedbackOptions } = {}) {
   if (publishKey != null && publishKey !== '' && (typeof publishKey !== 'string' || publishKey.length < 32 || publishKey.length > 512 || /[\r\n]/.test(publishKey)))
     throw new Error('PUBLISH_KEY must have 32..512 characters');
   integer(maxCards, 1, 10_000, 'MAX_CARDS');
@@ -47,6 +48,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   integer(mediaQuotaBytes, 29, Number.MAX_SAFE_INTEGER, 'MEDIA_QUOTA_BYTES');
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
   const media = await createMediaStore(dataDir, { now, maxFiles: maxMediaFiles, quota: mediaQuotaBytes });
+  const feedback = createFeedbackHandler({ ...feedbackOptions, now });
   const secret = publishKey ? `Bearer ${publishKey}` : null;
   const index = new Map();
   const rates = new Map();
@@ -108,7 +110,8 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
-    if (req.url === '/health' && req.method === 'GET') return send(res, 200, '{"status":"ok","protocol":2,"media":1}');
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, feedback: feedback.enabled ? 1 : 0 }));
+    if (req.url === '/v2/feedback') return feedback(req, res);
     if (!ROUTE.test(req.url || '')) return send(res, 404);
     if (!['GET', 'PUT', 'POST', 'DELETE'].includes(req.method)) return send(res, 405, '', { Allow: 'GET, PUT, DELETE' });
     if (inFlight >= maxInFlight) { req.resume(); return send(res, 503, '', { 'Retry-After': '2' }); }
@@ -235,7 +238,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   const sweep = setInterval(() => { serialized(async () => { await prune(); await media.prune(); }).catch(() => {}); }, sweepIntervalMs);
   sweep.unref();
   server.on('close', () => clearInterval(sweep));
-  server.requestTimeout = 120_000;
+  server.requestTimeout = 300_000;
   server.headersTimeout = 10_000;
   server.keepAliveTimeout = 5_000;
   server.maxRequestsPerSocket = 100;
@@ -246,10 +249,13 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const publishKey = process.env.PUBLISH_KEY_FILE
     ? (await readFile(process.env.PUBLISH_KEY_FILE, 'utf8')).trim() : process.env.PUBLISH_KEY;
+  const feedbackToken = process.env.FEEDBACK_GITHUB_TOKEN_FILE
+    ? (await readFile(process.env.FEEDBACK_GITHUB_TOKEN_FILE, 'utf8')).trim() : process.env.FEEDBACK_GITHUB_TOKEN;
   const server = await createRelay({ dataDir: process.env.DATA_DIR || './data', publishKey,
     maxCards: Number(process.env.MAX_CARDS || 500), rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE || 240),
     maxInFlight: Number(process.env.MAX_IN_FLIGHT || 8), maxMediaFiles: Number(process.env.MAX_MEDIA_FILES || MAX_MEDIA_FILES),
-    mediaQuotaBytes: Number(process.env.MEDIA_QUOTA_BYTES ?? DEFAULT_MEDIA_QUOTA) });
+    mediaQuotaBytes: Number(process.env.MEDIA_QUOTA_BYTES ?? DEFAULT_MEDIA_QUOTA),
+    feedback: { repo: process.env.FEEDBACK_GITHUB_REPO, token: feedbackToken } });
   server.listen(Number(process.env.PORT || 8787), process.env.HOST || '127.0.0.1', () => console.log('SuperHealth encrypted relay ready'));
   const shutdown = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(1), 10_000).unref(); };
   process.once('SIGTERM', shutdown); process.once('SIGINT', shutdown);
