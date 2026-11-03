@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 import java.time.DayOfWeek
+import app.superhealth.nutrition.domain.GoalType
 
 /** Progression de l'app : la régularité des suivis, distincte de l'indice de santé. */
 object Progression {
@@ -24,9 +25,21 @@ object Progression {
     fun threshold(level: Int): Long { val n = (level - 1).coerceAtLeast(0).toLong(); return n * (100 + 25 * n) }
     fun level(xp: Long): Int { var l = 1; while (l < 10000 && threshold(l + 1) <= xp.coerceAtLeast(0)) l++; return l }
     fun week(day: Long): Long = LocalDate.ofEpochDay(day).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toEpochDay()
-    /** Tolérance de rattrapage seulement pour une journée terminée ; l'objectif affiché reste 100 %. */
-    fun nutritionQualified(kcal: Double, goal: Double, closedDay: Boolean): Boolean = kcal.isFinite() && goal.isFinite() && goal > 0 &&
-        kcal >= goal * (if (closedDay) 0.9 else 1.0) - 1e-7 && kcal <= goal * 1.1 + 1e-7
+    data class NutritionRange(val minPercent: Int, val maxPercent: Int)
+    /** Règle des récompenses : les cibles alimentaires affichées restent inchangées. */
+    fun nutritionRange(type: GoalType = GoalType.MAINTENANCE, manual: Boolean = false): NutritionRange = when {
+        manual -> NutritionRange(80, 115)
+        type == GoalType.CUT -> NutritionRange(75, 110)
+        type == GoalType.BULK -> NutritionRange(85, 125)
+        else -> NutritionRange(80, 115)
+    }
+    fun nutritionQualified(kcal: Double, goal: Double, type: GoalType = GoalType.MAINTENANCE, manual: Boolean = false): Boolean {
+        return nutritionQualified(kcal, goal, nutritionRange(type, manual))
+    }
+    fun nutritionQualified(kcal: Double, goal: Double, range: NutritionRange): Boolean {
+        if (!kcal.isFinite() || !goal.isFinite() || goal <= 0) return false
+        return kcal >= goal * range.minPercent / 100 - 1e-7 && kcal <= goal * range.maxPercent / 100 + 1e-7
+    }
 
     fun streak(track: Track, days: Set<Long>, today: Long, target: Int = if (track.weekly) 2 else 1, since: Long = days.minOrNull() ?: today,
         dailyCounts: Map<Long, Int>? = null, weeklyGoals: Map<Long, Int> = emptyMap()): Streak {

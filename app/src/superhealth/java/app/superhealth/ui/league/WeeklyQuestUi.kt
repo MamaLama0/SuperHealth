@@ -37,7 +37,7 @@ internal fun questGoal(q: WeeklyQuests.Quest): String = trf(when(q.metric) {
     WeeklyQuests.Metric.MIND -> if (q.target == 1) "%1\$s jour avec 10 min de méditation ou mobilité" else "%1\$s jours avec 10 min de méditation ou mobilité"
     WeeklyQuests.Metric.HIKE -> if (q.target == 1) "%1\$s randonnée validée cette semaine" else "%1\$s randonnées validées cette semaine"
     WeeklyQuests.Metric.RUN -> if (q.target == 1) "%1\$s jour avec une sortie course" else "%1\$s jours avec une sortie course"
-    WeeklyQuests.Metric.FOOD -> if (q.target == 1) "%1\$s jour de journal alimentaire" else "%1\$s jours de journal alimentaire"
+    WeeklyQuests.Metric.FOOD -> if (q.target == 1) "%1\$s jour dans votre plage calorique" else "%1\$s jours dans votre plage calorique"
     WeeklyQuests.Metric.ACTIVE -> if (q.target == 1) "%1\$s jour avec un suivi" else "%1\$s jours avec un suivi"
     else -> if (q.target == 1) "%1\$s jour où votre objectif est atteint" else "%1\$s jours où votre objectif est atteint"
 }, q.target)
@@ -125,6 +125,7 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Text(tr(q.metric.title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(questGoal(q), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                        if (q.metric == WeeklyQuests.Metric.FOOD) Text(trackingGoal(Progression.Track.FOOD), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     }
                 }
                 Text("${q.progress} / ${q.target}", style = MaterialTheme.typography.headlineSmall,

@@ -26,7 +26,7 @@ object WeeklyQuests {
         STRENGTH("Votre rendez-vous musculation", "activities", Progression.Track.STRENGTH),
         STRENGTH_REVIEW("Mieux comprendre votre progression", "activities", Progression.Track.STRENGTH),
         RUN("Enchaîner les sorties course", "activities", Progression.Track.RUN),
-        FOOD("Garder le fil du journal", "log", Progression.Track.FOOD),
+        FOOD("Garder le cap alimentaire", "log", Progression.Track.FOOD),
         STEPS("Bouger à votre rythme", "h/metric/STEPS", Progression.Track.STEPS),
         SLEEP("Faire une place au repos", "h/metric/SLEEP", Progression.Track.SLEEP),
         MIND("Méditation et mobilité", "activities", Progression.Track.MIND),

@@ -32,7 +32,7 @@ internal object RegionalMaps { val revision = MutableStateFlow(0) }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun RegionalMapsPicker() {
+internal fun RegionalMapsPicker(compact: Boolean = false) {
     val ctx = LocalContext.current
     var message by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf(false) }
@@ -45,7 +45,8 @@ internal fun RegionalMapsPicker() {
             message = tr("Cartes régionales prêtes hors ligne")
         }.onFailure { message = it.message }
     }
-    TextButton(onClick={open=true},contentPadding=PaddingValues(0.dp)) {
+    if(compact) IconButton(onClick={open=true}) { Icon(Icons.Rounded.Map,tr("Cartes hors ligne"),tint=Mf.colors.accent) }
+    else TextButton(onClick={open=true},contentPadding=PaddingValues(0.dp)) {
         Icon(Icons.Rounded.Map,null);Spacer(Modifier.width(8.dp));Text(tr("Cartes hors ligne"))
     }
     if(open) ModalBottomSheet(onDismissRequest={open=false},containerColor=Mf.colors.background) {
@@ -61,8 +62,32 @@ internal fun RegionalMapsPicker() {
     }
 }
 
+private class RegionalMapHolder(val view:MapView,val manager:MapsManager,val dot:Circle,val covered:Boolean) {
+    private var planned:List<HikePoint>?=null
+    private var recorded:List<HikePoint>?=null
+    private val lines=mutableListOf<Polyline>()
+
+    fun update(planned:List<HikePoint>,recorded:List<HikePoint>) {
+        if(this.planned===planned && this.recorded===recorded) return
+        this.planned=planned;this.recorded=recorded
+        lines.forEach { view.layerManager.layers.remove(it) };lines.clear()
+        view.layerManager.layers.remove(dot)
+        fun add(points:List<HikePoint>,color:Int,width:Float) {
+            points.groupBy { it.segment }.values.filter { it.size>1 }.forEach { segment ->
+                val paint=AndroidGraphicFactory.INSTANCE.createPaint().apply { setColor(color);setStrokeWidth(width);setStyle(Style.STROKE) }
+                val line=Polyline(paint,AndroidGraphicFactory.INSTANCE).apply { setPoints(segment.map { LatLong(it.lat,it.lon) }) }
+                lines.add(line);view.layerManager.layers.add(line)
+            }
+        }
+        add(planned,android.graphics.Color.rgb(40,140,105),8f)
+        add(recorded,android.graphics.Color.rgb(68,143,232),6f)
+        view.layerManager.layers.add(dot)
+        view.layerManager.redrawLayers()
+    }
+}
+
 @Composable
-internal fun RegionalHikeMap(route:HikeRoute,modifier:Modifier,position:HikePoint?,onUnavailable:()->Unit) {
+internal fun RegionalHikeMap(route:HikeRoute,modifier:Modifier,position:HikePoint?,recorded:List<HikePoint>,onUnavailable:()->Unit) {
     val ctx=LocalContext.current
     val holder=remember(route.id,Mf.colors.dark,RegionalMaps.revision.collectAsState().value) {
         AndroidGraphicFactory.createInstance(ctx.applicationContext as android.app.Application)
@@ -73,23 +98,20 @@ internal fun RegionalHikeMap(route:HikeRoute,modifier:Modifier,position:HikePoin
         val center=route.points[route.points.size/2]
         val covered=manager.isMapLoaded && bounds!=null && bounds.contains(center.lat,center.lon)
         if(covered) {
-            route.points.groupBy { it.segment }.values.forEach { segment ->
-                val paint=AndroidGraphicFactory.INSTANCE.createPaint().apply { setColor(android.graphics.Color.rgb(40,140,105));setStrokeWidth(8f);setStyle(Style.STROKE) }
-                view.layerManager.layers.add(Polyline(paint,AndroidGraphicFactory.INSTANCE).apply { setPoints(segment.map { LatLong(it.lat,it.lon) }) })
-            }
             view.post { manager.setBoundingBox(BoundingBox(route.points.minOf{it.lat}-.001,route.points.minOf{it.lon}-.001,
                 route.points.maxOf{it.lat}+.001,route.points.maxOf{it.lon}+.001)) }
         }
         val paint=AndroidGraphicFactory.INSTANCE.createPaint().apply { setColor(android.graphics.Color.rgb(50,140,235));setStyle(Style.FILL) }
         val dot=Circle(LatLong(center.lat,center.lon),8f,paint,null).apply { setVisible(false) }
         view.layerManager.layers.add(dot)
-        Triple(view,manager,dot) to covered
+        RegionalMapHolder(view,manager,dot,covered)
     }
-    DisposableEffect(holder) { onDispose { holder.first.second.onDestroy();holder.first.first.destroyAll() } }
-    if(!holder.second) { LaunchedEffect(holder){onUnavailable()};return }
-    AndroidView(factory={holder.first.first},modifier=modifier,update={
-        holder.first.third.setVisible(position!=null)
-        position?.let { p -> holder.first.third.setLatLong(LatLong(p.lat,p.lon)) }
-        holder.first.third.requestRedraw()
+    DisposableEffect(holder) { onDispose { holder.manager.onDestroy();holder.view.destroyAll() } }
+    if(!holder.covered) { LaunchedEffect(holder){onUnavailable()};return }
+    AndroidView(factory={holder.view},modifier=modifier,update={
+        holder.update(route.points,recorded)
+        holder.dot.setVisible(position!=null)
+        position?.let { p -> holder.dot.setLatLong(LatLong(p.lat,p.lon)) }
+        holder.dot.requestRedraw()
     })
 }

@@ -61,6 +61,9 @@ object Archive {
                 zip.closeEntry()
                 // Journaux des plugins, classement et photo de profil
                 PLUGIN_FILES.forEach { name -> File(ctx.filesDir, name).takeIf { it.isFile }?.let { f -> zip.putNextEntry(ZipEntry(name.replace('/', '_'))); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry() } }
+                app.superhealth.hiking.HikePhotos.backupFiles(ctx).forEach { photo ->
+                    zip.putNextEntry(ZipEntry("hiking_photo_${photo.name}"));photo.inputStream().use{it.copyTo(zip)};zip.closeEntry()
+                }
                 if (watch.length() > 0) { zip.putNextEntry(ZipEntry("montre.zip")); watch.inputStream().use { it.copyTo(zip) }; zip.closeEntry() }
             }
             watch.delete()
@@ -86,7 +89,12 @@ object Archive {
                     ZipInputStream(plain.inputStream()).use { zip ->
                         generateSequence { zip.nextEntry }.forEach { e ->
                             val plugin = PLUGIN_FILES.firstOrNull { it.replace('/', '_') == e.name }
-                            if (e.name == "montre.zip") watch.outputStream().use { zip.copyTo(it) }
+                            if (e.name.matches(Regex("hiking_photo_[a-f0-9]{64}\\.jpg"))) {
+                                val out=ByteArrayOutputStream();val buffer=ByteArray(8192)
+                                while(true){val n=zip.read(buffer);if(n<0)break;require(out.size()+n<=app.superhealth.hiking.HikePhotos.MAX_BYTES);out.write(buffer,0,n)}
+                                File(ctx.filesDir,"hiking/photos/"+e.name.removePrefix("hiking_photo_")).apply{parentFile?.mkdirs();writeBytes(out.toByteArray())}
+                            }
+                            else if (e.name == "montre.zip") watch.outputStream().use { zip.copyTo(it) }
                             else if (plugin != null) File(ctx.filesDir, plugin).apply { parentFile?.mkdirs() }.outputStream().use { zip.copyTo(it) }
                             else put(e.name, zip.readBytes().decodeToString())
                         }

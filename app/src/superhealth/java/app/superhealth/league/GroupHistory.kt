@@ -26,7 +26,10 @@ object GroupHistory {
     @Serializable data class Reply(val author: String, val post: String, val text: String, val created: Long,
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val to: ReplyRef? = null)
     @Serializable data class Profile(val title: String? = null, val badges: List<String> = emptyList(), val avatar: SocialPosts.Media? = null)
-    @Serializable data class Forward(val post: String, val key: String, val signed: String)
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @Serializable data class Forward(val post: String, val key: String, val signed: String,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val ownerRoot: String? = null,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val ownerEndorsement: String? = null)
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @Serializable data class Event(val id: String, val key: String, val name: String, val revision: Long,
         val post: SocialPosts.Post? = null, val reply: Reply? = null, val deleted: Boolean = false, val profile: Profile? = null, val reaction: SocialReactions.Reaction? = null,
@@ -77,7 +80,11 @@ object GroupHistory {
         require(inner.forward == null && inner.key == forward.key && valid(inner, now))
         require(inner.reply != null || inner.deleted)
         require(wrapper.id == forwardId(inner.key, inner.id))
-        if (inner.reply != null) require(inner.reply.author == author(wrapper.key) && inner.reply.post == forward.post)
+        // Existing accounts retain the id of their original key after a recoverable key migration.
+        // A root key is accepted only when it cryptographically endorses the wrapper's signing key.
+        require(GroupIdentity.validEndorsement(forward.ownerRoot, wrapper.key, forward.ownerEndorsement))
+        val owner = forward.ownerRoot ?: wrapper.key
+        if (inner.reply != null) require(inner.reply.author == author(owner) && inner.reply.post == forward.post)
         inner
     }.getOrNull()
     internal fun conversation(events: List<Event>, target: String, post: String, ownerKey: String, trusted: Set<String>): List<Event> {
@@ -216,6 +223,7 @@ object GroupHistory {
         }
         for (post in League.state.value.posts) if (state.value.events.none { it.key == League.publicKey() && it.id == post.id }) record(ctx, post)
         val ownKey = League.publicKey()
+        val identity = GroupIdentity.current()
         val ownPosts = (state.value.events.filter { it.key == ownKey && it.post != null && !it.deleted }.map { it.id } + current.posts.map { it.id }).toSet()
         for ((proofId, signed) in state.value.proofs) {
             val key = proofId.substringBefore(':'); val id = proofId.substringAfter(':')
@@ -226,10 +234,10 @@ object GroupHistory {
             val old = state.value.events.firstOrNull { it.key == ownKey && it.id == wrapperId }
             val post = inner.reply?.takeIf { it.author == League.myId() }?.post ?: old?.forward?.post ?: continue
             if (post !in ownPosts || (inner.reply == null && !inner.deleted)) continue
-            val forward = Forward(post,key,signed)
+            val forward = Forward(post,key,signed,identity.previous,identity.endorsement)
             if (old?.forward == forward) continue
             val event = ownEvent(wrapperId).copy(forward = forward)
-            require(valid(event))
+            if (!valid(event)) continue
             update(ctx) { it.copy(events = merge(it.events,event),pending = it.pending + wrapperId) }
         }
         for (id in state.value.pending.toList()) {

@@ -96,6 +96,7 @@ object Modules {
     private const val MAX_UNZIPPED = 48L * 1024 * 1024
 
     private lateinit var root: File
+    private var bundledCatalog = emptyList<Entry>()
     private val _installed = MutableStateFlow<List<Installed>>(emptyList())
     val installed: StateFlow<List<Installed>> = _installed
 
@@ -123,11 +124,25 @@ object Modules {
         } }.getOrDefault(Index()).modules.filter { it.kind in engines }.map {
             Entry(it, OFFICIAL, true, URI(OFFICIAL).resolve(it.url).toString())
         }
-        catalog.value = (catalog.value + bundled).distinctBy { it.module.id }
+        bundledCatalog = bundled
+        catalog.value = preferred(catalog.value + bundled)
         // module dont le moteur a quitté l'app (l'Aventure, retirée en 1.3) : effacé
         val (kept, gone) = saved.partition { it.kind in engines }
         gone.forEach { File(root, it.id).deleteRecursively() }
         if (gone.isEmpty()) _installed.value = kept else save(kept)
+    }
+
+    /** Prefer verified content, then the newest version, including the APK's offline catalogue. */
+    private fun preferred(entries: List<Entry>) = entries.groupBy { it.module.id }.values.map { versions ->
+        versions.reduce { a,b -> if ((b.verified && !a.verified) || (a.verified == b.verified && newer(b.module.version,a.module.version))) b else a }
+    }
+
+    /** Content shipped with an app update also updates an already installed official hiking pack offline. */
+    suspend fun upgradeBundled(ctx: Context) {
+        bundledCatalog.filter { it.module.kind == HIKING && compatible(ctx,it.module) }.forEach { entry ->
+            val old = _installed.value.firstOrNull { it.id == entry.module.id && it.source == OFFICIAL } ?: return@forEach
+            if (newer(entry.module.version,old.version)) install(ctx,entry)
+        }
     }
 
     private fun save(list: List<Installed>) {
@@ -172,7 +187,7 @@ object Modules {
             }.onFailure { errors[src] = it.message ?: "?"; out += previous.filter { it.source == src } }
         }
         // un module vérifié l'emporte sur une copie du même id venue d'une source non vérifiée
-        catalog.value = (out + previous.filter { it.module.kind == HIKING && it.verified && it.source == OFFICIAL }).groupBy { it.module.id }.map { (_, l) -> l.firstOrNull { it.verified } ?: l.first() }
+        catalog.value = preferred(out + bundledCatalog + previous.filter { it.module.kind == HIKING && it.verified && it.source == OFFICIAL })
         File(root, "catalog.json").writeText(json.encodeToString(ListSerializer(Entry.serializer()), catalog.value))
         sourceErrors.value = errors
         if (errors.size < sources().size) lastRefresh.value = System.currentTimeMillis()

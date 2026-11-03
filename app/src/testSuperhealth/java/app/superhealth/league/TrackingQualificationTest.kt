@@ -7,15 +7,33 @@ import java.time.LocalDate
 class TrackingQualificationTest {
     private val monday = LocalDate.parse("2026-11-02").toEpochDay()
 
-    @Test fun nutritionHasInclusiveBoundsAndOnlyRecoversAnUnderTargetDayAfterItEnds() {
-        assertFalse(Progression.nutritionQualified(1799.9, 2000.0, true))
-        assertTrue(Progression.nutritionQualified(1800.0, 2000.0, true))
-        assertFalse(Progression.nutritionQualified(1800.0, 2000.0, false))
-        assertTrue(Progression.nutritionQualified(2000.0, 2000.0, false))
-        assertTrue(Progression.nutritionQualified(2200.0, 2000.0, true))
-        assertFalse(Progression.nutritionQualified(2200.1, 2000.0, true))
-        assertFalse(Progression.nutritionQualified(0.0, 0.0, true))
-        assertFalse(Progression.nutritionQualified(Double.NaN, 2000.0, true))
+    @Test fun calorieRangesFollowTheGoalAndKeepInclusiveBounds() {
+        val loss=app.superhealth.nutrition.domain.GoalType.CUT
+        val gain=app.superhealth.nutrition.domain.GoalType.BULK
+        val maintenance=app.superhealth.nutrition.domain.GoalType.MAINTENANCE
+        assertTrue(Progression.nutritionQualified(1500.0,2000.0,loss))
+        assertTrue(Progression.nutritionQualified(2200.0,2000.0,loss))
+        assertFalse(Progression.nutritionQualified(1499.9,2000.0,loss))
+        assertFalse(Progression.nutritionQualified(2200.1,2000.0,loss))
+        assertTrue(Progression.nutritionQualified(1700.0,2000.0,gain))
+        assertTrue(Progression.nutritionQualified(2500.0,2000.0,gain))
+        assertFalse(Progression.nutritionQualified(1699.9,2000.0,gain))
+        assertFalse(Progression.nutritionQualified(2500.1,2000.0,gain))
+        assertTrue(Progression.nutritionQualified(1600.0,2000.0,maintenance))
+        assertTrue(Progression.nutritionQualified(2300.0,2000.0,maintenance))
+        assertFalse(Progression.nutritionQualified(1599.9,2000.0,maintenance))
+        assertFalse(Progression.nutritionQualified(2300.1,2000.0,maintenance))
+    }
+
+    @Test fun manualTargetsUseNeutralBoundsAndInvalidValuesNeverQualify() {
+        val loss=app.superhealth.nutrition.domain.GoalType.CUT
+        assertFalse(Progression.nutritionQualified(1500.0,2000.0,loss,manual=true))
+        assertTrue(Progression.nutritionQualified(1600.0,2000.0,loss,manual=true))
+        assertTrue(Progression.nutritionQualified(2300.0,2000.0,loss,manual=true))
+        assertFalse(Progression.nutritionQualified(2300.1,2000.0,loss,manual=true))
+        assertFalse(Progression.nutritionQualified(0.0,0.0))
+        assertFalse(Progression.nutritionQualified(Double.NaN,2000.0))
+        assertFalse(Progression.nutritionQualified(2000.0,Double.POSITIVE_INFINITY))
     }
 
     @Test fun threeOfFourSessionsNeverCompletesTheOpenWeekButKeepsTheStreakNextMonday() {

@@ -47,6 +47,7 @@ import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import app.superhealth.plusActions
 import app.superhealth.has
+import app.superhealth.ui.activities.sections
 import app.superhealth.PlusAction
 import androidx.compose.material.icons.rounded.LocalDrink
 import androidx.compose.material.icons.rounded.Tune
@@ -148,11 +149,11 @@ fun settingsIsTab(s: app.superhealth.SuperSettings) = s.plusSide == "CENTER" && 
 
 private fun isTabRoute(route: String?) = tabs.any { it.route == route } || (route == "settings" && settingsIsTab(app.superhealth.SuperPrefs.settings.value))
 
-/** Onglets des parties activées : Journal avec la nutrition, Activités avec la musculation ou les activités. */
+/** L'onglet Activités suit les sections réellement sélectionnées et disponibles. */
 private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
     when (it.route) {
         "log" -> s.has(app.superhealth.Feature.NUTRITION)
-        "activities" -> s.has(app.superhealth.Feature.TRAINING) || s.has(app.superhealth.Feature.HEALTH) || s.activitySections.isNotEmpty()
+        "activities" -> s.sections().isNotEmpty()
         else -> true
     }
 }
@@ -388,7 +389,8 @@ val LocalTabBarInset = androidx.compose.runtime.compositionLocalOf { 0.dp }
 @Composable
 private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
-    val shown = visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it }
+    val installed = app.superhealth.modules.Modules.installed.collectAsState().value
+    val shown = remember(sh, installed) { visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it } }
     val dark = Mf.colors.dark
     val shape = RoundedCornerShape(26.dp)
     val pill = Modifier.height(68.dp)

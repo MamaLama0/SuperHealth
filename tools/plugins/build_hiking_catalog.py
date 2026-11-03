@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a small real OSM route pack. No raster tile scraping. Retain source responses."""
+"""Refresh the OSM layer while retaining enriched routes and saved source responses."""
 import json, math, time, urllib.request, urllib.parse, sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[3]
@@ -60,6 +60,11 @@ for idx,(region,lat,lon,radius) in enumerate(areas):
    routes.append(route);print(region,t['name'],round(km,1),len(points),len(features),flush=True)
  except Exception as e:print('Unavailable',region,str(e),flush=True)
 OUT.mkdir(parents=True,exist_ok=True)
-(OUT/'hiking.json').write_text(json.dumps({'routes':routes},ensure_ascii=False,separators=(',',':'))+'\n')
-(OUT/'credits.txt').write_text('Cartographie et itinéraires : © les contributeurs OpenStreetMap, ODbL 1.0.\nhttps://www.openstreetmap.org/copyright\nExtraction : 2026-11-03. Données non vérifiées sur le terrain.\nVisuel décoratif : asset Visorando fourni par le titulaire des droits.\n')
+target=OUT/'hiking.json'
+previous=json.loads(target.read_text()).get('routes',[]) if target.exists() else []
+fresh={r['id']:r for r in routes}
+routes=[fresh.pop(r['id'],r) for r in previous]+list(fresh.values())
+target.write_text(json.dumps({'routes':routes},ensure_ascii=False,separators=(',',':'))+'\n')
+if not (OUT/'credits.txt').exists():
+ (OUT/'credits.txt').write_text('Cartographie et itinéraires : © les contributeurs OpenStreetMap, ODbL 1.0.\nhttps://www.openstreetmap.org/copyright\nRessources graphiques fournies sous autorisation du titulaire des droits.\n')
 print('Built',len(routes),'routes',flush=True)

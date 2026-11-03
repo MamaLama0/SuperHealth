@@ -50,6 +50,14 @@ object ProgressRepository {
     private var lastKey = 0
     private var lastAt = 0L
     val current = MutableStateFlow<Progression.Result?>(null)
+    val foodRange = MutableStateFlow(Progression.nutritionRange())
+    private fun foodRangeAt(nutrition: app.superhealth.nutrition.data.Analytics, day: Long): Progression.NutritionRange {
+        val checkIn = nutrition.checkInFor(day) ?: nutrition.checkIns.firstOrNull()
+        val type = nutrition.goalAt(day)?.type ?: checkIn?.goalType ?: nutrition.program.goalType
+        val manual = nutrition.program.style == app.superhealth.nutrition.domain.ProgramStyle.MANUAL || checkIn?.manual == true
+        val overridden = app.superhealth.nutrition.domain.ManualTargets.overrideAt(nutrition.program, day) != null
+        return Progression.nutritionRange(type, manual || overridden)
+    }
     suspend fun compute(ctx: Context, today: LocalDate = LocalDate.now()): Progression.Result = lock.withLock { withContext(Dispatchers.IO) {
         val day = today.toEpochDay(); val from = day - 89; val zone = ZoneId.systemDefault()
         val events = mutableMapOf<Long, MutableSet<Progression.Track>>()
@@ -67,12 +75,13 @@ object ProgressRepository {
         val inputKey = listOf(day, calories.hashCode(), flags.hashCode(), repo.prefs.program.value.hashCode(), repo.prefs.checkIns.value.hashCode(),
             repo.prefs.profile.value.hashCode(), repo.prefs.settings.value.hashCode(), repo.prefs.goals.value.hashCode(), training.programs.hashCode(), training.settings.activeProgramId,
             app.superhealth.health.data.HealthRepository.revision, WorkoutApp.store.state.value.history.hashCode(),
-            SuperPrefs.hc.value.hashCode(), app.superhealth.hiking.Hiking.library.value.completed.hashCode(), HikingProgress.outings.value.hashCode(), sh.features.hashCode(), app.superhealth.modules.Modules.installed.value.hashCode(), Meditation.log.value.hashCode(), Stretch.log.value.hashCode(),
+            SuperPrefs.hc.value.hashCode(), app.superhealth.hiking.Hiking.library.value.completed.hashCode(), HikingProgress.outings.value.hashCode(), sh.features.hashCode(), sh.activityAsked, sh.activitySections.hashCode(), app.superhealth.modules.Modules.installed.value.hashCode(), Meditation.log.value.hashCode(), Stretch.log.value.hashCode(),
             League.state.value.questXp, League.state.value.questFocus.hashCode(), League.state.value.tracked.hashCode(), League.state.value.weeklyTargets.hashCode()).hashCode()
         current.value?.takeIf { inputKey == lastKey && System.currentTimeMillis() - lastAt < 300000 }?.let { return@withContext it }
         val nutrition = repo.analytics().first()
+        foodRange.value = foodRangeAt(nutrition, day)
         calories.filter { it.epochDay !in partial && it.epochDay <= day }.forEach { entry ->
-            if (Progression.nutritionQualified(entry.kcal, nutrition.targetFor(entry.epochDay).macros.kcal, entry.epochDay < day)) add(entry.epochDay, Progression.Track.FOOD)
+            if (Progression.nutritionQualified(entry.kcal, nutrition.targetFor(entry.epochDay).macros.kcal, foodRangeAt(nutrition, entry.epochDay))) add(entry.epochDay, Progression.Track.FOOD)
         }
         val todayCalories = calories.firstOrNull { it.epochDay == day }?.kcal ?: 0.0
         val todayTarget = nutrition.targetFor(day).macros.kcal
@@ -138,7 +147,7 @@ object ProgressRepository {
                 WeeklyQuests.Metric.ACTIVE -> events.count { (d, ts) -> d in first..last && ts.any { it in tracks } }
                 WeeklyQuests.Metric.STRENGTH -> sessions.filterKeys { it in first..last }.values.sum()
                 WeeklyQuests.Metric.STRENGTH_REVIEW -> history.count { w -> Analytics.day(w.startTime).toEpochDay() in first..last && w.rpe != null && w.exercises.any { Analytics.workingSets(it).isNotEmpty() } }
-                WeeklyQuests.Metric.FOOD -> calories.count { it.epochDay in first..last && it.kcal > 0 && it.epochDay !in partial }
+                WeeklyQuests.Metric.FOOD -> events.count { (d, ts) -> d in first..last && Progression.Track.FOOD in ts }
                 WeeklyQuests.Metric.HIKE -> hiking.count { HikingProgress.day(it,zone) in first..last }
                 WeeklyQuests.Metric.MIND -> mindfulMinutes.count { (d, m) -> d in first..last && m >= 10 }
                 else -> events.count { (d, ts) -> d in first..last && metric.track in ts }

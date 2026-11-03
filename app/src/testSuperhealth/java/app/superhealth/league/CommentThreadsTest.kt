@@ -38,6 +38,24 @@ class CommentThreadsTest {
         assertNull(GroupHistory.forwarded(wrapper.copy(id="d".repeat(32)),now))
         assertNull(GroupHistory.forwarded(wrapper.copy(key=key(another)),now))
     }
+    @Test fun migratedOwnersKeepCommentsAddressedToTheirOriginalIdentity() {
+        val successor=pair()
+        val inner=comment(stranger,'b') // The post still belongs to the original owner's stable id.
+        val wrapper=wrap(inner,wrapperOwner=successor)
+        assertNull(GroupHistory.forwarded(wrapper,now))
+        val proof=Signature.getInstance("SHA256withECDSA").run {
+            initSign(owner.private)
+            update(("SuperHealth identity successor v1:"+key(successor)).toByteArray())
+            b64.encodeToString(sign())
+        }
+        val migrated=wrapper.copy(forward=wrapper.forward!!.copy(ownerRoot=key(owner),ownerEndorsement=proof))
+        assertEquals(inner,GroupHistory.forwarded(migrated,now))
+        assertTrue(GroupHistory.valid(migrated,now))
+        assertEquals(listOf(inner),GroupHistory.conversation(listOf(migrated),GroupHistory.author(key(owner)),post,key(successor),setOf(key(successor))))
+        assertNull(GroupHistory.forwarded(migrated.copy(forward=migrated.forward!!.copy(ownerRoot=key(another))),now))
+        assertNull(GroupHistory.forwarded(migrated.copy(forward=migrated.forward!!.copy(ownerEndorsement=null)),now))
+        assertNull(GroupHistory.forwarded(migrated.copy(key=key(another)),now))
+    }
     @Test fun signedDeletionsReplaceRelayedCommentsAndVersionsDeduplicate() {
         val inner=comment(stranger,'b');val deleted=inner.copy(reply=null,deleted=true,revision=now+1)
         val target=GroupHistory.author(key(owner))

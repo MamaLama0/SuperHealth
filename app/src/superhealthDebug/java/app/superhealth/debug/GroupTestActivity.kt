@@ -25,6 +25,7 @@ class GroupTestActivity : Activity() {
             try {
                 val db = WorkoutApp.db.first { it != null }!!
                 when (operation) {
+                    "activities-none" -> SuperPrefs.update { it.copy(activityAsked=true,activitySections=emptyList()) }
                     "hc-permissions" -> {
                         val permissions = setOf(
                             androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.ExerciseSessionRecord::class),
@@ -130,7 +131,18 @@ class GroupTestActivity : Activity() {
                         check(notification.contentIntent.creatorPackage == packageName)
                         nodomain.freeyourgadget.gadgetbridge.util.GB.notify(9051, notification, this@GroupTestActivity)
                     }
-                    "seed" -> {
+                    "seed", "migrated-seed" -> {
+                        if(operation=="migrated-seed") {
+                            val generator=java.security.KeyPairGenerator.getInstance("EC").apply{initialize(java.security.spec.ECGenParameterSpec("secp256r1"))}
+                            val legacy=generator.generateKeyPair();val successor=generator.generateKeyPair()
+                            val b64=java.util.Base64.getUrlEncoder().withoutPadding()
+                            val public=b64.encodeToString(successor.public.encoded)
+                            val proof=java.security.Signature.getInstance("SHA256withECDSA").run{initSign(legacy.private);update(("SuperHealth identity successor v1:"+public).toByteArray());b64.encodeToString(sign())}
+                            GroupIdentity.restore(GroupIdentity.Identity(b64.encodeToString(successor.private.encoded),public,b64.encodeToString(legacy.public.encoded),proof))
+                            GroupHistory.reset(this@GroupTestActivity)
+                            League.configure(this@GroupTestActivity){League.State()}
+                            listOf("league_mailbox_v2","league_read_capability_v2","league_aes_read_key","league_owner_token_v2","league_published_hash_v2","league_published_at_v2","profile_avatar_media","profile_avatar_source","profile_avatar_at").forEach{app.superhealth.backup.Secrets.put(this@GroupTestActivity,it,null)}
+                        }
                         val name = intent.getStringExtra("name")?.take(24) ?: "Test Groupe"
                         nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().preferences.edit()
                             .putString(nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_NAME, name).commit()
@@ -251,6 +263,7 @@ class GroupTestActivity : Activity() {
                     put("forwarded", GroupHistory.state.value.events.count { it.forward != null })
                     put("unread", SocialInbox.items.value.count { !it.read })
                     put("tracking", app.superhealth.hiking.Hiking.tracking.value)
+                    put("identityMigrated",GroupIdentity.current().previous!=null)
                 }.toString())
             } catch (e: Exception) {
                 File(directory, "result.json").writeText(buildJsonObject { put("ok", false); put("operation", operation);

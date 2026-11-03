@@ -42,4 +42,23 @@ class HikingTest {
         Hiking.tracking.value=false
         assertEquals(60,Hiking.elapsed(s,15000))
     }
+    @Test fun gpsSamplesDoNotRoundAwayTimeAndCheckpointsPreserveTheActiveInterval() {
+        val route=HikeRoute("one","Route",description="Long notes",points=listOf(HikePoint(48.0,2.0),HikePoint(48.01,2.0)),directions=listOf("Step"))
+        val start=Hiking.Session(route=route,started=1000,resumed=1000)
+        Hiking.tracking.value=true
+        try {
+            val sampled=start.copy(points=listOf(HikePoint(48.0,2.0)))
+            assertEquals(30,Hiking.elapsed(sampled,31900))
+            val saved=Hiking.checkpoint(sampled,31900)
+            assertEquals(30,saved.seconds)
+            assertEquals(sampled.points,saved.points)
+            assertTrue(saved.route!!.directions.isEmpty())
+            assertTrue(saved.route!!.description.isEmpty())
+            assertEquals(30,Hiking.elapsed(saved.copy(paused=true),60000))
+            Hiking.tracking.value=false
+            assertEquals(30,Hiking.elapsed(saved,60000))
+            Hiking.tracking.value=true
+            assertEquals(40,Hiking.elapsed(saved.copy(resumed=60000),70000))
+        } finally { Hiking.tracking.value=false }
+    }
 }

@@ -68,7 +68,8 @@ class HikeTrackingService : Service(), LocationListener {
             val seconds = ((point.time ?: 0)-(previous.time ?: 0))/1000.0
             if (d < 3 || (seconds > 0 && d/seconds > 15)) return
         }
-        Hiking.setSession(this,s.copy(points = s.points+point, seconds = Hiking.elapsed(s), resumed = System.currentTimeMillis()))
+        // Keep the clock's origin: rounding an interval at every GPS point would lose active time.
+        Hiking.setSession(this,s.copy(points = s.points+point),sampled=true)
     }
     override fun onProviderDisabled(provider: String) { Hiking.gpsError.value = tr("Signal GPS indisponible. Le suivi reprendra dès son retour.") }
     override fun onProviderEnabled(provider: String) { Hiking.gpsError.value = tr("Recherche du signal GPS…") }

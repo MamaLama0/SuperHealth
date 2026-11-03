@@ -25,7 +25,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
@@ -50,8 +54,10 @@ private fun duration(minutes: Int) = if (minutes < 60) "$minutes min" else "${mi
 @Composable
 fun HikingSection(nav: NavHostController) {
     val ctx=LocalContext.current;val scope=rememberCoroutineScope()
+    val keyboard=LocalSoftwareKeyboardController.current;val focus=LocalFocusManager.current
     val library by Hiking.library.collectAsState();val session by Hiking.session.collectAsState()
     val modules by Modules.installed.collectAsState()
+    val catalogRevision by Hiking.catalogRevision.collectAsState()
     var tab by rememberSaveable { mutableStateOf("Explorer") }
     var query by rememberSaveable { mutableStateOf(Hiking.searchPlace.value) }
     var short by rememberSaveable { mutableStateOf(false) }
@@ -60,6 +66,7 @@ fun HikingSection(nav: NavHostController) {
     var busy by remember { mutableStateOf(false) };var error by remember { mutableStateOf<String?>(null) }
     fun search() {
         if(query.trim().length<2 || busy) return
+        keyboard?.hide();focus.clearFocus()
         scope.launch {
             busy=true;error=null
             try { Hiking.searchResults.value=Hiking.search(query);Hiking.searchPlace.value=query.trim() }
@@ -68,7 +75,7 @@ fun HikingSection(nav: NavHostController) {
             finally{busy=false}
         }
     }
-    val routes=remember(library,modules,result,tab,short,loop) {
+    val routes=remember(library,modules,catalogRevision,result,tab,short,loop) {
         val all=if(tab=="Explorer") result ?: Hiking.catalog().map { Hiking.route(it.id) ?: it } else Hiking.routes()
         all.filter { (tab!="Favoris" || it.id in library.favorites) && (tab!="Mes parcours" || library.routes.any { r -> r.id==it.id }) &&
             (!short || HikeGeometry.length(it.points)<10000) && (!loop || it.loop) }
@@ -80,14 +87,14 @@ fun HikingSection(nav: NavHostController) {
         catch(e:Exception){error=tr(e.message ?: "Import impossible. Réessayez.")}
         finally{busy=false}
     } }
-    Column(verticalArrangement=Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
         val hero by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null,modules) {
             value=withContext(Dispatchers.IO) { Modules.file(Modules.HIKING,"landscape.jpg")?.let { android.graphics.BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
         }
-        Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(26.dp)).background(HikingHue)) {
+        Box(Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(26.dp)).background(HikingHue)) {
             hero?.let { Image(it,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop,alignment=Alignment.TopCenter) }
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xDD102D22)))))
-            Column(Modifier.align(Alignment.BottomStart).padding(20.dp)) {
+            Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
                 Row(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Landscape,null,Modifier.size(18.dp),tint=Color.White)
                     Text(tr("LE DEHORS VOUS ATTEND"),style=MaterialTheme.typography.labelSmall,color=Color.White)
@@ -107,31 +114,32 @@ fun HikingSection(nav: NavHostController) {
             listOf("Explorer","Favoris","Mes parcours").forEach { label -> FilterChip(selected=tab==label,onClick={tab=label},label={Text(tr(label))}) }
         }
         if(tab=="Explorer") {
-            OutlinedTextField(query,{query=it.take(160)},Modifier.fillMaxWidth(),label={Text(tr("Ville, région ou lieu dans le monde"))},singleLine=true,
+            OutlinedTextField(query,{query=it.take(160)},Modifier.fillMaxWidth(),label={Text(tr("Ville, région ou lieu"))},singleLine=true,
                 leadingIcon={Icon(Icons.Rounded.TravelExplore,null)},shape=RoundedCornerShape(18.dp),
                 trailingIcon={ IconButton(onClick=::search,enabled=query.trim().length>=2 && !busy) { Icon(Icons.Rounded.Search,tr("Rechercher en ligne")) } },
                 keyboardOptions=androidx.compose.foundation.text.KeyboardOptions(imeAction=androidx.compose.ui.text.input.ImeAction.Search),
                 keyboardActions=androidx.compose.foundation.text.KeyboardActions(onSearch={search()}))
             if(result!=null) Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text(trf("Autour de %1\$s",Hiking.searchPlace.value),Modifier.weight(1f),style=MaterialTheme.typography.labelLarge,color=Mf.colors.textSecondary)
+                Text(trf("Résultats pour %1\$s",Hiking.searchPlace.value),Modifier.weight(1f),style=MaterialTheme.typography.labelLarge,color=Mf.colors.textSecondary)
                 TextButton(onClick={Hiking.searchResults.value=null;Hiking.searchPlace.value="";error=null}){Text(tr("Revenir à la sélection"))}
             }
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
             FilterChip(selected=short,onClick={short=!short},label={Text(tr("Moins de 10 km"))})
             FilterChip(selected=loop,onClick={loop=!loop},label={Text(tr("Boucle"))})
+            Spacer(Modifier.weight(1f));RegionalMapsPicker(compact=true)
         }
         Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            PillButton(tr("Importer un parcours"),Modifier.weight(1f),strong=false,icon=Icons.Rounded.FileOpen) { importer.launch(arrayOf("application/gpx+xml","application/xml","text/xml","application/octet-stream")) }
+            PillButton(tr("Importer"),Modifier.weight(1f),strong=false,icon=Icons.Rounded.FileOpen) { importer.launch(arrayOf("application/gpx+xml","application/xml","text/xml","application/octet-stream")) }
             PillButton(tr("Sortie libre"),Modifier.weight(1f),strong=false,icon=Icons.Rounded.MyLocation) { nav.go("hiking/live") }
         }
-        RegionalMapsPicker()
         if(busy) LinearProgressIndicator(Modifier.fillMaxWidth(),color=HikingHue)
         error?.let{Text(it,color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall)}
         Text(tr(if(tab=="Explorer" && result==null) "Une sélection pour s’évader" else tab)+" · ${routes.size}",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
         if(routes.isEmpty()) MfCard {
             Text(tr(if(result!=null) "Aucun parcours continu disponible ici. Essayez un lieu voisin." else "Vos chemins vous attendent"),style=MaterialTheme.typography.titleMedium)
             Text(tr("Enregistrez un itinéraire, ajoutez un favori ou importez une trace GPX : un fichier qui contient le chemin à suivre."),color=Mf.colors.textSecondary,style=MaterialTheme.typography.bodySmall)
+            if(result!=null) TextButton(onClick={Hiking.searchResults.value=null;Hiking.searchPlace.value="";error=null}){Text(tr("Afficher les parcours hors ligne"))}
         }
         routes.forEachIndexed { index,route ->
             if(index==2) HikingSocial(nav)
@@ -170,7 +178,7 @@ fun HikingSection(nav: NavHostController) {
 @Composable
 private fun RouteCard(route:HikeRoute,favorite:Boolean,offline:Boolean,stored:Boolean,onFavorite:()->Unit,onClick:()->Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Mf.colors.card).clickable(onClick=onClick)) {
-        Box { HikeMap(route,Modifier.fillMaxWidth().height(150.dp))
+        Box { RoutePhoto(route,Modifier.fillMaxWidth().height(150.dp))
             FilledIconButton(onClick=onFavorite,modifier=Modifier.align(Alignment.TopEnd).padding(8.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=Mf.colors.card)) {
                 Icon(if(favorite)Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,tr("Favoris"),tint=if(favorite)HikingHue else Mf.colors.text)
             }
@@ -179,8 +187,44 @@ private fun RouteCard(route:HikeRoute,favorite:Boolean,offline:Boolean,stored:Bo
             Text(route.region,style=MaterialTheme.typography.labelSmall,color=Mf.colors.textSecondary)
             Text(route.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
             Text("${km(HikeGeometry.length(route.points))}  ·  ${duration(HikeGeometry.estimatedMinutes(route))} ${tr("estimées")}"+(if(route.loop) "  ·  ${tr("Boucle")}" else ""),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
+            DifficultyLabel(route)
             Text(tr(if(!stored) "À enregistrer pour le hors ligne" else if(offline) "Parcours et carte hors ligne" else "Tracé disponible hors ligne"),style=MaterialTheme.typography.labelSmall,color=HikingHue)
         }
+    }
+}
+
+@Composable
+private fun RoutePhoto(route:HikeRoute,modifier:Modifier) {
+    val ctx=LocalContext.current
+    val photo by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null,route.id,route.imageUrl) {
+        value=withContext(Dispatchers.IO) {
+            try { HikePhotos.load(ctx,route)?.let { file ->
+                val bounds=android.graphics.BitmapFactory.Options().apply{inJustDecodeBounds=true}
+                android.graphics.BitmapFactory.decodeFile(file.path,bounds)
+                val options=android.graphics.BitmapFactory.Options().apply{inSampleSize=(maxOf(bounds.outWidth,bounds.outHeight)/1200).coerceAtLeast(1)}
+                android.graphics.BitmapFactory.decodeFile(file.path,options)?.asImageBitmap()
+            } } catch(e:kotlinx.coroutines.CancellationException){throw e} catch(_:Exception){null}
+        }
+    }
+    if(photo!=null) Image(photo!!,null,modifier.clip(RoundedCornerShape(24.dp)),contentScale=ContentScale.Crop)
+    else HikeMap(route,modifier)
+}
+
+@Composable
+private fun DifficultyLabel(route:HikeRoute) {
+    if(route.difficulty.isBlank())return
+    val (label,icon)=when(route.difficulty.lowercase(Locale.ROOT)) {
+        "very_easy","très facile" -> "Très facile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_easy
+        "easy","facile" -> "Facile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_easy
+        "moderate","moyenne","moyen" -> "Modérée" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_moderate
+        "difficult","hard","difficile" -> "Difficile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_hard
+        "strenuous","very_difficult","très difficile" -> "Très difficile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_strenuous
+        else -> route.difficulty to 0
+    }
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        if(icon!=0) Icon(painterResource(icon),null,Modifier.size(20.dp),tint=Color.Unspecified)
+        else Icon(Icons.Rounded.Info,null,Modifier.size(20.dp),tint=Mf.colors.textSecondary)
+        Text(tr(label),style=MaterialTheme.typography.labelMedium,color=Mf.colors.textSecondary)
     }
 }
 
@@ -189,9 +233,18 @@ private fun RouteCard(route:HikeRoute,favorite:Boolean,offline:Boolean,stored:Bo
 fun HikeDetailScreen(nav:NavHostController,id:String) {
     val ctx=LocalContext.current;val scope=rememberCoroutineScope();val library by Hiking.library.collectAsState()
     val modules by Modules.installed.collectAsState();val session by Hiking.session.collectAsState()
-    val route=remember(id,library,modules){Hiking.route(id)}
+    val catalogRevision by Hiking.catalogRevision.collectAsState()
+    val route=remember(id,library,modules,catalogRevision){Hiking.route(id)}
     var busy by remember{mutableStateOf(false)};var error by remember{mutableStateOf<String?>(null)}
     var remove by remember{mutableStateOf(false)}
+    var descriptionOpen by remember(id){mutableStateOf(false)}
+    var directionsOpen by remember(id){mutableStateOf(false)}
+    LaunchedEffect(id) {
+        if(route!=null && route.provider.isNotBlank() && route.directions.isEmpty()) {
+            busy=true
+            try{Hiking.enrich(ctx,route)}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error=tr("Les détails complémentaires sont indisponibles. Le tracé reste utilisable.")}finally{busy=false}
+        }
+    }
     val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")){uri -> if(uri!=null && route!=null) scope.launch{
         try{withContext(Dispatchers.IO){ctx.contentResolver.openOutputStream(uri)?.use{it.write(HikeGeometry.exportGpx(route).toByteArray())} ?: error("Fichier indisponible")}}
         catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error=tr("Export impossible. Réessayez.")}
@@ -199,21 +252,48 @@ fun HikeDetailScreen(nav:NavHostController,id:String) {
     DetailScaffold(route?.name ?: tr("Randonnée"),onBack={nav.popBackStack()}) {
         if(route==null){Text(tr("Parcours indisponible"));return@DetailScaffold}
         Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            HikeMap(route,Modifier.fillMaxWidth().height(330.dp),interactive=true)
+            if(route.imageUrl.isNotBlank()) RoutePhoto(route,Modifier.fillMaxWidth().height(190.dp))
             Text(route.region,style=MaterialTheme.typography.labelLarge,color=HikingHue)
+            DifficultyLabel(route)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                 Metric(tr("Distance"),km(HikeGeometry.length(route.points)))
                 Metric(tr("Durée estimée"),duration(HikeGeometry.estimatedMinutes(route)))
                 Metric(tr("Dénivelé +"),(route.ascent ?: HikeGeometry.ascent(route.points))?.let{"${it.toInt()} m"} ?: "—")
             }
             Text(tr(if(route.loop) "Boucle" else "Parcours linéaire"),color=Mf.colors.textSecondary)
-            if(route.ascent==null && HikeGeometry.ascent(route.points)==null) Text(tr("Durée indicative calculée sur la distance seule : l’altitude n’est pas fournie."),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
-            if(route.description.isNotBlank()) Text(route.description,style=MaterialTheme.typography.bodyMedium)
+            if(route.durationMinutes==null && route.ascent==null && HikeGeometry.ascent(route.points)==null) Text(tr("Durée indicative calculée sur la distance seule : l’altitude n’est pas fournie."),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
+            PillButton(tr(if(session!=null) "Retrouver ma randonnée" else "Suivre ce parcours"),Modifier.fillMaxWidth(),icon=Icons.Rounded.Explore) {
+                if(session==null) Hiking.setSession(ctx,Hiking.Session(route=route,started=System.currentTimeMillis()))
+                nav.go("hiking/live")
+            }
+            HikeMap(route,Modifier.fillMaxWidth().height(330.dp),interactive=true)
             Text(tr("Profil d’altitude"),style=MaterialTheme.typography.titleMedium)
             ElevationProfile(route)
+            if(route.description.isNotBlank()) MfCard {
+                Text(tr("À découvrir sur ce parcours"),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+                Text(route.description,style=MaterialTheme.typography.bodyMedium,maxLines=if(descriptionOpen)Int.MAX_VALUE else 6,overflow=TextOverflow.Ellipsis)
+                TextButton(onClick={descriptionOpen=!descriptionOpen}){Text(tr(if(descriptionOpen)"Réduire" else "Lire la suite"))}
+            }
+            if(route.directions.isNotEmpty()) MfCard {
+                Text(tr("Repères du parcours"),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+                route.directions.take(if(directionsOpen)route.directions.size else 3).forEachIndexed { index,text ->
+                    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text("${index+1}",style=MaterialTheme.typography.labelLarge,color=HikingHue)
+                        Text(text,style=MaterialTheme.typography.bodyMedium,modifier=Modifier.weight(1f))
+                    }
+                }
+                if(route.directions.size>3) TextButton(onClick={directionsOpen=!directionsOpen}){Text(tr(if(directionsOpen)"Réduire" else "Voir tous les repères"))}
+            }
+            if(route.surfaces.isNotEmpty()) MfCard {
+                Text(tr("Terrain"),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+                route.surfaces.entries.sortedByDescending{it.value}.take(5).forEach { (kind,part) ->
+                    val name=when(kind){"nature"->"Sol naturel";"asphalt"->"Asphalte";"gravel"->"Gravier";"paved"->"Revêtu";"alpine"->"Terrain alpin";else->"Autres terrains"}
+                    Text("${tr(name)} · ${(part*100).toInt()} %",style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
+                }
+            }
             MfCard {
                 Text(tr(if(route.features.isNotEmpty()) "Prêt hors ligne" else "Gardez aussi la carte"),fontWeight=FontWeight.Bold)
-                Text(tr(if(route.features.isNotEmpty()) "Le parcours et une carte simplifiée des sentiers, routes, forêts et eaux sont sur ce téléphone." else "Le tracé est sur ce téléphone. Téléchargez le fond de carte simplifié avant de partir."),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
+                Text(tr(if(route.features.isNotEmpty()) "Le parcours et une carte simplifiée des sentiers, routes, forêts et eaux sont sur ce téléphone." else "Le tracé est sur ce téléphone. Vous pouvez aussi enregistrer son fond simplifié ; vos cartes régionales restent disponibles."),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
                 TextButton(enabled=!busy,onClick={scope.launch{
                     busy=true;error=null
                     try{Hiking.downloadMap(ctx,route)}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(e:Exception){error=tr(e.message ?: "Téléchargement impossible. Réessayez.")}finally{busy=false}
@@ -232,12 +312,11 @@ fun HikeDetailScreen(nav:NavHostController,id:String) {
                 }
             }
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick={Hiking.favorite(ctx,id)},Modifier.weight(1f)){Icon(if(id in library.favorites)Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,null);Text(tr("Favoris"))}
+                OutlinedButton(onClick={scope.launch{try{withContext(Dispatchers.IO){Hiking.favorite(ctx,id)}}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error=tr("Enregistrement impossible. Réessayez.")}}},Modifier.weight(1f)){Icon(if(id in library.favorites)Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,null);Text(tr("Favoris"))}
                 OutlinedButton(onClick={export.launch("${route.name.replace(Regex("[^\\p{L}\\p{N} _-]"),"_").take(80)}.gpx")},Modifier.weight(1f)){Icon(Icons.Rounded.FileUpload,null);Text(tr("Exporter GPX"))}
             }
             if(library.routes.any{it.id==id}) TextButton(onClick={remove=true},enabled=session?.route?.id!=id){Text(tr("Supprimer de mes parcours"),color=MaterialTheme.colorScheme.error)}
-            Text(tr("Données OpenStreetMap · ODbL. Vérifiez les conditions locales et le balisage ; la durée est une estimation, la difficulté n’est pas évaluée."),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
-            if(route.source.isNotBlank()) TextButton(onClick={runCatching{ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(route.source)))}}){Text(tr("Voir la source du parcours"))}
+            Text(tr("Vérifiez les conditions locales et le balisage. La durée est indicative ; adaptez votre sortie au terrain et à votre expérience."),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
         }
     }
     if(remove) AlertDialog(onDismissRequest={remove=false},title={Text(tr("Supprimer ce parcours ?"))},

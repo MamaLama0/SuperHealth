@@ -6,6 +6,10 @@ import app.superhealth.nutrition.NutriApp
 import app.superhealth.training.WorkoutApp
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * SuperHealth : le moteur Gadgetbridge (module LocalHealth) démarre en premier, puis les modules nutrition (La Bouffe)
@@ -47,6 +51,7 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.league.LeagueWorker.schedule(this)
         app.superhealth.backup.BackupWorker.schedule(this)
         app.superhealth.update.UpdateWorker.schedule(this)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { app.superhealth.modules.Modules.upgradeBundled(this@SuperHealthApp) }
         // icône du lanceur : l'icône pixel-art de l'Aventure (1.2) avait pu désactiver l'alias de base
         runCatching {
             val launcher = android.content.ComponentName(this, "app.superhealth.Launcher")

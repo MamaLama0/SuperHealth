@@ -103,9 +103,12 @@ object Relay {
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { errors += "Invitations indisponibles. Réessayez plus tard." }
         myEndpoint(ctx)?.let { endpoint ->
-            try { publishCard(ctx, endpoint); GroupHistory.publish(ctx, endpoint) }
+            try { publishCard(ctx, endpoint) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { errors += "Publication impossible. Vérifiez la connexion ou les réglages du serveur." }
+            try { GroupHistory.publish(ctx, endpoint) }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { errors += "Des commentaires ou publications attendent encore leur envoi. Réessayez." }
         }
         try { GroupRecovery.upload(ctx) }
         catch (e: CancellationException) { throw e }
@@ -140,11 +143,14 @@ object Relay {
                 }
             } }.awaitAll()
         }
-        try { GroupHistory.refresh(ctx); myEndpoint(ctx)?.let { GroupHistory.publish(ctx, it) } }
+        try { GroupHistory.refresh(ctx) }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { errors += "Historique du Groupe indisponible. Réessayez." }
+        try { myEndpoint(ctx)?.let { GroupHistory.publish(ctx,it) } }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { errors += "Des commentaires ou publications attendent encore leur envoi. Réessayez." }
         League.configure(ctx) { it.copy(lastSync = System.currentTimeMillis(), lastSuccessfulSync = if (errors.isEmpty()) System.currentTimeMillis() else it.lastSuccessfulSync,
-            syncError = errors.take(3).joinToString(" · ").ifBlank { null }) }
+            syncError = errors.distinct().take(3).joinToString(" · ").ifBlank { null }) }
     } }
     @Serializable private data class Rotation(val old: String, val owner: String, val publishKey: String,
         val mailbox: String, val read: String, val aes: String, val writer: String, val backup: String, val excluded: Set<String>,

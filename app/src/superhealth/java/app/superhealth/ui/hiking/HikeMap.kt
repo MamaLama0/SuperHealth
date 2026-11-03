@@ -35,18 +35,18 @@ internal fun HikeMap(route: HikeRoute, modifier: Modifier = Modifier, interactiv
         nodomain.freeyourgadget.gadgetbridge.util.maps.MapsManager.PREF_MAPS_FOLDER, "")
     if (interactive && folder.isNotEmpty() && !unavailable) {
         Box(modifier.clip(RoundedCornerShape(24.dp))) {
-            RegionalHikeMap(route,Modifier.fillMaxSize(),position) { unavailable = true }
-            Text("© OpenStreetMap · Mapsforge",Modifier.align(Alignment.BottomStart).background(Mf.colors.card).padding(6.dp),style=MaterialTheme.typography.labelSmall)
+            RegionalHikeMap(route,Modifier.fillMaxSize(),position,recorded) { unavailable = true }
+            Text("© OpenStreetMap",Modifier.align(Alignment.BottomStart).background(Mf.colors.card).padding(6.dp),style=MaterialTheme.typography.labelSmall)
         }
         return
     }
     val dark = Mf.colors.dark
-    val ground = if (dark) Color(0xFF192824) else Color(0xFFEFF2E7)
+    val ground = if (dark) Color(0xFF192824) else Color(0xFFE8E8E8)
     val forest = if (dark) Color(0xFF284139) else Color(0xFFD6E5CE)
-    val water = if (dark) Color(0xFF294D59) else Color(0xFFB9DCE5)
-    val pathColor = if (dark) Color(0xFF78958A) else Color(0xFFA5B4A0)
+    val water = if (dark) Color(0xFF294D59) else Color(0xFFBCE0F0)
+    val pathColor = if (dark) Color(0xFF91A69B) else Color(0xFF696969)
     val roadColor = if (dark) Color(0xFF718079) else Color.White
-    val lineColor = if (dark) Color(0xFF83D7AE) else Color(0xFF24775C)
+    val lineColor = if (dark) Color(0xFF83D7AE) else Color(0xFF37A480)
     val fit = remember(route.id, route.points.size) {
         val lat = (route.points.minOf { it.lat }+route.points.maxOf { it.lat })/2
         val lon = (route.points.minOf { it.lon }+route.points.maxOf { it.lon })/2
@@ -67,17 +67,18 @@ internal fun HikeMap(route: HikeRoute, modifier: Modifier = Modifier, interactiv
                 pan = (pan-relative)*actual+relative+move; zoom=next
             }
         } else Modifier)) {
-            fun drawPoints(points: List<HikePoint>, color: Color, stroke: Float, fill: Boolean = false) {
+            fun drawPoints(points: List<HikePoint>, color: Color, stroke: Float, fill: Boolean = false, dashed:Boolean=false) {
                 if (points.size < 2) return
                 val path=Path()
                 points.forEachIndexed { i,p -> val pos=screen(p)
                     if (i==0 || points[i-1].segment != p.segment) path.moveTo(pos.x,pos.y) else path.lineTo(pos.x,pos.y) }
-                if (fill) { path.close(); drawPath(path,color) } else drawPath(path,color,style=Stroke(stroke,cap=StrokeCap.Round,join=StrokeJoin.Round))
+                if (fill) { path.close(); drawPath(path,color) } else drawPath(path,color,style=Stroke(stroke,cap=StrokeCap.Round,join=StrokeJoin.Round,
+                    pathEffect=if(dashed)PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(),3.dp.toPx())) else null))
             }
             route.features.filter { it.kind in setOf("forest","water") }.forEach { f ->
                 drawPoints(f.points,if (f.kind=="forest") forest else water,3.dp.toPx(),f.points.firstOrNull()==f.points.lastOrNull())
             }
-            route.features.filter { it.kind in setOf("path","road") }.forEach { f -> drawPoints(f.points,if(f.kind=="road") roadColor else pathColor,if(f.kind=="road") 3.dp.toPx() else 1.2.dp.toPx()) }
+            route.features.filter { it.kind in setOf("path","road") }.forEach { f -> drawPoints(f.points,if(f.kind=="road") roadColor else pathColor,if(f.kind=="road") 3.dp.toPx() else 1.2.dp.toPx(),dashed=f.kind=="path") }
             drawPoints(route.points,Color.White.copy(alpha=.85f),7.dp.toPx())
             drawPoints(route.points,lineColor,4.dp.toPx())
             if(recorded.size>1) drawPoints(recorded,Color(0xFF448FE8),3.dp.toPx())

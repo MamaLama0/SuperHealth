@@ -12,7 +12,10 @@ import kotlinx.serialization.Serializable
 @Serializable data class MapFeature(val kind: String, val points: List<HikePoint>)
 @Serializable data class HikeRoute(val id: String, val name: String, val region: String = "", val description: String = "",
     val source: String = "", val points: List<HikePoint>, val features: List<MapFeature> = emptyList(),
-    val ascent: Double? = null, val loop: Boolean = false)
+    val ascent: Double? = null, val loop: Boolean = false,
+    val provider: String = "", val imageUrl: String = "", val imageCredit: String = "", val difficulty: String = "",
+    val durationMinutes: Int? = null, val distanceMeters: Double? = null, val descent: Double? = null,
+    val directions: List<String> = emptyList(), val surfaces: Map<String, Double> = emptyMap(), val providerQuery: String = "")
 
 object HikeGeometry {
     fun valid(p: HikePoint) = p.lat.isFinite() && p.lon.isFinite() && p.lat in -85.0..85.0 && p.lon in -180.0..180.0 &&
@@ -49,7 +52,7 @@ object HikeGeometry {
         }
         return if (best == Double.MAX_VALUE) null else Position(best, progress, (travelled-progress).coerceAtLeast(0.0))
     }
-    fun estimatedMinutes(route: HikeRoute) = (length(route.points)/4000*60 + (route.ascent ?: ascent(route.points) ?: 0.0)/600*60).roundToInt().coerceAtLeast(1)
+    fun estimatedMinutes(route: HikeRoute) = route.durationMinutes ?: (length(route.points)/4000*60 + (route.ascent ?: ascent(route.points) ?: 0.0)/600*60).roundToInt().coerceAtLeast(1)
     data class Gpx(val name: String, val points: List<HikePoint>)
     fun parseGpx(text: String): Gpx {
         require(text.length <= 8 * 1024 * 1024) { "Fichier trop volumineux" }
