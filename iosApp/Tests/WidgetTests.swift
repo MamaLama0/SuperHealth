@@ -31,8 +31,7 @@ final class WidgetTests: XCTestCase {
         for c in Snapshot.socialPreview {
             for (family, size) in sizes {
                 for dark in [false, true] {
-                    let view = SocialWidgetView(entry: Entry(date: Date(), snap: .preview), id: c.id)
-                        .environment(\.widgetFamily, family)
+                    let view = SocialWidgetView(entry: Entry(date: Date(), snap: .preview), id: c.id, previewFamily: family)
                         .preferredColorScheme(dark ? .dark : .light)
                         .padding(16)
                         .frame(width: size.width, height: size.height)

@@ -81,6 +81,19 @@ targets:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: ActivityKit.framework
+  WidgetTestHost:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.2"
+    sources:
+      - path: WidgetTestHost
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.superhealth.widget-test-host
+        PRODUCT_NAME: WidgetTestHost
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1"
   SuperHealthWidgetTests:
     type: bundle.unit-test
     platform: iOS
@@ -94,11 +107,11 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.superhealth.widget-tests
         GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SuperHealth.app/SuperHealth"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/WidgetTestHost.app/WidgetTestHost"
         BUNDLE_LOADER: "$(TEST_HOST)"
         TARGETED_DEVICE_FAMILY: "1"
     dependencies:
-      - target: SuperHealth
+      - target: WidgetTestHost
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: ActivityKit.framework
@@ -111,6 +124,14 @@ schemes:
       config: Debug
     archive:
       config: Release
+    test:
+      config: Debug
+      targets: [SuperHealthWidgetTests]
+      gatherCoverageData: false
+  WidgetRenderTests:
+    build:
+      targets:
+        WidgetTestHost: all
     test:
       config: Debug
       targets: [SuperHealthWidgetTests]
