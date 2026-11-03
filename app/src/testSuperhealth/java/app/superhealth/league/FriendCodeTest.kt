@@ -24,6 +24,8 @@ class FriendCodeTest {
         assertTrue(runCatching { RelayCrypto.decrypt(encrypted, FriendCode.key("ABCD-EFGH-2346"), FriendCode.path(code)) }.isFailure)
     }
     @Test fun wholeSharedMessageCanBePastedInEitherLanguage() {
+        assertEquals("ABCDEFGH2345", FriendCode.fromText("ABCD-EFGH-2345"))
+        assertEquals("ABCDEFGH2345", FriendCode.fromText("abcdefgh2345"))
         assertEquals("ABCDEFGH2345", FriendCode.fromText("Ajoute-moi sur SuperHealth : ABCD-EFGH-2345\nSocial → Ajouter un ami · valable 24 h"))
         assertEquals("ABCDEFGH2345", FriendCode.fromText("Add me on SuperHealth: abcd-efgh-2345\nSocial → Add a friend · valid for 24 hours"))
         assertEquals("ABCDEFGH2345", FriendCode.fromText("ABCD EFGH 2345"))
