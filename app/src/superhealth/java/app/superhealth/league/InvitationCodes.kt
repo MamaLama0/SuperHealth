@@ -123,12 +123,12 @@ object InvitationCodes {
             http.newCall(Request.Builder().url(base + responsePath).header("X-Write-Token", owner).delete().build()).execute().use { }
         }
     }
-    suspend fun receive(ctx: Context, text: String): Boolean {
+    suspend fun receive(ctx: Context, text: String, serverOverride: String? = null): Boolean {
         val link = Regex("superhealth://league\\?[^\\s]+", RegexOption.IGNORE_CASE).find(text.take(131072))?.value
         val uri = runCatching { android.net.Uri.parse(link ?: text.trim()) }.getOrNull()
         if (uri?.scheme == "superhealth" && uri.host == "league" && uri.getQueryParameter("code") != null)
             return lookup(ctx, uri.getQueryParameter("code").orEmpty(), uri.getQueryParameter("server"))
-        if (FriendCode.normalize(text) != null) return lookup(ctx, text)
+        FriendCode.fromText(text)?.let { return lookup(ctx, it, serverOverride ?: FriendCode.serverFromText(text)) }
         return League.receive(ctx, text)
     }
 }

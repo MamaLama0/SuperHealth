@@ -1,6 +1,8 @@
 package app.superhealth.ui.settings
 
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.heightIn
@@ -144,6 +146,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     var nameTick by remember { mutableIntStateOf(0) }
     val name = remember(nameTick) { app.superhealth.ui.userName() }
     val photoCtx = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     var photoMenu by remember { mutableStateOf(false) }
     val pickPhoto = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) app.superhealth.ui.ProfilePhoto.set(photoCtx, uri)
@@ -312,6 +315,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
                 RowDivider(56.dp)
                 SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV"), icon = Icons.Rounded.Info, hue = app.superhealth.ui.theme.Base.Grey) { nav.go("settings/sources") }
+                RowDivider(56.dp)
+                SettingRow(tr("Code source"), subtitle = tr("Consulter le projet sur GitHub"), icon = Icons.Rounded.Code, hue = app.superhealth.ui.theme.Base.Grey) {
+                    uriHandler.openUri("https://github.com/MamaLama0/SuperHealth/tree/superhealth")
+                }
             }
             Spacer(Modifier.height(24.dp))
         }

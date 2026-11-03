@@ -2,6 +2,11 @@ package app.superhealth.ui
 /** Libellés ajoutés en 2.6 : français → anglais. */
 object Strings26 {
     val map: Map<String, String> = hashMapOf(
+        "Ajoute-moi sur SuperHealth : %1\$s" to "Add me on SuperHealth: %1\$s",
+        "Social → Ajouter un ami · valable 24 h" to "Social → Add a friend · valid for 24 hours",
+        "Serveur : %1\$s" to "Server: %1\$s",
+        "Code source" to "Source code",
+        "Consulter le projet sur GitHub" to "View the project on GitHub",
         "Notifications" to "Notifications",
         "Heure de la pesée et du check-in" to "Weigh-in and check-in time",
         "Les bandeaux apparaissent à partir de cette heure" to "Banners appear from this time onwards",

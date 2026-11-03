@@ -28,6 +28,7 @@ import app.superhealth.nutrition.ui.components.*
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
+import app.superhealth.ui.trf
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.CancellationException
@@ -54,8 +55,7 @@ fun AddFriendScreen(nav: NavHostController) {
         scope.launch {
             busy = true; message = null
             try {
-                val ok = if (!fromScanner && FriendCode.normalize(raw) != null) InvitationCodes.lookup(ctx, raw, server.takeIf { custom })
-                    else InvitationCodes.receive(ctx, raw)
+                val ok = InvitationCodes.receive(ctx, raw, server.takeIf { custom && !fromScanner })
                 if (!ok) message = tr("Invitation non valable.")
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { message = tr(e.message?.takeIf { !it.contains("://") && !it.contains(".") } ?: "Code indisponible. Vérifiez le code et le serveur, puis réessayez.") }
@@ -99,7 +99,9 @@ fun AddFriendScreen(nav: NavHostController) {
                     }) { Text(tr("Copier")) }
                     TextButton(onClick = { showQr = true }) { Text(tr("QR code")) }
                     TextButton(onClick = {
-                        val shareText = tr("On progresse ensemble sur SuperHealth ? 💪") + "\n\n" + tr("Ajoute-moi avec ce code : ") + invitation.text + "\n" + tr("Dans Social → Ajouter un ami. Valable 24 h.") + "\n\n" + invitation.link + "\n" + "https://github.com/Ouinon0/SuperHealth/releases/latest"
+                        val shareText = trf("Ajoute-moi sur SuperHealth : %1\$s", invitation.text) + "\n" +
+                            tr("Social → Ajouter un ami · valable 24 h") +
+                            if (invitation.base != Relay.defaultBase()) "\n" + trf("Serveur : %1\$s", invitation.base) else ""
                         ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shareText), tr("Partager mon invitation")))
                     }) { Text(tr("Partager")) }
                 }
@@ -107,12 +109,12 @@ fun AddFriendScreen(nav: NavHostController) {
             } ?: PillButton(tr("Révéler mon code"), Modifier.fillMaxWidth().padding(top = 12.dp), enabled = !busy) { publish() }
         }
         MfCard {
-            TextInput(tr("Code de votre ami"), code, { code = it.uppercase(java.util.Locale.ROOT).take(32) }, placeholder = "ABCD-EFGH-2345")
-            PillButton(tr("Rechercher mon ami"), Modifier.fillMaxWidth().padding(top = 10.dp), enabled = !busy && FriendCode.normalize(code) != null && (!custom || Relay.validBase(server))) { receive(code) }
+            TextInput(tr("Code de votre ami"), code, { code = it.take(4096) }, placeholder = "ABCD-EFGH-2345")
+            PillButton(tr("Rechercher mon ami"), Modifier.fillMaxWidth().padding(top = 10.dp), enabled = !busy && FriendCode.fromText(code) != null && (!custom || Relay.validBase(server))) { receive(code) }
             TextButton(enabled = !busy, onClick = {
                 val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
-                if (text.isBlank()) message = tr("Aucune invitation dans le presse-papiers.") else { code = text; receive(text) }
+                if (text.isBlank()) message = tr("Aucune invitation dans le presse-papiers.") else { code = text.take(4096); receive(text) }
             }) { Text(tr("Coller une invitation")) }
         }
         Spacer(Modifier.height(14.dp))
