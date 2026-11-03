@@ -240,10 +240,26 @@ object League {
             avatar = if (includeAvatar && detailed && !hello && !invite && state.value.shareProfilePhoto) state.value.profileAvatar else null,
             reactions = if (detailed && !hello && !invite) SocialReactions.visible(state.value.reactions) else emptyList(),
             profileBadges = if (!hello && !invite) state.value.profileBadges.filter { it in state.value.earnedBadges }.take(3) else emptyList())
-        val body = json.encodeToString(Card.serializer(), c).toByteArray()
+        val body = json.encodeToString(Card.serializer(), boundedCard(c)).toByteArray()
         val key = keyStore().getKey(ALIAS, null) as java.security.PrivateKey
         val sig = Signature.getInstance("SHA256withECDSA").run { initSign(key); update(body); sign() }
         return "$PREFIX.${b64(body)}.${b64(sig)}"
+    }
+
+    /** Préserve une carte lisible même avec des publications longues et beaucoup de réactions/records. */
+    internal fun boundedCard(original: Card): Card {
+        // Réserve pour le préfixe, les séparateurs et une signature ECDSA après encodage base64url.
+        val budget = (MAX_CARD - 256) * 3 / 4
+        var card = original
+        while (json.encodeToString(Card.serializer(), card).toByteArray().size > budget) {
+            card = when {
+                card.metrics.isNotEmpty() -> card.copy(metrics = card.metrics.dropLast(maxOf(1, card.metrics.size / 4)))
+                card.posts.size > 1 -> card.copy(posts = card.posts.dropLast(1))
+                card.reactions.isNotEmpty() -> card.copy(reactions = card.reactions.dropLast(maxOf(1, card.reactions.size / 4)))
+                else -> error("Carte de partage trop volumineuse")
+            }
+        }
+        return card
     }
 
     /** Preuve éphémère : une carte interceptée ne suffit pas à obtenir les détails d'un ami. */
