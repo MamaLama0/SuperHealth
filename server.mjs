@@ -36,14 +36,15 @@ export function validateEnvelope(raw, now = Date.now()) {
 }
 
 export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLimitPerMinute = 240,
-  maxInFlight = 8, now = Date.now, sweepIntervalMs = 3_600_000 } = {}) {
+  maxInFlight = 8, maxMediaFiles = 2000, now = Date.now, sweepIntervalMs = 3_600_000 } = {}) {
   if (publishKey != null && publishKey !== '' && (typeof publishKey !== 'string' || publishKey.length < 32 || publishKey.length > 512 || /[\r\n]/.test(publishKey)))
     throw new Error('PUBLISH_KEY must have 32..512 characters');
   integer(maxCards, 1, 10_000, 'MAX_CARDS');
   integer(rateLimitPerMinute, 1, 10_000, 'RATE_LIMIT_PER_MINUTE');
   integer(maxInFlight, 1, 64, 'MAX_IN_FLIGHT');
+  integer(maxMediaFiles, 1, 10_000, 'MAX_MEDIA_FILES');
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
-  const media = await createMediaStore(dataDir, { now });
+  const media = await createMediaStore(dataDir, { now, maxFiles: maxMediaFiles });
   const secret = publishKey ? `Bearer ${publishKey}` : null;
   const index = new Map();
   const rates = new Map();
@@ -245,7 +246,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     ? (await readFile(process.env.PUBLISH_KEY_FILE, 'utf8')).trim() : process.env.PUBLISH_KEY;
   const server = await createRelay({ dataDir: process.env.DATA_DIR || './data', publishKey,
     maxCards: Number(process.env.MAX_CARDS || 500), rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE || 240),
-    maxInFlight: Number(process.env.MAX_IN_FLIGHT || 8) });
+    maxInFlight: Number(process.env.MAX_IN_FLIGHT || 8), maxMediaFiles: Number(process.env.MAX_MEDIA_FILES || 2000) });
   server.listen(Number(process.env.PORT || 8787), process.env.HOST || '127.0.0.1', () => console.log('SuperHealth encrypted relay ready'));
   const shutdown = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(1), 10_000).unref(); };
   process.once('SIGTERM', shutdown); process.once('SIGINT', shutdown);

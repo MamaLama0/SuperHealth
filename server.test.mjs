@@ -277,3 +277,17 @@ test('chunked media overflow returns 413, leaves no partial files, then accepts 
     assert.equal((await fetch(f.base + path, { method: 'PUT', body: Buffer.alloc(50), headers: headers() })).status, 204);
   } finally { await f.close(); }
 });
+
+test('attachment count is bounded independently of bytes and deletion frees the quota', async () => {
+  const f = await fixture({ maxMediaFiles: 1 });
+  const first = route + '/media/' + '4'.repeat(64);
+  const second = route + '/media/' + '5'.repeat(64);
+  const put = path => fetch(f.base + path, { method: 'PUT', body: Buffer.alloc(40), headers: headers() });
+  try {
+    await fetch(f.base + route, { method: 'PUT', body: encrypt(f.now), headers: headers() });
+    assert.equal((await put(first)).status, 204);
+    assert.equal((await put(second)).status, 507);
+    await fetch(f.base + first, { method: 'DELETE', headers: headers() });
+    assert.equal((await put(second)).status, 204);
+  } finally { await f.close(); }
+});
