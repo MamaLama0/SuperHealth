@@ -5,10 +5,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 
 export const MAX_MEDIA = 16 * 1024 * 1024;
-export const MAX_MEDIA_FILES = 2000;
+export const MAX_MEDIA_FILES = 10_000;
+export const DEFAULT_MEDIA_QUOTA = 100_000_000_000;
 export const MEDIA_TTL = 35 * 86400000;
 /** Opaque, capability-addressed attachments. One upload at a time, streamed to disk. */
-export async function createMediaStore(dataDir, { now = Date.now, quota = 512 * 1024 * 1024, maxFiles = MAX_MEDIA_FILES } = {}) {
+export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAULT_MEDIA_QUOTA, maxFiles = MAX_MEDIA_FILES } = {}) {
   const dir = join(dataDir, 'media'); await mkdir(dir, { recursive: true, mode: 0o700 });
   const entries = new Map(); let used = 0; let uploading = false;
   const file = id => join(dir, id + '.bin');

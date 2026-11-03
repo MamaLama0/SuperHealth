@@ -293,3 +293,32 @@ test('attachment count is bounded independently of bytes and deletion frees the 
     assert.equal((await put(second)).status, 204);
   } finally { await f.close(); }
 });
+
+test('global media byte quota survives restart and deletion restores capacity', async () => {
+  const f = await fixture({ mediaQuotaBytes: 100 });
+  const first = route + '/media/' + '6'.repeat(64);
+  const second = otherRoute + '/media/' + '7'.repeat(64);
+  const third = route + '/media/' + '8'.repeat(64);
+  const put = (path, size) => fetch(f.base + path, { method: 'PUT', body: Buffer.alloc(size), headers: headers() });
+  try {
+    assert.equal((await fetch(f.base + route, { method: 'PUT', body: encrypt(f.now), headers: headers() })).status, 204);
+    assert.equal((await fetch(f.base + otherRoute, { method: 'PUT', body: encrypt(f.now, otherRoute), headers: headers() })).status, 204);
+    assert.equal((await put(first, 40)).status, 204);
+    assert.equal((await put(second, 60)).status, 204);
+    assert.equal((await put(third, 29)).status, 507);
+    await f.restart();
+    assert.equal((await put(third, 29)).status, 507);
+    assert.equal((await fetch(f.base + first, { method: 'DELETE', headers: headers() })).status, 204);
+    assert.equal((await put(third, 29)).status, 204);
+    assert.equal((await (await fetch(f.base + second)).arrayBuffer()).byteLength, 60);
+  } finally { await f.close(); }
+});
+
+test('invalid media byte quotas fail before startup', async () => {
+  const f = await fixture();
+  try {
+    for (const mediaQuotaBytes of [0, -1, 28, 99.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      await assert.rejects(createRelay({ dataDir: f.dataDir, mediaQuotaBytes }), /MEDIA_QUOTA_BYTES/);
+    }
+  } finally { await f.close(); }
+});
