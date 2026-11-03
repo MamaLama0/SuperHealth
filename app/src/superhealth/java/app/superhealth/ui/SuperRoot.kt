@@ -181,7 +181,7 @@ fun SuperRoot(vm: SuperViewModel) {
     val back by nav.currentBackStackEntryAsState()
     val current = back?.destination?.route
     val isTab = isTabRoute(current) || current == "feed"
-    val groupVisible = homePager.settledPage == 0
+    val groupVisible = sh.socialFeedEnabled && sh.leagueEnabled && homePager.settledPage == 0
     val groupContext = current == "feed" || (current == "home" && groupVisible)
     var plus by remember { mutableStateOf(false) }
     var plusAction by remember { mutableStateOf<String?>(null) }

@@ -96,4 +96,23 @@ class GroupHistoryTest {
         assertEquals("xp_100", League.mergeFriend(friend, card.copy(detailSnapshot = false), 200)!!.profileTitle)
     }
 
+    @Test fun commentRepliesReferenceTheExactAuthorAndPostWithoutCopyingPrivateText() {
+        val parent = event.copy(post = null, reply = GroupHistory.Reply("c".repeat(16), "d".repeat(32), "Original comment", now))
+        val child = parent.copy(id = "e".repeat(32), reply = parent.reply!!.copy(text = "A response",
+            to = GroupHistory.ReplyRef(GroupHistory.author(parent.key), parent.id)))
+        assertTrue(GroupHistory.valid(child, now))
+        assertEquals(parent, GroupHistory.replyParent(child, listOf(parent)))
+        assertNull(GroupHistory.replyParent(child, listOf(parent.copy(deleted = true, reply = null))))
+        assertNull(GroupHistory.replyParent(child, listOf(parent.copy(reply = parent.reply!!.copy(post = "f".repeat(32))))))
+        assertNull(GroupHistory.replyParent(child, listOf(parent.copy(key = "c".repeat(124)))))
+        assertNull(GroupHistory.replyParent(child, emptyList()))
+        assertFalse(GroupHistory.valid(child.copy(reply = child.reply!!.copy(to = GroupHistory.ReplyRef("not-an-author", parent.id))), now))
+        assertFalse(GroupHistory.valid(child.copy(reply = child.reply!!.copy(to = GroupHistory.ReplyRef(GroupHistory.author(parent.key), child.id))), now))
+        val json = Json { encodeDefaults = true }
+        val encoded = json.encodeToString(GroupHistory.Event.serializer(), child)
+        assertFalse(encoded.contains("Original comment"))
+        assertEquals(child, json.decodeFromString(GroupHistory.Event.serializer(), encoded))
+        assertFalse(json.encodeToString(GroupHistory.Reply.serializer(), parent.reply!!).contains("\"to\""))
+    }
+
 }

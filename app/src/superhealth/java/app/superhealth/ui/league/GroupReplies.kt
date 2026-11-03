@@ -6,6 +6,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,20 +37,29 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val history by GroupHistory.state.collectAsState()
     val league by League.state.collectAsState()
+    val replyFocus = remember { FocusRequester() }
+    var parentKey by rememberSaveable(author, post.id) { mutableStateOf<String?>(null) }
+    var parentId by rememberSaveable(author, post.id) { mutableStateOf<String?>(null) }
     var text by rememberSaveable(author, post.id) { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var visible by rememberSaveable(author, post.id) { mutableIntStateOf(2) }
     var profile by remember { mutableStateOf<League.Friend?>(null) }
     val replies = remember(history, author, post.id, league.friends) { GroupHistory.replies(author, post.id) }
+    val parent = replies.firstOrNull { it.key == parentKey && it.id == parentId }
+    fun name(event: GroupHistory.Event) = if (event.key == League.publicKey()) tr("Vous") else league.friends.firstOrNull { it.key == event.key }?.shown ?: event.name
     fun submit() {
         if (text.isBlank() || busy) return
+        if (parentId != null && parent == null) { error = tr("Le commentaire n’est plus disponible."); return }
         val submitted = text.trim()
+        val submittedParent = parent
         scope.launch {
             busy = true; error = null
             try {
-                val sent = GroupHistory.reply(ctx, author, post, submitted)
+                val sent = GroupHistory.reply(ctx, author, post, submitted, submittedParent)
                 if (text.trim() == submitted) { text = ""; focus.clearFocus(); keyboard?.hide() }
+                if (parentId == submittedParent?.id && parentKey == submittedParent?.key) { parentId = null; parentKey = null }
+                visible = maxOf(visible, 3)
                 if (!sent) error = tr("Réponse enregistrée. Elle sera envoyée à la prochaine synchronisation.")
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { error = tr("Réponse impossible. Réessayez.") }
@@ -79,7 +94,21 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
                                 System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString(),
                                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
                         }
+                        if (event.reply?.to != null) {
+                            val quoted = GroupHistory.replyParent(event, replies)
+                            Column(Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(10.dp)).background(Mf.colors.elevated).padding(10.dp)) {
+                                Text(if (quoted == null) tr("Commentaire indisponible") else trf("En réponse à %1\$s", name(quoted)),
+                                    style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent)
+                                quoted?.reply?.text?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                            }
+                        }
                         Text(event.reply!!.text, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.text)
+                        TextButton(onClick = {
+                            parentKey = event.key; parentId = event.id; error = null
+                            replyFocus.requestFocus(); keyboard?.show()
+                        }, enabled = !busy, contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 40.dp)) {
+                            Text(tr("Répondre"), style = MaterialTheme.typography.labelMedium)
+                        }
                         if (event.id in history.pending) Text(tr("En attente d'envoi"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                     }
                     if (own) Box {
@@ -100,13 +129,22 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
                 }
             }
         }
+        if (parentId != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Mf.colors.elevated).padding(start = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+                Text(parent?.let { trf("Répondre à %1\$s", name(it)) } ?: tr("Commentaire indisponible"),
+                    style = MaterialTheme.typography.labelMedium, color = Mf.colors.accent)
+                parent?.reply?.text?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            }
+            IconButton(onClick = { parentId = null; parentKey = null }) { Icon(Icons.Rounded.Close, tr("Annuler la réponse"), Modifier.size(18.dp)) }
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FriendAvatar(null, app.superhealth.ui.userName() ?: tr("Vous"), 28.dp)
             OutlinedTextField(text, { text = it.take(1000) },
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { submit() }),
                 placeholder = { Text(tr("Ajouter une réponse…"), style = MaterialTheme.typography.bodyMedium) },
-                modifier = Modifier.weight(1f), shape = RoundedCornerShape(24.dp), maxLines = 4,
+                modifier = Modifier.weight(1f).focusRequester(replyFocus), shape = RoundedCornerShape(24.dp), maxLines = 4,
                 colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Mf.colors.divider, focusedBorderColor = Mf.colors.accent),
                 trailingIcon = {
                     IconButton(enabled = text.isNotBlank() && !busy, onClick = ::submit) {

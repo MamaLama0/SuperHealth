@@ -2,6 +2,11 @@ package app.superhealth.ui
 
 object Strings27 {
     val map = mapOf(
+        "Le commentaire n’est plus disponible." to "This comment is no longer available.",
+        "Commentaire indisponible" to "Comment unavailable",
+        "En réponse à %1\$s" to "In reply to %1\$s",
+        "Répondre à %1\$s" to "Reply to %1\$s",
+        "Annuler la réponse" to "Cancel reply",
         "Muscles sollicités" to "Muscles worked",
         "Partager un PR de cette séance" to "Share a PR from this workout",
         "Choisissez le record. Vous pourrez ajouter une vidéo avant de publier." to "Choose your record. You can add a video before posting.",

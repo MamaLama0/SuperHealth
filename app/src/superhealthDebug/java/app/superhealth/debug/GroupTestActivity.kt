@@ -25,6 +25,15 @@ class GroupTestActivity : Activity() {
             try {
                 val db = WorkoutApp.db.first { it != null }!!
                 when (operation) {
+                    "notification" -> {
+                        val device = nodomain.freeyourgadget.gadgetbridge.impl.GBDevice("00:11:22:33:44:55", "Montre de test", null, null,
+                            nodomain.freeyourgadget.gadgetbridge.model.DeviceType.TEST)
+                        device.setBatteryLevel(73, 0)
+                        device.setState(nodomain.freeyourgadget.gadgetbridge.impl.GBDevice.State.INITIALIZED)
+                        val notification = nodomain.freeyourgadget.gadgetbridge.util.GB.createNotification(listOf(device), this@GroupTestActivity)
+                        check(notification.contentIntent.creatorPackage == packageName)
+                        nodomain.freeyourgadget.gadgetbridge.util.GB.notify(9051, notification, this@GroupTestActivity)
+                    }
                     "seed" -> {
                         val name = intent.getStringExtra("name")?.take(24) ?: "Test Groupe"
                         nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().preferences.edit()
@@ -62,6 +71,11 @@ class GroupTestActivity : Activity() {
                         Relay.sync(this@GroupTestActivity)
                         val (post, friend) = GroupHistory.posts(this@GroupTestActivity).first { it.second != null && it.first.record != null }
                         check(GroupHistory.reply(this@GroupTestActivity, friend!!.id, post, "Bravo pour ce record !"))
+                    }
+                    "respond" -> {
+                        val parent = GroupHistory.state.value.events.first { it.reply?.text == "Bravo pour ce record !" }
+                        val post = GroupHistory.posts(this@GroupTestActivity).first { it.first.id == parent.reply!!.post }.first
+                        check(GroupHistory.reply(this@GroupTestActivity, parent.reply!!.author, post, "Merci pour ton encouragement !", parent))
                     }
                     "visuals" -> {
                         val now = System.currentTimeMillis()

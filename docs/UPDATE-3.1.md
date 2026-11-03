@@ -1,6 +1,6 @@
 # SuperHealth 3.1
 
-- Activités partagées : cartes du parcours, chiffres clés, courbes et tours dans une présentation plus visuelle.
-- Fin de séance plus colorée, effort ressenti plus accessible et partage d’un PR de la séance. Résumés visuels de musculation et progression des records.
-- Aperçu avant publication et choix du partage du parcours et des statistiques détaillées.
-- Réactions : défilement des emojis corrigé. Revenir des paramètres retrouve le Groupe ; Accueil ramène au dashboard.
+- Activités partagées : parcours sur carte, chiffres clés, courbes et tours. Résumés visuels des séances et progression des PR.
+- Fin de séance plus colorée, effort ressenti mieux intégré et partage d’un PR de la séance.
+- Réponses aux commentaires avec contexte, aperçu avant publication et choix du parcours et des statistiques partagés.
+- Défilement des emojis corrigé. Retour des paramètres vers le Groupe, Accueil vers le dashboard et notification de batterie vers SuperHealth.

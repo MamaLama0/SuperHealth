@@ -21,7 +21,10 @@ import java.util.concurrent.TimeUnit
 /** Social-only durable history. Health cards and journals never enter this store. */
 object GroupHistory {
     const val RETENTION_DAYS = 5 * 366
-    @Serializable data class Reply(val author: String, val post: String, val text: String, val created: Long)
+    @Serializable data class ReplyRef(val author: String, val id: String)
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    @Serializable data class Reply(val author: String, val post: String, val text: String, val created: Long,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val to: ReplyRef? = null)
     @Serializable data class Profile(val title: String? = null, val badges: List<String> = emptyList(), val avatar: SocialPosts.Media? = null)
     @Serializable data class Event(val id: String, val key: String, val name: String, val revision: Long,
         val post: SocialPosts.Post? = null, val reply: Reply? = null, val deleted: Boolean = false, val profile: Profile? = null, val reaction: SocialReactions.Reaction? = null)
@@ -54,7 +57,8 @@ object GroupHistory {
             event.profile != null -> event.reaction == null && event.post == null && event.reply == null && Achievements.validDecor(event.profile.title, event.profile.badges) && (event.profile.avatar?.let(ProfileAvatars::valid) ?: true)
             event.post != null -> event.reaction == null && event.profile == null && event.reply == null && event.post.id == event.id && SocialPosts.valid(event.post, now)
             event.reply != null -> event.reaction == null && event.profile == null && event.reply.author.matches(Regex("[a-f0-9]{16}")) && event.reply.post.matches(Regex("[a-f0-9]{32}")) &&
-                event.reply.text.isNotBlank() && event.reply.text.length <= 1000 && event.reply.created in 1..(now + 300000)
+                event.reply.text.isNotBlank() && event.reply.text.length <= 1000 && event.reply.created in 1..(now + 300000) &&
+                (event.reply.to?.let { it.author.matches(Regex("[a-f0-9]{16}")) && it.id.matches(Regex("[a-f0-9]{32}")) && it.id != event.id } ?: true)
             else -> false
         }
     internal fun merge(events: List<Event>, event: Event): List<Event> {
@@ -95,11 +99,12 @@ object GroupHistory {
             if (event != null) event.reaction?.kind else SocialReactions.visible(legacy).firstOrNull { it.author == author && it.post == post }?.kind
         }.groupingBy { it }.eachCount()
     }
-    suspend fun reply(ctx: Context, target: String, post: SocialPosts.Post, text: String) = withContext(Dispatchers.IO) {
+    suspend fun reply(ctx: Context, target: String, post: SocialPosts.Post, text: String, parent: Event? = null) = withContext(Dispatchers.IO) {
         require(text.trim().isNotBlank() && text.trim().length <= 1000)
         require(target == League.myId() || League.state.value.friends.any { it.id == target })
+        require(parent == null || replies(target, post.id).any { it.key == parent.key && it.id == parent.id })
         val id = UUID.randomUUID().toString().replace("-", "")
-        val event = ownEvent(id, reply = Reply(target, post.id, text.trim(), System.currentTimeMillis()))
+        val event = ownEvent(id, reply = Reply(target, post.id, text.trim(), System.currentTimeMillis(), parent?.let { ReplyRef(author(it.key), it.id) }))
         require(valid(event)); update(ctx) { it.copy(events = merge(it.events, event), pending = it.pending + id) }
         try { Relay.publishOnly(ctx); true } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
     }
@@ -113,6 +118,14 @@ object GroupHistory {
         !it.deleted && it.reply?.author == target && it.reply.post == post &&
             (it.key == League.publicKey() || League.isFriend(it.key))
     }.sortedBy { it.reply!!.created }
+    /** Resolve only a visible reply in the same post; never quote another thread or a deleted message. */
+    fun replyParent(event: Event, candidates: List<Event>): Event? {
+        val child = event.reply ?: return null
+        val ref = child.to ?: return null
+        return candidates.firstOrNull { candidate -> !candidate.deleted && candidate.reply != null && candidate.id == ref.id &&
+            candidate.reply.author == child.author && candidate.reply.post == child.post &&
+            runCatching { author(candidate.key) == ref.author }.getOrDefault(false) }
+    }
     fun posts(ctx: Context): List<Pair<SocialPosts.Post, League.Friend?>> {
         val own = League.publicKey(); val friends = League.state.value.friends.associateBy { it.key }
         val archived = state.value.events.filter { !it.deleted && it.post != null && it.post.created >= System.currentTimeMillis() - RETENTION_DAYS.toLong() * 86400000 && (it.key == own || friends.containsKey(it.key)) }
@@ -211,7 +224,9 @@ object GroupHistory {
                 val event = json.decodeFromString(Event.serializer(), payload)
                 val envelope = json.decodeFromString(RelayCrypto.Envelope.serializer(), item.raw)
                 require(valid(event) && event.key == key && event.id == item.id && event.revision == envelope.revision)
-                if (!older && state.value.notificationBaseline && key != League.publicKey() && event.reply?.author == League.myId() &&
+                val repliesToMe = event.reply?.author == League.myId() ||
+                    (event.reply?.to?.author == author(League.publicKey()) && replyParent(event, state.value.events)?.key == League.publicKey())
+                if (!older && state.value.notificationBaseline && key != League.publicKey() && event.reply != null && repliesToMe &&
                     event.reply.created >= System.currentTimeMillis() - 86400000 && state.value.events.none { it.key == key && it.id == event.id }) newReplies++
                 update(ctx) { it.copy(events = merge(it.events, event)) }
                 event.profile?.let { profile ->

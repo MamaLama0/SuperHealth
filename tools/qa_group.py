@@ -58,6 +58,7 @@ def main():
                     time.sleep(0.2)
                     continue
                 assert parsed['ok'], {k: v for k, v in parsed.items() if k != 'public'}
+                assert parsed.get('syncError') is None, 'Relay sync failed during ' + operation
                 safe = {k: v for k, v in parsed.items() if k != 'public'}
                 summary.append({'installation': index + 1, **safe})
                 print(json.dumps({'installation': index + 1, **safe}, ensure_ascii=False), flush=True)
@@ -91,6 +92,13 @@ def main():
     run(1, 'reply')
     run(1, 'react')
     assert run(0, 'sync')['reactionEvents'] > 0
+    run(0, 'respond')
+    run(1, 'sync')
+    conversation = json.loads(adb(1, 'exec-out', 'run-as', PACKAGE, 'cat', 'files/league/group-history.json').stdout)
+    parent = next(e for e in conversation['events'] if e.get('reply') and e['reply']['text'] == 'Bravo pour ce record !')
+    response = next(e for e in conversation['events'] if e.get('reply') and e['reply']['text'] == 'Merci pour ton encouragement !')
+    assert response['reply']['to']['id'] == parent['id']
+    assert response['reply']['post'] == parent['reply']['post']
     if args.visuals:
         run(0, 'visuals')
         run(1, 'sync')
@@ -118,6 +126,7 @@ def main():
     (output / 'checks.private.json').write_text(json.dumps({
         'social_exchange': True, 'profiles_and_badges': True, 'pr_with_video': True,
         'video_plaintext_hash_verified': True, 'signed_replies': True,
+        'signed_comment_reply_reference': True,
         'rotation_retains_media': True, 'retained_friend_follows_handoff': True,
         'social_identity_recovery': True, 'custom_emoji_exchange': True,
         'rich_activity_workout_and_pr_received': args.visuals,
