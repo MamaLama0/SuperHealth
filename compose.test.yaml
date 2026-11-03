@@ -1,0 +1,42 @@
+# Local test only: independent image, network and volume; existing production data is untouched.
+name: superhealth-group-test-306
+services:
+  friend-relay:
+    build: .
+    image: superhealth-group-test:3.0.6
+    pull_policy: never
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 256m
+    cpus: 0.50
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8787"
+      DATA_DIR: /data
+      PUBLISH_KEY: "${PUBLISH_KEY:-}"
+      MEDIA_QUOTA_BYTES: "${MEDIA_QUOTA_BYTES:-100000000000}"
+      SOCIAL_RETENTION_DAYS: "${SOCIAL_RETENTION_DAYS:-1830}"
+      MAX_SOCIAL_ENTRIES: "${MAX_SOCIAL_ENTRIES:-200000}"
+      MAX_MEDIA_PER_MAILBOX: "${MAX_MEDIA_PER_MAILBOX:-20000}"
+      MAX_MEDIA_FILES: "${MAX_MEDIA_FILES:-100000}"
+      MAX_NEW_MAILBOXES_PER_HOUR: "${MAX_NEW_MAILBOXES_PER_HOUR:-12}"
+    ports:
+      - "127.0.0.1:${GROUP_TEST_PORT:-18788}:8787"
+    volumes:
+      - group-test-data:/data
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "2"
+volumes:
+  group-test-data:

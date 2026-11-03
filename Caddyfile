@@ -7,7 +7,11 @@
 }
 {$DOMAIN} {
     request_body {
-        max_size 96KB
+        max_size 53477376
     }
-    reverse_proxy friend-relay:8787
+    reverse_proxy friend-relay:8787 {
+        transport http {
+            response_header_timeout 300s
+        }
+    }
 }

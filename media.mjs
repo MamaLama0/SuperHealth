@@ -5,11 +5,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 
 export const MAX_MEDIA = 50 * 1024 * 1024 + 28;
-export const MAX_MEDIA_FILES = 10_000;
+export const MAX_MEDIA_FILES = 100_000;
 export const DEFAULT_MEDIA_QUOTA = 100_000_000_000;
-export const MEDIA_TTL = 35 * 86400000;
+export const MEDIA_TTL = 5 * 366 * 86400000;
 /** Opaque, capability-addressed attachments. One upload at a time, streamed to disk. */
-export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAULT_MEDIA_QUOTA, maxFiles = MAX_MEDIA_FILES } = {}) {
+export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAULT_MEDIA_QUOTA, maxFiles = MAX_MEDIA_FILES, maxPerMailbox = 5000, retentionDays = 5 * 366 } = {}) {
   const dir = join(dataDir, 'media'); await mkdir(dir, { recursive: true, mode: 0o700 });
   const entries = new Map(); let used = 0; let uploading = false;
   const file = id => join(dir, id + '.bin');
@@ -31,15 +31,15 @@ export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAUL
   }
   // Remove orphaned ciphertexts after an interrupted atomic commit.
   for (const name of await readdir(dir)) if (/^[a-f0-9]{64}\.bin$/.test(name) && !entries.has(name.slice(0, -4))) await unlink(join(dir, name));
-  const prune = async () => { for (const [id, e] of entries) if (e.at <= now() - MEDIA_TTL) await remove(id); };
+  const prune = async () => { for (const [id, e] of entries) if (e.at <= now() - retentionDays * 86400000) await remove(id); };
   await prune();
   const send = (res, status) => { res.writeHead(status, { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' }); res.end(); };
-  const handle = async (req, res, { exists, authorized }) => {
+  const handle = async (req, res, { exists, authorized, parent }) => {
     const id = createHash('sha256').update(req.url).digest('hex');
     if (!exists) { req.resume(); return send(res, 404); }
     if (req.method === 'GET') {
       const entry = entries.get(id);
-      if (!entry || entry.at <= now() - MEDIA_TTL) return send(res, 404);
+      if (!entry || entry.at <= now() - retentionDays * 86400000) return send(res, 404);
       res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': entry.size,
         'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
       await pipeline(createReadStream(file(id)), res); return;
@@ -56,7 +56,7 @@ export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAUL
     let size = 0; const hash = createHash('sha256');
     try {
       await prune();
-      if (entries.size >= maxFiles) { req.resume(); return send(res, 507); }
+      if (entries.size >= maxFiles || [...entries.values()].filter(e => e.parent === createHash('sha256').update(parent).digest('hex')).length >= maxPerMailbox) { req.resume(); return send(res, 507); }
       await new Promise((resolveUpload, reject) => {
         const out = createWriteStream(tmp, { flags: 'wx', mode: 0o600 });
         let failed = false;
@@ -81,7 +81,7 @@ export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAUL
         req.on('data', data); req.once('end', end); req.once('error', fail); req.once('aborted', abort);
       });
       if (size < 29) return send(res, 400);
-      const meta = { size, at: now(), hash: hash.digest('hex') };
+      const meta = { size, at: now(), hash: hash.digest('hex'), parent: createHash('sha256').update(parent).digest('hex') };
       await rename(tmp, file(id));
       await writeFile(tmp + '.meta.tmp', JSON.stringify(meta), { flag: 'wx', mode: 0o600 });
       await rename(tmp + '.meta.tmp', join(dir, id + '.json'));
@@ -91,5 +91,9 @@ export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAUL
     finally { uploading = false; await unlink(tmp).catch(() => {}); await unlink(tmp + '.meta.tmp').catch(() => {}); }
   };
   handle.prune = prune;
+  handle.purge = async parent => {
+    const box = createHash('sha256').update(parent).digest('hex');
+    for (const [id, entry] of entries) if (entry.parent === box) await remove(id);
+  };
   return handle;
 }

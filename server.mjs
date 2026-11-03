@@ -1,3 +1,4 @@
+import { createSocialStore, SOCIAL_RETENTION_DAYS } from './social.mjs';
 import { createMediaStore, DEFAULT_MEDIA_QUOTA, MAX_MEDIA_FILES } from './media.mjs';
 import { createFeedbackHandler } from './feedback.mjs';
 import { createServer } from 'node:http';
@@ -10,10 +11,10 @@ export const MAX_BODY = 98_304;
 export const TTL_MS = 35 * 86_400_000;
 const ROUTE = /^\/v2\/(?:cards\/[a-f0-9]{64}\/[a-f0-9]{64}(?:\/media\/[a-f0-9]{64})?|invites\/[a-f0-9]{64}(?:\/responses(?:\/[a-f0-9]{64})?)?)$/;
 export const INVITE_TTL_MS = 24 * 3_600_000;
-const ttl = record => record.kind === 'invite' ? INVITE_TTL_MS : TTL_MS;
+const ttl = record => record.kind === 'invite' ? INVITE_TTL_MS : record.kind === 'recovery' ? SOCIAL_RETENTION_DAYS * 86400000 : TTL_MS;
 const HEX_SECRET = /^[a-f0-9]{64}$/;
 const digest = value => createHash('sha256').update(value).digest('hex');
-const equal = (a, b) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+const equal = (a, b) => Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 const integer = (value, min, max, name) => {
   if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(name);
   return value;
@@ -38,20 +39,44 @@ export function validateEnvelope(raw, now = Date.now()) {
 
 export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLimitPerMinute = 240,
   maxInFlight = 8, maxMediaFiles = MAX_MEDIA_FILES, mediaQuotaBytes = DEFAULT_MEDIA_QUOTA,
+  socialRetentionDays = SOCIAL_RETENTION_DAYS, maxSocialEntries = 200000, maxMediaPerMailbox = 20000, maxNewMailboxesPerHour = 12,
   now = Date.now, sweepIntervalMs = 3_600_000, feedback: feedbackOptions } = {}) {
   if (publishKey != null && publishKey !== '' && (typeof publishKey !== 'string' || publishKey.length < 32 || publishKey.length > 512 || /[\r\n]/.test(publishKey)))
     throw new Error('PUBLISH_KEY must have 32..512 characters');
   integer(maxCards, 1, 10_000, 'MAX_CARDS');
   integer(rateLimitPerMinute, 1, 10_000, 'RATE_LIMIT_PER_MINUTE');
   integer(maxInFlight, 1, 64, 'MAX_IN_FLIGHT');
-  integer(maxMediaFiles, 1, 10_000, 'MAX_MEDIA_FILES');
+  integer(maxMediaFiles, 1, 1_000_000, 'MAX_MEDIA_FILES');
+  integer(socialRetentionDays, 365, 3650, 'SOCIAL_RETENTION_DAYS');
+  integer(maxSocialEntries, 1, 2_000_000, 'MAX_SOCIAL_ENTRIES');
+  integer(maxMediaPerMailbox, 1, 100000, 'MAX_MEDIA_PER_MAILBOX');
+  integer(maxNewMailboxesPerHour, 1, 10000, 'MAX_NEW_MAILBOXES_PER_HOUR');
   integer(mediaQuotaBytes, 29, Number.MAX_SAFE_INTEGER, 'MEDIA_QUOTA_BYTES');
   await mkdir(dataDir, { recursive: true, mode: 0o700 });
-  const media = await createMediaStore(dataDir, { now, maxFiles: maxMediaFiles, quota: mediaQuotaBytes });
+  const media = await createMediaStore(dataDir, { now, maxFiles: maxMediaFiles, quota: mediaQuotaBytes, maxPerMailbox: maxMediaPerMailbox, retentionDays: socialRetentionDays });
+  const social = await createSocialStore(dataDir, { now, retentionDays: socialRetentionDays, maxEntries: maxSocialEntries });
+  const handoffs = await createSocialStore(join(dataDir, 'handoffs'), { now, retentionDays: socialRetentionDays, maxEntries: maxSocialEntries, maxPerMailbox: 1000 });
+  const ownerDir = join(dataDir, 'owners'); await mkdir(ownerDir, { recursive: true, mode: 0o700 });
+  const owners = new Map();
+  for (const name of await readdir(ownerDir)) {
+    if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
+    const path = join(ownerDir, name);
+    if ((await stat(path)).size > 1024) throw new Error('invalid owner record');
+    const value = JSON.parse(await readFile(path, 'utf8'));
+    if (!HEX_SECRET.test(value.writeHash) || typeof value.revoked !== 'boolean') throw new Error('invalid owner');
+    owners.set(name.slice(0, -5), value);
+  }
+  const saveOwner = async (id, value) => {
+    const target = join(ownerDir, id + '.json'); const tmp = target + '.' + randomUUID() + '.tmp';
+    try { await writeFile(tmp, JSON.stringify(value), { flag: 'wx', mode: 0o600 }); await rename(tmp, target); }
+    finally { await unlink(tmp).catch(() => {}); }
+    owners.set(id, value);
+  };
   const feedback = createFeedbackHandler({ ...feedbackOptions, now });
   const secret = publishKey ? `Bearer ${publishKey}` : null;
   const index = new Map();
   const rates = new Map();
+  const creationRates = new Map();
   let writes = Promise.resolve();
   let inFlight = 0;
   const fileFor = id => join(dataDir, id + '.json');
@@ -69,7 +94,8 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
     if (record.responses != null && (record.kind !== 'invite' || typeof record.responses !== 'object' || Array.isArray(record.responses) || Object.keys(record.responses).length > 16 || Object.entries(record.responses).some(([key, value]) => !HEX_SECRET.test(key) || typeof value !== 'string' || Buffer.byteLength(value) > 16384))) throw new Error('invalid responses');
     const envelope = validateEnvelope(record.raw, record.updatedAt);
     if (record.revision !== envelope.revision) throw new Error('invalid stored revision');
-    if (record.kind != null && record.kind !== 'invite') throw new Error('invalid stored kind');
+    if (record.kind != null && !['invite', 'recovery'].includes(record.kind)) throw new Error('invalid stored kind');
+    if (record.kind == null && !owners.has(name.slice(0, -5))) await saveOwner(name.slice(0, -5), { writeHash: record.writeHash, revoked: false });
     if (record.updatedAt <= now() - ttl(record)) { await unlink(path); continue; }
     if (index.size >= maxCards) throw new Error('stored mailboxes exceed MAX_CARDS');
     index.set(name.slice(0, -5), { writeHash: record.writeHash, updatedAt: record.updatedAt,
@@ -110,9 +136,12 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
-    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, feedback: feedback.enabled ? 1 : 0 }));
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, feedback: feedback.enabled ? 1 : 0 }));
     if (req.url === '/v2/feedback') return feedback(req, res);
-    if (!ROUTE.test(req.url || '')) return send(res, 404);
+    const archiveRoute = (req.url || '').match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/social(?:\/([a-f0-9]{32}))?(?:\?before=([0-9]{16}%3A[a-f0-9]{32}|[0-9]{16}:[a-f0-9]{32}))?$/);
+    const handoffRoute = (req.url || '').match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/handoffs\/([a-f0-9]{32})$/);
+    const recoveryRoute = /^\/v2\/recovery\/[a-f0-9]{64}$/.test(req.url || '');
+    if (!ROUTE.test(req.url || '') && !archiveRoute && !handoffRoute && !recoveryRoute) return send(res, 404);
     if (!['GET', 'PUT', 'POST', 'DELETE'].includes(req.method)) return send(res, 405, '', { Allow: 'GET, PUT, DELETE' });
     if (inFlight >= maxInFlight) { req.resume(); return send(res, 503, '', { 'Retry-After': '2' }); }
     // Bound all connections, including unauthenticated attempts; behind a proxy this is a shared limit.
@@ -126,14 +155,23 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
     if (requests > (invitation ? Math.min(12, rateLimitPerMinute) : rateLimitPerMinute)) { req.resume(); return send(res, 429, '', { 'Retry-After': '60' }); }
     inFlight++;
     try {
+      if (handoffRoute || archiveRoute) {
+        const match = handoffRoute || archiveRoute;
+        const parent = owners.get(digest(match[1]));
+        const token = req.headers['x-write-token'];
+        const exists = parent && (!parent.revoked || Boolean(handoffRoute));
+        const authorized = exists && !parent.revoked && (!secret || equal(req.headers.authorization || '', secret)) &&
+          typeof token === 'string' && HEX_SECRET.test(token) && equal(parent.writeHash, digest(token));
+        return await (handoffRoute ? handoffs : social)(req, res, { parent: match[1], id: match[2], before: match[3] ? decodeURIComponent(match[3]) : null, exists, authorized, readBody, validateEnvelope });
+      }
       const mediaRoute = req.url.match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/media\/[a-f0-9]{64}$/);
       if (mediaRoute) {
-        const parent = index.get(digest(mediaRoute[1]));
-        const exists = parent && parent.updatedAt > now() - TTL_MS;
+        const parent = owners.get(digest(mediaRoute[1]));
+        const exists = parent && !parent.revoked;
         const token = req.headers['x-write-token'];
         const authorized = exists && (!secret || equal(req.headers.authorization || '', secret)) &&
           typeof token === 'string' && HEX_SECRET.test(token) && equal(parent.writeHash, digest(token));
-        return await media(req, res, { exists, authorized });
+        return await media(req, res, { exists, authorized, parent: mediaRoute[1] });
       }
       const responseRoute = req.url.match(/^(\/v2\/invites\/[a-f0-9]{64})\/responses(?:\/([a-f0-9]{64}))?$/);
       const id = digest(responseRoute ? responseRoute[1] : req.url);
@@ -203,6 +241,12 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
         return await serialized(async () => {
           const existing = index.get(id);
           if (existing && !equal(existing.writeHash, writeHash)) return send(res, 403);
+          const owner = owners.get(id);
+          if (owner && !equal(owner.writeHash, writeHash)) return send(res, 403);
+          if (owner) {
+            await saveOwner(id, { ...owner, revoked: true });
+            await social.purge(req.url); await media.purge(req.url);
+          }
           await unlink(fileFor(id)).catch(e => { if (e.code !== 'ENOENT') throw e; });
           index.delete(id);
           send(res, 204);
@@ -215,6 +259,17 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
       return await serialized(async () => {
         await prune();
         const existing = index.get(id);
+        const owner = owners.get(id);
+        if (owner && (owner.revoked || !equal(owner.writeHash, writeHash))) return send(res, 403);
+        if (!invitation && !recoveryRoute && !owner && owners.size >= maxCards * 10) return send(res, 507);
+        if (!existing && !owner && !invitation) {
+          const address = digest(req.socket.remoteAddress || '?'); const hour = Math.floor(now() / 3600000);
+          for (const [key, value] of creationRates) if (value.hour !== hour) creationRates.delete(key);
+          const previous = creationRates.get(address);
+          if ((previous?.count || 0) >= maxNewMailboxesPerHour) return send(res, 429, '', { 'Retry-After': '3600' });
+          if (!previous && creationRates.size >= 1024) return send(res, 503, '', { 'Retry-After': '60' });
+          creationRates.set(address, { hour, count: (previous?.count || 0) + 1 });
+        }
         if (existing) {
           if (!equal(existing.writeHash, writeHash)) return send(res, 403);
           if (envelope.revision < existing.revision || (envelope.revision === existing.revision && etag !== existing.etag))
@@ -222,20 +277,21 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
           // Retrying an identical PUT does not refresh expiry or rewrite a disk block.
           if (etag === existing.etag) return send(res, 204, '', { ETag: etag });
         } else if (index.size >= maxCards) return send(res, 507);
+        if (!invitation && !recoveryRoute && !owner) await saveOwner(id, { writeHash, revoked: false });
         const updatedAt = now();
         const tmp = fileFor(id) + '.' + randomUUID() + '.tmp';
         try {
-          await writeFile(tmp, JSON.stringify({ format: 2, raw, writeHash, updatedAt, revision: envelope.revision, etag, ...(invitation ? { kind: 'invite' } : {}) }), { mode: 0o600, flag: 'wx' });
+          await writeFile(tmp, JSON.stringify({ format: 2, raw, writeHash, updatedAt, revision: envelope.revision, etag, ...(invitation ? { kind: 'invite' } : recoveryRoute ? { kind: 'recovery' } : {}) }), { mode: 0o600, flag: 'wx' });
           await rename(tmp, fileFor(id));
         } finally { await unlink(tmp).catch(() => {}); }
-        index.set(id, { writeHash, updatedAt, revision: envelope.revision, etag, kind: invitation ? 'invite' : undefined });
+        index.set(id, { writeHash, updatedAt, revision: envelope.revision, etag, kind: invitation ? 'invite' : recoveryRoute ? 'recovery' : undefined });
         send(res, 204, '', { ETag: etag });
       });
     } catch (e) {
       if (!res.headersSent) send(res, e.status || 500, '', e.status === 413 ? { Connection: 'close' } : {}); else res.end();
     } finally { inFlight--; }
   });
-  const sweep = setInterval(() => { serialized(async () => { await prune(); await media.prune(); }).catch(() => {}); }, sweepIntervalMs);
+  const sweep = setInterval(() => { serialized(async () => { await prune(); await media.prune(); await social.prune(); await handoffs.prune(); }).catch(() => {}); }, sweepIntervalMs);
   sweep.unref();
   server.on('close', () => clearInterval(sweep));
   server.requestTimeout = 300_000;
@@ -259,6 +315,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     maxCards: Number(process.env.MAX_CARDS || 500), rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE || 240),
     maxInFlight: Number(process.env.MAX_IN_FLIGHT || 8), maxMediaFiles: Number(process.env.MAX_MEDIA_FILES || MAX_MEDIA_FILES),
     mediaQuotaBytes: Number(process.env.MEDIA_QUOTA_BYTES ?? DEFAULT_MEDIA_QUOTA),
+    socialRetentionDays: Number(process.env.SOCIAL_RETENTION_DAYS || SOCIAL_RETENTION_DAYS),
+    maxSocialEntries: Number(process.env.MAX_SOCIAL_ENTRIES || 200000), maxMediaPerMailbox: Number(process.env.MAX_MEDIA_PER_MAILBOX || 20000),
+    maxNewMailboxesPerHour: Number(process.env.MAX_NEW_MAILBOXES_PER_HOUR || 12),
     feedback: { repo: process.env.FEEDBACK_GITHUB_REPO, token: feedbackToken } });
   server.listen(Number(process.env.PORT || 8787), process.env.HOST || '127.0.0.1', () => console.log('SuperHealth encrypted relay ready'));
   const shutdown = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(1), 10_000).unref(); };

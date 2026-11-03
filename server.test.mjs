@@ -5,7 +5,7 @@ import { request } from 'node:http';
 import { mkdtemp, rm, readFile, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { MAX_MEDIA } from './media.mjs';
+import { MAX_MEDIA, MEDIA_TTL } from './media.mjs';
 import { createRelay, validateEnvelope, MAX_BODY, TTL_MS, INVITE_TTL_MS } from './server.mjs';
 
 const publishKey = 'test-only-'.repeat(5);
@@ -258,6 +258,8 @@ test('media remain opaque, owned by an existing mailbox, bounded, persistent and
     assert.equal((await fetch(f.base + mediaRoute)).status, 404);
     assert.equal((await put(mediaRoute, opaque)).status, 204);
     f.advance(TTL_MS + 1); await f.restart();
+    assert.equal((await fetch(f.base + mediaRoute)).status, 200);
+    f.advance(MEDIA_TTL); await f.restart();
     assert.equal((await fetch(f.base + mediaRoute)).status, 404);
     assert.deepEqual(await readdir(join(f.dataDir, 'media')), []);
   } finally { await f.close(); }
@@ -352,5 +354,103 @@ test('feedback is disabled without server credentials and relay remains availabl
     assert.equal((await fetch(f.base + '/v2/feedback', { method: 'POST' })).status, 503);
     assert.equal((await fetch(f.base + '/health')).status, 200);
     assert.equal((await (await fetch(f.base + '/health')).json()).feedback, 0);
+  } finally { await f.close(); }
+});
+
+test('social history is opaque, paginated, owner-written and survives expired health cards and restart', async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await fetch(f.base + route, { method: 'PUT', body: encrypt(f.now), headers: headers() })).status, 204);
+    for (let n = 1; n <= 43; n++) {
+      const path = route + '/social/' + n.toString(16).padStart(32, '0');
+      assert.equal((await fetch(f.base + path, { method: 'PUT', body: encrypt(f.now + n, path, 'SHG1.signed-social-only'), headers: headers() })).status, 204);
+    }
+    const first = await (await fetch(f.base + route + '/social')).json();
+    assert.equal(first.items.length, 20); assert.ok(first.next);
+    const second = await (await fetch(f.base + route + '/social?before=' + encodeURIComponent(first.next))).json();
+    const third = await (await fetch(f.base + route + '/social?before=' + encodeURIComponent(second.next))).json();
+    assert.equal(second.items.length, 20); assert.equal(third.items.length, 3); assert.equal(third.next, null);
+    assert.equal(new Set([...first.items, ...second.items, ...third.items].map(item => item.id)).size, 43);
+    const path = route + '/social/' + first.items[0].id;
+    assert.equal(decrypt(first.items[0].raw, path), 'SHG1.signed-social-only');
+    assert.equal((await fetch(f.base + path, { method: 'PUT', body: encrypt(f.now + 100, path), headers: headers('f'.repeat(64)) })).status, 403);
+    assert.equal((await fetch(f.base + route + '/social?before=../../bad')).status, 404);
+    f.advance(TTL_MS + 1); await f.restart();
+    assert.equal((await fetch(f.base + route)).status, 404);
+    assert.equal((await (await fetch(f.base + route + '/social')).json()).items.length, 20);
+    const box = (await readdir(join(f.dataDir, 'social')))[0];
+    const saved = await readFile(join(f.dataDir, 'social', box, first.items[0].id + '.json'), 'utf8');
+    assert.equal(saved.includes('signed-social-only'), false); assert.equal(saved.includes(route), false);
+    f.advance(5 * 366 * 86400000); await f.restart();
+    assert.deepEqual((await (await fetch(f.base + route + '/social')).json()).items, []);
+  } finally { await f.close(); }
+});
+
+test('expired mailbox retains its owner; revocation removes social/media but preserves private handoffs', async () => {
+  const f = await fixture();
+  const post = route + '/social/' + '1'.repeat(32);
+  const handoff = route + '/handoffs/' + '2'.repeat(32);
+  const media = route + '/media/' + '3'.repeat(64);
+  try {
+    const put = (path, body, auth = headers()) => fetch(f.base + path, { method: 'PUT', body, headers: auth });
+    assert.equal((await put(route, encrypt(f.now))).status, 204);
+    assert.equal((await put(post, encrypt(f.now, post))).status, 204);
+    assert.equal((await put(handoff, encrypt(f.now, handoff))).status, 204);
+    assert.equal((await put(media, randomBytes(100))).status, 204);
+    f.advance(TTL_MS + 1); await f.restart();
+    assert.equal((await put(route, encrypt(f.now), headers('f'.repeat(64)))).status, 403);
+    assert.equal((await put(route, encrypt(f.now))).status, 204);
+    assert.equal((await fetch(f.base + route, { method: 'DELETE', headers: headers() })).status, 204);
+    assert.equal((await fetch(f.base + route + '/social')).status, 404);
+    assert.equal((await fetch(f.base + media)).status, 404);
+    assert.equal((await fetch(f.base + handoff)).status, 200);
+    assert.equal((await put(route, encrypt(f.now + 1))).status, 403);
+    assert.equal((await put(handoff, encrypt(f.now + 1, handoff))).status, 403);
+    await f.restart();
+    assert.equal((await put(route, encrypt(f.now + 2))).status, 403);
+    assert.deepEqual(await readdir(join(f.dataDir, 'media')), []);
+  } finally { await f.close(); }
+});
+
+test('social updates reject replay and conflicting retries, and quotas are bounded', async () => {
+  const f = await fixture({ maxSocialEntries: 1, maxMediaPerMailbox: 1 });
+  const path = route + '/social/' + 'a'.repeat(32);
+  try {
+    const put = (path, body) => fetch(f.base + path, { method: 'PUT', body, headers: headers() });
+    assert.equal((await put(route, encrypt(f.now))).status, 204);
+    const first = encrypt(f.now, path);
+    assert.equal((await put(path, first)).status, 204);
+    assert.equal((await put(path, first)).status, 204);
+    assert.equal((await put(path, encrypt(f.now, path))).status, 409);
+    assert.equal((await put(path, encrypt(f.now + 1, path, 'signed deletion'))).status, 204);
+    assert.equal((await put(path, first)).status, 409);
+    const other = route + '/social/' + 'b'.repeat(32);
+    assert.equal((await put(other, encrypt(f.now + 2, other))).status, 507);
+    assert.equal((await put(route + '/media/' + 'c'.repeat(64), randomBytes(100))).status, 204);
+    assert.equal((await put(route + '/media/' + 'd'.repeat(64), randomBytes(100))).status, 507);
+  } finally { await f.close(); }
+});
+
+test('social recovery has its own long-lived opaque slot and owner authorization', async () => {
+  const f = await fixture(); const path = '/v2/recovery/' + 'a'.repeat(64);
+  try {
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers(), body: encrypt(f.now, path, 'social credentials only') })).status, 204);
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers('f'.repeat(64)), body: encrypt(f.now + 1, path) })).status, 403);
+    f.advance(TTL_MS + 1); await f.restart();
+    assert.equal(decrypt(await (await fetch(f.base + path)).text(), path), 'social credentials only');
+    const health = await (await fetch(f.base + '/health')).json(); assert.equal(health.social, 1); assert.equal(health.recovery, 1);
+  } finally { await f.close(); }
+});
+
+test('mailbox creation is limited independently from existing users publications', async () => {
+  const f = await fixture({ maxNewMailboxesPerHour: 2 });
+  try {
+    const put = path => fetch(f.base + path, { method: 'PUT', body: encrypt(f.now, path), headers: headers() });
+    assert.equal((await put(route)).status, 204);
+    assert.equal((await put(otherRoute)).status, 204);
+    const third = `/v2/cards/${'1'.repeat(64)}/${'2'.repeat(64)}`;
+    const response = await put(third); assert.equal(response.status, 429); assert.equal(response.headers.get('retry-after'), '3600');
+    f.advance(1); assert.equal((await put(route)).status, 204);
+    f.advance(3600000); assert.equal((await put(third)).status, 204);
   } finally { await f.close(); }
 });

@@ -1,3 +1,26 @@
+## Groupe 3.0.6 en test
+
+Essai isolé avec les sources locales : `docker compose -f compose.test.yaml up --build -d`.
+Cette variante crée sa propre image, son réseau et un volume séparé ; elle ne met pas à jour l’installation existante. Le port local par défaut est 18788 (`GROUP_TEST_PORT` pour le modifier). Un accès depuis un téléphone hors des essais ADB demande votre proxy HTTPS. `node --test server.test.mjs` exécute les contrôles du protocole sans dépendance npm.
+
+Le nouveau module `social.mjs` conserve séparément les publications, réponses, réactions et profils signés et chiffrés pendant cinq ans (1830 jours par défaut, `SOCIAL_RETENTION_DAYS`, de 365 à 3650). Les journaux de santé ne sont pas envoyés à cette archive. Les résumés d’activités et les PR n’y entrent que lorsqu’une personne choisit de les publier. Les cartes de classement restent des instantanés temporaires de 35 jours.
+
+`GET /v2/cards/<boîte>/<capacité>/social` renvoie au plus 20 événements opaques et un curseur `next`. Reprendre avec `?before=<curseur encodé>`. Un `PUT /social/<id32hex>` requiert le propriétaire ; les révisions anciennes et les reprises divergentes sont refusées. Le client vérifie AES-GCM et la signature SHG1 de l’auteur. Un événement contient une publication, un profil, une réponse, une réaction ou un marqueur de suppression, sans copie des journaux.
+
+Les médias ont la même rétention de cinq ans et restent accessibles quand seule la carte de classement expire. La réservation propriétaire persiste indépendamment du contenu temporaire. Supprimer une boîte révoque ses accès et supprime ses nouveaux médias et son archive. Les anciens médias sans métadonnée de rattachement seront encore collectés à leur expiration ; une migration de liens recopie les médias connus avant la révocation.
+
+`/v2/cards/<ancienne-boîte>/<capacité>/handoffs/<destinataire32hex>` conserve les changements d’adresse individuellement chiffrés pour les amis conservés. Il n’existe pas de liste de ces messages. Après révocation, seule leur lecture reste possible. Les amis ayant déjà échangé leurs nouvelles clés suivent automatiquement le changement ; les anciennes versions nécessitent une nouvelle invitation.
+
+`/v2/recovery/<capacité64hex>` conserve une copie chiffrée de l’identité sociale, des contacts, des titres, badges et références d’avatar. La capacité, la clé AES et le secret propriétaire sont dérivés séparément d’un code aléatoire. Ni le code ni les journaux de santé ne sont envoyés. Cette récupération ne remplace pas un système complet de gestion et révocation des appareils.
+
+Les paramètres par défaut sont : quota médias 100 Go, 100000 fichiers, 20000 médias par boîte, 200000 événements sociaux et 50000 événements par boîte. Le quota des événements est séparé, plafonné à 2 Go de chiffrés et métadonnées. Le tas Node est plafonné à 160 Mio dans l’image, dans le conteneur de 256 Mio. Ces limites ne sont pas des mesures de charge. Le quota de création est de 12 nouvelles boîtes ou copies de récupération par heure et par adresse réseau directe (`MAX_NEW_MAILBOXES_PER_HOUR`). Derrière un proxy, cette limite peut être partagée. Pour un serveur privé, conserver le contrôle d’admission par `PUBLISH_KEY` ; une distribution publique demande une stratégie d’admission supplémentaire.
+
+`GET /health` annonce `social:1`, `recovery:1` et `socialRetentionDays`. Une app 3.0.6 doit utiliser ce serveur pour le nouveau fil. Le volume existant est conservé ; de nouveaux dossiers `owners/`, `social/` et `handoffs/` sont créés. Le Dockerfile doit embarquer `social.mjs` en plus des trois autres modules. Aucun déploiement n’est effectué par la préparation locale de la version de test.
+
+Les limites et comportements ci-dessus remplacent les anciennes descriptions du fil à 12 posts et des médias à 35 jours figurant dans l’historique ci-dessous. Les formats v2 existants sont conservés. Les 12 publications encore disponibles sont importées vers le nouvel historique ; un contenu déjà effacé par une ancienne version n’est pas recréé.
+
+---
+
 # Relais amis SuperHealth — serveur chiffré
 
 Branche autonome `server/homeserver` : uniquement le petit serveur et son déploiement, sans l'application Android. L’image GHCR est publiée depuis cette branche ; aucun serveur n’est déployé automatiquement.
