@@ -8,14 +8,15 @@ import kotlin.math.roundToInt
 
 /** Indice d'habitudes SuperHealth v4, sur sept jours terminés. Pas une estimation médicale. */
 object HealthIndex {
-    const val MODEL = 4
+    const val CLASSIC = 4
+    const val MODEL = 5
     const val MIN_DOMAINS = 3
     val weights = listOf(20, 20, 15, 25, 15, 5)
 
     fun historyKey(day: Long, coverage: Int, model: Int = MODEL) = "v$model:$day:$coverage"
 
-    fun mean28(history: Map<String, Int>, end: Long, coverage: Int): Double? =
-        ((end - 27)..end).mapNotNull { history[historyKey(it, coverage)] }
+    fun mean28(history: Map<String, Int>, end: Long, coverage: Int, model: Int = MODEL): Double? =
+        ((end - 27)..end).mapNotNull { history[historyKey(it, coverage, model)] }
             .takeIf { it.isNotEmpty() }?.average()
 
     /** Gain relatif en points sur 100, borné avant toute agrégation entre disciplines. */
@@ -52,6 +53,13 @@ object HealthIndex {
 
     fun sport(volume: Double, target: Double, gain: Double): Int =
         (90 * (volume / target).coerceIn(0.0, 1.0) + gain.coerceIn(0.0, 10.0)).roundToInt()
+
+    /** Signal facultatif sur la même échelle. Une absence de mesure garde la composante principale. */
+    fun blend(primary: Int?, secondary: Int?, share: Double): Int? = when {
+        primary == null -> null
+        secondary == null -> primary
+        else -> (primary * (1 - share) + secondary * share).roundToInt().coerceIn(0, 100)
+    }
 
     fun total(parts: List<Int?>): Int? {
         if (parts.count { it != null } < MIN_DOMAINS) return null

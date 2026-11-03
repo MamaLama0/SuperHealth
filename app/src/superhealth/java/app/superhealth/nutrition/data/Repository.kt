@@ -330,12 +330,13 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             }
             val firstWeigh = weights.keys.minOrNull()
             // Algorithmes les plus précis seulement : tendance V2 (Kalman) et dépense V3 (plus de choix dans les réglages).
-            val trend: List<TrendDay> = if (weights.isEmpty()) emptyList()
-                else WeightTrendV2.compute(weights, today).map { TrendDay(it.epochDay, it.scale, it.trend, it.tween, it.trendSd) }
+            val weightPoints = WeightTrendV2.compute(weights.filterKeys { it <= today }, today)
+            val trend = weightPoints.map { TrendDay(it.epochDay, it.scale, it.trend, it.tween, it.trendSd) }
             val trendMap = trend.associate { it.epochDay to it.trend }
             val age = LocalDate.ofEpochDay(today).year - profile.birthYear
-            val refWeight = weighIns.firstOrNull()?.weightKg ?: Analytics.DEFAULT_WEIGHT
-            val refBf = bodyFat.values.firstOrNull() ?: profile.bodyFatPct
+            val seed = if (settings.useFilteredWeightForExpenditure) weighIns.filter { it.epochDay <= today && it.weightKg >= 25.0 }.minByOrNull { it.epochDay } else weighIns.firstOrNull()
+            val refWeight = seed?.weightKg ?: Analytics.DEFAULT_WEIGHT
+            val refBf = (if (settings.useFilteredWeightForExpenditure) seed?.bodyFatPct else bodyFat.values.firstOrNull()) ?: profile.bodyFatPct
             val goalEvents = goals.map { ExpenditureV3.GoalEvent(it.startDay, it.type, it.ratePctPerWeek) }
             val firstGoal = goalEvents.firstOrNull()
             val initial = program.initialTdeeOverride ?: ExpenditureV3.initialTdee(
@@ -345,7 +346,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             val exp: List<ExpDay> = when {
                 weights.isEmpty() -> emptyList()
                 else -> {
-                    val tweenByDay = trend.associate { it.epochDay to it.tween }
+                    val tweenByDay = weightPoints.associate { it.epochDay to if (settings.useFilteredWeightForExpenditure) it.filteredTween else it.tween }
                     val v3Days = days.filter { it.epochDay >= firstWeigh!! }.map { d ->
                         ExpenditureV3.Day(d.epochDay, tweenByDay[d.epochDay] ?: refWeight, d.weightKg, d.intakeKcal, d.fasted, d.partial, d.steps)
                     }

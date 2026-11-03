@@ -51,7 +51,7 @@ object Performance {
     private val lock = Mutex()
     private var memory: MutableMap<Long, Entry>? = null
 
-    private fun file(ctx: Context) = File(ctx.filesDir, "performance-cache.json")
+    private fun file(ctx: Context) = File(ctx.filesDir, "performance-cache-v2.json")
 
     /** Lit les séances (montre), complète le cache avec les nouvelles et calcule les modules. */
     suspend fun snapshot(ctx: Context): Snapshot = withContext(Dispatchers.IO) {
@@ -85,20 +85,47 @@ object Performance {
 
     /** Temps le plus court pour couvrir [meters] d'affilée (fenêtre glissante sur le tracé). */
     fun bestEffort(points: List<TrackPoint>, meters: Double): Double? {
-        val p = points.filter { it.d > 0 }
-        if (p.isEmpty() || p.last().d - p.first().d < meters) return null
-        var best = Double.MAX_VALUE
-        var j = 0
-        for (i in p.indices) {
-            while (j < p.size && p[j].d - p[i].d < meters) j++
-            if (j >= p.size) break
-            // Interpolation au mètre près entre les deux points qui encadrent la distance visée.
-            val a = p[j - 1]; val b = p[j]
-            val f = if (b.d > a.d) (p[i].d + meters - a.d) / (b.d - a.d) else 0.0
-            val t = a.t + (b.t - a.t) * f - p[i].t
-            if (t in 1.0..best) best = t
+        if (!meters.isFinite() || meters <= 0) return null
+        var best = Double.POSITIVE_INFINITY
+        var first = 0
+        var atStart = 0
+        var atEnd = 0
+        // Pour une distance fixe, le minimum interpolé a au moins une borne
+        // sur un échantillon. Tester les deux orientations en temps linéaire.
+        for (i in points.indices) {
+            val p = points[i]
+            if (!p.t.isFinite() || !p.d.isFinite() || p.d < 0) {
+                first = i + 1
+                continue
+            }
+            if (i > first) {
+                val prev = points[i - 1]
+                val seconds = p.t - prev.t
+                if (seconds <= 0 || p.d < prev.d || p.d - prev.d > 15 * seconds) first = i
+            }
+            if (i == first) {
+                atStart = i
+                atEnd = i
+                continue
+            }
+            val startD = p.d - meters
+            if (startD < points[first].d) continue
+            while (atStart + 1 < i && points[atStart + 1].d <= startD) atStart++
+            val a = points[atStart]
+            val b = points[atStart + 1]
+            val startT = a.t + (b.t - a.t) * (startD - a.d) / (b.d - a.d)
+            best = minOf(best, p.t - startT)
+            while (atEnd < i && points[atEnd].d + meters <= p.d) {
+                val endD = points[atEnd].d + meters
+                val prev = points[i - 1]
+                if (p.d > prev.d) {
+                    val endT = prev.t + (p.t - prev.t) * (endD - prev.d) / (p.d - prev.d)
+                    best = minOf(best, endT - points[atEnd].t)
+                }
+                atEnd++
+            }
         }
-        return best.takeIf { it < Double.MAX_VALUE }
+        return best.takeIf { it.isFinite() && it >= 1.0 }
     }
 
     private fun compute(entries: List<Entry>): Snapshot {

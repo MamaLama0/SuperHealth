@@ -2,6 +2,10 @@ package app.superhealth.coach
 
 import android.content.Context
 import app.superhealth.SuperPrefs
+import app.superhealth.Feature
+import app.superhealth.has
+import app.superhealth.league.League
+import app.superhealth.insights.Insights
 import app.superhealth.bridge.Bridge
 import app.superhealth.health.data.Metric
 import app.superhealth.insights.InsightData
@@ -141,11 +145,57 @@ object Coach {
         ACTIVITIES("Autres activités"),
         INSIGHTS("Constats de l'appli"),
         MEMORY("Ce qu'il retient"),
+        INDEX("Indice social et composantes", optIn = true),
         WELLBEING("Moral, habitudes et forme du jour", optIn = true),
         CYCLE("Cycle menstruel", optIn = true),
     }
 
-    fun shares(s: Share): Boolean = SuperPrefs.settings.value.let { if (s.optIn) s.name in it.coachShared else s.name !in it.coachHidden }
+    fun shares(s: Share): Boolean = SuperPrefs.settings.value.let { settings ->
+        val enabled = when (s) {
+            Share.FOOD, Share.WEIGHT -> settings.has(Feature.NUTRITION)
+            Share.TRAINING -> settings.has(Feature.TRAINING)
+            Share.HEALTH -> settings.has(Feature.HEALTH)
+            Share.CYCLE -> settings.has(Feature.CYCLE)
+            Share.INDEX -> settings.leagueEnabled
+            else -> true
+        }
+        enabled && if (s.optIn) s.name in settings.coachShared else s.name !in settings.coachHidden
+    }
+
+    internal fun indexContext(s: League.Score, allowed: (Share) -> Boolean = ::shares): String {
+        if (!allowed(Share.INDEX)) return ""
+        val visible = s.pillars.filter { (p, v) -> v != null && when (p) {
+            League.Pillar.STRENGTH -> allowed(Share.TRAINING)
+            League.Pillar.FOOD -> allowed(Share.FOOD)
+            League.Pillar.SLEEP, League.Pillar.STEPS -> allowed(Share.HEALTH)
+            League.Pillar.CARDIO, League.Pillar.MIND -> allowed(Share.ACTIVITIES)
+        } }
+        if (visible.isEmpty()) return ""
+        return buildString {
+            appendLine("App habits index v${s.model}, 7 completed days ending ${LocalDate.ofEpochDay(s.endDay)}.")
+            if (s.ready && visible.size == s.pillars.values.count { it != null }) appendLine("Overall: ${s.total}/1000.")
+            visible.forEach { (p, value) ->
+                val meaning = if (s.model == app.superhealth.league.HealthIndex.CLASSIC) "classic habits component" else when (p) {
+                    League.Pillar.STRENGTH -> "session goal and mean progress on comparable exercises"
+                    League.Pillar.FOOD -> "energy target and protein when recorded, complete days only"
+                    League.Pillar.CARDIO -> "cardio minutes, comparable run pace and running-day goal when applicable"
+                    League.Pillar.SLEEP -> "duration against personal need, plus regularity when available"
+                    League.Pillar.STEPS -> "daily steps against the selected goal for that day"
+                    League.Pillar.MIND -> "meditation and mobility minutes"
+                }
+                appendLine("${p.name.lowercase()}: ${value}/100 ($meaning)")
+            }
+            append("Use the tracked domains to explain habits. A missing domain is unknown. Do not infer a diagnosis or change manual goals.")
+        }
+    }
+
+    private fun mayShareInsight(type: Insights.Type) = when (type) {
+        Insights.Type.LIFT, Insights.Type.TRAINING_MONTH -> shares(Share.TRAINING)
+        Insights.Type.SLEEP_TRAINING -> shares(Share.TRAINING) && shares(Share.HEALTH)
+        Insights.Type.WEIGHT_RATE -> shares(Share.WEIGHT)
+        Insights.Type.KCAL_WEEK, Insights.Type.PROTEIN_WEEK -> shares(Share.FOOD)
+        else -> shares(Share.HEALTH)
+    }
 
     fun setShared(s: Share, on: Boolean) = SuperPrefs.update {
         if (s.optIn) it.copy(coachShared = if (on) it.coachShared + s.name else it.coachShared - s.name)
@@ -155,7 +205,7 @@ object Coach {
     /** Moral et ressenti des 14 jours, conseil de forme du jour. */
     private suspend fun wellbeing(ctx: Context, today: LocalDate, from: LocalDate): String? {
         val journalOn = SuperPrefs.settings.value.let { it.features.contains(app.superhealth.Feature.JOURNAL.name) }
-        val moods = Journal.days.value; val feels = Checkin.days.value
+        val moods = if (journalOn) Journal.days.value else emptyMap(); val feels = Checkin.days.value
         val lines = generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.mapNotNull { d ->
             val e = moods[d.toEpochDay()]; val f = feels[d.toEpochDay()]
             if (e == null && f == null) return@mapNotNull null
@@ -164,12 +214,12 @@ object Coach {
                 f?.let { "morning check-in sleep ${it.sleep}/5, energy ${it.energy}/5" },
             ).joinToString("; ")
         }.toList()
-        val form = runCatching { Form.today(ctx, journalOn) }.getOrNull() as? Form.Advice
+        val form = if (shares(Share.HEALTH) && shares(Share.TRAINING)) runCatching { Form.today(ctx, journalOn) }.getOrNull() as? Form.Advice else null
         if (lines.isEmpty() && form == null) return null
         return buildString {
             appendLine("## Wellbeing (mood journal 1-5, morning check-in)")
             lines.forEach { appendLine(it) }
-            if (runCatching { app.superhealth.health.data.Scores.persistentDebtOf(ctx, today) }.getOrDefault(false)) appendLine("Lasting sleep debt: most nights of the last two weeks are over 45 min short of the sleep need.")
+            if (shares(Share.HEALTH) && runCatching { app.superhealth.health.data.Scores.persistentDebtOf(ctx, today) }.getOrDefault(false)) appendLine("Lasting sleep debt: most nights of the last two weeks are over 45 min short of the sleep need.")
             form?.let { a ->
                 appendLine("Today's readiness (app): ${a.verdict.name.lowercase()}" + (a.score?.let { ", score $it/100" } ?: "") +
                     (a.cause?.let { ", ${it.name.lowercase()} fatigue" } ?: "") +
@@ -196,7 +246,7 @@ object Coach {
             val acts = runCatching { Bridge.activities(fromMs) }.getOrDefault(emptyList())
             val st = WorkoutApp.store.state.value
             val db = withTimeoutOrNull(2000) { WorkoutApp.db.filterNotNull().first() }
-            val insights = runCatching { InsightData.insights(ctx).take(5).map { it.text(an.settings) } }.getOrDefault(emptyList())
+            val insights = runCatching { InsightData.insights(ctx).filter { mayShareInsight(it.type) }.take(5).map { it.text(an.settings) } }.getOrDefault(emptyList())
             val sh = SuperPrefs.settings.value
 
             buildString {
@@ -313,11 +363,10 @@ object Coach {
                         if (st.available()) appendLine("Stretching: ${st.minutes(fromDay)} min" + (st.log.value.lastOrNull()?.let { ", last on ${java.time.LocalDate.ofEpochDay(it.day).format(dayFmt)} (${it.kind.lowercase()})" } ?: ""))
                         st.results.value.lastOrNull()?.let { r -> appendLine("Mobility test: ${st.globalScore(r)}/100; " + st.FOCI.joinToString { f -> "${f.lowercase()} ${st.focusScore(f, r) ?: "?"}" }) }
                     }
-                    if (app.superhealth.league.League.available()) app.superhealth.league.League.mine.value?.let { s ->
-                        appendLine()
-                        appendLine("## Health habits index (7 completed days)")
-                        appendLine((if (s.ready) "${s.total}/1000; " else "Insufficient tracked domains for a global score; ") + s.pillars.entries.joinToString { (p, v) -> "${p.name.lowercase()} ${v?.let { "$it%" } ?: "not tracked"}" })
-                    }
+                }
+                if (shares(Share.INDEX) && db != null) {
+                    val index = indexContext(League.compute(ctx, today))
+                    if (index.isNotBlank()) appendLine(index)
                 }
                 if (shares(Share.WELLBEING)) wellbeing(ctx, today, from)?.let { appendLine(); append(it) }
                 if (shares(Share.CYCLE)) Cycle.info()?.let { c ->

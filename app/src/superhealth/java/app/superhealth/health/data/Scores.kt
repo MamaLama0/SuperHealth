@@ -297,15 +297,18 @@ object Scores {
      */
     fun load(efforts: List<Double?>): Pair<Double, Double>? {
         if (efforts.takeLast(28).count { it != null } < 14) return null
-        return ewma(efforts, 7).last() to ewma(efforts, 28).last()
+        if (efforts.takeLast(7).none { it != null }) return null
+        return ewma(efforts, 7).last()!! to ewma(efforts, 28).last()!!
     }
 
-    /** Moyenne mobile exponentielle jour par jour (jour sans mesure = 0), amorcée sur la moyenne de la fenêtre. */
-    fun ewma(values: List<Double?>, days: Int): List<Double> {
-        if (values.isEmpty()) return emptyList()
+    /** Un jour sans mesure laisse la moyenne en attente. Un zéro mesuré compte comme repos. */
+    fun ewma(values: List<Double?>, days: Int): List<Double?> {
         val k = 2.0 / (days + 1)
-        var m = values.take(days).map { it ?: 0.0 }.average()
-        return values.map { v -> m = k * (v ?: 0.0) + (1 - k) * m; m }
+        var mean: Double? = null
+        return values.map { value ->
+            if (value != null) mean = mean?.let { it + k * (value - it) } ?: value
+            mean
+        }
     }
 
     // ---- Lecture des données --------------------------------------------------------------

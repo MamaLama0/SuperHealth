@@ -154,6 +154,26 @@ data class PastSet(val weight: Double, val reps: Int, val rir: Int?, val time: L
 object Progression {
     data class Suggestion(val weight: Double, val reps: Int, val rir: Int, val outOfRange: Boolean = false, val widened: Boolean = false)
 
+    /** Médiane des estimations à froid, en tenant compte du repos prévu entre séries. */
+    fun typicalFreshStrength(sets: List<SetLog>, upper: Boolean, restSec: Int): Double? {
+        var fatigue = 0.0
+        val estimates = mutableListOf<Double>()
+        for (set in sets) {
+            val kg = set.weight ?: continue
+            val reps = set.reps ?: continue
+            if (!kg.isFinite() || kg <= 0 || reps !in 1..100) continue
+            val remaining = 1 - Strength.fatigueDrop(fatigue)
+            if (remaining > 0.5 && reps <= 20) {
+                estimates += Strength.e1rm(kg, reps, set.rir ?: 2, upper, set.partialReps) / remaining
+            }
+            fatigue = Strength.recover(fatigue + Strength.fatiguingReps(reps, set.partialReps),
+                restSec.coerceAtLeast(0) / 60.0)
+        }
+        if (estimates.isEmpty()) return null
+        estimates.sort()
+        return (estimates[estimates.lastIndex / 2] + estimates[estimates.size / 2]) / 2
+    }
+
     /** 1RM courant estimé : meilleure série de la dernière séance, corrigée de la fatigue au moment de la série. */
     fun currentOneRm(lastSession: List<PastSet>, upper: Boolean, restMin: Double = 2.0): Double? {
         var fatigue = 0.0
@@ -174,7 +194,7 @@ object Progression {
     fun suggest(
         oneRm: Double, targets: List<TargetSet>, upper: Boolean, ladder: LoadLadder,
         prevWeight: Double?, weightMatch: Boolean, expandRange: Boolean, progress: Double = Strength.SESSION_PROGRESS,
-        forced: Map<Int, Double> = emptyMap(),
+        forced: Map<Int, Double> = emptyMap(), manualReps: Map<Int, Int> = emptyMap(),
     ): List<Suggestion> {
         val strength = oneRm * progress
         var fatigue = 0.0
@@ -191,7 +211,7 @@ object Progression {
                 reps = max(1, reps)
                 out += Suggestion(w, reps, t.rir, outOfRange = reps < t.minReps, widened = widened)
                 previousSetWeight = w
-                fatigue = Strength.recover(fatigue + reps, t.restSec / 60.0)
+                fatigue = Strength.recover(fatigue + (manualReps[k] ?: reps), t.restSec / 60.0)
                 continue
             }
             val keep = previousSetWeight ?: if (weightMatch) prevWeight else null
@@ -218,7 +238,7 @@ object Progression {
             reps = max(1, reps)
             out += Suggestion(w, reps, t.rir, outOfRange, widened)
             previousSetWeight = w
-            fatigue = Strength.recover(fatigue + reps, t.restSec / 60.0)
+            fatigue = Strength.recover(fatigue + (manualReps[k] ?: reps), t.restSec / 60.0)
         }
         return out
     }

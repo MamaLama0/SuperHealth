@@ -539,7 +539,8 @@ private fun ExercisePage(
                         onChange = { ns ->
                             // charge seule modifiée : répétitions recalculées en direct
                             if (ns.weight != set.weight && ns.copy(weight = set.weight) == set) vm.setWeight(index, si, ns.weight)
-                            else edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns }) }
+                            else edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = ns.copy(repsEdited = if (ns.reps != set.reps) ns.reps != null else set.repsEdited,
+                                weightEdited = if (ns.weight != set.weight) ns.weight != null else set.weightEdited) }) }
                         },
                         onToggle = { onToggle(si) }, onPlates = onPlates, onNudge = { up -> vm.nudgeWeight(index, si, up) },
                         onType = { t -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = set.copy(type = t) }) } },
@@ -1120,13 +1121,13 @@ private fun CalculatorSheet(vm: AppViewModel, settings: Settings, weight: Double
         Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().imePadding()) {
             app.superhealth.training.ui.components.ChipChoice(listOf(0, 1), tab, { if (it == 0) tr("Disques") else tr("Série") }) { tab = it }
             Spacer(Modifier.height(8.dp))
-            if (tab == 0) PlateCalc(vm, settings, weight) else SetCalc(settings, ex, e, history)
+            if (tab == 0) PlateCalc(vm, settings, weight) else SetCalc(vm, settings, ex, e, history)
         }
     }
 }
 
 @Composable
-private fun SetCalc(settings: Settings, ex: SessionExercise?, e: Exercise?, history: List<Workout>) {
+private fun SetCalc(vm: AppViewModel, settings: Settings, ex: SessionExercise?, e: Exercise?, history: List<Workout>) {
     val upper = e?.upperBody ?: true
     // 1RM : séries faites dans cette séance, sinon dernière séance de l'exercice
     val done = ex?.sets?.filter { it.done && it.type != SetType.WARMUP && it.weight != null && it.reps != null }.orEmpty()
@@ -1134,7 +1135,10 @@ private fun SetCalc(settings: Settings, ex: SessionExercise?, e: Exercise?, hist
         history.sortedByDescending { it.startTime }.firstNotNullOfOrNull { w -> w.exercises.firstOrNull { it.exerciseId == ex?.exerciseId } }
             ?.let { Analytics.workingSets(it) }.orEmpty()
     }
-    val oneRm = app.superhealth.training.domain.Progression.currentOneRm(
+    val oneRm = if (settings.adaptiveStrength && e != null && e.usesWeight && e.usesReps && "aw" !in e.metrics) {
+        if (done.isNotEmpty()) app.superhealth.training.domain.Progression.typicalFreshStrength(done, upper, ex?.restSec ?: settings.restDefaultSec)
+        else vm.db.value?.let { app.superhealth.training.domain.SessionEngine(it).openingStrength(e, history, settings, vm.gym(vm.state.value.session?.gymId)) }
+    } else app.superhealth.training.domain.Progression.currentOneRm(
         past.filter { it.weight != null && it.reps != null }.map { app.superhealth.training.domain.PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }, upper)
     var reps by remember { mutableStateOf("8") }
     var rir by remember { mutableStateOf("2") }

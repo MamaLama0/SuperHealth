@@ -26,6 +26,7 @@ object WeightTrendV2 {
         val slope: Double,
         /** Écart-type de la tendance lissée (kg), pour la bande d'incertitude. */
         val trendSd: Double,
+        val filteredTween: Double = tween,
     ) {
         val noise: Double? get() = scale?.let { it - tween }
     }
@@ -134,7 +135,7 @@ object WeightTrendV2 {
         }
         return (0 until n).map { i ->
             val st0 = xs[i]
-            Point(first + i, valid[first + i], st0[0], st0[0] + st0[2], st0[2], st0[1], sqrt(max(ps[i][0], 0.0)))
+            Point(first + i, valid[first + i], st0[0], st0[0] + st0[2], st0[2], st0[1], sqrt(max(ps[i][0], 0.0)), xFilt[i][0] + xFilt[i][2])
         }
     }
 }

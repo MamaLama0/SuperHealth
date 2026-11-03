@@ -126,7 +126,7 @@ fun LeagueScreen(nav: NavHostController) {
     var showParts by rememberSaveable { mutableStateOf(false) }
     var metricPicker by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) { runCatching { League.compute(ctx) } }
+    LaunchedEffect(st.unifiedScore, st.tracked, st.weeklyTargets) { runCatching { League.compute(ctx) } }
     val name = userName() ?: tr("Moi")
     val s = mine
     val endDay = s?.endDay ?: LocalDate.now().minusDays(1).toEpochDay()
@@ -135,9 +135,9 @@ fun LeagueScreen(nav: NavHostController) {
     val pillar = League.Pillar.entries.firstOrNull { it.name == part }.takeIf { !month && metricKey == null }
     val metrics = (s?.metrics.orEmpty() + st.friends.flatMap { it.metrics }).distinctBy { it.key }.sortedBy { it.label }
     val metric = metrics.firstOrNull { it.key == metricKey }.takeIf { !month }
-    fun mean(scores: Map<String, Int>, coverage: Int = s?.coverage ?: 0) = HealthIndex.mean28(scores, endDay, coverage)
+    fun mean(scores: Map<String, Int>, coverage: Int = s?.coverage ?: 0) = HealthIndex.mean28(scores, endDay, coverage, League.currentModel)
     val rows = (st.friends.map { f ->
-        val compatible = f.model == HealthIndex.MODEL && f.endDay == endDay && f.time >= recent
+        val compatible = f.model == League.currentModel && f.endDay == endDay && f.time >= recent
         val value: Double? = when {
             xpMode -> f.progress?.takeIf { it.model == app.superhealth.league.Progression.MODEL && it.weekStart == s?.progress?.weekStart && f.time >= recent }?.weekXp?.toDouble()
             mode == "PERF" && metric == null -> null
@@ -273,7 +273,7 @@ fun LeagueScreen(nav: NavHostController) {
                     if (i > 0) RowDivider()
                     val reason = when {
                         row.friend == null -> tr("Données insuffisantes, période ou version différentes")
-                        mode == "HEALTH" && !month && row.friend.model != HealthIndex.MODEL -> tr("Ancienne carte : demander une mise à jour")
+                        mode == "HEALTH" && !month && row.friend.model != League.currentModel -> tr("Ancienne carte : demander une mise à jour")
                         !month && row.friend.time < recent -> tr("Carte reçue il y a plus de 48 h")
                         else -> tr("Données insuffisantes, période ou version différentes")
                     }

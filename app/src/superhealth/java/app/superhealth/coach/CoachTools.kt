@@ -164,8 +164,8 @@ object CoachTools {
             add(fn("propose_meditation", "Propose a guided meditation written by you for today, with a 'Start' button. Lines are displayed as text only, with no synthesized voice. Use at most four prompts and long silent intervals.",
                 props("title" to p("string", "Short title in the user's language"), "minutes" to p("integer", "3 to 30"),
                     "script" to p("string", "One line per sentence, format mm:ss | sentence, in the user's language, first at 00:05, at most four prompts, spaced at least 120 seconds, last at least 30 seconds before the end")), listOf("minutes", "script")))
-        if (app.superhealth.league.League.available())
-            add(fn("get_league", "The user's weekly leaderboard score by area and friends' scores (first names are shared by the friends themselves)."))
+        if (Coach.shares(Coach.Share.INDEX))
+            add(fn("get_league", "Read the app-computed habits index and permitted components for the last seven complete days."))
         add(fn("show_screen", "Add a button under your answer that opens a screen of the app, when looking at it helps.",
             props("screen" to p("string", "Screen", SCREENS.keys.toList()), "label" to p("string", "Short button label in the user's language")), listOf("screen")))
     }
@@ -223,7 +223,7 @@ object CoachTools {
                 val an = NutriApp.repository.analytics().first()
                 val t = an.targetFor(today.toEpochDay()).macros
                 Outcome("Targets today: ${n(t.kcal)} kcal, protein ${n(t.protein)} g, fat ${n(t.fat)} g, carbs ${n(t.carbs)} g. Expenditure ${n(an.currentTdee)} kcal/day. " +
-                    (an.currentGoal?.let { "Goal ${it.type.name.lowercase()}, rate ${n(it.ratePctPerWeek, 2)} %/week" + (it.targetWeightKg?.let { w -> ", target ${n(w, 1)} kg" } ?: "") } ?: "No goal.") +
+                    (an.currentGoal?.takeIf { Coach.shares(Coach.Share.WEIGHT) }?.let { "Goal ${it.type.name.lowercase()}, rate ${n(it.ratePctPerWeek, 2)} %/week" + (it.targetWeightKg?.let { w -> ", target ${n(w, 1)} kg" } ?: "") } ?: "No goal.") +
                     " Week targets: " + (0..6).joinToString("; ") { i -> val d = today.plusDays(i.toLong()); "${d.dayOfWeek.name.take(3)} ${n(an.targetFor(d.toEpochDay()).macros.kcal)}" })
             }
             "get_workouts" -> {
@@ -247,12 +247,20 @@ object CoachTools {
                 val history = WorkoutApp.store.state.value.history.sortedBy { it.startTime }
                 val done = history.flatMap { w -> w.exercises.map { it.exerciseId } }.toSet()
                 val match = db.search(a.str("query").orEmpty()).firstOrNull { it.id in done } ?: return Outcome("No logged exercise matches.")
-                Outcome("${match.name}:\n" + history.mapNotNull { w ->
-                    val sets = w.exercises.filter { it.exerciseId == match.id }.flatMap { it.sets }.filter { it.done && it.type.name != "WARMUP" && it.reps != null }
-                    val best = sets.maxByOrNull { (it.weight ?: 0.0) * (1 + (it.reps ?: 0) / 30.0) } ?: return@mapNotNull null
-                    "${TrainingAnalytics.day(w.startTime)}: best ${best.weight?.let { n(it, 1) } ?: "bw"}×${best.reps}" + (best.rir?.let { "@RIR $it" } ?: "") +
-                        (best.weight?.let { ", e1RM ${n(it * (1 + best.reps!! / 30.0), 1)} kg" } ?: "") + ", ${sets.size} sets"
-                }.takeLast(60).joinToString("\n"))
+                val state = WorkoutApp.store.state.value
+                val gymId = state.session?.gymId ?: state.settings.activeGymId
+                val gym = state.gyms.firstOrNull { it.id == gymId } ?: state.gyms.firstOrNull()
+                val estimate = if (match.usesWeight && "aw" !in match.metrics)
+                    app.superhealth.training.domain.SessionEngine(db).openingStrength(match, history, state.settings, gym) else null
+                Outcome(buildString {
+                    appendLine(match.name)
+                    estimate?.let { appendLine("App opening strength estimate: ${n(it, 1)} kg; multi-session option: ${state.settings.adaptiveStrength}. A suggestion, not a tested maximum.") }
+                    history.mapNotNull { w ->
+                        val sets = w.exercises.filter { it.exerciseId == match.id }.flatMap { TrainingAnalytics.workingSets(it) }
+                        val value = TrainingAnalytics.bestPerformance(match, sets) ?: return@mapNotNull null
+                        "${TrainingAnalytics.day(w.startTime)}: ${n(value, 1)} ${if (match.usesWeight) "kg estimated 1RM" else "reps"}, ${sets.size} sets"
+                    }.takeLast(60).forEach { appendLine(it) }
+                })
             }
             "get_programs" -> {
                 if (!Coach.shares(Coach.Share.TRAINING)) return Outcome(HIDDEN)
@@ -377,11 +385,8 @@ object CoachTools {
                     app.superhealth.ui.trf("%1\$s min", minutes), a.toString()))
             }
             "get_league" -> {
-                val s = app.superhealth.league.League.compute(ctx)
-                val week = s.week
-                val friends = app.superhealth.league.League.state.value.friends.filter { it.week == week }
-                Outcome("Me: ${s.total}/1000; " + s.pillars.entries.joinToString { (p, v) -> "${p.name.lowercase()} ${v ?: "not tracked"}" } +
-                    "\nFriends this week: " + friends.joinToString { "${it.name} ${it.score}" }.ifEmpty { "none" })
+                if (!Coach.shares(Coach.Share.INDEX)) return Outcome(HIDDEN)
+                Outcome(Coach.indexContext(app.superhealth.league.League.compute(ctx)).ifBlank { "No permitted score available." })
             }
             "show_screen" -> {
                 val key = a.str("screen")?.takeIf { it in SCREENS } ?: return Outcome("Unknown screen.")

@@ -88,13 +88,14 @@ object Week {
     fun describe(s: Stats): String = buildString {
         fun n(v: Double, d: Int = 0) = if (d == 0) v.roundToInt().toString() else String.format(java.util.Locale.US, "%.${d}f", v)
         appendLine("Last 7 complete days (computed by the app, exact):")
-        appendLine("- food logged on ${s.loggedDays}/7 days")
-        if (s.kcalAvg != null) appendLine("- average intake ${n(s.kcalAvg)} kcal vs target ${n(s.kcalTarget ?: 0.0)} kcal (logged days)")
-        if (s.proteinAvg != null) appendLine("- average protein ${n(s.proteinAvg)} g vs target ${n(s.proteinTarget ?: 0.0)} g")
-        s.trendDelta?.let { appendLine("- trend weight change ${if (it >= 0) "+" else ""}${n(it, 2)} kg") }
-        appendLine("- ${s.sessions} strength sessions, volume ${n(s.volumeKg)} kg; ${s.cardioMin} min of cardio")
-        s.sleepH?.let { appendLine("- average sleep ${n(it, 1)} h") }
-        s.steps?.let { appendLine("- average steps ${n(it)}") }
+        if (Coach.shares(Coach.Share.FOOD)) appendLine("- food logged on ${s.loggedDays}/7 days")
+        if (Coach.shares(Coach.Share.FOOD) && s.kcalAvg != null) appendLine("- average intake ${n(s.kcalAvg)} kcal vs target ${n(s.kcalTarget ?: 0.0)} kcal (logged days)")
+        if (Coach.shares(Coach.Share.FOOD) && s.proteinAvg != null) appendLine("- average protein ${n(s.proteinAvg)} g vs target ${n(s.proteinTarget ?: 0.0)} g")
+        if (Coach.shares(Coach.Share.WEIGHT)) s.trendDelta?.let { appendLine("- trend weight change ${if (it >= 0) "+" else ""}${n(it, 2)} kg") }
+        if (Coach.shares(Coach.Share.TRAINING)) appendLine("- ${s.sessions} strength sessions, volume ${n(s.volumeKg)} kg")
+        if (Coach.shares(Coach.Share.ACTIVITIES)) appendLine("- ${s.cardioMin} min of cardio")
+        if (Coach.shares(Coach.Share.HEALTH)) s.sleepH?.let { appendLine("- average sleep ${n(it, 1)} h") }
+        if (Coach.shares(Coach.Share.HEALTH)) s.steps?.let { appendLine("- average steps ${n(it)}") }
     }.trim()
 
     /** Le mot du coach pour ce bilan (une fois par semaine glissante, gardé sur l'appareil). */

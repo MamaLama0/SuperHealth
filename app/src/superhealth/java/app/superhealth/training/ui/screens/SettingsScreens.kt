@@ -161,6 +161,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             GroupCard {
                 SwitchRow(tr("Appliquer en séance"), tr("Ajuste les séries suivantes"), s.smartProgression) { v -> vm.settings { it.copy(smartProgression = v) } }
                 RowDivider()
+                SwitchRow(tr("Estimation sur plusieurs séances"), tr("Utilise les séries récentes du même exercice dans cette salle"), s.adaptiveStrength) { v -> vm.settings { it.copy(adaptiveStrength = v) } }
+                RowDivider()
                 SettingRow(tr("Pré-remplissage"), if (s.fillWithSmart) tr("Progression") else tr("Séance précédente")) { vm.settings { it.copy(fillWithSmart = !it.fillWithSmart) } }
                 RowDivider()
                 SwitchRow(tr("Élargir la plage de reps"), tr("Si la charge seule ne suffit pas"), s.expandRepRange) { v -> vm.settings { it.copy(expandRepRange = v) } }

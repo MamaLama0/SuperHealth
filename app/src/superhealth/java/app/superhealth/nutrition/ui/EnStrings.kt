@@ -289,6 +289,8 @@ object EnStrings {
         "Non configuré" to "Not set up",
         "Santé" to "Health",
         "Algorithmes" to "Algorithms",
+        "Poids connu au jour du calcul" to "Weight known on the day",
+        "Estime la dépense de chaque jour avec les pesées disponibles à cette date" to "Estimates each day’s expenditure using weigh-ins up to that day",
         "Ajustement prédictif" to "Predictive adjustment",
         "Anticipe un changement d'objectif" to "Anticipates a goal change",
         "Données" to "Data",

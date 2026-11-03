@@ -468,8 +468,8 @@ internal fun LoadCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: NavHos
     val l = Scores.load(w.efforts)
     Tile(c, tr("Charge d'entraînement"), modifier, onClick = { nav.go("h/metric/EFFORT") }, bottom = {
         val pts = w.efforts.withIndex().mapNotNull { (i, v) -> v?.let { i to it } }
-        val acute = Scores.ewma(w.efforts, 7).withIndex().map { it.index to it.value }
-        val chronic = Scores.ewma(w.efforts, 28).withIndex().map { it.index to it.value }
+        val acute = Scores.ewma(w.efforts, 7).mapIndexedNotNull { i, v -> v?.takeIf { w.efforts[i] != null }?.let { i to it } }
+        val chronic = Scores.ewma(w.efforts, 28).mapIndexedNotNull { i, v -> v?.takeIf { w.efforts[i] != null }?.let { i to it } }
         if (pts.size >= 2) LineChart(listOf(Series(chronic, Mf.colors.textSecondary, dashed = true), Series(pts, c.ink(), dots = true), Series(acute, c.ink())),
             height = 56.dp, showAxis = false)
     }) {

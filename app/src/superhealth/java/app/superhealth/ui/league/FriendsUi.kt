@@ -102,7 +102,7 @@ fun FriendsScreen(nav: NavHostController) {
                         FriendAvatar(f, f.shown, 44.dp)
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(f.shown, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != HealthIndex.MODEL) tr("Ancienne carte : demander une mise à jour") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
+                            Text(if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != League.currentModel) tr("Ancienne carte : demander une mise à jour") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                         }
                         f.progress?.let { Text(trf("Niveau %1\$s", it.level), style = MaterialTheme.typography.labelMedium, color = LeagueHue.onContainer()) }
@@ -139,7 +139,7 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                     Text(f.shown, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(if (f.time <= 0) tr("En attente d'actualisation") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
-                if (f.model == HealthIndex.MODEL && f.ready) Column(horizontalAlignment = Alignment.End) {
+                if (f.model == League.currentModel && f.ready) Column(horizontalAlignment = Alignment.End) {
                     Text(f.score.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = LeagueHue.onContainer())
                     Text(tr("Indice"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                 }

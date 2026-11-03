@@ -233,6 +233,10 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                     set { it.copy(predictiveGoalAdjustment = v) }
                 }
                 RowDivider()
+                SwitchRow(tr("Poids connu au jour du calcul"), tr("Estime la dépense de chaque jour avec les pesées disponibles à cette date"), s.useFilteredWeightForExpenditure) { v ->
+                    set { it.copy(useFilteredWeightForExpenditure = v) }
+                }
+                RowDivider()
                 SwitchRow(tr("Pas dans la dépense"), tr("Réagit plus vite aux changements d'activité"), s.useSteps) { v -> set { it.copy(useSteps = v) } }
             }
 

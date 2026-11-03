@@ -44,10 +44,11 @@ object League {
 
     /** Partie : son taux de 0 à 100, null si elle ne compte pas pour cette personne. */
     data class Score(val week: String, val total: Int, val pillars: Map<Pillar, Int?>,
-        val ready: Boolean = false, val endDay: Long = 0, val metrics: List<Comparison> = emptyList(), val progress: Progression.Summary? = null) {
+        val ready: Boolean = false, val endDay: Long = 0, val metrics: List<Comparison> = emptyList(), val progress: Progression.Summary? = null,
+        val model: Int = HealthIndex.MODEL, val classic: Map<Pillar, Int?> = emptyMap()) {
         val coverage get() = Pillar.entries.fold(0) { mask, p -> if (pillars[p] != null) mask or (1 shl p.ordinal) else mask }
         fun comparable(friend: Friend, nowSeconds: Long) = ready && friend.ready &&
-            friend.model == HealthIndex.MODEL && friend.endDay == endDay && Integer.bitCount(friend.coverage) >= HealthIndex.MIN_DOMAINS &&
+            friend.model == model && friend.endDay == endDay && Integer.bitCount(friend.coverage) >= HealthIndex.MIN_DOMAINS &&
             friend.time >= nowSeconds - 48 * 3600
     }
 
@@ -56,7 +57,9 @@ object League {
 
     @Serializable data class Card(val v: Int = 1, val k: String, val n: String, val w: String, val t: Long, val s: Int, val p: List<Int?> = emptyList(), val st: Int = 0,
         val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
-        val metrics: List<Comparison> = emptyList(), val detailSnapshot: Boolean = false, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val hello: Boolean = false, val relayKey: String? = null, val progress: Progression.Summary? = null, val invite: Boolean = false, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList(), val avatar: SocialPosts.Media? = null, val reactions: List<SocialReactions.Reaction> = emptyList(), val previousKey: String? = null, val endorsement: String? = null)
+        val metrics: List<Comparison> = emptyList(), val detailSnapshot: Boolean = false, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val hello: Boolean = false, val relayKey: String? = null, val progress: Progression.Summary? = null, val invite: Boolean = false, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList(), val avatar: SocialPosts.Media? = null, val reactions: List<SocialReactions.Reaction> = emptyList(), val previousKey: String? = null, val endorsement: String? = null,
+        val unified: IndexCard? = null, @kotlinx.serialization.Transient val classicIndex: IndexCard? = null)
+    @Serializable data class IndexCard(val total: Int?, val coverage: Int, val parts: List<Int?>)
 
     @Serializable data class Friend(val id: String, val key: String, val name: String, val week: String, val time: Long, val score: Int,
                                     val pillars: List<Int?> = emptyList(), val streak: Int = 0,
@@ -64,7 +67,8 @@ object League {
                                     val alias: String? = null, val history: Map<String, Int> = emptyMap(), val addedAt: Long = 0,
                                     val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
                                     val metrics: List<Comparison> = emptyList(), val metricsTime: Long = 0, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val metricsEndDay: Long = 0, val relayKey: String? = null, val progress: Progression.Summary? = null,
-                                    val trends: Map<String, List<TrendPoint>> = emptyMap(), val relayEtag: String? = null, val inviteRevision: Long = 0, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList(), val avatar: SocialPosts.Media? = null, val reactions: List<SocialReactions.Reaction> = emptyList(), val rootKey: String? = null, val profileRevision: Long = 0) {
+                                    val trends: Map<String, List<TrendPoint>> = emptyMap(), val relayEtag: String? = null, val inviteRevision: Long = 0, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList(), val avatar: SocialPosts.Media? = null, val reactions: List<SocialReactions.Reaction> = emptyList(), val rootKey: String? = null, val profileRevision: Long = 0,
+                                    val classicIndex: IndexCard? = null, val unifiedIndex: IndexCard? = null) {
         val shown get() = alias?.takeIf { it.isNotBlank() } ?: name
     }
 
@@ -75,12 +79,13 @@ object League {
         val notifyFriends: Boolean = true, val notifyReplies: Boolean = true, val notifyPosts: Boolean = true, val notifyReactions: Boolean = true,
         val notifyProgress: Boolean = true, val progressNotificationBaseline: Boolean = false, val progressNotificationLevel: Int = 0,
         val shareProfilePhoto: Boolean = true, val profileAvatar: SocialPosts.Media? = null,
-        val lastSync: Long = 0, val lastSuccessfulSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), val questXp: Long = 0, val questsCompleted: Long = 0, val posts: List<SocialPosts.Post> = emptyList(), val reactions: List<SocialReactions.Reaction> = emptyList())
+        val lastSync: Long = 0, val lastSuccessfulSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), val questXp: Long = 0, val questsCompleted: Long = 0, val posts: List<SocialPosts.Post> = emptyList(), val reactions: List<SocialReactions.Reaction> = emptyList(), val unifiedScore: Boolean = true)
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private const val ALIAS = "superhealth_league"
     private const val PREFIX = "SH1"
     const val MAX_CARD = 65_536
+    val currentModel get() = if (state.value.unifiedScore) HealthIndex.MODEL else HealthIndex.CLASSIC
     fun available() = SuperPrefs.settings.value.leagueEnabled
     val state = MutableStateFlow(State())
     val mine = MutableStateFlow<Score?>(null)
@@ -97,6 +102,17 @@ object League {
         catch (e: Exception) { atomic.failWrite(out); throw e }
         state.value = s
     }
+    fun setUnifiedScore(ctx: Context, on: Boolean) = configure(ctx) { old ->
+        val model = if (on) HealthIndex.MODEL else HealthIndex.CLASSIC
+        old.copy(unifiedScore = on, friends = old.friends.map { it.withIndex(model) })
+    }
+
+    internal fun Friend.withIndex(selected: Int): Friend {
+        val value = (if (selected == HealthIndex.CLASSIC) classicIndex else unifiedIndex) ?: return this
+        return copy(model = selected, score = value.total ?: 0, ready = value.total != null,
+            pillars = value.parts, coverage = value.coverage)
+    }
+
     fun setSharePillars(ctx: Context, on: Boolean) = configure(ctx) { it.copy(sharePillars = on) }
     @Synchronized fun configure(ctx: Context, f: (State) -> State) = save(ctx, f(state.value))
     fun claimQuest(ctx: Context, metric: WeeklyQuests.Metric, today: Long = LocalDate.now().toEpochDay()) = configure(ctx) { s ->
@@ -124,6 +140,9 @@ object League {
         val fromMs = start.atStartOfDay(zone).toInstant().toEpochMilli()
         val toMs = today.atStartOfDay(zone).toInstant().toEpochMilli()
         val sh = SuperPrefs.settings.value
+        val model = currentModel
+        val tracks = ProgressRepository.selectedTracks(sh)
+        val advanced = mutableMapOf<Pillar, Int?>()
         val p = linkedMapOf<Pillar, Int?>()
         val history = WorkoutApp.store.state.value.history
         val workouts = history.filter { it.startTime in fromMs until toMs }
@@ -135,11 +154,21 @@ object League {
         val referenceRuns = activities.filter { it.start in referenceStart until fromMs && it.kind == Bridge.Kind.RUN }
         p[Pillar.STRENGTH] = if (!sh.has(Feature.TRAINING)) null else {
             val previous = HealthIndex.strengthBests(history.filter { it.startTime in referenceStart until fromMs }, exerciseDb)
-            val gain = HealthIndex.strengthBests(workouts, exerciseDb).maxOfOrNull { (id, value) -> HealthIndex.gain(value, previous[id]) } ?: 0.0
-            HealthIndex.sport(workouts.size.toDouble(), (WorkoutApp.store.state.value.programs.firstOrNull { it.id == WorkoutApp.store.state.value.settings.activeProgramId }?.leagueTarget() ?: state.value.weeklyTargets["STRENGTH"] ?: 2).toDouble(), gain)
+            val current = HealthIndex.strengthBests(workouts, exerciseDb)
+            val gain = current.maxOfOrNull { (id, value) -> HealthIndex.gain(value, previous[id]) } ?: 0.0
+            val volumeGoal = (WorkoutApp.store.state.value.programs.firstOrNull { it.id == WorkoutApp.store.state.value.settings.activeProgramId }?.leagueTarget() ?: state.value.weeklyTargets["STRENGTH"] ?: 2).toDouble()
+            val comparable = current.filterKeys { it in previous }
+            val typicalGain = comparable.map { (id, v) -> HealthIndex.gain(v, previous[id]) }.takeIf { it.isNotEmpty() }?.average() ?: 0.0
+            advanced[Pillar.STRENGTH] = HealthIndex.sport(workouts.size.toDouble(), volumeGoal, typicalGain)
+            HealthIndex.sport(workouts.size.toDouble(), volumeGoal, gain)
         }
         p[Pillar.CARDIO] = if (!sh.has(Feature.HEALTH) || activities.none { it.kind != Bridge.Kind.STRENGTH }) null else
             HealthIndex.sport(cardio.sumOf { it.minutes.coerceAtLeast(0) }.toDouble(), 150.0, HealthIndex.runGain(runs, referenceRuns))
+        if (model == HealthIndex.MODEL && Progression.Track.RUN in tracks && runs.isNotEmpty()) {
+            val runDays = runs.map { Analytics.day(it.start) }.distinct().size
+            advanced[Pillar.CARDIO] = HealthIndex.blend(p[Pillar.CARDIO],
+                pct(runDays.toDouble(), (state.value.weeklyTargets["RUN"] ?: 2).coerceIn(1, 7).toDouble()), 0.2)
+        }
         val settings = NutriApp.repository.prefs.settings.first()
         suspend fun observed(metric: Metric, date: LocalDate) = Bridge.healthValue(ctx, metric, date)?.takeIf { it > 0 }
         p[Pillar.STEPS] = if (sh.has(Feature.HEALTH)) HealthIndex.daily(days.map { date ->
@@ -149,6 +178,14 @@ object League {
         p[Pillar.SLEEP] = if (sh.has(Feature.HEALTH)) HealthIndex.daily(days.map { date ->
             runCatching { observed(Metric.SLEEP, date) }.getOrNull()
         }, 420.0) else null
+        if (model == HealthIndex.MODEL && Progression.Track.SLEEP in tracks && p[Pillar.SLEEP] != null) {
+            val scores = app.superhealth.health.data.Scores
+            val nights = (1L..28L).mapNotNull { observed(Metric.SLEEP, start.minusDays(it)) }
+            val need = scores.personalNeed(nights, scores.sleepNeed())
+            val duration = HealthIndex.daily(days.map { observed(Metric.SLEEP, it) }, need)
+            val regularity = runCatching { scores.sriOf(end) }.getOrNull()?.coerceIn(0.0, 100.0)?.toInt()
+            advanced[Pillar.SLEEP] = HealthIndex.blend(duration, regularity, 0.2)
+        }
         p[Pillar.FOOD] = if (!sh.has(Feature.NUTRITION)) null else {
             val repo = NutriApp.repository
             val an = repo.analytics().first()
@@ -158,15 +195,29 @@ object League {
                 val target = an.targetFor(d.toEpochDay()).macros.kcal
                 if (kcal == null || kcal <= 0 || target <= 0) null else (100 - kotlin.math.abs(kcal / target - 1) * 200).coerceIn(0.0, 100.0)
             }
-            HealthIndex.daily(values, 100.0)
+            val energy = HealthIndex.daily(values, 100.0)
+            if (model == HealthIndex.MODEL && Progression.Track.FOOD in tracks) {
+                val flags = an.days.associateBy { it.epochDay }
+                val complete = days.indices.filter { flags[days[it].toEpochDay()]?.let { d -> d.partial || d.fasted } != true }
+                val protein = HealthIndex.daily(complete.map { i ->
+                    val day = days[i].toEpochDay()
+                    val items = eaten[day].orEmpty()
+                    val target = an.targetFor(day).macros.protein
+                    if (target > 0 && items.isNotEmpty() && items.all { it.protein + it.fat + it.carbs > 0 })
+                        items.sumOf { it.protein } / target else null
+                }, 1.0)
+                advanced[Pillar.FOOD] = HealthIndex.blend(HealthIndex.daily(complete.map { values[it] }, 100.0), protein, 0.25)
+            }
+            energy
         }
         p[Pillar.MIND] = if (!Meditation.available() && !Stretch.available()) null else
             pct((Meditation.minutes(start.toEpochDay(), end.toEpochDay()) + Stretch.minutes(start.toEpochDay(), end.toEpochDay())).toDouble(), 70.0)
-        val tracks = ProgressRepository.selectedTracks(sh)
         val chosen = mapOf(Pillar.STRENGTH to Progression.Track.STRENGTH, Pillar.CARDIO to Progression.Track.RUN,
             Pillar.STEPS to Progression.Track.STEPS, Pillar.SLEEP to Progression.Track.SLEEP,
             Pillar.FOOD to Progression.Track.FOOD, Pillar.MIND to Progression.Track.MIND)
         chosen.forEach { (pillar, track) -> if (track !in tracks) p[pillar] = null }
+        val classic = p.toMap()
+        if (model == HealthIndex.MODEL) advanced.forEach { (pillar, value) -> if (chosen[pillar] in tracks) p[pillar] = value }
         val index = HealthIndex.total(Pillar.entries.map { p[it] })
         val metrics = mutableListOf<Comparison>()
         metrics += Comparison("activities:count", "Activités", "séances", acts.size.toDouble() + workouts.count { w -> acts.none { it.gymId == w.id } })
@@ -195,9 +246,9 @@ object League {
         val progress = try { ProgressRepository.compute(ctx, today).summary }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { null }
-        val s = Score(key, index ?: 0, p, index != null, end.toEpochDay(), metrics.filter { it.value.isFinite() && it.value >= 0 }, progress)
+        val s = Score(key, index ?: 0, p, index != null, end.toEpochDay(), metrics.filter { it.value.isFinite() && it.value >= 0 }, progress, model, classic)
         mine.value = s
-        val historyKey = HealthIndex.historyKey(s.endDay, s.coverage)
+        val historyKey = HealthIndex.historyKey(s.endDay, s.coverage, s.model)
         if (index != null && state.value.best[historyKey] != index) configure(ctx) { st -> st.copy(best = (st.best + (historyKey to index)).entries.sortedBy { it.key }.takeLast(60).associate { it.key to it.value }) }
         s
     }
@@ -246,11 +297,17 @@ object League {
     @Synchronized fun card(name: String, s: Score, remote: String? = null, detailed: Boolean = false, hello: Boolean = false, relayKey: String? = null, invite: Boolean = false, includeAvatar: Boolean = true): String {
         val pub = myPublic()
         val revision = maxOf(System.currentTimeMillis(), lastRevision + 1).also { lastRevision = it }
-        val c = Card(v = 2, k = pub, previousKey = GroupIdentity.current().previous, endorsement = GroupIdentity.current().endorsement, n = clean(name).ifBlank { "?" }, w = s.week, t = revision / 1000, s = s.total,
-            p = if (state.value.sharePillars) Pillar.entries.map { s.pillars[it] } else emptyList(), st = 0,
-            model = if (hello || invite) 2 else HealthIndex.MODEL, ready = s.ready, endDay = s.endDay,
+        // Older apps read the classic score. New apps read the signed extension.
+        val extended = s.model == HealthIndex.MODEL && !hello && !invite && s.classic.isNotEmpty()
+        val baseParts = if (extended) s.classic else s.pillars
+        val baseTotal = if (extended) HealthIndex.total(Pillar.entries.map { baseParts[it] }) else s.total.takeIf { s.ready }
+        val mask = Pillar.entries.fold(0) { acc, p -> if (baseParts[p] == null) acc else acc or (1 shl p.ordinal) }
+        fun shareParts(parts: Map<Pillar, Int?>) = if (state.value.sharePillars) Pillar.entries.map { parts[it] } else emptyList()
+        val c = Card(v = 2, k = pub, previousKey = GroupIdentity.current().previous, endorsement = GroupIdentity.current().endorsement, n = clean(name).ifBlank { "?" }, w = s.week, t = revision / 1000, s = baseTotal ?: 0,
+            p = shareParts(baseParts), st = 0,
+            model = if (hello || invite) 2 else HealthIndex.CLASSIC, ready = baseTotal != null, endDay = s.endDay,
             metrics = if (detailed && state.value.shareActivities) s.metrics else emptyList(), detailSnapshot = detailed,
-            remote = remote, revision = revision, coverage = s.coverage, hello = hello, relayKey = relayKey, progress = if (state.value.shareProgress && !hello) s.progress else null, invite = invite,
+            remote = remote, revision = revision, unified = if (extended) IndexCard(s.total.takeIf { s.ready }, s.coverage, shareParts(s.pillars)) else null, coverage = mask, hello = hello, relayKey = relayKey, progress = if (state.value.shareProgress && !hello) s.progress else null, invite = invite,
             profileTitle = state.value.profileTitle.takeIf { !hello && !invite },
             posts = if (detailed && !hello && !invite) SocialPosts.visible(state.value.posts).map(SocialPosts::compact) else emptyList(),
             avatar = if (includeAvatar && detailed && !hello && !invite && state.value.shareProfilePhoto) state.value.profileAvatar else null,
@@ -332,7 +389,17 @@ object League {
         if (c.revision < 0 || (c.revision > 0 && c.revision / 1000 != c.t)) return null
         if (c.v == 2 && (c.model !in 2..HealthIndex.MODEL || c.endDay !in 1..LocalDate.now().toEpochDay())) return null
         if (c.remote != null && !Relay.validEndpoint(c.remote)) return null
-        c.copy(n = clean(c.n).ifBlank { "?" })
+        val ext = c.unified
+        if (ext != null) {
+            if (c.v != 2 || c.model != HealthIndex.CLASSIC || c.hello || c.invite || ext.coverage !in 0..63 ||
+                ext.total?.let { it !in 0..1000 } == true || (ext.total != null) != (Integer.bitCount(ext.coverage) >= HealthIndex.MIN_DOMAINS) ||
+                ext.parts.size !in listOf(0, Pillar.entries.size) || ext.parts.any { it != null && it !in 0..100 } ||
+                ext.parts.withIndex().any { (i, part) -> (part != null) != (ext.coverage and (1 shl i) != 0) }) return null
+        }
+        val read = if (ext == null || currentModel == HealthIndex.CLASSIC) c else
+            c.copy(s = ext.total ?: 0, ready = ext.total != null, coverage = ext.coverage, p = ext.parts, model = HealthIndex.MODEL)
+        read.copy(n = clean(c.n).ifBlank { "?" },
+            classicIndex = if (ext != null) IndexCard(c.s.takeIf { c.ready }, c.coverage, c.p) else null)
     }.getOrNull()
 
     /** Carte reçue : un ami connu est mis à jour directement, un inconnu attend la confirmation. */
@@ -372,14 +439,18 @@ object League {
         }
         val sameRelay = remote == base.remote && relayKey == base.relayKey
         val updateDecor = c.detailSnapshot && c.revision >= base.profileRevision
-        val history = if (c.model in 2..HealthIndex.MODEL && c.ready) base.history + (HealthIndex.historyKey(c.endDay, c.coverage, c.model) to c.s) else base.history
+        val history = base.history.toMutableMap()
+        if (c.model in 2..HealthIndex.MODEL && c.ready) history[HealthIndex.historyKey(c.endDay, c.coverage, c.model)] = c.s
+        for ((version, index) in listOf(HealthIndex.CLASSIC to c.classicIndex, HealthIndex.MODEL to c.unified)) {
+            if (index?.total != null) history[HealthIndex.historyKey(c.endDay, index.coverage, version)] = index.total
+        }
         val trends = base.trends.toMutableMap()
         if (c.detailSnapshot) c.metrics.forEach { m ->
             trends[m.key] = (trends[m.key].orEmpty().filter { it.day != c.endDay } + TrendPoint(c.endDay, m.value)).sortedBy { it.day }.takeLast(60)
         }
         return base.copy(key = c.k, rootKey = c.previousKey ?: c.k, name = if (updateMetadata) c.n else base.name, week = c.w, time = c.t, score = c.s,
-            pillars = c.p, streak = c.st,
-            history = history.entries.sortedBy { it.key }.takeLast(60).associate { it.key to it.value },
+            pillars = c.p, streak = c.st, classicIndex = c.classicIndex, unifiedIndex = c.unified,
+            history = history.entries.sortedBy { it.key.split(':').getOrNull(1)?.toLongOrNull() ?: 0L }.takeLast(120).associate { it.key to it.value },
             model = c.model, ready = c.ready, endDay = c.endDay,
             metrics = if (c.detailSnapshot) c.metrics else base.metrics,
             metricsTime = if (c.detailSnapshot) c.t else base.metricsTime,

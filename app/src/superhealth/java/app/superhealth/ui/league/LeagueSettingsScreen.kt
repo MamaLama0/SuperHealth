@@ -40,6 +40,12 @@ fun LeagueSettingsScreen(nav: NavHostController) {
             SettingRow(tr("Réglages de l'application")) { nav.go("settings") }
         }
         SectionLabel(tr("Mes activités et mon score"))
+        GroupCard {
+            SwitchRow(tr("Indice unifié"), tr("Associe les tendances de vos suivis. Désactivez pour retrouver le calcul classique."), st.unifiedScore) { on ->
+                League.setUnifiedScore(ctx, on)
+                scope.launch { League.compute(ctx) }
+            }
+        }
         Text(tr("Seuls les suivis cochés entrent dans votre score. Il faut au moins trois domaines renseignés."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         Text(tr("Chaque suivi a un objectif. La musculation suit les séances du programme ; les jours de repos restent libres."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         GroupCard {
@@ -81,6 +87,8 @@ fun LeagueSettingsScreen(nav: NavHostController) {
         GroupCard { SettingRow(tr("Comment c'est calculé"), subtitle = tr("Indice global de santé")) { healthRules = !healthRules } }
         if (healthRules) MfCard {
             Text(tr("Le score porte sur les sept derniers jours terminés. Il faut au moins trois domaines. La moyenne sur 1 000 utilise uniquement leurs poids."), style = MaterialTheme.typography.bodySmall)
+            if (st.unifiedScore) Text(tr("La force suit le progrès moyen des exercices comparables. Le cardio tient compte des jours de course. Le sommeil combine durée et régularité, la nutrition calories et protéines sur les journées complètes."), style = MaterialTheme.typography.bodySmall)
+            else {
             Text(tr("Chaque pourcent de progrès vaut un point sur 100 dans le domaine sportif. La référence est votre meilleur résultat des 28 jours précédant la période. Sans référence, seuls les points de volume comptent."), style = MaterialTheme.typography.bodySmall)
             listOf(
                 "Musculation (poids 20) · Jusqu’à 90 points pour votre objectif de séances et 10 pour un gain de force estimée ou de répétitions sur le même exercice.",
@@ -90,6 +98,7 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 "Écart relatif entre apports et cibles, évalué progressivement. Au moins 4 jours renseignés. Poids relatif : 15.",
                 "Méditation et étirements face à 70 min sur 7 jours. Poids relatif : 5."
             ).forEach { Text(tr(it), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
+            }
         }
         RelaySettings()
         SectionLabel(tr("Confidentialité avancée"))

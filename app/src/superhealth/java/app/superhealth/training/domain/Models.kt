@@ -168,6 +168,8 @@ data class SetLog(
     val autoWeight: Double? = null,
     val autoReps: Int? = null,
     val completedAt: Long? = null,
+    val repsEdited: Boolean = false,
+    val weightEdited: Boolean = false,
 )
 
 @Serializable
@@ -228,6 +230,7 @@ data class Workout(
     val rpe: Int? = null,
     /** Nombre de séances prévues dans le cycle au moment de l'enregistrement. */
     val plannedSessions: Int? = null,
+    val gymId: String? = null,
 )
 
 // ----- Salles et réglages -----
@@ -291,4 +294,5 @@ data class Settings(
     val restSound: Boolean = true,
     val activeGymId: String? = null,
     val activeProgramId: String? = null,
+    val adaptiveStrength: Boolean = false,
 )

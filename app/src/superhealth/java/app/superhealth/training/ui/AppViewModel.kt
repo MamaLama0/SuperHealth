@@ -174,7 +174,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val ex = sess.exercises.getOrNull(exIndex) ?: return@update s
             val set = ex.sets.getOrNull(setIndex) ?: return@update s
             if (set.weight == weight) return@update s
-            val sets = ex.sets.toMutableList().also { it[setIndex] = set.copy(weight = weight) }
+            val sets = ex.sets.toMutableList().also { it[setIndex] = set.copy(weight = weight, weightEdited = weight != null) }
             val next = sess.copy(exercises = sess.exercises.toMutableList().also { it[exIndex] = ex.copy(sets = sets) })
             s.copy(session = e.weightChanged(next, exIndex, setIndex, s.history, s.settings, gym(sess.gymId)))
         }
@@ -205,7 +205,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val work = ex.sets.firstOrNull { it.type != SetType.WARMUP }
             val weight = work?.weight ?: work?.autoWeight
             val ladder = e.ladderFor(ex.exerciseId, gym(sess.gymId))
-            val oneRm = if (exercise?.usesWeight == true) app.superhealth.training.domain.Progression.currentOneRm(e.lastSets(ex.exerciseId, s.history), exercise.upperBody) else null
+            val oneRm = if (exercise?.usesWeight == true) e.openingStrength(exercise, s.history, s.settings, gym(sess.gymId)) else null
             val smart = s.settings.warmUp == app.superhealth.training.domain.WarmUpMode.SMART
             // demandés à la main : les muscles déjà travaillés ne les suppriment pas
             var warm = if (smart) e.warmUps(exercise, weight, oneRm, s.settings, ladder, emptySet()) else emptyList()

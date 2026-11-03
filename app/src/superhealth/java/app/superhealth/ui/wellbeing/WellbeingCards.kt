@@ -225,9 +225,9 @@ fun FormBody(r: Form.Result?, vm: SuperViewModel, nav: NavHostController, compac
             // une ligne par signal : coché quand il est prêt, sinon où il en est (3 / 14) — plus parlant qu'une liste de règles
             val journalOn = SuperPrefs.settings.collectAsState().value.has(Feature.JOURNAL)
             val moodToday = Journal.days.collectAsState().value[LocalDate.now().toEpochDay()] != null
-            Text(tr("Le conseil arrive avec ces 4 signaux"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(tr(if (journalOn) "Le conseil arrive avec ces 4 signaux" else "Le conseil arrive avec ces 3 signaux"), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
-            listOf(Form.Kind.CHARGE, Form.Kind.SLEEP, Form.Kind.LOAD, Form.Kind.MOOD).forEach { k ->
+            listOf(Form.Kind.CHARGE, Form.Kind.SLEEP, Form.Kind.LOAD, Form.Kind.MOOD).filter { it != Form.Kind.MOOD || journalOn }.forEach { k ->
                 val ok = k !in r.what
                 val (n, of) = r.have[k] ?: (0 to 0)
                 Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {

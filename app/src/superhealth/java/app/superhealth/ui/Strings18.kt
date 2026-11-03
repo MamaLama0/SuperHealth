@@ -239,6 +239,7 @@ object Strings18 {
         "le voyage" to "travelling",
         "Fatigue liée au stress" to "Stress-related fatigue",
         "Malade : laissez le corps guérir" to "Sick: let your body heal",
+        "Le conseil arrive avec ces 3 signaux" to "Advice comes with these 3 signals",
         "Le conseil arrive avec ces 4 signaux" to "Advice comes with these 4 signals",
         "Journal coupé" to "Journal off",
         "À noter" to "To log",

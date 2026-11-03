@@ -28,6 +28,20 @@ class RegressionProbeActivity : Activity() {
         scope.launch {
             try {
                 when (intent.getStringExtra("op")) {
+                    "unified-32" -> {
+                        val out = File(filesDir, "qa/unified-32.txt").apply { parentFile?.mkdirs(); writeText("running") }
+                        val score = League.compute(this@RegressionProbeActivity)
+                        val parsed = League.parse(League.card("QA", score)) ?: error("Signed score did not round trip")
+                        check(parsed.model == score.model && parsed.s == score.total && parsed.ready == score.ready)
+                        val current = app.superhealth.health.data.Scores.load(List(25) { 50.0 } + listOf(null, null, null))
+                        check(current == (50.0 to 50.0))
+                        val demo = League.Score("2026-W44", 750, mapOf(League.Pillar.SLEEP to 80, League.Pillar.FOOD to 70, League.Pillar.STEPS to 75), true, 20000)
+                        val limited = app.superhealth.coach.Coach.indexContext(demo) { it != app.superhealth.coach.Coach.Share.FOOD }
+                        check("750/1000" !in limited && "food:" !in limited && "sleep: 80/100" in limited)
+                        val full = app.superhealth.coach.Coach.indexContext(demo) { true }
+                        check("750/1000" in full)
+                        out.writeText("PASS score-card, missing-wear, coach-permissions")
+                    }
                     "social-304-prepare" -> {
                         seed()
                         SuperPrefs.update { it.copy(leagueEnabled = true, socialFeedEnabled = true, socialFeedIntroSeen = true) }

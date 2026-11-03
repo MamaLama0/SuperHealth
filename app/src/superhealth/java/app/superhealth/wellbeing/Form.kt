@@ -97,8 +97,8 @@ object Form {
         if (load == null) missing += Kind.LOAD
 
         val entry = if (journalOn) Journal.today() else null
-        val base = Journal.moodBaseline(today.toEpochDay())?.takeIf { it.second >= MIN_MOOD_DAYS }
-        if (entry == null || base == null) missing += Kind.MOOD
+        val base = if (journalOn) Journal.moodBaseline(today.toEpochDay()) else null
+        if (journalOn && (entry == null || (base?.second ?: 0) < MIN_MOOD_DAYS)) missing += Kind.MOOD
 
         val body = runCatching { BodyAlert.today(ctx) }.getOrNull()
         if (missing.isNotEmpty()) {
@@ -106,7 +106,7 @@ object Form {
                 Kind.CHARGE to ((runCatching { Scores.chargeOf(ctx, today) }.getOrNull()?.nights ?: 0).coerceAtMost(MIN_CHARGE_NIGHTS) to MIN_CHARGE_NIGHTS),
                 Kind.SLEEP to (nights.coerceAtMost(Scores.NEED_MIN_NIGHTS) to Scores.NEED_MIN_NIGHTS),
                 Kind.LOAD to (efforts.count { it != null }.coerceAtMost(14) to 14),
-                Kind.MOOD to ((Journal.moodBaseline(today.toEpochDay())?.second ?: 0).coerceAtMost(MIN_MOOD_DAYS) to MIN_MOOD_DAYS),
+                Kind.MOOD to ((base?.second ?: 0).coerceAtMost(MIN_MOOD_DAYS) to MIN_MOOD_DAYS),
             )
             return@withContext Missing(missing, body, have)
         }
@@ -127,10 +127,10 @@ object Form {
             acwr > 1.5 -> -1
             else -> 0
         })
-        val mood = entry!!.mood
-        signals += Signal(Kind.MOOD, app.superhealth.ui.tr(Journal.MOODS[mood - 1]), when {
-            mood >= 4 && mood >= base!!.first -> 1
-            mood <= 2 || mood <= base!!.first - 1.5 -> -1
+        val mood = entry?.mood
+        if (mood != null && base != null) signals += Signal(Kind.MOOD, app.superhealth.ui.tr(Journal.MOODS[mood - 1]), when {
+            mood >= 4 && mood >= base.first -> 1
+            mood <= 2 || mood <= base.first - 1.5 -> -1
             else -> 0
         })
         // ressenti du matin (facultatif) : moyenne sommeil + énergie
@@ -142,10 +142,11 @@ object Form {
         if (body?.level == BodyAlert.Level.ALERT) signals += Signal(Kind.BODY, "!", -1)
 
         val feel = Checkin.today()
-        val x = Model.features(charge, acwr, mood, base!!.first)
-        val weights = runCatching { Model.weights(ctx, today) }.getOrNull() ?: (Model.PRIOR to 0)
+        val x = Model.features(charge, acwr, mood, base?.first)
+        val weights = if (journalOn) runCatching { Model.weights(ctx, today) }.getOrNull() ?: (Model.PRIOR to 0) else Model.PRIOR to 0
         val score = Model.score(x, feel?.let { (it.sleep + it.energy) / 2.0 }, weights.first)
-        val v = verdict(score, signals, acwr, charge.hrv?.overreaching == true, body?.level == BodyAlert.Level.ALERT)
+        val v = verdict(score, signals, acwr, charge.hrv?.overreaching == true, body?.level == BodyAlert.Level.ALERT,
+            allowPush = journalOn || feel != null)
         val why = when {
             v != Verdict.EASY && v != Verdict.REST -> null
             else -> cause(acwr, x)
@@ -158,10 +159,10 @@ object Form {
      * (rapport > 1,5) ou un surmenage repéré sur la VFC. Pousser : 70 et plus, aucun signal bas et pas de hausse de charge
      * (rapport ≤ 1,3). Sinon : comme prévu.
      */
-    fun verdict(score: Int, signals: List<Signal>, acwr: Double, overreaching: Boolean, alert: Boolean): Verdict = when {
+    fun verdict(score: Int, signals: List<Signal>, acwr: Double, overreaching: Boolean, alert: Boolean, allowPush: Boolean = true): Verdict = when {
         alert || score < 35 -> Verdict.REST
         score < 50 || acwr > 1.5 || overreaching -> Verdict.EASY
-        score >= 70 && acwr <= 1.3 && signals.none { it.level < 0 } -> Verdict.PUSH
+        allowPush && score >= 70 && acwr <= 1.3 && signals.none { it.level < 0 } -> Verdict.PUSH
         else -> Verdict.NORMAL
     }
 
@@ -173,8 +174,8 @@ object Form {
      */
     fun effortRange(v: Verdict, past: List<Double?>): Pair<Double, Double>? {
         val days = past.takeLast(28)
-        if (days.count { it != null } < 14) return null
-        val chronic = days.map { e -> e?.let { exp(it * kotlin.math.ln(Scores.STRAIN_D) / 100) - 1 } ?: 0.0 }.average()
+        if (days.count { it != null } < 14 || days.takeLast(7).none { it != null }) return null
+        val chronic = days.filterNotNull().map { exp(it * kotlin.math.ln(Scores.STRAIN_D) / 100) - 1 }.average()
         if (chronic <= 0) return null
         val (lo, hi) = when (v) { Verdict.PUSH -> 1.1 to 1.4; Verdict.NORMAL -> 0.8 to 1.1; Verdict.EASY -> 0.4 to 0.7; Verdict.REST -> 0.0 to 0.3 }
         return Scores.effortFromTrimp(chronic * lo) to Scores.effortFromTrimp(chronic * hi)
