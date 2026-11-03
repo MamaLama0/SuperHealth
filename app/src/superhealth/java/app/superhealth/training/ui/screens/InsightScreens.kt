@@ -5,6 +5,13 @@ import androidx.compose.material.icons.rounded.Share
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import androidx.compose.material.icons.rounded.SelfImprovement
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import app.superhealth.ui.theme.Base
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -330,11 +337,13 @@ fun WorkoutDetailScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     if (editDuration) DurationDialog(w.durationSec, estimatedDuration(w), onDismiss = { editDuration = false }) { editDuration = false; vm.saveWorkout(w.copy(durationSec = it)) }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose: () -> Unit, onEdit: () -> Unit, onDuration: () -> Unit, onDelete: () -> Unit, rpeFirst: Boolean = false,
                            nav: NavHostController? = null) {
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var sharePr by remember { mutableStateOf(false) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     if (menu) WorkoutOptionsMenu(onDismiss = { menu = false }, onEdit = { menu = false; onEdit() }, onDuration = { menu = false; onDuration() },
         onLibrary = { menu = false; vm.saveToLibrary(w); android.widget.Toast.makeText(ctx, tr("Ajoutée à la bibliothèque"), android.widget.Toast.LENGTH_SHORT).show() },
@@ -349,6 +358,33 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
     val max = (sets.values.maxOrNull() ?: 1.0).coerceAtLeast(1.0)
     val before = st.history.filter { it.startTime < w.startTime }
     val records = Analytics.newRecords(w, before, db)
+    val shareable = remember(w, st.history, db) { app.superhealth.league.GroupRecords.forWorkout(w, st.history, db) }
+    val canShare = nav != null && app.superhealth.league.League.available()
+    if (sharePr) ModalBottomSheet(onDismissRequest = { sharePr = false }, containerColor = Mf.colors.card,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(tr("Partager un PR de cette séance"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(tr("Choisissez le record. Vous pourrez ajouter une vidéo avant de publier."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            shareable.forEach { record ->
+                MfCard(onClick = {
+                    sharePr = false
+                    app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.GroupRecords.draft(record)
+                    nav?.navigate("social/compose")
+                }) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = Base.Yellow, modifier = Modifier.size(30.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(record.name, style = MaterialTheme.typography.titleSmall)
+                            Text(tr(app.superhealth.league.GroupRecords.label(record)) + " · " +
+                                (if (record.metric == "REPS") record.value.toInt().toString() else st.settings.weight(record.value)),
+                                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                        }
+                        Icon(Icons.Rounded.Share, tr("Partager un PR"), tint = Mf.colors.accent)
+                    }
+                }
+            }
+        }
+    }
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
         app.superhealth.nutrition.ui.components.NavBar(title, onClose, backIcon = Icons.Rounded.Close) {
             if (nav != null && app.superhealth.league.League.available()) app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Share, tr("Partager avec mes amis")) {
@@ -359,16 +395,36 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
         }
         val rpe: @Composable () -> Unit = { RpeCard(w) { r -> vm.saveWorkout(w.copy(rpe = r)); app.superhealth.health.data.Scores.invalidate() } }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 96.dp)) {
-            if (nav != null && app.superhealth.league.League.available()) app.superhealth.nutrition.ui.components.PillButton(tr("Partager cette séance"),
-                Modifier.fillMaxWidth().padding(vertical = 10.dp), strong = false, icon = Icons.Rounded.Share) {
-                app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.workoutDraft(w)
-                nav.navigate("social/compose")
+            val volume = w.exercises.sumOf { Analytics.volume(Analytics.workingSets(it)) }
+            val setCount = w.exercises.sumOf { Analytics.workingSets(it).size }
+            Column(Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(24.dp))
+                .background(Brush.linearGradient(listOf(WorkoutBlue.container(), Mf.colors.accent.container()))).padding(20.dp)) {
+                Text(w.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(longDate(w.startTime), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SummaryStat(Icons.Rounded.Schedule, durationWords(w.durationSec), tr("Durée"), WorkoutBlue, Modifier.weight(1f))
+                    SummaryStat(Icons.Rounded.FitnessCenter, st.settings.volume(volume), tr("Volume"), Base.Purple, Modifier.weight(1f))
+                    SummaryStat(Icons.Rounded.Repeat, setCount.toString(), tr("Séries de travail"), Base.Teal, Modifier.weight(1f))
+                }
+                if (records.isNotEmpty()) Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Rounded.EmojiEvents, null, tint = Base.Yellow)
+                    Text(trf("%1\$s records dans cette séance", records.size), style = MaterialTheme.typography.labelLarge)
+                }
             }
-            // fin de séance : l'effort ressenti en premier, avant la silhouette (il passait sous le pli)
             if (rpeFirst) rpe()
-            BodyMap(intensity(sets, max), st.settings.sex, Modifier.fillMaxWidth().height(if (rpeFirst) 260.dp else 320.dp))
+            if (canShare) {
+                app.superhealth.nutrition.ui.components.PillButton(tr("Partager cette séance"), Modifier.fillMaxWidth().padding(top = 12.dp),
+                    strong = false, icon = Icons.Rounded.Share) {
+                    app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.workoutDraft(w)
+                    nav?.navigate("social/compose")
+                }
+                if (shareable.isNotEmpty()) app.superhealth.nutrition.ui.components.PillButton(tr("Partager un PR de cette séance"),
+                    Modifier.fillMaxWidth().padding(top = 8.dp), strong = false, icon = Icons.Rounded.EmojiEvents) { sharePr = true }
+            }
+            SectionLabel(tr("Muscles sollicités"))
+            MfCard { BodyMap(intensity(sets, max), st.settings.sex, Modifier.fillMaxWidth().height(230.dp), color = WorkoutBlue) }
             if (records.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
+                SectionLabel(tr("Records personnels"))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     records.forEach { RecordCard(db, st.settings, it, shortDate(w.startTime)) {} }
                 }
@@ -411,31 +467,56 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
     }
 }
 
-/** Échelle CR-10 (Borg, utilisée par la session-RPE de Foster) : les repères nommés. */
-private val RPE_WORDS = mapOf(1 to "Très facile", 2 to "Facile", 3 to "Modéré", 4 to "Un peu dur", 5 to "Dur", 7 to "Très dur", 9 to "Presque maximal", 10 to "Maximal")
+@Composable
+private fun SummaryStat(icon: ImageVector, value: String, label: String, color: Color, modifier: Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Icon(icon, null, Modifier.size(24.dp), tint = color)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+    }
+}
 
-/** Effort ressenti de la séance, une touche : sa charge ressentie (effort × minutes) entre dans l'Effort du jour. */
+/** Same CR-10 scale and stored load calculation; larger choices keep the rating easy to enter. */
+private val RPE_WORDS = mapOf(1 to "Très facile", 2 to "Facile", 3 to "Modéré", 4 to "Un peu dur", 5 to "Dur", 7 to "Très dur", 9 to "Presque maximal", 10 to "Maximal")
+private fun rpeLabel(n: Int) = RPE_WORDS[n] ?: RPE_WORDS.filterKeys { it < n }.maxBy { it.key }.value
+private fun rpeColor(n: Int) = when (n) { in 1..3 -> Base.Green; in 4..5 -> Base.Yellow; in 6..8 -> Base.Orange; else -> Base.Red }
+
 @Composable
 private fun RpeCard(w: Workout, onPick: (Int) -> Unit) {
-    MfCard(Modifier.padding(top = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Effort ressenti"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            w.rpe?.let { r -> Text(tr(RPE_WORDS[r] ?: RPE_WORDS.filterKeys { it < r }.maxBy { it.key }.value), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
+    val hue = w.rpe?.let(::rpeColor) ?: Mf.colors.accent
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(24.dp))
+        .background(hue.container()).border(1.dp, hue.copy(alpha = .28f), RoundedCornerShape(24.dp)).padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Effort ressenti"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(tr(w.rpe?.let(::rpeLabel) ?: "Comment avez-vous vécu cette séance ?"),
+                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            }
+            Text(w.rpe?.let { "$it/10" } ?: "—/10", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = hue)
         }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            (1..10).forEach { n ->
-                val on = w.rpe == n
-                Box(Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(10.dp)).background(if (on) Mf.colors.accent.container(1.4f) else Mf.colors.chip)
-                    .clickable { onPick(n) }, contentAlignment = Alignment.Center) {
-                    Text("$n", style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.accent.onContainer() else Mf.colors.text)
+        Spacer(Modifier.height(14.dp))
+        listOf(1..5, 6..10).forEach { range ->
+            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                range.forEach { n ->
+                    val selected = w.rpe == n
+                    val color = rpeColor(n)
+                    Box(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) color else color.copy(alpha = .12f))
+                        .then(if (selected) Modifier.border(2.dp, color.onContainer(), RoundedCornerShape(12.dp)) else Modifier)
+                        .selectable(selected, role = Role.RadioButton, onClick = { onPick(n) }), contentAlignment = Alignment.Center) {
+                        Text("$n", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                            color = if (selected) color.onContainer() else Mf.colors.text)
+                    }
                 }
             }
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(tr("Très facile"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+            Text(tr("Maximal"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+        }
         w.rpe?.let { r ->
-            Spacer(Modifier.height(8.dp))
             Text(trf("Charge ressentie : %1\$s × %2\$s min = %3\$s", r, w.durationSec / 60, r * (w.durationSec / 60)),
-                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
     }
 }

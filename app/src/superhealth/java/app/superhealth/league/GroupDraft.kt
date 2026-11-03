@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 object GroupDraft {
-    @Serializable data class Draft(val text: String = "", val source: String = "", val uri: String? = null)
+    @Serializable data class Draft(val text: String = "", val source: String = "", val uri: String? = null, val shareRoute: Boolean = true, val shareDetails: Boolean = true)
     private fun file(ctx: Context) = AtomicFile(File(ctx.filesDir, "league/group-draft.json").apply { parentFile?.mkdirs() })
     fun load(ctx: Context): Draft = runCatching { file(ctx).openRead().bufferedReader().use { Json.decodeFromString(Draft.serializer(), it.readText()) } }.getOrDefault(Draft())
     fun save(ctx: Context, draft: Draft) {

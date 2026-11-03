@@ -150,7 +150,8 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
     DetailScaffold(tr(detail?.name ?: "Activité"), onBack = { nav.popBackStack() }, action = {
         if (detail != null && app.superhealth.league.League.available()) IconButton(onClick = {
             app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.Draft(detail.name,
-                listOfNotNull(detail.distanceM?.let { "${km(it)} km" }, "${(detail.activeSec / 60).toInt()} min").joinToString(" · "), if (kind == Bridge.Kind.RUN) "RUN" else "WORKOUT")
+                listOfNotNull(detail.distanceM?.let { "${km(it)} km" }, "${(detail.activeSec / 60).toInt()} min").joinToString(" · "), if (kind == Bridge.Kind.RUN) "RUN" else "WORKOUT",
+                activity = app.superhealth.league.SharedActivity.fromDetail(detail, kind.name))
             nav.navigate("social/compose")
         }) { Icon(Icons.Rounded.Share, tr("Partager avec mes amis")) }
         // module Coach : analyse de la séance comparée aux précédentes (comme l'Athlete Intelligence de Strava)

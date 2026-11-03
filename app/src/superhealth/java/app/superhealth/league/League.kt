@@ -252,7 +252,7 @@ object League {
             metrics = if (detailed && state.value.shareActivities) s.metrics else emptyList(), detailSnapshot = detailed,
             remote = remote, revision = revision, coverage = s.coverage, hello = hello, relayKey = relayKey, progress = if (state.value.shareProgress && !hello) s.progress else null, invite = invite,
             profileTitle = state.value.profileTitle.takeIf { !hello && !invite },
-            posts = if (detailed && !hello && !invite) SocialPosts.visible(state.value.posts) else emptyList(),
+            posts = if (detailed && !hello && !invite) SocialPosts.visible(state.value.posts).map(SocialPosts::compact) else emptyList(),
             avatar = if (includeAvatar && detailed && !hello && !invite && state.value.shareProfilePhoto) state.value.profileAvatar else null,
             reactions = if (detailed && !hello && !invite) SocialReactions.visible(state.value.reactions) else emptyList(),
             profileBadges = if (!hello && !invite) state.value.profileBadges.filter { it in state.value.earnedBadges }.take(3) else emptyList())

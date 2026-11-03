@@ -27,7 +27,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/** Only explicitly published summaries enter the signed, encrypted friend card. No GPS tracks. */
+/** Only explicitly published summaries enter the signed, encrypted friend card. GPS routes require the visible, per-post sharing option. */
 object SocialPosts {
     const val MAX_PHOTO_BYTES = 15 * 1024 * 1024
     const val MAX_BYTES = 50 * 1024 * 1024
@@ -35,8 +35,16 @@ object SocialPosts {
     const val MAX_POSTS = 12
     @Serializable data class Media(val id: String, val key: String, val mime: String, val hash: String, val bytes: Int)
     @Serializable data class Post(val id: String, val created: Long, val text: String = "", val kind: String = "TEXT",
-        val title: String = "", val detail: String = "", val media: Media? = null, val record: GroupRecords.Record? = null)
-    @Serializable data class Draft(val title: String, val detail: String, val kind: String, val record: GroupRecords.Record? = null)
+        val title: String = "", val detail: String = "", val media: Media? = null, val record: GroupRecords.Record? = null,
+        val workout: SharedActivity.Strength? = null, val activity: SharedActivity.Outdoor? = null)
+    @Serializable data class Draft(val title: String, val detail: String, val kind: String, val record: GroupRecords.Record? = null,
+        val workout: SharedActivity.Strength? = null, val activity: SharedActivity.Outdoor? = null) {
+        fun shared(route: Boolean, details: Boolean) = copy(
+            detail = if (!details && workout != null) "${workout.seconds / 60} min" else detail,
+            record = record?.let { if (details) it else it.copy(previous = null, trail = emptyList(), muscles = emptyList()) },
+            workout = workout?.let { if (details) it else it.copy(exercises = emptyList()) },
+            activity = activity?.let { (if (details) it else it.withoutDetails()).copy(route = it.route.takeIf { route }) })
+    }
     data class Published(val post: Post, val sent: Boolean)
     internal class MissingMediaMailbox : IllegalStateException("La boîte de partage doit être créée avant le média.")
     val draft = MutableStateFlow<Draft?>(null)
@@ -44,9 +52,31 @@ object SocialPosts {
     private val mimes = setOf("image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/3gpp")
     private val http = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES).writeTimeout(60, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).build()
+    private val postJson = kotlinx.serialization.json.Json { encodeDefaults = true }
     fun valid(post: Post, now: Long = System.currentTimeMillis()): Boolean = post.id.matches(Regex("[a-f0-9]{32}")) &&
         post.created in 1..(now + 300000) && post.text.length <= 500 && post.title.length <= 100 && post.detail.length <= 1500 &&
-        post.kind in kinds && (post.record?.let { GroupRecords.valid(it, now) } ?: (post.kind != "PR")) && (post.media?.let(::validMedia) ?: (post.kind !in setOf("PHOTO", "VIDEO")))
+        post.kind in kinds && (post.workout == null || (post.kind == "WORKOUT" && post.activity == null && SharedActivity.valid(post.workout, now))) &&
+        (post.activity == null || (post.kind in setOf("RUN", "WORKOUT") && SharedActivity.valid(post.activity, now))) &&
+        (post.record?.let { post.kind == "PR" && post.workout == null && post.activity == null && GroupRecords.valid(it, now) } ?: (post.kind != "PR")) && (post.media?.let(::validMedia) ?: (post.kind !in setOf("PHOTO", "VIDEO"))) &&
+        postJson.encodeToString(Post.serializer(), post).toByteArray().size <= 11000
+    /** Preserve the message and totals; bound optional visual samples to the relay's signed-event budget. */
+    internal fun bounded(original: Post): Post {
+        var p = if (original.workout != null || original.activity != null) original.copy(detail = original.detail.take(320)) else original
+        while (postJson.encodeToString(Post.serializer(), p).toByteArray().size > 11000) {
+            val w = p.workout; val a = p.activity
+            p = when {
+                w != null && w.exercises.isNotEmpty() -> p.copy(workout = w.copy(exercises = w.exercises.dropLast(1)))
+                a?.route != null && SharedActivity.Route.decode(a.route)!!.size > 12 -> p.copy(activity = a.copy(route =
+                    SharedActivity.Route.encode(SharedActivity.sample(SharedActivity.Route.decode(a.route)!!, SharedActivity.Route.decode(a.route)!!.size / 2))))
+                a != null && (a.speed.isNotEmpty() || a.elevation.isNotEmpty() || a.heart.isNotEmpty()) -> p.copy(activity = a.copy(speed = emptyList(), elevation = emptyList(), heart = emptyList()))
+                else -> error("Publication trop volumineuse.")
+            }
+        }
+        return p
+    }
+    /** Discovery cards stay compact; the independent signed archive carries full activity snapshots. */
+    internal fun compact(post: Post) = post.copy(workout = null, activity = null,
+        record = post.record?.copy(previous = null, trail = emptyList(), muscles = emptyList()))
     fun validMedia(m: Media) = m.id.matches(Regex("[a-f0-9]{64}")) && RelayCrypto.validKey(m.key) &&
         m.mime in mimes && m.hash.matches(Regex("[a-f0-9]{64}")) && m.bytes in 29..(MAX_BYTES + 28)
     fun visible(posts: List<Post>, now: Long = System.currentTimeMillis()) = posts.filter { valid(it, now) && it.created >= now - GroupHistory.RETENTION_DAYS.toLong() * 86400000 }.sortedByDescending { it.created }.take(MAX_POSTS)
@@ -125,9 +155,9 @@ object SocialPosts {
                     trimCache(ctx)
                 } finally { upload.plain.delete(); upload.encrypted.delete() }
             }
-            val post = Post(UUID.randomUUID().toString().replace("-", ""), System.currentTimeMillis(), text.trim().take(500),
+            val post = bounded(Post(UUID.randomUUID().toString().replace("-", ""), System.currentTimeMillis(), text.trim().take(500),
                 source?.kind ?: uploaded?.let { if (it.mime.startsWith("video/")) "VIDEO" else "PHOTO" } ?: "TEXT",
-                source?.title.orEmpty().take(100), source?.detail.orEmpty().take(1500), uploaded, source?.record)
+                source?.title.orEmpty().take(100), source?.detail.orEmpty().take(1500), uploaded, source?.record, source?.workout, source?.activity))
             check(valid(post))
             GroupHistory.record(ctx, post)
             League.configure(ctx) { it.copy(posts = visible(listOf(post) + it.posts)) }
@@ -252,7 +282,7 @@ object SocialPosts {
                 listOfNotNull(set.weight?.let { "$it kg" }, set.reps?.let { "$it reps" }).joinToString(" × ")
             }
         }
-        return Draft(w.name, "${w.durationSec / 60} min\n" + lines.joinToString("\n").take(1400), "WORKOUT")
+        return Draft(w.name, "${w.durationSec / 60} min\n" + lines.joinToString("\n").take(1400), "WORKOUT", workout = SharedActivity.strength(w, db))
     }
 
     fun activityDraft(a: app.superhealth.bridge.Bridge.Activity): Draft = Draft(a.title,

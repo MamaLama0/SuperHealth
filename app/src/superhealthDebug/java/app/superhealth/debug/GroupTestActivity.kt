@@ -63,6 +63,27 @@ class GroupTestActivity : Activity() {
                         val (post, friend) = GroupHistory.posts(this@GroupTestActivity).first { it.second != null && it.first.record != null }
                         check(GroupHistory.reply(this@GroupTestActivity, friend!!.id, post, "Bravo pour ce record !"))
                     }
+                    "visuals" -> {
+                        val now = System.currentTimeMillis()
+                        val route = SharedActivity.Route.encode((0..90).map { i ->
+                            val t = i / 90.0 * Math.PI * 2
+                            48.858 + kotlin.math.sin(t) * .006 to 2.294 + kotlin.math.cos(t) * .009
+                        })
+                        val activity = SharedActivity.Outdoor("RUN", now - 86400000, 1560.0, 5200.0, 420.0, 85.0, 148, 174, 172.0,
+                            route, (0..60).map { 3.0 + kotlin.math.sin(it / 6.0) * .8 },
+                            (0..60).map { 80.0 + kotlin.math.sin(it / 12.0) * 25 }, (0..60).map { 140 + it / 2 },
+                            List(5) { SharedActivity.Split(1000.0, 290.0 + it * 12) })
+                        check(SocialPosts.publish(this@GroupTestActivity, "Une sortie partagée avec son parcours et ses statistiques.",
+                            SocialPosts.Draft("Boucle au parc", "5,20 km · 26 min", "RUN", activity = activity), null).sent)
+                        val exercises = db.exercises.filter { it.usesWeight && it.usesReps && "aw" !in it.metrics }.take(4)
+                        val workout = Workout("visual-test", "Séance du haut du corps", now - 86400000, 3600,
+                            exercises.mapIndexed { i, ex -> SessionExercise("ex-$i", ex.id,
+                                List(3) { j -> SetLog("set-$i-$j", weight = 60.0 + i * 10, reps = 8 + j, done = true) }) })
+                        check(SocialPosts.publish(this@GroupTestActivity, "Une bonne séance, tous les détails sont dans le résumé.", SocialPosts.workoutDraft(workout), null).sent)
+                        val record = GroupRecords.Record(exercises.first().id, exercises.first().name, "WEIGHT", 100.0, "kg", now,
+                            90.0, listOf(60.0, 70.0, 80.0, 90.0, 100.0), exercises.first().muscleGroups.take(3).map { it.key })
+                        check(SocialPosts.publish(this@GroupTestActivity, "Nouveau cap !", GroupRecords.draft(record), null).sent)
+                    }
                     "issues" -> {
                         val repo = app.superhealth.nutrition.NutriApp.repository
                         val day = java.time.LocalDate.now().toEpochDay()

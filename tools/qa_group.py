@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--port', type=int, default=18788)
     parser.add_argument('--video', required=True)
     parser.add_argument('--output', required=True)
+    parser.add_argument('--visuals', action='store_true', help='Verify the detailed activity, workout and PR snapshots')
     parser.add_argument('--reset-synthetic', action='store_true', help='Erase only the isolated synthetic test package before seeding')
     args = parser.parse_args()
     output = pathlib.Path(args.output)
@@ -90,6 +91,14 @@ def main():
     run(1, 'reply')
     run(1, 'react')
     assert run(0, 'sync')['reactionEvents'] > 0
+    if args.visuals:
+        run(0, 'visuals')
+        run(1, 'sync')
+        history = json.loads(adb(1, 'exec-out', 'run-as', PACKAGE, 'cat', 'files/league/group-history.json').stdout)
+        posts = [e['post'] for e in history['events'] if e.get('post')]
+        assert any(p.get('activity', {}).get('route') for p in posts if p.get('activity'))
+        assert any(p.get('workout', {}).get('setCount', 0) > 0 for p in posts if p.get('workout'))
+        assert any(p.get('record', {}).get('previous') for p in posts if p.get('record'))
     run(0, 'archive')
     assert run(0, 'sync')['replies'] > 0
     before = run(0, 'status')
@@ -111,6 +120,7 @@ def main():
         'video_plaintext_hash_verified': True, 'signed_replies': True,
         'rotation_retains_media': True, 'retained_friend_follows_handoff': True,
         'social_identity_recovery': True, 'custom_emoji_exchange': True,
+        'rich_activity_workout_and_pr_received': args.visuals,
         'rotation_after_recovery_preserves_unloaded_archive_pages': True, 'production_package_accessed': False,
     }, indent=2))
     print('All isolated Group exchange checks passed.', flush=True)

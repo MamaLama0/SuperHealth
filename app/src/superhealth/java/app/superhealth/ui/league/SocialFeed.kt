@@ -57,16 +57,9 @@ import java.time.format.DateTimeFormatter
 
 /** Left page is the feed, right page is the existing dashboard. No feed navigation button. */
 @Composable
-fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController) {
+fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.compose.foundation.pager.PagerState) {
     val settings by SuperPrefs.settings.collectAsState()
-    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = 1) { 2 }
     val scope = rememberCoroutineScope()
-    val dashboardRequest by GroupNavigation.dashboardRequest.collectAsState()
-    LaunchedEffect(dashboardRequest) { if (dashboardRequest > 0) pager.animateScrollToPage(1) }
-    LaunchedEffect(pager.settledPage, settings.socialFeedEnabled, settings.leagueEnabled) {
-        GroupNavigation.groupVisible.value = pager.settledPage == 0 && settings.socialFeedEnabled && settings.leagueEnabled
-    }
-    DisposableEffect(Unit) { onDispose { GroupNavigation.groupVisible.value = false } }
     if (settings.socialFeedEnabled && settings.leagueEnabled) {
         BackHandler(pager.currentPage == 0) { scope.launch { pager.animateScrollToPage(1) } }
         androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), key = { it }) { page ->
@@ -210,6 +203,8 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
     val history by GroupHistory.state.collectAsState()
     val league by League.state.collectAsState()
     val author = friend?.id ?: remember { League.myId() }
+    val sharedWorkout = remember(post) { post.workout ?: SharedActivity.legacyStrength(post) }
+    val sharedActivity = remember(post) { post.activity ?: SharedActivity.legacyActivity(post) }
     val counts = remember(league.reactions, league.friends, history, author, post.id) { GroupHistory.reactionCounts(author, post.id) }
     val selected = GroupHistory.selectedReaction(author, post.id)
     var reacting by remember { mutableStateOf(false) }
@@ -256,6 +251,9 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
             if (friend == null) IconButton({ confirmDelete = true }, enabled = !busy) { Icon(Icons.Rounded.DeleteOutline, tr("Supprimer"), tint = Mf.colors.textTertiary) }
         }
         if (post.title.isNotBlank()) Text(post.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+        if (post.record != null || sharedWorkout != null || sharedActivity != null) {
+            SharedPostVisual(post.record, sharedWorkout, sharedActivity)
+        } else {
         var expanded by rememberSaveable(post.id) { mutableStateOf(false) }
         if (post.detail.isNotBlank()) {
             Text(post.detail, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary,
@@ -264,6 +262,7 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
             if (post.detail.lines().size > 3 || post.detail.length > 180) TextButton({ expanded = !expanded }) {
                 Text(tr(if (expanded) "Réduire" else "Voir le détail"))
             }
+        }
         }
         if (post.text.isNotBlank()) Text(post.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 12.dp))
         photo?.let { Image(it, tr("Agrandir la photo"), Modifier.fillMaxWidth().padding(top = 12.dp).heightIn(max = 400.dp)
@@ -356,6 +355,10 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
     val source = remember(sourceJson) { sourceJson.takeIf { it.isNotBlank() }?.let { kotlinx.serialization.json.Json.decodeFromString(SocialPosts.Draft.serializer(), it) } }
     fun selectSource(draft: SocialPosts.Draft?) { sourceJson = draft?.let { kotlinx.serialization.json.Json.encodeToString(SocialPosts.Draft.serializer(), it) }.orEmpty() }
     var uri by rememberSaveable { mutableStateOf(savedDraft.uri) }
+    var shareRoute by rememberSaveable { mutableStateOf(savedDraft.shareRoute) }
+    var shareDetails by rememberSaveable { mutableStateOf(savedDraft.shareDetails) }
+    var sourceLoading by remember { mutableStateOf(false) }
+    val sharedSource = source?.shared(shareRoute, shareDetails)
     var busy by remember { mutableStateOf(false) }; var error by remember { mutableStateOf<String?>(null) }
     var published by rememberSaveable { mutableStateOf(false) }
     var sent by rememberSaveable { mutableStateOf(false) }
@@ -364,10 +367,10 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
         selected?.let { runCatching { ctx.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
         uri = selected?.toString()
     }
-    LaunchedEffect(text, sourceJson, uri, published) {
+    LaunchedEffect(text, sourceJson, uri, published, shareRoute, shareDetails) {
         if (!published) {
             kotlinx.coroutines.delay(300)
-            withContext(Dispatchers.IO) { GroupDraft.save(ctx, GroupDraft.Draft(text, sourceJson, uri)) }
+            withContext(Dispatchers.IO) { GroupDraft.save(ctx, GroupDraft.Draft(text, sourceJson, uri, shareRoute, shareDetails)) }
         }
     }
     val preview by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, uri) {
@@ -405,19 +408,27 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 RowDivider()
                 SettingRow(tr("Partager une série"), subtitle = tr("Montrer votre régularité"), icon = Icons.Rounded.LocalFireDepartment) { if (!busy) choosing = "STREAK" }
             }
-            source?.let { draft -> GroupSurface {
-                Text(draft.title, style = MaterialTheme.typography.titleMedium); Text(draft.detail, modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
-                TextButton({ selectSource(null) }, enabled = !busy) { Text(tr("Retirer")) }
-            } }
+            if (source?.activity?.route != null) SwitchRow(tr("Partager le parcours"), tr("Le tracé GPS sera visible par vos amis."), shareRoute) { shareRoute = it }
+            if (source?.activity != null || source?.workout != null || source?.record != null)
+                SwitchRow(tr("Statistiques détaillées"), tr("Séries, progression et mesures disponibles pour cette activité."), shareDetails) { shareDetails = it }
+            sharedSource?.let { draft ->
+                Text(tr("Aperçu de la publication"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+                PostSurface {
+                    Text(draft.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (draft.record != null || draft.workout != null || draft.activity != null) SharedPostVisual(draft.record, draft.workout, draft.activity)
+                    else Text(draft.detail, modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
+                    TextButton({ selectSource(null) }, enabled = !busy) { Text(tr("Retirer")) }
+                }
+            }
         }
         Text(tr("Visible par vos amis · seules les informations choisies sont partagées"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if (!published) PillButton(tr("Publier dans le Groupe"), Modifier.fillMaxWidth(), enabled = !busy && (text.isNotBlank() || uri != null || source != null)) {
+        if (busy || sourceLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (!published) PillButton(tr("Publier dans le Groupe"), Modifier.fillMaxWidth(), enabled = !busy && !sourceLoading && (text.isNotBlank() || uri != null || source != null)) {
             scope.launch {
                 busy = true; error = null
                 try {
-                    sent = SocialPosts.publish(ctx, text, source, uri?.let(Uri::parse)).sent; published = true
+                    sent = SocialPosts.publish(ctx, text, sharedSource, uri?.let(Uri::parse)).sent; published = true
                     SocialPosts.draft.value = null; GroupDraft.clear(ctx)
                 } catch (e: kotlinx.coroutines.CancellationException) { throw e }
                 catch (e: Exception) { error = tr(e.message?.takeIf { !it.contains("://") } ?: "Publication impossible. Réessayez.") }
@@ -427,7 +438,7 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
             Text(tr(if (sent) "Publication envoyée au Groupe" else "Publication enregistrée. Actualisez le fil pour réessayer l'envoi."), style = MaterialTheme.typography.titleMedium)
             PillButton(tr("Terminé"), Modifier.fillMaxWidth()) { nav.popBackStack() }
         }
-        Text(tr("Les photos sont redimensionnées et leurs métadonnées retirées. Les vidéos conservent leur fichier d'origine. Les cartes de séance et de course ne contiennent aucun tracé GPS."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary)
+        Text(tr("Seules les données de l’activité choisie et visibles dans l’aperçu seront partagées. Vous pouvez masquer le parcours et les statistiques détaillées. Les vidéos conservent leur fichier d’origine."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary)
     }
     if (choosing != null) ModalBottomSheet(onDismissRequest = { choosing = null }, containerColor = Mf.colors.background) {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp).navigationBarsPadding(), contentPadding = PaddingValues(16.dp)) {
@@ -445,7 +456,15 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 items(runs, key = { it.key }) { run ->
                     val draft = SocialPosts.activityDraft(run)
                     val date = Instant.ofEpochMilli(run.start).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy", app.superhealth.ui.Lang.locale))
-                    SettingRow(draft.title, subtitle = "$date · ${draft.detail}") { selectSource(draft); choosing = null }
+                    SettingRow(draft.title, subtitle = "$date · ${draft.detail}") {
+                        if (!sourceLoading) scope.launch {
+                            sourceLoading = true
+                            try { selectSource(SharedActivity.draft(ctx, run)); choosing = null }
+                            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                            catch (_: Exception) { error = tr("Détails de l’activité indisponibles. Réessayez.") }
+                            finally { sourceLoading = false }
+                        }
+                    }
                 }
             } else if (choosing == "PR") {
                 val records = GroupRecords.recent()

@@ -4,6 +4,9 @@ import android.content.res.Configuration
 import android.view.ContextThemeWrapper
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -22,9 +25,15 @@ internal fun GroupReactionPicker(selected: String?, onDismiss: () -> Unit, onSel
     LaunchedEffect(Unit) { focus.clearFocus(); keyboard?.hide() }
     val dark = Mf.colors.dark
     val select by rememberUpdatedState(onSelect)
+    // The native emoji grid owns vertical drags and flings. A draggable parent sheet
+    // intercepts these gestures and can dismiss itself instead of scrolling the grid.
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.card,
+        sheetGesturesEnabled = false, dragHandle = null,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Text(tr("Choisir une réaction"), Modifier.padding(horizontal = 20.dp, vertical = 8.dp), style = MaterialTheme.typography.titleMedium)
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Choisir une réaction"), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, tr("Fermer")) }
+        }
         if (selected != null) TextButton(onClick = { onSelect(selected) }, modifier = Modifier.padding(horizontal = 8.dp)) {
             Text(SocialReactions.emoji(selected) + "  " + tr("Retirer ma réaction"))
         }

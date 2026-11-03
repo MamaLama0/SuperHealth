@@ -59,7 +59,7 @@ import kotlin.math.tan
 /** Coordonnées « monde » Web Mercator, en unités de tuile de 256 au niveau [z]. */
 private fun worldX(lon: Double, z: Int) = (lon + 180.0) / 360.0 * 256.0 * (1 shl z)
 private fun worldY(lat: Double, z: Int): Double {
-    val r = lat * PI / 180
+    val r = lat.coerceIn(-85.05112878, 85.05112878) * PI / 180
     return (1 - ln(tan(r) + 1 / kotlin.math.cos(r)) / PI) / 2 * 256.0 * (1 shl z)
 }
 

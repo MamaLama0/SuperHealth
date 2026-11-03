@@ -175,10 +175,13 @@ fun SuperRoot(vm: SuperViewModel) {
     if (!sh.onboarded) { OnboardingScreen(vm); return }
     if (db == null) { Box(Modifier.fillMaxSize().background(Mf.colors.background)); return }
     val nav = rememberNavController()
+    // Keep the selected home panel across child destinations; only an explicit
+    // Home action requests the dashboard. No old navigation event is replayed.
+    val homePager = androidx.compose.foundation.pager.rememberPagerState(initialPage = 1) { 2 }
     val back by nav.currentBackStackEntryAsState()
     val current = back?.destination?.route
     val isTab = isTabRoute(current) || current == "feed"
-    val groupVisible by app.superhealth.ui.league.GroupNavigation.groupVisible.collectAsState()
+    val groupVisible = homePager.settledPage == 0
     val groupContext = current == "feed" || (current == "home" && groupVisible)
     var plus by remember { mutableStateOf(false) }
     var plusAction by remember { mutableStateOf<String?>(null) }
@@ -210,6 +213,7 @@ fun SuperRoot(vm: SuperViewModel) {
         // Widget ou notification : les feuilles ouvertes se ferment et la pile repart de l'accueil (jamais deux tableaux de bord
         // empilés : un second « home » faisait ensuite revenir les onglets sur l'accueil, cartes et onglets semblant ne plus répondre).
         plus = false; logSheet = false
+        if (r == "home") homePager.requestScrollToPage(1)
         runCatching {
             when {
                 r == "mood" -> app.superhealth.ui.wellbeing.moodSheet = true
@@ -233,7 +237,7 @@ fun SuperRoot(vm: SuperViewModel) {
             popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
             popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
-            composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav) }
+            composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav, homePager) }
             composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true) }
             composable("social/compose") { app.superhealth.ui.league.SocialComposer(nav) }
             composable("social/share/workout") { app.superhealth.ui.league.SocialComposer(nav, "WORKOUT") }
@@ -326,7 +330,7 @@ fun SuperRoot(vm: SuperViewModel) {
         if (isTab) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { barPx = it.height }) {
             if (tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
             BottomBar(current, onTab = { route ->
-                if (route == "home") app.superhealth.ui.league.GroupNavigation.dashboard()
+                if (route == "home") homePager.requestScrollToPage(1)
                 nav.openTab(route)
             }, onPlus = {
                 if (groupContext) { plusAction = "social/compose"; return@BottomBar }
