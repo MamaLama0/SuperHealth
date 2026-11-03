@@ -23,7 +23,7 @@ struct SocialWidgetView: View {
     @ViewBuilder
     private func content(_ c: Snapshot.SocialCard) -> some View {
         let hue = Color(hex: c.color)
-        VStack(alignment: .leading, spacing: family == .systemSmall ? 7 : 12) {
+        VStack(alignment: .leading, spacing: family == .systemSmall ? 7 : 8) {
             HStack(spacing: 7) {
                 Chip(symbol: c.symbol, color: hue)
                 Text(c.title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
@@ -35,18 +35,18 @@ struct SocialWidgetView: View {
             if family == .systemMedium {
                 HStack(alignment: .center, spacing: 18) {
                     metric(c, hue: hue)
-                    if !c.chart.isEmpty { bars(c.chart, hue: hue).frame(maxWidth: 130).frame(height: 65) }
+                    if !c.chart.isEmpty && c.rows.isEmpty { bars(c.chart, hue: hue).frame(maxWidth: 130).frame(height: 65) }
                     else if !c.rows.isEmpty { rows(Array(c.rows.prefix(2)), hue: hue).frame(maxWidth: .infinity) }
                 }
             } else {
-                Spacer(minLength: 0)
+                if family == .systemSmall { Spacer(minLength: 0) }
                 metric(c, hue: hue)
             }
             if let fraction = c.fraction {
                 ProgressView(value: min(max(fraction, 0), 1)).tint(hue).accessibilityLabel(c.detail)
             }
             if family == .systemLarge {
-                if !c.chart.isEmpty { bars(c.chart, hue: hue).frame(height: 65) }
+                if !c.chart.isEmpty && c.rows.isEmpty { bars(c.chart, hue: hue).frame(height: 65) }
                 if !c.rows.isEmpty { rows(Array(c.rows.prefix(5)), hue: hue) }
                 Spacer(minLength: 0)
             }
@@ -91,14 +91,29 @@ struct SocialWidgetView: View {
     }
 }
 
-struct SocialWidget: Widget {
-    var id: String
-    var title: String
-    var about: String
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "social." + id, provider: Provider()) { SocialWidgetView(entry: $0, id: id) }
-            .configurationDisplayName(title)
-            .description(about)
-            .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-    }
+@MainActor
+private func socialConfiguration(_ id: String, _ title: String, _ about: String) -> some WidgetConfiguration {
+    StaticConfiguration(kind: "social." + id, provider: Provider()) { SocialWidgetView(entry: $0, id: id) }
+        .configurationDisplayName(Text(LocalizedStringKey(title)))
+        .description(Text(LocalizedStringKey(about)))
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+}
+
+struct LeagueWidget: Widget {
+    var body: some WidgetConfiguration { socialConfiguration("league", "Classement", "Votre indice et le classement entre amis.") }
+}
+struct ProgressWidget: Widget {
+    var body: some WidgetConfiguration { socialConfiguration("progress", "Progression", "Niveau, XP et activité de la semaine.") }
+}
+struct StreakWidget: Widget {
+    var body: some WidgetConfiguration { socialConfiguration("streak", "Séries", "La régularité de vos suivis.") }
+}
+struct QuestsWidget: Widget {
+    var body: some WidgetConfiguration { socialConfiguration("quests", "Quêtes de la semaine", "Le prochain défi ou la récompense à récupérer.") }
+}
+struct FriendsWidget: Widget {
+    var body: some WidgetConfiguration { socialConfiguration("friends", "Amis", "Vos amis et leur progression partagée.") }
+}
+struct SocialOverviewWidget: Widget {
+    var body: some WidgetConfiguration { socialConfiguration("social", "Vue sociale", "Profil, niveau, amis et badges.") }
 }

@@ -3,7 +3,11 @@ package app.superhealth.ui
 /** Textes propres à la version iOS (Apple Santé à la place de la montre Gadgetbridge et de Health Connect). */
 object StringsIos {
     val map: Map<String, String> = mapOf(
+        "Sur iPhone, installez les nouvelles versions avec SideStore + HealthKit." to "On iPhone, install new versions with SideStore + HealthKit.",
+        "Voir les versions iOS" to "View iOS releases",
+        "Série en cours" to "Current streak",
         "Widgets iPhone" to "iPhone widgets",
+        "%1\$s XP → niv. %2\$s" to "%1\$s XP → level %2\$s",
         "Faites un appui long sur l'écran d'accueil, touchez Modifier puis Ajouter un widget. Recherchez SuperHealth et choisissez la taille." to "Touch and hold the Home Screen, tap Edit, then Add Widget. Search for SuperHealth and choose a size.",
         "Petit, moyen ou grand : choisissez le format dans la galerie iOS. Un appui ouvre le détail dans SuperHealth." to "Small, medium or large: choose a size in the iOS gallery. Tap to open its details in SuperHealth.",
         "Petit, moyen et grand" to "Small, medium and large",

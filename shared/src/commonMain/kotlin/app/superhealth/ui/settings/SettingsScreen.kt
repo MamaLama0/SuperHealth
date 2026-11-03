@@ -306,10 +306,6 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             Group(tr("À propos")) {
                 VersionRow(nav)
                 RowDivider(56.dp)
-                IconSwitchRow(tr("Vérifier chaque jour"), tr("Une requête par jour à GitHub"), Icons.Rounded.Autorenew, null, sh.updateCheck) { v ->
-                    SuperPrefs.update { it.copy(updateCheck = v) }
-                }
-                RowDivider(56.dp)
                 SettingRow(tr("Sources"), subtitle = tr("Apple Santé · Open Food Facts (ODbL) · OSAV"), icon = Icons.Rounded.Info, hue = app.superhealth.ui.theme.Base.Grey) { nav.go("settings/sources") }
             }
             Spacer(Modifier.height(24.dp))

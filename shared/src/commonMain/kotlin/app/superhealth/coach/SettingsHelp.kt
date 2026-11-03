@@ -7,7 +7,7 @@ import app.superhealth.platform.*
 object SettingsHelp {
     data class Destination(val key: String, val label: String, val route: String, val keywords: String)
     val destinations = listOf(
-        Destination("home_widgets", "Widgets iPhone", "widgets", "widget accueil ecran bureau ajouter android social classement progression series quetes"),
+        Destination("home_widgets", "Widgets iPhone", "widgets", "widget accueil ecran bureau ajouter iphone ios social classement progression series quetes"),
         Destination("nutrition_guide", "Guide nutrition", "setup/nutrition", "nutrition assistant guider configuration objectif kcal calories macros jour"),
         Destination("nutrition_program", "Programme nutrition", "program", "kcal calories macros proteines glucides lipides par jour lundi manuel collaboratif jours hauts repartition depense fixe dynamique metabolisme bmr tdee plancher"),
         Destination("nutrition_override", "Remplacer mes cibles", "targets/override", "calories macros temporaire remplacement aujourd hui vacances exception"),
@@ -28,8 +28,8 @@ object SettingsHelp {
         Destination("stretch_library", "Bibliothèque d'étirements", "stretch/all", "etirement recherche exercice favoris bibliotheque"),
         Destination("reminders", "Rappels", "settings/reminders", "rappel notification horaire repas poids coucher"),
         Destination("sleep_settings", "Sommeil", "settings/sleep", "sommeil besoin horaires coucher reveil"),
-        Destination("connections", "Health Connect", "settings/hc", "montre health connect google autorisation donnees sante synchro"),
-        Destination("sources", "Sources", "settings/sources", "sources donnees montre garmin apple doublons priorite"),
+        Destination("connections", "Apple Santé", "settings/hc", "montre apple sante health watch autorisation donnees synchro"),
+        Destination("sources", "Sources", "settings/sources", "sources donnees apple food facts osav illustrations licence"),
         Destination("security", "Sécurité", "settings/security", "verrou code empreinte biometrie confidentialite capture ecran"),
         Destination("backup", "Sauvegardes", "backup", "sauvegarde restauration drive chiffre fichier export transfert"),
         Destination("plugins", "Plugins", "modules", "plugin module installer meditation etirement ajouter telecharger"),
@@ -39,7 +39,7 @@ object SettingsHelp {
         Destination("league_settings", "Réglages du classement", "league/settings", "serveur personnalise relais synchronisation score classement streak serie suivis partage"),
         Destination("coach_settings", "Réglages du coach", "coach/settings", "ia coach modele cle fournisseur partage memoire confidentialite"),
         Destination("ai_settings", "Réglages IA nutrition", "aisettings", "ia repas photo code barre modele fournisseur cle"),
-        Destination("updates", "Mises à jour", "update", "mise a jour version apk nouveautes"),
+        Destination("updates", "Mises à jour", "update", "mise a jour version ios ipa sidestore nouveautes"),
         Destination("dashboard", "Personnaliser le tableau de bord", "dash/edit", "dashboard widget carte taille classement ordre tableau bord"),
         Destination("quick_actions", "Actions rapides", "plus/edit", "bouton plus raccourci action rapide"),
     )

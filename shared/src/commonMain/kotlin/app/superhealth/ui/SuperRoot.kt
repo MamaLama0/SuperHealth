@@ -236,6 +236,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
             composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
+            composable("update") { app.superhealth.ui.settings.UpdateScreen(nav) }
             composable("widgets") { app.superhealth.ui.settings.HomeWidgetsScreen(nav) }
             composable("settings/find") { app.superhealth.ui.settings.FindSettingScreen(nav) }
             composable("settings") { SettingsScreen(vm, nav) }

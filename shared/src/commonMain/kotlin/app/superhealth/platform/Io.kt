@@ -45,7 +45,8 @@ class Reader(private val text: String) : Closeable {
     fun read(chars: CharArray): Int {
         if (position >= text.length) return -1
         val n = minOf(chars.size, text.length-position)
-        text.toCharArray().copyInto(chars, 0, position, position+n); position += n
+        for (i in 0 until n) chars[i]=text[position+i]
+        position += n
         return n
     }
     fun readText() = text

@@ -21,14 +21,17 @@ fun HomeWidgetsScreen(nav: NavHostController) {
         }
         listOf(
             "Social" to listOf("Classement","Progression","Séries","Quêtes de la semaine","Amis","Vue sociale"),
-            "Santé" to listOf("Anneaux d'activité","Pas","Sommeil","Constantes"),
+            "Santé" to listOf("Anneaux du jour","Pas","Sommeil","Constantes","Ma journée"),
             "Nutrition" to listOf("Calories","Poids"),
             "Musculation" to listOf("Prochaine séance")
         ).forEach { (section,items) ->
             SectionLabel(tr(section))
             GroupCard { items.forEachIndexed { index,name ->
                 if(index>0)RowDivider()
-                SettingRow(tr(name),subtitle=if(section=="Social")tr("Petit, moyen et grand")else null) {}
+                Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp)) {
+                    Text(tr(name),style=MaterialTheme.typography.titleSmall)
+                    if(section=="Social") Text(tr("Petit, moyen et grand"),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
+                }
             } }
         }
         MfCard { Text(tr("Les widgets affichent le dernier instantané de l'app. iOS décide des actualisations en arrière-plan ; ouvrez SuperHealth pour rafraîchir vos données."),color=Mf.colors.textSecondary) }

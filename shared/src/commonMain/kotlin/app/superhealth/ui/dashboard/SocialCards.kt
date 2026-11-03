@@ -48,7 +48,10 @@ internal fun SocialCard(size: CardSize, modifier: Modifier, icon: ImageVector, t
         verticalArrangement = Arrangement.spacedBy(if (size == CardSize.S) 6.dp else 10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(icon, null, Modifier.size(if (size == CardSize.S) 15.dp else 18.dp), tint = hue.onContainer())
-            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary,
+            val label=if(size==CardSize.S) tr(when(title) {
+                tr("Classement") -> "Score";tr("Progression") -> "Niveau";tr("Mes séries") -> "Séries";else -> title
+            }) else title
+            Text(label, Modifier.weight(1f), style = if(size==CardSize.M) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (size != CardSize.S) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.size(16.dp), tint = Mf.colors.textTertiary)
         }
@@ -103,7 +106,7 @@ internal fun WProgression(size: CardSize, icon: ImageVector, modifier: Modifier,
             if (size == CardSize.S) tr("Niveau") else week, hue, size == CardSize.S)
         if (size != CardSize.S) {
             SocialBar(into.toFloat() / span.coerceAtLeast(1), hue)
-            if (p != null) Text(trf("%1\$s XP avant le niveau %2\$s", (span - into).coerceAtLeast(0), p.level + 1),
+            if (p != null) Text(trf("%1\$s XP → niv. %2\$s", (span - into).coerceAtLeast(0), p.level + 1),
                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
         }
     }

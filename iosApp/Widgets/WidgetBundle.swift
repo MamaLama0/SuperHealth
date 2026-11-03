@@ -5,13 +5,13 @@ import SwiftUI
 struct SuperHealthWidgets: WidgetBundle {
     @WidgetBundleBuilder
     var body: some Widget {
-        CoreWidgets()
-        SocialWidget(id: "league", title: "Classement", about: "Votre indice et le classement entre amis.")
-        SocialWidget(id: "progress", title: "Progression", about: "Niveau, XP et activité de la semaine.")
-        SocialWidget(id: "streak", title: "Séries", about: "La régularité de vos suivis.")
-        SocialWidget(id: "quests", title: "Quêtes de la semaine", about: "Le prochain défi ou la récompense à récupérer.")
-        SocialWidget(id: "friends", title: "Amis", about: "Vos amis et leur progression partagée.")
-        SocialWidget(id: "social", title: "Vue sociale", about: "Profil, niveau, amis et badges.")
+        CoreWidgets().body
+        LeagueWidget()
+        ProgressWidget()
+        StreakWidget()
+        QuestsWidget()
+        FriendsWidget()
+        SocialOverviewWidget()
     }
 }
 
@@ -23,6 +23,7 @@ struct CoreWidgets: WidgetBundle {
         WeightWidget()
         VitalsWidget()
         SleepWidget()
+        StepsWidget()
         DayWidget()
         WorkoutLiveActivity()
     }

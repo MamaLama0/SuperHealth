@@ -4,6 +4,8 @@ import app.superhealth.platform.*
 import app.superhealth.league.*
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
+import app.superhealth.ui.dashboard.dashboardPriorityStreak
+import app.superhealth.ui.dashboard.dashboardRank
 import app.superhealth.ui.dashboard.dashboardQuest
 import app.superhealth.ui.dashboard.dashboardScoreEntries
 import kotlinx.serialization.Serializable
@@ -23,9 +25,9 @@ internal suspend fun socialWidgets(): List<SocialWidgetCard> {
     val state=League.state.value
     val summary=result?.summary
     val rankings=dashboardScoreEntries(score,state.friends,nowMs()/1000,tr("Moi"))
-    val rank=rankings.indexOfFirst { it.me }.takeIf { it>=0 }?.plus(1)
+    val rank=rankings.firstOrNull { it.me }?.let { dashboardRank(rankings,it) }
     val streaks=summary?.streaks.orEmpty().sortedByDescending { it.current }
-    val best=streaks.firstOrNull()
+    val best=dashboardPriorityStreak(streaks)
     val week=state.questWeeks.firstOrNull { it.start==Progression.week(LocalDate.now().toEpochDay()) }
     val quest=dashboardQuest(week?.quests.orEmpty())
     val into=summary?.let { it.totalXp-Progression.threshold(it.level) } ?: 0L
@@ -40,8 +42,8 @@ internal suspend fun socialWidgets(): List<SocialWidgetCard> {
         SocialWidgetCard("progress",tr("Progression"),summary?.let { trf("Niv. %1\$s",it.level) } ?: "—",trf("%1\$s XP cette semaine",summary?.weekXp ?: 0),
             trf("%1\$s XP avant le prochain niveau",(span-into).coerceAtLeast(0)),"bolt.fill","#9BD54B","progress",
             fraction=(into.toDouble()/span.coerceAtLeast(1)).coerceIn(0.0,1.0),chart=summary?.days?.map { it.xp }.orEmpty()),
-        SocialWidgetCard("streak",tr("Séries"),best?.current?.toString() ?: "0",best?.let { track(it.track) } ?: tr("Choisir mes suivis"),
-            best?.let { trf(if(it.weekly)"%1\$s semaines" else "%1\$s jours",it.current) } ?: tr("Un premier objectif simple pour découvrir votre rythme."),
+        SocialWidgetCard("streak",tr("Séries"),best?.let { it.current.toString()+if(it.capped)"+"else "" } ?: "0",best?.let { track(it.track) } ?: tr("Choisir mes suivis"),
+            best?.let { if(it.capped) tr("Série en cours") else trf(if(it.weekly)"%1\$s semaines" else "%1\$s jours",it.current) } ?: tr("Un premier objectif simple pour découvrir votre rythme."),
             "flame.fill","#FF8C36","progress",rows=streaks.take(5).map { SocialRow(track(it.track),trf(if(it.weekly)"%1\$s sem." else "%1\$s j",it.current)) }),
         SocialWidgetCard("quests",tr("Quêtes"),quest?.let { "${it.progress} / ${it.target}" } ?: "—",quest?.let { tr(it.metric.title) } ?: tr("Choisir mes défis"),
             quest?.let { if(it.claimed)tr("Récompense récupérée")else if(it.complete)tr("Récompense à récupérer")else trf("+%1\$s XP",it.reward) } ?: tr("À votre rythme cette semaine"),

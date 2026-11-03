@@ -89,12 +89,14 @@ jobs:
           xcrun xcresulttool export attachments --path build/WidgetTests.xcresult --output-path build/widget-captures
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: SuperHealth-ios
           path: |
             SuperHealth.ipa
             SuperHealth-simulator.zip
             build/widget-captures/
+            build/WidgetTests.xcresult/
             shared/build/test-results/
             shared/build/reports/tests/
 

@@ -5,7 +5,7 @@ Portage des interfaces et fonctions de la version Android `v3.0` (`7b304eba69`),
 - Social : classement clarifié, amis par code ou QR, cartes signées P-256 et relais AES-GCM, profil et décorations.
 - Progression : suivis quotidiens ou hebdomadaires, XP, niveaux, badges et quêtes avec récompenses explicites.
 - Tableau de bord : cinq cartes sociales adaptées aux quatre formats de l'app, section Sociale dans l'éditeur.
-- WidgetKit : six widgets sociaux, chacun en petit, moyen et grand ; catalogue dans les Réglages et le profil Social. Les instantanés ne contiennent aucune clé de partage ou adresse de relais.
+- WidgetKit : un widget Pas dédié et six widgets sociaux, chacun en petit, moyen et grand ; catalogue dans les Réglages et le profil Social. Les instantanés ne contiennent aucune clé de partage ou adresse de relais.
 - Activités : méditation avec sons locaux AAC et minuteur, mobilité et routines avec lecteur vidéo natif AVPlayer. La mise en arrière-plan met la méditation en pause.
 - Musculation : assistant de configuration, import et export d'un programme seul, programmes additionnels, cibles et échauffements.
 - Nutrition : configuration guidée, objectifs manuels et bilan hebdomadaire clarifié.
@@ -21,6 +21,7 @@ Le visuel de série utilise l'illustration locale et le compteur, sans moteur Ri
 
 ## Vérifications
 
+- 71 tests locaux passent (code commun et interopérabilité JVM) ; compilation native iPhone et compilation de la suite de tests Apple Silicon réussies.
 - Suite commune : règles de progression et quêtes, qualifications, badges, fusion des amis et protection contre les rejeux, codes amis et chiffrement.
 - Interopérabilité : signature EC et message AES-GCM produits par Java/Android, validation dans le code multiplateforme ; aller-retour des clés natives et signatures DER ; limites d'URL et de calendrier ISO.
 - Transport : absence de redirection, réponse bornée, intégrité des en-têtes et publications.
