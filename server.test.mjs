@@ -270,7 +270,9 @@ test('chunked media overflow returns 413, leaves no partial files, then accepts 
     const status = await new Promise((resolveStatus, reject) => {
       const req = request(f.base + path, { method: 'PUT', headers: headers() }, res => { res.resume(); resolveStatus(res.statusCode); });
       req.on('error', reject);
-      req.end(Buffer.alloc(16 * 1024 * 1024 + 100));
+      req.flushHeaders(); // Force Transfer-Encoding: chunked rather than an inferred Content-Length.
+      req.write(Buffer.alloc(8 * 1024 * 1024));
+      req.end(Buffer.alloc(8 * 1024 * 1024 + 100));
     });
     assert.equal(status, 413);
     assert.deepEqual(await readdir(join(f.dataDir, 'media')), []);
