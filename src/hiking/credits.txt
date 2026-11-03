@@ -2,3 +2,5 @@ Cartographie et itinéraires : © les contributeurs OpenStreetMap, ODbL 1.0.
 https://www.openstreetmap.org/copyright
 Extraction : 2026-11-03. Données non vérifiées sur le terrain.
 Visuel décoratif : asset Visorando fourni par le titulaire des droits.
+
+Parcours enrichis, photos associées et pictogrammes fournis sous autorisation du titulaire des droits. Provenance technique conservée dans les métadonnées.

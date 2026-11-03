@@ -64,12 +64,12 @@
     {
       "id": "hiking",
       "kind": "hiking",
-      "minApp": "3.1.1",
+      "minApp": "3.1.2",
       "color": "#328C70",
       "name": "Randonnée",
       "nameEn": "Hiking",
-      "summary": "Explorez les sentiers du monde entier, gardez les parcours et cartes hors ligne, importez vos traces et enregistrez vos sorties GPS.",
-      "summaryEn": "Explore trails worldwide, save routes and maps offline, import GPX tracks and record GPS hikes."
+      "summary": "Des parcours détaillés à découvrir dans le monde, avec photos, étapes, relief, cartes hors ligne et suivi GPS.",
+      "summaryEn": "Discover detailed trails worldwide, with photos, directions, elevation, offline maps and GPS tracking."
     }
   ]
 }
