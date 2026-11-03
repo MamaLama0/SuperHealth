@@ -84,6 +84,20 @@
       "size": 331,
       "sha256": "732ac3c888d62fb1d946ac36c35e6b097979afa5e917390568106b5bb6b12cf6",
       "url": "league-1.0.1.zip"
+    },
+    {
+      "id": "hiking",
+      "kind": "hiking",
+      "minApp": "3.1.1",
+      "color": "#328C70",
+      "name": "Randonnée",
+      "nameEn": "Hiking",
+      "summary": "Explorez les sentiers du monde entier, gardez les parcours et cartes hors ligne, importez vos traces et enregistrez vos sorties GPS.",
+      "summaryEn": "Explore trails worldwide, save routes and maps offline, import GPX tracks and record GPS hikes.",
+      "version": "1.0.0",
+      "size": 428567,
+      "sha256": "8c5a56fdb686bc2f49d1f4d121055933827fe1f5c09887322d1d0cdd9653c188",
+      "url": "hiking-1.0.0.zip"
     }
   ]
 }

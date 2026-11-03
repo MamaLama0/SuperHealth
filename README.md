@@ -8,6 +8,7 @@ L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis l
 | Plugin | Moteur | Contenu |
 |---|---|---|
 | `coach` — Coach IA | `coach` | `prompts.json` (consignes du coach, tons, point du jour, questions suggérées) |
+| `hiking` — Randonnée | `hiking` | `hiking.json` (parcours et fonds vectoriels locaux), paysage décoratif et crédits ; recherche mondiale et suivi GPS dans le moteur Android |
 | `meals` — Repas | `meals` | `planner.json` (consignes du planificateur IA, créneaux de repas : nom, part des calories, heure) |
 
 ## Publier une version

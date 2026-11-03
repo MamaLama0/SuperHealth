@@ -60,6 +60,16 @@
       "nameEn": "Leaderboard",
       "summary": "Un score de la semaine sur six parties, comparé entre amis par QR code ou message. Aucun serveur, cartes signées.",
       "summaryEn": "A weekly score over six areas, compared with friends by QR code or message. No server, signed cards."
+    },
+    {
+      "id": "hiking",
+      "kind": "hiking",
+      "minApp": "3.1.1",
+      "color": "#328C70",
+      "name": "Randonnée",
+      "nameEn": "Hiking",
+      "summary": "Explorez les sentiers du monde entier, gardez les parcours et cartes hors ligne, importez vos traces et enregistrez vos sorties GPS.",
+      "summaryEn": "Explore trails worldwide, save routes and maps offline, import GPX tracks and record GPS hikes."
     }
   ]
 }
