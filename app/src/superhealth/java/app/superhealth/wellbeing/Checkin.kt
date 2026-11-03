@@ -14,7 +14,7 @@ import java.time.LocalDate
  * « mauvaise nuit » dégrade la journée). Les réponses entrent dans la Forme du jour.
  */
 object Checkin {
-    @Serializable data class Feel(val sleep: Int, val energy: Int)
+    @Serializable data class Feel(val sleep: Int, val energy: Int, val at: Long = 0L)
 
     @Serializable private data class Store(val days: Map<Long, Feel> = emptyMap())
 
@@ -34,7 +34,8 @@ object Checkin {
     fun today(): Feel? = days.value[LocalDate.now().toEpochDay()]
 
     fun set(feel: Feel, day: Long = LocalDate.now().toEpochDay()) {
-        days.value = days.value + (day to feel)
+        days.value = days.value + (day to feel.copy(at = System.currentTimeMillis()))
+        Form.Model.invalidate()
         // l'alerte des signes de la nuit en tient compte
         BodyAlert.invalidate()
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), Store(days.value))) }

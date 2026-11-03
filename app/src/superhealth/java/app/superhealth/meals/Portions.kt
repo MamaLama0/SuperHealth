@@ -29,7 +29,7 @@ object Portions {
 
     private val W = doubleArrayOf(2.0, 1.0, 1.0)
 
-    fun solve(foods: List<Food>, goal: Goal): Result {
+    fun solve(foods: List<Food>, goal: Goal, usualGrams: Map<Int, Double> = emptyMap()): Result {
         val n = foods.size
         require(n > 0)
         val k = DoubleArray(n) { foods[it].kcal / 100 }
@@ -42,7 +42,9 @@ object Portions {
         val reachable = goal.kcal in minK..maxK
 
         // pas sûr : 1 / constante de Lipschitz du gradient (2 Σ w‖aᵢ‖² majore la plus grande valeur propre de 2 AᵀWA)
-        val lip = 2 * (0 until 3).sumOf { r -> W[r] * a[r].sumOf { it * it } }
+        val prior = usualGrams.filter { (i, g) -> i in foods.indices && g.isFinite() && g in MIN_G..MAX_G }
+        val penalty = if (prior.isEmpty()) 0.0 else 0.04
+        val lip = 2 * ((0 until 3).sumOf { r -> W[r] * a[r].sumOf { it * it } } + penalty)
         val step = if (lip > 0) 1 / lip else 0.0
         var x = project(DoubleArray(n) { target / n / k[it].coerceAtLeast(1e-6) }, k, lo, hi, target)
         if (step > 0) for (iter in 0 until 4000) {
@@ -51,6 +53,7 @@ object Portions {
                 val res = (0 until n).sumOf { a[r][it] * x[it] } - t[r]
                 for (i in 0 until n) g[i] += 2 * W[r] * res * a[r][i]
             }
+            prior.forEach { (i, grams) -> g[i] += 2 * penalty * (x[i] - grams) }
             val y = DoubleArray(n) { x[it] - step * g[it] }
             val nx = project(y, k, lo, hi, target)
             val moved = (0 until n).maxOf { abs(nx[it] - x[it]) }

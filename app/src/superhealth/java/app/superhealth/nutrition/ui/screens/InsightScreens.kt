@@ -480,7 +480,13 @@ fun NutrientsScreen(vm: AppViewModel, onBack: () -> Unit) {
     val an = a
     val n = range.days ?: an?.days?.size ?: 7
     val inRange = if (an == null) emptyList() else allEntries.filter { it.epochDay > an.today - n }
-    val loggedDays = inRange.map { it.epochDay }.distinct().size.coerceAtLeast(1)
+    val loggedDays = inRange.map { it.epochDay }.distinct().size
+    val coverage = remember(inRange) {
+        val keysByDay = inRange.groupBy { it.epochDay }.values.map { entries ->
+            entries.map { app.superhealth.nutrition.data.Micros.parse(it.microsJson).keys }
+        }
+        keysByDay.flatten().flatten().distinct().associateWith { key -> keysByDay.count { entries -> entries.all { key in it } } }
+    }
     DetailScaffold(tr("Nutriments"), onBack) {
         if (an == null) return@DetailScaffold
         val totals = app.superhealth.nutrition.data.Micros.sum(inRange.map { it.microsJson }) + mapOf("fiber" to inRange.sumOf { it.fiber })
@@ -502,17 +508,19 @@ fun NutrientsScreen(vm: AppViewModel, onBack: () -> Unit) {
             GroupCard {
                 list.forEachIndexed { i, d ->
                     val total = macroTotals[d.code] ?: totals[d.code] ?: 0.0
-                    val avg = total / loggedDays
+                    val avg = total / loggedDays.coerceAtLeast(1)
+                    val known = d.code in macroTotals || d.code in totals
+                    val partial = d.code !in macroTotals && d.code != "fiber" && (coverage[d.code] ?: 0) < loggedDays
                     val target = s.microTargets[d.code] ?: (if (d.category == tr("Macronutriments")) d.reference else app.superhealth.nutrition.data.Micros.reference(d))
                     if (i > 0) RowDivider()
                     Column(Modifier.fillMaxWidth().clickable { open = d }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row {
                             Text(d.label.tr(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                             val v = if (d.code == "kcal") s.energyValue(avg) else avg
-                            Text("${num(v, if (v < 10) 1 else 0)} ${d.unit}" + (target?.let { " / ${num(if (d.code == "kcal") s.energyValue(it) else it, 0)}" } ?: ""),
+                            Text((if (!known || loggedDays == 0) "—" else (if (partial) "≥ " else "") + "${num(v, if (v < 10) 1 else 0)} ${d.unit}") + (target?.let { " / ${num(if (d.code == "kcal") s.energyValue(it) else it, 0)}" } ?: ""),
                                 style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                         }
-                        target?.let {
+                        target?.takeIf { known && loggedDays > 0 && it > 0 }?.let {
                             Spacer(Modifier.height(4.dp))
                             ProgressBar((avg / it).toFloat(), if (avg >= it) Base.Green else Mf.colors.accent, height = 5.dp)
                         }

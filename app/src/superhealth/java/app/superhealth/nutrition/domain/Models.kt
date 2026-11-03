@@ -189,6 +189,9 @@ data class Settings(
     /** Cibles de micronutriments personnalisées (MicroGoalType.custom) ; absent = référence automatique. */
     val microTargets: Map<String, Double> = emptyMap(),
     val useFilteredWeightForExpenditure: Boolean = false,
+    val learnFoodPatterns: Boolean = false,
+    val confirmedFoodMatches: Map<String, Long> = emptyMap(),
+    val learnActivityEnergy: Boolean = false,
 )
 
 /** Objectif de pas du jour [date] : celui de son jour de la semaine s'il est fixé, sinon l'objectif quotidien. */

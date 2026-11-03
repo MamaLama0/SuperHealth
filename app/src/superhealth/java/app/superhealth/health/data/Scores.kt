@@ -1,6 +1,7 @@
 package app.superhealth.health.data
 
 import android.content.Context
+import kotlinx.coroutines.sync.withLock
 import app.superhealth.bridge.Bridge
 import app.superhealth.has
 import java.time.LocalDate
@@ -285,7 +286,7 @@ object Scores {
 
     suspend fun persistentDebtOf(ctx: Context, date: LocalDate): Boolean {
         if (!Bridge.hasSource(Metric.SLEEP)) return false
-        return persistentDebt((13L downTo 0L).map { Bridge.healthValue(ctx, Metric.SLEEP, date.minusDays(it)) }, sleepHabits(ctx).needMin)
+        return persistentDebt((13L downTo 0L).map { Bridge.healthValue(ctx, Metric.SLEEP, date.minusDays(it)) }, sleepHabits(ctx, date).needMin)
     }
 
     // ---- Charge acquise / aiguë (Effort) --------------------------------------------------
@@ -316,7 +317,7 @@ object Scores {
     private val chargeCache = ConcurrentHashMap<LocalDate, Charge?>()
     private val effortCache = ConcurrentHashMap<LocalDate, Double>()
 
-    fun invalidate() { chargeCache.clear(); effortCache.clear(); restCache.clear(); habits = null; app.superhealth.wellbeing.BodyAlert.invalidate() }
+    fun invalidate() { chargeCache.clear(); effortCache.clear(); restCache.clear(); habits.clear(); priorSources.clear(); peakDays.clear(); sleepDurations.clear(); windows.clear(); app.superhealth.wellbeing.Form.Model.invalidate(); app.superhealth.wellbeing.BodyAlert.invalidate() }
 
     private fun age(): Int = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().age }.getOrDefault(30).coerceIn(10, 100)
     private fun female(): Boolean = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().gender ==
@@ -325,11 +326,30 @@ object Scores {
     /** Pouls (s, bpm) du jour pour l'Effort. */
     suspend fun heart(date: LocalDate): List<Pair<Long, Int>> = Bridge.minuteHeart(date)
 
+    private val peakDays = datedCache<Double?>()
+    private val peakLock = kotlinx.coroutines.sync.Mutex()
+
+    private suspend fun maxForDay(date: LocalDate, current: List<Int>): Double {
+        val base = hrMax(age(), current, female())
+        if (current.isEmpty()) return base
+        val peaks = (1L..14L).mapNotNull { offset ->
+            val day = date.minusDays(offset)
+            peakLock.withLock {
+                if (!peakDays.containsKey(day)) {
+                    val samples = heart(day).map { it.second }.sorted()
+                    peakDays[day] = if (samples.size < 600) null else samples[((samples.size - 1) * 0.995).toInt()].toDouble()
+                }
+                peakDays[day]
+            }
+        }.sortedDescending()
+        return maxOf(base, peaks.getOrNull(1) ?: base)
+    }
+
     suspend fun effortOf(ctx: Context, date: LocalDate): Double? {
         if (date.isBefore(LocalDate.now())) effortCache[date]?.let { return it.takeUnless { v -> v.isNaN() } }
         val hr = heart(date)
         val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: hr.map { it.second.toDouble() }.sorted().let { s -> s.getOrNull(s.size / 10) }
-        val max = hrMax(age(), hr.map { it.second }, female())
+        val max = maxForDay(date, hr.map { it.second })
         val (hrTrimp, covered) = if (rest != null) trimp(hr, rest, max) else 0.0 to 0.0
         // séances notées (effort ressenti) : leur charge ressentie, au-delà de ce que le pouls a mesuré pendant la séance
         val from = HealthRepository.startMs(date); val to = HealthRepository.endMs(date)
@@ -346,14 +366,14 @@ object Scores {
     suspend fun zonesOf(ctx: Context, date: LocalDate): IntArray? {
         val hr = heart(date).takeIf { it.isNotEmpty() } ?: return null
         val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: hr.map { it.second.toDouble() }.sorted()[hr.size / 10]
-        return zones(hr, rest, hrMax(age(), hr.map { it.second }, female()))
+        return zones(hr, rest, maxForDay(date, hr.map { it.second }))
     }
 
-    private suspend fun night(ctx: Context, d: LocalDate, need: Double): Night {
+    private suspend fun night(ctx: Context, d: LocalDate): Night {
         val sleepScore = Bridge.healthValue(ctx, Metric.SLEEP_SCORE, d)
         val sleep = Bridge.healthValue(ctx, Metric.SLEEP, d)
         return Night(Bridge.healthValue(ctx, Metric.HRV, d), Bridge.healthValue(ctx, Metric.RESTING_HR, d),
-            sleepScore?.div(100) ?: sleep?.let { (it / need).coerceAtMost(1.0) },
+            sleepScore?.div(100) ?: sleep?.let { (it / sleepHabits(ctx, d).needMin).coerceAtMost(1.0) },
             Bridge.healthValue(ctx, Metric.RESPIRATORY_RATE, d), Bridge.healthValue(ctx, Metric.TEMPERATURE, d))
     }
 
@@ -363,20 +383,25 @@ object Scores {
      */
     suspend fun chargeSeries(ctx: Context, date: LocalDate, days: Int): List<Charge?> {
         if (!Bridge.hasSource(Metric.HRV) && !Bridge.hasSource(Metric.RESTING_HR)) return List(days) { null }
-        val need = sleepHabits(ctx).needMin
         val dates = ((days + 66).toLong() downTo 0L).map { date.minusDays(it) }
-        val nights = sameHrvSource(dates, dates.map { night(ctx, it, need) }, hrvSource(ctx, date)).first
+        val nights = dates.map { night(ctx, it) }
+        val sources = dates.indices.associate { i -> dates[i].toEpochDay() to if (nights[i].hrv != null) hrvSource(ctx, dates[i]) else null }
         val ph = phases(dates)
-        return (67 until dates.size).map { i -> charge(nights.subList(i - 67, i), nights[i], ph?.subList(i - 67, i + 1)) }
+        return (67 until dates.size).map { i ->
+            val window = dates.subList(i - 67, i + 1)
+            val filtered = sameHrvSource(window, nights.subList(i - 67, i + 1), sources[dates[i].toEpochDay()], sources).first
+            charge(filtered.dropLast(1), filtered.last(), ph?.subList(i - 67, i + 1))
+        }
     }
 
     suspend fun chargeOf(ctx: Context, date: LocalDate): Charge? {
         if (chargeCache.containsKey(date) && date.isBefore(LocalDate.now())) return chargeCache[date]
         if (!Bridge.hasSource(Metric.HRV) && !Bridge.hasSource(Metric.RESTING_HR)) return null
-        val need = sleepHabits(ctx).needMin
         val dates = (67L downTo 0L).map { date.minusDays(it) }
-        val src = hrvSource(ctx, date)
-        val nights = sameHrvSource(dates, dates.map { night(ctx, it, need) }, src)
+        val raw = dates.map { night(ctx, it) }
+        val sources = dates.indices.associate { i -> dates[i].toEpochDay() to if (raw[i].hrv != null) hrvSource(ctx, dates[i]) else null }
+        val src = sources[date.toEpochDay()]
+        val nights = sameHrvSource(dates, raw, src, sources)
         val c = charge(nights.first.dropLast(1), nights.first.last(), phases(dates))?.copy(hrvSource = src.takeIf { nights.second })
         if (date.isBefore(LocalDate.now())) chargeCache[date] = c
         return c
@@ -389,9 +414,8 @@ object Scores {
      * et température restent comparés à toutes les nuits). Les jours d'avant le premier relevé comptent comme la source
      * actuelle. Seconde valeur : vrai si des nuits d'une autre source ont été écartées.
      */
-    private fun sameHrvSource(dates: List<LocalDate>, nights: List<Night>, src: String?): Pair<List<Night>, Boolean> {
+    private fun sameHrvSource(dates: List<LocalDate>, nights: List<Night>, src: String?, log: Map<Long, String?>): Pair<List<Night>, Boolean> {
         if (src == null) return nights to false
-        val log = app.superhealth.SuperPrefs.settings.value.hrvSources
         var dropped = false
         return nights.mapIndexed { i, n ->
             val k = log[dates[i].toEpochDay()]
@@ -400,7 +424,17 @@ object Scores {
     }
 
     /** Source de la VFC du jour (appareil, sinon appli) ; notée pour aujourd'hui (120 derniers jours gardés). */
-    private suspend fun hrvSource(ctx: Context, date: LocalDate): String? {
+    private val priorSources = datedCache<String>()
+
+    internal suspend fun hrvSource(ctx: Context, date: LocalDate): String? {
+        if (date.isBefore(LocalDate.now())) {
+            // Prefer the actual dated source. Old recordings may only have the original source log.
+            priorSources[date]?.let { return it }
+            val actual = Bridge.dataSource(Metric.HRV, date)
+            val key = actual?.device ?: actual?.app ?: app.superhealth.SuperPrefs.settings.value.hrvSources[date.toEpochDay()]
+            if (key != null) priorSources[date] = key
+            return key
+        }
         val d = runCatching { Bridge.dataSource(Metric.HRV, date) }.getOrNull() ?: return null
         val key = d.device ?: d.app ?: return null
         val day = date.toEpochDay()
@@ -414,15 +448,14 @@ object Scores {
     fun phases(dates: List<LocalDate>): List<Boolean?>? {
         if (!app.superhealth.SuperPrefs.settings.value.has(app.superhealth.Feature.CYCLE)) return null
         val days = app.superhealth.wellbeing.Cycle.days.value
-        val length = app.superhealth.wellbeing.Cycle.info(d = days)?.length ?: return null
-        return dates.map { app.superhealth.wellbeing.Cycle.luteal(it.toEpochDay(), days, length) }
+return dates.map { app.superhealth.wellbeing.Cycle.phaseForBaseline(it.toEpochDay(), days) }
     }
 
     suspend fun sleepDebtOf(ctx: Context, date: LocalDate): Double? {
         if (!Bridge.hasSource(Metric.SLEEP)) return null
         val nights = (13L downTo 0L).map { Bridge.healthValue(ctx, Metric.SLEEP, date.minusDays(it)) }
         if (nights.count { it != null } < 3) return null
-        return sleepDebt(nights, sleepHabits(ctx).needMin)
+        return sleepDebt(nights, sleepHabits(ctx, date).needMin)
     }
 
     // ---- Repos (score de sommeil calculé) --------------------------------------------------
@@ -464,9 +497,22 @@ object Scores {
     const val SRI_MIN_PAIRS = 5
 
     /** Minutes endormies de la fenêtre de midi (veille) à midi ([date]) ; null sans nuit enregistrée. */
+    private val windows = datedCache<BooleanArray?>()
+
     suspend fun sleepWindow(date: LocalDate): BooleanArray? {
+        if (windows.containsKey(date)) return windows[date]
+        val result = readWindow(date)
+        if (date.isBefore(LocalDate.now())) windows[date] = result
+        return result
+    }
+
+    private suspend fun readWindow(date: LocalDate): BooleanArray? {
         val night = Bridge.sleepNight(date)?.takeIf { it.isNotEmpty() } ?: return null
-        val start = HealthRepository.startMs(date) - 12 * 3_600_000L
+        val span = night.maxOf { it.end } - night.minOf { it.start }
+        if (span <= 0 || night.sumOf { it.end - it.start } < 0.85 * span) return null
+        val start = NightSummary.noon(date)
+        // A 23/25-hour local day is not a comparable 1440-minute SRI window.
+        if (NightSummary.noon(date.plusDays(1)) - start != 86_400_000L) return null
         val out = BooleanArray(1440)
         night.filter { it.kind != nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP }.forEach { p ->
             val a = ((p.start - start) / 60_000).toInt().coerceIn(0, 1440); val b = ((p.end - start) / 60_000).toInt().coerceIn(0, 1440)
@@ -548,7 +594,7 @@ object Scores {
         fun minutes(k: nodomain.freeyourgadget.gadgetbridge.model.ActivityKind) = n.filter { it.kind == k }.sumOf { it.end - it.start } / 60000.0
         val awake = minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP)
         val asleep = n.sumOf { it.end - it.start } / 60000.0 - awake
-        val inBed = (n.maxOf { it.end } - n.minOf { it.start }) / 60000.0
+        val inBed = asleep + awake
         if (asleep < 120 || inBed <= 0) return null
         val restorative = if (Bridge.hasStages(n)) (minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.DEEP_SLEEP) +
             minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.REM_SLEEP)) / asleep else null
@@ -558,15 +604,24 @@ object Scores {
     /** Besoin de sommeil personnel (min) et régularité (SRI des 2 dernières semaines ramené à 0–1), relus une fois par jour. */
     data class SleepHabits(val needMin: Double, val consistency: Double?, val sri: Double? = null)
 
-    @Volatile private var habits: Pair<LocalDate, SleepHabits>? = null
+    private fun <T> datedCache(): MutableMap<LocalDate, T> =
+        java.util.Collections.synchronizedMap(object : LinkedHashMap<LocalDate, T>(256, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<LocalDate, T>?) = size > 256
+        })
 
-    suspend fun sleepHabits(ctx: Context): SleepHabits {
-        val today = LocalDate.now()
-        habits?.takeIf { it.first == today }?.let { return it.second }
-        val nights = (60L downTo 1L).mapNotNull { Bridge.healthValue(ctx, Metric.SLEEP, today.minusDays(it)) }
+    private val habits = datedCache<SleepHabits>()
+    private val sleepDurations = datedCache<Double?>()
+    private suspend fun priorDuration(ctx: Context, day: LocalDate): Double? {
+        if (sleepDurations.containsKey(day)) return sleepDurations[day]
+        return Bridge.healthValue(ctx, Metric.SLEEP, day).also { sleepDurations[day] = it }
+    }
+
+    suspend fun sleepHabits(ctx: Context, today: LocalDate = LocalDate.now()): SleepHabits {
+        habits[today]?.let { return it }
+        val nights = (60L downTo 1L).mapNotNull { priorDuration(ctx, today.minusDays(it)) }
         val sri = runCatching { sriOf(today) }.getOrNull()
         val h = SleepHabits(personalNeed(nights, sleepNeed()), sri?.let { (it / 100).coerceIn(0.0, 1.0) }, sri)
-        habits = today to h
+        habits[today] = h
         return h
     }
 
@@ -587,7 +642,7 @@ object Scores {
         fun minutes(vararg k: nodomain.freeyourgadget.gadgetbridge.model.ActivityKind) = n.filter { it.kind in k }.sumOf { it.end - it.start } / 60000.0
         val awake = minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP)
         val asleep = n.sumOf { it.end - it.start } / 60000.0 - awake
-        val h = sleepHabits(ctx)
+        val h = sleepHabits(ctx, date)
         return restParts(asleep, asleep + awake, minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.DEEP_SLEEP),
             minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.REM_SLEEP), h.needMin, h.consistency)
     }
@@ -624,6 +679,7 @@ object Scores {
         val rhr = days.mapNotNull { Bridge.healthValue(ctx, Metric.RESTING_HR, it) }.sorted()
         if (rhr.size < 4) return null
         val efforts = days.mapNotNull { runCatching { effortOf(ctx, it) }.getOrNull() }
+        if (efforts.size < 4) return null
         val p = app.superhealth.nutrition.NutriApp.repository.prefs.profile.value
         val age = (date.year - p.birthYear).toDouble().takeIf { it in 10.0..100.0 } ?: return null
         return fitnessAge(age, p.sex.name == "FEMALE", rhr[rhr.size / 2], activityIndex(efforts))

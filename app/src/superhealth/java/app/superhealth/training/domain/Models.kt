@@ -295,4 +295,5 @@ data class Settings(
     val activeGymId: String? = null,
     val activeProgramId: String? = null,
     val adaptiveStrength: Boolean = false,
+    val preferPracticedExercises: Boolean = false,
 )

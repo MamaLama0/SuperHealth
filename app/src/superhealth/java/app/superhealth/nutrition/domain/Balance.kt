@@ -8,7 +8,7 @@ object Balance {
         return (today - n + 1..today).map { d ->
             val day = byDay[d]
             val intake = when {
-                day == null -> null
+                day == null || day.partial -> null
                 day.fasted -> day.intakeKcal ?: 0.0
                 else -> day.intakeKcal
             }

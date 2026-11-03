@@ -38,7 +38,7 @@ object HikingProgress {
             Outing("local-${log.route}",log.time,log.end ?: route?.points?.mapNotNull{it.time}?.maxOrNull() ?: log.time+log.seconds*1000,
                 log.seconds,log.meters,log.ascent ?: route?.let{HikeGeometry.ascent(it.points)})
         }
-        val external=Bridge.activities(from).filter{it.kind==Bridge.Kind.HIKE}.map { a ->
+        val external=Bridge.activityFacts(from).filter{it.kind==Bridge.Kind.HIKE}.map { a ->
             Outing(a.key,a.start,a.end,a.run?.activeSec?.toLong() ?: (a.end-a.start)/1000,a.distanceM,a.run?.ascentM)
         }
         val next=merge(local+external,outings.value)

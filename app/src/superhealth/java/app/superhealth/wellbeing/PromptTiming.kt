@@ -23,7 +23,7 @@ object PromptTiming {
     fun activityDelayMinutes(end: Long, seed: Long): Int = 30 + Random(seed xor end).nextInt(90)
 
     fun moodDue(settings: SuperSettings, now: Long, steps: Double?, stepGoal: Int,
-                activityEnds: List<Long>, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+                activityEnds: List<Long>, zone: ZoneId = ZoneId.systemDefault(), history: Map<Long, Journal.Entry> = emptyMap()): Boolean {
         val time = Instant.ofEpochMilli(now).atZone(zone)
         val day = time.toLocalDate().toEpochDay()
         if (settings.moodPromptShownDay == day) return true
@@ -33,6 +33,11 @@ object PromptTiming {
                 Instant.ofEpochMilli(end).atZone(zone).toLocalDate() == LocalDate.ofEpochDay(day) &&
                     elapsed in activityDelayMinutes(end, settings.promptSeed) * 60_000L..120 * 60_000L
             }) return true
-        return time.hour * 60 + time.minute >= eveningMinute(day, settings.promptSeed)
+        val historyMinutes = if (!settings.learnMoodPrompt) emptyList() else history.asSequence()
+            .filter { (d, entry) -> d in day - 28 until day && entry.at > 0 }
+            .mapNotNull { (d, entry) -> Instant.ofEpochMilli(entry.at).atZone(zone).takeIf { it.toLocalDate().toEpochDay() == d }
+                ?.let { it.hour * 60 + it.minute } }.filter { it in 17 * 60..19 * 60 }.sorted().toList()
+        val minute = if (historyMinutes.size >= 7) historyMinutes[historyMinutes.size / 2] else eveningMinute(day, settings.promptSeed)
+        return time.hour * 60 + time.minute >= minute
     }
 }

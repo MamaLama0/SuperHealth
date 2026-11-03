@@ -115,7 +115,7 @@ class InsightsTest {
         val a = (0L..9L).associate { d(it) to it.toDouble() }
         val b = (0L..9L).associate { d(it) to 2.0 * it + 1 } + (d(20) to 99.0)
         val r = Correlation.pearson(a, b)!!
-        assertEquals(1.0, r.r, 1e-12); assertEquals(10, r.n); assertTrue(r.significant)
+        assertEquals(1.0, r.r, 1e-12); assertEquals(10, r.n); assertFalse("Shared linear trends have too few independent observations", r.significant)
         val c = (0L..9L).associate { d(it) to listOf(3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0, 5.0, 3.0)[it.toInt()] }
         val rc = Correlation.pearson(a, c)!!
         assertTrue(kotlin.math.abs(rc.r) < 0.5); assertFalse(rc.significant)

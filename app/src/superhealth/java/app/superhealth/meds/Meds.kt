@@ -78,14 +78,14 @@ object Meds {
         val cur = taken.value[day].orEmpty()
         taken.value = taken.value + (day to if (on) cur + key else cur - key)
         save(ctx)
-        if (on) cancelNotification(ctx, key)
+        if (on) cancelNotification(ctx, key, day)
     }
 
     /** Prises du jour [day], dans l'ordre des heures. */
     fun doses(day: LocalDate = LocalDate.now()): List<Dose> {
         val done = taken.value[day.toEpochDay()].orEmpty()
         return meds.value.filter { it.active && day.dayOfWeek.value in it.days }
-            .flatMap { m -> m.times.map { t -> Dose(m, t, "${m.id}@$t" in done) } }.sortedBy { it.minute }
+            .flatMap { m -> m.times.distinct().map { t -> Dose(m, t, "${m.id}@$t" in done) } }.sortedBy { it.minute }
     }
 
     /** Prises dont l'heure est passée et pas encore cochées (pour « À faire »). */
@@ -114,35 +114,40 @@ object Meds {
 
     /** Notifie les prises dont l'heure vient d'arriver (et pas encore cochées). */
     fun notifyDue(ctx: Context) {
+        if (!available()) return
         val now = LocalDateTime.now()
         val minute = now.hour * 60 + now.minute
         doses(now.toLocalDate()).filter { !it.taken && it.minute in (minute - 10)..minute }.forEach { notify(ctx, it) }
         schedule(ctx)
     }
 
-    fun notify(ctx: Context, d: Dose) {
+    fun notify(ctx: Context, d: Dose, day: Long = LocalDate.now().toEpochDay()) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Rappel médication"), NotificationManager.IMPORTANCE_HIGH))
-        fun action(act: String, code: Int) = PendingIntent.getBroadcast(ctx, code, Intent(ctx, MedsReceiver::class.java).setAction(act)
-            .putExtra("key", d.key).putExtra("day", LocalDate.now().toEpochDay()), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        fun action(act: String, code: Int) = PendingIntent.getBroadcast(ctx, code, Intent(ctx, MedsReceiver::class.java).setAction(act).setData(android.net.Uri.parse("superhealth://med-dose/$day/${android.net.Uri.encode(d.key)}"))
+            .putExtra("key", d.key).putExtra("day", day), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val open = PendingIntent.getActivity(ctx, 42, Intent(ctx, app.superhealth.MainActivity::class.java)
             .putExtra(app.superhealth.MainActivity.EXTRA_ROUTE, "meds").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val id = d.key.hashCode()
-        nm.notify(id, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_stat_meds)
+        nm.notify(day.toString(), id, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_stat_meds)
             .setContentTitle(d.med.name).setContentText(d.med.dose.ifBlank { tr("C'est l'heure") }).setContentIntent(open).setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .addAction(0, tr("Pris"), action(ACTION_TAKEN, id))
             .addAction(0, tr("Plus tard"), action(ACTION_SNOOZE, id + 1)).build())
     }
 
-    private fun cancelNotification(ctx: Context, key: String) = ctx.getSystemService(NotificationManager::class.java).cancel(key.hashCode())
+    private fun cancelNotification(ctx: Context, key: String, day: Long) {
+        val manager = ctx.getSystemService(NotificationManager::class.java)
+        manager.cancel(day.toString(), key.hashCode())
+        manager.cancel(key.hashCode()) // notification posted before this update
+    }
 
     /** « Plus tard » : la même prise renotifiée dans quelques minutes (durée du plugin). */
-    fun snooze(ctx: Context, key: String) {
-        cancelNotification(ctx, key)
+    fun snooze(ctx: Context, key: String, day: Long = LocalDate.now().toEpochDay()) {
+        cancelNotification(ctx, key, day)
         val at = System.currentTimeMillis() + content().snoozeMinutes * 60_000L
-        val pi = PendingIntent.getBroadcast(ctx, key.hashCode() + 2, Intent(ctx, MedsReceiver::class.java).setAction(ACTION_SNOOZED).putExtra("key", key),
+        val pi = PendingIntent.getBroadcast(ctx, key.hashCode() + 2, Intent(ctx, MedsReceiver::class.java).setAction(ACTION_SNOOZED).setData(android.net.Uri.parse("superhealth://med-dose/$day/${android.net.Uri.encode(key)}")).putExtra("key", key).putExtra("day", day),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         ctx.getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
     }
@@ -160,9 +165,10 @@ class MedsReceiver : BroadcastReceiver() {
         when (intent.action) {
             Meds.ACTION_DUE -> Meds.notifyDue(app)
             Meds.ACTION_TAKEN -> intent.getStringExtra("key")?.let { Meds.setTaken(app, intent.getLongExtra("day", LocalDate.now().toEpochDay()), it, true) }
-            Meds.ACTION_SNOOZE -> intent.getStringExtra("key")?.let { Meds.snooze(app, it) }
+            Meds.ACTION_SNOOZE -> intent.getStringExtra("key")?.let { Meds.snooze(app, it, intent.getLongExtra("day", LocalDate.now().toEpochDay())) }
             Meds.ACTION_SNOOZED -> intent.getStringExtra("key")?.let { k ->
-                Meds.doses().firstOrNull { it.key == k && !it.taken }?.let { Meds.notify(app, it) }
+                val day = intent.getLongExtra("day", LocalDate.now().toEpochDay())
+                if (Meds.available()) Meds.doses(LocalDate.ofEpochDay(day)).firstOrNull { it.key == k && !it.taken }?.let { Meds.notify(app, it, day) }
             }
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED, Intent.ACTION_TIMEZONE_CHANGED -> Meds.schedule(app)
         }

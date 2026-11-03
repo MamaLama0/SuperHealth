@@ -279,8 +279,15 @@ object HealthConnectHub {
                 .maxBy { ps -> ps.asleepMin() }
         } ?: prev.nights
         val sleep = if (sleepRecords != null) nights.mapValues { (_, ps) -> ps.asleepMin() }.filterValues { it > 0 } else prev.sleepMin
-        val hrv = others(HeartRateVariabilityRmssdRecord::class)?.noteOrigin(Metric.HRV) { it.time }
-            ?.avgBy({ it.time.day() }, { it.heartRateVariabilityMillis }) ?: prev.hrv
+        val hrvRecords = others(HeartRateVariabilityRmssdRecord::class)?.noteOrigin(Metric.HRV) { it.time }
+        val hrvDays = hrvRecords?.groupBy { it.time.day() }?.mapValues { (_, rows) ->
+            // Different devices can use different HRV methods. Select one source for the day.
+            rows.groupBy { Triple(it.metadata.dataOrigin.packageName, it.metadata.device?.manufacturer, it.metadata.device?.model) }
+                .values.maxWith(compareBy<List<HeartRateVariabilityRmssdRecord>> { it.size }.thenBy { it.maxOf { r -> r.time } }
+                    .thenBy { it.first().metadata.dataOrigin.packageName })
+        }
+        val hrv = hrvDays?.mapValues { (_, rows) -> rows.map { it.heartRateVariabilityMillis }.average() } ?: prev.hrv
+        val hrvOrigins = hrvDays?.mapValues { (_, rows) -> sourceOf(rows.first().metadata, pm) } ?: prev.hrvOrigins
         val spo2 = others(OxygenSaturationRecord::class)?.noteOrigin(Metric.SPO2) { it.time }
             ?.avgBy({ it.time.day() }, { it.percentage.value }) ?: prev.spo2
         // Respiration de la nuit : jour du réveil, comme le sommeil.
@@ -333,7 +340,7 @@ object HealthConnectHub {
         val steps = if (read(StepsRecord::class) in granted) runCatching { stepsHourly(client, range, me) }.getOrDefault(prev.stepsHourly)
         else prev.stepsHourly
         return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps, origins, nights,
-            resp, distance, kcal, vo2)
+            resp, distance, kcal, vo2, hrvOrigins)
     }
 
     /** Phases d'une session de sommeil ; sans phases (appli qui ne note que la durée), une seule phase « endormi ». */

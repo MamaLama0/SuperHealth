@@ -74,7 +74,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ----- Programmes -----
 
-    fun generate(input: Generator.Input): Program? = db.value?.let { Generator.generate(it, input) }
+    fun generate(input: Generator.Input): Program? = db.value?.let { database ->
+        val st = state.value
+        val recent = if (!st.settings.preferPracticedExercises) emptyMap() else {
+            val now = System.currentTimeMillis()
+            st.history.filter { it.startTime in (now - 56L * 86_400_000)..now }
+                .flatMap { w -> w.exercises.filter { app.superhealth.training.domain.Analytics.workingSets(it).isNotEmpty() }.map { it.exerciseId }.distinct() }
+                .groupingBy { it }.eachCount()
+        }
+        Generator.generate(database, input, recent)
+    }
 
     fun saveProgram(p: Program, activate: Boolean = false) = update { s ->
         val list = if (s.programs.any { it.id == p.id }) s.programs.map { if (it.id == p.id) p else it } else s.programs + p
@@ -137,12 +146,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val sess = s.session ?: return@update s
             val g = gym(sess.gymId)
             s.copy(session = sess.copy(adjust = 1, exercises = sess.exercises.map { ex ->
+                val exercise = db.value?.exercise(ex.exerciseId) ?: return@map ex
+                if (!exercise.usesWeight || "aw" in exercise.metrics) return@map ex
                 val ladder = e.ladderFor(ex.exerciseId, g)
+                val firstWork = ex.sets.firstOrNull { it.type != SetType.WARMUP && !it.done }
                 ex.copy(sets = ex.sets.map { set ->
+                    if (s.settings.adaptiveStrength && set.id != firstWork?.id) return@map set
                     val w = set.weight ?: set.autoWeight
-                    if (set.type == app.superhealth.training.domain.SetType.WARMUP || set.done || w == null || w <= 0) return@map set
+                    if (set.type == app.superhealth.training.domain.SetType.WARMUP || set.done || set.weightEdited || w == null || w <= 0) return@map set
                     val next = ladder.above(w)
-                    if (next != null && next - w <= 0.05 * w + 1e-9) set.copy(weight = next) else set
+                    if (next != null && next - w <= 0.05 * w + 1e-9) set.copy(weight = next, autoWeight = next) else set
                 })
             }))
         }

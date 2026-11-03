@@ -79,6 +79,9 @@ object AiFood {
         val match: FoodEntity? = null, val assumption: String = "",
     )
 
+    internal fun matchKey(item: Item) = listOf(item.name, item.query, item.type, item.unit)
+        .joinToString("|") { it.lowercase(java.util.Locale.ROOT).trim().replace(Regex("\\s+"), " ").take(100) }
+
     class AiException(message: String) : Exception(message)
 
     private val json = Json { ignoreUnknownKeys = true }

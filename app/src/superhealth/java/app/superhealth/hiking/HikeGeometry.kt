@@ -37,9 +37,9 @@ object HikeGeometry {
     }
     data class Position(val offset: Double, val progress: Double, val remaining: Double)
     /** Project onto actual segments, never across GPX gaps. */
-    fun position(points: List<HikePoint>, location: HikePoint): Position? {
+    fun position(points: List<HikePoint>, location: HikePoint, previousProgress: Double? = null): Position? {
         if (points.size < 2) return null
-        var best = Double.MAX_VALUE; var progress = 0.0; var travelled = 0.0
+        var best = Double.MAX_VALUE; var bestCost = Double.MAX_VALUE; var progress = 0.0; var travelled = 0.0
         val scale = cos(Math.toRadians(location.lat)).coerceAtLeast(.01)
         points.zipWithNext().forEach { (a, b) ->
             if (a.segment != b.segment) return@forEach
@@ -47,12 +47,28 @@ object HikeGeometry {
             val t = if (x*x+y*y < 1e-18) 0.0 else (((location.lon-a.lon)*scale*x + (location.lat-a.lat)*y)/(x*x+y*y)).coerceIn(0.0,1.0)
             val projected = HikePoint(a.lat + t*(b.lat-a.lat), a.lon+t*(b.lon-a.lon))
             val offset = distance(location, projected); val d = distance(a, b)
-            if (offset < best) { best = offset; progress = travelled + t*d }
+            val candidate = travelled + t * d
+            val cost = offset + (previousProgress?.let { minOf(8.0, abs(candidate - it) * 0.04) } ?: 0.0)
+            if (cost < bestCost) { bestCost = cost; best = offset; progress = candidate }
             travelled += d
         }
         return if (best == Double.MAX_VALUE) null else Position(best, progress, (travelled-progress).coerceAtLeast(0.0))
     }
-    fun estimatedMinutes(route: HikeRoute) = route.durationMinutes ?: (length(route.points)/4000*60 + (route.ascent ?: ascent(route.points) ?: 0.0)/600*60).roundToInt().coerceAtLeast(1)
+    fun estimatedMinutes(route: HikeRoute, history: List<Hiking.Completed> = emptyList()): Int {
+        route.durationMinutes?.let { return it }
+        val meters = length(route.points)
+        val climb = route.ascent ?: ascent(route.points)
+        fun nominal(distance: Double, up: Double) = distance / 4000 * 60 + up / 600 * 60
+        val ratios = history.asSequence().filter { it.meters >= 1000 && it.seconds >= 600 && it.ascent != null && climb != null && meters > 0 }
+            .filter { kotlin.math.abs(it.ascent!! / it.meters - climb!! / meters) < 0.04 }
+            .sortedByDescending { it.time }.take(12)
+            .map { it.seconds / 60.0 / nominal(it.meters, it.ascent!!) }.filter { it in 0.5..2.0 }.sorted().toList()
+        val factor = if (ratios.size >= 3) {
+            val median = (ratios[ratios.lastIndex / 2] + ratios[ratios.size / 2]) / 2
+            1 + (median - 1) * ratios.size / (ratios.size + 4.0)
+        } else 1.0
+        return (nominal(meters, climb ?: 0.0) * factor).roundToInt().coerceAtLeast(1)
+    }
     data class Gpx(val name: String, val points: List<HikePoint>)
     fun parseGpx(text: String): Gpx {
         require(text.length <= 8 * 1024 * 1024) { "Fichier trop volumineux" }

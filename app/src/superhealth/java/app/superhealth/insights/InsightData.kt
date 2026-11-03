@@ -56,10 +56,17 @@ object InsightData {
     }
 
     /** Sources dont une donnée peut exister (montre, Health Connect ou saisie). */
-    fun available(): List<Source> = Source.entries.filter { s -> s.metric == null || Bridge.hasSource(s.metric) }
+    private fun enabled(s: Source): Boolean = (when (s) {
+        Source.KCAL, Source.PROTEIN, Source.WEIGHT -> app.superhealth.Feature.NUTRITION
+        Source.VOLUME -> app.superhealth.Feature.TRAINING
+        else -> app.superhealth.Feature.HEALTH
+    }).name in app.superhealth.SuperPrefs.settings.value.features
+
+    fun available(): List<Source> = Source.entries.filter { s -> enabled(s) && (s.metric == null || Bridge.hasSource(s.metric)) }
 
     /** Valeurs par jour de [src] sur les [days] derniers jours (aujourd'hui compris). */
     suspend fun series(ctx: Context, src: Source, days: Int, today: LocalDate = LocalDate.now()): Map<LocalDate, Double> = coroutineScope {
+        if (!enabled(src)) return@coroutineScope emptyMap()
         val dates = (days - 1 downTo 0).map { today.minusDays(it.toLong()) }
         when (src) {
             Source.WEIGHT -> NutriApp.repository.analytics().first().trend
@@ -89,10 +96,14 @@ object InsightData {
 
     /** Entrée complète des règles d'insights. */
     suspend fun input(ctx: Context, today: LocalDate = LocalDate.now()): Insights.Input = coroutineScope {
-        val sleep = async { series(ctx, Source.SLEEP, 44, today) }
+        val sh = app.superhealth.SuperPrefs.settings.value
+        val healthOn = app.superhealth.Feature.HEALTH.name in sh.features
+        val foodOn = app.superhealth.Feature.NUTRITION.name in sh.features
+        val trainOn = app.superhealth.Feature.TRAINING.name in sh.features
+        val sleep = async { series(ctx, Source.SLEEP, 57, today) }
         val steps = async { series(ctx, Source.STEPS, 36, today) }
         val rhr = async { series(ctx, Source.RESTING_HR, 36, today) }
-        suspend fun daily(m: Metric) = if (!Bridge.hasSource(m)) emptyMap() else (0L..31L).map { today.minusDays(it) }
+        suspend fun daily(m: Metric) = if (!healthOn || !Bridge.hasSource(m)) emptyMap() else (0L..31L).map { today.minusDays(it) }
             .map { d -> async { runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull()?.takeIf { it > 0 }?.let { d to it } } }.awaitAll().filterNotNull().toMap()
         val hrv = async { daily(Metric.HRV) }
         val resp = async { daily(Metric.RESPIRATORY_RATE) }
@@ -100,8 +111,27 @@ object InsightData {
         val repo = NutriApp.repository
         val an = repo.analytics().first()
         val days = (0L..8L).map { today.minusDays(it) }
-        val prot = protein(today.minusDays(8), today)
-        val history = WorkoutApp.store.state.value.history
+        val validFood = an.days.filter { foodOn && !it.partial && !it.fasted }.map { it.epochDay }.toSet()
+        val prot = protein(today.minusDays(8), today).filterKeys { it.toEpochDay() in validFood }
+        val from = today.minusDays(56)
+        val zone = java.time.ZoneId.systemDefault()
+        val caffeine = if (!foodOn || !healthOn || !an.settings.learnFoodPatterns) emptyMap() else
+            repo.entries.rangeFlow(from.toEpochDay(), today.toEpochDay() - 1).first()
+                .filter { it.epochDay in validFood && it.minuteOfDay in 0..1439 &&
+                    (app.superhealth.nutrition.data.Micros.parse(it.microsJson)["caffeine"] ?: 0.0) > 0 }
+                .groupBy { LocalDate.ofEpochDay(it.epochDay) }.mapValues { (_, entries) -> entries.maxOf { it.minuteOfDay } }
+        val activity = if (!healthOn) emptyMap() else Bridge.activityFacts(from.atStartOfDay(zone).toInstant().toEpochMilli(),
+            today.atStartOfDay(zone).toInstant().toEpochMilli() - 1).filter { it.minutes >= 10 &&
+            (trainOn || it.source != Bridge.Source.GYM) }.groupBy { java.time.Instant.ofEpochMilli(it.end).atZone(zone).toLocalDate() }
+            .mapValues { (_, acts) -> java.time.Instant.ofEpochMilli(acts.maxOf { it.end }).atZone(zone).toLocalTime().toSecondOfDay() / 60 }
+        val bedtime = (caffeine.keys + activity.keys).associateWith { d ->
+            Bridge.sleepNight(d.plusDays(1))?.filter { it.kind != nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP }?.minOfOrNull { it.start }
+        }
+        fun beforeSleep(times: Map<LocalDate, Int>, cutoff: Int) = times.filter { (d, minute) ->
+            val time = d.atStartOfDay().plusMinutes(minute.toLong()).atZone(zone).toInstant().toEpochMilli()
+            bedtime[d]?.let { time < it } == true
+        }.mapValues { (_, minute) -> minute >= cutoff }
+        val history = if (trainOn) WorkoutApp.store.state.value.history.distinctBy { it.id } else emptyList()
         val db = withTimeoutOrNull(3000) { WorkoutApp.db.filterNotNull().first() }
         val since = today.minusDays(Insights.LIFT_WINDOW)
         val sinceMs = since.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -109,12 +139,12 @@ object InsightData {
             Insights.Lift(id, db.exercise(id)?.name ?: "", TrainingAnalytics.history(id, history, db).map { TrainingAnalytics.day(it.time) to it.e1rm })
         }
         Insights.Input(
-            today = today,
+            today = today, caffeineLate = beforeSleep(caffeine, 16 * 60), activityLate = beforeSleep(activity, 18 * 60),
             sleepMin = sleep.await(), steps = steps.await(), restingHr = rhr.await(),
             trainingDays = history.map { TrainingAnalytics.day(it.startTime) }.toSet(),
             lifts = lifts,
-            trendKg = an.trend.associate { LocalDate.ofEpochDay(it.epochDay) to it.trend },
-            intakeKcal = an.days.mapNotNull { d -> d.intakeKcal?.let { LocalDate.ofEpochDay(d.epochDay) to it } }.toMap(),
+            trendKg = an.trend.filter { foodOn }.associate { LocalDate.ofEpochDay(it.epochDay) to it.trend },
+            intakeKcal = an.days.filter { it.epochDay in validFood }.mapNotNull { d -> d.intakeKcal?.let { LocalDate.ofEpochDay(d.epochDay) to it } }.toMap(),
             kcalTarget = days.associateWith { an.targetFor(it.toEpochDay()).macros.kcal },
             protein = prot,
             proteinTarget = days.associateWith { an.targetFor(it.toEpochDay()).macros.protein },
@@ -123,12 +153,15 @@ object InsightData {
     }
 
     /** Constats du jour, gardés le temps d'une session de l'app (relus au plus toutes les 10 minutes). */
-    private var cached: Pair<Long, List<Insights.Insight>>? = null
+    private data class Cached(val time: Long, val features: Set<String>, val foodPatterns: Boolean, val insights: List<Insights.Insight>)
+    private var cached: Cached? = null
 
     suspend fun insights(ctx: Context, force: Boolean = false): List<Insights.Insight> {
         val now = System.currentTimeMillis()
-        cached?.takeIf { !force && now - it.first < 10 * 60_000L }?.let { return it.second }
-        return Insights.compute(input(ctx)).also { cached = now to it }
+        val features = app.superhealth.SuperPrefs.settings.value.features
+        val patterns = NutriApp.repository.prefs.settings.value.learnFoodPatterns
+        cached?.takeIf { !force && it.features == features && it.foodPatterns == patterns && now - it.time < 10 * 60_000L }?.let { return it.insights }
+        return Insights.compute(input(ctx)).also { cached = Cached(now, features, patterns, it) }
     }
 
     fun invalidate() { cached = null }
@@ -139,6 +172,11 @@ fun Insights.Insight.text(s: app.superhealth.nutrition.domain.Settings): String 
     val v = abs(value)
     fun pct() = formatNumber(v, if (v < 10) 1 else 0)
     return when (type) {
+        Insights.Type.LATE_CAFFEINE, Insights.Type.LATE_ACTIVITY -> {
+            val exposure = tr(if (type == Insights.Type.LATE_CAFFEINE) "Caféine notée après 16 h" else "Séance terminée après 18 h")
+            exposure + " · " + trf(if (value > 0) "sommeil plus long de %1\$s en médiane (%2\$s paires de jours comparables)" else
+                "sommeil plus court de %1\$s en médiane (%2\$s paires de jours comparables)", formatDuration(v), count)
+        }
         Insights.Type.LIFT -> trf(if (value > 0) "%1\$s : ton 1RM a pris %2\$s %% en %3\$s semaines" else "%1\$s : ton 1RM a perdu %2\$s %% en %3\$s semaines",
             subject ?: "", pct(), count)
         Insights.Type.SLEEP_TRAINING -> trf(if (value > 0) "Tu dors %1\$s de plus après les jours sans séance" else "Tu dors %1\$s de moins après les jours sans séance",
@@ -162,7 +200,7 @@ fun Insights.Insight.text(s: app.superhealth.nutrition.domain.Settings): String 
 /** Écran ouvert en touchant le constat. */
 val Insights.Insight.route: String get() = when (type) {
     Insights.Type.LIFT -> "exercise/$subjectId"
-    Insights.Type.SLEEP_TRAINING -> "h/metric/SLEEP"
+    Insights.Type.SLEEP_TRAINING, Insights.Type.LATE_ACTIVITY, Insights.Type.LATE_CAFFEINE -> "h/metric/SLEEP"
     Insights.Type.STEPS_WEEK -> "h/metric/STEPS"
     Insights.Type.WEIGHT_RATE -> "weight"
     Insights.Type.KCAL_WEEK -> "nutrition"
@@ -174,7 +212,7 @@ val Insights.Insight.route: String get() = when (type) {
 
 val Insights.Insight.source: InsightData.Source get() = when (type) {
     Insights.Type.LIFT, Insights.Type.TRAINING_MONTH -> InsightData.Source.VOLUME
-    Insights.Type.SLEEP_TRAINING -> InsightData.Source.SLEEP
+    Insights.Type.SLEEP_TRAINING, Insights.Type.LATE_ACTIVITY, Insights.Type.LATE_CAFFEINE -> InsightData.Source.SLEEP
     Insights.Type.STEPS_WEEK -> InsightData.Source.STEPS
     Insights.Type.WEIGHT_RATE -> InsightData.Source.WEIGHT
     Insights.Type.KCAL_WEEK -> InsightData.Source.KCAL

@@ -210,7 +210,7 @@ object Generator {
         return 10 - l + (e.searchBoost ?: 0.0) * 0.05
     }
 
-    fun generate(db: ExerciseDb, input: Input): Program {
+    fun generate(db: ExerciseDb, input: Input, practice: Map<String, Int> = emptyMap()): Program {
         val available = db.exercises.filter { db.isAvailable(it, input.equipment) && it.id !in input.doNotRecommend && it.usesReps }
         val used = mutableMapOf<String, Int>()
         val dayCounters = mutableMapOf<SplitDay, Int>()
@@ -230,7 +230,7 @@ object Generator {
                         (slot.template == Template.ACCESSORY || e.isCompound)
                 }
                 val pool = cands.filter { level(it, input.goal, slot.template) != null }.ifEmpty { cands }
-                val pick = pool.maxByOrNull { score(it, input.goal, slot.template) - used.getOrDefault(it.id, 0) * 1.5 } ?: continue
+                val pick = pool.maxByOrNull { score(it, input.goal, slot.template) - used.getOrDefault(it.id, 0) * 1.5 + 0.1 * (practice[it.id] ?: 0).coerceIn(0, 4) } ?: continue
                 val base = chosenTarget(input, pick, slot.template)
                 val focus = pick.muscleGroups.sumOf { input.focus[it] ?: 0 }.coerceIn(-1, 2)
                 val sets = (baseSets(slot.template, input.experience) + focus).coerceIn(1, 5)

@@ -1,5 +1,6 @@
 package app.superhealth.meals
 
+import kotlinx.coroutines.flow.first
 import android.content.Context
 import app.superhealth.SuperPrefs
 import app.superhealth.backup.Secrets
@@ -132,7 +133,7 @@ object MealPlanner {
      * reste des cibles. Tout est déjà mangé mais il reste des calories : une collation.
      */
     suspend fun generate(ctx: Context, day: Long, target: Macros, logged: List<FoodEntryEntity>): Plan {
-        val c = content() ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
+        val c = planningContent(day) ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val left = left(target, logged)
         if (left.kcal < 80) throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
         val usedSlots = logged.map { it.meal }.toSet()
@@ -155,9 +156,9 @@ object MealPlanner {
      * L'IA reçoit les plats déjà proposés pour en choisir un autre.
      */
     suspend fun regenerate(ctx: Context, day: Long, slot: Int, target: Macros, logged: List<FoodEntryEntity>): Meal {
-        val c = content() ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
+        val c = planningContent(day) ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val p = plans.value[day] ?: throw PlanException(tr("Aucun repas prévu."))
-        val goal = slotGoal(target, logged, slot)?.takeIf { it.kcal >= 80 } ?: throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
+        val goal = slotGoal(target, logged, slot, c)?.takeIf { it.kcal >= 80 } ?: throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
         val avoid = p.meals.map { it.title }
         val meal = (if (p.provider == "spoonacular" && hasSpoonacular(ctx)) {
             val mainShare = c.slots.take(3).sumOf { it.share }
@@ -191,8 +192,25 @@ object MealPlanner {
      * Cible d'un repas choisi : sa part de ce qui reste, partagée avec les autres repas encore vides (un repas déjà commencé
      * garde sa part, ce qui y est déjà journalisé étant compté dans ce qui reste).
      */
-    fun slotGoal(target: Macros, logged: List<FoodEntryEntity>, slot: Int): Macros? {
+    suspend fun planningContent(day: Long): Content? {
         val c = content() ?: return null
+        val repo = app.superhealth.nutrition.NutriApp.repository
+        if (!repo.prefs.settings.value.learnFoodPatterns || app.superhealth.Feature.NUTRITION.name !in app.superhealth.SuperPrefs.settings.value.features) return c
+        val excluded = repo.dayFlags.allFlow().first().filter { it.partial || it.fasted }.map { it.epochDay }.toSet()
+        val days = repo.entries.rangeFlow(day - 28, day - 1).first().filter { it.epochDay !in excluded }.groupBy { it.epochDay }
+        val trainingDays = if (app.superhealth.Feature.TRAINING.name in app.superhealth.SuperPrefs.settings.value.features)
+            app.superhealth.training.WorkoutApp.store.state.value.history.filter { it.durationSec > 0 }.map {
+                app.superhealth.training.domain.Analytics.day(it.startTime).toEpochDay()
+            }.toSet() else emptySet()
+        val rows = days.mapValues { (_, meals) -> c.slots.indices.map { slot -> meals.filter { it.meal == slot }.sumOf { it.kcal } } }
+        val comparable = rows.filterKeys { it in trainingDays }.values.filter { row -> row.count { it > 0 } >= 2 }
+        val samples = if (day in trainingDays && comparable.size >= 7) comparable else rows.values.toList()
+        val shares = app.superhealth.nutrition.domain.FoodLogAdaptation.mealShares(c.slots.map { it.share }, samples)
+        return c.copy(slots = c.slots.mapIndexed { i, slot -> slot.copy(share = shares[i]) })
+    }
+
+    fun slotGoal(target: Macros, logged: List<FoodEntryEntity>, slot: Int, config: Content? = content()): Macros? {
+        val c = config ?: return null
         val used = logged.map { it.meal }.toSet()
         val open = (c.slots.indices.filter { it !in used } + slot).distinct()
         return goals(c, left(target, logged), open)[slot]
@@ -202,9 +220,17 @@ object MealPlanner {
      * Repas composé avec les aliments choisis : grammes calculés sur l'appareil ([Portions]), aucune IA ni réseau.
      * Remplace un éventuel repas déjà prévu pour le même créneau.
      */
-    fun compose(day: Long, slot: Int, foods: List<FoodEntity>, goal: Macros): Pair<Meal, Portions.Result> {
+    suspend fun compose(day: Long, slot: Int, foods: List<FoodEntity>, goal: Macros): Pair<Meal, Portions.Result> {
+        val repo = app.superhealth.nutrition.NutriApp.repository
+        val usual = if (repo.prefs.settings.value.learnFoodPatterns) {
+            val previous = repo.entries.rangeFlow(day - 56, day - 1).first().filter { it.meal == slot && it.grams != null }.groupBy { it.foodId }
+            foods.mapIndexedNotNull { i, food ->
+                val grams = previous[food.id]?.groupBy { it.epochDay }?.values?.map { meals -> meals.sumOf { it.grams!! } }?.sorted().orEmpty()
+                if (grams.size < 3) null else i to grams[grams.size / 2]
+            }.toMap()
+        } else emptyMap()
         val r = Portions.solve(foods.map { Portions.Food(it.kcal100, it.protein100, it.fat100, it.carbs100) },
-            Portions.Goal(goal.kcal, goal.protein, goal.fat, goal.carbs))
+            Portions.Goal(goal.kcal, goal.protein, goal.fat, goal.carbs), usual)
         val ings = foods.zip(r.grams).map { (f, g) ->
             val k = g / 100
             Ingredient(f.name, g, f.kcal100 * k, f.protein100 * k, f.fat100 * k, f.carbs100 * k, f.fiber100 * k, f.id.takeIf { it != 0L })

@@ -33,6 +33,7 @@ object Journal {
     fun set(ctx: Context, day: Long, e: Entry?) {
         days.value = if (e == null) days.value - day else days.value + (day to e)
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), Store(days.value))) }
+        Form.Model.invalidate()
         Reminders.schedule(ctx)
     }
 

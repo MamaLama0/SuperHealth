@@ -193,7 +193,7 @@ fun MobilityTestScreen(vm: SuperViewModel, nav: NavHostController) {
             }
             Spacer(Modifier.height(10.dp))
             PillButton(tr("Routine sur mes points faibles"), Modifier.fillMaxWidth(), strong = false) {
-                preset.value = Stretch.weakGroups(last); nav.popBackStack()
+                preset.value = Stretch.weakGroups(last, results); nav.popBackStack()
             }
             if (coachAvailable()) {
                 Spacer(Modifier.height(8.dp))

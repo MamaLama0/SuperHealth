@@ -509,6 +509,8 @@ fun RemindersScreen(vm: SuperViewModel, nav: NavHostController) {
             if (sh.has(app.superhealth.Feature.NUTRITION)) WeighPromptTimeRow()
             if (sh.has(app.superhealth.Feature.JOURNAL)) {
                 if (sh.has(app.superhealth.Feature.NUTRITION)) RowDivider()
+                SwitchRow(tr("Adapter le bandeau du soir"), tr("Utilise les heures de saisie du moral entre 17 h et 19 h"), sh.learnMoodPrompt) { on -> app.superhealth.SuperPrefs.update { it.copy(learnMoodPrompt = on) } }
+                RowDivider()
                 SwitchRow(tr("Moral après l'objectif de pas"), tr("Proposer le journal quand l'objectif du jour est atteint"), sh.moodAfterSteps) { v -> SuperPrefs.update { it.copy(moodAfterSteps = v) } }
                 RowDivider()
                 SwitchRow(tr("Moral après une activité"), tr("Entre 30 min et 2 h après une activité terminée"), sh.moodAfterActivity) { v -> SuperPrefs.update { it.copy(moodAfterActivity = v) } }

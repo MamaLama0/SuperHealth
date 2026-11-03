@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  * Le sommeil d'une date est celui de la nuit qui s'y termine (réveil ce jour-là), comme dans Gadgetbridge et Health Connect.
  */
 object Insights {
-    enum class Type { LIFT, SLEEP_TRAINING, STEPS_WEEK, WEIGHT_RATE, KCAL_WEEK, PROTEIN_WEEK, RESTING_HR, TRAINING_MONTH, STRAIN_SIGNALS }
+    enum class Type { LIFT, SLEEP_TRAINING, STEPS_WEEK, WEIGHT_RATE, KCAL_WEEK, PROTEIN_WEEK, RESTING_HR, TRAINING_MONTH, STRAIN_SIGNALS, LATE_CAFFEINE, LATE_ACTIVITY }
 
     /**
      * Un constat. [value] : la grandeur de la phrase (variation en %, minutes, kg / semaine, bpm…), [count] et [total] :
@@ -29,6 +29,8 @@ object Insights {
 
     data class Input(
         val today: LocalDate,
+        val caffeineLate: Map<LocalDate, Boolean> = emptyMap(),
+        val activityLate: Map<LocalDate, Boolean> = emptyMap(),
         val sleepMin: Map<LocalDate, Double> = emptyMap(),
         val steps: Map<LocalDate, Double> = emptyMap(),
         val restingHr: Map<LocalDate, Double> = emptyMap(),
@@ -46,7 +48,27 @@ object Insights {
 
     /** Tous les constats valides, du plus marquant au moins marquant. */
     fun compute(i: Input): List<Insight> =
-        listOfNotNull(lift(i), sleepTraining(i), steps(i), weight(i), kcal(i), protein(i), restingHr(i), training(i), strain(i)).sortedByDescending { it.score }
+        listOfNotNull(lift(i), sleepTraining(i), steps(i), weight(i), kcal(i), protein(i), restingHr(i), training(i), strain(i),
+            nightTiming(i, i.caffeineLate, Type.LATE_CAFFEINE), nightTiming(i, i.activityLate, Type.LATE_ACTIVITY)).sortedByDescending { it.score }
+
+    /** Compare observed exposures against earlier exposures, matching weekday and testing a later block. */
+    internal fun nightTiming(input: Input, late: Map<LocalDate, Boolean>, type: Type): Insight? {
+        fun differences(start: LocalDate): List<Double> {
+            val dates = (0L until 28).map { start.plusDays(it) }.filter { late[it] != null && input.sleepMin[it.plusDays(1)] != null }
+            return dates.groupBy { it.dayOfWeek }.values.flatMap { group ->
+                val (later, earlier) = group.partition { late[it] == true }
+                later.zip(earlier).map { (a, b) -> input.sleepMin.getValue(a.plusDays(1)) - input.sleepMin.getValue(b.plusDays(1)) }
+            }
+        }
+        val first = differences(input.today.minusDays(56))
+        val next = differences(input.today.minusDays(28))
+        if (first.size < 4 || next.size < 4) return null
+        fun median(xs: List<Double>) = xs.sorted().let { (it[it.lastIndex / 2] + it[it.size / 2]) / 2 }
+        val effect = median(next)
+        if (abs(effect) < 15 || median(first) * kotlin.math.sign(effect) < 15 ||
+            listOf(first, next).any { sample -> sample.count { it * effect > 0 } < 0.75 * sample.size }) return null
+        return Insight(type, effect, count = next.size, total = first.size + next.size, score = (abs(effect) / 30).coerceAtMost(2.0))
+    }
 
     // --- seuils ---
     const val LIFT_WINDOW = 42L
@@ -198,7 +220,8 @@ object Correlation {
 
     /** [lag] : décalage de b (1 = b du lendemain). Null sous 3 jours communs ou si une série est constante. */
     fun pearson(a: Map<LocalDate, Double>, b: Map<LocalDate, Double>, lag: Int = 0): Result? {
-        val pairs = a.mapNotNull { (d, x) -> b[d.plusDays(lag.toLong())]?.let { x to it } }
+        val days = a.keys.filter { b.containsKey(it.plusDays(lag.toLong())) }.sorted()
+        val pairs = days.map { a.getValue(it) to b.getValue(it.plusDays(lag.toLong())) }
         val n = pairs.size
         if (n < 3) return null
         val mx = pairs.sumOf { it.first } / n; val my = pairs.sumOf { it.second } / n
@@ -206,7 +229,18 @@ object Correlation {
         for ((x, y) in pairs) { sxy += (x - mx) * (y - my); sxx += (x - mx) * (x - mx); syy += (y - my) * (y - my) }
         if (sxx == 0.0 || syy == 0.0) return null
         val r = (sxy / sqrt(sxx * syy)).coerceIn(-1.0, 1.0)
-        val t = if (abs(r) >= 1.0) Double.POSITIVE_INFINITY * kotlin.math.sign(r) else r * sqrt((n - 2) / (1 - r * r))
+        // Persistent series reduce the independent evidence. Only adjacent calendar days are paired.
+        val adjacent = (1 until n).filter { days[it - 1].plusDays(1) == days[it] }
+        fun persistence(series: List<Double>): Double {
+            if (adjacent.size < 4) return 0.0
+            val before = adjacent.map { series[it - 1] }; val after = adjacent.map { series[it] }
+            val m0 = before.average(); val m1 = after.average()
+            val den = sqrt(before.sumOf { (it - m0) * (it - m0) } * after.sumOf { (it - m1) * (it - m1) })
+            return if (den == 0.0) 0.0 else (before.indices.sumOf { (before[it] - m0) * (after[it] - m1) } / den).coerceIn(-1.0, 1.0)
+        }
+        val dependence = (persistence(pairs.map { it.first }) * persistence(pairs.map { it.second })).coerceIn(0.0, 0.95)
+        val effective = n * (1 - dependence) / (1 + dependence)
+        val t = if (effective < MIN_DAYS) 0.0 else if (abs(r) >= 1.0) Double.POSITIVE_INFINITY * kotlin.math.sign(r) else r * sqrt((effective - 2) / (1 - r * r))
         return Result(r, n, t)
     }
 

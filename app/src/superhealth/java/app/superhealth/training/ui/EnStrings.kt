@@ -282,6 +282,8 @@ object EnStrings {
         "Salles" to "Gyms",
         "%1\$s équipements · barre %2\$s" to "%1\$s pieces of equipment · bar %2\$s",
         "Gérer les salles" to "Manage gyms",
+        "Privilégier les exercices pratiqués" to "Prefer familiar exercises",
+        "Pour départager les exercices lors de la création du prochain programme" to "Break ties between exercises when generating your next program",
         "Estimation sur plusieurs séances" to "Multi-session strength estimate",
         "Utilise les séries récentes du même exercice dans cette salle" to "Uses recent sets of the same exercise at this gym",
         "Appliquer en séance" to "Apply in session",

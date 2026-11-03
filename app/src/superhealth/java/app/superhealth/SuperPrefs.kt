@@ -279,6 +279,7 @@ data class SuperSettings(
     /** Ambiance des séances : rain, ocean, brown ; vide : aucune. */
     val meditationAmbience: String = "",
     val meditationGongs: Boolean = true,
+    val suggestMeditationDuration: Boolean = false,
     val meditationVolume: Float = .28f,
     val foodIcons: Map<String, String> = emptyMap(),
     /** 1.8 : rappels (minute du jour, −1 : coupé) et coucher conseillé. */
@@ -333,6 +334,7 @@ data class SuperSettings(
     /** Tirages quotidiens stables, propres à cette installation. */
     val promptSeed: Long = 0,
     val moodAfterSteps: Boolean = true,
+    val learnMoodPrompt: Boolean = false,
     val moodAfterActivity: Boolean = true,
     /** Une fois proposé, le moral reste disponible jusqu'à la saisie ou « pas aujourd'hui ». */
     val moodPromptShownDay: Long = 0,
@@ -432,6 +434,7 @@ data class HcCache(
     val distanceKm: Map<Long, Double> = emptyMap(),
     val activeKcal: Map<Long, Double> = emptyMap(),
     val vo2max: Map<Long, Double> = emptyMap(),
+    val hrvOrigins: Map<Long, app.superhealth.health.data.DataSource> = emptyMap(),
 )
 
 /** Phase de sommeil lue dans Health Connect : type (nom d'ActivityKind : DEEP_SLEEP, SLEEP_ANY…), début et fin en ms. */

@@ -598,12 +598,12 @@ private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, no
         sh.moodAfterSteps, sh.moodAfterActivity, sh.moodPromptShownDay, sh.promptSeed) {
         val eligible = pending && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val date = LocalDate.now()
-            if (app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, null, 0, emptyList())) return@withContext true
+            if (app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, null, 0, emptyList(), history = app.superhealth.wellbeing.Journal.days.value)) return@withContext true
             val steps = if (sh.moodAfterSteps) runCatching { Bridge.healthValue(ctx, Metric.STEPS, date) }.getOrNull() else null
             val ends = if (sh.moodAfterActivity) runCatching {
                 Bridge.activities(date.minusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), now).map { it.end }
             }.getOrDefault(emptyList()) else emptyList()
-            app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, steps, nutrition.stepGoalFor(date), ends)
+            app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, steps, nutrition.stepGoalFor(date), ends, history = app.superhealth.wellbeing.Journal.days.value)
         }
         value = today to eligible
         if (eligible && sh.moodPromptShownDay != today) app.superhealth.SuperPrefs.update { it.copy(moodPromptShownDay = today) }

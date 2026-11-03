@@ -122,7 +122,7 @@ object ProgressRepository {
         }
         var hasRecentHealthData = false
         if (sh.has(Feature.HEALTH)) {
-            Bridge.activities(LocalDate.ofEpochDay(from).atStartOfDay(zone).toInstant().toEpochMilli()).filter { it.kind == Bridge.Kind.RUN && it.minutes > 0 }.forEach {
+            Bridge.activityFacts(LocalDate.ofEpochDay(from).atStartOfDay(zone).toInstant().toEpochMilli()).filter { it.kind == Bridge.Kind.RUN && it.minutes > 0 }.forEach {
                 add(java.time.Instant.ofEpochMilli(it.start).atZone(zone).toLocalDate().toEpochDay(), Progression.Track.RUN)
             }
             // Limité à 90 jours pour la première reprise montre ; le « + » signale une série qui atteint cette borne.

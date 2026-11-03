@@ -20,6 +20,15 @@ import app.superhealth.nutrition.domain.Settings
 import app.superhealth.nutrition.domain.Targets
 import app.superhealth.nutrition.domain.WeightTrend
 import kotlinx.coroutines.Dispatchers
+import app.superhealth.Feature
+import app.superhealth.SuperPrefs
+import app.superhealth.bridge.Bridge
+import app.superhealth.has
+import app.superhealth.nutrition.domain.ActivityEnergy
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
@@ -33,6 +42,7 @@ data class TrendDay(val epochDay: Long, val scale: Double?, val trend: Double, v
 data class ExpDay(
     val epochDay: Long, val tdee: Double, val short: Double, val long: Double,
     val status: Expenditure.Status, val goalAdjustment: Double = 0.0, val missingDays: Double = 0.0,
+    val activityAdjustment: Double = 0.0,
 )
 
 enum class CheckInState { NONE, FUTURE, NOW }
@@ -111,7 +121,15 @@ data class Analytics(
     /** Ce que donnerait un check-in calculé ce jour-là. */
     fun provisionalCheckIn(day: Long): CheckIn {
         val w = trendByDay[day] ?: currentTrendKg ?: DEFAULT_WEIGHT
-        return Targets.checkIn(day, tdeeAt(day), w, lbmAt(day), program, goalAt(day), profile.heightCm,
+        var tdee = tdeeAt(day)
+        // Only the proposed check-in changes. Accepted check-ins and manual/static targets retain precedence.
+        if (settings.learnFoodPatterns && program.style == ProgramStyle.COACHED && program.tdeeMode == TdeeMode.DYNAMIC) {
+            val prior = checkIns.lastOrNull { it.day < day }
+            val observed = days.filter { it.epochDay in (day - 7) until day }
+            if (prior != null && (observed.count { it.weightKg != null } < 2 || observed.count { Expenditure.usableIntake(it) != null } < 4))
+                tdee = prior.tdee
+        }
+        return Targets.checkIn(day, tdee, w, lbmAt(day), program, goalAt(day), profile.heightCm,
             java.time.LocalDate.ofEpochDay(day).year - profile.birthYear, profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE)
     }
 
@@ -275,13 +293,39 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
     /** Enregistre un check-in (remplace un éventuel check-in du même jour). */
     fun saveCheckIn(c: CheckIn) = prefs.setCheckIns(prefs.checkIns.value.filter { it.day != c.day } + c)
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun activityMinutes(): Flow<Map<Long, Double>> = combine(prefs.settings, prefs.program, SuperPrefs.settings) { s, p, sh ->
+        val enabled = s.learnActivityEnergy && s.useSteps && p.style != ProgramStyle.MANUAL && p.tdeeMode == TdeeMode.DYNAMIC &&
+            sh.has(Feature.NUTRITION) && sh.has(Feature.HEALTH)
+        if (enabled) Triple(sh.has(Feature.TRAINING), sh.watchModule, sh.healthConnect) else null
+    }.distinctUntilChanged().flatMapLatest { access ->
+        if (access == null) flowOf(emptyMap()) else combine(
+            app.superhealth.training.WorkoutApp.store.state.map { it.history }.distinctUntilChanged(),
+            SuperPrefs.hc.map { it.sessions }.distinctUntilChanged(),
+            app.superhealth.bridge.RunImport.runs,
+        ) { _, _, _ ->
+            val today = LocalDate.now()
+            val start = today.minusDays(385).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            Bridge.reconcile(Bridge.activities(start, raw = true).filter { a ->
+                when (a.source) {
+                    Bridge.Source.GYM -> access.first
+                    Bridge.Source.WATCH -> access.second
+                    Bridge.Source.HEALTH_CONNECT -> access.third
+                    Bridge.Source.IMPORT -> true
+                } && a.kind in setOf(Bridge.Kind.STRENGTH, Bridge.Kind.BIKE, Bridge.Kind.SWIM)
+            }).filter { it.minutes in 1..1440 }.groupBy {
+                app.superhealth.training.domain.Analytics.day(it.start).toEpochDay()
+            }.mapValues { (_, sessions) -> sessions.sumOf { it.minutes }.toDouble() }
+        }
+    }
+
     fun analytics(): Flow<Analytics> = combine(
         entries.allFlow(), weighIns.allFlow(), dayFlags.allFlow(),
         combine(prefs.profile, prefs.program, prefs.settings) { a, b, c -> Triple(a, b, c) },
-        combine(prefs.goals, prefs.checkIns, body.metricsFlow()) { g, c, m -> Triple(g, c, m) },
+        combine(prefs.goals, prefs.checkIns, combine(body.metricsFlow(), activityMinutes()) { m, a -> m to a }) { g, c, m -> Triple(g, c, m) },
     ) { e, w, f, (profile, program, settings), (goals, checkIns, metrics) ->
-        val steps = metrics.filter { it.metric == STEPS }.associate { it.epochDay to it.value }
-        computeAnalytics(e, w, f, profile, program, settings, goals, checkIns, LocalDate.now().toEpochDay(), steps)
+        val steps = metrics.first.filter { it.metric == STEPS }.associate { it.epochDay to it.value }
+        computeAnalytics(e, w, f, profile, program, settings, goals, checkIns, LocalDate.now().toEpochDay(), steps, metrics.second)
     }.flowOn(Dispatchers.Default)
 
     suspend fun backup() = Backup(
@@ -317,7 +361,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
         fun computeAnalytics(
             entries: List<FoodEntryEntity>, weighIns: List<WeighInEntity>, flags: List<DayFlagEntity>,
             profile: Profile, program: Program, settings: Settings, goals: List<Goal>, checkIns: List<CheckIn>, today: Long,
-            steps: Map<Long, Double> = emptyMap(),
+            steps: Map<Long, Double> = emptyMap(), activityMinutes: Map<Long, Double> = emptyMap(),
         ): Analytics {
             val intake = entries.groupBy { it.epochDay }.mapValues { (_, v) -> v.sumOf { it.kcal } }
             val weights = weighIns.associate { it.epochDay to it.weightKg }
@@ -328,30 +372,43 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             val days = (minOf(start, today)..today).map { d ->
                 DayData(d, intake[d], weights[d], bodyFat[d], flagMap[d]?.fasted == true, flagMap[d]?.partial == true, steps[d])
             }
-            val firstWeigh = weights.keys.minOrNull()
+            val firstWeigh = weights.filter { (d, kg) -> d <= today && kg.isFinite() && kg >= 25.0 }.keys.minOrNull()
             // Algorithmes les plus précis seulement : tendance V2 (Kalman) et dépense V3 (plus de choix dans les réglages).
-            val weightPoints = WeightTrendV2.compute(weights.filterKeys { it <= today }, today)
+            val useSport = settings.learnActivityEnergy && settings.useSteps && program.style != ProgramStyle.MANUAL &&
+                program.tdeeMode == TdeeMode.DYNAMIC && activityMinutes.isNotEmpty()
+            val causalEnergy = settings.useFilteredWeightForExpenditure || settings.learnFoodPatterns || useSport
+            val baseline = WeightTrendV2.compute(weights, today)
+            val shifts = if (settings.learnFoodPatterns && baseline.size >= 42) {
+                val carbs = entries.groupBy { it.epochDay }.mapNotNull { (day, meals) ->
+                    val usable = flagMap[day]?.let { !it.partial && !it.fasted } != false &&
+                        meals.all { it.protein + it.fat + it.carbs > 0 && it.carbs.isFinite() && it.carbs >= 0 }
+                    if (usable) day to meals.sumOf { it.carbs } else null
+                }.toMap()
+                app.superhealth.nutrition.domain.FoodLogAdaptation.weightShifts(baseline, carbs)
+            } else emptyMap()
+            val weightPoints = if (shifts.isEmpty()) baseline else WeightTrendV2.compute(weights, today, shifts)
             val trend = weightPoints.map { TrendDay(it.epochDay, it.scale, it.trend, it.tween, it.trendSd) }
             val trendMap = trend.associate { it.epochDay to it.trend }
             val age = LocalDate.ofEpochDay(today).year - profile.birthYear
-            val seed = if (settings.useFilteredWeightForExpenditure) weighIns.filter { it.epochDay <= today && it.weightKg >= 25.0 }.minByOrNull { it.epochDay } else weighIns.firstOrNull()
+            val seed = if (causalEnergy) weighIns.filter { it.epochDay <= today && it.weightKg >= 25.0 }.minByOrNull { it.epochDay } else weighIns.firstOrNull()
             val refWeight = seed?.weightKg ?: Analytics.DEFAULT_WEIGHT
-            val refBf = (if (settings.useFilteredWeightForExpenditure) seed?.bodyFatPct else bodyFat.values.firstOrNull()) ?: profile.bodyFatPct
+            val refBf = (if (causalEnergy) seed?.bodyFatPct else bodyFat.values.firstOrNull()) ?: profile.bodyFatPct
             val goalEvents = goals.map { ExpenditureV3.GoalEvent(it.startDay, it.type, it.ratePctPerWeek) }
-            val firstGoal = goalEvents.firstOrNull()
+            val firstGoal = if (causalEnergy)
+                goalEvents.filter { it.startDay <= (firstWeigh ?: today) }.maxByOrNull { it.startDay } else goalEvents.firstOrNull()
             val initial = program.initialTdeeOverride ?: ExpenditureV3.initialTdee(
-                Bmr.bmr(profile, refWeight, refBf, age), profile.activity.factor, profile.exercise.bonus, firstGoal,
+                Bmr.bmr(profile, refWeight, refBf, if (causalEnergy) LocalDate.ofEpochDay(firstWeigh ?: today).year - profile.birthYear else age), profile.activity.factor, profile.exercise.bonus, firstGoal,
                 settings.predictiveGoalAdjustment,
             )
             val exp: List<ExpDay> = when {
-                weights.isEmpty() -> emptyList()
+                firstWeigh == null -> emptyList()
                 else -> {
-                    val tweenByDay = weightPoints.associate { it.epochDay to if (settings.useFilteredWeightForExpenditure) it.filteredTween else it.tween }
-                    val v3Days = days.filter { it.epochDay >= firstWeigh!! }.map { d ->
+                    val tweenByDay = weightPoints.associate { it.epochDay to ((if (causalEnergy) it.filteredTween else it.tween) - (shifts[it.epochDay] ?: 0.0)) }
+                    val v3Days = days.filter { it.epochDay >= firstWeigh }.map { d ->
                         ExpenditureV3.Day(d.epochDay, tweenByDay[d.epochDay] ?: refWeight, d.weightKg, d.intakeKcal, d.fasted, d.partial, d.steps)
                     }
                     ExpenditureV3.compute(v3Days, initial, goalEvents, settings.predictiveGoalAdjustment,
-                        useSteps = settings.useSteps && steps.isNotEmpty()).mapIndexed { i, p ->
+                        useSteps = settings.useSteps && steps.isNotEmpty(), requireRecentWeight = causalEnergy).mapIndexed { i, p ->
                         val st = when { i < 3 -> Expenditure.Status.INITIAL; p.paused -> Expenditure.Status.HOLDING; else -> Expenditure.Status.UPDATING }
                         ExpDay(p.epochDay, p.tdee, p.short, p.long, st, p.goalAdjustment, p.missingDays)
                     }
@@ -360,7 +417,20 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             val currentTrend = trend.lastOrNull { it.epochDay <= today }?.trend
             val lastBf = bodyFat.entries.maxByOrNull { it.key }?.value ?: profile.bodyFatPct
             val lbm = currentTrend?.let { Bmr.leanMassOrDefault(it, lastBf, profile.sex, profile.heightCm, age) }
-            return Analytics(today, days, trend, exp, initial, currentTrend, lbm, profile, program, settings, goals, checkIns)
+            val adjusted = if (useSport) {
+                val levels = weightPoints.filter { it.scale != null }.associate { it.epochDay to it.filteredLevel }
+                val offsets = ActivityEnergy.weeklyAdjustments(days, levels, exp.associate { it.epochDay to it.tdee }, activityMinutes)
+                exp.map { p ->
+                    val offset = offsets[app.superhealth.nutrition.domain.Habits.weekStart(p.epochDay)] ?: 0.0
+                    if (p.status != Expenditure.Status.UPDATING || offset == 0.0) p else {
+                        val floor = ExpenditureV3.floorKcal(trendMap[p.epochDay] ?: refWeight)
+                        val delta = (p.tdee + offset).coerceAtLeast(floor) - p.tdee
+                        p.copy(tdee = p.tdee + delta, short = (p.short + delta).coerceAtLeast(floor),
+                            long = (p.long + delta).coerceAtLeast(floor), activityAdjustment = delta)
+                    }
+                }
+            } else exp
+            return Analytics(today, days, trend, adjusted, initial, currentTrend, lbm, profile, program, settings, goals, checkIns)
         }
     }
 }

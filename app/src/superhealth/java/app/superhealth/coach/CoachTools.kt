@@ -328,7 +328,7 @@ object CoachTools {
                 if (!Coach.shares(Coach.Share.ACTIVITIES)) return Outcome(HIDDEN)
                 val days = (a.int("days") ?: 30).coerceIn(1, 90)
                 val from = today.minusDays(days.toLong() - 1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val acts = Bridge.activities(from).filter { it.source != Bridge.Source.GYM }.sortedBy { it.start }
+                val acts = Bridge.activityFacts(from).filter { it.source != Bridge.Source.GYM }.sortedBy { it.start }
                 Outcome(acts.joinToString("\n") { x ->
                     "${TrainingAnalytics.day(x.start)} ${x.title} (${x.kind.name.lowercase()}), ${x.minutes} min" +
                         (x.distanceM?.takeIf { it > 0 }?.let { ", ${n(it / 1000, 2)} km" } ?: "") + ((x.watch?.kcal ?: x.run?.kcal)?.takeIf { it > 0 }?.let { ", ${n(it)} kcal" } ?: "")

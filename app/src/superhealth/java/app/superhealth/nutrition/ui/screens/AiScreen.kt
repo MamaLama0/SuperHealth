@@ -208,7 +208,14 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit, on
                                 vm.repo.foods.search(q).take(3) + (if (s.swissDbEnabled) SwissFoods.search(ctx, q, 5).map(SwissFoods::toFood) else emptyList())
                             }
                         }) { stage = it }
-                        plate = items.map { PlateRow(it, num(it.grams, 0), it.match != null) }
+                        plate = items.map { item ->
+                            val key = AiFood.matchKey(item)
+                            val id = if (s.learnFoodPatterns) s.confirmedFoodMatches[key] else null
+                            val saved = id?.takeIf { it > 0 }?.let { vm.repo.foods.byId(it) }
+                                ?.takeIf { AiFood.plausible(item, it) }
+                            val candidate = if (saved != null) item.copy(match = saved) else item
+                            PlateRow(candidate, num(item.grams, 0), candidate.match != null && id != 0L)
+                        }
                     } catch (e: Exception) {
                         error = e.message ?: e.javaClass.simpleName; stage = null
                     }
@@ -240,11 +247,23 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit, on
                     rows.forEach { r ->
                         val g = r.grams.toNum()?.takeIf { it > 0 } ?: return@forEach
                         val m = r.item.match
-                        if (r.useMatch && m != null) vm.repo.logFood(day, minute, vm.repo.saveFood(m), g)
+                        var confirmedId = 0L
+                        if (r.useMatch && m != null) {
+                            val saved = vm.repo.saveFood(m)
+                            vm.repo.logFood(day, minute, saved, g)
+                            confirmedId = saved.id
+                        }
                         else {
                             val mm = r.macros(); val k = g / r.item.grams
                             vm.repo.entries.insert(FoodEntryEntity(epochDay = day, meal = 3, minuteOfDay = minute, name = r.item.name, grams = g,
                                 kcal = mm.kcal, protein = mm.protein, fat = mm.fat, carbs = mm.carbs, fiber = r.item.fiber * k))
+                        }
+                        val settings = vm.repo.prefs.settings.value
+                        if (settings.learnFoodPatterns && m != null) {
+                            val key = AiFood.matchKey(r.item)
+                            val recent = (settings.confirmedFoodMatches - key).entries.toList().takeLast(199)
+                                .associate { it.key to it.value } + (key to confirmedId)
+                            vm.repo.prefs.setSettings(settings.copy(confirmedFoodMatches = recent))
                         }
                     }
                     vm.logNotice.value = trf("%1\$s élément(s) ajouté(s) au journal", rows.size)

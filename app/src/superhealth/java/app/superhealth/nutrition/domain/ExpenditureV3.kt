@@ -69,17 +69,17 @@ object ExpenditureV3 {
     }
 
     fun compute(
-        days: List<Day>, initialTdee: Double, goals: List<GoalEvent>, predictive: Boolean, useSteps: Boolean = false,
+        days: List<Day>, initialTdee: Double, goals: List<GoalEvent>, predictive: Boolean, useSteps: Boolean = false, requireRecentWeight: Boolean = false,
     ): List<Point> {
         if (days.isEmpty()) return emptyList()
-        val a = run(days, initialTdee, goals, predictive, useSteps, MAIN)
-        val b = run(days, initialTdee, goals, predictive, useSteps, SHORT)
-        val c = run(days, initialTdee, goals, predictive, useSteps, LONG)
+        val a = run(days, initialTdee, goals, predictive, useSteps, requireRecentWeight, MAIN)
+        val b = run(days, initialTdee, goals, predictive, useSteps, requireRecentWeight, SHORT)
+        val c = run(days, initialTdee, goals, predictive, useSteps, requireRecentWeight, LONG)
         return a.indices.map { a[it].copy(short = b[it].tdee, long = c[it].tdee) }
     }
 
     private fun run(
-        days: List<Day>, t0: Double, goalsIn: List<GoalEvent>, predictive: Boolean, useSteps: Boolean, p: Params,
+        days: List<Day>, t0: Double, goalsIn: List<GoalEvent>, predictive: Boolean, useSteps: Boolean, requireRecentWeight: Boolean, p: Params,
     ): List<Point> {
         val goals = goalsIn.sortedBy { it.startDay }
         val out = ArrayList<Point>(days.size)
@@ -121,7 +121,7 @@ object ExpenditureV3 {
                     out += Point(d.epochDay, tdee, tdee, tdee, false, missing, missingW, 0.0)
                 }
                 else -> {
-                    val hold = missing > 4 || i == 2
+                    val hold = missing > 4 || i == 2 || (requireRecentWeight && weighed == 0)
                     val l2 = level + p.beta * (w - level)
                     val delta = l2 - level
                     val s2 = slope + p.alpha * (delta - slope)

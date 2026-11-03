@@ -46,7 +46,8 @@ object Bedtime {
             val start = n.minOf { it.start }; val end = n.maxOf { it.end }
             val awake = n.filter { it.kind == ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start }
             val asleep = (n.sumOf { it.end - it.start } - awake) / 60000.0
-            val inBed = (end - start) / 60000.0
+            val inBed = asleep + awake / 60000.0
+            if (inBed < 0.85 * (end - start) / 60000.0) return@mapNotNull null
             if (asleep < 120 || inBed <= 0) return@mapNotNull null
             val t = Instant.ofEpochMilli(end).atZone(zone).toLocalTime()
             // endormissement : début de la première phase de sommeil (pas d'éveil)

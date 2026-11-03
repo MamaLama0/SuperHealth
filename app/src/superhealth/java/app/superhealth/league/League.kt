@@ -144,10 +144,10 @@ object League {
         val tracks = ProgressRepository.selectedTracks(sh)
         val advanced = mutableMapOf<Pillar, Int?>()
         val p = linkedMapOf<Pillar, Int?>()
-        val history = WorkoutApp.store.state.value.history
+        val history = WorkoutApp.store.state.value.history.distinctBy { it.id }
         val workouts = history.filter { it.startTime in fromMs until toMs }
         val referenceStart = start.minusDays(28).atStartOfDay(zone).toInstant().toEpochMilli()
-        val activities = if (sh.has(Feature.HEALTH)) runCatching { Bridge.activities(referenceStart, toMs - 1) }.getOrDefault(emptyList()) else emptyList()
+        val activities = if (sh.has(Feature.HEALTH)) runCatching { Bridge.activityFacts(referenceStart, toMs - 1) }.getOrDefault(emptyList()) else emptyList()
         val acts = activities.filter { it.start in fromMs until toMs }
         val cardio = acts.filter { it.kind != Bridge.Kind.STRENGTH }
         val runs = cardio.filter { it.kind == Bridge.Kind.RUN }
@@ -172,7 +172,7 @@ object League {
         val settings = NutriApp.repository.prefs.settings.first()
         suspend fun observed(metric: Metric, date: LocalDate) = Bridge.healthValue(ctx, metric, date)?.takeIf { it > 0 }
         p[Pillar.STEPS] = if (sh.has(Feature.HEALTH)) HealthIndex.daily(days.map { date ->
-            val goal = settings.stepGoalFor(date).takeIf { it > 0 } ?: 8000
+            val goal = settings.stepGoalFor(date).takeIf { it > 0 } ?: if (model == HealthIndex.CLASSIC) 8000 else return@map null
             runCatching { observed(Metric.STEPS, date) }.getOrNull()?.div(goal)
         }, 1.0) else null
         p[Pillar.SLEEP] = if (sh.has(Feature.HEALTH)) HealthIndex.daily(days.map { date ->

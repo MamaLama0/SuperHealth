@@ -302,8 +302,13 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
             val muscles = w.exercises.filter { ex -> ex.sets.any { it.done && it.type != app.superhealth.training.domain.SetType.WARMUP } }
                 .flatMap { ex -> db?.exercise(ex.exerciseId)?.let { it.muscleGroups + it.secondaryMuscleGroups }.orEmpty() }
             val prefs = app.superhealth.SuperPrefs.settings.value
+            val worked = app.superhealth.stretch.Stretch.groupsFor(muscles)
+            val tests = app.superhealth.stretch.Stretch.results.value
+            val weak = tests.lastOrNull()?.takeIf { System.currentTimeMillis() - it.at in 0..90L * 86_400_000 }?.let {
+                app.superhealth.stretch.Stretch.weakGroups(it, tests)
+            }.orEmpty()
             val routine = app.superhealth.stretch.Stretch.routine(app.superhealth.stretch.Stretch.Kind.POST,
-                app.superhealth.stretch.Stretch.groupsFor(muscles), prefs.stretchRoutineMinutes, prefs.stretchGears,
+                worked, prefs.stretchRoutineMinutes, prefs.stretchGears, preferredZones = worked.intersect(weak).flatMap { it.zones }.toSet(),
                 favorites = prefs.stretchFavorites, disliked = prefs.stretchDisliked, secondsPerSide = prefs.stretchSecondsPerSide)
             app.superhealth.stretch.Stretch.prepare(routine.copy(name = tr("Après ma séance")))
             onClose()

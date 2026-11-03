@@ -33,8 +33,15 @@ object PhotoMilestones {
     /** Palier à photographier maintenant (le plus haut atteint pas encore fait), ou null. 0 : la photo de départ. */
     fun due(an: Analytics, photos: List<ProgressPhotoEntity>): Int? {
         val g = an.currentGoal ?: return null
-        val p = progressAt(an)
-        val reached = if (p == null) listOf(0) else STEPS.filter { p * 100 >= it - 1e-6 }
+        val weighDays = an.trend.filter { it.epochDay >= g.startDay && it.scale != null }
+        val last = weighDays.lastOrNull()
+        val p = last?.let { progressAt(an, it.epochDay) }
+        val span = abs(g.startWeightKg - (g.targetWeightKg ?: g.startWeightKg))
+        val prior = weighDays.dropLast(1).lastOrNull()?.let { progressAt(an, it.epochDay) }
+        val reached = STEPS.filter { step ->
+            step == 0 || (last != null && span > 0 && p != null && p * 100 >= step &&
+                ((p - last.sd / span) * 100 >= step || (prior ?: 0.0) * 100 >= step))
+        }
         val m = reached.lastOrNull { it !in done(an) } ?: return null
         // photo de départ déjà là (prise depuis le début de l'objectif)
         if (m == 0 && photos.any { it.epochDay >= g.startDay }) return null

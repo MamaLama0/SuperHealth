@@ -37,7 +37,7 @@ class NightSummary(val date: LocalDate, val phases: List<HealthRepository.SleepP
     val wakeClock: Double get() = (wakeMs - noon(date)) / 60_000.0
 
     companion object {
-        fun noon(date: LocalDate) = HealthRepository.startMs(date) - 12 * 3_600_000L
+        fun noon(date: LocalDate) = date.minusDays(1).atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
 }
 
@@ -65,18 +65,16 @@ object Nights {
      * pas), et son heure. Null sous 30 minutes mesurées.
      */
     fun lowest(heart: List<Pair<Long, Int>>): Pair<Long, Double>? {
-        if (heart.size < 30) return null
+        val minutes = heart.groupBy { it.first / 60_000L }.mapValues { (_, samples) -> samples.map { it.second }.average() }
+        if (minutes.size < 30) return null
         var best: Pair<Long, Double>? = null
-        var i = 0
-        for (j in heart.indices) {
-            while (heart[j].first - heart[i].first >= 5 * 60_000L) i++
-            if (heart[j].first - heart[i].first < 4 * 60_000L) continue
-            val avg = heart.subList(i, j + 1).map { it.second }.average()
-            if (best == null || avg < best.second) best = heart[(i + j) / 2].first to avg
+        for (end in minutes.keys.sorted()) {
+            val measured = (end - 4..end).mapNotNull(minutes::get)
+            if (measured.size < 4) continue
+            val average = measured.average()
+            if (best == null || average < best.second) best = (end - 2) * 60_000L to average
         }
-        // mesures espacées (une toutes les 5 à 10 min, fréquent via Health Connect) : aucune fenêtre de 4 min pleine,
-        // le point bas est alors la tranche de 5 min la plus basse
-        return best ?: fiveMinutes(heart).minByOrNull { it.second }
+        return best
     }
 
     /** Pouls moyen par tranche de 5 minutes (ms, bpm), pour une courbe lisible. */

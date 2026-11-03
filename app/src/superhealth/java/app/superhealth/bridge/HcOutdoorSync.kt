@@ -50,6 +50,6 @@ internal object HcOutdoorSync {
     /** Ignore incidental overlaps and different sports. */
     fun duplicate(a: Bridge.Kind, start: Long, end: Long, b: Bridge.Kind, otherStart: Long, otherEnd: Long): Boolean {
         if(a!=b || end<=start || otherEnd<=otherStart) return false
-        return (minOf(end,otherEnd)-maxOf(start,otherStart)).coerceAtLeast(0)>minOf(end-start,otherEnd-otherStart)/2
+        return (minOf(end,otherEnd)-maxOf(start,otherStart)).coerceAtLeast(0)>0.75*maxOf(end-start,otherEnd-otherStart)
     }
 }

@@ -191,6 +191,8 @@ object Coach {
 
     private fun mayShareInsight(type: Insights.Type) = when (type) {
         Insights.Type.LIFT, Insights.Type.TRAINING_MONTH -> shares(Share.TRAINING)
+        Insights.Type.LATE_CAFFEINE -> shares(Share.FOOD) && shares(Share.HEALTH)
+        Insights.Type.LATE_ACTIVITY -> shares(Share.ACTIVITIES) && shares(Share.HEALTH) && shares(Share.TRAINING)
         Insights.Type.SLEEP_TRAINING -> shares(Share.TRAINING) && shares(Share.HEALTH)
         Insights.Type.WEIGHT_RATE -> shares(Share.WEIGHT)
         Insights.Type.KCAL_WEEK, Insights.Type.PROTEIN_WEEK -> shares(Share.FOOD)
@@ -243,7 +245,7 @@ object Coach {
                 generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.toList()
                     .map { d -> async { d to runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull() } }
             }.mapValues { it.value.awaitAll().toMap() }
-            val acts = runCatching { Bridge.activities(fromMs) }.getOrDefault(emptyList())
+            val acts = runCatching { Bridge.activityFacts(fromMs) }.getOrDefault(emptyList())
             val st = WorkoutApp.store.state.value
             val db = withTimeoutOrNull(2000) { WorkoutApp.db.filterNotNull().first() }
             val insights = runCatching { InsightData.insights(ctx).filter { mayShareInsight(it.type) }.take(5).map { it.text(an.settings) } }.getOrDefault(emptyList())
@@ -278,7 +280,13 @@ object Coach {
                 }
                 if (shares(Share.FOOD)) {
                     val t = an.targetFor(today.toEpochDay()).macros
+                    appendLine("Nutrition program: ${an.program.style.name.lowercase()}. Expenditure mode: ${an.program.tdeeMode.name.lowercase()}. Keep user-set targets and accepted check-ins authoritative.")
                     appendLine("App-computed expenditure (TDEE): ${n(an.currentTdee)} kcal/day")
+                    if (shares(Share.TRAINING) && shares(Share.ACTIVITIES) && shares(Share.HEALTH) && shares(Share.WEIGHT)) {
+                        an.expenditure.lastOrNull()?.activityAdjustment?.takeIf { it != 0.0 }?.let {
+                            appendLine("Included in TDEE: app training-week adjustment ${n(it)} kcal/day, checked on later logged weeks. Do not add exercise calories again.")
+                        }
+                    }
                     appendLine("Today's targets: ${n(t.kcal)} kcal, protein ${n(t.protein)} g, fat ${n(t.fat)} g, carbs ${n(t.carbs)} g")
                     val todayFood = eaten[today.toEpochDay()].orEmpty()
                     if (todayFood.isNotEmpty()) appendLine("Eaten so far today: ${n(todayFood.sumOf { it.kcal })} kcal, protein ${n(todayFood.sumOf { it.protein })} g, " +
@@ -324,7 +332,7 @@ object Coach {
                         appendLine("Active program: ${prog.name} (${prog.days.size} days/cycle, week ${prog.cycleIndex + 1} of ${prog.numCycles})" +
                             (next?.let { ", next session: ${if (it.isRest) "rest day" else it.name}" } ?: ""))
                     } else appendLine("No active program.")
-                    val history = st.history.sortedBy { it.startTime }
+                    val history = st.history.distinctBy { it.id }.sortedBy { it.startTime }
                     val recent = history.filter { it.startTime >= fromMs }
                     if (recent.isEmpty()) appendLine("No strength session logged.")
                     recent.forEach { w ->

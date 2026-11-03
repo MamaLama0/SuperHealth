@@ -135,7 +135,7 @@ object Stretch {
      * Choix glouton : à chaque tour, l'exercice qui couvre le mieux les zones les moins travaillées, la zone principale (première) comptant
      * double. Le tirage du jour départage (une routine différente chaque jour, identique dans la journée).
      */
-    fun routine(kind: Kind, groups: Set<Group>, minutes: Int, gears: Set<String>, day: Long = LocalDate.now().toEpochDay(), zones: Set<String> = emptySet(), favorites: Set<String> = emptySet(), secondsPerSide: Int? = null, availableExercises: List<Ex> = exercises(), disliked: Set<String> = emptySet()): Routine {
+    fun routine(kind: Kind, groups: Set<Group>, minutes: Int, gears: Set<String>, day: Long = LocalDate.now().toEpochDay(), zones: Set<String> = emptySet(), favorites: Set<String> = emptySet(), secondsPerSide: Int? = null, availableExercises: List<Ex> = exercises(), disliked: Set<String> = emptySet(), preferredZones: Set<String> = emptySet()): Routine {
         val pool = availableExercises.filter { e ->
             e.id !in disliked && when (kind) { Kind.DAILY -> e.daily; Kind.PRE -> e.pre; Kind.POST -> e.post } &&
                 e.gears.all { it in gears } && (e.type != "Massage" || e.gears.isNotEmpty() || e.id.startsWith("custom-"))
@@ -148,7 +148,7 @@ object Stretch {
         var budget = minutes.coerceIn(1, 60) * 60
         while (left.isNotEmpty()) {
             val best = left.maxByOrNull { e ->
-                e.zones.withIndex().sumOf { (i, z) -> if (z in target) (if (i == 0) 2.0 else 1.0) / (1 + (cover[z] ?: 0)) else 0.0 } + (if (e.id in favorites) 0.3 else 0.0) + rnd.nextDouble() * 0.4
+                e.zones.withIndex().sumOf { (i, z) -> if (z in target) ((if (i == 0) 2.0 else 1.0) + if (z in preferredZones) 0.35 else 0.0) / (1 + (cover[z] ?: 0)) else 0.0 } + (if (e.id in favorites) 0.3 else 0.0) + rnd.nextDouble() * 0.4
             }!!
             left.remove(best)
             val item = if (best.seconds <= budget) best else {
@@ -244,7 +244,13 @@ object Stretch {
     }
 
     /** Les zones à travailler : les deux parties les plus faibles du dernier test. */
-    fun weakGroups(r: MResult): Set<Group> = FOCI.mapNotNull { f -> focusScore(f, r)?.let { f to it } }.sortedBy { it.second }.take(2).flatMap { (f, _) ->
+    fun weakGroups(r: MResult, history: List<MResult> = emptyList()): Set<Group> = FOCI.mapNotNull { f ->
+        focusScore(f, r)?.let { last ->
+            val previous = history.filter { it.at in (r.at - 90L * 86_400_000) until r.at }.sortedByDescending { it.at }
+                .mapNotNull { focusScore(f, it) }.take(2)
+            f to (previous.sum() + 2.0 * last) / (2 + previous.size)
+        }
+    }.sortedBy { it.second }.take(2).flatMap { (f, _) ->
         when (f) {
             "Shoulders" -> listOf(Group.SHOULDERS)
             "Overhead" -> listOf(Group.SHOULDERS, Group.BACK)

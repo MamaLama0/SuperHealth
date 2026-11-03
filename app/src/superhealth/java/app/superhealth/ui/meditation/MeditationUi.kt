@@ -132,7 +132,10 @@ fun ColumnScope.MeditationSection(nav: NavHostController) {
     val monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toEpochDay()
     val week = remember(log) { Meditation.minutes(monday) }
     val streak = remember(log) { Meditation.streak() }
-    val sessions = Meditation.simpleSessions()
+    val observations by app.superhealth.wellbeing.Journal.days.collectAsState()
+    val now = java.time.ZonedDateTime.now()
+    val mood = observations[now.toLocalDate().toEpochDay()]?.mood.takeIf { app.superhealth.Feature.JOURNAL.name in sh.features }
+    val sessions = if (sh.suggestMeditationDuration) Meditation.suggestedOrder(Meditation.simpleSessions(), log, now, mood) else Meditation.simpleSessions()
     MfCard {
         Text(tr("Un moment pour vous"), style = MaterialTheme.typography.headlineSmall)
         Text(tr("Du silence, une ambiance si vous le souhaitez, et quelques repères à lire. Aucune voix automatique."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
@@ -142,6 +145,9 @@ fun ColumnScope.MeditationSection(nav: NavHostController) {
     }
     Spacer(Modifier.height(10.dp))
     Tile(Icons.Rounded.Air, tr("Respirer"), HealthHues.Respiration, Modifier.fillMaxWidth()) { nav.go("breathe") }
+    app.superhealth.nutrition.ui.components.SwitchRow(tr("Suggestions selon mes habitudes"), tr("Classe les séances selon la durée habituelle à cette heure"), sh.suggestMeditationDuration) {
+        enabled -> SuperPrefs.update { it.copy(suggestMeditationDuration = enabled) }
+    }
     SectionLabel(tr("Quelques repères"))
     GroupCard {
         sessions.forEachIndexed { i, session ->

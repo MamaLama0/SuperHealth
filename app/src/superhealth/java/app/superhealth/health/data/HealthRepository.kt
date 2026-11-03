@@ -190,8 +190,7 @@ object HealthRepository {
             Metric.HEART_RATE -> intraday(Metric.HEART_RATE, date).map { it.value }.averageOrNull()
             Metric.RESTING_HR -> samples(from, to) { d, s -> d.deviceCoordinator.getHeartRateRestingSampleProvider(d, s) }
                 .map { it.heartRate.toDouble() }.filter { it > 0 }.averageOrNull()
-            Metric.HRV -> samples(from, to) { d, s -> d.deviceCoordinator.getHrvSummarySampleProvider(d, s) }
-                .mapNotNull { it.lastNightAverage?.toDouble() }.lastOrNull { it > 0 }
+            Metric.HRV -> hrvObservation(date)?.second
             Metric.RESPIRATORY_RATE -> samples(from, to) { d, s -> d.deviceCoordinator.getRespiratoryRateSampleProvider(d, s) }
                 .map { it.respiratoryRate.toDouble() }.filter { it > 0 }.averageOrNull()
             Metric.TEMPERATURE -> samples(from, to) { d, s -> d.deviceCoordinator.getTemperatureSampleProvider(d, s) }
@@ -310,8 +309,22 @@ object HealthRepository {
     }, d.aliasOrName)
 
     /** Montre qui fournit [metric] le jour [date] (celle du score pour le sommeil, sinon la première qui la mesure). */
+    private suspend fun hrvObservation(date: LocalDate): Pair<GBDevice, Double>? {
+        val from = startMs(date); val to = endMs(date) - 1
+        return db { db ->
+            devices().filter { supports(it, Metric.HRV) }.mapNotNull { device ->
+                val sample = runCatching {
+                    device.deviceCoordinator.getHrvSummarySampleProvider(device, db.daoSession)
+                        ?.getAllSamples(from, to)?.filter { (it.lastNightAverage?.toDouble() ?: 0.0) > 0 }?.maxByOrNull { it.timestamp }
+                }.getOrNull()
+                sample?.let { Triple(device, it.lastNightAverage!!.toDouble(), it.timestamp) }
+            }.maxByOrNull { it.third }?.let { it.first to it.second }
+        }
+    }
+
     suspend fun sourceOf(metric: Metric, date: LocalDate): DataSource? =
-        if (metric == Metric.SLEEP_SCORE) sleepScore(date)?.second?.let(::sourceOf)
+        if (metric == Metric.HRV) hrvObservation(date)?.first?.let(::sourceOf)
+        else if (metric == Metric.SLEEP_SCORE) sleepScore(date)?.second?.let(::sourceOf)
         else devices().firstOrNull { supports(it, metric) }?.let(::sourceOf)
 
     /** Pouls minute par minute (horodatage en s, bpm) du jour, toutes montres confondues : base de l'Effort et des zones. */

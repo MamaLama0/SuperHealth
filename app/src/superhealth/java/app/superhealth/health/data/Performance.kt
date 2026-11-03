@@ -1,6 +1,7 @@
 package app.superhealth.health.data
 
 import android.content.Context
+import app.superhealth.bridge.Bridge
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -51,26 +52,32 @@ object Performance {
     private val lock = Mutex()
     private var memory: MutableMap<Long, Entry>? = null
 
-    private fun file(ctx: Context) = File(ctx.filesDir, "performance-cache-v2.json")
+    private fun file(ctx: Context) = File(ctx.filesDir, "performance-cache-v3.json")
 
     /** Lit les séances (montre), complète le cache avec les nouvelles et calcule les modules. */
     suspend fun snapshot(ctx: Context): Snapshot = withContext(Dispatchers.IO) {
-        val workouts = runCatching { HealthRepository.workouts(0L, System.currentTimeMillis()) }.getOrDefault(emptyList())
-        val cache = lock.withLock {
+        val facts = Bridge.activityFacts(0L)
+        val entries = lock.withLock {
             val m = memory ?: runCatching { json.decodeFromString(ser, file(ctx).readText()).toMutableMap() }.getOrNull() ?: mutableMapOf()
             memory = m
-            val missing = workouts.filter { it.id !in m }
-            missing.forEach { w -> runCatching { WorkoutDetails.load(ctx, w.id) }.getOrNull()?.let { m[w.id] = entry(it) } }
-            // Séances supprimées : retirées du cache.
-            val ids = workouts.map { it.id }.toSet()
-            m.keys.retainAll(ids)
-            if (missing.isNotEmpty()) runCatching { file(ctx).writeText(json.encodeToString(ser, m)) }
-            m.values.sortedByDescending { it.start }
+            val ids = mutableSetOf<Long>()
+            var changed = false
+            val result = facts.mapNotNull { activity ->
+                val id = activity.watch?.id ?: activity.run?.id ?: activity.hc?.let { app.superhealth.bridge.HcWorkouts.idOf(it) }
+                    ?: return@mapNotNull null
+                ids += id
+                // Health Connect summaries are mutable and cheap to rebuild.
+                if (app.superhealth.bridge.HcWorkouts.isHc(id))
+                    return@mapNotNull app.superhealth.bridge.HcWorkouts.detail(id)?.let(::entry)
+                val old = m[id]
+                if (old != null && old.start == (activity.watch?.start?.time ?: activity.start) && old.end == (activity.watch?.end?.time ?: activity.end) &&
+                    (activity.distanceM == null || old.distanceM == activity.distanceM)) return@mapNotNull old
+                WorkoutDetails.load(ctx, id)?.let(::entry)?.also { m[id] = it; changed = true }
+            }
+            if (m.keys.retainAll(ids) || changed) runCatching { file(ctx).writeText(json.encodeToString(ser, m)) }
+            result
         }
-        // Séances d'autres apps (Garmin Connect, NOOP…) via Health Connect, quand la montre ne les a pas déjà.
-        val hc = app.superhealth.SuperPrefs.hc.value.sessions.filter { s -> cache.none { it.start < s.end && s.start < it.end } }
-            .mapNotNull { s -> app.superhealth.bridge.HcWorkouts.detail(app.superhealth.bridge.HcWorkouts.idOf(s))?.let(::entry) }
-        compute((cache + hc).sortedByDescending { it.start })
+        compute(entries.sortedByDescending { it.start })
     }
 
     private fun entry(w: WorkoutDetail): Entry {
@@ -101,7 +108,7 @@ object Performance {
             if (i > first) {
                 val prev = points[i - 1]
                 val seconds = p.t - prev.t
-                if (seconds <= 0 || p.d < prev.d || p.d - prev.d > 15 * seconds) first = i
+                if (seconds <= 0 || seconds > 120 || p.d < prev.d || p.d - prev.d > 15 * seconds) first = i
             }
             if (i == first) {
                 atStart = i
@@ -151,7 +158,7 @@ object Performance {
         return Snapshot(
             entries = entries, records = records, longestRun = runs.maxByOrNull { it.distanceM }, weeks = weeks,
             acwr = if (chronic > 0) acute / chronic else null, latest = latest, recoveryLeftH = recoveryLeft,
-            predictions = runs.firstOrNull { it.predictions.isNotEmpty() }?.predictions ?: emptyMap(),
+            predictions = runs.firstOrNull { it.predictions.isNotEmpty() && now - it.end in 0..28L * 86_400_000 }?.predictions ?: emptyMap(),
         )
     }
 }

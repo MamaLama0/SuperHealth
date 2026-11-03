@@ -70,8 +70,8 @@ object Week {
         val zone = ZoneId.systemDefault()
         val fromMs = from.atStartOfDay(zone).toInstant().toEpochMilli()
         val toMs = today.atStartOfDay(zone).toInstant().toEpochMilli()
-        val gym = WorkoutApp.store.state.value.history.filter { it.startTime in fromMs until toMs }
-        val cardio = runCatching { Bridge.activities(fromMs, toMs) }.getOrDefault(emptyList()).filter { it.source != Bridge.Source.GYM }
+        val gym = WorkoutApp.store.state.value.history.distinctBy { it.id }.filter { it.startTime in fromMs until toMs }
+        val cardio = runCatching { Bridge.activityFacts(fromMs, toMs) }.getOrDefault(emptyList()).filter { it.source != Bridge.Source.GYM }
         suspend fun health(m: Metric): Double? = if (!Bridge.hasSource(m)) null
             else avg(days.mapNotNull { d -> runCatching { Bridge.healthValue(ctx, m, d) }.getOrNull()?.takeIf { it > 0 } })
         Stats(

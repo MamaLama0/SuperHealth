@@ -76,7 +76,11 @@ object NightVitals {
             async {
                 val s = series(ctx, m, date.minusDays(28), date)
                 val value = s.last().second
-                val r = range(s.dropLast(1).mapNotNull { it.second }, m)
+                val source = if (m == Metric.HRV && value != null) Scores.hrvSource(ctx, date) else null
+                val history = s.dropLast(1).mapNotNull { (d, v) ->
+                    if (source != null && v != null && Scores.hrvSource(ctx, d)?.let { it != source } == true) null else v
+                }
+                val r = range(history, m)
                 Item(m, value, r?.first, r?.second, status(value, r))
             }
         }.awaitAll()

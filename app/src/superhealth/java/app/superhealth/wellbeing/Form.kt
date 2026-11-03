@@ -225,6 +225,9 @@ object Form {
         }
 
         /** Poids appris sur [rows] (termes mesurés, ressenti 1–5) ; les poids de départ sous [MIN_DAYS] lignes. */
+        internal fun moodKnownAt(entry: Journal.Entry?, feel: Checkin.Feel): Int? =
+            entry?.takeIf { it.at > 0 && it.at <= feel.at }?.mood
+
         fun fit(rows: List<Pair<Map<Term, Double>, Double>>): Map<Term, Double> {
             val n = rows.size
             if (n < MIN_DAYS) return PRIOR
@@ -263,6 +266,21 @@ object Form {
 
         @Volatile private var cache: Triple<LocalDate, Map<Term, Double>, Int>? = null
 
+        internal fun validatedWeights(rows: List<Pair<Map<Term, Double>, Double>>): Pair<Map<Term, Double>, Int> {
+            if (rows.size < MIN_DAYS + 14) return PRIOR to 0
+            val fit = fit(rows.dropLast(14))
+            fun error(row: Pair<Map<Term, Double>, Double>, weights: Map<Term, Double>): Double {
+                val (x, feel) = row
+                val total = x.keys.sumOf { weights[it] ?: 0.0 }
+                val prediction = if (total <= 0) 3.0 else 3 + x.entries.sumOf { (term, v) -> v * (weights[term] ?: 0.0) } / total
+                return kotlin.math.abs(feel - prediction.coerceIn(1.0, 5.0))
+            }
+            val wins = rows.takeLast(14).chunked(7).all { block ->
+                block.sumOf { error(it, fit) } < 0.95 * block.sumOf { error(it, PRIOR) }
+            }
+            return if (wins) fit to (rows.size - 14) else PRIOR to 0
+        }
+
         /** Poids du jour et nombre de matins appris (recalculés une fois par jour). */
         suspend fun weights(ctx: Context, today: LocalDate): Pair<Map<Term, Double>, Int> {
             cache?.takeIf { it.first == today }?.let { return it.second to it.third }
@@ -279,9 +297,9 @@ object Form {
                     val c = charges[i] ?: return@mapNotNull null
                     val acwr = Scores.load(efforts.subList(i, i + 28))?.takeIf { it.second > 0 }?.let { it.first / it.second }
                     val e = Journal.days.value[day.toEpochDay()]
-                    features(c, acwr, e?.mood, Journal.moodBaseline(day.toEpochDay())?.first) to (f.sleep + f.energy) / 2.0
+                    features(c, acwr, moodKnownAt(e, f), Journal.moodBaseline(day.toEpochDay())?.first) to (f.sleep + f.energy) / 2.0
                 }
-                fit(rows) to (if (rows.size >= MIN_DAYS) rows.size else 0)
+                validatedWeights(rows)
             }
             cache = Triple(today, result.first, result.second)
             return result

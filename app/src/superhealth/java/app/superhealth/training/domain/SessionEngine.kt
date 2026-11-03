@@ -59,7 +59,7 @@ class SessionEngine(private val db: ExerciseDb) {
                         last: List<PastSet> = lastSets(exercise.id, history), now: Long = System.currentTimeMillis()): Double? {
         if (!settings.adaptiveStrength || !exercise.usesReps || "aw" in exercise.metrics)
             return Progression.currentOneRm(last, exercise.upperBody)
-        val recent = history.asSequence()
+        val recent = history.asSequence().distinctBy { it.id }
             .filter { it.startTime in (now - 56L * 86_400_000)..now }
             .filter { it.matchesGym(gym) }
             .sortedByDescending { it.startTime }
@@ -209,9 +209,16 @@ class SessionEngine(private val db: ExerciseDb) {
         val prevWeight: Double?
         val progress: Double
         if (done.isNotEmpty()) {
-            val rm = (if (settings.adaptiveStrength && e.usesReps && "aw" !in e.metrics) Progression.typicalFreshStrength(done, e.upperBody, ex.restSec) else Progression.currentOneRm(done.map { PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }, e.upperBody, ex.restSec / 60.0)) ?: return s
+            val adaptive = settings.adaptiveStrength && e.usesReps && "aw" !in e.metrics
+            val rm = if (adaptive) Progression.typicalFreshStrength(done, e.upperBody, ex.restSec) else {
+                val actual = done.map { PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }
+                Progression.currentOneRm(actual, e.upperBody, ex.restSec / 60.0)
+            } ?: return s
             var fatigue = 0.0
-            done.forEach { fatigue = Strength.recover(fatigue + Strength.fatiguingReps(it.reps!!, it.partialReps), ex.restSec / 60.0) }
+            done.forEachIndexed { i, set ->
+                val rest = if (adaptive) Progression.restMinutes(set, done.getOrNull(i + 1), ex.restSec) else ex.restSec / 60.0
+                fatigue = Strength.recover(fatigue + Strength.fatiguingReps(set.reps!!, set.partialReps), rest)
+            }
             oneRm = rm * (1 - Strength.fatigueDrop(fatigue)); prevWeight = done.last().weight; progress = 1.0
         } else {
             val last = lastSets(ex.exerciseId, if (settings.adaptiveStrength) history.filter { it.matchesGym(gym) } else history)

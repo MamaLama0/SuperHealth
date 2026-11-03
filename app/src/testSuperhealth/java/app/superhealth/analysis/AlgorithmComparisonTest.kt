@@ -42,9 +42,10 @@ class AlgorithmComparisonTest {
             if (d % s.weighEvery == 0) scale[d] = fat + water
             if (rnd.nextDouble() < s.logged) logged[d] = s.intake(d)
         }
+        // filteredTween contains only observations known by its day, even when the graph is subsequently smoothed.
         val trend = WeightTrendV2.compute(scale.mapKeys { it.key.toLong() }, days - 1L).associateBy { it.epochDay }
         val v3Days = (0 until days).map { d ->
-            ExpenditureV3.Day(d.toLong(), trend[d.toLong()]?.tween ?: 80.0, scale[d], logged[d], false, false)
+            ExpenditureV3.Day(d.toLong(), trend[d.toLong()]?.filteredTween ?: 80.0, scale[d], logged[d], false, false)
         }
         val mf = ExpenditureV3.compute(v3Days, initialTdee = s.tdee(0) + 300, goals = emptyList(), predictive = false).associate { it.epochDay.toInt() to it.tdee }
         val eb = (0 until days).associateWith { energyBalance(it, scale, logged) }

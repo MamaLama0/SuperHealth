@@ -27,6 +27,8 @@ object WeightTrendV2 {
         /** Écart-type de la tendance lissée (kg), pour la bande d'incertitude. */
         val trendSd: Double,
         val filteredTween: Double = tween,
+        val predictedTween: Double = tween,
+        val filteredLevel: Double = trend,
     ) {
         val noise: Double? get() = scale?.let { it - tween }
     }
@@ -73,8 +75,8 @@ object WeightTrendV2 {
      * @param weighIns pesées par epochDay (kg).
      * @param toDay dernier jour à produire (les jours après la dernière pesée sont des prédictions).
      */
-    fun compute(weighIns: Map<Long, Double>, toDay: Long): List<Point> {
-        val valid = weighIns.filterValues { it >= 25.0 }
+    fun compute(weighIns: Map<Long, Double>, toDay: Long, shifts: Map<Long, Double> = emptyMap()): List<Point> {
+        val valid = weighIns.filter { (day, kg) -> day <= toDay && kg.isFinite() && kg >= 25.0 }
         if (valid.isEmpty()) return emptyList()
         val first = valid.keys.min()
         val w0 = valid.getValue(first)
@@ -100,7 +102,7 @@ object WeightTrendV2 {
             if (y != null) {
                 val s0 = p[0] + p[2] + p[6] + p[8]
                 val r = (sigma * noiseScale).let { it * it }
-                val nu = y - (x[0] + x[2])
+                val nu = y - (x[0] + x[2] + (shifts[first + i] ?: 0.0))
                 val z = nu / sqrt(s0 + r)
                 val wgt = if (abs(z) <= HUBER) 1.0 else HUBER / abs(z)
                 val rEff = r / max(wgt, 1e-9)
@@ -135,7 +137,9 @@ object WeightTrendV2 {
         }
         return (0 until n).map { i ->
             val st0 = xs[i]
-            Point(first + i, valid[first + i], st0[0], st0[0] + st0[2], st0[2], st0[1], sqrt(max(ps[i][0], 0.0)), xFilt[i][0] + xFilt[i][2])
+            val shift = shifts[first + i] ?: 0.0
+            Point(first + i, valid[first + i], st0[0], st0[0] + st0[2] + shift, st0[2] + shift, st0[1],
+                sqrt(max(ps[i][0], 0.0)), xFilt[i][0] + xFilt[i][2] + shift, xPred[i][0] + xPred[i][2] + shift, xFilt[i][0])
         }
     }
 }

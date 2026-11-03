@@ -28,6 +28,27 @@ class RegressionProbeActivity : Activity() {
         scope.launch {
             try {
                 when (intent.getStringExtra("op")) {
+                    "adaptive-321" -> {
+                        val out = File(filesDir, "qa/adaptive-321.txt").apply { parentFile?.mkdirs(); writeText("running") }
+                        val repo = NutriApp.repository
+                        val original = repo.prefs.settings.value
+                        val originalProgram = repo.prefs.program.value
+                        try {
+                            repo.prefs.setSettings(original.copy(learnFoodPatterns = true, learnActivityEnergy = true))
+                            val an = withTimeout(30000) { repo.analytics().first() }
+                            check(an.program == originalProgram && an.currentTdee.isFinite())
+                            val facts = app.superhealth.bridge.Bridge.activityFacts(System.currentTimeMillis() - 90L * 86_400_000)
+                            check(facts.map { it.key }.distinct().size == facts.size)
+                            app.superhealth.health.data.Performance.snapshot(this@RegressionProbeActivity)
+                            val score = withTimeout(60000) { League.compute(this@RegressionProbeActivity) }
+                            check(League.parse(League.card("QA", score))?.s == score.total)
+                            val context = app.superhealth.coach.Coach.context(this@RegressionProbeActivity)
+                            if (!app.superhealth.coach.Coach.shares(app.superhealth.coach.Coach.Share.INDEX)) check("App habits index v" !in context)
+                        } finally {
+                            repo.prefs.setSettings(original)
+                        }
+                        out.writeText("PASS nutrition, activity facts, race performance, signed score, local coach context")
+                    }
                     "unified-32" -> {
                         val out = File(filesDir, "qa/unified-32.txt").apply { parentFile?.mkdirs(); writeText("running") }
                         val score = League.compute(this@RegressionProbeActivity)

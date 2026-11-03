@@ -177,12 +177,14 @@ fun MealPlanCard(day: Long, entries: List<FoodEntryEntity>, target: Macros?, ene
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp)) }
         error?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = app.superhealth.ui.theme.Base.Red, modifier = Modifier.padding(top = 8.dp)) }
     }
-    if (compose && target != null) ComposeSheet(entries, target, energy, onDismiss = { compose = false }) { slot, foods, goal ->
-        val (meal, r) = MealPlanner.compose(day, slot, foods, goal)
-        open = MealPlanner.plans.value[day]?.meals?.indexOf(meal)?.takeIf { it >= 0 }
-        note = if (r.reachable) null else tr("Ces aliments ne suffisent pas pour la cible : portions au plus près.")
-        error = null
-        compose = false
+    if (compose && target != null) ComposeSheet(day, entries, target, energy, onDismiss = { compose = false }) { slot, foods, goal ->
+        scope.launch {
+            val (meal, r) = MealPlanner.compose(day, slot, foods, goal)
+            open = MealPlanner.plans.value[day]?.meals?.indexOf(meal)?.takeIf { it >= 0 }
+            note = if (r.reachable) null else tr("Ces aliments ne suffisent pas pour la cible : portions au plus près.")
+            error = null
+            compose = false
+        }
     }
 }
 
@@ -202,7 +204,7 @@ private fun defaultSlot(slots: List<MealPlanner.Slot>, entries: List<FoodEntryEn
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun ComposeSheet(entries: List<FoodEntryEntity>, target: Macros, energy: (Double) -> String, onDismiss: () -> Unit,
+private fun ComposeSheet(day: Long, entries: List<FoodEntryEntity>, target: Macros, energy: (Double) -> String, onDismiss: () -> Unit,
                          onDone: (Int, List<FoodEntity>, Macros) -> Unit) {
     val ctx = LocalContext.current
     val slots = MealPlanner.content()?.slots.orEmpty()
@@ -221,7 +223,8 @@ private fun ComposeSheet(entries: List<FoodEntryEntity>, target: Macros, energy:
                 (if (swiss) app.superhealth.nutrition.data.SwissFoods.search(ctx, q, 15).map(app.superhealth.nutrition.data.SwissFoods::toFood) else emptyList())
         }
     }
-    val goal = MealPlanner.slotGoal(target, entries, slot)
+    val config by produceState<MealPlanner.Content?>(null, day) { value = MealPlanner.planningContent(day) }
+    val goal = MealPlanner.slotGoal(target, entries, slot, config)
     fun key(f: FoodEntity) = if (f.id != 0L) "id${f.id}" else "n" + f.name + f.brand
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss,
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Mf.colors.card) {

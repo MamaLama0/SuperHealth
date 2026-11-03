@@ -176,10 +176,34 @@ object Bridge {
      * Health Connect (ses phases si elle en fournit, sinon une seule phase « endormi »). null sans nuit.
      */
     suspend fun sleepNight(date: LocalDate): List<HealthRepository.SleepPhase>? {
-        if (Watch.enabled && HealthRepository.isSupported(Metric.SLEEP)) HealthRepository.sleepNight(date)?.let { return it }
+        if (Watch.enabled && HealthRepository.isSupported(Metric.SLEEP)) HealthRepository.sleepNight(date)?.let(::normalizeSleep)?.takeIf { it.isNotEmpty() }?.let { return it }
         return SuperPrefs.hc.value.nights[date.toEpochDay()]
             ?.mapNotNull { p -> runCatching { ActivityKind.valueOf(p.kind) }.getOrNull()?.let { HealthRepository.SleepPhase(it, p.start, p.end) } }
-            ?.sortedBy { it.start }?.takeIf { it.isNotEmpty() }
+            ?.let(::normalizeSleep)?.takeIf { it.isNotEmpty() }
+    }
+
+    /** More specific phases replace enclosing duration-only intervals. Gaps remain unobserved. */
+    internal fun normalizeSleep(phases: List<HealthRepository.SleepPhase>): List<HealthRepository.SleepPhase> {
+        val ordered = phases.filter { it.end > it.start }.sortedBy { it.start }
+        if (ordered.zipWithNext().all { (a, b) -> a.end <= b.start }) return ordered
+        val changes = ordered.flatMap { listOf(it.start, it.end) }.distinct().sorted()
+        val result = mutableListOf<HealthRepository.SleepPhase>()
+        val active = mutableListOf<HealthRepository.SleepPhase>()
+        val priority = compareBy<HealthRepository.SleepPhase> { when (it.kind) {
+            ActivityKind.AWAKE_SLEEP -> 0
+            ActivityKind.REM_SLEEP, ActivityKind.DEEP_SLEEP, ActivityKind.LIGHT_SLEEP -> 1
+            else -> 2
+        } }.thenBy { it.end - it.start }.thenBy { it.kind.name }
+        var next = 0
+        for ((start, end) in changes.zipWithNext()) {
+            active.removeAll { it.end <= start }
+            while (next < ordered.size && ordered[next].start <= start) active += ordered[next++]
+            val phase = active.minWithOrNull(priority) ?: continue
+            val last = result.lastOrNull()
+            if (last?.kind == phase.kind && last.end == start) result[result.lastIndex] = last.copy(end = end)
+            else result += phase.copy(start = start, end = end)
+        }
+        return result
     }
 
     /** La nuit a-t-elle des phases (léger, profond, paradoxal) ou seulement une durée ? */
@@ -196,6 +220,7 @@ object Bridge {
         if (metric == Metric.SLEEP_SCORE) return dataSource(Metric.SLEEP, date)
         if (metric.manual) return app.superhealth.health.data.DataSource(app.superhealth.health.data.SourceKind.MANUAL)
         if (Watch.enabled && HealthRepository.isSupported(metric)) HealthRepository.sourceOf(metric, date)?.let { return it }
+        if (metric == Metric.HRV) return SuperPrefs.hc.value.hrvOrigins[date.toEpochDay()]
         return SuperPrefs.hc.value.origins[metric.name]
     }
 
@@ -239,7 +264,7 @@ object Bridge {
         val distanceM: Double? get() = watch?.distanceM ?: run?.distanceM ?: hc?.distanceM
     }
 
-    suspend fun activities(fromMs: Long, toMs: Long = System.currentTimeMillis()): List<Activity> {
+    suspend fun activities(fromMs: Long, toMs: Long = System.currentTimeMillis(), raw: Boolean = false): List<Activity> {
         val gym = WorkoutApp.store.state.value.history.filter { it.startTime in fromMs..toMs }.map { w ->
             Activity("g-${w.id}", Kind.STRENGTH, w.name, w.startTime, w.startTime + w.durationSec * 1000L, Source.GYM, gymId = w.id)
         }
@@ -253,13 +278,59 @@ object Bridge {
         // Séances Health Connect : on écarte celles qui recouvrent une séance déjà listée (même activité vue deux fois).
         val known = gym + watch + imported
         val hc = SuperPrefs.hc.value.sessions.filter { it.start in fromMs..toMs }.filter { s ->
-            known.none { HcOutdoorSync.duplicate(it.kind,it.start,it.end,hcKind(s.type),s.start,s.end) }
+            raw || known.none { HcOutdoorSync.duplicate(it.kind,it.start,it.end,hcKind(s.type),s.start,s.end) }
         }.map { s -> Activity("h-${s.id}", hcKind(s.type), s.title ?: hcLabel(s.type), s.start, s.end, Source.HEALTH_CONNECT, hc = s) }
         val distinctHc = hc.sortedByDescending { (if(it.hc?.distanceM != null) 2 else 0) + (if(it.hc?.avgHr != null) 1 else 0) }
             .fold(emptyList<Activity>()) { accepted, activity ->
                 if(accepted.any { HcOutdoorSync.duplicate(it.kind,it.start,it.end,activity.kind,activity.start,activity.end) }) accepted else accepted+activity
             }
         return (known + distinctHc).sortedByDescending { it.start }
+    }
+
+    /** One activity per event for statistics. Original records remain independently accessible. */
+    suspend fun activityFacts(fromMs: Long, toMs: Long = System.currentTimeMillis()): List<Activity> =
+        reconcile(activities(fromMs, toMs, raw = true).filter { a ->
+            val sh = SuperPrefs.settings.value
+            when (a.source) {
+                Source.GYM -> app.superhealth.Feature.TRAINING.name in sh.features
+                Source.HEALTH_CONNECT -> app.superhealth.Feature.HEALTH.name in sh.features && sh.healthConnect
+                else -> app.superhealth.Feature.HEALTH.name in sh.features
+            }
+        })
+
+    internal fun reconcile(records: List<Activity>): List<Activity> {
+        val groups = mutableListOf<Activity>()
+        val active = mutableListOf<Int>()
+        for (record in records.distinctBy { it.key }.sortedBy { it.start }) {
+            active.removeAll { groups[it].end <= record.start }
+            val matches = active.filter { i ->
+                val other = groups[i]
+                val alreadyIncluded = when (record.source) {
+                    Source.GYM -> other.gymId != null
+                    Source.WATCH -> other.watch != null
+                    Source.HEALTH_CONNECT -> other.hc != null
+                    Source.IMPORT -> other.run != null
+                }
+                if (alreadyIncluded || other.source == record.source || record.kind == Kind.OTHER || other.kind != record.kind) return@filter false
+                val overlap = minOf(other.end, record.end) - maxOf(other.start, record.start)
+                val duration = maxOf(other.end - other.start, record.end - record.start)
+                val a = other.distanceM
+                val b = record.distanceM
+                duration > 0 && overlap >= 0.8 * duration &&
+                    (a == null || b == null || a <= 0 || b <= 0 || kotlin.math.abs(a - b) <= maxOf(100.0, 0.15 * maxOf(a, b)))
+            }
+            val index = matches.singleOrNull()
+            if (index == null) {
+                active += groups.size
+                groups += record
+            } else {
+                val previous = groups[index]
+                val primary = if (record.source.ordinal < previous.source.ordinal) record else previous
+                groups[index] = primary.copy(gymId = previous.gymId ?: record.gymId, watch = previous.watch ?: record.watch,
+                    hc = previous.hc ?: record.hc, run = previous.run ?: record.run)
+            }
+        }
+        return groups.sortedByDescending { it.start }
     }
 
     fun kindOf(name: String): Kind = when {

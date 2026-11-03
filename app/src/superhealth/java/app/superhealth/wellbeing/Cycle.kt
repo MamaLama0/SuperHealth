@@ -90,6 +90,21 @@ object Cycle {
         return day > next - 14
     }
 
+    /** La référence d’un matin utilise uniquement les cycles déjà terminés ce jour-là. */
+    fun phaseForBaseline(day: Long, logged: Set<Long>): Boolean? {
+        val prior = info(day, logged) ?: return null
+        val length = prior.length ?: return null
+        val lengths = prior.cycles.takeLast(6).map { it.second }.sorted()
+        val offset = day - prior.start
+        if (offset >= lengths.first()) return null
+        // Quand les cycles observés divergent, la zone de transition reste inconnue.
+        return when {
+            offset <= lengths.first() - 14 -> false
+            offset > lengths.last() - 14 && offset < length -> true
+            else -> null
+        }
+    }
+
     fun info(today: Long = LocalDate.now().toEpochDay(), d: Set<Long> = days.value): Info? {
         val st = starts(d).filter { it <= today }
         val start = st.lastOrNull() ?: return null

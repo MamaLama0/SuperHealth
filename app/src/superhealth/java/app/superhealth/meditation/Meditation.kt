@@ -54,6 +54,19 @@ object Meditation {
     /** Pauses sobres, sans voix ; le catalogue garde les identifiants pour l'historique. */
     fun simpleSessions(): List<Session> = simple.sessions
     private val simple: Content by lazy { json.decodeFromString(Content.serializer(), """{"sessions":[{"id":"stress3","name":"Une pause de trois minutes","nameEn":"A three-minute pause","summary":"Quelques repères, puis du silence.","summaryEn":"A few prompts, then quiet.","minutes":3,"theme":"calm","lines":[{"at":5,"fr":"Prenez une position confortable. Laissez les épaules se relâcher.","en":"Find a comfortable position. Let your shoulders soften."},{"at":45,"fr":"Remarquez les points de contact avec le sol ou le siège. Rien à réussir.","en":"Notice where your body touches the floor or seat. There is nothing to achieve."},{"at":120,"fr":"Si votre attention part ailleurs, revenez simplement à une sensation présente.","en":"If your attention wanders, gently return to one sensation in the present."}]},{"id":"souffle5","name":"Revenir au présent","nameEn":"Back to the present","summary":"Cinq minutes avec trois repères discrets.","summaryEn":"Five minutes with three gentle prompts.","minutes":5,"theme":"focus","lines":[{"at":5,"fr":"Installez-vous comme vous êtes. Vous pouvez garder les yeux ouverts.","en":"Settle in as you are. You can keep your eyes open."},{"at":60,"fr":"Observez votre respiration naturelle, sans chercher à la modifier.","en":"Notice your natural breathing without trying to change it."},{"at":180,"fr":"Un bruit, une pensée, une sensation : remarquez-les, puis revenez tranquillement au moment présent.","en":"A sound, a thought, a sensation: notice it, then gently return to the present moment."}]},{"id":"sommeil10","name":"Ralentir avant la nuit","nameEn":"Wind down for the night","summary":"Dix minutes calmes, sans voix ni rythme imposé.","summaryEn":"Ten quiet minutes, with no voice or imposed rhythm.","minutes":10,"theme":"sleep","lines":[{"at":5,"fr":"Choisissez une position confortable et une lumière qui vous convient.","en":"Choose a comfortable position and lighting that suits you."},{"at":120,"fr":"Laissez le visage et les mains se détendre, à votre rythme.","en":"Let your face and hands soften at your own pace."},{"at":300,"fr":"Vous n'avez rien à terminer ici. Laissez simplement un peu de place au calme.","en":"There is nothing to finish here. Simply leave a little room for quiet."}]}],"programs":[],"sos":"stress3"}""") }
+    fun suggestedOrder(sessions: List<Session>, history: List<Done>, now: java.time.ZonedDateTime, mood: Int?): List<Session> {
+        val recent = history.filter { d ->
+            val time = java.time.Instant.ofEpochMilli(d.at).atZone(now.zone)
+            d.day in now.toLocalDate().minusDays(42).toEpochDay()..now.toLocalDate().toEpochDay() &&
+                time < now && d.minutes > 0 && kotlin.math.abs(time.hour - now.hour) <= 3
+        }
+        if (recent.size < 5) return sessions
+        val sorted = recent.map { it.minutes }.sorted()
+        val duration = sorted[sorted.size / 2]
+        return sessions.sortedWith(compareBy<Session> { kotlin.math.abs(it.minutes - duration) }
+            .thenByDescending { mood != null && mood <= 2 && it.theme == "calm" })
+    }
+
     fun daily(today: Long = LocalDate.now().toEpochDay()): Pair<Session, String>? {
         val all = simpleSessions()
         return all[Math.floorMod(today, all.size.toLong()).toInt()] to "guided"

@@ -186,7 +186,7 @@ private fun RouteCard(route:HikeRoute,favorite:Boolean,offline:Boolean,stored:Bo
         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Text(route.region,style=MaterialTheme.typography.labelSmall,color=Mf.colors.textSecondary)
             Text(route.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
-            Text("${km(HikeGeometry.length(route.points))}  ·  ${duration(HikeGeometry.estimatedMinutes(route))} ${tr("estimées")}"+(if(route.loop) "  ·  ${tr("Boucle")}" else ""),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
+            Text("${km(HikeGeometry.length(route.points))}  ·  ${duration(HikeGeometry.estimatedMinutes(route, Hiking.library.value.completed))} ${tr("estimées")}"+(if(route.loop) "  ·  ${tr("Boucle")}" else ""),style=MaterialTheme.typography.bodySmall,color=Mf.colors.textSecondary)
             DifficultyLabel(route)
             Text(tr(if(!stored) "À enregistrer pour le hors ligne" else if(offline) "Parcours et carte hors ligne" else "Tracé disponible hors ligne"),style=MaterialTheme.typography.labelSmall,color=HikingHue)
         }
@@ -257,7 +257,7 @@ fun HikeDetailScreen(nav:NavHostController,id:String) {
             DifficultyLabel(route)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                 Metric(tr("Distance"),km(HikeGeometry.length(route.points)))
-                Metric(tr("Durée estimée"),duration(HikeGeometry.estimatedMinutes(route)))
+                Metric(tr("Durée estimée"),duration(HikeGeometry.estimatedMinutes(route, Hiking.library.value.completed)))
                 Metric(tr("Dénivelé +"),(route.ascent ?: HikeGeometry.ascent(route.points))?.let{"${it.toInt()} m"} ?: "—")
             }
             Text(tr(if(route.loop) "Boucle" else "Parcours linéaire"),color=Mf.colors.textSecondary)
@@ -354,7 +354,11 @@ fun HikeLiveScreen(nav:NavHostController) {
                 Metric(tr("Dénivelé +"),HikeGeometry.ascent(current?.points.orEmpty())?.let{"${it.toInt()} m"} ?: "—")
             }
             if(current?.route!=null && position!=null){
-                val projection=HikeGeometry.position(current.route.points,position!!)
+                var previous by remember(current.started, current.segment, current.route.id) { mutableStateOf<Double?>(null) }
+                val projection = remember(position, current.started, current.segment, current.route.id) {
+                    HikeGeometry.position(current.route.points, position!!, previous)
+                }
+                LaunchedEffect(projection) { previous = projection?.takeIf { it.offset <= 80 }?.progress }
                 if(projection!=null){
                     LinearProgressIndicator(progress={(projection.progress/(projection.progress+projection.remaining).coerceAtLeast(1.0)).toFloat()},modifier=Modifier.fillMaxWidth(),color=HikingHue)
                     Text(trf("%1\$s restants · à %2\$s m du tracé",km(projection.remaining),projection.offset.toInt()),color=if(projection.offset>80)MaterialTheme.colorScheme.error else Mf.colors.textSecondary)

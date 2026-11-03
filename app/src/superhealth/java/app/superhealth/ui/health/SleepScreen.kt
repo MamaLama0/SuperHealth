@@ -176,7 +176,7 @@ private fun NightView(vm: SuperViewModel, nav: NavHostController, date: LocalDat
                 val parts = async { runCatching { Scores.restPartsOf(ctx, date) }.getOrNull() }
                 val score = async { runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, date) }.getOrNull() }
                 val watch = async { runCatching { Bridge.watchSleepScore(ctx, date) }.getOrNull() }
-                val need = async { runCatching { Scores.sleepHabits(ctx).needMin }.getOrDefault(Scores.sleepNeed()) }
+                val need = async { runCatching { Scores.sleepHabits(ctx, date).needMin }.getOrDefault(Scores.sleepNeed()) }
                 val debt = async { runCatching { Scores.sleepDebtOf(ctx, date) }.getOrNull() }
                 val settled = async { runCatching { Scores.persistentDebtOf(ctx, date) }.getOrDefault(false) }
                 val history = async { Nights.range(date.minusDays(28), date.minusDays(1)).mapNotNull { it.second } }
@@ -346,7 +346,7 @@ private fun NightsView(vm: SuperViewModel, nav: NavHostController, from: LocalDa
                     generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(end) }.toList()
                         .map { d -> async { d to runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, d) }.getOrNull() } }.awaitAll()
                 }
-                val need = async { runCatching { Scores.sleepHabits(ctx).needMin }.getOrDefault(Scores.sleepNeed()) }
+                val need = async { runCatching { Scores.sleepHabits(ctx, end).needMin }.getOrDefault(Scores.sleepNeed()) }
                 val sri = async { runCatching { Scores.sriOf(end) }.getOrNull() }
                 // jours à venir vides : des barres de largeur constante
                 val all = generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.toList()

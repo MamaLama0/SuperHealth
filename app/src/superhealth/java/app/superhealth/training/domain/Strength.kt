@@ -158,7 +158,7 @@ object Progression {
     fun typicalFreshStrength(sets: List<SetLog>, upper: Boolean, restSec: Int): Double? {
         var fatigue = 0.0
         val estimates = mutableListOf<Double>()
-        for (set in sets) {
+        for ((index, set) in sets.withIndex()) {
             val kg = set.weight ?: continue
             val reps = set.reps ?: continue
             if (!kg.isFinite() || kg <= 0 || reps !in 1..100) continue
@@ -167,11 +167,18 @@ object Progression {
                 estimates += Strength.e1rm(kg, reps, set.rir ?: 2, upper, set.partialReps) / remaining
             }
             fatigue = Strength.recover(fatigue + Strength.fatiguingReps(reps, set.partialReps),
-                restSec.coerceAtLeast(0) / 60.0)
+                restMinutes(set, sets.getOrNull(index + 1), restSec))
         }
         if (estimates.isEmpty()) return null
         estimates.sort()
         return (estimates[estimates.lastIndex / 2] + estimates[estimates.size / 2]) / 2
+    }
+
+    internal fun restMinutes(set: SetLog, next: SetLog?, plannedSeconds: Int): Double {
+        val planned = plannedSeconds.coerceAtLeast(0).toDouble()
+        val interval = set.completedAt?.let { at -> next?.completedAt?.let { (it - at) / 1000.0 } }
+        // Batch confirmations have equal or almost equal timestamps.
+        return (if (interval != null && interval >= 15) minOf(planned, interval) else planned) / 60
     }
 
     /** 1RM courant estimé : meilleure série de la dernière séance, corrigée de la fatigue au moment de la série. */
