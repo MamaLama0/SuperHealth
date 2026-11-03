@@ -25,7 +25,7 @@ actual fun rememberImagePicker(onResult: (ByteArray?) -> Unit): () -> Unit = rem
 actual fun rememberCamera(onResult: (ByteArray?) -> Unit): () -> Unit = remember { { onResult(null) } }
 
 @Composable
-actual fun rememberBarcodeScanner(onResult: (String?) -> Unit): () -> Unit = remember {
+actual fun rememberBarcodeScanner(qrOnly: Boolean, onResult: (String?) -> Unit): () -> Unit = remember {
     { onResult(javax.swing.JOptionPane.showInputDialog("Code-barres")?.takeIf { it.isNotBlank() }) }
 }
 

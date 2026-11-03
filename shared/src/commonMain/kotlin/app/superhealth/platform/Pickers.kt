@@ -24,9 +24,9 @@ expect fun rememberCamera(onResult: (ByteArray?) -> Unit): () -> Unit
 /** Enregistre un fichier : feuille de partage du système (« Enregistrer dans Fichiers », AirDrop, Mail…). */
 fun saveFile(name: String, mime: String, bytes: ByteArray) = shareFile(name, mime, bytes)
 
-/** Lecteur de code-barres (EAN/UPC) plein écran ; null si annulé. */
+/** Lecteur plein écran : codes alimentaires par défaut, QR uniquement pour les invitations ; null si annulé. */
 @Composable
-expect fun rememberBarcodeScanner(onResult: (String?) -> Unit): () -> Unit
+expect fun rememberBarcodeScanner(qrOnly: Boolean = false, onResult: (String?) -> Unit): () -> Unit
 
 /** Image JPEG réduite pour qu'aucun côté ne dépasse [maxSide] (photos envoyées à l'IA, photos de progression). */
 expect fun downscaleJpeg(bytes: ByteArray, maxSide: Int, quality: Int = 85): ByteArray

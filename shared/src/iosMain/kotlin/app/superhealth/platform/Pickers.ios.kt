@@ -135,7 +135,7 @@ actual fun rememberCamera(onResult: (ByteArray?) -> Unit): () -> Unit = remember
 }
 
 /** Lecteur de codes-barres alimentaires (EAN-13, EAN-8, UPC-E) sur la caméra arrière. */
-private class ScannerController(val onResult: (String?) -> Unit) : UIViewController(nibName = null, bundle = null),
+private class ScannerController(val qrOnly: Boolean, val onResult: (String?) -> Unit) : UIViewController(nibName = null, bundle = null),
     AVCaptureMetadataOutputObjectsDelegateProtocol {
     private val session = AVCaptureSession()
     private var done = false
@@ -150,7 +150,7 @@ private class ScannerController(val onResult: (String?) -> Unit) : UIViewControl
         val output = AVCaptureMetadataOutput()
         session.addOutput(output)
         output.setMetadataObjectsDelegate(this, dispatch_get_main_queue())
-        output.metadataObjectTypes = listOf(AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeUPCECode, AVMetadataObjectTypeQRCode)
+        output.metadataObjectTypes = if(qrOnly) listOf(AVMetadataObjectTypeQRCode) else listOf(AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeUPCECode)
         val layer = AVCaptureVideoPreviewLayer(session = session)
         layer.videoGravity = AVLayerVideoGravityResizeAspectFill
         layer.frame = view.bounds
@@ -181,9 +181,9 @@ private class ScannerController(val onResult: (String?) -> Unit) : UIViewControl
 }
 
 @Composable
-actual fun rememberBarcodeScanner(onResult: (String?) -> Unit): () -> Unit = remember {
+actual fun rememberBarcodeScanner(qrOnly: Boolean, onResult: (String?) -> Unit): () -> Unit = remember(qrOnly) {
     {
-        val vc = ScannerController(onResult)
+        val vc = ScannerController(qrOnly, onResult)
         vc.modalPresentationStyle = UIModalPresentationFullScreen
         topController()?.presentViewController(vc, true, null)
     }

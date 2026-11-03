@@ -74,7 +74,7 @@ fun AddFriendScreen(nav: NavHostController) {
             kotlinx.coroutines.delay(15000)
         }
     }
-    val scanner = rememberBarcodeScanner { raw -> raw?.let { receive(it, true) } }
+    val scanner = rememberBarcodeScanner(qrOnly = true) { raw -> raw?.let { receive(it, true) } }
     DetailScaffold(tr("Ajouter un ami"), { nav.popBackStack() }, contentSpacing = 12.dp) {
         Text(tr("Un code, et vous êtes connectés"), style = MaterialTheme.typography.headlineMedium)
         Text(tr("Saisissez le code de votre ami. SuperHealth retrouve son invitation sur le serveur."), color = Mf.colors.textSecondary,
