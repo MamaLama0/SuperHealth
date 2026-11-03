@@ -15,10 +15,11 @@ class SuperHealthApp : GBApplication() {
     override fun onCreate() {
         super.onCreate()
         SuperPrefs.init(this)
+        app.superhealth.league.GroupIdentity.init(this)
         app.superhealth.modules.Modules.init(this)
         app.superhealth.stretch.Stretch.load(this)
         app.superhealth.meditation.Meditation.load(this)
-        app.superhealth.league.League.load(this)
+        app.superhealth.league.League.load(this); app.superhealth.league.GroupHistory.load(this)
         app.superhealth.ui.ProfilePhoto.load(this)
         app.superhealth.coach.Coach.init(this)
         app.superhealth.bridge.RunImport.init(this)

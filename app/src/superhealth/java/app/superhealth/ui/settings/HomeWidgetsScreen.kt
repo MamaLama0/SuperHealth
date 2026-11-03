@@ -41,7 +41,7 @@ fun HomeWidgetsScreen(nav: NavHostController) {
             SectionLabel(tr(section))
             entries.forEach { entry ->
                 MfCard {
-                    Text(ctx.getString(entry.name).removePrefix("Social · "), style = MaterialTheme.typography.titleMedium)
+                    Text(ctx.getString(entry.name).removePrefix("Social · ").removePrefix("Groupe · ").removePrefix("Group · "), style = MaterialTheme.typography.titleMedium)
                     Text(ctx.getString(entry.description), style = MaterialTheme.typography.bodySmall,
                         color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp))
                     if (supported) TextButton(onClick = {

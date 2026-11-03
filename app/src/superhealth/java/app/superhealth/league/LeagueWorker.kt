@@ -13,7 +13,7 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             Relay.sync(applicationContext)
             // Mettre à jour les cartes d'accueil après la réception des scores, sans attendre l'ouverture de l'app.
             app.superhealth.ui.widget.DayWidgets.refresh(applicationContext)
-            Result.success()
+            if (League.state.value.syncError == null) Result.success() else Result.retry()
         }
         catch (e: CancellationException) { throw e }
         catch (e: Exception) {
@@ -26,7 +26,7 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         fun onOpen(ctx: Context, force: Boolean = false) {
             if (!League.available() || !League.state.value.relayEnabled) return
             val s = League.state.value
-            val social = s.notifyFriends || s.notifyPosts || s.notifyReactions
+            val social = s.notifyFriends || s.notifyPosts || s.notifyReactions || s.notifyReplies
             if (!force && ((!s.refreshOnOpen && !social) || System.currentTimeMillis() - s.lastSync < (if (social) 30_000 else TimeUnit.MINUTES.toMillis(10)))) return
             if (Relay.base() == null && s.friends.none { it.remote != null }) return
             WorkManager.getInstance(ctx).enqueueUniqueWork("league_open", ExistingWorkPolicy.KEEP,
@@ -39,7 +39,7 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             if (frequency !in setOf(2, 4)) { manager.cancelUniqueWork("league_sync"); return }
             if (Relay.base() == null && League.state.value.friends.none { it.remote != null }) return
             manager.enqueueUniquePeriodicWork("league_sync", ExistingPeriodicWorkPolicy.UPDATE,
-                PeriodicWorkRequestBuilder<LeagueWorker>(if (League.state.value.notifyFriends || League.state.value.notifyPosts || League.state.value.notifyReactions) 15L else (24 / frequency * 60).toLong(), TimeUnit.MINUTES)
+                PeriodicWorkRequestBuilder<LeagueWorker>(if (League.state.value.notifyFriends || League.state.value.notifyPosts || League.state.value.notifyReactions || League.state.value.notifyReplies) 15L else (24 / frequency * 60).toLong(), TimeUnit.MINUTES)
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).build())
         }
     }

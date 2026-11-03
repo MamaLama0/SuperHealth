@@ -297,7 +297,7 @@ fun CompletedScreen(vm: AppViewModel, nav: NavHostController, onClose: () -> Uni
             val prefs = app.superhealth.SuperPrefs.settings.value
             val routine = app.superhealth.stretch.Stretch.routine(app.superhealth.stretch.Stretch.Kind.POST,
                 app.superhealth.stretch.Stretch.groupsFor(muscles), prefs.stretchRoutineMinutes, prefs.stretchGears,
-                favorites = prefs.stretchFavorites, secondsPerSide = prefs.stretchSecondsPerSide)
+                favorites = prefs.stretchFavorites, disliked = prefs.stretchDisliked, secondsPerSide = prefs.stretchSecondsPerSide)
             app.superhealth.stretch.Stretch.prepare(routine.copy(name = tr("Après ma séance")))
             onClose()
             nav.navigate("stretch/edit")

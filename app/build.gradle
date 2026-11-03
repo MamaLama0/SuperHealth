@@ -192,9 +192,9 @@ android {
             def shAppId = providers.gradleProperty("superhealthAppId").getOrElse("app.superhealth")
             applicationId shAppId
             manifestPlaceholders += [shPebbleAuthority: shAppId == "app.superhealth" ? "com.getpebble.android.nopebble.superhealth.provider" : "${shAppId}.pebble.provider",
-                superhealthLabel: shAppId == "app.superhealth" ? "@string/app_name" : "SuperHealth QA"]
-            versionName "3.0.5"
-            versionCode 39
+                superhealthLabel: shAppId == "app.superhealth" ? "@string/app_name" : "SuperHealth Test"]
+            versionName providers.gradleProperty("superhealthTestVersion").getOrElse("3.0.6")
+            versionCode providers.gradleProperty("superhealthTestCode").map { it.toInteger() }.getOrElse(40)
             // Navigation Compose, Room et Health Connect côté nutrition/musculation : Android 8.0 minimum (comme La Bouffe et La Salle)
             minSdk = 26
             // Interface en français et en anglais seulement : les ~70 langues de Gadgetbridge sont retirées (resources.arsc).
@@ -399,6 +399,7 @@ dependencies {
     implementation libs.apache.commons.lang3
     implementation libs.cyanogenmod.sdk
     implementation libs.colorpicker
+    implementation "androidx.emoji2:emoji2-emojipicker:1.5.0"
     implementation libs.bundles.android.emojify
     implementation libs.protobuf.lite
     implementation libs.okhttp

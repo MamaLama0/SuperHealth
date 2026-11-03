@@ -33,7 +33,7 @@ object SettingsHelp {
         Destination("security", "Sécurité", "settings/security", "verrou code empreinte biometrie confidentialite capture ecran"),
         Destination("backup", "Sauvegardes", "backup", "sauvegarde restauration drive chiffre fichier export transfert"),
         Destination("plugins", "Plugins", "modules", "plugin module installer meditation etirement ajouter telecharger"),
-        Destination("social_profile", "Profil et social", "social", "titre badge profil public amis social"),
+        Destination("social_profile", "Profil du Groupe", "social", "titre badge profil public amis social"),
         Destination("weekly_quests", "Quêtes de la semaine", "quests", "quete defis semaine recompense xp objectif"),
         Destination("friends", "Ajouter un ami", "friends/add", "ami invitation qr code scanner partager"),
         Destination("league_settings", "Réglages du classement", "league/settings", "serveur personnalise relais synchronisation score classement streak serie suivis partage"),

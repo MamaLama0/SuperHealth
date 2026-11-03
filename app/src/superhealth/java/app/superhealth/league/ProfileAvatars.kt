@@ -21,7 +21,7 @@ object ProfileAvatars {
         val previous = Secrets.get(ctx, "profile_avatar_media")?.let { runCatching { Json.decodeFromString(SocialPosts.Media.serializer(), it) }.getOrNull() }
         val published = Secrets.get(ctx, "profile_avatar_at")?.toLongOrNull() ?: 0
         if (previous != null && valid(previous) && Secrets.get(ctx, "profile_avatar_source") == fingerprint &&
-            System.currentTimeMillis() - published < 86400000) return previous
+            System.currentTimeMillis() - published < (GroupHistory.RETENTION_DAYS - 7L) * 86400000) return previous
         val original = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
         val small = Bitmap.createScaledBitmap(original, 192, 192, true)
         val image = ByteArrayOutputStream().use { out -> small.compress(Bitmap.CompressFormat.JPEG, 85, out); out.toByteArray() }

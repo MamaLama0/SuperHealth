@@ -43,7 +43,7 @@ object SocialNotifications {
             "VIDEO" -> "%1\$s a partagé une vidéo."
             else -> "%1\$s a publié dans le fil."
         }, next.shown)
-        show(ctx, POSTS, next.id, tr("Du nouveau dans le club"), text, "feed")
+        show(ctx, POSTS, next.id, tr("Du nouveau dans le Groupe"), text, "feed")
     }
 
     fun reactionsReceived(ctx: Context, old: League.Friend?, next: League.Friend) {
@@ -53,6 +53,11 @@ object SocialNotifications {
         val fresh = SocialReactions.visible(next.reactions).filter { r -> r.author == me && r.post in posts &&
             r.at > System.currentTimeMillis() - 86400000 && old.reactions.none { it.author == r.author && it.post == r.post && it.kind == r.kind && it.at >= r.at } }
         if (fresh.isNotEmpty()) show(ctx, REACTIONS, next.id, tr("Réaction à votre publication"), trf("%1\$s a réagi à votre publication.", next.shown), "feed")
+    }
+
+    fun groupRepliesReceived(ctx: Context, friend: League.Friend) {
+        if (!League.state.value.notifyReplies) return
+        show(ctx, "group_replies", friend.id, tr("Réponse à votre publication"), trf("%1\$s a répondu dans le Groupe.", friend.shown), "feed")
     }
 
     fun progressEarned(ctx: Context, badges: Int, level: Int?) {
@@ -68,6 +73,7 @@ object SocialNotifications {
         nm.createNotificationChannel(NotificationChannel(POSTS, tr("Publications des amis"), NotificationManager.IMPORTANCE_DEFAULT))
         nm.createNotificationChannel(NotificationChannel(REACTIONS, tr("Réactions aux publications"), NotificationManager.IMPORTANCE_DEFAULT))
         nm.createNotificationChannel(NotificationChannel("progress_rewards", tr("Badges et niveaux"), NotificationManager.IMPORTANCE_DEFAULT))
+        nm.createNotificationChannel(NotificationChannel("group_replies", tr("Réponses aux publications"), NotificationManager.IMPORTANCE_DEFAULT))
         val id = (channel + key).hashCode()
         val open = PendingIntent.getActivity(ctx, id, Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_ROUTE, route)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

@@ -34,8 +34,8 @@ fun SocialProfileScreen(nav: NavHostController) {
     val photo by ProfilePhoto.bitmap
     val name = app.superhealth.ui.userName() ?: tr("Mon profil")
     LaunchedEffect(Unit) { runCatching { League.compute(ctx) } }
-    DetailScaffold(tr("Social"), { nav.popBackStack() }, contentSpacing = 12.dp) {
-        MfCard {
+    DetailScaffold(tr("Groupe"), { nav.popBackStack() }, contentSpacing = 12.dp) {
+        GroupSurface {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(80.dp).clip(CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
                     if (photo != null) Image(photo!!, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -68,7 +68,7 @@ fun SocialProfileScreen(nav: NavHostController) {
         GroupCard {
             SettingRow(tr("Widgets Android"), subtitle = tr("Classement, séries, quêtes et suivis"), icon = Icons.Rounded.Widgets) { nav.go("widgets") }
         }
-        SectionLabel(tr("Préférences sociales"))
+        SectionLabel(tr("Paramètres du Groupe"))
         GroupCard {
             SettingRow(tr("Partage et serveur"), icon = Icons.Rounded.PrivacyTip) { nav.go("league/settings") }
         }
@@ -82,7 +82,7 @@ fun ProfileBadgesScreen(nav: NavHostController) {
 
 @Composable
 private fun ProfileStat(value: String, label: String, modifier: Modifier, onClick: () -> Unit) {
-    MfCard(modifier, onClick = onClick, padding = PaddingValues(horizontal = 8.dp, vertical = 16.dp)) {
+    GroupSurface(modifier, onClick = onClick, padding = PaddingValues(horizontal = 8.dp, vertical = 16.dp)) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)

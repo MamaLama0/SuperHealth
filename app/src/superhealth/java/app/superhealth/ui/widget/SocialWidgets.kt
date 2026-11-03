@@ -47,7 +47,7 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
             Kind.QUEST -> Color(0xFF9074DD)
             Kind.FRIENDS, Kind.OVERVIEW -> Color(0xFF4FA8E8)
         }
-        val title = tr(when (kind) { Kind.SCORE -> "Classement"; Kind.PROGRESS -> "Progression"; Kind.STREAK -> "Mes séries"; Kind.QUEST -> "Quêtes"; Kind.FRIENDS -> "Amis"; Kind.OVERVIEW -> "Social" })
+        val title = tr(when (kind) { Kind.SCORE -> "Classement"; Kind.PROGRESS -> "Progression"; Kind.STREAK -> "Mes séries"; Kind.QUEST -> "Quêtes"; Kind.FRIENDS -> "Amis"; Kind.OVERVIEW -> "Groupe" })
         val route = when (kind) { Kind.SCORE -> "league"; Kind.QUEST -> "quests"; Kind.FRIENDS -> "friends"; Kind.OVERVIEW -> "social"; else -> "progress" }
         val icon = when (kind) { Kind.SCORE -> R.drawable.ic_w_trophy; Kind.PROGRESS -> R.drawable.ic_w_bolt; Kind.STREAK -> R.drawable.ic_w_flame; Kind.QUEST -> R.drawable.ic_w_flag; Kind.FRIENDS -> R.drawable.ic_w_people; Kind.OVERVIEW -> R.drawable.ic_w_bolt }
         var place: Int? = null
@@ -70,8 +70,8 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
                 if (me != null) { value = me.score.toString(); fraction = me.score / 1000f }
                 val ahead = me?.let { own -> entries.lastOrNull { it.score > own.score } }
                 detail = if (ahead != null && me != null) trf("À %1\$s points de la prochaine place", ahead.score - me.score)
-                    else if (entries.size > 1) tr("En tête du club · continuez !") else tr("Invitez votre premier rival")
-                compactCaption = if (me != null && entries.size > 1) "#${dashboardRank(entries, me)} · " + tr("Le club") else caption
+                    else if (entries.size > 1) tr("En tête du Groupe · continuez !") else tr("Invitez votre premier rival")
+                compactCaption = if (me != null && entries.size > 1) "#${dashboardRank(entries, me)} · " + tr("Groupe") else caption
             }
             Kind.PROGRESS -> summary?.let { p ->
                 value = p.level.toString(); unit = tr("Niveau")
@@ -140,13 +140,13 @@ private fun ScoreWidgetContent(context: Context, value: String, caption: String,
                 androidx.glance.Image(androidx.glance.ImageProvider(R.drawable.sh_league_trophy), null, GlanceModifier.size(30.dp))
                 Spacer(GlanceModifier.width(8.dp))
                 Column(GlanceModifier.defaultWeight()) {
-                    Text(tr("Le club"), style = TextStyle(color = WK.text, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(tr("Groupe"), style = TextStyle(color = WK.text, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                     Text(caption, style = TextStyle(color = WK.sub, fontSize = 10.sp), maxLines = 1)
                 }
                 WidgetValue(value, null, gold, 20)
             }
             else -> {
-                Text(tr("Le club"), style = TextStyle(color = WK.sub, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                Text(tr("Groupe"), style = TextStyle(color = WK.sub, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                 Spacer(GlanceModifier.height(5.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.glance.Image(androidx.glance.ImageProvider(R.drawable.sh_league_trophy), null,

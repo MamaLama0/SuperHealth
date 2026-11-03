@@ -36,14 +36,10 @@ internal fun RankMedal(place: Int, modifier: Modifier = Modifier) {
 
 @Composable
 internal fun RankingHero(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
-        .background(Brush.linearGradient(listOf(LeagueHue.copy(alpha = if (Mf.colors.dark) .23f else .14f),
-            RankGold.copy(alpha = if (Mf.colors.dark) .10f else .08f), Mf.colors.card)))
-        .border(1.dp, LeagueHue.copy(alpha = .25f), RoundedCornerShape(28.dp)).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    GroupSurface(hue = LeagueHue, padding = PaddingValues(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GameArt(GameArtKind.TROPHY, Modifier.size(32.dp))
-            Text(tr("LE CLUB"), style = MaterialTheme.typography.labelLarge, color = LeagueHue.onContainer(), fontWeight = FontWeight.Bold)
+            Text(tr("GROUPE"), style = MaterialTheme.typography.labelLarge, color = LeagueHue.onContainer(), fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(4.dp))
         content()

@@ -30,16 +30,16 @@
     <string name="widget_sleep_desc">Last night\'s duration and sleep stages</string>
     <string name="widget_overview_name">Overview</string>
     <string name="widget_overview_desc">Calories, steps, water and Body Battery in one strip</string>
-    <string name="widget_league_name">Social · Leaderboard</string>
+    <string name="widget_league_name">Group · Leaderboard</string>
     <string name="widget_league_desc">Your score and rank over the last seven completed days</string>
-    <string name="widget_progress_name">Social · Progress</string>
+    <string name="widget_progress_name">Group · Progress</string>
     <string name="widget_progress_desc">Your level, weekly XP and progress toward the next level</string>
-    <string name="widget_streak_name">Social · Streaks</string>
+    <string name="widget_streak_name">Group · Streaks</string>
     <string name="widget_streak_desc">Your longest active streak and personal best</string>
-    <string name="widget_quest_name">Social · Weekly quests</string>
+    <string name="widget_quest_name">Group · Weekly quests</string>
     <string name="widget_quest_desc">Your next challenge or reward to claim</string>
-    <string name="widget_friends_name">Social · Friends</string>
+    <string name="widget_friends_name">Group · Friends</string>
     <string name="widget_friends_desc">Your friends and invitations</string>
-    <string name="widget_social_name">Social · Overview</string>
+    <string name="widget_social_name">Group · Overview</string>
     <string name="widget_social_desc">Level, badges and weekly quests</string>
 </resources>

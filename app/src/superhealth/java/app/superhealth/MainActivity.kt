@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
             while (true) {
                 kotlinx.coroutines.delay(30_000)
                 val s = app.superhealth.league.League.state.value
-                if (s.notifyFriends || s.notifyPosts || s.notifyReactions) app.superhealth.league.LeagueWorker.onOpen(applicationContext)
+                if (s.notifyFriends || s.notifyPosts || s.notifyReactions || s.notifyReplies) app.superhealth.league.LeagueWorker.onOpen(applicationContext)
             }
         }
         if (!app.superhealth.league.League.available() || !app.superhealth.league.League.state.value.refreshOnOpen) return

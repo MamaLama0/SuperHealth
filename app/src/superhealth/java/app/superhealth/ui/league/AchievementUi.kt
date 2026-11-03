@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -20,7 +22,20 @@ import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 
 @Composable
-internal fun ProfileDecor(title: String?, badges: List<String>) {
+internal fun ProfileDecor(title: String?, badges: List<String>, compact: Boolean = false) {
+    if (compact) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Achievements.find(title)?.title?.let {
+                Text(tr(it), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.labelSmall,
+                    color = Mf.colors.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            badges.take(3).mapNotNull(Achievements::find).forEach { badge ->
+                val description = badgeLabel(badge)
+                AssetImage(badge.asset, Modifier.size(24.dp).semantics { contentDescription = description }, crop = false)
+            }
+        }
+        return
+    }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Achievements.find(title)?.title?.let { Text(tr(it), style = MaterialTheme.typography.titleSmall, color = Mf.colors.accent) }
         if (badges.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

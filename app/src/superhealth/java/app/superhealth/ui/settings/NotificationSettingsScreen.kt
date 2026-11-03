@@ -49,12 +49,13 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             }
             if (!allowed) TextButtonRow(tr("Ouvrir les réglages Android"), ::system)
         }
-        SectionLabel(tr("Social"))
+        SectionLabel(tr("Groupe"))
         GroupCard {
             SwitchRow(tr("Ajouts d'amis"), tr("Quand une personne utilise votre code"), social.notifyFriends) { v -> updateSocial { it.copy(notifyFriends = v) } }
             RowDivider()
             SwitchRow(tr("Publications des amis"), tr("Séances, sorties, photos, vidéos et messages"), social.notifyPosts) { v -> updateSocial { it.copy(notifyPosts = v) } }
             RowDivider()
+            SwitchRow(tr("Réponses à mes publications"), tr("Messages dans les conversations du Groupe"), social.notifyReplies) { v -> updateSocial { it.copy(notifyReplies = v) } }
             SwitchRow(tr("Réactions à mes publications"), tr("J'aime, je n'aime pas et emojis"), social.notifyReactions) { v -> updateSocial { it.copy(notifyReactions = v) } }
             RowDivider()
             SwitchRow(tr("Badges et niveaux"), tr("Nouvelles récompenses"), social.notifyProgress) { v -> updateSocial { it.copy(notifyProgress = v) } }

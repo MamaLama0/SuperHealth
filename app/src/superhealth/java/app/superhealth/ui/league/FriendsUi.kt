@@ -36,6 +36,7 @@ import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -120,6 +121,9 @@ fun FriendsScreen(nav: NavHostController) {
 @Composable
 internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var revoking by remember { mutableStateOf(false) }
+    var revokeError by remember { mutableStateOf<String?>(null) }
     val st by League.state.collectAsState()
     val f = st.friends.firstOrNull { it.id == f0.id } ?: f0
     var alias by remember(f.id) { mutableStateOf(f.alias.orEmpty()) }
@@ -199,6 +203,16 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
     }
     if (removing) AlertDialog(onDismissRequest = { removing = false }, containerColor = Mf.colors.card,
         title = { Text(trf("Retirer %1\$s ?", f.shown)) },
-        confirmButton = { TextButton(onClick = { League.remove(ctx, f.id); removing = false; onDismiss() }) { Text(tr("Retirer")) } },
+        text = { Column {
+            Text(tr("Son accès aux prochains partages sera révoqué. Les amis à jour suivront automatiquement le nouveau lien."))
+            revokeError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        } },
+        confirmButton = { TextButton(enabled = !revoking, onClick = { scope.launch {
+            revoking = true; revokeError = null
+            try { app.superhealth.league.Relay.rotate(ctx, setOf(f.id)); League.remove(ctx, f.id); removing = false; onDismiss() }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { revokeError = tr("Révocation à réessayer. Aucun nouvel accès ne lui sera communiqué.") }
+            finally { revoking = false }
+        } }) { Text(tr(if (revoking) "Révocation…" else "Retirer et révoquer")) } },
         dismissButton = { TextButton(onClick = { removing = false }) { Text(tr("Annuler")) } })
 }

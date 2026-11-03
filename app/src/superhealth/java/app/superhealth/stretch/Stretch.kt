@@ -109,6 +109,20 @@ object Stretch {
         val original = routine.items[index]
         return routine.copy(items = routine.items.toMutableList().also { it[index] = replacement.copy(secondsPerSide = original.sideSeconds) })
     }
+    /** Display mapping shared with the workout anatomy preview. */
+    fun musclesFor(zones: Iterable<String>): Set<MuscleGroup> {
+        val keys = zones.flatMap { zone -> when (zone) {
+            "Shoulders", "Rotators" -> listOf("frontDelts", "sideDelts", "rearDelts")
+            "Traps" -> listOf("upperTraps"); "Pecs" -> listOf("chest"); "Lats" -> listOf("lats")
+            "LumbarMuscles" -> listOf("lowerBack"); "Abs" -> listOf("abs"); "Obliques" -> listOf("obliques")
+            "Biceps" -> listOf("biceps"); "Triceps" -> listOf("triceps"); "Flexors", "Extensors" -> listOf("forearms")
+            "Hips" -> listOf("hipFlexors"); "Glutes" -> listOf("glutes"); "Adductors" -> listOf("adductors")
+            "Quads" -> listOf("quads"); "Hamstrings" -> listOf("hamstrings"); "ItBands" -> listOf("abductors")
+            "Calves", "Ankles", "Feet" -> listOf("calves"); "Shins", "PostShins" -> listOf("tibs")
+            else -> emptyList()
+        } }.toSet()
+        return MuscleGroup.entries.filter { it.key in keys }.toSet()
+    }
     fun videoUrl(id: String) = catalog().video.replace("{id}", id)
     fun posterUrl(id: String) = catalog().poster.replace("{id}", id)
     fun thumb(id: String): File? = Modules.file(Modules.STRETCH, "thumbs/$id.jpg")
@@ -121,9 +135,9 @@ object Stretch {
      * Choix glouton : à chaque tour, l'exercice qui couvre le mieux les zones les moins travaillées, la zone principale (première) comptant
      * double. Le tirage du jour départage (une routine différente chaque jour, identique dans la journée).
      */
-    fun routine(kind: Kind, groups: Set<Group>, minutes: Int, gears: Set<String>, day: Long = LocalDate.now().toEpochDay(), zones: Set<String> = emptySet(), favorites: Set<String> = emptySet(), secondsPerSide: Int? = null, availableExercises: List<Ex> = exercises()): Routine {
+    fun routine(kind: Kind, groups: Set<Group>, minutes: Int, gears: Set<String>, day: Long = LocalDate.now().toEpochDay(), zones: Set<String> = emptySet(), favorites: Set<String> = emptySet(), secondsPerSide: Int? = null, availableExercises: List<Ex> = exercises(), disliked: Set<String> = emptySet()): Routine {
         val pool = availableExercises.filter { e ->
-            when (kind) { Kind.DAILY -> e.daily; Kind.PRE -> e.pre; Kind.POST -> e.post } &&
+            e.id !in disliked && when (kind) { Kind.DAILY -> e.daily; Kind.PRE -> e.pre; Kind.POST -> e.post } &&
                 e.gears.all { it in gears } && (e.type != "Massage" || e.gears.isNotEmpty() || e.id.startsWith("custom-"))
         }
         val target = zones.ifEmpty { groups.flatMap { it.zones }.toSet() }.ifEmpty { Group.entries.flatMap { it.zones }.toSet() }

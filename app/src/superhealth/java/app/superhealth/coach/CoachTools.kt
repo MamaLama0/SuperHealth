@@ -356,7 +356,12 @@ object CoachTools {
             }
             "get_stretch_catalog" -> {
                 val g = app.superhealth.stretch.Stretch.Group.entries.firstOrNull { it.name == a.str("group") }
-                val list = app.superhealth.stretch.Stretch.exercises().filter { !it.id.startsWith("custom-") || Coach.shares(Coach.Share.ACTIVITIES) }.filter { e -> g == null || e.zones.any { it in g.zones } }.take((a.int("limit") ?: 20).coerceIn(1, 60))
+                val preferences = if (Coach.shares(Coach.Share.ACTIVITIES)) app.superhealth.SuperPrefs.settings.value else null
+                val list = app.superhealth.stretch.Stretch.exercises().filter { !it.id.startsWith("custom-") || Coach.shares(Coach.Share.ACTIVITIES) }
+                    .filter { e -> g == null || e.zones.any { it in g.zones } }
+                    .filterNot { it.id in preferences?.stretchDisliked.orEmpty() }
+                    .sortedByDescending { it.id in preferences?.stretchFavorites.orEmpty() }
+                    .take((a.int("limit") ?: 20).coerceIn(1, 60))
                 Outcome(list.joinToString("\n") { e -> "${e.id} | ${e.name} | ${e.zones.joinToString("/")} | gear: ${e.gears.joinToString("/").ifEmpty { "none" }} | ${listOfNotNull("pre".takeIf { _ -> e.pre }, "post".takeIf { _ -> e.post }, "daily".takeIf { _ -> e.daily }).joinToString("/")} | type=${e.type} | ${e.sideSeconds}s per side | unilateral=${e.uni}" })
             }
             "propose_stretch_routine" -> {
@@ -394,14 +399,14 @@ object CoachTools {
         val prefs = app.superhealth.SuperPrefs.settings.value
         val named = ids.mapNotNull { Stretch.exercise(it) }
         if (ids.isNotEmpty()) {
-            if (named.size != ids.size || named.any { e -> e.gears.any { it !in prefs.stretchGears } }) return null
+            if (named.size != ids.size || named.any { e -> e.id in prefs.stretchDisliked || e.gears.any { it !in prefs.stretchGears } }) return null
             return Stretch.Routine(kind.label, kind, named.map { if (seconds == null) it else it.copy(secondsPerSide = seconds) })
         }
         val areas = (a["areas"] as? JsonArray)?.mapNotNull { e -> Stretch.Group.entries.firstOrNull { it.name == (e as? JsonPrimitive)?.contentOrNull } }.orEmpty().toSet()
         val allowedZones = Stretch.Group.entries.flatMap { it.zones }.toSet()
         val zones = (a["zones"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf { zone -> zone in allowedZones } }.orEmpty().toSet()
         return Stretch.routine(kind, areas, (a.int("minutes") ?: prefs.stretchRoutineMinutes).coerceIn(1, 30), prefs.stretchGears,
-            zones = zones, favorites = prefs.stretchFavorites, secondsPerSide = seconds ?: prefs.stretchSecondsPerSide).takeIf { it.items.isNotEmpty() }
+            zones = zones, favorites = prefs.stretchFavorites, disliked = prefs.stretchDisliked, secondsPerSide = seconds ?: prefs.stretchSecondsPerSide).takeIf { it.items.isNotEmpty() }
     }
 
     // ---- Application d'une proposition (bouton de l'utilisateur) -----------------------------------------

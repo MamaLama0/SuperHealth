@@ -100,7 +100,7 @@ fun AddFriendScreen(nav: NavHostController) {
                     TextButton(onClick = { showQr = true }) { Text(tr("QR code")) }
                     TextButton(onClick = {
                         val shareText = trf("Ajoute-moi sur SuperHealth : %1\$s", invitation.text) + "\n" +
-                            tr("Social → Ajouter un ami · valable 24 h") +
+                            tr("Groupe → Ajouter un ami · valable 24 h") +
                             if (invitation.base != Relay.defaultBase()) "\n" + trf("Serveur : %1\$s", invitation.base) else ""
                         ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shareText), tr("Partager mon invitation")))
                     }) { Text(tr("Partager")) }

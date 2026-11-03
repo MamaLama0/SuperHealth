@@ -113,7 +113,7 @@ fun StretchEditorScreen(nav: NavHostController) {
     var menu by remember { mutableStateOf<Int?>(null) }
     fun update(next: Stretch.Routine) { Stretch.draft.value = next }
     fun generate() {
-        val next = Stretch.routine(r.kind, groups, minutes, sh.stretchGears, zones = zones, favorites = sh.stretchFavorites, secondsPerSide = seconds)
+        val next = Stretch.routine(r.kind, groups, minutes, sh.stretchGears, zones = zones, favorites = sh.stretchFavorites, disliked = sh.stretchDisliked, secondsPerSide = seconds)
         update(next.copy(name = r.name.ifBlank { next.name }, id = r.id))
     }
     DetailScaffold(tr("Ma séance d'étirements"), { nav.popBackStack() }) {
@@ -145,6 +145,14 @@ fun StretchEditorScreen(nav: NavHostController) {
             }
             SettingRow(tr("Mon matériel"), subtitle = sh.stretchGears.mapNotNull { key -> Stretch.Gear.entries.firstOrNull { it.key == key }?.label?.let(::tr) }.joinToString().ifBlank { tr("Sans matériel") }) { gear = true }
             PillButton(tr("Générer ma sélection"), Modifier.fillMaxWidth(), strong = false) { if (r.items.isEmpty()) generate() else confirmGenerate = true }
+        }
+        val preview = Stretch.musclesFor(r.items.flatMap { it.zones }.ifEmpty { zones.ifEmpty { groups.flatMap { it.zones }.toSet() }.toList() })
+        if (preview.isNotEmpty()) MfCard {
+            Text(tr("Muscles ciblés"), style = MaterialTheme.typography.titleSmall)
+            val training by app.superhealth.training.WorkoutApp.store.state.collectAsState()
+            app.superhealth.training.ui.components.BodyMap(preview.associate { it.key to 1f }, training.settings.sex,
+                Modifier.fillMaxWidth().height(160.dp))
+            Text(preview.joinToString { tr(it.label) }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
         SectionLabel(tr("Mes exercices"))
         if (r.items.isEmpty()) Text(tr("Ajoutez vos exercices ou générez une première sélection."), color = Mf.colors.textSecondary)

@@ -35,21 +35,21 @@ object SocialPosts {
     const val MAX_POSTS = 12
     @Serializable data class Media(val id: String, val key: String, val mime: String, val hash: String, val bytes: Int)
     @Serializable data class Post(val id: String, val created: Long, val text: String = "", val kind: String = "TEXT",
-        val title: String = "", val detail: String = "", val media: Media? = null)
-    @Serializable data class Draft(val title: String, val detail: String, val kind: String)
+        val title: String = "", val detail: String = "", val media: Media? = null, val record: GroupRecords.Record? = null)
+    @Serializable data class Draft(val title: String, val detail: String, val kind: String, val record: GroupRecords.Record? = null)
     data class Published(val post: Post, val sent: Boolean)
     internal class MissingMediaMailbox : IllegalStateException("La boîte de partage doit être créée avant le média.")
     val draft = MutableStateFlow<Draft?>(null)
-    private val kinds = setOf("TEXT", "PHOTO", "VIDEO", "WORKOUT", "RUN", "STREAK")
+    private val kinds = setOf("TEXT", "PHOTO", "VIDEO", "WORKOUT", "RUN", "STREAK", "PR")
     private val mimes = setOf("image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/3gpp")
     private val http = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES).writeTimeout(60, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).build()
     fun valid(post: Post, now: Long = System.currentTimeMillis()): Boolean = post.id.matches(Regex("[a-f0-9]{32}")) &&
         post.created in 1..(now + 300000) && post.text.length <= 500 && post.title.length <= 100 && post.detail.length <= 1500 &&
-        post.kind in kinds && (post.media?.let(::validMedia) ?: (post.kind !in setOf("PHOTO", "VIDEO")))
+        post.kind in kinds && (post.record?.let { GroupRecords.valid(it, now) } ?: (post.kind != "PR")) && (post.media?.let(::validMedia) ?: (post.kind !in setOf("PHOTO", "VIDEO")))
     fun validMedia(m: Media) = m.id.matches(Regex("[a-f0-9]{64}")) && RelayCrypto.validKey(m.key) &&
         m.mime in mimes && m.hash.matches(Regex("[a-f0-9]{64}")) && m.bytes in 29..(MAX_BYTES + 28)
-    fun visible(posts: List<Post>, now: Long = System.currentTimeMillis()) = posts.filter { valid(it, now) && it.created >= now - 34L * 86400000 }.sortedByDescending { it.created }.take(MAX_POSTS)
+    fun visible(posts: List<Post>, now: Long = System.currentTimeMillis()) = posts.filter { valid(it, now) && it.created >= now - GroupHistory.RETENTION_DAYS.toLong() * 86400000 }.sortedByDescending { it.created }.take(MAX_POSTS)
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun crypt(bytes: ByteArray, key: String, id: String, encrypt: Boolean): ByteArray {
         val nonce = if (encrypt) SecureRandom().generateSeed(12) else bytes.take(12).toByteArray()
@@ -127,8 +127,9 @@ object SocialPosts {
             }
             val post = Post(UUID.randomUUID().toString().replace("-", ""), System.currentTimeMillis(), text.trim().take(500),
                 source?.kind ?: uploaded?.let { if (it.mime.startsWith("video/")) "VIDEO" else "PHOTO" } ?: "TEXT",
-                source?.title.orEmpty().take(100), source?.detail.orEmpty().take(1500), uploaded)
+                source?.title.orEmpty().take(100), source?.detail.orEmpty().take(1500), uploaded, source?.record)
             check(valid(post))
+            GroupHistory.record(ctx, post)
             League.configure(ctx) { it.copy(posts = visible(listOf(post) + it.posts)) }
             committed = true
             val sent = try { Relay.publishOnly(ctx); true }
@@ -236,18 +237,12 @@ object SocialPosts {
         cache(ctx, media).writeBytes(bytes)
         return media
     }
-    suspend fun delete(ctx: Context, id: String) = withContext(Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
-        val post = League.state.value.posts.firstOrNull { it.id == id } ?: return@withContext
+    suspend fun delete(ctx: Context, id: String) = withContext(Dispatchers.IO) {
+        val post = GroupHistory.posts(ctx).firstOrNull { it.second == null && it.first.id == id }?.first ?: return@withContext
+        GroupHistory.delete(ctx, post)
         League.configure(ctx) { it.copy(posts = it.posts.filterNot { p -> p.id == id }) }
-        try { Relay.publishOnly(ctx) }
-        catch (e: Exception) {
-            League.configure(ctx) { it.copy(posts = visible(listOf(post) + it.posts)) }
-            error("Suppression distante à réessayer.")
-        }
-        post.media?.let { media -> Relay.myEndpoint(ctx)?.let { endpoint ->
-            http.newCall(Relay.auth(ctx, Request.Builder().url(path(endpoint, media.id))).delete().build()).execute().use { check(it.isSuccessful) }
-            cache(ctx, media).delete()
-        } }
+        Relay.publishOnly(ctx)
+        post.media?.let { cache(ctx, it).delete() }
     }
     fun workoutDraft(w: Workout): Draft {
         val db = WorkoutApp.db.value

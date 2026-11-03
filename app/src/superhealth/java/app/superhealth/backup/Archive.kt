@@ -35,7 +35,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "profile.jpg")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/group-history.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
 
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
 
@@ -56,7 +56,10 @@ object Archive {
                     "sante.json" to health).forEach { (name, text) ->
                     zip.putNextEntry(ZipEntry(name)); zip.write(text.toByteArray()); zip.closeEntry()
                 }
-                // 2.5 : journaux des plugins, classement et photo de profil
+                zip.putNextEntry(ZipEntry("group-recovery.json"))
+                zip.write(kotlinx.serialization.json.Json.encodeToString(app.superhealth.league.GroupRecovery.Profile.serializer(), app.superhealth.league.GroupRecovery.export(ctx)).toByteArray())
+                zip.closeEntry()
+                // Journaux des plugins, classement et photo de profil
                 PLUGIN_FILES.forEach { name -> File(ctx.filesDir, name).takeIf { it.isFile }?.let { f -> zip.putNextEntry(ZipEntry(name.replace('/', '_'))); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry() } }
                 if (watch.length() > 0) { zip.putNextEntry(ZipEntry("montre.zip")); watch.inputStream().use { it.copyTo(zip) }; zip.closeEntry() }
             }
@@ -94,7 +97,11 @@ object Archive {
                 if ("\"foods\"" in text && "\"entries\"" in text) mapOf("nutrition.json" to text) else mapOf("musculation.json" to text)
             }
         }
-        app.superhealth.stretch.Stretch.load(ctx); app.superhealth.meditation.Meditation.load(ctx); app.superhealth.league.League.load(ctx); app.superhealth.ui.ProfilePhoto.load(ctx)
+        app.superhealth.stretch.Stretch.load(ctx); app.superhealth.meditation.Meditation.load(ctx); app.superhealth.league.League.load(ctx); app.superhealth.league.GroupHistory.load(ctx); app.superhealth.ui.ProfilePhoto.load(ctx)
+        files["group-recovery.json"]?.let { app.superhealth.league.GroupRecovery.restore(ctx,
+            kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(), it), clearHistory = false) }
+        app.superhealth.league.GroupHistory.load(ctx)
+        app.superhealth.meds.Meds.init(ctx); app.superhealth.wellbeing.Journal.init(ctx); app.superhealth.wellbeing.Checkin.init(ctx); app.superhealth.wellbeing.Cycle.init(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }
         files["musculation.json"]?.let { WorkoutApp.store.import(it); done += tr("musculation") }

@@ -45,6 +45,9 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.rounded.ThumbUp
+import androidx.compose.material.icons.rounded.ThumbDown
 import androidx.compose.material3.TextButton
 import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.RowDivider
@@ -158,7 +161,7 @@ fun ColumnScope.StretchSection(nav: NavHostController) {
     var gear by remember { mutableStateOf(false) }
     LaunchedEffect(presetGroups) { presetGroups?.let { p -> kind = Stretch.Kind.POST; groups = p.map { it.name }; preset.value = null } }
     val chosen = groups.mapNotNull { n -> Stretch.Group.entries.firstOrNull { it.name == n } }.toSet()
-    val routine = remember(kind, minutes, groups, sh.stretchGears) { Stretch.routine(kind, chosen, minutes, sh.stretchGears) }
+    val routine = remember(kind, minutes, groups, sh.stretchGears, sh.stretchFavorites, sh.stretchDisliked) { Stretch.routine(kind, chosen, minutes, sh.stretchGears, favorites = sh.stretchFavorites, disliked = sh.stretchDisliked) }
     val last = results.lastOrNull()
     val saved by Stretch.saved.collectAsState()
     val ctx = LocalContext.current
@@ -192,7 +195,7 @@ fun ColumnScope.StretchSection(nav: NavHostController) {
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Stretch.Kind.entries.forEach { k ->
-            val cover = remember(k, sh.stretchGears) { Stretch.routine(k, emptySet(), 5, sh.stretchGears).items.firstOrNull()?.id }
+            val cover = remember(k, sh.stretchGears, sh.stretchDisliked) { Stretch.routine(k, emptySet(), 5, sh.stretchGears, disliked = sh.stretchDisliked).items.firstOrNull()?.id }
             PhotoTile(cover, tr(k.label), null, k == kind, Modifier.weight(1f).height(112.dp)) { kind = k }
         }
     }
@@ -226,7 +229,7 @@ fun ColumnScope.StretchSection(nav: NavHostController) {
     SectionLabel(tr("Situations"))
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         situations.forEach { s ->
-            val r = remember(s, minutes, sh.stretchGears) { Stretch.routine(s.kind, s.groups, minutes, sh.stretchGears) }
+            val r = remember(s, minutes, sh.stretchGears, sh.stretchFavorites, sh.stretchDisliked) { Stretch.routine(s.kind, s.groups, minutes, sh.stretchGears, favorites = sh.stretchFavorites, disliked = sh.stretchDisliked) }
             PhotoTile(r.items.firstOrNull()?.id, tr(s.label), trf("%1\$s min", r.seconds / 60), false, Modifier.width(138.dp).height(92.dp)) {
                 if (r.items.isNotEmpty()) { Stretch.prepare(r.copy(name = tr(s.label))); nav.go("stretch/edit") }
             }
@@ -325,12 +328,23 @@ fun StretchExerciseScreen(nav: NavHostController, id: String) {
             StretchVideo(e.id, Modifier.fillMaxSize())
             OverlayButton(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour"), Modifier.align(Alignment.TopStart).padding(8.dp)) { nav.popBackStack() }
             OverlayButton(if (fav) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favoris"), Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-                SuperPrefs.update { it.copy(stretchFavorites = if (fav) it.stretchFavorites - id else it.stretchFavorites + id) }
+                SuperPrefs.update { it.copy(stretchFavorites = if (fav) it.stretchFavorites - id else it.stretchFavorites + id, stretchDisliked = it.stretchDisliked - id) }
             }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             Text(e.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(zoneLabel(e), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = fav, onClick = {
+                    SuperPrefs.update { it.copy(stretchFavorites = if (fav) it.stretchFavorites - id else it.stretchFavorites + id,
+                        stretchDisliked = it.stretchDisliked - id) }
+                }, label = { Text(tr("À privilégier")) }, leadingIcon = { Icon(Icons.Rounded.ThumbUp, null, Modifier.size(18.dp)) })
+                val disliked = id in sh.stretchDisliked
+                FilterChip(selected = disliked, onClick = {
+                    SuperPrefs.update { it.copy(stretchDisliked = if (disliked) it.stretchDisliked - id else it.stretchDisliked + id,
+                        stretchFavorites = it.stretchFavorites - id) }
+                }, label = { Text(tr("À éviter")) }, leadingIcon = { Icon(Icons.Rounded.ThumbDown, null, Modifier.size(18.dp)) })
+            }
             Spacer(Modifier.height(10.dp))
             ChipRow { listOf(15, 30, 45, 60, 90, 120, 180).forEach { sec -> Chip(stretchTime(sec) + if (e.uni) " × 2" else "", sec == seconds) { seconds = sec } } }
             Spacer(Modifier.height(10.dp))

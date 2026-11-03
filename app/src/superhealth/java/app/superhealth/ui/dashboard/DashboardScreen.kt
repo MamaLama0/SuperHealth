@@ -441,6 +441,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                     if (modules.any { it.kind == app.superhealth.modules.Modules.COACH && it.enabled })
                         app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.AutoAwesome, tr("Coach"), tint = app.superhealth.ui.coach.CoachHue) { nav.go("coach") }
                     app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Tune, tr("Personnaliser")) { arranging = true }
+                    if (sh.leagueEnabled && sh.socialFeedEnabled) app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Group, tr("Groupe")) { nav.go("feed") }
                     app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
                 }
             }

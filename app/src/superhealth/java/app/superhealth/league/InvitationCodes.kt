@@ -126,6 +126,16 @@ object InvitationCodes {
             http.newCall(Request.Builder().url(base + responsePath).header("X-Write-Token", owner).delete().build()).execute().use { }
         }
     }
+    suspend fun revokeCurrent(ctx: Context, publishKey: String = Relay.publicationKey(ctx)) = withContext(Dispatchers.IO) {
+        val code = Secrets.get(ctx, "friend_invitation_code")?.let(FriendCode::normalize)
+        val base = Secrets.get(ctx, "friend_invitation_base")?.takeIf(Relay::validBase)
+        val owner = Secrets.get(ctx, "friend_invitation_owner")
+        if (code != null && base != null && owner != null) {
+            http.newCall(Request.Builder().url(base + FriendCode.path(code)).header("Authorization", "Bearer " + publishKey)
+                .header("X-Write-Token", owner).delete().build()).execute().use { check(it.isSuccessful || it.code == 404) }
+        }
+        Secrets.putAll(ctx, listOf("friend_invitation_code", "friend_invitation_base", "friend_invitation_owner", "friend_invitation_expiry").associateWith { null })
+    }
     suspend fun receive(ctx: Context, text: String, serverOverride: String? = null): Boolean {
         val link = Regex("superhealth://league\\?[^\\s]+", RegexOption.IGNORE_CASE).find(text.take(131072))?.value
         val uri = runCatching { android.net.Uri.parse(link ?: text.trim()) }.getOrNull()

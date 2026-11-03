@@ -253,7 +253,7 @@ fun ProgressScreen(nav: NavHostController) {
             } else SettingRow(tr("Choisir mes suivis")) { nav.go("league/settings") }
             SectionLabel(tr("Cette semaine"))
             WeekCalendar(p)
-            SettingRow(tr("Profil et social")) { nav.go("social") }
+            SettingRow(tr("Profil du Groupe")) { nav.go("social") }
             SectionLabel(tr("Mes badges"))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MfCard(Modifier.weight(1f)) {

@@ -177,7 +177,9 @@ fun SuperRoot(vm: SuperViewModel) {
     val nav = rememberNavController()
     val back by nav.currentBackStackEntryAsState()
     val current = back?.destination?.route
-    val isTab = isTabRoute(current)
+    val isTab = isTabRoute(current) || current == "feed"
+    val groupVisible by app.superhealth.ui.league.GroupNavigation.groupVisible.collectAsState()
+    val groupContext = current == "feed" || (current == "home" && groupVisible)
     var plus by remember { mutableStateOf(false) }
     var plusAction by remember { mutableStateOf<String?>(null) }
     var logSheet by remember { mutableStateOf(false) }
@@ -235,6 +237,19 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true) }
             composable("social/compose") { app.superhealth.ui.league.SocialComposer(nav) }
             composable("social/share/workout") { app.superhealth.ui.league.SocialComposer(nav, "WORKOUT") }
+            composable("group/post/{author}/{post}", listOf(navArgument("author") { type = NavType.StringType }, navArgument("post") { type = NavType.StringType })) { entry ->
+                val author = entry.arguments?.getString("author")
+                val post = entry.arguments?.getString("post")
+                val group by app.superhealth.league.GroupHistory.state.collectAsState()
+                val selected = app.superhealth.league.GroupHistory.posts(nav.context).firstOrNull { (p, friend) -> p.id == post && (friend?.id ?: app.superhealth.league.League.myId()) == author }
+                app.superhealth.nutrition.ui.screens.DetailScaffold(tr("Publication du Groupe"), { nav.popBackStack() }) {
+                    if (selected != null) app.superhealth.ui.league.SocialPostCard(selected.first, selected.second)
+                    else Text(tr("Publication supprimée ou indisponible"))
+                }
+            }
+            composable("group/recovery") { app.superhealth.ui.league.GroupRecoveryScreen(nav) }
+            composable("group/records") { app.superhealth.ui.league.GroupRecordsScreen(nav) }
+            composable("social/share/pr") { app.superhealth.ui.league.SocialComposer(nav, "PR") }
             composable("social/share/activity") { app.superhealth.ui.league.SocialComposer(nav, "ACTIVITY") }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
             composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
@@ -310,7 +325,11 @@ fun SuperRoot(vm: SuperViewModel) {
         }
         if (isTab) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { barPx = it.height }) {
             if (tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
-            BottomBar(current, onTab = { route -> nav.openTab(route) }, onPlus = {
+            BottomBar(current, onTab = { route ->
+                if (route == "home") app.superhealth.ui.league.GroupNavigation.dashboard()
+                nav.openTab(route)
+            }, onPlus = {
+                if (groupContext) { plusAction = "social/compose"; return@BottomBar }
                 // Un seul raccourci choisi : le « + » l'ouvre directement.
                 val single = sh.plusActions.mapNotNull { it.resolve(vm) }.singleOrNull()
                 if (single != null) plusAction = single.action else plus = true
@@ -337,7 +356,7 @@ fun SuperRoot(vm: SuperViewModel) {
         }
     }
     LaunchedEffect(plusAction) { plusAction?.let { plusAction = null; runAction(it) } }
-    if (plus) PlusSheet(vm, onDismiss = { plus = false }, onEdit = { plus = false; nav.go("plus/edit") }) { action ->
+    if (plus) PlusSheet(vm, current, onDismiss = { plus = false }, onEdit = { plus = false; nav.go("plus/edit") }) { action ->
         plus = false
         runAction(action)
     }
@@ -408,7 +427,7 @@ private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: ()
     val accent = Mf.colors.accent
     val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
     Column(
-        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { if (!selected) onClick() }),
+        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onClick() }),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent), contentAlignment = Alignment.Center) {
@@ -463,7 +482,7 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
 /** « + » : les raccourcis choisis (Réglages du « + »), regroupés par module, dans l'ordre choisi. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> Unit, onAction: (String) -> Unit) {
+private fun PlusSheet(vm: SuperViewModel, current: String?, onDismiss: () -> Unit, onEdit: () -> Unit, onAction: (String) -> Unit) {
     val sh by vm.settings.collectAsState()
     vm.nutrition.settings.collectAsState()
     vm.training.state.collectAsState()
@@ -478,13 +497,19 @@ private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> U
                     app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Close, tr("Fermer"), onClick = onDismiss)
                 }
             }
+            val contextual = when (current) {
+                "log" -> listOf(PlusAction.SEARCH, PlusAction.SCAN, PlusAction.QUICK).filter { it in chosen }
+                "activities" -> listOf(PlusAction.WORKOUT, PlusAction.EMPTY, PlusAction.EXERCISES).filter { it in chosen }
+                else -> emptyList()
+            }.mapNotNull { it.resolve(vm) }
+            if (contextual.isNotEmpty()) ActionGroup(tr("Pour cet écran"), Mf.colors.accent, contextual, onAction)
             app.superhealth.DashCard.Section.entries.forEach { section ->
-                val actions = chosen.filter { it.section == section }.mapNotNull { it.resolve(vm) }
+                val actions = chosen.filter { it.section == section }.mapNotNull { it.resolve(vm) }.filterNot { a -> contextual.any { it.action == a.action } }
                 if (actions.isNotEmpty()) ActionGroup(tr(when (section) {
                     app.superhealth.DashCard.Section.NUTRITION -> "Nutrition"
                     app.superhealth.DashCard.Section.TRAINING -> "Entraînement"
                     app.superhealth.DashCard.Section.HEALTH -> "Santé"
-                    app.superhealth.DashCard.Section.SOCIAL -> "Social"
+                    app.superhealth.DashCard.Section.SOCIAL -> "Groupe"
                 }), when (section) {
                     app.superhealth.DashCard.Section.NUTRITION -> app.superhealth.ui.theme.Base.Green
                     app.superhealth.DashCard.Section.TRAINING -> app.superhealth.ui.theme.WorkoutBlue

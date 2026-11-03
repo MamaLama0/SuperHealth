@@ -1075,6 +1075,9 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
 /** Accueil : icône de l'app, titre, fonctions en liste à symboles colorés. */
 @Composable
 private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor) {
+    var recovery by remember { mutableStateOf(false) }
+    if (recovery) app.superhealth.ui.league.GroupRecoveryDialog { recovery = false }
+    androidx.compose.material3.TextButton(onClick = { recovery = true }) { Text(tr("Retrouver mon Groupe")) }
     Spacer(Modifier.height(20.dp))
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AppIcon(88, accent) }
     Spacer(Modifier.height(18.dp))

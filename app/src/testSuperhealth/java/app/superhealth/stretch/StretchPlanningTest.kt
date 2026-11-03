@@ -44,4 +44,18 @@ class StretchPlanningTest {
         assertEquals(15, r.seconds)
         assertEquals(personal.id, r.items.single().id)
     }
+    @Test fun dislikedExercisesAreExcludedEvenWhenTheyAreFavorites() {
+        val pool = listOf(ex("avoided"), ex("allowed"))
+        val r = Stretch.routine(Stretch.Kind.DAILY, emptySet(), 5, emptySet(), day = 0,
+            favorites = setOf("avoided"), availableExercises = pool, disliked = setOf("avoided"))
+        assertEquals(listOf("allowed"), r.items.map { it.id })
+        assertTrue(Stretch.routine(Stretch.Kind.DAILY, emptySet(), 5, emptySet(), availableExercises = pool,
+            disliked = setOf("avoided", "allowed")).items.isEmpty())
+    }
+    @Test fun anatomyPreviewMapsMusclesInsteadOfJustBroadAreas() {
+        assertEquals(setOf(app.superhealth.training.domain.MuscleGroup.HAMSTRINGS), Stretch.musclesFor(listOf("Hamstrings")))
+        assertTrue(Stretch.musclesFor(listOf("Unknown")).isEmpty())
+        assertEquals(3, Stretch.musclesFor(listOf("Shoulders")).size)
+    }
+
 }

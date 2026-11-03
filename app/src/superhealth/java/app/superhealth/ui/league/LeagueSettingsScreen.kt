@@ -28,13 +28,17 @@ fun LeagueSettingsScreen(nav: NavHostController) {
     val selected = st.tracked ?: ProgressRepository.selectedTracks(sh).map { it.name }.toSet()
     var healthRules by remember { mutableStateOf(false) }
     var confirmRotate by remember { mutableStateOf(false) }; var message by remember { mutableStateOf<String?>(null) }
-    DetailScaffold(tr("Classement et progression"), onBack = { nav.popBackStack() }) {
+    DetailScaffold(tr("Paramètres du Groupe"), onBack = { nav.popBackStack() }) {
         GroupCard {
             SwitchRow(tr("Activer le classement et la progression"), tr("Les données et les amis restent conservés à la désactivation"), sh.leagueEnabled) { on ->
                 SuperPrefs.update { it.copy(leagueEnabled = on) }; LeagueWorker.schedule(ctx)
             }
         }
         GroupCard { SettingRow(tr("Notifications"), subtitle = tr("Gérer toutes les alertes de l'application")) { nav.go("settings/notifications") } }
+        GroupCard {
+            SettingRow(tr("Retrouver mon Groupe"), subtitle = tr("Code de récupération · profil et amis, sans journaux de santé")) { nav.go("group/recovery") }
+            SettingRow(tr("Réglages de l'application")) { nav.go("settings") }
+        }
         SectionLabel(tr("Mes activités et mon score"))
         Text(tr("Seuls les suivis cochés entrent dans votre score. Il faut au moins trois domaines renseignés."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         Text(tr("Chaque suivi a un objectif. La musculation suit les séances du programme ; les jours de repos restent libres."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
@@ -90,13 +94,13 @@ fun LeagueSettingsScreen(nav: NavHostController) {
         RelaySettings()
         SectionLabel(tr("Confidentialité avancée"))
         MfCard {
-            Text(tr("Le relais conserve une seule carte chiffrée par personne. Il ne reçoit ni prénom, ni score, ni clé de lecture en clair. Les adresses et capacités sont aléatoires ; l'hébergeur peut toujours observer des métadonnées de connexion."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Le Groupe conserve vos publications, réponses et médias pendant cinq ans. Les journaux de santé restent sur votre téléphone. Les profils et partages sont chiffrés ; l'hébergeur peut observer les métadonnées de connexion."), style = MaterialTheme.typography.bodySmall)
             PillButton(tr("Renouveler mes liens de partage"), Modifier.fillMaxWidth().padding(top = 10.dp), strong = false) { confirmRotate = true }
             message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         }
     }
     if (confirmRotate) AlertDialog(onDismissRequest = { confirmRotate = false }, title = { Text(tr("Révoquer les anciennes invitations ?")) },
-        text = { Text(tr("L'ancienne carte distante sera supprimée. Vous devrez partager une nouvelle invitation avec vos amis pour rétablir les mises à jour à distance.")) },
-        confirmButton = { TextButton({ confirmRotate = false; scope.launch { runCatching { Relay.rotate(ctx); Relay.sync(ctx) }.onSuccess { message = tr("Partage renouvelé : envoyez votre nouvelle invitation.") }.onFailure { message = it.message } } }) { Text(tr("Renouveler")) } },
+        text = { Text(tr("Les anciens accès seront révoqués après conservation de vos publications et médias. Vos amis à jour suivront le nouveau lien ; les autres auront besoin d'une nouvelle invitation.")) },
+        confirmButton = { TextButton({ confirmRotate = false; scope.launch { runCatching { Relay.rotate(ctx); Relay.sync(ctx) }.onSuccess { message = tr("Accès renouvelés. Une nouvelle invitation reste disponible si nécessaire.") }.onFailure { message = it.message } } }) { Text(tr("Renouveler")) } },
         dismissButton = { TextButton({ confirmRotate = false }) { Text(tr("Annuler")) } })
 }

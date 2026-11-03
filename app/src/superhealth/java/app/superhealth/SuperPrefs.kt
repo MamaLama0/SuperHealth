@@ -275,6 +275,7 @@ data class SuperSettings(
     val stretchSecondsPerSide: Int = 45,
     val stretchGears: Set<String> = emptySet(),
     val stretchFavorites: Set<String> = emptySet(),
+    val stretchDisliked: Set<String> = emptySet(),
     /** Ambiance des séances : rain, ocean, brown ; vide : aucune. */
     val meditationAmbience: String = "",
     val meditationGongs: Boolean = true,

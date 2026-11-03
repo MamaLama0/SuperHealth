@@ -14,7 +14,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.security.SecureRandom
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okhttp3.RequestBody.Companion.asRequestBody
 
 /** Boîte chiffrée facultative : identité, prénom, statistiques et clé AES ne sont jamais envoyés en clair au relais. */
 object Relay {
@@ -26,8 +28,8 @@ object Relay {
     private fun token() = SecureRandom().generateSeed(32).joinToString("") { "%02x".format(it) }
     fun readKey(ctx: Context) = secret(ctx, "league_aes_read_key", RelayCrypto::newKey)
     private fun allowedTransport(url: okhttp3.HttpUrl) = url.isHttps ||
-        (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG &&
-            nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.qa" &&
+        ((nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.grouptest" ||
+            (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG && nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.qa")) &&
             url.scheme == "http" && url.host == "127.0.0.1")
     fun validBase(raw: String): Boolean = raw.toHttpUrlOrNull()?.let {
         allowedTransport(it) && it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null && it.encodedPath == "/"
@@ -63,7 +65,8 @@ object Relay {
                 // Un média exige une boîte existante. Amorcer une carte sans avatar, puis publier la carte complète.
                 publishCard(ctx, endpoint, withAvatar = false, force = true)
                 ProfileAvatars.prepare(ctx, endpoint)
-            }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { League.state.value.profileAvatar }
             if (League.state.value.profileAvatar != avatar) League.configure(ctx) { it.copy(profileAvatar = avatar) }
         }
         val raw = League.myCard(ctx, detailed = true, includeRelayKey = false, includeAvatar = withAvatar)
@@ -83,20 +86,30 @@ object Relay {
     /** Explicit publication does not depend on whether a friend's server answers. */
     internal suspend fun publishOnly(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
         check(League.available())
+        finishRotation(ctx)
         val endpoint = myEndpoint(ctx) ?: error("Activez le serveur dans les préférences sociales.")
         publishCard(ctx, endpoint)
+        GroupHistory.publish(ctx, endpoint)
+        // A failed recovery backup must not report an already published post as unsent.
+        try { GroupRecovery.upload(ctx) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { /* The next synchronization retries; recovery has an explicit status screen. */ }
     } }
     suspend fun sync(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
         if (!League.available() || !League.state.value.relayEnabled) return@withContext
+        finishRotation(ctx)
         val errors = java.util.Collections.synchronizedList(mutableListOf<String>())
         try { InvitationCodes.collectResponses(ctx) }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { errors += "Invitations indisponibles. Réessayez plus tard." }
         myEndpoint(ctx)?.let { endpoint ->
-            try { publishCard(ctx, endpoint) }
+            try { publishCard(ctx, endpoint); GroupHistory.publish(ctx, endpoint) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { errors += "Publication impossible. Vérifiez la connexion ou les réglages du serveur." }
         }
+        try { GroupRecovery.upload(ctx) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { errors += "Protection du Groupe à réessayer dans les paramètres." }
         val permits = Semaphore(3)
         coroutineScope {
             League.state.value.friends.map { friend -> async {
@@ -110,13 +123,14 @@ object Relay {
                         friend.relayEtag?.takeIf { it.length <= 100 }?.let { builder.header("If-None-Match", it) }
                         http.newCall(builder.get().build()).execute().use { r ->
                             if (r.code == 304) return@use
+                            if (r.code == 404 && GroupLinks.resolve(ctx, friend)) return@use
                             check(r.isSuccessful) { "HTTP ${r.code}" }
                             val encrypted = readBounded(r)
                             val raw = RelayCrypto.decrypt(encrypted, friend.relayKey!!, endpoint.toHttpUrlOrNull()!!.encodedPath)
                             val card = League.parse(raw) ?: error("signature ou carte non valable")
-                            check(card.k == friend.key && card.remote == endpoint && card.relayKey == null) { "identité ou destination différente" }
+                            check(League.matches(friend, card) && card.remote == endpoint && card.relayKey == null) { "identité ou destination différente" }
                             check(json.decodeFromString(RelayCrypto.Envelope.serializer(), encrypted).revision == card.revision) { "révision incohérente" }
-                            if (League.isFriend(card.k)) {
+                            if (League.state.value.friends.any { it.id == friend.id }) {
                                 League.accept(ctx, card)
                                 League.configure(ctx) { s -> s.copy(friends = s.friends.map { if (it.key == friend.key) it.copy(relayEtag = r.header("ETag")?.takeIf { tag -> tag.length <= 100 }) else it }) }
                             }
@@ -126,13 +140,89 @@ object Relay {
                 }
             } }.awaitAll()
         }
-        League.configure(ctx) { it.copy(lastSync = System.currentTimeMillis(), syncError = errors.take(3).joinToString(" · ").ifBlank { null }) }
+        try { GroupHistory.refresh(ctx) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { errors += "Historique du Groupe indisponible. Réessayez." }
+        League.configure(ctx) { it.copy(lastSync = System.currentTimeMillis(), lastSuccessfulSync = if (errors.isEmpty()) System.currentTimeMillis() else it.lastSuccessfulSync,
+            syncError = errors.take(3).joinToString(" · ").ifBlank { null }) }
     } }
-    /** Révoque toutes les anciennes capacités de lecture ; nécessite un nouvel échange de cartes. */
-    suspend fun rotate(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
-        myEndpoint(ctx)?.let { old ->
-            http.newCall(auth(ctx, Request.Builder().url(old)).delete().build()).execute().use { check(it.isSuccessful || it.code == 404) { "révocation : HTTP ${it.code}" } }
+    @Serializable private data class Rotation(val old: String, val owner: String, val publishKey: String,
+        val mailbox: String, val read: String, val aes: String, val writer: String, val backup: String, val excluded: Set<String>,
+        val completedMedia: Set<String> = emptySet(), val historyPrepared: Boolean = false)
+    private val transfer = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES)
+        .followRedirects(false).followSslRedirects(false).build()
+
+    /** Resumable migration: prepare the new mailbox and media, inform retained friends, then revoke the old URL. */
+    private suspend fun finishRotation(ctx: Context) {
+        val raw = Secrets.get(ctx, "group_rotation_pending") ?: return
+        var rotation = json.decodeFromString(Rotation.serializer(), raw)
+        fun saveRotation() = Secrets.put(ctx, "group_rotation_pending", json.encodeToString(Rotation.serializer(), rotation))
+        val base = rotation.old.substringBefore("/v2/cards/")
+        val endpoint = "$base/v2/cards/${rotation.mailbox}/${rotation.read}"
+        fun authorized(url: String) = Request.Builder().url(url).header("X-Write-Token", rotation.writer)
+            .header("Authorization", "Bearer " + rotation.publishKey)
+        val switched = Secrets.get(ctx, "league_mailbox_v2") == rotation.mailbox
+        if (!switched) {
+            GroupHistory.loadOwnHistory(ctx)
+            val card = League.card(app.superhealth.ui.userName() ?: "?", League.compute(ctx), endpoint, includeAvatar = false)
+            val parsed = League.parse(card) ?: error("Carte du Groupe non valable")
+            val encrypted = RelayCrypto.encrypt(card, rotation.aes, endpoint.toHttpUrlOrNull()!!.encodedPath, parsed.revision)
+            transfer.newCall(authorized(endpoint).put(encrypted.toRequestBody("application/json".toMediaType())).build()).execute().use { check(it.isSuccessful) }
+            val media = (GroupHistory.posts(ctx).filter { it.second == null }.mapNotNull { it.first.media } + listOfNotNull(League.state.value.profileAvatar)).distinctBy { it.id }
+            for (item in media) {
+                if (item.id in rotation.completedMedia) continue
+                val tmp = java.io.File.createTempFile("group-rotation-", ".enc", ctx.cacheDir)
+                try {
+                    val digest = MessageDigest.getInstance("SHA-256"); var size = 0L
+                    transfer.newCall(Request.Builder().url(rotation.old + "/media/" + item.id).get().build()).execute().use { response ->
+                        check(response.isSuccessful) { "Un média est indisponible. Le partage actuel reste conservé." }
+                        response.body.byteStream().use { input -> tmp.outputStream().use { out ->
+                            val buffer = ByteArray(65536)
+                            while (true) { val n = input.read(buffer); if (n < 0) break; size += n
+                                check(size <= item.bytes); digest.update(buffer, 0, n); out.write(buffer, 0, n) }
+                        } }
+                    }
+                    check(size == item.bytes.toLong() && digest.digest().joinToString("") { "%02x".format(it) } == item.hash)
+                    transfer.newCall(authorized(endpoint + "/media/" + item.id).put(tmp.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use {
+                        check(it.isSuccessful || it.code == 409) { "Migration des médias à réessayer." }
+                    }
+                } finally { tmp.delete() }
+                rotation = rotation.copy(completedMedia = rotation.completedMedia + item.id)
+                saveRotation()
+            }
+            GroupLinks.publish(ctx, rotation.old, rotation.owner, rotation.publishKey, endpoint, rotation.aes, rotation.excluded)
+            Secrets.remember(ctx, Secrets.backupCode(ctx))
+            Secrets.putAll(ctx, mapOf("league_mailbox_v2" to rotation.mailbox, "league_read_capability_v2" to rotation.read,
+                "league_aes_read_key" to rotation.aes, "league_owner_token_v2" to rotation.writer,
+                Secrets.BACKUP_CODE to rotation.backup, "league_published_hash_v2" to null, "league_published_at_v2" to null,
+                "group_recovery_hash" to null, "profile_avatar_source" to null))
         }
-        listOf("league_mailbox_v2", "league_read_capability_v2", "league_aes_read_key", "league_owner_token_v2", "league_published_hash_v2", "league_published_at_v2").forEach { Secrets.put(ctx, it, null) }
+        if (!rotation.historyPrepared) {
+            GroupHistory.republish(ctx)
+            rotation = rotation.copy(historyPrepared = true)
+            saveRotation()
+        }
+        GroupHistory.publish(ctx, endpoint)
+        transfer.newCall(Request.Builder().url(rotation.old).header("X-Write-Token", rotation.owner)
+            .header("Authorization", "Bearer " + rotation.publishKey).delete().build()).execute().use {
+            check(it.isSuccessful || it.code == 404) { "Ancien accès à révoquer : la reprise est enregistrée." }
+        }
+        InvitationCodes.revokeCurrent(ctx, rotation.publishKey)
+        League.configure(ctx) { s -> s.copy(friends = s.friends.filterNot { it.id in rotation.excluded }) }
+        Secrets.put(ctx, "group_rotation_pending", null)
+    }
+    suspend fun rotate(ctx: Context, excluded: Set<String> = emptySet()) = lock.withLock { withContext(Dispatchers.IO) {
+        if (Secrets.get(ctx, "group_rotation_pending") == null) {
+            val old = myEndpoint(ctx) ?: error("Activez le serveur du Groupe.")
+            val owner = secret(ctx, "league_owner_token_v2", ::token)
+            val rotation = Rotation(old, owner, publicationKey(ctx), token(), token(), RelayCrypto.newKey(), token(),
+                Secrets.backupCode(ctx), excluded)
+            Secrets.put(ctx, "group_rotation_pending", json.encodeToString(Rotation.serializer(), rotation))
+        }
+        finishRotation(ctx)
+        val endpoint = myEndpoint(ctx)!!
+        publishCard(ctx, endpoint)
+        GroupHistory.publish(ctx, endpoint)
+        GroupRecovery.upload(ctx)
     } }
 }

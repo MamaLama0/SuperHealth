@@ -31,16 +31,16 @@
     <string name="widget_sleep_desc">Durée et phases de la nuit</string>
     <string name="widget_overview_name">Aperçu</string>
     <string name="widget_overview_desc">Calories, pas, eau et Body Battery en un bandeau</string>
-    <string name="widget_league_name">Social · Classement</string>
+    <string name="widget_league_name">Groupe · Classement</string>
     <string name="widget_league_desc">Votre score et votre place sur les sept derniers jours terminés</string>
-    <string name="widget_progress_name">Social · Progression</string>
+    <string name="widget_progress_name">Groupe · Progression</string>
     <string name="widget_progress_desc">Votre niveau, vos XP et le prochain niveau</string>
-    <string name="widget_streak_name">Social · Mes séries</string>
+    <string name="widget_streak_name">Groupe · Mes séries</string>
     <string name="widget_streak_desc">Votre meilleure série active et votre record</string>
-    <string name="widget_quest_name">Social · Quêtes de la semaine</string>
+    <string name="widget_quest_name">Groupe · Quêtes de la semaine</string>
     <string name="widget_quest_desc">Votre prochain défi ou la récompense à récupérer</string>
-    <string name="widget_friends_name">Social · Amis</string>
+    <string name="widget_friends_name">Groupe · Amis</string>
     <string name="widget_friends_desc">Mes amis et accès aux invitations</string>
-    <string name="widget_social_name">Social · Vue d’ensemble</string>
+    <string name="widget_social_name">Groupe · Vue d’ensemble</string>
     <string name="widget_social_desc">Niveau, badges et quêtes de la semaine</string>
 </resources>

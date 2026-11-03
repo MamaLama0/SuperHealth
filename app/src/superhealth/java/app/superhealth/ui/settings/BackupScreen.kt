@@ -163,7 +163,7 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
                 }) { Icon(Icons.Rounded.ContentCopy, tr("Copier")) }
             }
             Spacer(Modifier.height(6.dp))
-            Text(tr("Propre à ce téléphone, il reste le même après une réinstallation. Notez-le pour restaurer sur un autre téléphone."),
+            Text(tr("Gardez ce code hors du téléphone. Il permet de retrouver votre Groupe et d’ouvrir vos sauvegardes sur un autre appareil."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
 

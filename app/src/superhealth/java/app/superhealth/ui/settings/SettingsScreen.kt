@@ -233,18 +233,18 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
-            Group(tr("Social")) {
+            Group(tr("Groupe")) {
                 IconSwitchRow(tr("Fil des amis"), tr("Glissez vers la droite depuis l’accueil pour voir les publications"),
                     Icons.Rounded.Group, HealthHues.Fitness, sh.socialFeedEnabled) { enabled ->
                     SuperPrefs.update { it.copy(socialFeedEnabled = enabled) }
                 }
                 RowDivider(56.dp)
-                SettingRow(tr("Profil et social"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social") }
+                SettingRow(tr("Profil du Groupe"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social") }
                 RowDivider(56.dp)
-                SettingRow(tr("Notifications et partage"), subtitle = tr("Amis, publications, réactions et photo de profil"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Fitness) { nav.go("league/settings") }
+                SettingRow(tr("Paramètres du Groupe"), subtitle = tr("Amis, publications, réactions et photo de profil"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Fitness) { nav.go("league/settings") }
                 RowDivider(56.dp)
                 val friends by app.superhealth.league.League.state.collectAsState()
-                SettingRow(tr("Groupe d'amis"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Comparer mes progrès et ajouter un ami"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
+                SettingRow(tr("Amis du Groupe"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Comparer mes progrès et ajouter un ami"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Classement et progression"), tr("Niveaux, séries et comparaisons entre amis"), Icons.Rounded.Group, HealthHues.Fitness, sh.leagueEnabled,
                     onClick = { nav.go("league") }) { on ->

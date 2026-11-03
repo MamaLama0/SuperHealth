@@ -7,6 +7,7 @@ import app.superhealth.SuperPrefs
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -25,7 +26,7 @@ object Remote {
     private const val FOLDER_NAME = "SuperHealth"
 
     private val http by lazy {
-        OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).writeTimeout(120, TimeUnit.SECONDS).build()
+        OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).writeTimeout(120, TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false).build()
     }
 
     data class Entry(val name: String, val uri: String, val size: Long)
@@ -38,13 +39,25 @@ object Remote {
      */
     fun davFolder(): String? {
         val s = SuperPrefs.settings.value
-        val base = s.webdavUrl.trim().trimEnd('/').takeIf { it.startsWith("http") } ?: return null
+        val base = s.webdavUrl.trim().trimEnd('/').takeIf { raw ->
+            val url = raw.toHttpUrlOrNull()
+            url != null && url.isHttps && url.username.isEmpty() && url.password.isEmpty() && url.query == null && url.fragment == null
+        } ?: return null
         return when (kind()) {
             Kind.NEXTCLOUD -> if ("/remote.php/" in base) "$base/" else "$base/remote.php/dav/files/${Uri.encode(s.webdavUser.trim())}/$FOLDER_NAME/"
             Kind.WEBDAV -> "$base/"
             else -> null
         }
     }
+
+    internal fun safeDavEntry(base: String, href: String): String? {
+        val origin = base.toHttpUrlOrNull() ?: return null
+        val target = origin.resolve(href) ?: return null
+        return target.toString().takeIf { target.isHttps && target.scheme == origin.scheme && target.host == origin.host &&
+            target.port == origin.port && target.username.isEmpty() && target.password.isEmpty() && target.query == null && target.fragment == null &&
+            target.encodedPath.startsWith(origin.encodedPath) && target.encodedPath != origin.encodedPath }
+    }
+    private fun checkedEntry(entry: Entry): String = safeDavEntry(davFolder() ?: error("Adresse HTTPS requise"), entry.uri) ?: error("Destination de sauvegarde refusée")
 
     private fun auth(ctx: Context): String = Credentials.basic(SuperPrefs.settings.value.webdavUser.trim(), Secrets.get(ctx, Secrets.WEBDAV_PASSWORD) ?: "")
 
@@ -95,9 +108,8 @@ object Remote {
                     .method("PROPFIND", body.toRequestBody("application/xml".toMediaType())).build()).execute().use { r ->
                     if (r.code == 404) return@withContext emptyList()
                     if (!r.isSuccessful) error("lecture du dossier refusée (${r.code})")
-                    parsePropfind(r.body.string()).map { (href, size) ->
-                        Entry(Uri.decode(href.trimEnd('/').substringAfterLast('/')),
-                            if (href.startsWith("http")) href else Uri.parse(dir).buildUpon().encodedPath(href).build().toString(), size)
+                    parsePropfind(r.body.string()).mapNotNull { (href, size) ->
+                        safeDavEntry(dir, href)?.let { target -> Entry(Uri.decode(href.trimEnd('/').substringAfterLast('/')), target, size) }
                     }.filter { it.name.endsWith(".${Archive.EXT}") }.sortedByDescending { it.name }
                 }
             }
@@ -120,7 +132,7 @@ object Remote {
 
     suspend fun download(ctx: Context, e: Entry): ByteArray = withContext(Dispatchers.IO) {
         if (kind() == Kind.FOLDER || kind() == Kind.GOOGLE_DRIVE) ctx.contentResolver.openInputStream(Uri.parse(e.uri))!!.use { it.readBytes() }
-        else http.newCall(Request.Builder().url(e.uri).header("Authorization", auth(ctx)).build()).execute().use { r ->
+        else http.newCall(Request.Builder().url(checkedEntry(e)).header("Authorization", auth(ctx)).build()).execute().use { r ->
             if (!r.isSuccessful) error("téléchargement refusé (${r.code})")
             r.body.bytes()
         }
@@ -129,7 +141,7 @@ object Remote {
     private fun delete(ctx: Context, e: Entry) {
         if (kind() == Kind.GOOGLE_DRIVE) return
         if (kind() == Kind.FOLDER) DocumentsContract.deleteDocument(ctx.contentResolver, Uri.parse(e.uri))
-        else http.newCall(Request.Builder().url(e.uri).header("Authorization", auth(ctx)).delete().build()).execute().close()
+        else http.newCall(Request.Builder().url(checkedEntry(e)).header("Authorization", auth(ctx)).delete().build()).execute().close()
     }
 
     /** Liens (href) et tailles d'une réponse PROPFIND ; le dossier lui-même (sans taille) est ignoré. */
