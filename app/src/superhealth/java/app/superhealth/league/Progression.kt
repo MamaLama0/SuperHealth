@@ -10,7 +10,7 @@ object Progression {
     const val MODEL = 2
     enum class Track(val label: String, val xp: Int, val weekly: Boolean = false) {
         FOOD("Nutrition", 20), STRENGTH("Musculation", 40, true), RUN("Course", 30, true),
-        STEPS("Pas", 10), SLEEP("Sommeil", 10), MIND("Esprit et mobilité", 20)
+        STEPS("Pas", 10), SLEEP("Sommeil", 10), MIND("Esprit et mobilité", 20), HIKE("Randonnée", 30, true)
     }
     @Serializable data class Streak(val track: String, val current: Int, val best: Int, val weekly: Boolean, val target: Int,
         val progress: Int = 0, val capped: Boolean = false, val percent: Int? = null)

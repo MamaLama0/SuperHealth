@@ -24,6 +24,7 @@ Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](htt
 - **Santé** : montre (pas, cœur, sommeil, VFC…), scores de sommeil, récupération et effort, courses avec tracé.
   Sur Android, une Garmin se connecte sans Garmin Connect (météo et GPS rapide inclus).
 - **IA offerte** sans clé, ou la vôtre.
+- **Randonnée** (plugin) : recherche de parcours dans le monde, favoris, import/export GPX, cartes hors ligne et suivi GPS avec pause/reprise. [Guide](docs/HIKING.md).
 - **Groupe** : classement avec podium, amis par code ou QR, progression, séries, quêtes et badges. Fil à gauche du dashboard (glisser vers la droite), publications de photos, vidéos, séances et courses entre amis ; désactivable dans Réglages → Groupe.
 - **Tableau de bord** personnalisable et **21 widgets Android**, dont 6 sociaux. Ajout depuis Réglages → Accueil → Widgets Android, ou depuis le menu de votre écran d’accueil.
 - **Sauvegardes chiffrées**, français et anglais.
@@ -36,7 +37,7 @@ Envoyez votre code depuis **Amis → Ajouter un ami** : quand la personne confir
 
 ## Vie privée
 
-Aucun compte requis. Les journaux restent sur le téléphone. Le partage entre amis est facultatif : le relais transporte des cartes et médias chiffrés. Les photos, vidéos et résumés de séance se publient uniquement quand vous le décidez. Les cartes d’activité ne contiennent pas de tracé GPS. La photo de profil peut être partagée sous forme de vignette chiffrée ; ce partage se désactive dans les préférences sociales. L’IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
+Aucun compte requis. Les journaux restent sur le téléphone. Le partage entre amis est facultatif : le relais transporte des cartes et médias chiffrés. Les photos, vidéos et résumés de séance se publient uniquement quand vous le décidez. Les publications d’activité proposent un choix pour inclure le tracé GPS ; ce choix est désactivé par défaut pour les randonnées. La photo de profil peut être partagée sous forme de vignette chiffrée ; ce partage se désactive dans les préférences sociales. L’IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
 
 ## iOS en détail
 
@@ -52,6 +53,6 @@ Tout en bas des réglages, **Donner mon avis** permet de transmettre une note, u
 - [Guide de contribution](CONTRIBUTING.md) : branches, compilation, tests et pull requests.
 - [Index de la documentation](docs/README.md) : Android, iOS, SideStore, serveur et modules.
 - [Issues](https://github.com/MamaLama0/SuperHealth/issues) et [solutions étudiées](docs/ISSUES.md).
-- [Notes de la version 3.0.6](docs/UPDATE-3.0.6.md).
+- [Notes de la version 3.1.1](docs/UPDATE-3.1.1.md).
 
 SuperHealth Android s’appuie sur [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge). Son [README d’origine](README.gadgetbridge.md) et ses [contributeurs](CONTRIBUTORS.rst) sont conservés pour l’attribution et la documentation des appareils. Les bugs propres à SuperHealth se signalent dans ce dépôt.

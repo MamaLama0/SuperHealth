@@ -29,7 +29,7 @@ object Relay {
     fun readKey(ctx: Context) = secret(ctx, "league_aes_read_key", RelayCrypto::newKey)
     private fun allowedTransport(url: okhttp3.HttpUrl) = url.isHttps ||
         ((nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.grouptest" ||
-            (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG && nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.qa")) &&
+            (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG && nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID in setOf("app.superhealth.qa", "app.superhealth.hikingtest"))) &&
             url.scheme == "http" && url.host == "127.0.0.1")
     fun validBase(raw: String): Boolean = raw.toHttpUrlOrNull()?.let {
         allowedTransport(it) && it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null && it.encodedPath == "/"
@@ -140,7 +140,7 @@ object Relay {
                 }
             } }.awaitAll()
         }
-        try { GroupHistory.refresh(ctx) }
+        try { GroupHistory.refresh(ctx); myEndpoint(ctx)?.let { GroupHistory.publish(ctx, it) } }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { errors += "Historique du Groupe indisponible. Réessayez." }
         League.configure(ctx) { it.copy(lastSync = System.currentTimeMillis(), lastSuccessfulSync = if (errors.isEmpty()) System.currentTimeMillis() else it.lastSuccessfulSync,

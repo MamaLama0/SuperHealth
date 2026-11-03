@@ -35,6 +35,7 @@ internal fun questGoal(q: WeeklyQuests.Quest): String = trf(when(q.metric) {
     WeeklyQuests.Metric.STRENGTH -> if (q.target == 1) "%1\$s séance cette semaine" else "%1\$s séances cette semaine"
     WeeklyQuests.Metric.STRENGTH_REVIEW -> if (q.target == 1) "%1\$s séance avec un effort ressenti noté" else "%1\$s séances avec un effort ressenti noté"
     WeeklyQuests.Metric.MIND -> if (q.target == 1) "%1\$s jour avec 10 min de méditation ou mobilité" else "%1\$s jours avec 10 min de méditation ou mobilité"
+    WeeklyQuests.Metric.HIKE -> if (q.target == 1) "%1\$s randonnée validée cette semaine" else "%1\$s randonnées validées cette semaine"
     WeeklyQuests.Metric.RUN -> if (q.target == 1) "%1\$s jour avec une sortie course" else "%1\$s jours avec une sortie course"
     WeeklyQuests.Metric.FOOD -> if (q.target == 1) "%1\$s jour de journal alimentaire" else "%1\$s jours de journal alimentaire"
     WeeklyQuests.Metric.ACTIVE -> if (q.target == 1) "%1\$s jour avec un suivi" else "%1\$s jours avec un suivi"
@@ -68,6 +69,7 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                     WeeklyQuests.Focus.NUTRITION -> sh.has(Feature.NUTRITION)
                     WeeklyQuests.Focus.STRENGTH -> sh.has(Feature.TRAINING)
                     WeeklyQuests.Focus.RUN -> sh.has(Feature.HEALTH)
+                    WeeklyQuests.Focus.HIKING -> modules.any { it.kind==Modules.HIKING && it.enabled }
                     WeeklyQuests.Focus.DAILY -> sh.has(Feature.HEALTH) || modules.any { it.enabled && it.kind in setOf(Modules.STRETCH, Modules.MEDITATION) }
                 }
                 MfCard(onClick = { focus = if (f in focus) focus - f else focus + f }) {
@@ -75,7 +77,7 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                         Checkbox(f in focus, { focus = if (f in focus) focus - f else focus + f })
                         Column(Modifier.weight(1f).padding(start = 8.dp)) {
                             Text(tr(f.label), style = MaterialTheme.typography.titleMedium)
-                            Text(tr(when (f) { WeeklyQuests.Focus.NUTRITION -> "Journal et régularité"; WeeklyQuests.Focus.STRENGTH -> "Séances et progression"; WeeklyQuests.Focus.RUN -> "Sorties et régularité"; WeeklyQuests.Focus.DAILY -> "Marche, méditation et mobilité" }), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                            Text(tr(when (f) { WeeklyQuests.Focus.NUTRITION -> "Journal et régularité"; WeeklyQuests.Focus.STRENGTH -> "Séances et progression"; WeeklyQuests.Focus.RUN -> "Sorties et régularité"; WeeklyQuests.Focus.HIKING -> "Sentiers, sorties et découvertes"; WeeklyQuests.Focus.DAILY -> "Marche, méditation et mobilité" }), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                             if (!available) Text(tr("Suivi à configurer pour valider les quêtes"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent)
                         }
                     }

@@ -40,7 +40,8 @@ object Modules {
     const val STRETCH = "stretch"
     const val MEDITATION = "meditation"
     const val LEAGUE = "league"
-    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION)
+    const val HIKING = "hiking"
+    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION, HIKING)
 
     @Serializable
     data class Module(
@@ -117,6 +118,12 @@ object Modules {
             runCatching { json.decodeFromString(Index.serializer(), ctx.assets.open("plugins/index.json").bufferedReader().use { it.readText() }) }
                 .getOrDefault(Index()).modules.filter { it.kind in engines }.map { Entry(it, OFFICIAL, true, URI(OFFICIAL).resolve(it.url).toString()) }
         }.filter { it.module.kind in engines && it.source in sources().map { source -> source.first } }
+        val bundled = runCatching { ctx.assets.open("plugins/index.json").bufferedReader().use {
+            json.decodeFromString(Index.serializer(), it.readText())
+        } }.getOrDefault(Index()).modules.filter { it.kind in engines }.map {
+            Entry(it, OFFICIAL, true, URI(OFFICIAL).resolve(it.url).toString())
+        }
+        catalog.value = (catalog.value + bundled).distinctBy { it.module.id }
         // module dont le moteur a quitté l'app (l'Aventure, retirée en 1.3) : effacé
         val (kept, gone) = saved.partition { it.kind in engines }
         gone.forEach { File(root, it.id).deleteRecursively() }
@@ -165,7 +172,7 @@ object Modules {
             }.onFailure { errors[src] = it.message ?: "?"; out += previous.filter { it.source == src } }
         }
         // un module vérifié l'emporte sur une copie du même id venue d'une source non vérifiée
-        catalog.value = out.groupBy { it.module.id }.map { (_, l) -> l.firstOrNull { it.verified } ?: l.first() }
+        catalog.value = (out + previous.filter { it.module.kind == HIKING && it.verified && it.source == OFFICIAL }).groupBy { it.module.id }.map { (_, l) -> l.firstOrNull { it.verified } ?: l.first() }
         File(root, "catalog.json").writeText(json.encodeToString(ListSerializer(Entry.serializer()), catalog.value))
         sourceErrors.value = errors
         if (errors.size < sources().size) lastRefresh.value = System.currentTimeMillis()
@@ -205,6 +212,18 @@ object Modules {
             if (!acceptable(e.archive)) error(tr("adresse refusée (HTTPS requis)"))
             val tmp = File(ctx.cacheDir, "module-${m.id}.zip")
             val digest = MessageDigest.getInstance("SHA-256")
+            val bundled = if (e.verified && e.source == OFFICIAL) runCatching { ctx.assets.open("plugins/${m.id}-${m.version}.zip") }.getOrNull() else null
+            if (bundled != null) {
+                var done = 0L
+                bundled.use { input -> tmp.outputStream().use { output ->
+                    val buffer = ByteArray(32768)
+                    while (true) {
+                        val n = input.read(buffer); if (n < 0) break
+                        done += n; check(done <= MAX_ARCHIVE) { tr("archive trop volumineuse") }
+                        output.write(buffer, 0, n); digest.update(buffer, 0, n)
+                    }
+                } }
+            } else {
             http.newCall(Request.Builder().url(e.archive).build()).execute().use { r ->
                 if (!r.isSuccessful) error(trf("téléchargement refusé (%1\$s)", r.code))
                 val total = r.body.contentLength().takeIf { it > 0 } ?: m.size
@@ -221,6 +240,7 @@ object Modules {
                         }
                     }
                 }
+            }
             }
             val sha = digest.digest().joinToString("") { "%02x".format(it) }
             if (!sha.equals(m.sha256.trim(), ignoreCase = true)) { tmp.delete(); error(tr("archive altérée (empreinte différente)")) }
@@ -278,7 +298,7 @@ object Modules {
 
     /** Plugin d'activité téléchargé ou réactivé : sa section rejoint l'onglet Activités. */
     private fun addSection(kind: String) {
-        val section = when (kind) { MEDITATION -> "MEDITATION"; STRETCH -> "STRETCH"; else -> return }
+        val section = when (kind) { MEDITATION -> "MEDITATION"; STRETCH -> "STRETCH"; HIKING -> "HIKING"; else -> return }
         SuperPrefs.update { s -> if (s.activitySections.isEmpty()) s else s.copy(activitySections = (s.activitySections + section).distinct()) }
     }
 
@@ -312,6 +332,7 @@ object Modules {
             }
             MEALS -> app.superhealth.meals.MealPlanner.invalidate()
             MEDS -> { app.superhealth.meds.Meds.invalidate(); app.superhealth.meds.Meds.schedule(ctx) }
+            HIKING -> app.superhealth.hiking.Hiking.invalidate()
             STRETCH -> { app.superhealth.stretch.Stretch.invalidate(); if (on) addCard(app.superhealth.DashCard.STRETCH) }
             MEDITATION -> { app.superhealth.meditation.Meditation.invalidate(); if (on) addCard(app.superhealth.DashCard.MEDITATION) }
             LEAGUE -> if (on) addCard(app.superhealth.DashCard.LEAGUE)

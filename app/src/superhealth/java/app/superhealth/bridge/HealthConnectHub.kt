@@ -76,6 +76,7 @@ object HealthConnectHub {
         read(RespiratoryRateRecord::class), read(DistanceRecord::class), read(ActiveCaloriesBurnedRecord::class), read(Vo2MaxRecord::class),
         write(WeightRecord::class), write(BodyFatRecord::class), write(NutritionRecord::class),
         write(ExerciseSessionRecord::class), write(HydrationRecord::class),
+        write(DistanceRecord::class), write(ActiveCaloriesBurnedRecord::class),
     )
 
     /** Règles (suivi du cycle) : demandées à part, depuis l'écran Cycle, pour ne pas les demander à tout le monde. */
@@ -212,6 +213,13 @@ object HealthConnectHub {
                 if (records.isNotEmpty()) client.insertRecords(records)
                 written += records.size
             }
+            if (write(ExerciseSessionRecord::class) in granted) {
+                val outdoor = HcOutdoorSync.imported(RunImport.runs.value) + HcOutdoorSync.hikes(app.superhealth.hiking.Hiking.library.value)
+                val records = HcOutdoorSync.records(outdoor, from.atStartOfDay(zone).toInstant().toEpochMilli(), version,
+                    write(DistanceRecord::class) in granted, write(ActiveCaloriesBurnedRecord::class) in granted)
+                records.chunked(200).forEach { client.insertRecords(it) }
+                written += records.size
+            }
             if (write(HydrationRecord::class) in granted) {
                 val logs = ManualLogStore.get(ctx).query(Metric.HYDRATION, from.atStartOfDay(zone).toInstant().toEpochMilli(), System.currentTimeMillis() + 1)
                 val records = logs.map { l ->
@@ -230,11 +238,11 @@ object HealthConnectHub {
 
     /** Tous les enregistrements de [type] sur [range] (toutes les pages : une seule page en compte 1000 au plus). */
     private suspend fun <T : androidx.health.connect.client.records.Record> readAll(client: HealthConnectClient, type: KClass<T>,
-                                                                                    range: TimeRangeFilter): List<T> {
+                                                                                    range: TimeRangeFilter, origins: Set<androidx.health.connect.client.records.metadata.DataOrigin> = emptySet()): List<T> {
         val out = ArrayList<T>()
         var token: String? = null
         do {
-            val res = client.readRecords(ReadRecordsRequest(type, range, pageSize = 5000, pageToken = token))
+            val res = client.readRecords(ReadRecordsRequest(type, range, dataOriginFilter = origins, pageSize = 5000, pageToken = token))
             out += res.records
             token = res.pageToken
         } while (token != null)
@@ -303,10 +311,10 @@ object HealthConnectHub {
             val bpm = hrSamples?.filter { it.first in r.startTime.toEpochMilli()..r.endTime.toEpochMilli() && it.second in 30..230 }?.map { it.second }
             // l'agrégat peut échouer (filtre d'origine refusé) : on additionne alors les mesures elles-mêmes
             val dist = agg?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters ?: runCatching {
-                client.readRecords(androidx.health.connect.client.request.ReadRecordsRequest(DistanceRecord::class, sr, origin)).records.sumOf { it.distance.inMeters }
+                readAll(client, DistanceRecord::class, sr, origin).sumOf { it.distance.inMeters }
             }.getOrNull()
             val burned = agg?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories ?: runCatching {
-                client.readRecords(androidx.health.connect.client.request.ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, sr, origin)).records.sumOf { it.energy.inKilocalories }
+                readAll(client, ActiveCaloriesBurnedRecord::class, sr, origin).sumOf { it.energy.inKilocalories }
             }.getOrNull()
             HcSession(r.metadata.id, r.exerciseType, r.title, r.startTime.toEpochMilli(), r.endTime.toEpochMilli(), r.metadata.dataOrigin.packageName,
                 distanceM = dist?.takeIf { it > 0 },

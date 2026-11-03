@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Hiking
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.SelfImprovement
@@ -103,18 +104,21 @@ enum class ActivitySection(val label: String, val summary: String, val plugin: S
     STRENGTH("Musculation", "Programmes et séances guidées", feature = Feature.TRAINING),
     RUN("Course", "Sorties de la montre, allure, performances", feature = Feature.HEALTH),
     MEDITATION("Méditation", "Minuteur, séances guidées, respiration", Modules.MEDITATION),
-    STRETCH("Étirements", "Routines en vidéo selon vos zones", Modules.STRETCH);
+    STRETCH("Étirements", "Routines en vidéo selon vos zones", Modules.STRETCH),
+    HIKING("Randonnée", "Parcours du monde entier, cartes hors ligne et suivi GPS", Modules.HIKING);
 
     val icon: ImageVector get() = when (this) {
         STRENGTH -> Icons.Rounded.FitnessCenter
         RUN -> Icons.AutoMirrored.Rounded.DirectionsRun
         MEDITATION -> Icons.Rounded.SelfImprovement
+        HIKING -> Icons.Rounded.Hiking
         STRETCH -> Icons.Rounded.AccessibilityNew
     }
     val hue: Color get() = when (this) {
         STRENGTH -> WorkoutBlue
         RUN -> HealthHues.Activity
         MEDITATION -> app.superhealth.ui.meditation.MeditationHue
+        HIKING -> app.superhealth.ui.hiking.HikingHue
         STRETCH -> app.superhealth.ui.stretch.StretchHue
     }
 }
@@ -286,6 +290,7 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
                 RecentActivities(vm, nav, false, true)
             }
             ActivitySection.MEDITATION -> Frame(tr("Méditation"), nav, null) { MeditationSection(nav) }
+            ActivitySection.HIKING -> Frame(tr("Randonnée"), nav, null) { app.superhealth.ui.hiking.HikingSection(nav) }
             ActivitySection.STRETCH -> Frame(tr("Étirements"), nav, null) { StretchSection(nav) }
             null -> Frame(tr("Activités"), nav, null) {
                 MfCard(onClick = { ask = true }) { Text(tr("Choisissez vos activités"), style = MaterialTheme.typography.titleMedium) }

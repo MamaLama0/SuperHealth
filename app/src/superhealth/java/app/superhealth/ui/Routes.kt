@@ -14,7 +14,7 @@ object Routes {
         // notification de mise à jour
         "update", "coach", "modules",
         // notification du rappel médication
-        "meds",
+        "meds", "hiking/live",
         // 1.8 : rappels et raccourcis du bien-être
         "journal", "mood", "cycle", "breathe", "form", "checkin", "feel",
         // 2.1 : écran Constantes (widget)

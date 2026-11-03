@@ -17,7 +17,7 @@ import java.io.File
 class GroupTestActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (packageName != "app.superhealth.grouptest") { finish(); return }
+        if (packageName !in setOf("app.superhealth.grouptest", "app.superhealth.hikingtest")) { finish(); return }
         val operation = intent.getStringExtra("operation") ?: "status"
         val directory = File(filesDir, "group-test").apply { mkdirs() }
         File(directory, "result.json").delete()
@@ -25,6 +25,100 @@ class GroupTestActivity : Activity() {
             try {
                 val db = WorkoutApp.db.first { it != null }!!
                 when (operation) {
+                    "hc-permissions" -> {
+                        val permissions = setOf(
+                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.ExerciseSessionRecord::class),
+                            androidx.health.connect.client.permission.HealthPermission.getWritePermission(androidx.health.connect.client.records.ExerciseSessionRecord::class),
+                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.DistanceRecord::class),
+                            androidx.health.connect.client.permission.HealthPermission.getWritePermission(androidx.health.connect.client.records.DistanceRecord::class))
+                        withContext(Dispatchers.Main) {
+                            if (android.os.Build.VERSION.SDK_INT >= 34) requestPermissions(permissions.toTypedArray(), 871)
+                            else startActivityForResult(androidx.health.connect.client.PermissionController.createRequestPermissionResultContract().createIntent(this@GroupTestActivity,permissions), 871)
+                        }
+                    }
+                    "hc-probe" -> {
+                        val client = androidx.health.connect.client.HealthConnectClient.getOrCreate(this@GroupTestActivity)
+                        val now = System.currentTimeMillis()
+                        val outdoor = app.superhealth.bridge.HcOutdoorSync.Outdoor("qa-roundtrip",app.superhealth.bridge.Bridge.Kind.RUN,"QA Course à pied — temporaire",now-900000,now-300000,2000.0)
+                        val records = app.superhealth.bridge.HcOutdoorSync.records(listOf(outdoor),0,now,true,false)
+                        try {
+                            client.insertRecords(records)
+                            client.insertRecords(records) // Same IDs must update, not duplicate.
+                            val range = androidx.health.connect.client.time.TimeRangeFilter.between(java.time.Instant.ofEpochMilli(outdoor.start),java.time.Instant.ofEpochMilli(outdoor.end+1))
+                            val origin = setOf(androidx.health.connect.client.records.metadata.DataOrigin(packageName))
+                            val sessions = client.readRecords(androidx.health.connect.client.request.ReadRecordsRequest(androidx.health.connect.client.records.ExerciseSessionRecord::class,range,origin)).records
+                                .filter { it.metadata.clientRecordId == "outdoor-session-qa-roundtrip" }
+                            check(sessions.size==1 && sessions.single().exerciseType==androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_RUNNING)
+                            val distances = client.readRecords(androidx.health.connect.client.request.ReadRecordsRequest(androidx.health.connect.client.records.DistanceRecord::class,range,origin)).records
+                                .filter { it.metadata.clientRecordId == "outdoor-distance-qa-roundtrip" }
+                            check(distances.size==1 && distances.single().distance.inMeters==2000.0)
+                            File(directory,"hc-roundtrip.txt").writeText("running=1 distance=2000m duplicates=0")
+                        } finally {
+                            client.deleteRecords(androidx.health.connect.client.records.ExerciseSessionRecord::class,emptyList(),listOf("outdoor-session-qa-roundtrip"))
+                            client.deleteRecords(androidx.health.connect.client.records.DistanceRecord::class,emptyList(),listOf("outdoor-distance-qa-roundtrip"))
+                        }
+                    }
+                    "hiking" -> {
+                        check(app.superhealth.modules.Modules.ensure(this@GroupTestActivity, app.superhealth.modules.Modules.HIKING))
+                        check(app.superhealth.hiking.Hiking.catalog().size >= 8)
+                        SuperPrefs.update { it.copy(onboarded = true, activityAsked = true, activitySections = listOf("HIKING"),
+                            activityCurrent = "HIKING", watchModule = false, socialFeedIntroSeen = true) }
+                    }
+                    "hiking-reward" -> {
+                        val original=app.superhealth.hiking.Hiking.catalog().first()
+                        val now=System.currentTimeMillis();val start=now-3600000
+                        val route=original.copy(id="qa-hike",name="QA randonnée synthétique",points=original.points.mapIndexed { i,p -> p.copy(time=start+i*1800000L/(original.points.size-1)) })
+                        app.superhealth.hiking.Hiking.save(this@GroupTestActivity,route)
+                        val previous=app.superhealth.hiking.Hiking.library.value
+                        val log=app.superhealth.hiking.Hiking.Completed(route.id,start,app.superhealth.hiking.HikeGeometry.length(route.points),1800,end=start+1800000,name=route.name)
+                        val next=previous.copy(completed=previous.completed.filterNot{it.route==route.id}+log)
+                        File(filesDir,"hiking/library.json").writeText(Json.encodeToString(app.superhealth.hiking.Hiking.Library.serializer(),next))
+                        app.superhealth.hiking.Hiking.load(this@GroupTestActivity)
+                        League.configure(this@GroupTestActivity){it.copy(questFocus=setOf(WeeklyQuests.Focus.HIKING))}
+                        val progress=ProgressRepository.compute(this@GroupTestActivity)
+                        check((progress.summary.totals["hikes"] ?: 0)>=1)
+                        check("hikes_1" in League.state.value.earnedBadges)
+                        val week=League.state.value.questWeeks.first{it.start==app.superhealth.league.Progression.week(java.time.LocalDate.now().toEpochDay())}
+                        check(week.quests.any{it.metric==WeeklyQuests.Metric.HIKE && it.complete})
+                        League.claimQuest(this@GroupTestActivity,WeeklyQuests.Metric.HIKE)
+                        val shared=SharedActivity.hikingDraft(route,log).shared(route=false,details=true)
+                        check(shared.activity?.route==null)
+                        check(SocialPosts.publish(this@GroupTestActivity,"Randonnée synthétique de test",shared,null).sent)
+                        League.configure(this@GroupTestActivity){it.copy(profileTitle="hikes_1",profileBadges=listOf("hikes_1"))}
+                        Relay.sync(this@GroupTestActivity)
+                        File(directory,"hiking-rewards.txt").writeText("badge=hikes_1 quest=complete gpsShared=false")
+                    }
+                    "hiking-search" -> {
+                        val results = app.superhealth.hiking.Hiking.search(intent.getStringExtra("place") ?: "Chamonix")
+                        check(results.isNotEmpty())
+                        File(directory, "search-count.txt").writeText(results.size.toString())
+                    }
+                    "hiking-start" -> {
+                        val route = app.superhealth.hiking.Hiking.catalog().first()
+                        app.superhealth.hiking.Hiking.setSession(this@GroupTestActivity, app.superhealth.hiking.Hiking.Session(route = route, started = System.currentTimeMillis()))
+                        withContext(Dispatchers.Main) { app.superhealth.hiking.HikeTrackingService.start(this@GroupTestActivity) }
+                    }
+                    "hiking-stop" -> {
+                        val current = app.superhealth.hiking.Hiking.session.value
+                        File(directory, "gps-count.txt").writeText((current?.points?.size ?: 0).toString())
+                        current?.let { app.superhealth.hiking.Hiking.setSession(this@GroupTestActivity,
+                            it.copy(seconds = app.superhealth.hiking.Hiking.elapsed(it), paused = true)) }
+                        app.superhealth.hiking.HikeTrackingService.stop(this@GroupTestActivity)
+                        app.superhealth.hiking.Hiking.finish(this@GroupTestActivity)
+                    }
+                    "post-text" -> { check(SocialPosts.publish(this@GroupTestActivity, "Publication randonnée de test", null, null).sent) }
+                    "comment" -> {
+                        Relay.sync(this@GroupTestActivity)
+                        val (post, friend) = GroupHistory.posts(this@GroupTestActivity).first { it.second != null }
+                        check(GroupHistory.reply(this@GroupTestActivity, friend!!.id, post, intent.getStringExtra("text") ?: "Commentaire de test"))
+                    }
+                    "comment-reply" -> {
+                        val (post, friend) = GroupHistory.posts(this@GroupTestActivity).first { it.second != null }
+                        val comments = GroupHistory.replies(friend!!.id,post.id)
+                        val parent = comments.first { it.reply?.text == "Commentaire du randonneur" }
+                        check(GroupHistory.reply(this@GroupTestActivity,friend.id,post,"Réponse au randonneur",parent))
+                    }
+                    "inbox" -> app.superhealth.league.SocialInbox.add(this@GroupTestActivity,"test-comment","Nouveau commentaire","Un randonneur a répondu à votre commentaire.","feed")
                     "icon" -> app.superhealth.ui.LauncherIcon.apply(this@GroupTestActivity,
                         app.superhealth.nutrition.domain.AccentColor.valueOf(intent.getStringExtra("accent") ?: "BLUE"))
                     "notification" -> {
@@ -152,16 +246,30 @@ class GroupTestActivity : Activity() {
                     put("reactionEvents", GroupHistory.state.value.events.count { it.reaction != null });
                     put("public", League.publicKey()); put("profiles", League.state.value.friends.count { it.avatar != null && it.profileBadges.isNotEmpty() })
                     put("syncError", League.state.value.syncError)
+                    put("hikingRoutes", app.superhealth.hiking.Hiking.catalog().size)
+                    put("visibleComments", posts.sumOf { (post, friend) -> GroupHistory.replies(friend?.id ?: League.myId(),post.id).size })
+                    put("forwarded", GroupHistory.state.value.events.count { it.forward != null })
+                    put("unread", SocialInbox.items.value.count { !it.read })
+                    put("tracking", app.superhealth.hiking.Hiking.tracking.value)
                 }.toString())
             } catch (e: Exception) {
                 File(directory, "result.json").writeText(buildJsonObject { put("ok", false); put("operation", operation);
                     put("error", e.javaClass.simpleName); put("detail", e.message.orEmpty().replace(Regex("https?://[^ ]+"), "[server]")) }.toString())
             } finally {
                 withContext(Dispatchers.Main) {
-                    if (intent.getBooleanExtra("open", false)) startActivity(Intent(this@GroupTestActivity, app.superhealth.MainActivity::class.java).putExtra("route", "feed"))
-                    finish()
+                    if (intent.getBooleanExtra("open", false)) startActivity(Intent(this@GroupTestActivity, app.superhealth.MainActivity::class.java).putExtra("route", intent.getStringExtra("route") ?: "feed"))
+                    if (operation != "hc-permissions") finish()
                 }
             }
         }
+    }
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if(requestCode==871) finish()
+    }
+    @Deprecated("Test-only legacy permission result")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode,resultCode,data)
+        if(requestCode==871) finish()
     }
 }

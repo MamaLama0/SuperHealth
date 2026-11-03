@@ -76,8 +76,8 @@ fun SocialProfileScreen(nav: NavHostController) {
 }
 
 @Composable
-fun ProfileBadgesScreen(nav: NavHostController) {
-    DetailScaffold(tr("Titres et badges"), { nav.popBackStack() }, contentSpacing = 12.dp) { AchievementProfileEditor() }
+fun ProfileBadgesScreen(nav: NavHostController, initialCategory: String = "xp") {
+    DetailScaffold(tr("Titres et badges"), { nav.popBackStack() }, contentSpacing = 12.dp) { AchievementProfileEditor(initialCategory) }
 }
 
 @Composable

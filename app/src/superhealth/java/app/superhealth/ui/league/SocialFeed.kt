@@ -106,6 +106,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
                     Text(tr("Groupe"), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                     Text(tr("Vos efforts, ensemble"), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodySmall)
                 }
+                NotificationBell(nav)
                 IconButton({ refresh(userInitiated = true) }, enabled = !busy) { Icon(Icons.Rounded.Refresh, tr("Actualiser")) }
                 IconButton({ nav.go("friends/add") }) { Icon(Icons.Rounded.PersonAdd, tr("Ajouter un ami")) }
                 IconButton({ nav.go("league/settings") }) { Icon(Icons.Rounded.Settings, tr("Paramètres du Groupe")) }
@@ -355,7 +356,7 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
     val source = remember(sourceJson) { sourceJson.takeIf { it.isNotBlank() }?.let { kotlinx.serialization.json.Json.decodeFromString(SocialPosts.Draft.serializer(), it) } }
     fun selectSource(draft: SocialPosts.Draft?) { sourceJson = draft?.let { kotlinx.serialization.json.Json.encodeToString(SocialPosts.Draft.serializer(), it) }.orEmpty() }
     var uri by rememberSaveable { mutableStateOf(savedDraft.uri) }
-    var shareRoute by rememberSaveable { mutableStateOf(savedDraft.shareRoute) }
+    var shareRoute by rememberSaveable { mutableStateOf(if (SocialPosts.draft.value?.activity?.sport == "HIKE") false else savedDraft.shareRoute) }
     var shareDetails by rememberSaveable { mutableStateOf(savedDraft.shareDetails) }
     var sourceLoading by remember { mutableStateOf(false) }
     val sharedSource = source?.shared(shareRoute, shareDetails)

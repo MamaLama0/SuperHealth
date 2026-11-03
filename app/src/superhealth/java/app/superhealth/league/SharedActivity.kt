@@ -75,6 +75,12 @@ object SharedActivity {
             avgHr = a.hc?.avgHr, maxHr = a.hc?.maxHr)
         SocialPosts.activityDraft(a).copy(activity = snapshot.takeIf { valid(it, System.currentTimeMillis()) })
     }
+    fun hikingDraft(route: app.superhealth.hiking.HikeRoute, log: app.superhealth.hiking.Hiking.Completed): SocialPosts.Draft {
+        val snapshot=Outdoor("HIKE",log.time,log.seconds.toDouble().coerceIn(1.0,604800.0),number(log.meters,2e7),
+            ascent=number(log.ascent ?: app.superhealth.hiking.HikeGeometry.ascent(route.points),100000.0),
+            route=Route.encode(route.points.map{it.lat to it.lon}))
+        return SocialPosts.Draft(route.name.take(120),"${app.superhealth.nutrition.ui.num(log.meters/1000,1)} km · ${log.seconds/60} min","WORKOUT",activity=snapshot)
+    }
     /** Older posts retain their exact recorded figures, but cannot acquire a missing GPS trace. */
     fun legacyActivity(p: SocialPosts.Post, now: Long = System.currentTimeMillis()): Outdoor? {
         if (p.activity != null || p.workout != null || p.kind !in setOf("RUN", "WORKOUT")) return null

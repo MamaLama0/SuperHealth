@@ -18,6 +18,7 @@ fun trackingGoal(track: Progression.Track): String = tr(when (track) {
     Progression.Track.FOOD -> "Objectif calorique du jour"
     Progression.Track.STRENGTH -> "Séances prévues cette semaine"
     Progression.Track.RUN -> "Jours de course cette semaine"
+    Progression.Track.HIKE -> "Jours de randonnée cette semaine"
     Progression.Track.STEPS -> "Objectif de pas du jour"
     Progression.Track.SLEEP -> "Objectif de durée de sommeil"
     Progression.Track.MIND -> "10 minutes d'esprit et mobilité"

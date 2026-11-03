@@ -7,7 +7,7 @@ object WeeklyQuests {
     private const val PRIMARY_REWARD = 80
     private const val SECONDARY_REWARD = 30
     const val MAX_WEEKLY_BONUS = PRIMARY_REWARD + SECONDARY_REWARD
-    @Serializable enum class Focus(val label: String) { NUTRITION("Nutrition"), STRENGTH("Musculation"), RUN("Course"), DAILY("Au quotidien") }
+    @Serializable enum class Focus(val label: String) { NUTRITION("Nutrition"), STRENGTH("Musculation"), RUN("Course"), DAILY("Au quotidien"), HIKING("Randonnée") }
     @Serializable enum class Reason(val text: String) {
         START("Un premier objectif concret pour découvrir votre rythme."),
         FOOD_GAP("Votre journal est irrégulier ces derniers jours. Un petit objectif pour reprendre le fil."),
@@ -18,6 +18,7 @@ object WeeklyQuests {
         STEPS_GAP("Votre objectif de pas est rarement atteint récemment. Essayez sur quelques jours, à votre rythme."),
         MIND_GAP("Un objectif de méditation ou de mobilité basé sur vos séances récentes."),
         MAINTAIN("Vous avez déjà un bon rythme dans ce domaine. Cette quête aide à le conserver."),
+        HIKING("Une sortie sur les sentiers, adaptée à votre rythme."),
         VARIETY("Une petite quête dans un autre domaine, pour varier votre semaine.")
     }
     @Serializable enum class Metric(val title: String, val route: String, val track: Progression.Track? = null) {
@@ -28,15 +29,16 @@ object WeeklyQuests {
         FOOD("Garder le fil du journal", "log", Progression.Track.FOOD),
         STEPS("Bouger à votre rythme", "h/metric/STEPS", Progression.Track.STEPS),
         SLEEP("Faire une place au repos", "h/metric/SLEEP", Progression.Track.SLEEP),
-        MIND("Méditation et mobilité", "activities", Progression.Track.MIND);
-        val focus: Focus get() = when (this) { FOOD -> Focus.NUTRITION; STRENGTH, STRENGTH_REVIEW -> Focus.STRENGTH; RUN -> Focus.RUN; else -> Focus.DAILY }
+        MIND("Méditation et mobilité", "activities", Progression.Track.MIND),
+        HIKE("Retrouver les sentiers", "activities", Progression.Track.HIKE);
+        val focus: Focus get() = when (this) { FOOD -> Focus.NUTRITION; STRENGTH, STRENGTH_REVIEW -> Focus.STRENGTH; RUN -> Focus.RUN; HIKE -> Focus.HIKING; else -> Focus.DAILY }
     }
     @Serializable data class Quest(val metric: Metric, val target: Int, val progress: Int = 0, val reward: Int = PRIMARY_REWARD, val claimed: Boolean = false,
         val secondary: Boolean = false, val reason: Reason = Reason.START) {
         val complete get() = progress >= target
     }
     @Serializable data class Week(val start: Long, val quests: List<Quest>, val focuses: Set<Focus> = emptySet())
-    data class Evidence(val previous14: Map<Metric, Int> = emptyMap(), val strengthGoal: Int = 2, val runGoal: Int = 2, val plateau: Boolean = false, val healthData: Boolean = true)
+    data class Evidence(val previous14: Map<Metric, Int> = emptyMap(), val strengthGoal: Int = 2, val runGoal: Int = 2, val plateau: Boolean = false, val healthData: Boolean = true, val hikingEnabled: Boolean = false)
     private data class Candidate(val metric: Metric, val weakness: Double, val reason: Reason)
 
     fun update(previous: Week?, today: Long, tracked: Set<Progression.Track>, counts: Map<Metric, Int>, focuses: Set<Focus>, evidence: Evidence,
@@ -57,6 +59,7 @@ object WeeklyQuests {
                         (metric !in setOf(Metric.STEPS, Metric.RUN) || evidence.healthData) &&
                         (metric != Metric.MIND || n(metric) > 0)) add(Candidate(metric, if (metric in setOf(Metric.STEPS, Metric.RUN) && !evidence.healthData) .2 else deficit, if (metric in setOf(Metric.STEPS, Metric.RUN) && !evidence.healthData) Reason.START else if (n(metric) == 0 && evidence.previous14.values.all { it == 0 }) Reason.START else if (deficit < .25) Reason.MAINTAIN else reason))
                 }
+                if(evidence.hikingEnabled) option(Metric.HIKE, gap(Metric.HIKE, 2), Reason.HIKING)
                 option(Metric.FOOD, gap(Metric.FOOD, 14), Reason.FOOD_GAP)
                 val strengthGap = gap(Metric.STRENGTH, evidence.strengthGoal * 2)
                 if (strengthGap >= .5) option(Metric.STRENGTH, strengthGap, Reason.STRENGTH_GAP)
@@ -77,6 +80,7 @@ object WeeklyQuests {
                 val goal = when (c.metric) {
                     Metric.STRENGTH -> minOf(evidence.strengthGoal.coerceIn(1, 7), (baseline + 1).coerceAtLeast(1))
                     Metric.STRENGTH_REVIEW -> minOf(2, evidence.strengthGoal.coerceAtLeast(1))
+                    Metric.HIKE -> (baseline + 1).coerceIn(1, 2)
                     Metric.RUN -> minOf(evidence.runGoal.coerceIn(1, 3), (baseline + 1).coerceAtLeast(1))
                     Metric.FOOD -> (baseline + 1).coerceIn(1, 7)
                     Metric.STEPS -> (baseline + 1).coerceIn(1, 7)

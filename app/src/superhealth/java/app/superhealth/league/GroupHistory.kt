@@ -26,11 +26,14 @@ object GroupHistory {
     @Serializable data class Reply(val author: String, val post: String, val text: String, val created: Long,
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val to: ReplyRef? = null)
     @Serializable data class Profile(val title: String? = null, val badges: List<String> = emptyList(), val avatar: SocialPosts.Media? = null)
+    @Serializable data class Forward(val post: String, val key: String, val signed: String)
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     @Serializable data class Event(val id: String, val key: String, val name: String, val revision: Long,
-        val post: SocialPosts.Post? = null, val reply: Reply? = null, val deleted: Boolean = false, val profile: Profile? = null, val reaction: SocialReactions.Reaction? = null)
+        val post: SocialPosts.Post? = null, val reply: Reply? = null, val deleted: Boolean = false, val profile: Profile? = null, val reaction: SocialReactions.Reaction? = null,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val forward: Forward? = null)
     @Serializable data class Removal(val endpoint: String, val media: String)
     @Serializable data class Store(val events: List<Event> = emptyList(), val pending: Set<String> = emptySet(),
-        val cursors: Map<String, String?> = emptyMap(), val notificationBaseline: Boolean = false, val removals: List<Removal> = emptyList())
+        val cursors: Map<String, String?> = emptyMap(), val notificationBaseline: Boolean = false, val removals: List<Removal> = emptyList(), val proofs: Map<String, String> = emptyMap())
     @Serializable private data class RemoteItem(val id: String, val raw: String)
     @Serializable private data class Page(val items: List<RemoteItem>, val next: String? = null)
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = false }
@@ -52,6 +55,7 @@ object GroupHistory {
         .take(8).joinToString("") { "%02x".format(it) }
     fun valid(event: Event, now: Long = System.currentTimeMillis()): Boolean = event.id.matches(Regex("[a-f0-9]{32}")) &&
         event.key.length in 32..512 && event.name.length <= 24 && event.revision in 1..(now + 300000) && when {
+            event.forward != null -> !event.deleted && event.post == null && event.reply == null && event.profile == null && event.reaction == null && forwarded(event, now) != null
             event.deleted -> event.post == null && event.reply == null && event.profile == null && event.reaction == null
             event.reaction != null -> event.post == null && event.reply == null && event.profile == null && SocialReactions.valid(event.reaction, now)
             event.profile != null -> event.reaction == null && event.post == null && event.reply == null && Achievements.validDecor(event.profile.title, event.profile.badges) && (event.profile.avatar?.let(ProfileAvatars::valid) ?: true)
@@ -61,6 +65,27 @@ object GroupHistory {
                 (event.reply.to?.let { it.author.matches(Regex("[a-f0-9]{16}")) && it.id.matches(Regex("[a-f0-9]{32}")) && it.id != event.id } ?: true)
             else -> false
         }
+    internal fun forwardId(key: String, id: String) = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(("SuperHealth comment forward v1:" + key + ":" + id).toByteArray()).take(16).joinToString("") { "%02x".format(it) }
+    /** Only a post owner may relay a comment; both the owner and the commenter sign it. No contact/health card is relayed. */
+    internal fun forwarded(wrapper: Event, now: Long = System.currentTimeMillis()): Event? = runCatching {
+        val forward = wrapper.forward ?: return null
+        require(forward.post.matches(Regex("[a-f0-9]{32}")))
+        require(forward.key.length in 32..512 && forward.signed.length <= 14000)
+        val payload = League.verifySocial(forward.signed, forward.key) ?: return null
+        val inner = json.decodeFromString(Event.serializer(), payload)
+        require(inner.forward == null && inner.key == forward.key && valid(inner, now))
+        require(inner.reply != null || inner.deleted)
+        require(wrapper.id == forwardId(inner.key, inner.id))
+        if (inner.reply != null) require(inner.reply.author == author(wrapper.key) && inner.reply.post == forward.post)
+        inner
+    }.getOrNull()
+    internal fun conversation(events: List<Event>, target: String, post: String, ownerKey: String, trusted: Set<String>): List<Event> {
+        val direct = events.filter { it.key in trusted && it.forward == null }
+        val relayed = events.filter { it.key == ownerKey && it.forward?.post == post }.mapNotNull { forwarded(it) }
+        return (direct + relayed).groupBy { it.key to it.id }.values.map { versions -> versions.maxBy { it.revision } }
+            .filter { !it.deleted && it.reply?.author == target && it.reply.post == post }.sortedBy { it.reply!!.created }
+    }
     internal fun merge(events: List<Event>, event: Event): List<Event> {
         val previous = events.firstOrNull { it.key == event.key && it.id == event.id }
         if (previous != null && previous.revision >= event.revision) return events
@@ -114,10 +139,12 @@ object GroupHistory {
         update(ctx) { it.copy(events = merge(it.events, deleted), pending = it.pending + event.id) }
         Relay.publishOnly(ctx)
     }
-    fun replies(target: String, post: String): List<Event> = state.value.events.filter {
-        !it.deleted && it.reply?.author == target && it.reply.post == post &&
-            (it.key == League.publicKey() || League.isFriend(it.key))
-    }.sortedBy { it.reply!!.created }
+    fun replies(target: String, post: String): List<Event> {
+        val own = League.publicKey()
+        val friends = League.state.value.friends
+        val owner = if (target == League.myId()) own else friends.firstOrNull { it.id == target }?.key ?: return emptyList()
+        return conversation(state.value.events, target, post, owner, (friends.map { it.key } + own).toSet())
+    }
     /** Resolve only a visible reply in the same post; never quote another thread or a deleted message. */
     fun replyParent(event: Event, candidates: List<Event>): Event? {
         val child = event.reply ?: return null
@@ -125,6 +152,29 @@ object GroupHistory {
         return candidates.firstOrNull { candidate -> !candidate.deleted && candidate.reply != null && candidate.id == ref.id &&
             candidate.reply.author == child.author && candidate.reply.post == child.post &&
             runCatching { author(candidate.key) == ref.author }.getOrDefault(false) }
+    }
+    data class ReplyRow(val event: Event, val depth: Int)
+    /** Parents precede children; missing parents remain readable. Cycles cannot hide comments. */
+    fun replyRows(candidates: List<Event>): List<ReplyRow> {
+        val events = candidates.filter { !it.deleted && it.reply != null }.distinctBy { it.key to it.id }
+            .sortedBy { it.reply!!.created }
+        val parents = events.associateWith { replyParent(it, events) }
+        val visited = mutableSetOf<Pair<String, String>>()
+        val result = mutableListOf<ReplyRow>()
+        fun append(start: Event, depth: Int) {
+            // Iterative traversal avoids stack overflow on long or malicious reply chains.
+            val stack = java.util.ArrayDeque<Pair<Event, Int>>()
+            stack.add(start to depth)
+            while (stack.isNotEmpty()) {
+                val (event, level) = stack.removeLast()
+                if (!visited.add(event.key to event.id)) continue
+                result += ReplyRow(event, level.coerceAtMost(2))
+                events.filter { parents[it] == event }.asReversed().forEach { stack.add(it to level + 1) }
+            }
+        }
+        events.filter { parents[it] == null }.forEach { append(it, 0) }
+        events.forEach { append(it, 0) }
+        return result
     }
     fun posts(ctx: Context): List<Pair<SocialPosts.Post, League.Friend?>> {
         val own = League.publicKey(); val friends = League.state.value.friends.associateBy { it.key }
@@ -165,6 +215,23 @@ object GroupHistory {
             update(ctx) { it.copy(events = merge(it.events, event), pending = it.pending + profileId) }
         }
         for (post in League.state.value.posts) if (state.value.events.none { it.key == League.publicKey() && it.id == post.id }) record(ctx, post)
+        val ownKey = League.publicKey()
+        val ownPosts = (state.value.events.filter { it.key == ownKey && it.post != null && !it.deleted }.map { it.id } + current.posts.map { it.id }).toSet()
+        for ((proofId, signed) in state.value.proofs) {
+            val key = proofId.substringBefore(':'); val id = proofId.substringAfter(':')
+            val payload = League.verifySocial(signed, key) ?: continue
+            val inner = runCatching { json.decodeFromString(Event.serializer(), payload) }.getOrNull() ?: continue
+            if (inner.forward != null || inner.key != key || !valid(inner)) continue
+            val wrapperId = forwardId(key,id)
+            val old = state.value.events.firstOrNull { it.key == ownKey && it.id == wrapperId }
+            val post = inner.reply?.takeIf { it.author == League.myId() }?.post ?: old?.forward?.post ?: continue
+            if (post !in ownPosts || (inner.reply == null && !inner.deleted)) continue
+            val forward = Forward(post,key,signed)
+            if (old?.forward == forward) continue
+            val event = ownEvent(wrapperId).copy(forward = forward)
+            require(valid(event))
+            update(ctx) { it.copy(events = merge(it.events,event),pending = it.pending + wrapperId) }
+        }
         for (id in state.value.pending.toList()) {
             var event = state.value.events.firstOrNull { it.id == id && it.key == League.publicKey() } ?: continue
             // A previous HTTP response may have been lost after the server committed it.
@@ -216,7 +283,7 @@ object GroupHistory {
                 json.decodeFromString(Page.serializer(), body(it))
             } ?: continue
             require(page.items.size <= 20 && (page.next == null || page.next.matches(Regex("[0-9]{16}:[a-f0-9]{32}"))))
-            var newReplies = 0
+            val newReplies = mutableListOf<String>()
             for (item in page.items) {
                 val path = endpoint.toHttpUrlOrNull()!!.encodedPath + "/social/" + item.id
                 val signed = RelayCrypto.decrypt(item.raw, aes, path)
@@ -224,18 +291,22 @@ object GroupHistory {
                 val event = json.decodeFromString(Event.serializer(), payload)
                 val envelope = json.decodeFromString(RelayCrypto.Envelope.serializer(), item.raw)
                 require(valid(event) && event.key == key && event.id == item.id && event.revision == envelope.revision)
-                val repliesToMe = event.reply?.author == League.myId() ||
-                    (event.reply?.to?.author == author(League.publicKey()) && replyParent(event, state.value.events)?.key == League.publicKey())
-                if (!older && state.value.notificationBaseline && key != League.publicKey() && event.reply != null && repliesToMe &&
-                    event.reply.created >= System.currentTimeMillis() - 86400000 && state.value.events.none { it.key == key && it.id == event.id }) newReplies++
-                update(ctx) { it.copy(events = merge(it.events, event)) }
+                val comment = if (event.forward != null) forwarded(event) else event
+                val received = comment?.reply
+                val repliesToMe = received?.author == League.myId() ||
+                    (received?.to?.author == author(League.publicKey()) && comment != null && replyParent(comment, state.value.events)?.key == League.publicKey())
+                if (!older && state.value.notificationBaseline && key != League.publicKey() && received != null && repliesToMe &&
+                    received.created >= System.currentTimeMillis() - 86400000 && state.value.events.none { it.key == key && it.id == event.id }) newReplies += event.id
+                update(ctx) { store -> store.copy(events = merge(store.events, event),
+                    proofs = if (key != League.publicKey() && event.forward == null && (event.reply != null || event.deleted))
+                        store.proofs + ((key + ":" + event.id) to signed) else store.proofs) }
                 event.profile?.let { profile ->
                     League.configure(ctx) { state -> state.copy(friends = state.friends.map { friend ->
                         if (friend.key == key && event.revision > friend.profileRevision) friend.copy(name = event.name, profileTitle = profile.title, profileBadges = profile.badges, avatar = profile.avatar, profileRevision = event.revision) else friend
                     }) }
                 }
             }
-            if (newReplies > 0) League.state.value.friends.firstOrNull { it.key == key }?.let { SocialNotifications.groupRepliesReceived(ctx, it) }
+            if (newReplies.isNotEmpty()) League.state.value.friends.firstOrNull { it.key == key }?.let { SocialNotifications.groupRepliesReceived(ctx, it, newReplies.sorted().joinToString()) }
             update(ctx) { it.copy(cursors = it.cursors + (key to (if (!older && key in it.cursors) it.cursors[key] ?: page.next else page.next))) }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { failures += e }

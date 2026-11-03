@@ -46,6 +46,15 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
     var visible by rememberSaveable(author, post.id) { mutableIntStateOf(2) }
     var profile by remember { mutableStateOf<League.Friend?>(null) }
     val replies = remember(history, author, post.id, league.friends) { GroupHistory.replies(author, post.id) }
+    val rows = remember(replies) { GroupHistory.replyRows(replies) }
+    val roots = rows.filter { it.depth == 0 }.takeLast(visible).map { it.event.key to it.event.id }.toSet()
+    val displayed = buildList {
+        var include = false
+        rows.forEach { row ->
+            if (row.depth == 0) include = (row.event.key to row.event.id) in roots
+            if (include) add(row)
+        }
+    }
     val parent = replies.firstOrNull { it.key == parentKey && it.id == parentId }
     fun name(event: GroupHistory.Event) = if (event.key == League.publicKey()) tr("Vous") else league.friends.firstOrNull { it.key == event.key }?.shown ?: event.name
     fun submit() {
@@ -59,7 +68,7 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
                 val sent = GroupHistory.reply(ctx, author, post, submitted, submittedParent)
                 if (text.trim() == submitted) { text = ""; focus.clearFocus(); keyboard?.hide() }
                 if (parentId == submittedParent?.id && parentKey == submittedParent?.key) { parentId = null; parentKey = null }
-                visible = maxOf(visible, 3)
+                visible = replies.size + 1
                 if (!sent) error = tr("Réponse enregistrée. Elle sera envoyée à la prochaine synchronisation.")
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { error = tr("Réponse impossible. Réessayez.") }
@@ -72,23 +81,26 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
                 null, Modifier.size(16.dp), tint = Mf.colors.textSecondary)
             Text(tr("Réponses") + " · " + replies.size, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
         }
-        if (replies.size > visible) TextButton(onClick = { visible += 10 }, contentPadding = PaddingValues(0.dp)) {
-            Text(trf("Afficher %1\$s autres réponses", replies.size - visible), style = MaterialTheme.typography.labelMedium)
+        if (rows.count { it.depth == 0 } > visible) TextButton(onClick = { visible += 10 }, contentPadding = PaddingValues(0.dp)) {
+            Text(trf("Afficher %1\$s autres réponses", rows.count { it.depth == 0 } - visible), style = MaterialTheme.typography.labelMedium)
         }
-        replies.takeLast(visible).forEach { event ->
+        displayed.forEach { row ->
+            val event = row.event
             key(event.key, event.id) {
                 val own = event.key == League.publicKey()
                 val person = league.friends.firstOrNull { it.key == event.key }
                 var menu by remember { mutableStateOf(false) }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().padding(start = (row.depth * 18).dp)
+                    .then(if (row.depth > 0) Modifier.background(Mf.colors.elevated, RoundedCornerShape(12.dp)).padding(8.dp) else Modifier),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.padding(top = 2.dp).clickable(enabled = person != null) { profile = person }) {
                         FriendAvatar(person, event.name, 28.dp)
                     }
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(if (own) tr("Vous") else person?.shown ?: event.name,
-                                Modifier.clickable(enabled = person != null) { profile = person },
-                                style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                                Modifier.weight(1f, fill = false).clickable(enabled = person != null) { profile = person },
+                                style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.width(8.dp))
                             Text(if (System.currentTimeMillis() - event.reply!!.created < 60000) tr("À l’instant") else android.text.format.DateUtils.getRelativeTimeSpanString(event.reply.created,
                                 System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString(),
@@ -96,11 +108,9 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
                         }
                         if (event.reply?.to != null) {
                             val quoted = GroupHistory.replyParent(event, replies)
-                            Column(Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(10.dp)).background(Mf.colors.elevated).padding(10.dp)) {
-                                Text(if (quoted == null) tr("Commentaire indisponible") else trf("En réponse à %1\$s", name(quoted)),
-                                    style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent)
-                                quoted?.reply?.text?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-                            }
+                            Text(if (quoted == null) tr("Commentaire indisponible") else trf("En réponse à %1\$s", name(quoted)),
+                                style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent,
+                                modifier = Modifier.padding(vertical = 4.dp))
                         }
                         Text(event.reply!!.text, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.text)
                         TextButton(onClick = {

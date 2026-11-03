@@ -10,6 +10,8 @@
 | Catalogues des modules | [Branche modules](https://github.com/MamaLama0/SuperHealth/tree/modules) |
 | Solutions pour les demandes ouvertes | [Suivi des issues](ISSUES.md) |
 | Partage et notifications | [Guide social](SOCIAL.md) |
+| Randonnée, cartes hors ligne et Santé Connect | [Guide randonnée](HIKING.md) |
+| Changements de SuperHealth 3.1.1 | [Notes de version](UPDATE-3.1.1.md) |
 | Changements de SuperHealth 3.0.5 | [Notes de version](UPDATE-3.0.5.md) |
 | Changements de SuperHealth 3.0.4 | [Notes précédentes](UPDATE-3.0.4.md) |
 | Documentation d’origine des montres | [README Gadgetbridge](../README.gadgetbridge.md) |

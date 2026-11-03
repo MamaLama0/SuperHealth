@@ -16,6 +16,7 @@ internal fun NavHostController.continueTracking(track: Progression.Track) {
             val section = when (track) {
                 Progression.Track.STRENGTH -> "STRENGTH"
                 Progression.Track.RUN -> "RUN"
+                Progression.Track.HIKE -> "HIKING"
                 else -> if (Modules.isActive(Modules.STRETCH)) "STRETCH" else "MEDITATION"
             }
             SuperPrefs.update { it.copy(activityCurrent = section, activityAsked = true,

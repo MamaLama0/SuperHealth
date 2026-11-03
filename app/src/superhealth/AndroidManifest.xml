@@ -9,6 +9,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Mises à jour depuis les versions GitHub, lancées par l'utilisateur (bouton de la notification ou écran des mises à jour) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -43,6 +44,8 @@
         android:label="${superhealthLabel}"
         android:usesCleartextTraffic="true"
         tools:replace="android:name,android:icon,android:roundIcon,android:label">
+
+        <service android:name="app.superhealth.hiking.HikeTrackingService" android:exported="false" android:foregroundServiceType="location" />
 
         <provider android:name="nodomain.freeyourgadget.gadgetbridge.contentprovider.PebbleContentProvider"
             android:authorities="${shPebbleAuthority}" tools:replace="android:authorities" />

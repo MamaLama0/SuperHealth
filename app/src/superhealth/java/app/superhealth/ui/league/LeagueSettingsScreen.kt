@@ -52,7 +52,7 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 if (t == Progression.Track.STRENGTH && t.name in selected && planTarget != null) {
                     Text(trf("%1\$s séances prévues", planTarget), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 } else if (t.weekly && t.name in selected) {
-                    ChipChoice((1..7).toList(), st.weeklyTargets[t.name] ?: 2, { if (t == Progression.Track.STRENGTH) trf("%1\$s séances", it) else trf("%1\$s j", it) }) { days ->
+                    ChipChoice((1..7).toList(), st.weeklyTargets[t.name] ?: if(t==Progression.Track.HIKE) 1 else 2, { if (t == Progression.Track.STRENGTH) trf("%1\$s séances", it) else trf("%1\$s j", it) }) { days ->
                         League.configure(ctx) { it.copy(weeklyTargets = it.weeklyTargets + (t.name to days)) }; scope.launch { ProgressRepository.compute(ctx) }
                     }
                 }
@@ -67,14 +67,14 @@ fun LeagueSettingsScreen(nav: NavHostController) {
             SwitchRow(tr("Niveaux, XP et séries"), tr("Votre progression agrégée, sans journal détaillé"), st.shareProgress) { on -> League.configure(ctx) { it.copy(shareProgress = on) } }
             RowDivider()
             SwitchRow(tr("Détail par partie"), tr("Partager les composantes de l'indice"), st.sharePillars) { League.setSharePillars(ctx, it) }
-            if (available.any { it in setOf(Progression.Track.STRENGTH, Progression.Track.RUN) }) {
+            if (available.any { it in setOf(Progression.Track.STRENGTH, Progression.Track.RUN, Progression.Track.HIKE) }) {
                 RowDivider()
                 SwitchRow(tr("Activités, courses et PR"), tr("Agrégats sportifs uniquement, sans tracé GPS"), st.shareActivities) { on -> League.configure(ctx) { it.copy(shareActivities = on) } }
             }
         }
         SectionLabel(tr("Progression et calcul"))
         MfCard {
-            Text(tr("Une catégorie rapporte ses XP une fois par jour : nutrition 20, musculation 40, course 30, pas 10, sommeil 10, esprit et mobilité 20. Un PR rapporte 10 XP, au plus deux par jour. Le total est plafonné à 120 XP par jour."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Une catégorie rapporte ses XP une fois par jour : nutrition 20, musculation 40, course et randonnée 30 chacune, pas 10, sommeil 10, esprit et mobilité 20. Un PR rapporte 10 XP, au plus deux par jour. Le total est plafonné à 120 XP par jour."), style = MaterialTheme.typography.bodySmall)
             Text(tr("Les XP suivent vos activités et vos objectifs atteints. Ils sont recalculés depuis vos journaux. L'indice de santé reste un calcul séparé."), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
             Text(tr("La reprise des données de montre est limitée aux 90 derniers jours. Une série qui atteint cette limite porte un + ; les périodes en cours ne sont pas déclarées perdues avant leur fin."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
         }

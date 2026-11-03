@@ -30,6 +30,7 @@ object ProgressRepository {
         if (sh.has(Feature.NUTRITION)) add(Progression.Track.FOOD)
         if (sh.has(Feature.TRAINING)) add(Progression.Track.STRENGTH)
         if (sh.has(Feature.HEALTH)) addAll(listOf(Progression.Track.RUN, Progression.Track.STEPS, Progression.Track.SLEEP))
+        if (app.superhealth.modules.Modules.isActive(app.superhealth.modules.Modules.HIKING)) add(Progression.Track.HIKE)
         if (Meditation.available() || Stretch.available()) add(Progression.Track.MIND)
     }
 
@@ -39,6 +40,7 @@ object ProgressRepository {
             ?.toSet()?.intersect(available) ?: available.filter { track -> when (track) {
                 Progression.Track.STRENGTH -> !sh.activityAsked || "STRENGTH" in sh.activitySections
                 Progression.Track.RUN -> !sh.activityAsked || "RUN" in sh.activitySections
+                Progression.Track.HIKE -> "HIKING" in sh.activitySections || HikingProgress.outings.value.isNotEmpty()
                 Progression.Track.MIND -> sh.activitySections.any { it in setOf("MEDITATION", "STRETCH") } || Meditation.log.value.isNotEmpty() || Stretch.log.value.isNotEmpty()
                 else -> true
             } }.toSet()
@@ -65,7 +67,7 @@ object ProgressRepository {
         val inputKey = listOf(day, calories.hashCode(), flags.hashCode(), repo.prefs.program.value.hashCode(), repo.prefs.checkIns.value.hashCode(),
             repo.prefs.profile.value.hashCode(), repo.prefs.settings.value.hashCode(), repo.prefs.goals.value.hashCode(), training.programs.hashCode(), training.settings.activeProgramId,
             app.superhealth.health.data.HealthRepository.revision, WorkoutApp.store.state.value.history.hashCode(),
-            SuperPrefs.hc.value.hashCode(), sh.features.hashCode(), app.superhealth.modules.Modules.installed.value.hashCode(), Meditation.log.value.hashCode(), Stretch.log.value.hashCode(),
+            SuperPrefs.hc.value.hashCode(), app.superhealth.hiking.Hiking.library.value.completed.hashCode(), HikingProgress.outings.value.hashCode(), sh.features.hashCode(), app.superhealth.modules.Modules.installed.value.hashCode(), Meditation.log.value.hashCode(), Stretch.log.value.hashCode(),
             League.state.value.questXp, League.state.value.questFocus.hashCode(), League.state.value.tracked.hashCode(), League.state.value.weeklyTargets.hashCode()).hashCode()
         current.value?.takeIf { inputKey == lastKey && System.currentTimeMillis() - lastAt < 300000 }?.let { return@withContext it }
         val nutrition = repo.analytics().first()
@@ -103,6 +105,8 @@ object ProgressRepository {
         val mindfulMinutes = (Meditation.log.value.map { it.day to it.minutes } + Stretch.log.value.map { it.day to it.minutes })
             .groupBy { it.first }.mapValues { (_, rows) -> rows.sumOf { it.second } }
         mindfulMinutes.filterValues { it >= 10 }.keys.forEach { add(it, Progression.Track.MIND) }
+        val hiking = HikingProgress.collect(ctx,LocalDate.ofEpochDay(from).atStartOfDay(zone).toInstant().toEpochMilli())
+        hiking.forEach { add(HikingProgress.day(it,zone),Progression.Track.HIKE) }
         val savedHealth = League.state.value.observedHealthDays
         savedHealth.forEach { (track, days) ->
             Progression.Track.entries.firstOrNull { it.name == track }?.let { t -> days.filter { it < from }.forEach { add(it, t) } }
@@ -135,6 +139,7 @@ object ProgressRepository {
                 WeeklyQuests.Metric.STRENGTH -> sessions.filterKeys { it in first..last }.values.sum()
                 WeeklyQuests.Metric.STRENGTH_REVIEW -> history.count { w -> Analytics.day(w.startTime).toEpochDay() in first..last && w.rpe != null && w.exercises.any { Analytics.workingSets(it).isNotEmpty() } }
                 WeeklyQuests.Metric.FOOD -> calories.count { it.epochDay in first..last && it.kcal > 0 && it.epochDay !in partial }
+                WeeklyQuests.Metric.HIKE -> hiking.count { HikingProgress.day(it,zone) in first..last }
                 WeeklyQuests.Metric.MIND -> mindfulMinutes.count { (d, m) -> d in first..last && m >= 10 }
                 else -> events.count { (d, ts) -> d in first..last && metric.track in ts }
             }
@@ -150,13 +155,13 @@ object ProgressRepository {
         val selectedFocus = League.state.value.questFocus
         val questWeek = if (selectedFocus == null) null else WeeklyQuests.update(
             League.state.value.questWeeks.firstOrNull { it.start == weekStart }, day, tracks, questCounts(weekStart, day), selectedFocus,
-            WeeklyQuests.Evidence(questCounts(day - 14, day - 1), fullGoal, League.state.value.weeklyTargets["RUN"] ?: 2, stagnant, hasRecentHealthData), League.state.value.questWeeks)
+            WeeklyQuests.Evidence(questCounts(day - 14, day - 1), fullGoal, League.state.value.weeklyTargets["RUN"] ?: 2, stagnant, hasRecentHealthData, Progression.Track.HIKE in defaults), League.state.value.questWeeks)
         val weeks = if (questWeek == null) League.state.value.questWeeks else
             (League.state.value.questWeeks.filterNot { it.start == weekStart } + questWeek).sortedBy { it.start }.takeLast(52)
         if (weeks != League.state.value.questWeeks) League.configure(ctx) { it.copy(questWeeks = weeks) }
         val bonus = League.state.value.questXp
         val weekBonus = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.claimed }.sumOf { it.reward }
-        Progression.calculate(events, day, tracks, League.state.value.weeklyTargets + ("STRENGTH" to fullGoal), records, events.keys.minOrNull() ?: day,
+        Progression.calculate(events, day, tracks, League.state.value.weeklyTargets + ("STRENGTH" to fullGoal) + ("HIKE" to (League.state.value.weeklyTargets["HIKE"] ?: 1)), records, events.keys.minOrNull() ?: day,
             sessions, strengthGoals).let { raw ->
             val limited = raw.summary.streaks.map { s -> if (s.track in setOf("RUN", "STEPS", "SLEEP")) s.copy(capped = s.current > 0 && (if (s.weekly) s.current * 7 >= day - (healthSince ?: from) - 5 else s.current >= day - (healthSince ?: from))) else s.copy(capped = false, percent = percent.takeIf { s.track == "FOOD" }) }
             raw.copy(summary = raw.summary.copy(totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
@@ -164,7 +169,7 @@ object ProgressRepository {
                 "sessions" to sessions.filterKeys { it <= day }.values.sum().toLong(),
                 "foodDays" to events.count { it.key <= day && Progression.Track.FOOD in it.value }.toLong(),
                 "mindMinutes" to mindfulMinutes.filterKeys { it <= day }.values.sum().toLong()
-            ))).also { result ->
+            ) + HikingProgress.totals(hiking))).also { result ->
                 current.value = result; lastKey = inputKey; lastAt = System.currentTimeMillis()
                 val previous = League.state.value
                 val earned = previous.earnedBadges + Achievements.unlocked(result.summary)

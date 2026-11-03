@@ -253,9 +253,13 @@ object Bridge {
         // Séances Health Connect : on écarte celles qui recouvrent une séance déjà listée (même activité vue deux fois).
         val known = gym + watch + imported
         val hc = SuperPrefs.hc.value.sessions.filter { it.start in fromMs..toMs }.filter { s ->
-            known.none { it.start < s.end && s.start < it.end }
+            known.none { HcOutdoorSync.duplicate(it.kind,it.start,it.end,hcKind(s.type),s.start,s.end) }
         }.map { s -> Activity("h-${s.id}", hcKind(s.type), s.title ?: hcLabel(s.type), s.start, s.end, Source.HEALTH_CONNECT, hc = s) }
-        return (known + hc).sortedByDescending { it.start }
+        val distinctHc = hc.sortedByDescending { (if(it.hc?.distanceM != null) 2 else 0) + (if(it.hc?.avgHr != null) 1 else 0) }
+            .fold(emptyList<Activity>()) { accepted, activity ->
+                if(accepted.any { HcOutdoorSync.duplicate(it.kind,it.start,it.end,activity.kind,activity.start,activity.end) }) accepted else accepted+activity
+            }
+        return (known + distinctHc).sortedByDescending { it.start }
     }
 
     fun kindOf(name: String): Kind = when {

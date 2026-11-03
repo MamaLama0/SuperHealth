@@ -19,6 +19,7 @@ fun GameArt(kind: GameArtKind, modifier: Modifier = Modifier, animated: Boolean 
 /** Visuel de la catégorie de série, partagé par les missions, le parcours et les profils amis. */
 @Composable
 internal fun TrackArt(track: String, count: Int, modifier: Modifier = Modifier) {
+    if(track=="HIKE") { AssetImage("game/hiking/mountain-gold.png",modifier,crop=false);return }
     val asset = when (track) {
         "FOOD" -> "food"; "STRENGTH" -> "strength"; "RUN" -> "run"; "SLEEP" -> "sleep"; "MIND" -> "mind"
         "STEPS" -> when { count >= 60 -> "steps-60"; count >= 30 -> "steps-30"; count >= 7 -> "steps"; else -> "steps-3" }

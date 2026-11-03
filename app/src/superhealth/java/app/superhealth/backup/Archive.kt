@@ -35,7 +35,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/group-history.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
 
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
 
@@ -97,7 +97,7 @@ object Archive {
                 if ("\"foods\"" in text && "\"entries\"" in text) mapOf("nutrition.json" to text) else mapOf("musculation.json" to text)
             }
         }
-        app.superhealth.stretch.Stretch.load(ctx); app.superhealth.meditation.Meditation.load(ctx); app.superhealth.league.League.load(ctx); app.superhealth.league.GroupHistory.load(ctx); app.superhealth.ui.ProfilePhoto.load(ctx)
+        app.superhealth.stretch.Stretch.load(ctx); app.superhealth.meditation.Meditation.load(ctx); app.superhealth.league.League.load(ctx); app.superhealth.league.GroupHistory.load(ctx); app.superhealth.league.SocialInbox.load(ctx); app.superhealth.hiking.Hiking.load(ctx); app.superhealth.league.HikingProgress.load(ctx); app.superhealth.ui.ProfilePhoto.load(ctx)
         files["group-recovery.json"]?.let { app.superhealth.league.GroupRecovery.restore(ctx,
             kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(), it), clearHistory = false) }
         app.superhealth.league.GroupHistory.load(ctx)

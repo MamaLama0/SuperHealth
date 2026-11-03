@@ -283,7 +283,9 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
             composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
             composable("social") { app.superhealth.ui.league.SocialProfileScreen(nav) }
-            composable("social/badges") { app.superhealth.ui.league.ProfileBadgesScreen(nav) }
+            composable("social/badges?category={category}", listOf(navArgument("category") { type = NavType.StringType; defaultValue = "xp" })) {
+                app.superhealth.ui.league.ProfileBadgesScreen(nav,it.arguments?.getString("category") ?: "xp")
+            }
             composable("quests") { app.superhealth.ui.league.WeeklyQuestsScreen(nav) }
             composable("progress") { app.superhealth.ui.league.ProgressScreen(nav) }
             composable("league/settings") { app.superhealth.ui.league.LeagueSettingsScreen(nav) }
@@ -292,6 +294,10 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("stretch/ex/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
                 app.superhealth.ui.stretch.StretchExerciseScreen(nav, it.arguments?.getString("id").orEmpty())
             }
+            composable("hiking/route/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
+                app.superhealth.ui.hiking.HikeDetailScreen(nav, it.arguments?.getString("id").orEmpty())
+            }
+            composable("hiking/live") { app.superhealth.ui.hiking.HikeLiveScreen(nav) }
             composable("meditation/play") { app.superhealth.ui.meditation.MeditationPlayScreen(nav) }
             composable("league") { app.superhealth.ui.league.LeagueScreen(nav) }
             composable("journal") { app.superhealth.ui.wellbeing.JournalScreen(vm, nav) }

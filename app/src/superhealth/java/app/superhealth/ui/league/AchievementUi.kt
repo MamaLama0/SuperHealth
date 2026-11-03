@@ -50,11 +50,11 @@ internal fun ProfileDecor(title: String?, badges: List<String>, compact: Boolean
 }
 
 @Composable
-fun AchievementProfileEditor() {
+fun AchievementProfileEditor(initialCategory: String = "xp") {
     val ctx = LocalContext.current
     val state by League.state.collectAsState()
     val result by ProgressRepository.current.collectAsState()
-    var category by remember { mutableStateOf("xp") }
+    var category by remember(initialCategory) { mutableStateOf(initialCategory) }
     var track by remember { mutableStateOf(Progression.Track.FOOD) }
     LaunchedEffect(Unit) { runCatching { ProgressRepository.compute(ctx) } }
     MfCard {
@@ -87,13 +87,13 @@ fun AchievementProfileEditor() {
     }
     SectionLabel(tr("Mes badges"))
     MfCard {
-        ChipChoice(listOf("xp", "sessions", "records", "foodDays", "mindMinutes", "quests", "streak"), category, { tr(when(it) {
-            "xp" -> "Progression"; "sessions" -> "Musculation"; "records" -> "Records"; "foodDays" -> "Nutrition"; "mindMinutes" -> "Esprit et mobilité"; "quests" -> "Quêtes"; else -> "Séries"
+        ChipChoice(listOf("xp", "sessions", "records", "foodDays", "mindMinutes", "quests", "hiking", "streak"), category, { tr(when(it) {
+            "xp" -> "Progression"; "sessions" -> "Musculation"; "records" -> "Records"; "foodDays" -> "Nutrition"; "mindMinutes" -> "Esprit et mobilité"; "quests" -> "Quêtes"; "hiking" -> "Randonnée"; else -> "Séries"
         }) }) { category = it }
         if (category == "streak") ChipChoice(Progression.Track.entries, track, { tr(it.label) }) { track = it }
     }
     GroupCard {
-        val visible = Achievements.catalog.filter { if (category == "streak") it.metric == "streak:${track.name}" else it.metric == category }
+        val visible = Achievements.catalog.filter { if(category=="hiking") it.metric in setOf("hikes","hikeMeters","hikeAscent","streak:HIKE") else if (category == "streak") it.metric == "streak:${track.name}" else it.metric == category }
         visible.forEachIndexed { index, badge ->
             if (index > 0) RowDivider()
             key(badge.id) {
@@ -104,7 +104,7 @@ fun AchievementProfileEditor() {
                 AssetImage(badge.asset, Modifier.size(48.dp), crop = false)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(badgeLabel(badge), style = MaterialTheme.typography.bodyMedium)
-                    Text(if (unlocked) tr("Débloqué") else "$value / ${badge.threshold}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                    Text(if (unlocked) tr("Débloqué") else if(badge.metric=="hikeMeters") trf("%1\$s / %2\$s km",app.superhealth.nutrition.ui.num(value/1000.0,1),badge.threshold/1000) else "$value / ${badge.threshold}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                 }
                 TextButton(enabled = unlocked && (selected || state.profileBadges.size < 3), onClick = {
                     League.configure(ctx) { s -> s.copy(profileBadges = if (selected) s.profileBadges - badge.id else (s.profileBadges + badge.id).distinct().take(3)) }
