@@ -193,7 +193,7 @@ object Strings26 {
         "Vos activités choisies définissent vos séries et vos quêtes. Vous gardez le contrôle du partage." to "Your chosen activities shape your streaks and quests. You control what you share.",
         "Vos efforts, ensemble" to "Your efforts, together",
         "Votre message" to "Your message",
-        "Vous pouvez désactiver ce fil dans Réglages → Social. Vos widgets sociaux restent disponibles sur le dashboard." to "You can disable this feed in Settings → Dashboard. Your social widgets remain on the dashboard.",
+        "Vous pouvez désactiver ce fil dans Réglages → Social. Vos widgets sociaux restent disponibles sur le dashboard." to "You can disable this feed in Settings → Social. Your social widgets remain on the dashboard.",
         "À %1\$s points de la prochaine place" to "%1\$s points from the next place",
         "À gauche du dashboard, accessible en glissant vers la droite" to "To the left of the dashboard: swipe right to open",
         "Méditation et mobilité" to "Meditation and mobility",
