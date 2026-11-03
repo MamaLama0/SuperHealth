@@ -1,0 +1,18 @@
+[
+  {
+    "device": "oneplus",
+    "badges": "vertical positions unchanged after selection"
+  },
+  {
+    "device": "oneplus",
+    "feedDisable": "right swipe stays on dashboard"
+  },
+  {
+    "device": "pixel",
+    "badges": "vertical positions unchanged after selection"
+  },
+  {
+    "device": "pixel",
+    "feedDisable": "right swipe stays on dashboard"
+  }
+]

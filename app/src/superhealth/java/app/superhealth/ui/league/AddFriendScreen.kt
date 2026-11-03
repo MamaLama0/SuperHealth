@@ -83,24 +83,12 @@ fun AddFriendScreen(nav: NavHostController) {
     }
     val scanner = rememberLauncherForActivityResult(ScanContract()) { it.contents?.let { raw -> receive(raw, true) } }
     DetailScaffold(tr("Ajouter un ami"), { nav.popBackStack() }, contentSpacing = 12.dp) {
-        Text(tr("Un code, et vous êtes connectés"), style = MaterialTheme.typography.headlineMedium)
-        Text(tr("Saisissez le code de votre ami. SuperHealth retrouve son invitation sur le serveur."), color = Mf.colors.textSecondary,
+        Text(tr("Retrouvez vos amis"), style = MaterialTheme.typography.headlineMedium)
+        Text(tr("Révélez votre code à partager, ou saisissez celui d’un ami."), color = Mf.colors.textSecondary,
             modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         MfCard {
-            TextInput(tr("Code de votre ami"), code, { code = it.uppercase(java.util.Locale.ROOT).take(32) }, placeholder = "ABCD-EFGH-2345")
-            SwitchRow(tr("Rechercher sur un serveur personnalisé"), tr("Activez seulement si votre ami utilise son propre serveur"), custom) { custom = it }
-            if (custom) TextInput(tr("Adresse du serveur personnalisé"), server, { server = it.trim() }, placeholder = "https://amis.exemple.fr")
-            PillButton(tr("Rechercher mon ami"), Modifier.fillMaxWidth().padding(top = 10.dp), enabled = !busy && FriendCode.normalize(code) != null && (!custom || Relay.validBase(server))) { receive(code) }
-            TextButton(enabled = !busy, onClick = {
-                val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
-                if (text.isBlank()) message = tr("Aucune invitation dans le presse-papiers.") else { code = text; receive(text) }
-            }) { Text(tr("Coller une invitation")) }
-        }
-        Spacer(Modifier.height(14.dp))
-        MfCard {
             Text(tr("Mon code ami"), style = MaterialTheme.typography.titleLarge)
-            Text(tr("Valable 24 heures. Partagez-le avec les personnes que vous souhaitez ajouter."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            Text(tr("Valable 24 h pour les nouveaux ajouts. Un nouveau code conserve vos amitiés et leurs mises à jour."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             mine?.let { invitation ->
                 Text(invitation.text, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Mf.colors.accent,
                     modifier = Modifier.padding(vertical = 16.dp))
@@ -111,16 +99,31 @@ fun AddFriendScreen(nav: NavHostController) {
                     }) { Text(tr("Copier")) }
                     TextButton(onClick = { showQr = true }) { Text(tr("QR code")) }
                     TextButton(onClick = {
-                        val shareText = tr("Mon code ami SuperHealth : ") + invitation.text + "\n" + invitation.link
+                        val shareText = tr("On progresse ensemble sur SuperHealth ? 💪") + "\n\n" + tr("Ajoute-moi avec ce code : ") + invitation.text + "\n" + tr("Dans Social → Ajouter un ami. Valable 24 h.") + "\n\n" + invitation.link + "\n" + "https://github.com/Ouinon0/SuperHealth/releases/latest"
                         ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shareText), tr("Partager mon invitation")))
                     }) { Text(tr("Partager")) }
                 }
                 TextButton(enabled = !busy, onClick = { publish(true) }) { Text(tr("Renouveler mon code")) }
-            } ?: PillButton(tr("Créer mon code"), Modifier.fillMaxWidth().padding(top = 12.dp), enabled = !busy) { publish() }
+            } ?: PillButton(tr("Révéler mon code"), Modifier.fillMaxWidth().padding(top = 12.dp), enabled = !busy) { publish() }
         }
+        MfCard {
+            TextInput(tr("Code de votre ami"), code, { code = it.uppercase(java.util.Locale.ROOT).take(32) }, placeholder = "ABCD-EFGH-2345")
+            PillButton(tr("Rechercher mon ami"), Modifier.fillMaxWidth().padding(top = 10.dp), enabled = !busy && FriendCode.normalize(code) != null && (!custom || Relay.validBase(server))) { receive(code) }
+            TextButton(enabled = !busy, onClick = {
+                val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
+                if (text.isBlank()) message = tr("Aucune invitation dans le presse-papiers.") else { code = text; receive(text) }
+            }) { Text(tr("Coller une invitation")) }
+        }
+        Spacer(Modifier.height(14.dp))
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 12.dp))
         message?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 12.dp)) }
         Spacer(Modifier.height(14.dp))
+        SectionLabel(tr("Autres options"))
+        MfCard {
+            SwitchRow(tr("Rechercher sur un serveur personnalisé"), tr("Activez seulement si votre ami utilise son propre serveur"), custom) { custom = it }
+            if (custom) TextInput(tr("Adresse du serveur personnalisé"), server, { server = it.trim() }, placeholder = "https://amis.exemple.fr")
+        }
         GroupCard {
             SettingRow(tr("Mon QR sans serveur"), subtitle = tr("Échanger une carte directement, même sans Internet")) {
                 scope.launch { offlineQr = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { League.link(League.inviteCard(ctx)) } }

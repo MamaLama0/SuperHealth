@@ -4,4 +4,5 @@
     <cache-path name="ai" path="ai/" />
     <!-- Photo de progression prise avec l'appareil photo, avant redimensionnement (cache/camera). -->
     <cache-path name="camera" path="camera/" />
+    <cache-path name="social" path="social/" />
 </paths>

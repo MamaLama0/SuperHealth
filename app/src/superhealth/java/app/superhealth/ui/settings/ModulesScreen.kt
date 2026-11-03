@@ -192,7 +192,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                 "Coaching" -> kind == Modules.COACH
                 else -> true
             }
-            kind != Modules.LEAGUE && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
+            kind !in setOf(Modules.LEAGUE, "friends", "health_index", "health-index", "healthIndex") && id !in setOf("friends", "health-index", "health_index", "healthIndex") && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
                 .any { it.contains(query.trim(), ignoreCase = true) }
         }
         if (ids.isEmpty()) MfCard {

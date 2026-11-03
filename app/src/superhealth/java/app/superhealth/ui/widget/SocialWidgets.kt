@@ -41,7 +41,7 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
         val summary = ProgressRepository.current.value?.summary
         val state = League.state.value
         val hue = when (kind) {
-            Kind.SCORE -> Color(0xFF4FA8E8)
+            Kind.SCORE -> Color(0xFFEAB544)
             Kind.PROGRESS -> Color(0xFF30A558)
             Kind.STREAK -> Color(0xFFFF9600)
             Kind.QUEST -> Color(0xFF9074DD)
@@ -50,6 +50,8 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
         val title = tr(when (kind) { Kind.SCORE -> "Classement"; Kind.PROGRESS -> "Progression"; Kind.STREAK -> "Mes séries"; Kind.QUEST -> "Quêtes"; Kind.FRIENDS -> "Amis"; Kind.OVERVIEW -> "Social" })
         val route = when (kind) { Kind.SCORE -> "league"; Kind.QUEST -> "quests"; Kind.FRIENDS -> "friends"; Kind.OVERVIEW -> "social"; else -> "progress" }
         val icon = when (kind) { Kind.SCORE -> R.drawable.ic_w_trophy; Kind.PROGRESS -> R.drawable.ic_w_bolt; Kind.STREAK -> R.drawable.ic_w_flame; Kind.QUEST -> R.drawable.ic_w_flag; Kind.FRIENDS -> R.drawable.ic_w_people; Kind.OVERVIEW -> R.drawable.ic_w_bolt }
+        var place: Int? = null
+        var participants = 0
         var value = "—"
         var unit: String? = null
         var caption = tr("Pas de données")
@@ -61,11 +63,15 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
             Kind.SCORE -> {
                 val entries = dashboardScoreEntries(score, state.friends, System.currentTimeMillis() / 1000, "")
                 val me = entries.firstOrNull { it.me }
+                place = me?.let { dashboardRank(entries, it) }; participants = entries.size
                 unit = "/ 1000"
                 caption = if (me == null) tr("3 domaines requis") else if (entries.size == 1) tr("En solo")
                     else trf("Place %1\$s sur %2\$s", dashboardRank(entries, me), entries.size)
                 if (me != null) { value = me.score.toString(); fraction = me.score / 1000f }
-                detail = tr("7 derniers jours terminés")
+                val ahead = me?.let { own -> entries.lastOrNull { it.score > own.score } }
+                detail = if (ahead != null && me != null) trf("À %1\$s points de la prochaine place", ahead.score - me.score)
+                    else if (entries.size > 1) tr("En tête du club · continuez !") else tr("Invitez votre premier rival")
+                compactCaption = if (me != null && entries.size > 1) "#${dashboardRank(entries, me)} · " + tr("Le club") else caption
             }
             Kind.PROGRESS -> summary?.let { p ->
                 value = p.level.toString(); unit = tr("Niveau")
@@ -111,7 +117,62 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
                 }
             }
         }
-        provideContent { SocialContent(context, kind, route, title, icon, hue, value, unit, caption, compactCaption, detail, fraction) }
+        provideContent {
+            if (kind == Kind.SCORE) ScoreWidgetContent(context, value, caption, detail, fraction, place, participants)
+            else SocialContent(context, kind, route, title, icon, hue, value, unit, caption, compactCaption, detail, fraction)
+        }
+    }
+}
+
+@Composable
+private fun ScoreWidgetContent(context: Context, value: String, caption: String, detail: String,
+                               fraction: Float?, place: Int?, participants: Int) {
+    val size = WK.size(LocalSize.current)
+    val gold = Color(0xFFEAB544)
+    WidgetCard(WK.open(context, "league"), gold, padding = if (size == WK.Size.SMALL) 5.dp else if (size == WK.Size.LARGE) 10.dp else 12.dp) {
+        when (size) {
+            WK.Size.SMALL -> {
+                androidx.glance.Image(androidx.glance.ImageProvider(R.drawable.sh_league_trophy), null, GlanceModifier.size(17.dp))
+                Text(place?.takeIf { participants > 1 }?.let { "#$it" } ?: value,
+                    style = TextStyle(color = WK.on(gold), fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            }
+            WK.Size.STRIP -> Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.glance.Image(androidx.glance.ImageProvider(R.drawable.sh_league_trophy), null, GlanceModifier.size(30.dp))
+                Spacer(GlanceModifier.width(8.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Text(tr("Le club"), style = TextStyle(color = WK.text, fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(caption, style = TextStyle(color = WK.sub, fontSize = 10.sp), maxLines = 1)
+                }
+                WidgetValue(value, null, gold, 20)
+            }
+            else -> {
+                Text(tr("Le club"), style = TextStyle(color = WK.sub, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                Spacer(GlanceModifier.height(5.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.glance.Image(androidx.glance.ImageProvider(R.drawable.sh_league_trophy), null,
+                        GlanceModifier.size(if (size == WK.Size.LARGE) 42.dp else 32.dp))
+                    Spacer(GlanceModifier.width(8.dp))
+                    Column(GlanceModifier.defaultWeight()) {
+                        Text(place?.takeIf { participants > 1 }?.let { "#$it" } ?: value,
+                            style = TextStyle(color = WK.on(gold), fontSize = 24.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                        Text(if (place != null && participants > 1) trf("%1\$s points", value) else tr("Score global"),
+                            style = TextStyle(color = WK.sub, fontSize = 10.sp), maxLines = 1)
+                    }
+                }
+                if (size == WK.Size.MEDIUM) {
+                    Spacer(GlanceModifier.height(5.dp))
+                    Text(caption, style = TextStyle(color = WK.text, fontSize = 10.sp), maxLines = 1)
+                }
+                if (fraction != null) {
+                    Spacer(GlanceModifier.height(5.dp))
+                    LinearProgressIndicator(fraction, GlanceModifier.fillMaxWidth().height(4.dp), color = WK.on(gold), backgroundColor = WK.track)
+                }
+                if (size == WK.Size.LARGE) {
+                    Spacer(GlanceModifier.height(4.dp))
+                    Text(detail, style = TextStyle(color = WK.sub, fontSize = 10.sp), maxLines = 1)
+                }
+            }
+        }
     }
 }
 

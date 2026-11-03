@@ -1,0 +1,162 @@
+[
+  {
+    "device": "oneplus",
+    "mode": "dark",
+    "size": "S",
+    "text": [
+      "#5"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "oneplus",
+    "mode": "dark",
+    "size": "M",
+    "text": [
+      "Le club",
+      "#5",
+      "827 points",
+      "Place 5 sur 6"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "oneplus",
+    "mode": "dark",
+    "size": "W",
+    "text": [
+      "Le club",
+      "Place 5 sur 6",
+      "827"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "oneplus",
+    "mode": "dark",
+    "size": "L",
+    "rendered": true,
+    "retestedAfterLayoutFix": true,
+    "nextPlaceLineVisible": true
+  },
+  {
+    "device": "oneplus",
+    "mode": "light-large",
+    "size": "S",
+    "text": [
+      "#5"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "oneplus",
+    "mode": "light-large",
+    "size": "M",
+    "text": [
+      "Le club",
+      "#5",
+      "827 points",
+      "Place 5 sur 6"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "oneplus",
+    "mode": "light-large",
+    "size": "W",
+    "text": [
+      "Le club",
+      "Place 5 sur 6",
+      "827"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "oneplus",
+    "mode": "light-large",
+    "size": "L",
+    "rendered": true,
+    "retestedAfterLayoutFix": true,
+    "nextPlaceLineVisible": true
+  },
+  {
+    "device": "pixel",
+    "mode": "dark",
+    "size": "S",
+    "text": [
+      "#6"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "pixel",
+    "mode": "dark",
+    "size": "M",
+    "text": [
+      "Le club",
+      "#6",
+      "818 points",
+      "Place 6 sur 6"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "pixel",
+    "mode": "dark",
+    "size": "W",
+    "text": [
+      "Le club",
+      "Place 6 sur 6",
+      "818"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "pixel",
+    "mode": "dark",
+    "size": "L",
+    "rendered": true,
+    "retestedAfterLayoutFix": true,
+    "nextPlaceLineVisible": true
+  },
+  {
+    "device": "pixel",
+    "mode": "light-large",
+    "size": "S",
+    "text": [
+      "#6"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "pixel",
+    "mode": "light-large",
+    "size": "M",
+    "text": [
+      "Le club",
+      "#6",
+      "818 points",
+      "Place 6 sur 6"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "pixel",
+    "mode": "light-large",
+    "size": "W",
+    "text": [
+      "Le club",
+      "Place 6 sur 6",
+      "818"
+    ],
+    "rendered": true
+  },
+  {
+    "device": "pixel",
+    "mode": "light-large",
+    "size": "L",
+    "rendered": true,
+    "retestedAfterLayoutFix": true,
+    "nextPlaceLineVisible": true
+  }
+]

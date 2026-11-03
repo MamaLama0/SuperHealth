@@ -199,6 +199,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             Group(tr("Accueil")) {
+                SwitchRow(tr("Fil des amis à gauche du dashboard"), tr("Glissez vers la droite depuis l’accueil pour voir les publications"), sh.socialFeedEnabled) { enabled ->
+                    SuperPrefs.update { it.copy(socialFeedEnabled = enabled) }
+                }
+                RowDivider(56.dp)
                 SettingRow(tr("Cartes"), trf("%1\$s configurées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider(56.dp)
                 SettingRow(tr("Widgets Android"), subtitle = tr("Ajouter mes suivis sur l'écran d'accueil"), icon = Icons.Rounded.Dashboard) { nav.go("widgets") }

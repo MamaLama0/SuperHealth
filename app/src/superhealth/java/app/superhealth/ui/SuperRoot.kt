@@ -231,7 +231,8 @@ fun SuperRoot(vm: SuperViewModel) {
             popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
             popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
-            composable("home") { DashboardScreen(vm, nav) }
+            composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav) }
+            composable("social/compose") { app.superhealth.ui.league.SocialComposer(nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
             composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
             composable("widgets") { app.superhealth.ui.settings.HomeWidgetsScreen(nav) }

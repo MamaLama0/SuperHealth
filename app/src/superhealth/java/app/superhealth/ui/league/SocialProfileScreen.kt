@@ -68,10 +68,9 @@ fun SocialProfileScreen(nav: NavHostController) {
         GroupCard {
             SettingRow(tr("Widgets Android"), subtitle = tr("Classement, séries, quêtes et suivis"), icon = Icons.Rounded.Widgets) { nav.go("widgets") }
         }
-        SectionLabel(tr("Mon compte"))
+        SectionLabel(tr("Préférences sociales"))
         GroupCard {
-            SettingRow(tr("Prénom et photo"), icon = Icons.Rounded.Edit) { if (!nav.popBackStack("settings", false)) nav.go("settings") }
-            RowDivider(); SettingRow(tr("Partage et serveur"), icon = Icons.Rounded.PrivacyTip) { nav.go("league/settings") }
+            SettingRow(tr("Partage et serveur"), icon = Icons.Rounded.PrivacyTip) { nav.go("league/settings") }
         }
     }
 }

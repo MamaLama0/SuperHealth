@@ -198,7 +198,7 @@ private enum class Step(val section: Int) {
     WELCOME(0), NAME(0), USES(0), ACTIVITIES(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
     PROGRAM(1), GOAL(1), TARGET(1), PACE(1), TRAINING(1), PREFS(1), MANUAL_TARGETS(1), ENERGY(1), CHECKIN(1),
     EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
-    WATCH(3), HEALTH(3), AI(3), PLUGINS(3),
+    WATCH(3), HEALTH(3), AI(3), PLUGINS(3), SOCIAL(3),
     GENERATING(4), RESULT(4),
 }
 
@@ -229,6 +229,7 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
     Step.PROGRAM, Step.MANUAL_TARGETS, Step.PREFS, Step.ENERGY -> Icons.Rounded.Restaurant to Base.Green
     Step.CHECKIN -> Icons.Rounded.CalendarMonth to HealthHues.Body
     Step.WATCH -> Icons.Rounded.Watch to HealthHues.Respiration
+    Step.SOCIAL -> Icons.Rounded.Favorite to Base.Blue
     Step.PLUGINS -> androidx.compose.material.icons.Icons.Rounded.Tune to HealthHues.Sleep
     Step.AI -> Icons.Rounded.AutoAwesome to app.superhealth.ui.coach.CoachHue
     Step.GENERATING, Step.RESULT -> Icons.Rounded.CheckCircle to Base.Green
@@ -326,6 +327,11 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     val pluginCatalog by app.superhealth.modules.Modules.catalog.collectAsState()
     var pluginIds by rememberSaveable { mutableStateOf(app.superhealth.modules.Modules.installed.value.filter { it.enabled && it.kind in app.superhealth.modules.Modules.engines }.map { it.id }) }
     LaunchedEffect(mode) { if (mode == OnboardingMode.FULL) app.superhealth.modules.Modules.refresh() }
+    var feedEnabled by rememberSaveable { mutableStateOf(true) }
+    var socialEnabled by rememberSaveable { mutableStateOf(true) }
+    var shareDetails by rememberSaveable { mutableStateOf(true) }
+    var shareSports by rememberSaveable { mutableStateOf(false) }
+    var useServer by rememberSaveable { mutableStateOf(true) }
     val healthAvailable = remember { HealthConnectHub.status(ctx) == HealthConnectHub.Status.AVAILABLE }
     val steps = Step.entries.filter {
         if (mode == OnboardingMode.TRAINING_SETUP && it == Step.BODY) return@filter false
@@ -342,7 +348,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             Step.WATCH -> wantsHealth || mode != OnboardingMode.FULL
             // IA offerte : proposée à l'accueil quand le build l'embarque (sinon rien à proposer sans clé)
             Step.AI -> mode == OnboardingMode.FULL && app.superhealth.nutrition.data.AiGift.available
-            Step.ACTIVITIES, Step.PLUGINS -> mode == OnboardingMode.FULL
+            Step.ACTIVITIES, Step.PLUGINS, Step.SOCIAL -> mode == OnboardingMode.FULL
             // poids habituel et métabolisme ne servent qu'à la nutrition
             Step.BODY_FAT, Step.ACTIVITY, Step.HISTORY, Step.GOAL, Step.PROGRAM, Step.ENERGY -> wantsNutrition
             Step.PREFS -> wantsNutrition && programStyle != app.superhealth.nutrition.domain.ProgramStyle.MANUAL
@@ -527,6 +533,26 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         SuperPrefs.update { it.copy(activitySections = (activities + optionalActivities).map { a -> a.name }) }
         app.superhealth.modules.Modules.installed.value.forEach { app.superhealth.modules.Modules.setEnabled(ctx, it.id, it.id in pluginIds) }
         app.superhealth.modules.PluginSelectionWorker.enqueue(ctx, pluginIds)
+        if (mode == OnboardingMode.FULL) {
+            val tracks = buildSet {
+                if (wantsNutrition) add(app.superhealth.league.Progression.Track.FOOD)
+                if (lifts) add(app.superhealth.league.Progression.Track.STRENGTH)
+                if (app.superhealth.ui.activities.ActivitySection.RUN in activities) add(app.superhealth.league.Progression.Track.RUN)
+                if (wantsHealth) addAll(listOf(app.superhealth.league.Progression.Track.STEPS, app.superhealth.league.Progression.Track.SLEEP))
+                if ((activities + optionalActivities).any { it.plugin in setOf(app.superhealth.modules.Modules.MEDITATION, app.superhealth.modules.Modules.STRETCH) }) add(app.superhealth.league.Progression.Track.MIND)
+            }
+            SuperPrefs.update { it.copy(leagueEnabled = socialEnabled, socialFeedEnabled = feedEnabled) }
+            app.superhealth.league.League.configure(ctx) { it.copy(tracked = tracks.map { t -> t.name }.toSet(),
+                questFocus = tracks.map { t -> when(t) {
+                    app.superhealth.league.Progression.Track.FOOD -> app.superhealth.league.WeeklyQuests.Focus.NUTRITION
+                    app.superhealth.league.Progression.Track.STRENGTH -> app.superhealth.league.WeeklyQuests.Focus.STRENGTH
+                    app.superhealth.league.Progression.Track.RUN -> app.superhealth.league.WeeklyQuests.Focus.RUN
+                    else -> app.superhealth.league.WeeklyQuests.Focus.DAILY
+                } }.toSet(), relayEnabled = socialEnabled && useServer, shareProgress = socialEnabled,
+                sharePillars = shareDetails, shareActivities = shareSports && (lifts || app.superhealth.ui.activities.ActivitySection.RUN in activities),
+                weeklyTargets = it.weeklyTargets + if (lifts) mapOf("STRENGTH" to liftDays) else emptyMap()) }
+            app.superhealth.league.LeagueWorker.schedule(ctx)
+        }
     }
 
     // Montre : autorisations Bluetooth seules, puis recherche et association (ou Health Connect si son app reste).
@@ -746,6 +772,21 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             picked = c.map { it.name }
                             val strength = app.superhealth.ui.activities.ActivitySection.STRENGTH in c; val run = app.superhealth.ui.activities.ActivitySection.RUN in c
                             training = when { strength && run -> Training.BOTH; strength -> Training.STRENGTH; run -> Training.CARDIO; else -> Training.NONE }
+                        }
+                    }
+                    Step.SOCIAL -> Page(st, tr("Progresser avec mes amis"), tr("Vos activités choisies définissent vos séries et vos quêtes. Vous gardez le contrôle du partage.")) {
+                        app.superhealth.nutrition.ui.components.SwitchRow(tr("Classement, séries et quêtes"), tr("Un score personnalisé dès trois domaines suivis"), socialEnabled) { socialEnabled = it }
+                        if (socialEnabled) {
+                            app.superhealth.nutrition.ui.components.SwitchRow(tr("Fil des amis"), tr("À gauche du dashboard, accessible en glissant vers la droite"), feedEnabled) { feedEnabled = it }
+                            Text(listOfNotNull(tr("Nutrition").takeIf { wantsNutrition }, tr("Musculation").takeIf { lifts },
+                                tr("Course").takeIf { app.superhealth.ui.activities.ActivitySection.RUN in activities },
+                                tr("Pas et sommeil").takeIf { wantsHealth }).joinToString(" · "),
+                                style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 16.dp))
+                            app.superhealth.nutrition.ui.components.SwitchRow(tr("Partager le détail du score"), tr("Uniquement les domaines que vous suivez"), shareDetails) { shareDetails = it }
+                            if (lifts || app.superhealth.ui.activities.ActivitySection.RUN in activities)
+                                app.superhealth.nutrition.ui.components.SwitchRow(tr("Partager mes performances"), tr("Séances, courses et records, sans tracé GPS"), shareSports) { shareSports = it }
+                            app.superhealth.nutrition.ui.components.SwitchRow(tr("Actualiser avec le serveur SuperHealth"), tr("Cartes et publications chiffrées entre amis"), useServer) { useServer = it }
+                            Text(tr("Les photos et vidéos se publient uniquement quand vous le décidez. Tous ces choix restent modifiables dans Social."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                         }
                     }
                     Step.PLUGINS -> Page(st, tr("Personnaliser avec des plugins"), tr("Tout est facultatif. Vous pourrez installer, désactiver et régler chaque plugin dans les paramètres.")) {

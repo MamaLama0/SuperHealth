@@ -1,5 +1,7 @@
 package app.superhealth.training.ui.screens
 
+import androidx.compose.material.icons.rounded.Share
+
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import androidx.compose.material.icons.rounded.SelfImprovement
@@ -349,6 +351,10 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
     val records = Analytics.newRecords(w, before, db)
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
         app.superhealth.nutrition.ui.components.NavBar(title, onClose, backIcon = Icons.Rounded.Close) {
+            if (nav != null && app.superhealth.league.League.available()) app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Share, tr("Partager avec mes amis")) {
+                app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.workoutDraft(w)
+                nav.navigate("social/compose")
+            }
             app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.MoreHoriz, tr("Options de la séance")) { menu = true }
         }
         val rpe: @Composable () -> Unit = { RpeCard(w) { r -> vm.saveWorkout(w.copy(rpe = r)); app.superhealth.health.data.Scores.invalidate() } }

@@ -6,9 +6,9 @@ import app.superhealth.training.domain.ExerciseDb
 import app.superhealth.training.domain.Workout
 import kotlin.math.roundToInt
 
-/** Indice d'habitudes SuperHealth v3, sur sept jours terminés. Pas une estimation médicale. */
+/** Indice d'habitudes SuperHealth v4, sur sept jours terminés. Pas une estimation médicale. */
 object HealthIndex {
-    const val MODEL = 3
+    const val MODEL = 4
     const val MIN_DOMAINS = 3
     val weights = listOf(20, 20, 15, 25, 15, 5)
 

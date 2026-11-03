@@ -1,0 +1,7 @@
+{
+  "photo": "OnePlus → Pixel: decrypted bytes identical",
+  "video": "Pixel → OnePlus: decrypted bytes identical",
+  "transport": "isolated localhost relay through adb reverse",
+  "independentPublication": "sent=true despite pre-existing friend sync error",
+  "orientedPhoto": "decrypted bytes identical; EXIF rotation applied"
+}

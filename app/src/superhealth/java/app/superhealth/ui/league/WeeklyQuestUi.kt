@@ -34,7 +34,8 @@ private val QuestGreen = androidx.compose.ui.graphics.Color(0xFF58CC02)
 internal fun questGoal(q: WeeklyQuests.Quest): String = trf(when(q.metric) {
     WeeklyQuests.Metric.STRENGTH -> if (q.target == 1) "%1\$s séance cette semaine" else "%1\$s séances cette semaine"
     WeeklyQuests.Metric.STRENGTH_REVIEW -> if (q.target == 1) "%1\$s séance avec un effort ressenti noté" else "%1\$s séances avec un effort ressenti noté"
-    WeeklyQuests.Metric.MIND -> if (q.target == 1) "%1\$s jour avec une pause de 5 min" else "%1\$s jours avec une pause de 5 min"
+    WeeklyQuests.Metric.MIND -> if (q.target == 1) "%1\$s jour avec 10 min de méditation ou mobilité" else "%1\$s jours avec 10 min de méditation ou mobilité"
+    WeeklyQuests.Metric.RUN -> if (q.target == 1) "%1\$s jour avec une sortie course" else "%1\$s jours avec une sortie course"
     WeeklyQuests.Metric.FOOD -> if (q.target == 1) "%1\$s jour de journal alimentaire" else "%1\$s jours de journal alimentaire"
     WeeklyQuests.Metric.ACTIVE -> if (q.target == 1) "%1\$s jour avec un suivi" else "%1\$s jours avec un suivi"
     else -> if (q.target == 1) "%1\$s jour où votre objectif est atteint" else "%1\$s jours où votre objectif est atteint"
@@ -74,7 +75,7 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                         Checkbox(f in focus, { focus = if (f in focus) focus - f else focus + f })
                         Column(Modifier.weight(1f).padding(start = 8.dp)) {
                             Text(tr(f.label), style = MaterialTheme.typography.titleMedium)
-                            Text(tr(when (f) { WeeklyQuests.Focus.NUTRITION -> "Journal et régularité"; WeeklyQuests.Focus.STRENGTH -> "Séances et progression"; WeeklyQuests.Focus.RUN -> "Sorties et régularité"; WeeklyQuests.Focus.DAILY -> "Pas et pauses" }), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                            Text(tr(when (f) { WeeklyQuests.Focus.NUTRITION -> "Journal et régularité"; WeeklyQuests.Focus.STRENGTH -> "Séances et progression"; WeeklyQuests.Focus.RUN -> "Sorties et régularité"; WeeklyQuests.Focus.DAILY -> "Marche, méditation et mobilité" }), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                             if (!available) Text(tr("Suivi à configurer pour valider les quêtes"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent)
                         }
                     }

@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -41,9 +43,27 @@ fun AchievementProfileEditor() {
     var track by remember { mutableStateOf(Progression.Track.FOOD) }
     LaunchedEffect(Unit) { runCatching { ProgressRepository.compute(ctx) } }
     MfCard {
-        ProfileDecor(state.profileTitle, state.profileBadges)
-        Text(tr("Choisissez un titre et jusqu'à trois badges visibles par vos amis. Vos choix sont enregistrés immédiatement."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 16.dp))
-        Text(trf("%1\$s badges débloqués", state.earnedBadges.size), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
+        Text(tr("Mon profil partagé"), style = MaterialTheme.typography.titleMedium)
+        Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) {
+            Text(Achievements.find(state.profileTitle)?.title?.let { tr(it) } ?: tr("Sans titre"),
+                style = MaterialTheme.typography.titleSmall, color = Mf.colors.accent,
+                maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            repeat(3) { index ->
+                val badge = state.profileBadges.getOrNull(index)?.let(Achievements::find)
+                Column(Modifier.weight(1f).height(110.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+                        if (badge != null) AssetImage(badge.asset, Modifier.size(56.dp), crop = false)
+                        else Text("+", style = MaterialTheme.typography.headlineSmall, color = Mf.colors.textTertiary)
+                    }
+                    Text(badge?.let(::badgeLabel) ?: tr("Emplacement libre"), style = MaterialTheme.typography.labelSmall,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                }
+            }
+        }
+        Text(tr("Choisissez un titre et jusqu'à trois badges visibles par vos amis. Vos choix sont enregistrés immédiatement."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        Text(trf("%1\$s / 3 badges affichés", state.profileBadges.size), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 8.dp))
     }
     SectionLabel(tr("Mon titre"))
     MfCard {
@@ -61,6 +81,7 @@ fun AchievementProfileEditor() {
         val visible = Achievements.catalog.filter { if (category == "streak") it.metric == "streak:${track.name}" else it.metric == category }
         visible.forEachIndexed { index, badge ->
             if (index > 0) RowDivider()
+            key(badge.id) {
             val unlocked = badge.id in state.earnedBadges
             val selected = badge.id in state.profileBadges
             val value = result?.summary?.let { Achievements.value(badge, it) } ?: 0
@@ -72,7 +93,11 @@ fun AchievementProfileEditor() {
                 }
                 TextButton(enabled = unlocked && (selected || state.profileBadges.size < 3), onClick = {
                     League.configure(ctx) { s -> s.copy(profileBadges = if (selected) s.profileBadges - badge.id else (s.profileBadges + badge.id).distinct().take(3)) }
-                }) { Text(tr(if (selected) "Retirer" else if (unlocked) "Afficher" else "Verrouillé")) }
+                }, modifier = Modifier.width(98.dp)) {
+                    if (unlocked) Text(tr(if (selected) "Retirer" else "Afficher"), maxLines = 1)
+                    else Icon(Icons.Rounded.Lock, tr("Verrouillé"), Modifier.size(18.dp))
+                }
+            }
             }
         }
     }

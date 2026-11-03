@@ -1,5 +1,7 @@
 package app.superhealth.ui.health
 
+import androidx.compose.material.icons.rounded.Share
+
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import app.superhealth.ui.coach.askCoach
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -146,6 +148,11 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
     val hue = kind.hue()
     var confirmDelete by remember { mutableStateOf(false) }
     DetailScaffold(tr(detail?.name ?: "Activité"), onBack = { nav.popBackStack() }, action = {
+        if (detail != null && app.superhealth.league.League.available()) IconButton(onClick = {
+            app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.Draft(detail.name,
+                listOfNotNull(detail.distanceM?.let { "${km(it)} km" }, "${(detail.activeSec / 60).toInt()} min").joinToString(" · "), "RUN")
+            nav.navigate("social/compose")
+        }) { Icon(Icons.Rounded.Share, tr("Partager avec mes amis")) }
         // module Coach : analyse de la séance comparée aux précédentes (comme l'Athlete Intelligence de Strava)
         if (detail != null && app.superhealth.ui.coach.coachAvailable()) IconButton(onClick = {
             val facts = listOfNotNull(detail.name, Instant.ofEpochMilli(detail.start).atZone(ZoneId.systemDefault()).toLocalDate().toString(),

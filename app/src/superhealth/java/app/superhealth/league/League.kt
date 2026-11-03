@@ -34,7 +34,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Indice d'habitudes v3 sur sept jours terminés et comparaisons sportives entre amis.
+ * Indice d'habitudes v4 sur sept jours terminés et comparaisons sportives entre amis.
  * Cartes EC P-256 : QR/message, proximité NSD ou relais personnel facultatif.
  * Les parties inconnues restent nulles ; le score nécessite au moins trois parties.
  * La signature protège l'identité, pas la sincérité des statistiques déclarées.
@@ -47,7 +47,7 @@ object League {
         val ready: Boolean = false, val endDay: Long = 0, val metrics: List<Comparison> = emptyList(), val progress: Progression.Summary? = null) {
         val coverage get() = Pillar.entries.fold(0) { mask, p -> if (pillars[p] != null) mask or (1 shl p.ordinal) else mask }
         fun comparable(friend: Friend, nowSeconds: Long) = ready && friend.ready &&
-            friend.model == HealthIndex.MODEL && friend.endDay == endDay && friend.coverage == coverage &&
+            friend.model == HealthIndex.MODEL && friend.endDay == endDay && Integer.bitCount(friend.coverage) >= HealthIndex.MIN_DOMAINS &&
             friend.time >= nowSeconds - 48 * 3600
     }
 
@@ -56,7 +56,7 @@ object League {
 
     @Serializable data class Card(val v: Int = 1, val k: String, val n: String, val w: String, val t: Long, val s: Int, val p: List<Int?> = emptyList(), val st: Int = 0,
         val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
-        val metrics: List<Comparison> = emptyList(), val detailSnapshot: Boolean = false, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val hello: Boolean = false, val relayKey: String? = null, val progress: Progression.Summary? = null, val invite: Boolean = false, val profileTitle: String? = null, val profileBadges: List<String> = emptyList())
+        val metrics: List<Comparison> = emptyList(), val detailSnapshot: Boolean = false, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val hello: Boolean = false, val relayKey: String? = null, val progress: Progression.Summary? = null, val invite: Boolean = false, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList())
 
     @Serializable data class Friend(val id: String, val key: String, val name: String, val week: String, val time: Long, val score: Int,
                                     val pillars: List<Int?> = emptyList(), val streak: Int = 0,
@@ -64,7 +64,7 @@ object League {
                                     val alias: String? = null, val history: Map<String, Int> = emptyMap(), val addedAt: Long = 0,
                                     val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
                                     val metrics: List<Comparison> = emptyList(), val metricsTime: Long = 0, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val metricsEndDay: Long = 0, val relayKey: String? = null, val progress: Progression.Summary? = null,
-                                    val trends: Map<String, List<TrendPoint>> = emptyMap(), val relayEtag: String? = null, val inviteRevision: Long = 0, val profileTitle: String? = null, val profileBadges: List<String> = emptyList()) {
+                                    val trends: Map<String, List<TrendPoint>> = emptyMap(), val relayEtag: String? = null, val inviteRevision: Long = 0, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList()) {
         val shown get() = alias?.takeIf { it.isNotBlank() } ?: name
     }
 
@@ -72,7 +72,7 @@ object League {
 
     @Serializable data class State(val friends: List<Friend> = emptyList(), val best: Map<String, Int> = emptyMap(), val sharePillars: Boolean = true,
         val shareActivities: Boolean = false, val relayUrl: String = "", val customRelay: Boolean = false, val relayEnabled: Boolean = true, val syncsPerDay: Int = 4,
-        val lastSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), val questXp: Long = 0, val questsCompleted: Long = 0)
+        val lastSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), val questXp: Long = 0, val questsCompleted: Long = 0, val posts: List<SocialPosts.Post> = emptyList())
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private const val ALIAS = "superhealth_league"
@@ -132,9 +132,9 @@ object League {
         p[Pillar.STRENGTH] = if (!sh.has(Feature.TRAINING)) null else {
             val previous = HealthIndex.strengthBests(history.filter { it.startTime in referenceStart until fromMs }, exerciseDb)
             val gain = HealthIndex.strengthBests(workouts, exerciseDb).maxOfOrNull { (id, value) -> HealthIndex.gain(value, previous[id]) } ?: 0.0
-            HealthIndex.sport(workouts.size.toDouble(), 2.0, gain)
+            HealthIndex.sport(workouts.size.toDouble(), (WorkoutApp.store.state.value.programs.firstOrNull { it.id == WorkoutApp.store.state.value.settings.activeProgramId }?.leagueTarget() ?: state.value.weeklyTargets["STRENGTH"] ?: 2).toDouble(), gain)
         }
-        p[Pillar.CARDIO] = if (!sh.has(Feature.HEALTH) || acts.isEmpty()) null else
+        p[Pillar.CARDIO] = if (!sh.has(Feature.HEALTH) || activities.none { it.kind != Bridge.Kind.STRENGTH }) null else
             HealthIndex.sport(cardio.sumOf { it.minutes.coerceAtLeast(0) }.toDouble(), 150.0, HealthIndex.runGain(runs, referenceRuns))
         val settings = NutriApp.repository.prefs.settings.first()
         suspend fun observed(metric: Metric, date: LocalDate) = Bridge.healthValue(ctx, metric, date)?.takeIf { it > 0 }
@@ -158,6 +158,11 @@ object League {
         }
         p[Pillar.MIND] = if (!Meditation.available() && !Stretch.available()) null else
             pct((Meditation.minutes(start.toEpochDay(), end.toEpochDay()) + Stretch.minutes(start.toEpochDay(), end.toEpochDay())).toDouble(), 70.0)
+        val tracks = ProgressRepository.selectedTracks(sh)
+        val chosen = mapOf(Pillar.STRENGTH to Progression.Track.STRENGTH, Pillar.CARDIO to Progression.Track.RUN,
+            Pillar.STEPS to Progression.Track.STEPS, Pillar.SLEEP to Progression.Track.SLEEP,
+            Pillar.FOOD to Progression.Track.FOOD, Pillar.MIND to Progression.Track.MIND)
+        chosen.forEach { (pillar, track) -> if (track !in tracks) p[pillar] = null }
         val index = HealthIndex.total(Pillar.entries.map { p[it] })
         val metrics = mutableListOf<Comparison>()
         metrics += Comparison("activities:count", "Activités", "séances", acts.size.toDouble() + workouts.count { w -> acts.none { it.gymId == w.id } })
@@ -228,6 +233,7 @@ object League {
             metrics = if (detailed && state.value.shareActivities) s.metrics else emptyList(), detailSnapshot = detailed,
             remote = remote, revision = revision, coverage = s.coverage, hello = hello, relayKey = relayKey, progress = if (state.value.shareProgress && !hello) s.progress else null, invite = invite,
             profileTitle = state.value.profileTitle.takeIf { !hello && !invite },
+            posts = if (detailed && !hello && !invite) SocialPosts.visible(state.value.posts) else emptyList(),
             profileBadges = if (!hello && !invite) state.value.profileBadges.filter { it in state.value.earnedBadges }.take(3) else emptyList())
         val body = json.encodeToString(Card.serializer(), c).toByteArray()
         val key = keyStore().getKey(ALIAS, null) as java.security.PrivateKey
@@ -277,6 +283,8 @@ object League {
         if (!Achievements.validDecor(c.profileTitle, c.profileBadges)) return null
         if ((c.hello || c.invite) && (c.profileTitle != null || c.profileBadges.isNotEmpty())) return null
         if (c.progress?.totals?.let { it.size > 16 || it.any { (k, v) -> k.length > 40 || v !in 0..1_000_000_000L } } == true) return null
+        if (c.posts.size > SocialPosts.MAX_POSTS || c.posts.any { !SocialPosts.valid(it) } || c.posts.map { it.id }.distinct().size != c.posts.size) return null
+        if ((c.hello || c.invite) && c.posts.isNotEmpty()) return null
         if (c.coverage !in 0..63) return null
         if (c.hello && (c.s != 0 || c.ready || c.remote != null || c.metrics.isNotEmpty() || c.relayKey != null || c.progress != null || c.p.any { it != null })) return null
         if (c.revision < 0 || (c.revision > 0 && c.revision / 1000 != c.t)) return null
@@ -334,7 +342,7 @@ object League {
             metricsTime = if (c.detailSnapshot) c.t else base.metricsTime,
             remote = remote, revision = c.revision, coverage = c.coverage,
             metricsEndDay = if (c.detailSnapshot) c.endDay else base.metricsEndDay,
-            relayKey = relayKey, progress = c.progress, trends = trends, profileTitle = c.profileTitle, profileBadges = c.profileBadges,
+            relayKey = relayKey, progress = c.progress, trends = trends, profileTitle = c.profileTitle, profileBadges = c.profileBadges, posts = if (c.detailSnapshot) c.posts else base.posts,
             relayEtag = base.relayEtag.takeIf { sameRelay },
             inviteRevision = if (updateMetadata) maxOf(metadataRevision, c.revision) else metadataRevision)
     }

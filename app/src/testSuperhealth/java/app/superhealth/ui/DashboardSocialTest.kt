@@ -26,16 +26,17 @@ class DashboardSocialTest {
     private fun friend(id: String, score: Int) = League.Friend(id, "key-$id", id, mine.week, now, score,
         ready = true, endDay = mine.endDay, model = app.superhealth.league.HealthIndex.MODEL, coverage = mine.coverage)
 
-    @Test fun globalDashboardRankingUsesMatchingCoverageDateAndModelAndKeepsTies() {
+    @Test fun globalDashboardRankingUsesPersonalDomainsAndMatchingDateAndModelAndKeepsTies() {
         val entries = dashboardScoreEntries(mine, listOf(
             friend("leader", 875).copy(alias = "My alias"), friend("tie", 850),
             friend("other-day", 950).copy(endDay = mine.endDay - 1),
             friend("stale", 950).copy(time = now - 48 * 3600 - 1),
             friend("old-model", 950).copy(model = 2),
-            friend("other-coverage", 950).copy(coverage = 7)
+            friend("other-coverage", 950).copy(coverage = 7),
+            friend("too-few-domains", 999).copy(coverage = 3)
         ), now, "Me")
-        assertEquals(listOf("My alias", "Me", "tie"), entries.map { it.name })
-        assertEquals(listOf(1, 2, 2), entries.map { dashboardRank(entries, it) })
+        assertEquals(listOf("other-coverage", "My alias", "Me", "tie"), entries.map { it.name })
+        assertEquals(listOf(1, 2, 3, 3), entries.map { dashboardRank(entries, it) })
         assertTrue(dashboardScoreEntries(mine.copy(ready = false), emptyList(), now, "Me").isEmpty())
     }
 

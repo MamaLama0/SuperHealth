@@ -1340,11 +1340,29 @@ private fun WClassement(sz: CardSize, icon: ImageVector, m: Modifier, refresh: I
         ?: if (entries.size > 1) tr("Vous êtes en tête") else tr("Comparez avec vos amis")
     if (sz == CardSize.W) SocialStrip(m, icon, tr("Classement"), rank, score, hue, onClick)
     else SocialCard(sz, m, icon, tr("Classement"), hue, onClick) {
-        SocialValue(score, if (me != null) "/ 1000 · $rank" else rank, hue, sz == CardSize.S)
+        if (sz != CardSize.S) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            app.superhealth.ui.league.GameArt(app.superhealth.ui.league.GameArtKind.TROPHY, Modifier.size(if (sz == CardSize.L) 60.dp else 42.dp))
+            Column(Modifier.weight(1f)) {
+                SocialValue(if (me != null && entries.size > 1) "#${dashboardRank(entries, me)}" else score,
+                    if (me != null && entries.size > 1) trf("%1\$s points · %2\$s participants", score, entries.size) else rank, hue)
+            }
+        } else SocialValue(if (me != null && entries.size > 1) "#${dashboardRank(entries, me)}" else score,
+            if (me != null) "$score / 1000" else rank, hue, true)
         if (sz != CardSize.S && me != null) {
             SocialBar(me.score / 1000f, hue)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (sz == CardSize.L && entries.size >= 2) {
+                entries.take(3).forEach { entry ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        app.superhealth.ui.league.RankMedal(dashboardRank(entries, entry))
+                        Text(if (entry.me) tr("Vous") else entry.name, Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(entry.score.toString(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }

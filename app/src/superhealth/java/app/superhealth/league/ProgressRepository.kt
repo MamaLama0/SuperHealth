@@ -33,6 +33,17 @@ object ProgressRepository {
         if (Meditation.available() || Stretch.available()) add(Progression.Track.MIND)
     }
 
+    fun selectedTracks(sh: app.superhealth.SuperSettings): Set<Progression.Track> {
+        val available = availableTracks(sh)
+        return League.state.value.tracked?.mapNotNull { name -> Progression.Track.entries.firstOrNull { it.name == name } }
+            ?.toSet()?.intersect(available) ?: available.filter { track -> when (track) {
+                Progression.Track.STRENGTH -> !sh.activityAsked || "STRENGTH" in sh.activitySections
+                Progression.Track.RUN -> !sh.activityAsked || "RUN" in sh.activitySections
+                Progression.Track.MIND -> sh.activitySections.any { it in setOf("MEDITATION", "STRETCH") } || Meditation.log.value.isNotEmpty() || Stretch.log.value.isNotEmpty()
+                else -> true
+            } }.toSet()
+    }
+
     private val lock = Mutex()
     private var lastKey = 0
     private var lastAt = 0L
@@ -116,7 +127,7 @@ object ProgressRepository {
         } else savedHealth
         val healthSince = if (sh.has(Feature.HEALTH)) minOf(League.state.value.healthSince ?: from, from) else League.state.value.healthSince
         val defaults = availableTracks(sh)
-        val tracks = if (League.state.value.tracked == null) defaults else League.state.value.tracked.orEmpty().mapNotNull { n -> Progression.Track.entries.firstOrNull { it.name == n } }.toSet().intersect(defaults)
+        val tracks = selectedTracks(sh)
         val weekStart = Progression.week(day)
         fun questCounts(first: Long, last: Long) = WeeklyQuests.Metric.entries.associateWith { metric ->
             when (metric) {
@@ -124,7 +135,7 @@ object ProgressRepository {
                 WeeklyQuests.Metric.STRENGTH -> sessions.filterKeys { it in first..last }.values.sum()
                 WeeklyQuests.Metric.STRENGTH_REVIEW -> history.count { w -> Analytics.day(w.startTime).toEpochDay() in first..last && w.rpe != null && w.exercises.any { Analytics.workingSets(it).isNotEmpty() } }
                 WeeklyQuests.Metric.FOOD -> calories.count { it.epochDay in first..last && it.kcal > 0 && it.epochDay !in partial }
-                WeeklyQuests.Metric.MIND -> mindfulMinutes.count { (d, m) -> d in first..last && m >= 5 }
+                WeeklyQuests.Metric.MIND -> mindfulMinutes.count { (d, m) -> d in first..last && m >= 10 }
                 else -> events.count { (d, ts) -> d in first..last && metric.track in ts }
             }
         }
@@ -138,7 +149,7 @@ object ProgressRepository {
         val stagnant = comparisons.values.count { samples -> samples.size >= 3 && samples.last().first - samples.first().first >= 14 && WeeklyQuests.plateau(samples.map { it.second }) } >= 2
         val selectedFocus = League.state.value.questFocus
         val questWeek = if (selectedFocus == null) null else WeeklyQuests.update(
-            League.state.value.questWeeks.firstOrNull { it.start == weekStart }, day, defaults, questCounts(weekStart, day), selectedFocus,
+            League.state.value.questWeeks.firstOrNull { it.start == weekStart }, day, tracks, questCounts(weekStart, day), selectedFocus,
             WeeklyQuests.Evidence(questCounts(day - 14, day - 1), fullGoal, League.state.value.weeklyTargets["RUN"] ?: 2, stagnant, hasRecentHealthData), League.state.value.questWeeks)
         val weeks = if (questWeek == null) League.state.value.questWeeks else
             (League.state.value.questWeeks.filterNot { it.start == weekStart } + questWeek).sortedBy { it.start }.takeLast(52)

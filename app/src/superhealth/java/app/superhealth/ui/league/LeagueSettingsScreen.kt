@@ -24,7 +24,7 @@ fun LeagueSettingsScreen(nav: NavHostController) {
     val planTarget = training.programs.firstOrNull { it.id == training.settings.activeProgramId }?.leagueTarget()
     val modules by app.superhealth.modules.Modules.installed.collectAsState()
     val available = remember(sh.features, modules) { ProgressRepository.availableTracks(sh) }
-    val selected = st.tracked ?: available.map { it.name }.toSet()
+    val selected = st.tracked ?: ProgressRepository.selectedTracks(sh).map { it.name }.toSet()
     var healthRules by remember { mutableStateOf(false) }
     var confirmRotate by remember { mutableStateOf(false) }; var message by remember { mutableStateOf<String?>(null) }
     DetailScaffold(tr("Classement et progression"), onBack = { nav.popBackStack() }) {
@@ -33,7 +33,8 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 SuperPrefs.update { it.copy(leagueEnabled = on) }; LeagueWorker.schedule(ctx)
             }
         }
-        SectionLabel(tr("Mes séries"))
+        SectionLabel(tr("Mes activités et mon score"))
+        Text(tr("Seuls les suivis cochés entrent dans votre score. Il faut au moins trois domaines renseignés."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         Text(tr("Chaque suivi a un objectif. La musculation suit les séances du programme ; les jours de repos restent libres."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         GroupCard {
             available.forEachIndexed { i, t ->
@@ -56,8 +57,10 @@ fun LeagueSettingsScreen(nav: NavHostController) {
             SwitchRow(tr("Niveaux, XP et séries"), tr("Votre progression agrégée, sans journal détaillé"), st.shareProgress) { on -> League.configure(ctx) { it.copy(shareProgress = on) } }
             RowDivider()
             SwitchRow(tr("Détail par partie"), tr("Partager les composantes de l'indice"), st.sharePillars) { League.setSharePillars(ctx, it) }
-            RowDivider()
-            SwitchRow(tr("Activités, courses et PR"), tr("Agrégats sportifs uniquement, sans tracé GPS"), st.shareActivities) { on -> League.configure(ctx) { it.copy(shareActivities = on) } }
+            if (available.any { it in setOf(Progression.Track.STRENGTH, Progression.Track.RUN) }) {
+                RowDivider()
+                SwitchRow(tr("Activités, courses et PR"), tr("Agrégats sportifs uniquement, sans tracé GPS"), st.shareActivities) { on -> League.configure(ctx) { it.copy(shareActivities = on) } }
+            }
         }
         SectionLabel(tr("Progression et calcul"))
         MfCard {
@@ -70,12 +73,12 @@ fun LeagueSettingsScreen(nav: NavHostController) {
             Text(tr("Le score porte sur les sept derniers jours terminés. Il faut au moins trois domaines. La moyenne sur 1 000 utilise uniquement leurs poids."), style = MaterialTheme.typography.bodySmall)
             Text(tr("Chaque pourcent de progrès vaut un point sur 100 dans le domaine sportif. La référence est votre meilleur résultat des 28 jours précédant la période. Sans référence, seuls les points de volume comptent."), style = MaterialTheme.typography.bodySmall)
             listOf(
-                "Musculation (20 %) · Jusqu’à 90 points pour deux séances et 10 pour un gain de force estimée ou de répétitions sur le même exercice.",
-                "Cardio (20 %) · Jusqu’à 90 points pour 150 minutes et 10 pour un gain de vitesse sur une course d’au moins 1 km de distance comparable (±10 %).",
-                "Moyenne des jours renseignés face à votre objectif de pas. Au moins 4 jours. Poids : 15 %.",
-                "Moyenne des nuits renseignées face à 7 h. Au moins 4 nuits. Poids : 25 %.",
-                "Écart relatif entre apports et cibles, évalué progressivement. Au moins 4 jours renseignés. Poids : 15 %.",
-                "Méditation et étirements face à 70 min sur 7 jours. Poids : 5 %."
+                "Musculation (poids 20) · Jusqu’à 90 points pour votre objectif de séances et 10 pour un gain de force estimée ou de répétitions sur le même exercice.",
+                "Cardio (poids 20) · Jusqu’à 90 points pour 150 minutes et 10 pour un gain de vitesse sur une course d’au moins 1 km de distance comparable (±10 %).",
+                "Moyenne des jours renseignés face à votre objectif de pas. Au moins 4 jours. Poids relatif : 15.",
+                "Moyenne des nuits renseignées face à 7 h. Au moins 4 nuits. Poids relatif : 25.",
+                "Écart relatif entre apports et cibles, évalué progressivement. Au moins 4 jours renseignés. Poids relatif : 15.",
+                "Méditation et étirements face à 70 min sur 7 jours. Poids relatif : 5."
             ).forEach { Text(tr(it), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
         }
         RelaySettings()

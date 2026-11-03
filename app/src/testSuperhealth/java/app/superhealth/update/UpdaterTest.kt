@@ -8,6 +8,8 @@ import org.junit.Test
 class UpdaterTest {
     @Test fun versions() {
         assertTrue(Updater.newer("v1.1", "1.0"))
+        assertTrue(Updater.newer("v3.0.1", "3.0"))
+        assertFalse(Updater.newer("v3.0", "3.0.1"))
         // numérotation décimale : 1.4 → 1.41 (mineure) → 1.5 (majeure) → 1.51 → 1.6
         assertTrue(Updater.newer("v1.41", "1.4"))
         assertTrue(Updater.newer("v1.5", "1.41"))

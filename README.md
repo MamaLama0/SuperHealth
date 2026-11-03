@@ -24,13 +24,13 @@ Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](htt
 - **Santé** : montre (pas, cœur, sommeil, VFC…), scores de sommeil, récupération et effort, courses avec tracé.
   Sur Android, une Garmin se connecte sans Garmin Connect (météo et GPS rapide inclus).
 - **IA offerte** sans clé, ou la vôtre.
-- **Social** : classement, amis par code ou QR, progression, séries, quêtes et badges.
+- **Social** : classement avec podium, amis par code ou QR, progression, séries, quêtes et badges. Fil à gauche du dashboard (glisser vers la droite), publications de photos, vidéos, séances et courses entre amis ; désactivable dans Réglages → Accueil.
 - **Tableau de bord** personnalisable et **21 widgets Android**, dont 6 sociaux. Ajout depuis Réglages → Accueil → Widgets Android, ou depuis le menu de votre écran d’accueil.
 - **Sauvegardes chiffrées**, français et anglais.
 
 ## Vie privée
 
-Aucun compte requis. Les journaux restent sur le téléphone. Le partage entre amis est facultatif : le relais transporte des cartes chiffrées, sans journal détaillé. L’IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
+Aucun compte requis. Les journaux restent sur le téléphone. Le partage entre amis est facultatif : le relais transporte des cartes et médias chiffrés. Les photos, vidéos et résumés de séance se publient uniquement quand vous le décidez. Les cartes de course ne contiennent pas de tracé GPS. L’IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
 
 ## iOS en détail
 

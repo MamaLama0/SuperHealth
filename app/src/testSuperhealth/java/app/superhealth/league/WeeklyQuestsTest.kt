@@ -62,6 +62,21 @@ class WeeklyQuestsTest {
         assertTrue(next.quests.none { it.claimed || it.complete })
         assertEquals(next, WeeklyQuests.claim(next, next.quests.first().metric, monday + 7))
     }
+    @Test fun unusedMeditationDoesNotCreateAGenericPauseQuestAndFrequencyScalesTheGoal() {
+        val noMind = WeeklyQuests.update(null, monday, setOf(Progression.Track.MIND), emptyMap(),
+            setOf(WeeklyQuests.Focus.DAILY), WeeklyQuests.Evidence())
+        assertTrue(noMind.quests.isEmpty())
+        fun food(count: Int) = WeeklyQuests.update(null, monday, setOf(Progression.Track.FOOD), emptyMap(),
+            setOf(WeeklyQuests.Focus.NUTRITION), WeeklyQuests.Evidence(mapOf(WeeklyQuests.Metric.FOOD to count))).quests.single().target
+        assertEquals(1, food(1))
+        assertEquals(4, food(6))
+        assertEquals(7, food(14))
+        val oldPause = WeeklyQuests.Week(monday, listOf(WeeklyQuests.Quest(WeeklyQuests.Metric.MIND, 2)))
+        assertTrue(WeeklyQuests.update(oldPause, monday, setOf(Progression.Track.MIND), emptyMap(),
+            setOf(WeeklyQuests.Focus.DAILY), WeeklyQuests.Evidence()).quests.isEmpty())
+        val claimed = oldPause.copy(quests = oldPause.quests.map { it.copy(progress = 2, claimed = true) })
+        assertEquals(claimed, WeeklyQuests.update(claimed, monday, emptySet(), emptyMap(), emptySet(), WeeklyQuests.Evidence()))
+    }
     @Test fun unconfiguredOrUnavailableFocusCannotGenerateAnUnrelatedQuest() {
         assertTrue(WeeklyQuests.update(null, monday, tracks, emptyMap(), emptySet(), WeeklyQuests.Evidence()).quests.isEmpty())
         assertTrue(WeeklyQuests.update(null, monday, setOf(Progression.Track.FOOD), emptyMap(), setOf(WeeklyQuests.Focus.RUN), WeeklyQuests.Evidence()).quests.isEmpty())
@@ -69,7 +84,7 @@ class WeeklyQuestsTest {
     @Test fun missingHealthDataIsAStarterGoalRatherThanAnInventedFailure() {
         val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), setOf(WeeklyQuests.Focus.DAILY),
             WeeklyQuests.Evidence(mapOf(WeeklyQuests.Metric.FOOD to 10, WeeklyQuests.Metric.MIND to 4), healthData = false))
-        assertEquals(WeeklyQuests.Metric.STEPS, w.quests.single().metric)
-        assertEquals(WeeklyQuests.Reason.START, w.quests.single().reason)
+        assertEquals(WeeklyQuests.Metric.MIND, w.quests.single().metric)
+        assertTrue(w.quests.none { it.metric in setOf(WeeklyQuests.Metric.RUN, WeeklyQuests.Metric.STEPS) })
     }
 }

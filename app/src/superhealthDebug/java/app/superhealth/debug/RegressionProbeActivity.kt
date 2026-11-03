@@ -28,6 +28,39 @@ class RegressionProbeActivity : Activity() {
         scope.launch {
             try {
                 when (intent.getStringExtra("op")) {
+                    "social-save" -> {
+                        val dir = File(filesDir, "qa/301-original").apply { mkdirs() }
+                        check(!File(dir, "league.json").exists())
+                        File(dir, "league.json").writeText(kotlinx.serialization.json.Json.encodeToString(League.State.serializer(), League.state.value))
+                        File(dir, "settings.json").writeText(kotlinx.serialization.json.Json.encodeToString(SuperSettings.serializer(), SuperPrefs.settings.value))
+                    }
+                    "social-restore" -> {
+                        val dir = File(filesDir, "qa/301-original")
+                        val original = kotlinx.serialization.json.Json.decodeFromString(League.State.serializer(), File(dir, "league.json").readText())
+                        val settings = kotlinx.serialization.json.Json.decodeFromString(SuperSettings.serializer(), File(dir, "settings.json").readText())
+                        League.configure(this@RegressionProbeActivity) { original }
+                        SuperPrefs.update { settings }
+                        dir.deleteRecursively()
+                    }
+                    "feed-intro" -> SuperPrefs.update { it.copy(socialFeedIntroSeen = false, socialFeedEnabled = true) }
+                    "feed-fixture" -> {
+                        val now = System.currentTimeMillis()
+                        League.configure(this@RegressionProbeActivity) { it.copy(posts = listOf(
+                            app.superhealth.league.SocialPosts.Post("3".repeat(32), now, "La régularité finit par payer 💪", "WORKOUT", "Haut du corps", "45 min · 4 exercices\nDéveloppé couché · 3 × 10 × 60 kg"),
+                            app.superhealth.league.SocialPosts.Post("4".repeat(32), now - 3600000, "La sortie du matin !", "RUN", "Ma sortie course", "5,20 km · 29 min"))) }
+                    }
+                    "post-publish" -> {
+                        val source = app.superhealth.league.SocialPosts.Draft("Séance QA 3.0.1", "3 × 10 × 60 kg · sans GPS", "WORKOUT")
+                        val result = app.superhealth.league.SocialPosts.publish(this@RegressionProbeActivity, "Échange chiffré entre téléphones", source,
+                            intent.getStringExtra("uri")?.let(android.net.Uri::parse))
+                        File(filesDir, "qa/publish-result.txt").writeText("sent=${result.sent}")
+                    }
+                    "post-download" -> {
+                        val friend = League.state.value.friends.first { it.posts.any { p -> p.media != null } }
+                        val post = friend.posts.first { it.media != null }
+                        val downloaded = app.superhealth.league.SocialPosts.download(this@RegressionProbeActivity, post, friend)
+                        File(filesDir, "qa/media-received.txt").writeText("bytes=${downloaded.length()};sha256=" + java.security.MessageDigest.getInstance("SHA-256").digest(downloaded.readBytes()).joinToString("") { "%02x".format(it) })
+                    }
                     "widget-cleanup" -> {
                         android.appwidget.AppWidgetHost(this@RegressionProbeActivity, 3002).deleteHost()
                     }

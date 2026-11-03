@@ -25,11 +25,15 @@ object Relay {
     @Synchronized private fun secret(ctx: Context, name: String, make: () -> String) = Secrets.get(ctx, name) ?: make().also { Secrets.put(ctx, name, it) }
     private fun token() = SecureRandom().generateSeed(32).joinToString("") { "%02x".format(it) }
     fun readKey(ctx: Context) = secret(ctx, "league_aes_read_key", RelayCrypto::newKey)
+    private fun allowedTransport(url: okhttp3.HttpUrl) = url.isHttps ||
+        (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG &&
+            nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.qa" &&
+            url.scheme == "http" && url.host == "127.0.0.1")
     fun validBase(raw: String): Boolean = raw.toHttpUrlOrNull()?.let {
-        it.isHttps && it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null && it.encodedPath == "/"
+        allowedTransport(it) && it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null && it.encodedPath == "/"
     } ?: false
     fun validEndpoint(raw: String): Boolean = raw.toHttpUrlOrNull()?.let {
-        it.isHttps && it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null &&
+        allowedTransport(it) && it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null &&
             (it.encodedPath.matches(Regex("/v2/cards/[a-f0-9]{64}/[a-f0-9]{64}")) || it.encodedPath.matches(Regex("/v1/cards/[a-f0-9]{16}/[a-f0-9]{64}")))
     } ?: false
     fun encryptedEndpoint(raw: String) = validEndpoint(raw) && raw.toHttpUrlOrNull()?.encodedPath?.startsWith("/v2/") == true
@@ -45,13 +49,34 @@ object Relay {
         val read = secret(ctx, "league_read_capability_v2", ::token)
         return "$base/v2/cards/$mailbox/$read"
     }
-    private fun auth(ctx: Context, request: Request.Builder) = request.header("Authorization", "Bearer " + publicationKey(ctx))
+    internal fun auth(ctx: Context, request: Request.Builder) = request.header("Authorization", "Bearer " + publicationKey(ctx))
         .header("X-Write-Token", secret(ctx, "league_owner_token_v2", ::token))
     private fun readBounded(r: Response): String = r.body.byteStream().use { input ->
         val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
         while (true) { val n = input.read(buffer); if (n < 0) break; check(out.size() + n <= 98304) { "réponse trop volumineuse" }; out.write(buffer, 0, n) }
         out.toString("UTF-8")
     }
+    private suspend fun publishCard(ctx: Context, endpoint: String) {
+        val raw = League.myCard(ctx, detailed = true, includeRelayKey = false)
+        val card = League.parse(raw) ?: error("carte locale non valable")
+        check(card.relayKey == null)
+        val stable = json.encodeToString(League.Card.serializer(), card.copy(t = 0, revision = 0))
+        val digest = MessageDigest.getInstance("SHA-256").digest(stable.toByteArray()).joinToString("") { "%02x".format(it) }
+        val publishedAt = Secrets.get(ctx, "league_published_at_v2")?.toLongOrNull() ?: 0
+        if (Secrets.get(ctx, "league_published_hash_v2") != digest || System.currentTimeMillis() - publishedAt > TimeUnit.HOURS.toMillis(24)) {
+            val encrypted = RelayCrypto.encrypt(raw, readKey(ctx), endpoint.toHttpUrlOrNull()!!.encodedPath, card.revision)
+            http.newCall(auth(ctx, Request.Builder().url(endpoint)).put(encrypted.toRequestBody("application/json".toMediaType())).build()).execute().use {
+                check(it.isSuccessful) { "publication : HTTP ${it.code}" }
+            }
+            Secrets.put(ctx, "league_published_hash_v2", digest); Secrets.put(ctx, "league_published_at_v2", System.currentTimeMillis().toString())
+        }
+    }
+    /** Explicit publication does not depend on whether a friend's server answers. */
+    internal suspend fun publishOnly(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
+        check(League.available())
+        val endpoint = myEndpoint(ctx) ?: error("Activez le serveur dans les préférences sociales.")
+        publishCard(ctx, endpoint)
+    } }
     suspend fun sync(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
         if (!League.available() || !League.state.value.relayEnabled) return@withContext
         val errors = java.util.Collections.synchronizedList(mutableListOf<String>())
@@ -59,22 +84,9 @@ object Relay {
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { errors += "Invitations indisponibles. Réessayez plus tard." }
         myEndpoint(ctx)?.let { endpoint ->
-            try {
-                val raw = League.myCard(ctx, detailed = true, includeRelayKey = false)
-                val card = League.parse(raw) ?: error("carte locale non valable")
-                check(card.relayKey == null)
-                val stable = json.encodeToString(League.Card.serializer(), card.copy(t = 0, revision = 0))
-                val digest = MessageDigest.getInstance("SHA-256").digest(stable.toByteArray()).joinToString("") { "%02x".format(it) }
-                val publishedAt = Secrets.get(ctx, "league_published_at_v2")?.toLongOrNull() ?: 0
-                if (Secrets.get(ctx, "league_published_hash_v2") != digest || System.currentTimeMillis() - publishedAt > TimeUnit.HOURS.toMillis(24)) {
-                    val encrypted = RelayCrypto.encrypt(raw, readKey(ctx), endpoint.toHttpUrlOrNull()!!.encodedPath, card.revision)
-                    http.newCall(auth(ctx, Request.Builder().url(endpoint)).put(encrypted.toRequestBody("application/json".toMediaType())).build()).execute().use {
-                        check(it.isSuccessful) { "publication : HTTP ${it.code}" }
-                    }
-                    Secrets.put(ctx, "league_published_hash_v2", digest); Secrets.put(ctx, "league_published_at_v2", System.currentTimeMillis().toString())
-                }
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { errors += "Publication impossible. Vérifiez la connexion ou les réglages du serveur." }
+            try { publishCard(ctx, endpoint) }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { errors += "Publication impossible. Vérifiez la connexion ou les réglages du serveur." }
         }
         val permits = Semaphore(3)
         coroutineScope {

@@ -137,13 +137,13 @@ fun LeagueScreen(nav: NavHostController) {
     val pillar = League.Pillar.entries.firstOrNull { it.name == part }.takeIf { !month && metricKey == null }
     val metrics = (s?.metrics.orEmpty() + st.friends.flatMap { it.metrics }).distinctBy { it.key }.sortedBy { it.label }
     val metric = metrics.firstOrNull { it.key == metricKey }.takeIf { !month }
-    fun mean(scores: Map<String, Int>) = s?.let { HealthIndex.mean28(scores, endDay, it.coverage) }
+    fun mean(scores: Map<String, Int>, coverage: Int = s?.coverage ?: 0) = HealthIndex.mean28(scores, endDay, coverage)
     val rows = (st.friends.map { f ->
         val compatible = f.model == HealthIndex.MODEL && f.endDay == endDay && f.time >= recent
         val value: Double? = when {
             xpMode -> f.progress?.takeIf { it.model == app.superhealth.league.Progression.MODEL && it.weekStart == s?.progress?.weekStart && f.time >= recent }?.weekXp?.toDouble()
             mode == "PERF" && metric == null -> null
-            month -> mean(f.history)
+            month -> mean(f.history, f.coverage)
             metric != null -> f.metrics.firstOrNull { it.key == metric.key && it.unit == metric.unit && it.scope == metric.scope && it.lowerWins == metric.lowerWins }
                 ?.takeIf { f.metricsTime >= recent && (it.scope == "all" || f.metricsEndDay == endDay) }?.value
             pillar != null -> if (compatible) f.pillars.getOrNull(pillar.ordinal)?.toDouble() else null
@@ -187,13 +187,18 @@ fun LeagueScreen(nav: NavHostController) {
         val period = when {
             xpMode -> tr("Du lundi au dimanche")
             metric?.scope == "all" -> tr("PR historique · même exercice")
-            else -> trf("Du %1\$s au %2\$s", app.superhealth.nutrition.ui.screens.fmtDate(endDay - if (month) 27 else 6),
-                app.superhealth.nutrition.ui.screens.fmtDate(endDay))
+            else -> {
+                val end = LocalDate.ofEpochDay(endDay)
+                val begin = end.minusDays(if (month) 27 else 6)
+                val startFormat = java.time.format.DateTimeFormatter.ofPattern(if (begin.year == end.year) "d MMM" else "d MMM yyyy", app.superhealth.ui.Lang.locale)
+                val endFormat = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", app.superhealth.ui.Lang.locale)
+                begin.format(startFormat) + " – " + end.format(endFormat)
+            }
         }
         val own = ranked.firstOrNull { it.friend == null }
         val position = ranked.indexOfFirst { own != null && it.score == own.score } + 1
         val tied = own != null && ranked.any { it.friend != null && it.score == own.score }
-        MfCard {
+        RankingHero {
             Text(criterion, style = MaterialTheme.typography.labelLarge, color = LeagueHue.onContainer())
             Text(period, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             Spacer(Modifier.height(10.dp))
@@ -205,7 +210,7 @@ fun LeagueScreen(nav: NavHostController) {
             own?.score?.let { value ->
                 FlowRow(verticalArrangement = Arrangement.spacedBy(2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(top = 6.dp)) {
-                    Text(number(value), style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold,
+                    Text(number(value), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
                         color = LeagueHue.onContainer())
                     Text(if (mode == "HEALTH" && pillar == null) "/ 1000" else suffix.trim(),
                         style = MaterialTheme.typography.titleMedium, color = Mf.colors.textSecondary,
@@ -221,15 +226,15 @@ fun LeagueScreen(nav: NavHostController) {
                         style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 6.dp))
                 }
             }
-            if (mode == "HEALTH" && !month && pillar == null) {
-                Text(if (s?.ready == true) tr("Même période et mêmes domaines suivis · cartes de moins de 48 h")
-                    else tr("Données insuffisantes : au moins 3 parties renseignées"), style = MaterialTheme.typography.bodySmall,
-                    color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
-            }
             if (metric != null) Text(if (metric.lowerWins) tr("La valeur la plus basse arrive en tête.") else tr("La valeur la plus élevée arrive en tête."), style = MaterialTheme.typography.bodySmall)
             if (month) Text(tr("Moyenne des indices disponibles sur 28 jours ; les jours absents restent absents."), style = MaterialTheme.typography.bodySmall)
         }
+        if (mode == "HEALTH" && s?.ready != true) PillButton(tr("Choisir mes activités"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("league/settings") }
         if (refreshError) Text(tr("Actualisation impossible. Réessayez."), color = MaterialTheme.colorScheme.error)
+        if (ranked.size >= 2) RankingPodium(ranked.take(3).map { row ->
+            PodiumEntry(row.name, number(row.score!!) + suffix, ranked.indexOfFirst { it.score == row.score } + 1, row.friend == null)
+        })
+        SectionLabel(tr("La course aux points"))
         if (ranked.isNotEmpty()) GroupCard {
             ranked.forEachIndexed { i, row ->
                 if (i > 0) RowDivider()
@@ -238,20 +243,20 @@ fun LeagueScreen(nav: NavHostController) {
                 Row(Modifier.fillMaxWidth().background(if (me) LeagueHue.container() else Color.Transparent)
                     .clickable(enabled = !me) { opened = row.friend }.padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(32.dp).clip(CircleShape).background(if (place == 1) LeagueHue.container() else Mf.colors.chip),
-                        contentAlignment = Alignment.Center) {
-                        Text("$place", style = MaterialTheme.typography.labelLarge,
-                            color = if (place == 1) LeagueHue.onContainer() else Mf.colors.textSecondary)
-                    }
+                    RankMedal(place)
                     Spacer(Modifier.width(8.dp))
                     Avatar(row, 32.dp)
                     Text(if (me) tr("Vous") else row.name, Modifier.weight(1f).padding(horizontal = 10.dp),
-                        style = MaterialTheme.typography.bodyLarge, fontWeight = if (me) FontWeight.Bold else FontWeight.Normal,
+                        style = MaterialTheme.typography.bodyLarge, fontWeight = if (me) FontWeight.Bold else FontWeight.Medium,
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(number(row.score!!) + suffix, style = MaterialTheme.typography.titleSmall)
                 }
             }
         }
+        if (mode == "HEALTH" && !month && pillar == null) Text(
+            if (s?.ready == true) tr("Même période · au moins 3 domaines par personne · cartes de moins de 48 h")
+            else tr("Données insuffisantes : au moins 3 parties renseignées"),
+            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         if (mode == "HEALTH" && !month) {
             SettingRow(tr("Détail par partie"), if (showParts) tr("Masquer") else tr("Afficher")) { showParts = !showParts }
             if (showParts) GroupCard {
@@ -269,10 +274,10 @@ fun LeagueScreen(nav: NavHostController) {
                 missing.forEachIndexed { i, row ->
                     if (i > 0) RowDivider()
                     val reason = when {
-                        row.friend == null -> tr("Données insuffisantes, période ou parties différentes")
+                        row.friend == null -> tr("Données insuffisantes, période ou version différentes")
                         mode == "HEALTH" && !month && row.friend.model != HealthIndex.MODEL -> tr("Ancienne carte : demander une mise à jour")
                         !month && row.friend.time < recent -> tr("Carte reçue il y a plus de 48 h")
-                        else -> tr("Données insuffisantes, période ou parties différentes")
+                        else -> tr("Données insuffisantes, période ou version différentes")
                     }
                     SettingRow(if (row.friend == null) tr("Vous") else row.name, "—", subtitle = reason) { row.friend?.let { opened = it } }
                 }
