@@ -29,6 +29,7 @@ object SessionNotification {
 
     fun update(ctx: Context, st: AppState) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
+        if (!app.superhealth.SuperPrefs.settings.value.notifyWorkout) { nm.cancel(ID); return }
         val s = st.session ?: run { nm.cancel(ID); return }
         nm.deleteNotificationChannel("session")
         nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Séance en cours"), NotificationManager.IMPORTANCE_DEFAULT).apply {

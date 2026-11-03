@@ -13,6 +13,7 @@ import app.superhealth.nutrition.ui.components.*
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
+import app.superhealth.ui.go
 import app.superhealth.ui.trf
 import kotlinx.coroutines.launch
 
@@ -33,6 +34,7 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 SuperPrefs.update { it.copy(leagueEnabled = on) }; LeagueWorker.schedule(ctx)
             }
         }
+        GroupCard { SettingRow(tr("Notifications"), subtitle = tr("Gérer toutes les alertes de l'application")) { nav.go("settings/notifications") } }
         SectionLabel(tr("Mes activités et mon score"))
         Text(tr("Seuls les suivis cochés entrent dans votre score. Il faut au moins trois domaines renseignés."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         Text(tr("Chaque suivi a un objectif. La musculation suit les séances du programme ; les jours de repos restent libres."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
@@ -54,6 +56,10 @@ fun LeagueSettingsScreen(nav: NavHostController) {
         }
         SectionLabel(tr("Ce que je partage"))
         GroupCard {
+            SwitchRow(tr("Photo de profil"), tr("Une petite vignette chiffrée, visible par vos amis"), st.shareProfilePhoto) { on ->
+                League.configure(ctx) { it.copy(shareProfilePhoto = on) }; LeagueWorker.onOpen(ctx, force = true)
+            }
+            RowDivider()
             SwitchRow(tr("Niveaux, XP et séries"), tr("Votre progression agrégée, sans journal détaillé"), st.shareProgress) { on -> League.configure(ctx) { it.copy(shareProgress = on) } }
             RowDivider()
             SwitchRow(tr("Détail par partie"), tr("Partager les composantes de l'indice"), st.sharePillars) { League.setSharePillars(ctx, it) }

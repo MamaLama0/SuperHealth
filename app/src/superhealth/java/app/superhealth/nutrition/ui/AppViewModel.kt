@@ -93,4 +93,15 @@ class AppViewModel(val repo: Repository) : ViewModel() {
 data class RecipeDraft(
     val id: Long = 0, val name: String = "", val servings: String = "1", val totalGrams: String = "",
     val items: List<RecipeItemEntity> = emptyList(), val favorite: Boolean = false,
-)
+) {
+    companion object {
+        /** Copie les quantités et nutriments journalisés ; ne modifie jamais le journal. */
+        fun fromEntries(entries: List<FoodEntryEntity>): RecipeDraft? {
+            if (entries.isEmpty() || entries.any { it.grams?.let { g -> g.isFinite() && g > 0 } != true }) return null
+            return RecipeDraft(items = entries.mapIndexed { index, e ->
+                RecipeItemEntity(recipeId = 0, position = index, foodId = e.foodId, name = e.name, grams = e.grams!!,
+                    kcal = e.kcal, protein = e.protein, fat = e.fat, carbs = e.carbs, fiber = e.fiber, microsJson = e.microsJson)
+            })
+        }
+    }
+}

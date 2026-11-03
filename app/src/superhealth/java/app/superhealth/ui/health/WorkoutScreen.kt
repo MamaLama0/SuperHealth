@@ -150,7 +150,7 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
     DetailScaffold(tr(detail?.name ?: "Activité"), onBack = { nav.popBackStack() }, action = {
         if (detail != null && app.superhealth.league.League.available()) IconButton(onClick = {
             app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.Draft(detail.name,
-                listOfNotNull(detail.distanceM?.let { "${km(it)} km" }, "${(detail.activeSec / 60).toInt()} min").joinToString(" · "), "RUN")
+                listOfNotNull(detail.distanceM?.let { "${km(it)} km" }, "${(detail.activeSec / 60).toInt()} min").joinToString(" · "), if (kind == Bridge.Kind.RUN) "RUN" else "WORKOUT")
             nav.navigate("social/compose")
         }) { Icon(Icons.Rounded.Share, tr("Partager avec mes amis")) }
         // module Coach : analyse de la séance comparée aux précédentes (comme l'Athlete Intelligence de Strava)
@@ -190,6 +190,14 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             }
         }
         Spacer(Modifier.height(10.dp))
+
+        if (app.superhealth.league.League.available()) app.superhealth.nutrition.ui.components.PillButton(
+            tr("Partager cette activité"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Share) {
+            app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.Draft(detail.name,
+                listOfNotNull(detail.distanceM?.let { "${km(it)} km" }, "${(detail.activeSec / 60).toInt()} min").joinToString(" · "),
+                if (kind == Bridge.Kind.RUN) "RUN" else "WORKOUT")
+            nav.navigate("social/compose")
+        }
 
         val track = remember(detail) { detail.points.mapNotNull { p -> if (p.lat != null && p.lon != null) p.lat to p.lon else null } }
         if (track.size >= 2) {

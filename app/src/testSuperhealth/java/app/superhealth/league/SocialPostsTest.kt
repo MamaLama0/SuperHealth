@@ -23,6 +23,13 @@ class SocialPostsTest {
         assertFalse(SocialPosts.valid(post().copy(text = "a".repeat(501)), now))
         assertFalse(SocialPosts.valid(post().copy(created = now + 300001), now))
     }
+    @Test fun videosAllow50MiBWhilePhotosKeepTheir15MiBLimit() {
+        assertEquals(50 * 1024 * 1024, SocialPosts.sourceLimit("video/mp4"))
+        assertEquals(15 * 1024 * 1024, SocialPosts.sourceLimit("image/jpeg"))
+        val video = SocialPosts.Media("b".repeat(64), RelayCrypto.newKey(), "video/mp4", "c".repeat(64), 50 * 1024 * 1024 + 28)
+        assertTrue(SocialPosts.validMedia(video))
+        assertFalse(SocialPosts.validMedia(video.copy(bytes = video.bytes + 1)))
+    }
     @Test fun feedRetentionDoesNotReviveExpiredPostsAndLimitsCardSize() {
         val expired = post().copy(created = now - 35L * 86400000)
         val posts = (0..30).map { post().copy(id = it.toString(16).padStart(32, '0'), created = now - it) } + expired

@@ -8,6 +8,7 @@ import app.superhealth.training.domain.Workout
 import app.superhealth.training.domain.Analytics
 import app.superhealth.training.WorkoutApp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -15,6 +16,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -27,22 +29,26 @@ import javax.crypto.spec.SecretKeySpec
 
 /** Only explicitly published summaries enter the signed, encrypted friend card. No GPS tracks. */
 object SocialPosts {
-    const val MAX_BYTES = 15 * 1024 * 1024
+    const val MAX_PHOTO_BYTES = 15 * 1024 * 1024
+    const val MAX_BYTES = 50 * 1024 * 1024
+    fun sourceLimit(mime: String) = if (mime.startsWith("image/")) MAX_PHOTO_BYTES else MAX_BYTES
     const val MAX_POSTS = 12
     @Serializable data class Media(val id: String, val key: String, val mime: String, val hash: String, val bytes: Int)
     @Serializable data class Post(val id: String, val created: Long, val text: String = "", val kind: String = "TEXT",
         val title: String = "", val detail: String = "", val media: Media? = null)
     @Serializable data class Draft(val title: String, val detail: String, val kind: String)
     data class Published(val post: Post, val sent: Boolean)
+    internal class MissingMediaMailbox : IllegalStateException("La boîte de partage doit être créée avant le média.")
     val draft = MutableStateFlow<Draft?>(null)
     private val kinds = setOf("TEXT", "PHOTO", "VIDEO", "WORKOUT", "RUN", "STREAK")
     private val mimes = setOf("image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/3gpp")
-    private val http = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).callTimeout(120, TimeUnit.SECONDS)
+    private val http = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES).writeTimeout(60, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).build()
     fun valid(post: Post, now: Long = System.currentTimeMillis()): Boolean = post.id.matches(Regex("[a-f0-9]{32}")) &&
         post.created in 1..(now + 300000) && post.text.length <= 500 && post.title.length <= 100 && post.detail.length <= 1500 &&
-        post.kind in kinds && (post.media?.let { m -> m.id.matches(Regex("[a-f0-9]{64}")) && RelayCrypto.validKey(m.key) &&
-            m.mime in mimes && m.hash.matches(Regex("[a-f0-9]{64}")) && m.bytes in 29..(MAX_BYTES + 28) } ?: (post.kind !in setOf("PHOTO", "VIDEO")))
+        post.kind in kinds && (post.media?.let(::validMedia) ?: (post.kind !in setOf("PHOTO", "VIDEO")))
+    fun validMedia(m: Media) = m.id.matches(Regex("[a-f0-9]{64}")) && RelayCrypto.validKey(m.key) &&
+        m.mime in mimes && m.hash.matches(Regex("[a-f0-9]{64}")) && m.bytes in 29..(MAX_BYTES + 28)
     fun visible(posts: List<Post>, now: Long = System.currentTimeMillis()) = posts.filter { valid(it, now) && it.created >= now - 34L * 86400000 }.sortedByDescending { it.created }.take(MAX_POSTS)
     private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun crypt(bytes: ByteArray, key: String, id: String, encrypt: Boolean): ByteArray {
@@ -59,7 +65,7 @@ object SocialPosts {
     private fun trimCache(ctx: Context) {
         var total = 0L
         File(ctx.cacheDir, "social").listFiles().orEmpty().sortedByDescending { it.lastModified() }.forEach { f ->
-            total += f.length(); if (total > 64L * 1024 * 1024) f.delete()
+            total += f.length(); if (total > 128L * 1024 * 1024) f.delete()
         }
     }
     private fun read(ctx: Context, uri: Uri): Pair<ByteArray, String> {
@@ -68,7 +74,7 @@ object SocialPosts {
         val bytes = ctx.contentResolver.openInputStream(uri)!!.use { input ->
             val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
             while (true) { val n = input.read(buffer); if (n < 0) break
-                require(out.size() + n <= MAX_BYTES) { "Choisissez un média de moins de 15 Mo." }; out.write(buffer, 0, n) }
+                require(out.size() + n <= sourceLimit(mime)) { "Choisissez une photo de moins de 15 Mo ou une vidéo de moins de 50 Mo." }; out.write(buffer, 0, n) }
             out.toByteArray()
         }
         if (!mime.startsWith("image/")) return bytes to mime
@@ -104,15 +110,20 @@ object SocialPosts {
         var committed = false
         try {
             if (uri != null) {
-                val (bytes, mime) = read(ctx, uri)
-                val id = SecureRandom().generateSeed(32).joinToString("") { "%02x".format(it) }
-                val key = RelayCrypto.newKey(); val encrypted = crypt(bytes, key, id, true)
-                uploaded = Media(id, key, mime, hash(encrypted), encrypted.size)
-                http.newCall(Relay.auth(ctx, Request.Builder().url(path(endpoint, id)))
-                    .put(encrypted.toRequestBody("application/octet-stream".toMediaType())).build()).execute().use {
-                    check(it.isSuccessful) { if (it.code == 404) "Mettez à jour le serveur pour les photos et vidéos." else "Envoi du média impossible. Réessayez." }
-                }
-                trimCache(ctx); cache(ctx, uploaded).writeBytes(bytes)
+                val upload = prepareUpload(ctx, uri)
+                try {
+                    uploaded = upload.media
+                    http.newCall(Relay.auth(ctx, Request.Builder().url(path(endpoint, uploaded.id)))
+                        .put(upload.encrypted.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use {
+                        check(it.isSuccessful) { when (it.code) {
+                            404 -> "Mettez à jour le serveur pour les photos et vidéos."
+                            413 -> "Cette vidéo dépasse la limite du serveur. Mettez le serveur à jour ou choisissez une vidéo plus courte."
+                            else -> "Envoi du média impossible. Réessayez."
+                        } }
+                    }
+                    upload.plain.copyTo(cache(ctx, uploaded), overwrite = true)
+                    trimCache(ctx)
+                } finally { upload.plain.delete(); upload.encrypted.delete() }
             }
             val post = Post(UUID.randomUUID().toString().replace("-", ""), System.currentTimeMillis(), text.trim().take(500),
                 source?.kind ?: uploaded?.let { if (it.mime.startsWith("video/")) "VIDEO" else "PHOTO" } ?: "TEXT",
@@ -134,21 +145,96 @@ object SocialPosts {
     }
     suspend fun download(ctx: Context, post: Post, friend: League.Friend?): File = withContext(Dispatchers.IO) {
         require(valid(post)); val media = post.media ?: error("Média absent.")
+        downloadMedia(ctx, media, friend)
+    }
+    internal suspend fun downloadMedia(ctx: Context, media: Media, friend: League.Friend?): File = withContext(Dispatchers.IO) {
+        require(validMedia(media))
         val cached = cache(ctx, media)
         if (cached.exists()) { cached.setLastModified(System.currentTimeMillis()); return@withContext cached }
         val endpoint = (if (friend == null) Relay.myEndpoint(ctx) else friend.remote)?.takeIf(Relay::encryptedEndpoint) ?: error("Média indisponible.")
-        val encrypted = http.newCall(Request.Builder().url(path(endpoint, media.id)).get().build()).execute().use { r ->
-            check(r.isSuccessful) { "Média expiré ou indisponible." }
-            r.body.byteStream().use { input ->
-                val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
-                while (true) { val n = input.read(buffer); if (n < 0) break
-                    check(out.size() + n <= media.bytes) { "Média non valable." }; out.write(buffer, 0, n) }
-                out.toByteArray()
+        val encrypted = File.createTempFile("social-download-", ".enc", ctx.cacheDir)
+        val plain = File.createTempFile("social-download-", ".plain", ctx.cacheDir)
+        try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            var count = 0L
+            http.newCall(Request.Builder().url(path(endpoint, media.id)).get().build()).execute().use { r ->
+                check(r.isSuccessful) { "Média expiré ou indisponible." }
+                r.body.byteStream().use { input -> encrypted.outputStream().use { out ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        val n = input.read(buffer); if (n < 0) break
+                        count += n; check(count <= media.bytes) { "Média non valable." }
+                        digest.update(buffer, 0, n); out.write(buffer, 0, n)
+                    }
+                } }
             }
+            check(count == media.bytes.toLong() && digest.digest().joinToString("") { "%02x".format(it) } == media.hash) { "Média non valable." }
+            encrypted.inputStream().use { input ->
+                val nonce = ByteArray(12); java.io.DataInputStream(input).readFully(nonce)
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(Base64.getUrlDecoder().decode(media.key), "AES"), GCMParameterSpec(128, nonce))
+                cipher.updateAAD(("SuperHealth media v1:" + media.id).toByteArray())
+                javax.crypto.CipherInputStream(input, cipher).use { source -> plain.outputStream().use { source.copyTo(it) } }
+            }
+            check(plain.length() == media.bytes - 28L) { "Média non valable." }
+            check(plain.renameTo(cached))
+            trimCache(ctx)
+            cached
+        } finally { encrypted.delete(); plain.delete() }
+    }
+
+    private data class Upload(val media: Media, val plain: File, val encrypted: File)
+    private suspend fun prepareUpload(ctx: Context, uri: Uri): Upload {
+        val mime = ctx.contentResolver.getType(uri).orEmpty()
+        require(mime.startsWith("image/") || mime in mimes) { "Format non pris en charge." }
+        val plain = File.createTempFile("social-upload-", ".plain", ctx.cacheDir)
+        val encrypted = File.createTempFile("social-upload-", ".enc", ctx.cacheDir)
+        try {
+            val actualMime = if (mime.startsWith("image/")) {
+                val image = read(ctx, uri); plain.writeBytes(image.first); image.second
+            } else {
+                var count = 0L
+                ctx.contentResolver.openInputStream(uri)!!.use { input -> plain.outputStream().use { out ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                        val n = input.read(buffer); if (n < 0) break
+                        count += n; require(count <= MAX_BYTES) { "Choisissez une vidéo de moins de 50 Mo." }
+                        out.write(buffer, 0, n)
+                    }
+                } }; mime
+            }
+            require(plain.length() > 0) { "Média illisible." }
+            val id = SecureRandom().generateSeed(32).joinToString("") { "%02x".format(it) }
+            val key = RelayCrypto.newKey(); val nonce = SecureRandom().generateSeed(12)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(Base64.getUrlDecoder().decode(key), "AES"), GCMParameterSpec(128, nonce))
+            cipher.updateAAD(("SuperHealth media v1:" + id).toByteArray())
+            encrypted.outputStream().use { out ->
+                out.write(nonce)
+                javax.crypto.CipherOutputStream(out, cipher).use { target -> plain.inputStream().use { it.copyTo(target) } }
+            }
+            val digest = MessageDigest.getInstance("SHA-256")
+            java.security.DigestInputStream(encrypted.inputStream(), digest).use { input ->
+                val buffer = ByteArray(64 * 1024); while (input.read(buffer) >= 0) { kotlinx.coroutines.currentCoroutineContext().ensureActive() }
+            }
+            return Upload(Media(id, key, actualMime, digest.digest().joinToString("") { "%02x".format(it) }, encrypted.length().toInt()), plain, encrypted)
+        } catch (e: Exception) { plain.delete(); encrypted.delete(); throw e }
+    }
+
+    internal fun uploadAvatar(ctx: Context, endpoint: String, bytes: ByteArray): Media {
+        require(bytes.size in 1..100_000)
+        val id = SecureRandom().generateSeed(32).joinToString("") { "%02x".format(it) }
+        val key = RelayCrypto.newKey(); val encrypted = crypt(bytes, key, id, true)
+        val media = Media(id, key, "image/jpeg", hash(encrypted), encrypted.size)
+        http.newCall(Relay.auth(ctx, Request.Builder().url(path(endpoint, id)))
+            .put(encrypted.toRequestBody("application/octet-stream".toMediaType())).build()).execute().use {
+            if (it.code == 404) throw MissingMediaMailbox()
+            check(it.isSuccessful) { "Envoi de la photo de profil impossible. Réessayez." }
         }
-        check(encrypted.size == media.bytes && hash(encrypted) == media.hash) { "Média non valable." }
-        val bytes = crypt(encrypted, media.key, media.id, false)
-        trimCache(ctx); cached.writeBytes(bytes); cached
+        cache(ctx, media).writeBytes(bytes)
+        return media
     }
     suspend fun delete(ctx: Context, id: String) = withContext(Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
         val post = League.state.value.posts.firstOrNull { it.id == id } ?: return@withContext
@@ -173,4 +259,9 @@ object SocialPosts {
         }
         return Draft(w.name, "${w.durationSec / 60} min\n" + lines.joinToString("\n").take(1400), "WORKOUT")
     }
+
+    fun activityDraft(a: app.superhealth.bridge.Bridge.Activity): Draft = Draft(a.title,
+        listOfNotNull(a.distanceM?.takeIf { it.isFinite() && it > 0 }?.let { app.superhealth.nutrition.ui.num(it / 1000, 2) + " km" },
+            "${a.minutes.coerceAtLeast(0)} min").joinToString(" · "),
+        if (a.kind == app.superhealth.bridge.Bridge.Kind.RUN) "RUN" else "WORKOUT")
 }

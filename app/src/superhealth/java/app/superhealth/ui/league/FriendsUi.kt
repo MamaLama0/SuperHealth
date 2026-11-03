@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,6 +47,32 @@ internal fun Initial(name: String, size: Dp = 40.dp) {
     }
 }
 
+@Composable
+internal fun FriendAvatar(friend: League.Friend?, name: String, size: Dp = 40.dp) {
+    val ctx = LocalContext.current
+    val own by ProfilePhoto.bitmap
+    val photo by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, friend?.id, friend?.avatar, friend?.remote) {
+        value = null
+        val avatar = friend?.avatar
+        if (friend != null && avatar != null && app.superhealth.league.ProfileAvatars.valid(avatar)) {
+            try {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val file = app.superhealth.league.SocialPosts.downloadMedia(ctx, avatar, friend)
+                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeFile(file.path, bounds)
+                    var sample = 1
+                    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 256) sample *= 2
+                    android.graphics.BitmapFactory.decodeFile(file.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { /* Initiale si le média est temporairement indisponible. */ }
+        }
+    }
+    val image = if (friend == null) own else photo
+    if (image == null) Initial(name, size)
+    else Image(image, name, Modifier.size(size).clip(CircleShape), contentScale = ContentScale.Crop)
+}
+
 /** Ajouter est toujours visible ; la liste conserve sa place et les réglages ont leur propre écran. */
 @Composable
 fun FriendsScreen(nav: NavHostController) {
@@ -71,7 +98,7 @@ fun FriendsScreen(nav: NavHostController) {
                 st.friends.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.shown }).forEachIndexed { i, f ->
                     if (i > 0) RowDivider()
                     Row(Modifier.fillMaxWidth().clickable { opened = f }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Initial(f.shown, 44.dp)
+                        FriendAvatar(f, f.shown, 44.dp)
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(f.shown, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != HealthIndex.MODEL) tr("Ancienne carte : demander une mise à jour") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
@@ -103,7 +130,7 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Initial(f.shown, 48.dp)
+                FriendAvatar(f, f.shown, 48.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(f.shown, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(if (f.time <= 0) tr("En attente d'actualisation") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)

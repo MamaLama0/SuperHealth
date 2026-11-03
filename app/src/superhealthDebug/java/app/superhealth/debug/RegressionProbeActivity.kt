@@ -28,6 +28,36 @@ class RegressionProbeActivity : Activity() {
         scope.launch {
             try {
                 when (intent.getStringExtra("op")) {
+                    "social-304-prepare" -> {
+                        seed()
+                        SuperPrefs.update { it.copy(leagueEnabled = true, socialFeedEnabled = true, socialFeedIntroSeen = true) }
+                        League.configure(this@RegressionProbeActivity) { League.State(customRelay = true,
+                            relayUrl = intent.getStringExtra("server").orEmpty(), syncsPerDay = 0, shareActivities = true) }
+                        val image = android.graphics.Bitmap.createBitmap(192, 192, android.graphics.Bitmap.Config.ARGB_8888)
+                        image.eraseColor(android.graphics.Color.rgb(50, 140, 210))
+                        app.superhealth.ui.ProfilePhoto.file(this@RegressionProbeActivity).outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it) }
+                        image.recycle(); app.superhealth.ui.ProfilePhoto.load(this@RegressionProbeActivity)
+                    }
+                    "social-304-react" -> {
+                        val friend = League.state.value.friends.first { it.posts.isNotEmpty() }
+                        check(app.superhealth.league.SocialReactions.react(this@RegressionProbeActivity, friend.id, friend.posts.first(), intent.getStringExtra("kind") ?: "LIKE"))
+                    }
+                    "social-304-report" -> {
+                        val state = League.state.value
+                        val avatar = state.friends.firstOrNull()?.avatar
+                        val imageOk = if (avatar != null) app.superhealth.league.SocialPosts.downloadMedia(this@RegressionProbeActivity, avatar, state.friends.first()).length() > 0 else false
+                        val post = state.posts.firstOrNull()
+                        val reactions = post?.let { app.superhealth.league.SocialReactions.counts(state.reactions, state.friends, League.myId(), it.id) }.orEmpty()
+                        val report = kotlinx.serialization.json.buildJsonObject {
+                            put("friends", kotlinx.serialization.json.JsonPrimitive(state.friends.size))
+                            put("ownPosts", kotlinx.serialization.json.JsonPrimitive(state.posts.size))
+                            put("friendPosts", kotlinx.serialization.json.JsonPrimitive(state.friends.sumOf { it.posts.size }))
+                            put("avatarDecoded", kotlinx.serialization.json.JsonPrimitive(imageOk))
+                            put("likesOnOwnPost", kotlinx.serialization.json.JsonPrimitive(reactions["LIKE"] ?: 0))
+                            put("notifications", kotlinx.serialization.json.JsonPrimitive(getSystemService(android.app.NotificationManager::class.java).activeNotifications.size))
+                        }
+                        File(filesDir, "qa/social-304.json").apply { parentFile?.mkdirs(); writeText(report.toString()) }
+                    }
                     "social-save" -> {
                         val dir = File(filesDir, "qa/301-original").apply { mkdirs() }
                         check(!File(dir, "league.json").exists())

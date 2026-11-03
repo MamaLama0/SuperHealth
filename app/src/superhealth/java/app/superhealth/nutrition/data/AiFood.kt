@@ -76,7 +76,7 @@ object AiFood {
     data class Item(
         val name: String, val quantity: Double, val unit: String, val grams: Double, val type: String,
         val kcal: Double, val protein: Double, val fat: Double, val carbs: Double, val fiber: Double, val query: String,
-        val match: FoodEntity? = null,
+        val match: FoodEntity? = null, val assumption: String = "",
     )
 
     class AiException(message: String) : Exception(message)
@@ -93,25 +93,30 @@ object AiFood {
         that the user ate, with your best estimate of the amount actually eaten.
 
         Output ONLY pipe-delimited lines, one food per line, no header, no markdown, no comments:
-        name | quantity | unit | weight_g | type | kcal | protein_g | fat_g | carbs_g | fiber_g | search_query
+        name | quantity | unit | weight_g | type | kcal | protein_g | fat_g | carbs_g | fiber_g | search_query | assumption
 
         Rules:
         - name: short $foodLang name of the food as it would appear in a food database (e.g. "Riz basmati cuit", "Poulet rôti, blanc").
         - quantity + unit: the household serving you see or that was described (e.g. 1 | assiette, 2 | tranches, 250 | ml, 1 | pièce).
-        - weight_g: estimated edible weight in grams (for drinks, millilitres ≈ grams). Always a number > 0.
+        - weight_g: edible weight actually eaten, without bones, peel, leftovers or packaging. Always a number > 0. For water-like drinks ml ≈ g; for oil, honey and dense foods use an appropriate density.
         - type: one of generic, branded_in_package, branded_not_in_package, restaurant.
         - kcal, protein_g, fat_g, carbs_g, fiber_g: totals for that weight (not per 100 g), numbers with a dot as decimal separator.
         - search_query: 1 to 4 French keywords to find the plain food in a generic database (e.g. "riz basmati cuit").
         - Split mixed dishes into their main components when they are visible or described (e.g. pasta, sauce, cheese), otherwise keep one line.
-        - Respect amounts, brands and remarks given by the user (e.g. "half", "without sauce", "200 g"). Scale and weights printed on packages win.
-        - Use realistic portion sizes; count cooking oil and sauces when likely.
+        - Priority: explicit eaten quantities and corrections from the user, readable nutrition/weight labels, then visual estimates. A package net weight is not the eaten portion unless the whole package was eaten.
+        - Preserve raw versus cooked weights: use the matching nutritional state and include it in name and search_query. "100 g dry pasta" is not "100 g cooked pasta". Do not convert a given gram weight to another state without a known yield.
+        - Respect "half", number of servings, "without sauce", drained weight, and all explicit exclusions. Never count the same dish both as a whole and as separate ingredients. A recipe for several people must be divided by the portion actually eaten.
+        - Include oil, butter and sauces explicitly mentioned or visible. For an uncertain cooking fat, use one modest estimate only when supported by the cooking method and state that assumption; never add oil automatically to every dish or on top of an already complete fried/dressed entry.
+        - For a photo with no reliable scale, make a conservative typical-portion estimate rather than claiming a measured weight. Do not invent a brand or unreadable label values.
+        - assumption: a short $foodLang note only when a material detail is estimated (portion size, raw/cooked assumption, added fat). Otherwise leave empty. No pipe characters within a field.
+        - Check that totals describe the eaten portion, not 100 g. Check rough consistency with protein/carbohydrate ~4 kcal/g and fat ~9 kcal/g, allowing fibre, alcohol and label rounding. Keep zero-calorie drinks at zero and do not add ingredients to force agreement.
         - If there is no food or drink at all, output exactly: $NOT_A_FOOD
     """.trimIndent()
 
     val SELECT_PROMPT = """
         You match foods estimated from a meal to entries of a nutrition database.
         For each numbered food, pick the candidate that describes the same food in the same state (raw/cooked, with/without skin, type of product).
-        Prefer a correct generic entry over a vague one. If no candidate is a good match, answer none.
+        Prefer a correct generic entry over a vague one. Never switch a raw or dry food to a cooked candidate, or the reverse. A similar name is insufficient when preparation, fat content or edible state differs. For a branded item with readable label values, do not replace them with an unrelated generic product. If no candidate is a good match, answer none.
 
         Output ONLY pipe-delimited lines, one per food, no header, no markdown:
         food_number | candidate_id
@@ -251,7 +256,16 @@ object AiFood {
     }
 
     /** Garde-fou : refuse une correspondance dont la densité énergétique s'écarte trop de l'estimation (×2,5). */
-    private fun plausible(it: Item, f: FoodEntity): Boolean {
+    internal fun plausible(it: Item, f: FoodEntity): Boolean {
+        fun state(name: String): String? {
+            val n = java.text.Normalizer.normalize(name.lowercase(), java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")
+            if (Regex("\\b(cooked|cuit|cuite|cuits|cuites|boiled|steamed)\\b").containsMatchIn(n)) return "cooked"
+            if (Regex("\\b(raw|cru|crue|crus|crues|uncooked|dry|sec|secs|seche|seches)\\b").containsMatchIn(n)) return "raw"
+            return null
+        }
+        val expected = state(it.name + " " + it.query)
+        val candidate = state(f.name)
+        if (expected != null && candidate != null && expected != candidate) return false
         if (it.grams <= 0 || it.kcal <= 0 || f.kcal100 <= 0) return true
         val r = (f.kcal100 / 100) / (it.kcal / it.grams)
         return r in 0.4..2.5
@@ -274,12 +288,14 @@ object AiFood {
 
     fun parseAnalyzed(raw: String): List<Item> = rows(raw).mapNotNull { c ->
         if (c.size < 10 || c[0].equals("name", true)) return@mapNotNull null
-        val grams = d(c[3])?.takeIf { it > 0 } ?: return@mapNotNull null
-        val kcal = d(c[5]) ?: return@mapNotNull null
+        val grams = d(c[3])?.takeIf { it.isFinite() && it > 0 } ?: return@mapNotNull null
+        val kcal = d(c[5])?.takeIf { it.isFinite() && it >= 0 && it <= grams * 10.5 } ?: return@mapNotNull null
+        val nutrients = (6..9).map { index -> d(c[index]) ?: 0.0 }
+        if (nutrients.any { !it.isFinite() || it < 0 || it > grams }) return@mapNotNull null
         Item(
             name = c[0], quantity = d(c[1]) ?: 1.0, unit = c[2], grams = grams, type = c[4].lowercase(),
             kcal = kcal, protein = d(c[6]) ?: 0.0, fat = d(c[7]) ?: 0.0, carbs = d(c[8]) ?: 0.0, fiber = d(c[9]) ?: 0.0,
-            query = c.getOrNull(10).orEmpty(),
+            query = c.getOrNull(10).orEmpty(), assumption = c.getOrNull(11).orEmpty().take(180),
         )
     }
 

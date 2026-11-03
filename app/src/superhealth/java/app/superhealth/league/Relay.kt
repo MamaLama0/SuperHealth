@@ -56,14 +56,23 @@ object Relay {
         while (true) { val n = input.read(buffer); if (n < 0) break; check(out.size() + n <= 98304) { "réponse trop volumineuse" }; out.write(buffer, 0, n) }
         out.toString("UTF-8")
     }
-    private suspend fun publishCard(ctx: Context, endpoint: String) {
-        val raw = League.myCard(ctx, detailed = true, includeRelayKey = false)
+    private suspend fun publishCard(ctx: Context, endpoint: String, withAvatar: Boolean = true, force: Boolean = false) {
+        if (withAvatar) {
+            val avatar = try { ProfileAvatars.prepare(ctx, endpoint) }
+            catch (_: SocialPosts.MissingMediaMailbox) {
+                // Un média exige une boîte existante. Amorcer une carte sans avatar, puis publier la carte complète.
+                publishCard(ctx, endpoint, withAvatar = false, force = true)
+                ProfileAvatars.prepare(ctx, endpoint)
+            }
+            if (League.state.value.profileAvatar != avatar) League.configure(ctx) { it.copy(profileAvatar = avatar) }
+        }
+        val raw = League.myCard(ctx, detailed = true, includeRelayKey = false, includeAvatar = withAvatar)
         val card = League.parse(raw) ?: error("carte locale non valable")
         check(card.relayKey == null)
         val stable = json.encodeToString(League.Card.serializer(), card.copy(t = 0, revision = 0))
         val digest = MessageDigest.getInstance("SHA-256").digest(stable.toByteArray()).joinToString("") { "%02x".format(it) }
         val publishedAt = Secrets.get(ctx, "league_published_at_v2")?.toLongOrNull() ?: 0
-        if (Secrets.get(ctx, "league_published_hash_v2") != digest || System.currentTimeMillis() - publishedAt > TimeUnit.HOURS.toMillis(24)) {
+        if (force || Secrets.get(ctx, "league_published_hash_v2") != digest || System.currentTimeMillis() - publishedAt > TimeUnit.HOURS.toMillis(24)) {
             val encrypted = RelayCrypto.encrypt(raw, readKey(ctx), endpoint.toHttpUrlOrNull()!!.encodedPath, card.revision)
             http.newCall(auth(ctx, Request.Builder().url(endpoint)).put(encrypted.toRequestBody("application/json".toMediaType())).build()).execute().use {
                 check(it.isSuccessful) { "publication : HTTP ${it.code}" }

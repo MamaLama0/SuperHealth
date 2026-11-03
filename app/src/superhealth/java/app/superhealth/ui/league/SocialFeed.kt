@@ -65,13 +65,13 @@ fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController) {
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr("Depuis le dashboard, glissez vers la droite : le fil se trouve juste à gauche."))
             Text(tr("Retrouvez le classement, puis les photos, vidéos, séries et sorties de vos amis. Glissez vers la gauche pour revenir."))
-            Text(tr("Vous pouvez désactiver ce fil dans Réglages → Accueil. Vos widgets sociaux restent disponibles sur le dashboard."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Vous pouvez désactiver ce fil dans Réglages → Social. Vos widgets sociaux restent disponibles sur le dashboard."), style = MaterialTheme.typography.bodySmall)
         } },
         confirmButton = { TextButton({ SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } }) { Text(tr("Compris")) } })
 }
 
 @Composable
-private fun SocialFeed(nav: NavHostController, active: Boolean) {
+fun SocialFeed(nav: NavHostController, active: Boolean) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
     val state by League.state.collectAsState(); val score by League.mine.collectAsState()
     val progression by ProgressRepository.current.collectAsState()
@@ -122,8 +122,20 @@ private fun SocialFeed(nav: NavHostController, active: Boolean) {
                 }
             }
         }
-        item(key = "compose") { PillButton(tr("Partager un moment"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Add) {
-            SocialPosts.draft.value = null; nav.go("social/compose")
+        item(key = "compose") { MfCard {
+            PillButton(tr("Créer une publication"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Add) {
+                SocialPosts.draft.value = null; nav.go("social/compose")
+            }
+            Text(tr("Un message, une photo ou une vidéo pour vos amis"), style = MaterialTheme.typography.bodySmall,
+                color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
+            PillButton(tr("Partager une séance"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.FitnessCenter) {
+                SocialPosts.draft.value = null; nav.go("social/share/workout")
+            }
+            PillButton(tr("Partager une activité"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false, icon = Icons.Rounded.DirectionsRun) {
+                SocialPosts.draft.value = null; nav.go("social/share/activity")
+            }
+            Text(tr("Choisissez dans votre historique, puis vérifiez l'aperçu avant de publier."),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
         } }
         if (busy) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         error?.let { message -> item(key = "error") { Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
@@ -139,6 +151,7 @@ private fun SocialFeed(nav: NavHostController, active: Boolean) {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
     var media by remember(post.id) { mutableStateOf<File?>(null) }
@@ -146,6 +159,11 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
     var error by remember { mutableStateOf<String?>(null) }
     var play by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val league by League.state.collectAsState()
+    val author = friend?.id ?: remember { League.myId() }
+    val counts = remember(league.reactions, league.friends, author, post.id) { SocialReactions.counts(league.reactions, league.friends, author, post.id) }
+    val selected = SocialReactions.selected(league.reactions, author, post.id)
+    var reacting by remember { mutableStateOf(false) }
     val video = post.media?.mime?.startsWith("video/") == true
     LaunchedEffect(post.id) {
         if (post.media != null && !video && media == null) {
@@ -167,7 +185,7 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
     }
     MfCard(padding = PaddingValues(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Initial(friend?.shown ?: app.superhealth.ui.userName() ?: tr("Vous"), 38.dp)
+            FriendAvatar(friend, friend?.shown ?: app.superhealth.ui.userName() ?: tr("Vous"), 38.dp)
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 Text(friend?.shown ?: tr("Vous"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM · HH:mm", app.superhealth.ui.Lang.locale)),
@@ -187,6 +205,18 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
             finally { busy = false }
         } }) { Icon(if (video) Icons.Rounded.PlayCircle else Icons.Rounded.Image, null); Spacer(Modifier.width(8.dp)); Text(tr(if (video) "Lire la vidéo" else "Afficher la photo")) }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.padding(top = 8.dp)) {
+            SocialReactions.choices.forEach { (kind, emoji) ->
+                FilterChip(selected = selected == kind, enabled = !reacting, onClick = { scope.launch {
+                    reacting = true; error = null
+                    try { if (!SocialReactions.react(ctx, author, post, kind)) error = tr("Réaction enregistrée. Elle sera envoyée à la prochaine synchronisation.") }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (_: Exception) { error = tr("Réaction impossible. Réessayez.") }
+                    finally { reacting = false }
+                } }, label = { Text(emoji + " " + (counts[kind] ?: 0)) })
+            }
+        }
+        Text(tr("Réactions visibles par vos amis communs"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text(tr("Supprimer cette publication ?")) },
@@ -209,7 +239,7 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SocialComposer(nav: NavHostController) {
+fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
     var text by rememberSaveable { mutableStateOf("") }
     var sourceJson by rememberSaveable { mutableStateOf(SocialPosts.draft.value?.let {
@@ -221,7 +251,7 @@ fun SocialComposer(nav: NavHostController) {
     var busy by remember { mutableStateOf(false) }; var error by remember { mutableStateOf<String?>(null) }
     var published by rememberSaveable { mutableStateOf(false) }
     var sent by rememberSaveable { mutableStateOf(false) }
-    var choosing by remember { mutableStateOf<String?>(null) }
+    var choosing by rememberSaveable { mutableStateOf(initialChoice) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri = it?.toString() }
     val preview by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, uri) {
         value = null
@@ -232,11 +262,16 @@ fun SocialComposer(nav: NavHostController) {
         }
     }
     val training by app.superhealth.training.WorkoutApp.store.state.collectAsState()
+    var loadingActivities by remember { mutableStateOf(true) }
     val runs by produceState<List<app.superhealth.bridge.Bridge.Activity>>(emptyList()) {
-        value = withContext(Dispatchers.IO) { runCatching { app.superhealth.bridge.Bridge.activities(System.currentTimeMillis() - 90L * 86400000).filter { it.kind == app.superhealth.bridge.Bridge.Kind.RUN }.sortedByDescending { it.start }.take(15) }.getOrDefault(emptyList()) }
+        try {
+            value = withContext(Dispatchers.IO) { app.superhealth.bridge.Bridge.activities(0).filter { it.gymId == null }.sortedByDescending { it.start } }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { error = tr("Historique indisponible. Rouvrez cet écran pour réessayer.") }
+        finally { loadingActivities = false }
     }
     DetailScaffold(tr("Partager avec mes amis"), { if (!busy) nav.popBackStack() }, contentSpacing = 12.dp) {
-        Text(tr("Un effort, un souvenir, une victoire"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(tr("Aperçu de votre publication"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(tr("Visible par vos amis SuperHealth. Relisez votre publication avant de l'envoyer."), color = Mf.colors.textSecondary)
         OutlinedTextField(text, { text = it.take(500) }, label = { Text(tr("Votre message")) },
             supportingText = { Text("${text.length}/500") }, minLines = 3, enabled = !busy && !published, modifier = Modifier.fillMaxWidth())
@@ -245,11 +280,13 @@ fun SocialComposer(nav: NavHostController) {
                 picker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
             preview?.let { Image(it, tr("Photo partagée"), Modifier.fillMaxWidth().heightIn(max = 240.dp), contentScale = ContentScale.Fit) }
-            uri?.let { Text(tr("Média sélectionné · 15 Mo maximum"), color = Mf.colors.accent); TextButton({ uri = null }, enabled = !busy) { Text(tr("Retirer le média")) } }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton({ choosing = "WORKOUT" }, enabled = !busy) { Text(tr("Séance")) }
-                TextButton({ choosing = "RUN" }, enabled = !busy) { Text(tr("Course")) }
-                TextButton({ choosing = "STREAK" }, enabled = !busy) { Text(tr("Série")) }
+            uri?.let { Text(tr("Média sélectionné · photo 15 Mo, vidéo 50 Mo maximum"), color = Mf.colors.accent); TextButton({ uri = null }, enabled = !busy) { Text(tr("Retirer le média")) } }
+            GroupCard {
+                SettingRow(tr("Partager une séance"), subtitle = tr("Choisir une séance de musculation enregistrée"), icon = Icons.Rounded.FitnessCenter) { if (!busy) choosing = "WORKOUT" }
+                RowDivider()
+                SettingRow(tr("Partager une activité"), subtitle = tr("Course, vélo, marche et autres sports"), icon = Icons.Rounded.DirectionsRun) { if (!busy) choosing = "ACTIVITY" }
+                RowDivider()
+                SettingRow(tr("Partager une série"), subtitle = tr("Montrer votre régularité"), icon = Icons.Rounded.LocalFireDepartment) { if (!busy) choosing = "STREAK" }
             }
             source?.let { draft -> MfCard {
                 Text(draft.title, style = MaterialTheme.typography.titleMedium); Text(draft.detail, modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
@@ -278,14 +315,19 @@ fun SocialComposer(nav: NavHostController) {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp).navigationBarsPadding(), contentPadding = PaddingValues(16.dp)) {
             if (choosing == "WORKOUT") {
                 if (training.history.isEmpty()) item { Text(tr("Aucune séance enregistrée")) }
-                items(training.history.sortedByDescending { it.startTime }.take(15), key = { it.id }) { workout ->
-                    SettingRow(workout.name, subtitle = "${workout.durationSec / 60} min") { selectSource(SocialPosts.workoutDraft(workout)); choosing = null }
+                item { Text(tr("Choisir une séance"), style = MaterialTheme.typography.titleLarge) }
+                items(training.history.sortedByDescending { it.startTime }, key = { it.id }) { workout ->
+                    val date = Instant.ofEpochMilli(workout.startTime).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy", app.superhealth.ui.Lang.locale))
+                    SettingRow(workout.name, subtitle = "$date · ${workout.durationSec / 60} min") { selectSource(SocialPosts.workoutDraft(workout)); choosing = null }
                 }
-            } else if (choosing == "RUN") {
-                if (runs.isEmpty()) item { Text(tr("Aucune course enregistrée")) }
+            } else if (choosing == "ACTIVITY") {
+                item { Text(tr("Choisir une activité"), style = MaterialTheme.typography.titleLarge) }
+                if (loadingActivities) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                else if (runs.isEmpty()) item { Text(tr("Aucune activité enregistrée. Importez une activité ou synchronisez votre montre.")) }
                 items(runs, key = { it.key }) { run ->
-                    val detail = listOfNotNull(run.distanceM?.let { app.superhealth.nutrition.ui.num(it / 1000, 2) + " km" }, "${run.minutes} min").joinToString(" · ")
-                    SettingRow(tr("Course"), subtitle = detail) { selectSource(SocialPosts.Draft(tr("Ma sortie course"), detail, "RUN")); choosing = null }
+                    val draft = SocialPosts.activityDraft(run)
+                    val date = Instant.ofEpochMilli(run.start).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy", app.superhealth.ui.Lang.locale))
+                    SettingRow(draft.title, subtitle = "$date · ${draft.detail}") { selectSource(draft); choosing = null }
                 }
             } else {
                 val streaks = ProgressRepository.current.value?.summary?.streaks.orEmpty().filter { it.current > 0 }

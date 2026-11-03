@@ -113,7 +113,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
     var menu by remember { mutableStateOf(false) }
     // nutriments du jour : dépliés depuis le résumé (toucher) ou le menu, cachés par défaut
     var nutrients by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    var selection by remember { mutableStateOf(setOf<Long>()) }
+    var selection by remember(day) { mutableStateOf(setOf<Long>()) }
     // dernière suppression, annulable quelques secondes
     var undo by remember { mutableStateOf<List<FoodEntryEntity>>(emptyList()) }
     LaunchedEffect(undo) { if (undo.isNotEmpty()) { kotlinx.coroutines.delay(5_000); undo = emptyList() } }
@@ -191,6 +191,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                 DayNutrients(entries, s, Modifier.padding(horizontal = 16.dp).padding(top = 10.dp), nav) { nav.navigate("nutrients") }
             }
             if (selection.isNotEmpty()) item {
+                Column {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.strong)
                     .padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(trf("%1\$s sélectionné(s)", selection.size), color = Mf.colors.onStrong, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
@@ -201,6 +202,18 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                         Icon(Icons.Rounded.Delete, tr("Supprimer"), tint = Mf.colors.onStrong)
                     }
                     IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Rounded.Close, tr("Annuler"), tint = Mf.colors.onStrong) }
+                }
+                val selected = entries.filter { it.id in selection }
+                val draft = app.superhealth.nutrition.ui.RecipeDraft.fromEntries(selected)
+                TextButton(onClick = {
+                    vm.recipeDraft.value = draft; selection = emptySet(); nav.navigate("recipe")
+                }, enabled = draft != null, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Rounded.RestaurantMenu, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("Créer une recette"))
+                }
+                if (draft == null) Text(tr("Renseignez le poids de chaque aliment sélectionné pour créer une recette."),
+                    Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
             }
             if (clipboard.isNotEmpty() && selection.isEmpty()) item {

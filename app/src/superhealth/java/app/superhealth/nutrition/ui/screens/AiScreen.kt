@@ -291,6 +291,8 @@ private fun PlateItem(r: PlateRow, s: app.superhealth.nutrition.domain.Settings,
         Row(verticalAlignment = Alignment.CenterVertically) {
             NumberField(tr("Quantité"), r.grams, { onChange(r.copy(grams = it)) }, Modifier.weight(1f), suffix = "g")
         }
+        if (r.item.assumption.isNotBlank()) Text(trf("Hypothèse : %1\$s", r.item.assumption),
+            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         val m = r.item.match
         if (m != null) ChipChoice(listOf(true, false), r.useMatch, {
             if (it) trf("Base : %1\$s", (m.name.take(28))) else tr("Estimation IA")

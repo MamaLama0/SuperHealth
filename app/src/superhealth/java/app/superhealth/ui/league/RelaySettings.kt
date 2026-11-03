@@ -41,7 +41,7 @@ internal fun RelaySettings() {
         ChipChoice(listOf(0, 2, 4), state.syncsPerDay, { when (it) { 0 -> tr("Manuel"); 2 -> tr("2 fois / jour"); else -> tr("4 fois / jour") } }) { frequency ->
             League.configure(ctx) { it.copy(syncsPerDay = frequency) }; LeagueWorker.schedule(ctx)
         }
-        Text(tr("Android peut décaler ces passages pour économiser la batterie."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary)
+        Text(tr("Avec les notifications sociales actives, le mode automatique relève les nouveautés environ toutes les 15 min. En mode Manuel, ouvrez le fil pour actualiser. Android peut décaler ces passages pour économiser la batterie."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton(tr("Enregistrer"), Modifier.weight(1f), enabled = !busy) {
                 if (custom && (!Relay.validBase(url) || (code.isNotBlank() && code.length !in 32..512))) error = tr("Saisissez une adresse HTTPS sans chemin et un code de publication de 32 caractères minimum.")

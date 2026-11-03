@@ -51,6 +51,7 @@ object InvitationCodes {
         val expires = System.currentTimeMillis() + VALID_MS
         Secrets.put(ctx, "friend_invitation_code", code); Secrets.put(ctx, "friend_invitation_base", base)
         Secrets.put(ctx, "friend_invitation_expiry", expires.toString()); Secrets.put(ctx, "friend_invitation_owner", owner)
+        LeagueWorker.schedule(ctx)
         Invitation(code, base, expires)
     }
     suspend fun lookup(ctx: Context, rawCode: String, customBase: String? = null): Boolean = withContext(Dispatchers.IO) {
@@ -92,6 +93,8 @@ object InvitationCodes {
             pending.remove(card.k)
         }
         League.accept(ctx, card)
+        // La carte complète doit être disponible dès l'ajout, sans attendre le prochain passage périodique.
+        LeagueWorker.onOpen(ctx, force = true)
     }
     suspend fun collectResponses(ctx: Context) = withContext(Dispatchers.IO) {
         val code = Secrets.get(ctx, "friend_invitation_code")?.let(FriendCode::normalize) ?: return@withContext
@@ -118,7 +121,7 @@ object InvitationCodes {
             val card = raw?.let(League::parse)
             if (card?.invite == true && card.k != ownKey && card.t * 1000 >= System.currentTimeMillis() - VALID_MS) {
                 val expected = java.security.MessageDigest.getInstance("SHA-256").digest(card.k.toByteArray()).joinToString("") { "%02x".format(it) }
-                if (senderId == expected) League.accept(ctx, card)
+                if (senderId == expected) League.accept(ctx, card, notifyAdded = true)
             }
             http.newCall(Request.Builder().url(base + responsePath).header("X-Write-Token", owner).delete().build()).execute().use { }
         }

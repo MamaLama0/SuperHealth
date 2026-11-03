@@ -90,13 +90,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private var nearbyJob: kotlinx.coroutines.Job? = null
+    private var socialJob: kotlinx.coroutines.Job? = null
     private var nearby: app.superhealth.league.Nearby? = null
 
     override fun onStart() {
         super.onStart()
         app.superhealth.security.AppLock.returned()
-        if (!app.superhealth.league.League.available() || !app.superhealth.league.League.state.value.refreshOnOpen) return
         app.superhealth.league.LeagueWorker.onOpen(applicationContext)
+        socialJob = lifecycleScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(30_000)
+                val s = app.superhealth.league.League.state.value
+                if (s.notifyFriends || s.notifyPosts || s.notifyReactions) app.superhealth.league.LeagueWorker.onOpen(applicationContext)
+            }
+        }
+        if (!app.superhealth.league.League.available() || !app.superhealth.league.League.state.value.refreshOnOpen) return
         if (app.superhealth.league.League.state.value.friends.isEmpty()) return
         nearbyJob = lifecycleScope.launch {
             var peer: app.superhealth.league.Nearby? = null
@@ -114,6 +122,7 @@ class MainActivity : ComponentActivity() {
     /** En quittant l'app : widgets à jour (repas, pas et Body Battery de la synchro à l'ouverture). */
     override fun onStop() {
         super.onStop()
+        socialJob?.cancel(); socialJob = null
         nearbyJob?.cancel(); nearbyJob = null
         nearby?.stop(); nearby = null
         // départ (Accueil, Récents, écran éteint) : pas l'ouverture d'une activité par l'app

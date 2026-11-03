@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import java.io.File
 import kotlin.math.min
 
-/** Photo de profil : carré de 512 px recadré au centre, gardé sur le téléphone (et dans la sauvegarde), jamais envoyé ailleurs. */
+/** Photo locale et sauvegardée ; une vignette chiffrée est partagée avec les amis si ce réglage est actif. */
 object ProfilePhoto {
     val bitmap = mutableStateOf<ImageBitmap?>(null)
 

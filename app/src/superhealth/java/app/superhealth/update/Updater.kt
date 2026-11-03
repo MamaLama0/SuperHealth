@@ -29,6 +29,10 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.coroutineContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import nodomain.freeyourgadget.gadgetbridge.R
@@ -54,10 +58,64 @@ object Updater {
         data class Available(val release: Release) : State
         data class Downloading(val release: Release, val fraction: Float) : State
         data class Ready(val release: Release, val file: File) : State
+        data object Queued : State
+        data class Verifying(val release: Release) : State
+        data class Preparing(val version: String) : State
+        data class Installing(val version: String) : State
+        data class AwaitingConfirmation(val version: String, val intent: Intent) : State
         data class Failed(val message: String) : State
     }
 
     val state = MutableStateFlow<State>(State.Idle)
+    private val operation = Mutex()
+
+    fun busy(s: State = state.value) = s is State.Queued || s is State.Checking || s is State.Downloading ||
+        s is State.Verifying || s is State.Preparing || s is State.Installing || s is State.AwaitingConfirmation
+
+    /** Un seul travail, indépendant de l'écran, et aucun second commit pendant la réponse d'Android. */
+    @Synchronized fun startInstall(ctx: Context) {
+        restoreSession(ctx)
+        if (busy()) return
+        state.value = State.Queued
+        try {
+            WorkManager.getInstance(ctx).enqueueUniqueWork("superhealth_update_now", ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<UpdateNowWorker>().setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).build())
+        } catch (e: Exception) { state.value = State.Failed(e.message ?: "?") }
+    }
+
+    private fun sessionPrefs(ctx: Context) = ctx.getSharedPreferences("update_install", Context.MODE_PRIVATE)
+
+    /** Une navigation ou un redémarrage du processus ne doit pas relancer une session déjà confiée à Android. */
+    fun restoreSession(ctx: Context): Boolean {
+        val prefs = sessionPrefs(ctx)
+        val id = prefs.getInt("id", -1)
+        if (id < 0) return false
+        if (ctx.packageManager.packageInstaller.getSessionInfo(id) == null) {
+            prefs.edit().clear().apply()
+            if (state.value is State.Installing || state.value is State.AwaitingConfirmation) state.value = State.Idle
+            return false
+        }
+        if (state.value !is State.AwaitingConfirmation) state.value = State.Installing(prefs.getString("version", "").orEmpty())
+        return true
+    }
+
+    fun finishSession(ctx: Context, intent: Intent, status: Int): Boolean {
+        val prefs = sessionPrefs(ctx)
+        if (intent.getIntExtra("update_session", -1) != prefs.getInt("id", -2)) return false
+        val version = prefs.getString("version", "").orEmpty()
+        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+            @Suppress("DEPRECATION") val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ?: return false
+            state.value = State.AwaitingConfirmation(version, confirm)
+        } else {
+            prefs.edit().clear().apply()
+            state.value = if (status == PackageInstaller.STATUS_SUCCESS) State.UpToDate(version)
+                else State.Failed(if (status == PackageInstaller.STATUS_FAILURE_ABORTED) tr("Installation annulée. Vous pouvez réessayer.")
+                    else intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: tr("Mise à jour impossible"))
+        }
+        return true
+    }
 
     private const val CHANNEL = "updates"
     const val NOTIF = 4201
@@ -125,14 +183,46 @@ object Updater {
 
     /** Vérifie et met [state] à jour (écran des mises à jour). */
     suspend fun refresh(ctx: Context) {
-        state.value = State.Checking
-        state.value = runCatching { check(ctx) }.fold({ it?.let(State::Available) ?: State.UpToDate(installed(ctx)) }, { State.Failed(it.message ?: "?") })
+        if (restoreSession(ctx) || busy() || !operation.tryLock()) return
+        try {
+            state.value = State.Checking
+            state.value = check(ctx)?.let(State::Available) ?: State.UpToDate(installed(ctx))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            state.value = State.Idle; throw e
+        } catch (e: Exception) { state.value = State.Failed(e.message ?: "?") }
+        finally { operation.unlock() }
+    }
+
+    suspend fun prefetch(ctx: Context, rel: Release) {
+        if (restoreSession(ctx) || busy() || !operation.tryLock()) return
+        try { download(ctx, rel, prefetch = true) }
+        catch (e: kotlinx.coroutines.CancellationException) { state.value = State.Idle; throw e }
+        catch (e: Exception) { state.value = State.Available(rel); throw e }
+        finally { operation.unlock() }
+    }
+
+    suspend fun runInstallation(ctx: Context) = operation.withLock {
+        if (restoreSession(ctx)) return@withLock
+        val rel = check(ctx)
+        if (rel == null) { state.value = State.UpToDate(installed(ctx)); cancelNotification(ctx); return@withLock }
+        var shown = -1
+        val file = download(ctx, rel) { f ->
+            val p = (f * 100).toInt() / 5 * 5
+            if (p != shown) { shown = p; showProgress(ctx, rel.version, p) }
+        }
+        install(ctx, file, rel.version)
     }
 
     /** Télécharge l'APK dans le cache (progression dans [state] et [onProgress]). */
-    suspend fun download(ctx: Context, rel: Release, onProgress: (Float) -> Unit = {}): File = withContext(Dispatchers.IO) {
-        val dir = File(ctx.cacheDir, "updates").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+    private suspend fun download(ctx: Context, rel: Release, prefetch: Boolean = false, onProgress: (Float) -> Unit = {}): File = withContext(Dispatchers.IO) {
+        state.value = State.Downloading(rel, 0f)
+        val dir = File(ctx.cacheDir, "updates").apply { mkdirs() }
         val out = File(dir, "SuperHealth-${rel.version}.apk")
+        if (out.exists() && runCatching { verify(ctx, out, rel) }.isSuccess) {
+            state.value = if (prefetch) State.Ready(rel, out) else State.Preparing(rel.version)
+            return@withContext out
+        }
+        dir.listFiles()?.forEach { it.delete() }
         http.newCall(Request.Builder().url(rel.apk.browser_download_url).build()).execute().use { r ->
             if (!r.isSuccessful) error(trf("téléchargement refusé (%1\$s)", r.code))
             val total = r.body.contentLength().takeIf { it > 0 } ?: rel.apk.size
@@ -141,6 +231,7 @@ object Updater {
                 out.outputStream().use { o ->
                     val buf = ByteArray(64 * 1024)
                     while (true) {
+                        coroutineContext.ensureActive()
                         val n = input.read(buf); if (n < 0) break
                         o.write(buf, 0, n); done += n
                         if (total > 0) {
@@ -152,8 +243,10 @@ object Updater {
                 }
             }
         }
+        state.value = State.Verifying(rel)
+        showStage(ctx, rel.version, tr("Vérification du fichier…"))
         verify(ctx, out, rel)
-        state.value = State.Ready(rel, out)
+        state.value = if (prefetch) State.Ready(rel, out) else State.Preparing(rel.version)
         out
     }
 
@@ -175,18 +268,28 @@ object Updater {
     }
 
     /** Installation par PackageInstaller ; Android demande la confirmation (voir [InstallReceiver]). */
-    suspend fun install(ctx: Context, apk: File) = withContext(Dispatchers.IO) {
+    private suspend fun install(ctx: Context, apk: File, version: String) = withContext(Dispatchers.IO) {
+        state.value = State.Preparing(version)
+        showStage(ctx, version, tr("Préparation de l'installation…"))
         val pi = ctx.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(ctx.packageName)
             if (android.os.Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         }
         val id = pi.createSession(params)
-        pi.openSession(id).use { s ->
+        try { pi.openSession(id).use { s ->
             s.openWrite("superhealth.apk", 0, apk.length()).use { o -> apk.inputStream().use { it.copyTo(o) }; s.fsync(o) }
-            val intent = Intent(ctx, InstallReceiver::class.java)
+            coroutineContext.ensureActive()
+            val intent = Intent(ctx, InstallReceiver::class.java).putExtra("update_session", id)
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (android.os.Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
+            check(sessionPrefs(ctx).edit().putInt("id", id).putString("version", version).commit())
+            state.value = State.Installing(version)
+            showStage(ctx, version, tr("Installation en cours…"))
             s.commit(PendingIntent.getBroadcast(ctx, id, intent, flags).intentSender)
+        } } catch (e: Exception) {
+            runCatching { pi.abandonSession(id) }
+            sessionPrefs(ctx).edit().clear().apply()
+            throw e
         }
     }
 
@@ -229,6 +332,13 @@ object Updater {
         runCatching { manager(ctx).notify(NOTIF, progress(ctx, version, percent)) }
     }
 
+    fun showStage(ctx: Context, version: String, label: String) {
+        val n = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(R.drawable.ic_stat_update)
+            .setContentTitle("SuperHealth $version").setContentText(label).setProgress(0, 0, true)
+            .setContentIntent(openScreen(ctx)).setOngoing(true).setOnlyAlertOnce(true).setSilent(true).build()
+        runCatching { manager(ctx).notify(NOTIF, n) }
+    }
+
     /** Android ne laisse pas une app en arrière-plan ouvrir sa demande de confirmation : la notification la propose. */
     fun notifyConfirm(ctx: Context, confirm: Intent) {
         val pi = PendingIntent.getActivity(ctx, NOTIF, confirm, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -256,8 +366,10 @@ class UpdateWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         if (!s.updateCheck) return Result.success()
         val rel = runCatching { Updater.check(applicationContext) }.getOrNull() ?: return Result.success()
         if (rel.version == s.updateSkip) return Result.success()
-        if (!s.updateConfirm) runCatching { Updater.download(applicationContext, rel) }
-        Updater.notify(applicationContext, rel)
+        if (!s.updateConfirm) try { Updater.prefetch(applicationContext, rel) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { if (!Updater.busy()) Updater.state.value = Updater.State.Available(rel) }
+        if (!Updater.busy()) Updater.notify(applicationContext, rel)
         return Result.success()
     }
 
@@ -273,10 +385,7 @@ class UpdateWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
 /** Bouton « Mettre à jour » de la notification. */
 class UpdateActionReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
-        Updater.showProgress(ctx, null, 0)
-        WorkManager.getInstance(ctx).enqueueUniqueWork("superhealth_update_now", ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequestBuilder<UpdateNowWorker>().setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).build())
+        Updater.startInstall(ctx)
     }
 }
 
@@ -287,21 +396,13 @@ class UpdateNowWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(
     override suspend fun doWork(): Result {
         val ctx = applicationContext
         return try {
-            val rel = Updater.check(ctx)
-            if (rel == null) Updater.cancelNotification(ctx)
-            else {
-                var shown = 0
-                Updater.showProgress(ctx, rel.version, 0)
-                val file = Updater.download(ctx, rel) { f ->
-                    val p = (f * 100).toInt() / 5 * 5
-                    if (p != shown) { shown = p; Updater.showProgress(ctx, rel.version, p) }
-                }
-                Updater.install(ctx, file)
-            }
+            Updater.runInstallation(ctx)
             Result.success()
         } catch (e: kotlinx.coroutines.CancellationException) {
+            if (!Updater.restoreSession(ctx)) Updater.state.value = Updater.State.Idle
             throw e
         } catch (e: Exception) {
+            Updater.state.value = Updater.State.Failed(e.message ?: "?")
             Updater.notifyFailed(ctx, e.message)
             Result.failure()
         }
@@ -311,8 +412,13 @@ class UpdateNowWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(
 /** Retour de PackageInstaller : demande de confirmation d'Android ou erreur. Une fois l'app remplacée, retire la notification. */
 class InstallReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) { Updater.cancelNotification(ctx); return }
+        if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            ctx.getSharedPreferences("update_install", Context.MODE_PRIVATE).edit().clear().apply()
+            Updater.state.value = Updater.State.UpToDate(Updater.installed(ctx))
+            Updater.cancelNotification(ctx); return
+        }
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        if (!Updater.finishSession(ctx, intent, status)) return
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 @Suppress("DEPRECATION") val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ?: return
@@ -321,8 +427,7 @@ class InstallReceiver : BroadcastReceiver() {
             }
             PackageInstaller.STATUS_SUCCESS -> Updater.cancelNotification(ctx)
             else -> {
-                val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: tr("installation annulée")
-                Updater.state.value = Updater.State.Failed(message)
+                val message = (Updater.state.value as? Updater.State.Failed)?.message
                 if (status == PackageInstaller.STATUS_FAILURE_ABORTED) Updater.cancelNotification(ctx) else Updater.notifyFailed(ctx, message)
             }
         }

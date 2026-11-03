@@ -2,6 +2,7 @@ package app.superhealth.ui.league
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,34 +50,40 @@ internal fun RankingHero(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-internal data class PodiumEntry(val name: String, val value: String, val place: Int, val me: Boolean)
+internal data class PodiumEntry(val name: String, val value: String, val place: Int, val me: Boolean, val friend: app.superhealth.league.League.Friend? = null)
 
 @Composable
-internal fun RankingPodium(entries: List<PodiumEntry>) {
+internal fun RankingPodium(entries: List<PodiumEntry>, onFriend: (app.superhealth.league.League.Friend) -> Unit = {}) {
     val top = entries.take(3)
     if (top.size < 2) return
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val order = if (top.size == 3) listOf(1, 0, 2) else listOf(1, 0)
-        order.forEach { i ->
-            val entry = top[i]
-            val hue = rankColor(entry.place)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                if (entry.place == 1) GameArt(GameArtKind.TROPHY, Modifier.size(24.dp)) else Spacer(Modifier.height(12.dp))
-                Box(Modifier.size(if (entry.place == 1) 44.dp else 38.dp).clip(CircleShape)
-                    .background(hue.copy(alpha = .18f)).border(2.dp, hue, CircleShape), contentAlignment = Alignment.Center) {
-                    Text(entry.name.take(1).uppercase(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(8.dp))
-                Column(Modifier.fillMaxWidth().heightIn(min = if (entry.place == 1) 108.dp else 88.dp)
-                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 8.dp, bottomEnd = 8.dp))
-                    .background(Brush.verticalGradient(listOf(hue.copy(alpha = .24f), hue.copy(alpha = .07f))))
-                    .padding(horizontal = 6.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("#${entry.place}", style = MaterialTheme.typography.titleLarge, color = hue.onContainer(), fontWeight = FontWeight.Black)
-                    Text(if (entry.me) tr("Vous") else entry.name, style = MaterialTheme.typography.labelMedium,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                    Text(entry.value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Mf.colors.card).padding(horizontal = 12.dp, vertical = 18.dp)) {
+        Text(tr("Le podium"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(20.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val order = if (top.size == 3) listOf(1, 0, 2) else listOf(1, 0)
+            order.forEach { i ->
+                val entry = top[i]
+                val hue = rankColor(entry.place)
+                val winner = entry.place == 1
+                Column(Modifier.weight(1f).clickable(enabled = entry.friend != null) { entry.friend?.let(onFriend) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (winner) { GameArt(GameArtKind.TROPHY, Modifier.size(30.dp)); Spacer(Modifier.height(8.dp)) }
+                    Box(Modifier.border(if (winner) 3.dp else 2.dp, hue, CircleShape).padding(4.dp)) {
+                        FriendAvatar(entry.friend, entry.name, if (winner) 60.dp else 48.dp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(if (entry.me) tr("Vous") else entry.name, style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(10.dp))
+                    Column(Modifier.fillMaxWidth().height(if (winner) 112.dp else if (entry.place == 2) 88.dp else 72.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 6.dp, bottomEnd = 6.dp))
+                        .background(Brush.verticalGradient(listOf(hue.copy(alpha = if (Mf.colors.dark) .30f else .22f), hue.copy(alpha = .07f))))
+                        .padding(horizontal = 5.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceBetween) {
+                        Text(entry.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, color = Mf.colors.text)
+                        Text(entry.place.toString(), style = if (winner) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineSmall,
+                            color = hue.onContainer(), fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }

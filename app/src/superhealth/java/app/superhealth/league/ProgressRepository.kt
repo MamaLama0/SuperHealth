@@ -166,7 +166,13 @@ object ProgressRepository {
                 "mindMinutes" to mindfulMinutes.filterKeys { it <= day }.values.sum().toLong()
             ))).also { result ->
                 current.value = result; lastKey = inputKey; lastAt = System.currentTimeMillis()
-                val earned = League.state.value.earnedBadges + Achievements.unlocked(result.summary)
+                val previous = League.state.value
+                val earned = previous.earnedBadges + Achievements.unlocked(result.summary)
+                val newBadges = earned - previous.earnedBadges
+                if (previous.progressNotificationBaseline && (newBadges.isNotEmpty() || result.summary.level > previous.progressNotificationLevel))
+                    SocialNotifications.progressEarned(ctx, newBadges.size, result.summary.level.takeIf { it > previous.progressNotificationLevel })
+                if (!previous.progressNotificationBaseline || previous.progressNotificationLevel != result.summary.level)
+                    League.configure(ctx) { it.copy(progressNotificationBaseline = true, progressNotificationLevel = result.summary.level) }
                 if (earned != League.state.value.earnedBadges || observedHealth != League.state.value.observedHealthDays || healthSince != League.state.value.healthSince)
                     League.configure(ctx) { it.copy(earnedBadges = it.earnedBadges + earned, observedHealthDays = observedHealth, healthSince = healthSince) }
             }

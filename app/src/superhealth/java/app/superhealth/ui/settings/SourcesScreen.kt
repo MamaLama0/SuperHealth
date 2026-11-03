@@ -14,20 +14,20 @@ import app.superhealth.ui.tr
 fun SourcesScreen(nav: NavHostController) {
     val context = LocalContext.current
     fun link(url: String) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-    DetailScaffold(tr("Sources et illustrations"), onBack = { nav.popBackStack() }) {
-        SectionLabel(tr("Application et données"))
-        Text("Gadgetbridge — AGPL · Open Food Facts — ODbL · Base suisse OSAV")
-        SectionLabel(tr("Animation de série"))
-        Text("streak animation improved — indoorraccoon. Remix de Dynamic streak fire — aristote.")
-        Text(tr("Animation adaptée pour une lecture continue ; couleurs et compteur pilotés par SuperHealth. Licence CC BY 4.0."))
+    DetailScaffold(tr("Sources"), onBack = { nav.popBackStack() }) {
         GroupCard {
-            SettingRow(tr("Voir l'animation et son auteur")) { link("https://rive.app/marketplace/28627-54130-streak-animation-improved/") }
+            SettingRow("Gadgetbridge", subtitle = tr("Connexion aux montres")) { link("https://gadgetbridge.org/") }
             RowDivider()
-            SettingRow("Creative Commons Attribution 4.0") { link("https://creativecommons.org/licenses/by/4.0/") }
+            SettingRow("Open Food Facts", subtitle = tr("Données alimentaires")) { link("https://world.openfoodfacts.org/") }
+            RowDivider()
+            SettingRow("OSAV", subtitle = tr("Base suisse des aliments")) { link("https://www.valeursnutritives.ch/") }
         }
-        SectionLabel(tr("Badges et trophées"))
-        Text(tr("Achievement Badges : illustrations locales fournies avec le projet, en bronze, argent, or, platine et diamant."))
-        Text("Garmin — illustrations de badges. Les critères des séries SuperHealth sont indépendants de Garmin Connect.")
-        Text("Rive Android runtime — MIT")
+        GroupCard {
+            SettingRow(tr("Animation de série"), subtitle = "indoorraccoon · aristote · CC BY 4.0") { link("https://rive.app/marketplace/28627-54130-streak-animation-improved/") }
+            RowDivider()
+            SettingRow(tr("Badges et trophées"), subtitle = "Achievement Badges · Garmin") { link("https://github.com/MamaLama0/SuperHealth/blob/superhealth/docs/CREDITS.md") }
+            RowDivider()
+            SettingRow(tr("Licences et crédits")) { link("https://github.com/MamaLama0/SuperHealth/blob/superhealth/docs/CREDITS.md") }
+        }
     }
 }

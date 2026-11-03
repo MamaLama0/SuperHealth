@@ -232,12 +232,17 @@ fun SuperRoot(vm: SuperViewModel) {
             popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
             composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav) }
+            composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true) }
             composable("social/compose") { app.superhealth.ui.league.SocialComposer(nav) }
+            composable("social/share/workout") { app.superhealth.ui.league.SocialComposer(nav, "WORKOUT") }
+            composable("social/share/activity") { app.superhealth.ui.league.SocialComposer(nav, "ACTIVITY") }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
             composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
             composable("widgets") { app.superhealth.ui.settings.HomeWidgetsScreen(nav) }
             composable("settings/find") { app.superhealth.ui.settings.FindSettingScreen(nav) }
             composable("settings") { SettingsScreen(vm, nav) }
+            composable("settings/notifications") { app.superhealth.ui.settings.NotificationSettingsScreen(nav) }
+            composable("settings/feedback") { app.superhealth.ui.settings.FeedbackScreen(nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
             composable("backup") { app.superhealth.ui.settings.BackupScreen(vm, nav) }
             composable("update") { app.superhealth.ui.settings.UpdateScreen(vm, nav) }

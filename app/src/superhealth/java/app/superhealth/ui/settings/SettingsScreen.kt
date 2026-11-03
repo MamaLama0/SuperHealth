@@ -149,14 +149,14 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     val uriHandler = LocalUriHandler.current
     var photoMenu by remember { mutableStateOf(false) }
     val pickPhoto = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) app.superhealth.ui.ProfilePhoto.set(photoCtx, uri)
+        if (uri != null && app.superhealth.ui.ProfilePhoto.set(photoCtx, uri)) app.superhealth.league.LeagueWorker.onOpen(photoCtx, force = true)
     }
     if (photoMenu) androidx.compose.material3.AlertDialog(onDismissRequest = { photoMenu = false }, title = { Text(tr("Photo de profil")) },
         confirmButton = { androidx.compose.material3.TextButton(onClick = {
             photoMenu = false
             pickPhoto.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
         }) { Text(tr("Choisir")) } },
-        dismissButton = { if (app.superhealth.ui.ProfilePhoto.bitmap.value != null) androidx.compose.material3.TextButton(onClick = { photoMenu = false; app.superhealth.ui.ProfilePhoto.clear(photoCtx) }) { Text(tr("Retirer")) } })
+        dismissButton = { if (app.superhealth.ui.ProfilePhoto.bitmap.value != null) androidx.compose.material3.TextButton(onClick = { photoMenu = false; app.superhealth.ui.ProfilePhoto.clear(photoCtx); app.superhealth.league.LeagueWorker.onOpen(photoCtx, force = true) }) { Text(tr("Retirer")) } })
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(bottom = if (app.superhealth.ui.settingsIsTab(sh)) app.superhealth.ui.LocalTabBarInset.current else 0.dp)) {
@@ -188,6 +188,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             Group(tr("Général")) {
+                SettingRow(tr("Notifications"), subtitle = tr("Rappels, amis, séances et mises à jour"), icon = Icons.Rounded.NotificationsActive, hue = Mf.colors.accent) { nav.go("settings/notifications") }
+                RowDivider(56.dp)
                 SettingRow(tr("Apparence et langue"), subtitle = "${tr(s.themeMode.label)} · ${s.accent.let { tr(it.label) }} · ${if (Lang.english) "English" else "Français"}",
                     icon = Icons.Rounded.Palette, hue = Mf.colors.accent) { nav.go("settings/look") }
                 RowDivider(56.dp)
@@ -202,10 +204,6 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             Group(tr("Accueil")) {
-                SwitchRow(tr("Fil des amis à gauche du dashboard"), tr("Glissez vers la droite depuis l’accueil pour voir les publications"), sh.socialFeedEnabled) { enabled ->
-                    SuperPrefs.update { it.copy(socialFeedEnabled = enabled) }
-                }
-                RowDivider(56.dp)
                 SettingRow(tr("Cartes"), trf("%1\$s configurées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
                 RowDivider(56.dp)
                 SettingRow(tr("Widgets Android"), subtitle = tr("Ajouter mes suivis sur l'écran d'accueil"), icon = Icons.Rounded.Dashboard) { nav.go("widgets") }
@@ -236,7 +234,14 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
 
             // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
             Group(tr("Social")) {
+                IconSwitchRow(tr("Fil des amis"), tr("Glissez vers la droite depuis l’accueil pour voir les publications"),
+                    Icons.Rounded.Group, HealthHues.Fitness, sh.socialFeedEnabled) { enabled ->
+                    SuperPrefs.update { it.copy(socialFeedEnabled = enabled) }
+                }
+                RowDivider(56.dp)
                 SettingRow(tr("Profil et social"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social") }
+                RowDivider(56.dp)
+                SettingRow(tr("Notifications et partage"), subtitle = tr("Amis, publications, réactions et photo de profil"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Fitness) { nav.go("league/settings") }
                 RowDivider(56.dp)
                 val friends by app.superhealth.league.League.state.collectAsState()
                 SettingRow(tr("Groupe d'amis"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Comparer mes progrès et ajouter un ami"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
@@ -308,13 +313,15 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             Group(tr("À propos")) {
+                SettingRow(tr("Donner mon avis"), subtitle = tr("Note, idée ou problème · retour privé"), icon = Icons.Rounded.Edit, hue = Mf.colors.accent) { nav.go("settings/feedback") }
+                RowDivider(56.dp)
                 VersionRow(nav)
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Vérifier chaque jour"), tr("Une requête par jour à GitHub"), Icons.Rounded.Autorenew, null, sh.updateCheck) { v ->
                     SuperPrefs.update { it.copy(updateCheck = v) }
                 }
                 RowDivider(56.dp)
-                SettingRow(tr("Sources"), subtitle = tr("Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV"), icon = Icons.Rounded.Info, hue = app.superhealth.ui.theme.Base.Grey) { nav.go("settings/sources") }
+                SettingRow(tr("Sources"), icon = Icons.Rounded.Info, hue = app.superhealth.ui.theme.Base.Grey) { nav.go("settings/sources") }
                 RowDivider(56.dp)
                 SettingRow(tr("Code source"), subtitle = tr("Consulter le projet sur GitHub"), icon = Icons.Rounded.Code, hue = app.superhealth.ui.theme.Base.Grey) {
                     uriHandler.openUri("https://github.com/MamaLama0/SuperHealth/tree/superhealth")

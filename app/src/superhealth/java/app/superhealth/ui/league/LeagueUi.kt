@@ -95,9 +95,7 @@ private class Rank(val name: String, value: Double?, val friend: League.Friend?)
 
 @Composable
 private fun Avatar(r: Rank, size: Dp) {
-    val photo = if (r.friend == null) ProfilePhoto.bitmap.value else null
-    if (photo != null) Image(photo, null, Modifier.size(size).clip(CircleShape), contentScale = ContentScale.Crop)
-    else Initial(r.name, size)
+    FriendAvatar(r.friend, r.name, size)
 }
 
 private fun number(value: Double) = app.superhealth.nutrition.ui.num(value, if (value % 1.0 == 0.0) 0 else 1)
@@ -232,8 +230,8 @@ fun LeagueScreen(nav: NavHostController) {
         if (mode == "HEALTH" && s?.ready != true) PillButton(tr("Choisir mes activités"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("league/settings") }
         if (refreshError) Text(tr("Actualisation impossible. Réessayez."), color = MaterialTheme.colorScheme.error)
         if (ranked.size >= 2) RankingPodium(ranked.take(3).map { row ->
-            PodiumEntry(row.name, number(row.score!!) + suffix, ranked.indexOfFirst { it.score == row.score } + 1, row.friend == null)
-        })
+            PodiumEntry(row.name, number(row.score!!) + suffix, ranked.indexOfFirst { it.score == row.score } + 1, row.friend == null, row.friend)
+        }, onFriend = { opened = it })
         SectionLabel(tr("La course aux points"))
         if (ranked.isNotEmpty()) GroupCard {
             ranked.forEachIndexed { i, row ->

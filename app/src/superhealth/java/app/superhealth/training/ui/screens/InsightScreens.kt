@@ -359,6 +359,11 @@ private fun WorkoutSummary(vm: AppViewModel, w: Workout, title: String, onClose:
         }
         val rpe: @Composable () -> Unit = { RpeCard(w) { r -> vm.saveWorkout(w.copy(rpe = r)); app.superhealth.health.data.Scores.invalidate() } }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 96.dp)) {
+            if (nav != null && app.superhealth.league.League.available()) app.superhealth.nutrition.ui.components.PillButton(tr("Partager cette séance"),
+                Modifier.fillMaxWidth().padding(vertical = 10.dp), strong = false, icon = Icons.Rounded.Share) {
+                app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.workoutDraft(w)
+                nav.navigate("social/compose")
+            }
             // fin de séance : l'effort ressenti en premier, avant la silhouette (il passait sous le pli)
             if (rpeFirst) rpe()
             BodyMap(intensity(sets, max), st.settings.sex, Modifier.fillMaxWidth().height(if (rpeFirst) 260.dp else 320.dp))

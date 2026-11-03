@@ -47,10 +47,10 @@ object RestTimer {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.cancel(ID)
         nm.deleteNotificationChannel(CHANNEL)
-        if (sound) beep(ctx)
+        if (sound && app.superhealth.SuperPrefs.settings.value.notifyRest) beep(ctx)
         // la notification de séance repasse du compte à rebours au chronomètre de séance
         SessionNotification.update(ctx, app.superhealth.training.WorkoutApp.store.state.value)
-        runCatching { ctx.getSystemService(Vibrator::class.java).vibrate(VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250), -1)) }
+        if (app.superhealth.SuperPrefs.settings.value.notifyRest) runCatching { ctx.getSystemService(Vibrator::class.java).vibrate(VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250), -1)) }
     }
 
     fun beep(ctx: Context) {

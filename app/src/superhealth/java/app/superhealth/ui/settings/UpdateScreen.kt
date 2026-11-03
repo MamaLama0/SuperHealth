@@ -12,6 +12,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,17 +59,22 @@ internal fun VersionRow(nav: NavHostController) {
     val scope = rememberCoroutineScope()
     val st by Updater.state.collectAsState()
     val sh by SuperPrefs.settings.collectAsState()
-    LaunchedEffect(Unit) { if (st is Updater.State.Idle && sh.updateCheck) Updater.refresh(ctx) }
+    LaunchedEffect(Unit) { if (!Updater.restoreSession(ctx) && st is Updater.State.Idle && sh.updateCheck) Updater.refresh(ctx) }
     val (value, color) = when (val s = st) {
         is Updater.State.Available -> trf("%1\$s disponible", s.release.version) to Mf.colors.accent
         is Updater.State.Downloading -> trf("%1\$s · %2\$s %%", s.release.version, (s.fraction * 100).toInt()) to Mf.colors.accent
         is Updater.State.Ready -> trf("%1\$s prête", s.release.version) to Mf.colors.accent
+        is Updater.State.Verifying -> tr("Vérification du fichier…") to Mf.colors.accent
+        is Updater.State.Preparing -> tr("Préparation de l'installation…") to Mf.colors.accent
+        is Updater.State.Installing -> tr("Installation en cours…") to Mf.colors.accent
+        is Updater.State.AwaitingConfirmation -> tr("Confirmation Android requise") to Mf.colors.accent
+        Updater.State.Queued -> tr("Mise à jour en attente…") to Mf.colors.accent
         Updater.State.Checking -> tr("Vérification…") to null
         is Updater.State.UpToDate -> tr("À jour") to null
         is Updater.State.Failed -> tr("Non vérifiée") to null
         Updater.State.Idle -> null to null
     }
-    val pending = st is Updater.State.Available || st is Updater.State.Downloading || st is Updater.State.Ready
+    val pending = st is Updater.State.Available || st is Updater.State.Ready || Updater.busy(st)
     SettingRow("SuperHealth " + Updater.installed(ctx), value, icon = Icons.Rounded.SystemUpdate, hue = if (pending) Mf.colors.accent else app.superhealth.ui.theme.Base.Grey, valueColor = color,
         onClick = { if (pending) nav.go("update") else if (st !is Updater.State.Checking) scope.launch { Updater.refresh(ctx) } })
 }
@@ -78,17 +86,14 @@ fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
     val scope = rememberCoroutineScope()
     val sh by vm.settings.collectAsState()
     val st by Updater.state.collectAsState()
-    LaunchedEffect(Unit) { if (st is Updater.State.Idle || st is Updater.State.Failed || st is Updater.State.UpToDate) Updater.refresh(ctx) }
+    LaunchedEffect(Unit) { if (!Updater.restoreSession(ctx) && (st is Updater.State.Idle || st is Updater.State.Failed || st is Updater.State.UpToDate)) Updater.refresh(ctx) }
 
-    fun install(rel: Updater.Release) = scope.launch {
+    fun install() {
         if (!Updater.canInstall(ctx)) {
             runCatching { ctx.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}"))) }
-            return@launch
+            return
         }
-        runCatching {
-            val file = (Updater.state.value as? Updater.State.Ready)?.file?.takeIf { it.exists() } ?: Updater.download(ctx, rel)
-            Updater.install(ctx, file)
-        }.onFailure { Updater.state.value = Updater.State.Failed(it.message ?: "?") }
+        Updater.startInstall(ctx)
     }
 
     DetailScaffold(tr("Mises à jour"), onBack = { nav.popBackStack() }) {
@@ -104,6 +109,27 @@ fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
                     Spacer(Modifier.height(10.dp))
                     PillButton(tr("Réessayer"), strong = false) { scope.launch { Updater.refresh(ctx) } }
                 }
+                Updater.State.Queued, is Updater.State.Verifying, is Updater.State.Preparing,
+                is Updater.State.Installing, is Updater.State.AwaitingConfirmation -> {
+                    val label = when (s) {
+                        Updater.State.Queued -> tr("Mise à jour en attente…")
+                        is Updater.State.Verifying -> tr("Vérification du fichier…")
+                        is Updater.State.Preparing -> tr("Préparation de l'installation…")
+                        is Updater.State.AwaitingConfirmation -> tr("Confirmation Android requise")
+                        else -> tr("Installation en cours…")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CircularProgressIndicator(Modifier.size(24.dp), color = Mf.colors.accent, strokeWidth = 2.dp)
+                        Text(label, style = MaterialTheme.typography.titleMedium)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(tr("La mise à jour continue. La confirmation Android s'ouvrira automatiquement si nécessaire ; sinon, touchez la notification."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    if (s is Updater.State.AwaitingConfirmation) {
+                        Spacer(Modifier.height(12.dp))
+                        PillButton(tr("Confirmer avec Android")) { runCatching { ctx.startActivity(s.intent) } }
+                    }
+                }
                 is Updater.State.Available, is Updater.State.Downloading, is Updater.State.Ready -> {
                     val rel = when (s) { is Updater.State.Available -> s.release; is Updater.State.Downloading -> s.release; is Updater.State.Ready -> s.release; else -> null }!!
                     Text(trf("Version %1\$s disponible", rel.version), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -114,9 +140,13 @@ fun UpdateScreen(vm: SuperViewModel, nav: NavHostController) {
                             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     }
                     Spacer(Modifier.height(12.dp))
-                    if (s is Updater.State.Downloading) ProgressBar(s.fraction, Mf.colors.accent, height = 6.dp)
+                    if (s is Updater.State.Downloading) {
+                        ProgressBar(s.fraction, Mf.colors.accent, height = 6.dp)
+                        Text(trf("Téléchargement… %1\$s %%", (s.fraction * 100).toInt()),
+                            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    }
                     else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PillButton(tr("Installer"), Modifier.weight(1f)) { install(rel) }
+                        PillButton(tr("Installer"), Modifier.weight(1f)) { install() }
                         PillButton(tr("Ignorer"), Modifier.weight(1f), strong = false) {
                             SuperPrefs.update { it.copy(updateSkip = rel.version) }; Updater.cancelNotification(ctx); nav.popBackStack()
                         }

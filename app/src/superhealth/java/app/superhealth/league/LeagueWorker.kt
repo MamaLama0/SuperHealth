@@ -23,10 +23,11 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     companion object {
-        fun onOpen(ctx: Context) {
+        fun onOpen(ctx: Context, force: Boolean = false) {
             if (!League.available() || !League.state.value.relayEnabled) return
             val s = League.state.value
-            if (!s.refreshOnOpen || System.currentTimeMillis() - s.lastSync < TimeUnit.MINUTES.toMillis(10)) return
+            val social = s.notifyFriends || s.notifyPosts || s.notifyReactions
+            if (!force && ((!s.refreshOnOpen && !social) || System.currentTimeMillis() - s.lastSync < (if (social) 30_000 else TimeUnit.MINUTES.toMillis(10)))) return
             if (Relay.base() == null && s.friends.none { it.remote != null }) return
             WorkManager.getInstance(ctx).enqueueUniqueWork("league_open", ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<LeagueWorker>().setInputData(workDataOf("onOpen" to true))
@@ -38,7 +39,7 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             if (frequency !in setOf(2, 4)) { manager.cancelUniqueWork("league_sync"); return }
             if (Relay.base() == null && League.state.value.friends.none { it.remote != null }) return
             manager.enqueueUniquePeriodicWork("league_sync", ExistingPeriodicWorkPolicy.UPDATE,
-                PeriodicWorkRequestBuilder<LeagueWorker>((24 / frequency).toLong(), TimeUnit.HOURS)
+                PeriodicWorkRequestBuilder<LeagueWorker>(if (League.state.value.notifyFriends || League.state.value.notifyPosts || League.state.value.notifyReactions) 15L else (24 / frequency * 60).toLong(), TimeUnit.MINUTES)
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()).build())
         }
     }

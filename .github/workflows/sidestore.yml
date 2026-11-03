@@ -1,0 +1,150 @@
+name: SideStore HealthKit
+
+# SideStore officiel + patch HealthKit (patch_healthkit.py) → SideStore-HealthKit.ipa, publiée en pré-version
+# (la « dernière version » du dépôt reste l'APK Android, lue par la mise à jour intégrée).
+# Version suivie : la « latest » de SideStore sur GitHub, celle qu'iloader installe avec « SideStore (Stable) ».
+on:
+  push:
+    branches: [ sidestore ]
+    paths:
+      - .github/workflows/sidestore.yml
+      - patch_healthkit.py
+      - anisette_80046.patch
+  schedule:
+    - cron: '0 6 * * 1'   # chaque lundi : nouvelle version de SideStore → nouvelle compilation
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Version de SideStore (tag) ; vide = la dernière stable
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sidestore
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      # Le cron vit aussi sur la branche par défaut ; les correctifs viennent toujours de sidestore.
+      - uses: actions/checkout@v4
+        with:
+          ref: sidestore
+          path: patcher
+
+      - name: Version de SideStore
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_REF: ${{ inputs.ref }}
+        run: |
+          REF="$REQUESTED_REF"
+          [ -n "$REF" ] || REF=$(gh api repos/SideStore/SideStore/releases/latest -q .tag_name)
+          [[ "$REF" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,80}$ ]] || { echo "::error::Tag SideStore non valable"; exit 1; }
+          PATCHSET=$(cat patcher/patch_healthkit.py patcher/anisette_80046.patch patcher/.github/workflows/sidestore.yml | shasum -a 256 | cut -c1-12)
+          TAG="sidestore-healthkit-$REF-$PATCHSET"
+          echo "commit=$(git -C patcher rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # compilation hebdomadaire : rien à faire si cette version est déjà publiée
+          if [ "${{ github.event_name }}" = "schedule" ] && gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "SideStore $REF"
+
+      - name: SideStore ${{ steps.v.outputs.ref }}
+        if: steps.v.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: SideStore/SideStore
+          ref: ${{ steps.v.outputs.ref }}
+          submodules: recursive
+          path: ss
+
+      - if: steps.v.outputs.skip != 'true'
+        run: brew install ldid xcbeautify
+
+      - if: steps.v.outputs.skip != 'true'
+        uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: "26.4"
+
+      - name: Patch HealthKit
+        if: steps.v.outputs.skip != 'true'
+        run: |
+          python3 patcher/patch_healthkit.py ss
+          git -C ss/Dependencies/SideSign diff
+
+      - name: Correctif connexion Apple (-80045 / -80046)
+        if: steps.v.outputs.skip != 'true'
+        working-directory: ss
+        run: |
+          # depuis le 22/10/2026 Apple refuse l'anisette envoyée avec l'identité intégrée de SideStore : chaque serveur
+          # anisette donne désormais la sienne (/v3/client_info), serveur Mac par défaut, anisette sur l'appareil coupée.
+          # Correctif de https://github.com/mariohurtado1402/SideStore (commit 15218d18), adapté à la version stable.
+          if git apply --check ../patcher/anisette_80046.patch; then
+            git apply ../patcher/anisette_80046.patch
+          elif git apply --reverse --check ../patcher/anisette_80046.patch; then
+            echo "correctif déjà inclus dans cette version de SideStore"
+          else
+            echo "::error::anisette_80046.patch ne s'applique plus à SideStore ${{ steps.v.outputs.ref }}"; exit 1
+          fi
+          git diff --stat
+
+      - name: Numéro de version officiel
+        if: steps.v.outputs.skip != 'true'
+        working-directory: ss
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # l'ipa officielle porte la version normalisée de son canal (ex. 0.7.0-20260911.328+6032424a), pas le
+          # MARKETING_VERSION du dépôt (0.7.0) : sans ce numéro, SideStore ne reconnaît pas sa propre version dans
+          # la source officielle et se croit pas à jour
+          gh release download "${{ steps.v.outputs.ref }}" --repo SideStore/SideStore --pattern SideStore.ipa --dir ../official
+          unzip -q -o ../official/SideStore.ipa 'Payload/SideStore.app/Info.plist' -d ../official
+          V=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ../official/Payload/SideStore.app/Info.plist)
+          python3 scripts/ci/workflow.py set-marketing-version "$V"
+          grep MARKETING_VERSION Build.xcconfig
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: Build
+        if: steps.v.outputs.skip != 'true'
+        working-directory: ss
+        run: python3 scripts/ci/workflow.py build
+
+      - name: Paquet
+        if: steps.v.outputs.skip != 'true'
+        run: |
+          mv ss/SideStore.ipa SideStore-HealthKit.ipa
+          # la capacité HealthKit doit être dans le binaire, sinon le patch n'a servi à rien
+          unzip -q -o SideStore-HealthKit.ipa -d check
+          grep -q -a HK421J6T7P check/Payload/SideStore.app/SideStore
+          # et le même numéro de version que l'ipa officielle
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' check/Payload/SideStore.app/Info.plist)" = "$VERSION"
+          ls -lh SideStore-HealthKit.ipa
+
+      - if: steps.v.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SideStore-HealthKit
+          path: SideStore-HealthKit.ipa
+
+      - name: Pré-version
+        if: steps.v.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ steps.v.outputs.commit }}
+          name: SideStore ${{ steps.v.outputs.ref }} + HealthKit + correctif -80045 (pour SuperHealth iOS)
+          prerelease: true
+          make_latest: false
+          body: |
+            - Installation de SuperHealth avec l’accès à Apple Santé pour les identifiants Apple gratuits.
+            - Correctif de connexion Apple -80045 / -80046 conservé.
+            - Base SideStore : ${{ steps.v.outputs.ref }} ; version de l’app : ${{ env.VERSION }}.
+            - Sources et licence : branche sidestore (AGPL-3.0), https://github.com/SideStore/SideStore
+          files: SideStore-HealthKit.ipa

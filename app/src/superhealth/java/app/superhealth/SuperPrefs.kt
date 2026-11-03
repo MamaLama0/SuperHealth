@@ -282,6 +282,8 @@ data class SuperSettings(
     val foodIcons: Map<String, String> = emptyMap(),
     /** 1.8 : rappels (minute du jour, −1 : coupé) et coucher conseillé. */
     val remindWeigh: Int = -1,
+    val notifyWorkout: Boolean = true,
+    val notifyRest: Boolean = true,
     val remindLog: Int = -1,
     val remindJournal: Int = -1,
     val remindBedtime: Boolean = false,
@@ -355,7 +357,7 @@ data class SuperSettings(
     /** Mises à jour depuis les versions GitHub : vérification quotidienne, confirmation par notification, dépôt « propriétaire/nom ». */
     val updateCheck: Boolean = true,
     val updateConfirm: Boolean = true,
-    val updateRepo: String = "Ouinon0/SuperHealth",
+    val updateRepo: String = "MamaLama0/SuperHealth",
     val lastUpdateCheck: Long = 0,
     val updateSkip: String? = null,
     /** Modules : sources ajoutées à la main (non vérifiées), mises à jour automatiques. */
