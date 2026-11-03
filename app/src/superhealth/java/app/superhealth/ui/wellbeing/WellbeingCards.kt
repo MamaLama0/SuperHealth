@@ -177,7 +177,8 @@ fun MoodSheet(nav: NavHostController) {
 // ---- Forme du jour --------------------------------------------------------------------------------------------
 
 /** Dernier résultat calculé, gardé entre deux affichages (pas de clignotement au défilement). */
-private var formCache: Pair<LocalDate, Form.Result>? = null
+private data class FormKey(val date: LocalDate, val features: Set<String>, val revision: Long)
+private var formCache: Pair<FormKey, Form.Result>? = null
 
 @Composable
 fun rememberForm(): Form.Result? {
@@ -185,10 +186,12 @@ fun rememberForm(): Form.Result? {
     val journal by Journal.days.collectAsState()
     val sh by SuperPrefs.settings.collectAsState()
     val feel by Checkin.days.collectAsState()
-    var r by remember { mutableStateOf(formCache?.takeIf { it.first == LocalDate.now() }?.second) }
-    LaunchedEffect(journal, sh.features, feel) {
+    val revision by app.superhealth.health.data.HealthRepository.changes.collectAsState()
+    val key = FormKey(LocalDate.now(), sh.features, revision)
+    var r by remember(key) { mutableStateOf(formCache?.takeIf { it.first == key }?.second) }
+    LaunchedEffect(journal, key, feel) {
         val v = runCatching { Form.today(ctx, sh.has(Feature.JOURNAL)) }.getOrNull() ?: return@LaunchedEffect
-        formCache = LocalDate.now() to v
+        formCache = key to v
         r = v
     }
     return r

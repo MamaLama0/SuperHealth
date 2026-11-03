@@ -1,5 +1,6 @@
 package app.superhealth.health.data
 
+import kotlinx.coroutines.flow.update
 import android.content.Context
 import java.time.DayOfWeek
 import java.time.Instant
@@ -94,9 +95,14 @@ object HealthRepository {
     private const val NONE = Double.NaN
     private val dbPermits = Semaphore(4)
 
-    private val revisionCounter = java.util.concurrent.atomic.AtomicLong()
-    val revision: Long get() = revisionCounter.get()
-    fun invalidate() { cache.clear(); Scores.invalidate(); revisionCounter.incrementAndGet() }
+    private val revisions = kotlinx.coroutines.flow.MutableStateFlow(0L)
+    val changes: kotlinx.coroutines.flow.StateFlow<Long> = revisions
+    val revision: Long get() = changes.value
+    fun invalidate() {
+        cache.clear()
+        Scores.invalidate()
+        revisions.update { it + 1 }
+    }
 
     /** Montres gérées par le module LocalHealth ; vide quand le module est désactivé. */
     fun devices(): List<GBDevice> = app.superhealth.bridge.Watch.devices()

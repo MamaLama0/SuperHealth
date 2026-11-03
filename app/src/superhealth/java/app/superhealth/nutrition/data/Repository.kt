@@ -303,7 +303,8 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             app.superhealth.training.WorkoutApp.store.state.map { it.history }.distinctUntilChanged(),
             SuperPrefs.hc.map { it.sessions }.distinctUntilChanged(),
             app.superhealth.bridge.RunImport.runs,
-        ) { _, _, _ ->
+            app.superhealth.health.data.HealthRepository.changes,
+        ) { _, _, _, _ ->
             val today = LocalDate.now()
             val start = today.minusDays(385).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
             Bridge.reconcile(Bridge.activities(start, raw = true).filter { a ->
