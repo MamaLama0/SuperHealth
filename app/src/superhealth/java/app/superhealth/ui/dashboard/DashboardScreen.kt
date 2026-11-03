@@ -390,6 +390,7 @@ internal object DashPreview {
 @Composable
 fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
+    val now = app.superhealth.ui.wellbeing.promptNow()
     val saved by vm.settings.collectAsState()
     // aperçu de test : une disposition en mémoire seulement, rien n'est enregistré
     val sh = DashPreview.cards?.let { p -> saved.copy(dashboard = p, dashSizes = DashPreview.sizes) } ?: saved
@@ -451,9 +452,9 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                 if (arranging) Text(tr("Touchez une carte pour la régler, maintenez-la pour la déplacer."), style = MaterialTheme.typography.bodySmall,
                     color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                 else {
-                    CheckInBanner(vm, an)
-                    WeighBanner(vm, an)
-                    MoodBanner(sh)
+                    CheckInBanner(vm, an, now)
+                    WeighBanner(vm, an, now)
+                    MoodBanner(vm, sh, now, refresh)
                 }
                 Spacer(Modifier.height(6.dp))
             }
@@ -547,11 +548,11 @@ private fun EditCell(c: DashCard, a: Arrange, modifier: Modifier, onTap: () -> U
  * jusqu'à demain, comme les autres). Rempli, il calcule et applique les nouvelles calories.
  */
 @Composable
-private fun CheckInBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics) {
+private fun CheckInBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics, now: Long) {
     val sh by vm.settings.collectAsState()
     val today = LocalDate.now().toEpochDay()
     var sheet by remember { mutableStateOf(false) }
-    val due = sh.has(app.superhealth.Feature.NUTRITION) && an.checkInState == CheckInState.NOW
+    val due = sh.has(app.superhealth.Feature.NUTRITION) && an.checkInState == CheckInState.NOW && app.superhealth.wellbeing.PromptTiming.weighDue(sh, now)
     PromptBanner(due && sh.checkInSkipDay != today, Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in de la semaine"), { sheet = true }) {
         app.superhealth.SuperPrefs.update { it.copy(checkInSkipDay = today) }
     }
@@ -563,7 +564,7 @@ private fun CheckInBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data
  * pesée sans quitter l'écran ; flèche : le replier jusqu'à demain. Désactivable dans Réglages > Tableau de bord.
  */
 @Composable
-private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics) {
+private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.Analytics, now: Long) {
     val sh by vm.settings.collectAsState()
     val s by vm.nutrition.settings.collectAsState()
     val profile by vm.nutrition.profile.collectAsState()
@@ -572,7 +573,7 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     var sheet by remember { mutableStateOf(false) }
     // le check-in en attente demande déjà le poids
     val checkInShown = sh.has(app.superhealth.Feature.NUTRITION) && an.checkInState == CheckInState.NOW && sh.checkInSkipDay != today
-    PromptBanner(sh.weighPrompt && !weighed && sh.weighSkipDay != today && !checkInShown, Icons.Rounded.MonitorWeight, DashCard.WEIGHT.hue(), tr("Pesée du jour"), { sheet = true }) {
+    PromptBanner(sh.has(app.superhealth.Feature.NUTRITION) && sh.weighPrompt && app.superhealth.wellbeing.PromptTiming.weighDue(sh, now) && !weighed && sh.weighSkipDay != today && !checkInShown, Icons.Rounded.MonitorWeight, DashCard.WEIGHT.hue(), tr("Pesée du jour"), { sheet = true }) {
         app.superhealth.SuperPrefs.update { it.copy(weighSkipDay = today) }
     }
     if (sheet) app.superhealth.nutrition.ui.screens.WeighInSheet(null, s, profile.sex, onDismiss = { sheet = false }, onDelete = null) { w ->
@@ -583,10 +584,30 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
 
 /** Moral pas encore noté aujourd'hui : même bandeau que la pesée, la fenêtre s'ouvre par-dessus (voir SuperRoot). */
 @Composable
-private fun MoodBanner(sh: app.superhealth.SuperSettings) {
+private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, now: Long, refresh: Int) {
+    val ctx = LocalContext.current
     val days by app.superhealth.wellbeing.Journal.days.collectAsState()
+    val nutrition by vm.nutrition.settings.collectAsState()
+    val training by app.superhealth.training.WorkoutApp.store.state.collectAsState()
+    val hc by app.superhealth.SuperPrefs.hc.collectAsState()
+    val runs by app.superhealth.bridge.RunImport.runs.collectAsState()
     val today = LocalDate.now().toEpochDay()
-    PromptBanner(sh.has(app.superhealth.Feature.JOURNAL) && days[today] == null && sh.moodSkipDay != today, Icons.Rounded.SentimentSatisfied, HealthHues.Mind,
+    val pending = sh.has(app.superhealth.Feature.JOURNAL) && days[today] == null && sh.moodSkipDay != today
+    val due by produceState(0L to false, pending, now / 60_000, refresh, nutrition, training.history, hc, runs,
+        sh.moodAfterSteps, sh.moodAfterActivity, sh.moodPromptShownDay, sh.promptSeed) {
+        val eligible = pending && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val date = LocalDate.now()
+            if (app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, null, 0, emptyList())) return@withContext true
+            val steps = if (sh.moodAfterSteps) runCatching { Bridge.healthValue(ctx, Metric.STEPS, date) }.getOrNull() else null
+            val ends = if (sh.moodAfterActivity) runCatching {
+                Bridge.activities(date.minusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), now).map { it.end }
+            }.getOrDefault(emptyList()) else emptyList()
+            app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, steps, nutrition.stepGoalFor(date), ends)
+        }
+        value = today to eligible
+        if (eligible && sh.moodPromptShownDay != today) app.superhealth.SuperPrefs.update { it.copy(moodPromptShownDay = today) }
+    }
+    PromptBanner(pending && due.first == today && due.second, Icons.Rounded.SentimentSatisfied, HealthHues.Mind,
         tr("Moral du jour"), { app.superhealth.ui.wellbeing.moodSheet = true }) { app.superhealth.SuperPrefs.update { it.copy(moodSkipDay = today) } }
 }
 
@@ -623,12 +644,13 @@ internal fun focusItems(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     val eaten by vm.nutrition.todayEntries.collectAsState()
     val st by vm.training.state.collectAsState()
     val today = LocalDate.now().toEpochDay()
+    val weighDue = app.superhealth.wellbeing.PromptTiming.weighDue(sh, app.superhealth.ui.wellbeing.promptNow())
     return buildList {
         // tâches ajoutées à la main : toucher les coche pour aujourd'hui, elles reviennent demain
         sh.todos.filter { sh.todosDone[it] != today }.forEach { t ->
             add(Triple(Icons.Rounded.RadioButtonUnchecked, HealthHues.Body, t to { app.superhealth.SuperPrefs.update { st2 -> st2.copy(todosDone = st2.todosDone + (t to today)) } }))
         }
-        if (an.checkInState == CheckInState.NOW) add(Triple(Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in disponible") to { nav.go("checkin") }))
+        if (sh.has(app.superhealth.Feature.NUTRITION) && weighDue && an.checkInState == CheckInState.NOW) add(Triple(Icons.Rounded.EventAvailable, HealthHues.Body, tr("Check-in disponible") to { nav.go("checkin") }))
         // rappel médication : prises dont l'heure est passée, pas encore cochées
         val medsTaken by app.superhealth.meds.Meds.taken.collectAsState()
         if (medsTaken.isNotEmpty() || app.superhealth.meds.Meds.meds.value.isNotEmpty()) app.superhealth.meds.Meds.late().takeIf { it.isNotEmpty() }?.let { late ->
@@ -640,7 +662,7 @@ internal fun focusItems(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
         app.superhealth.nutrition.domain.PhotoMilestones.due(an, photos)?.let { m ->
             add(Triple(Icons.Rounded.Straighten, HealthHues.Body, (if (m == 0) tr("Photo de départ") else trf("%1\$s %% de votre objectif : photo", m)) to { nav.go("body") }))
         }
-        if (an.days.lastOrNull()?.weightKg == null) add(Triple(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("Pesée du jour") to { nav.go("weight") }))
+        if (sh.has(app.superhealth.Feature.NUTRITION) && weighDue && an.days.none { it.epochDay == today && it.weightKg != null }) add(Triple(Icons.Rounded.MonitorWeight, HealthHues.Body, tr("Pesée du jour") to { nav.go("weight") }))
         // dès 60 ans, hors objectif de perte : perte de poids involontaire > 5 % en 6 mois (critère GLIM de dénutrition)
         app.superhealth.nutrition.domain.Senior.unintendedLossPct(LocalDate.now().year - an.profile.birthYear, an.currentGoal?.type, an.trendByDay, an.today)?.let { pct ->
             add(Triple(Icons.Rounded.MonitorWeight, HealthHues.Heart, trf("−%1\$s %% en 6 mois sans le vouloir : à signaler à votre médecin", pct.roundToInt()) to { nav.go("weight") }))

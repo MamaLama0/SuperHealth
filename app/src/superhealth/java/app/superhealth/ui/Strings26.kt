@@ -2,6 +2,15 @@ package app.superhealth.ui
 /** Libellés ajoutés en 2.6 : français → anglais. */
 object Strings26 {
     val map: Map<String, String> = hashMapOf(
+        "Notifications" to "Notifications",
+        "Heure de la pesée et du check-in" to "Weigh-in and check-in time",
+        "Les bandeaux apparaissent à partir de cette heure" to "Banners appear from this time onwards",
+        "Moral après l'objectif de pas" to "Mood after reaching your step goal",
+        "Proposer le journal quand l'objectif du jour est atteint" to "Show the journal when today's goal is reached",
+        "Moral après une activité" to "Mood after an activity",
+        "Entre 30 min et 2 h après une activité terminée" to "Between 30 minutes and 2 hours after a completed activity",
+        "Sinon, le journal apparaît entre 17 h et 19 h, à une heure tirée au sort chaque jour. Vous pouvez toujours le remplir depuis le bouton +." to "Otherwise, the journal appears between 5 pm and 7 pm, at a randomly chosen time each day. You can always fill it in using the + button.",
+        "Pesée et check-in" to "Weigh-in and check-in",
         "Méditation et étirements face à 70 min sur 7 jours. Poids relatif : 5." to "Meditation and stretching against 70 min over 7 days. Relative weight: 5.",
         "Écart relatif entre apports et cibles, évalué progressivement. Au moins 4 jours renseignés. Poids relatif : 15." to "Gradually scored relative difference between intake and targets. At least 4 logged days. Relative weight: 15.",
         "Moyenne des nuits renseignées face à 7 h. Au moins 4 nuits. Poids relatif : 25." to "Average observed nights against 7 hours. At least 4 nights. Relative weight: 25.",

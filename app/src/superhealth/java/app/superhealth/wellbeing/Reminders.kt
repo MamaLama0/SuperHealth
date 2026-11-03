@@ -29,7 +29,7 @@ import java.time.ZoneId
  */
 object Reminders {
     enum class Kind(val title: String, val route: String) {
-        WEIGH("Pesée du matin", "weight"),
+        WEIGH("Pesée et check-in", "weight"),
         LOG("Journal alimentaire", "log"),
         JOURNAL("Comment s'est passée la journée ?", "mood"),
         BEDTIME("Bientôt l'heure du coucher", "home"),
@@ -42,7 +42,7 @@ object Reminders {
     private suspend fun minuteOf(ctx: Context, k: Kind): Int? {
         val s = SuperPrefs.settings.value
         return when (k) {
-            Kind.WEIGH -> s.remindWeigh.takeIf { it >= 0 && s.has(Feature.NUTRITION) }
+            Kind.WEIGH -> PromptTiming.weighMinute(s).takeIf { s.remindWeigh >= 0 && s.has(Feature.NUTRITION) }
             Kind.LOG -> s.remindLog.takeIf { it >= 0 && s.has(Feature.NUTRITION) }
             Kind.JOURNAL -> s.remindJournal.takeIf { it >= 0 && s.has(Feature.JOURNAL) }
             Kind.BEDTIME -> if (s.remindBedtime) runCatching { Bedtime.tonight(ctx) }.getOrNull()?.let { Math.floorMod(it.bedMinute - 30, 24 * 60) } else null

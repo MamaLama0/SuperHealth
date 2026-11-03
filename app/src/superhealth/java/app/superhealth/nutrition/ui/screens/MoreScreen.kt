@@ -191,6 +191,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 if (hours) MealHoursDialog { hours = false }
                 RowDivider()
                 SwitchRow(tr("Bandeau de pesée"), tr("Tant que la pesée du jour manque"), sh.weighPrompt) { v -> SuperPrefs.update { it.copy(weighPrompt = v) } }
+                RowDivider()
+                app.superhealth.ui.wellbeing.WeighPromptTimeRow()
                 if (program.style != app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
                 RowDivider()
                 var checkInDayOpen by remember { mutableStateOf(false) }

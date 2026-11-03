@@ -26,7 +26,7 @@ object SettingsHelp {
         Destination("activities_settings", "Sections de l'onglet Activités", "settings/activities", "activite meditation etirement course musculation ordre section"),
         Destination("stretch_editor", "Ma séance d'étirements", "stretch/edit", "etirement souplesse mobilite muscles exo exercice remplacer swap personnaliser seance rapide"),
         Destination("stretch_library", "Bibliothèque d'étirements", "stretch/all", "etirement recherche exercice favoris bibliotheque"),
-        Destination("reminders", "Rappels", "settings/reminders", "rappel notification horaire repas poids coucher"),
+        Destination("reminders", "Rappels", "settings/reminders", "rappel notification horaire repas poids pesee check in moral humeur journal pas activite coucher"),
         Destination("sleep_settings", "Sommeil", "settings/sleep", "sommeil besoin horaires coucher reveil"),
         Destination("connections", "Health Connect", "settings/hc", "montre health connect google autorisation donnees sante synchro"),
         Destination("sources", "Sources", "settings/sources", "sources donnees montre garmin apple doublons priorite"),

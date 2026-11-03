@@ -325,7 +325,15 @@ data class SuperSettings(
     /** Les deux séries superposées de la carte Corrélations (noms de InsightData.Source) et la période en jours. */
     val corr: List<String> = listOf("SLEEP", "VOLUME"),
     val corrDays: Int = 30,
-    /** Demande de pesée à l'ouverture tant qu'aucune pesée n'est saisie aujourd'hui ; [weighSkipDay] : « pas aujourd'hui ». */
+    /** Heure commune des bandeaux de pesée/check-in ; −1 reprend l'ancien rappel, ou 7 h par défaut. */
+    val weighPromptMinute: Int = -1,
+    /** Tirages quotidiens stables, propres à cette installation. */
+    val promptSeed: Long = 0,
+    val moodAfterSteps: Boolean = true,
+    val moodAfterActivity: Boolean = true,
+    /** Une fois proposé, le moral reste disponible jusqu'à la saisie ou « pas aujourd'hui ». */
+    val moodPromptShownDay: Long = 0,
+    /** Demande de pesée après l'heure choisie ; [weighSkipDay] : « pas aujourd'hui ». */
     val weighPrompt: Boolean = true,
     val weighSkipDay: Long = 0,
     /** Check-in en attente replié pour aujourd'hui : il revient demain, tant qu'il n'est pas fait. */
@@ -474,6 +482,7 @@ object SuperPrefs {
         val newProfile = !sp.contains("settings")
         _settings.value = sp.getString("settings", null)?.let { runCatching { SuperJson.decodeFromString(SuperSettings.serializer(), it) }.getOrNull() }
             ?: SuperSettings()
+        if (_settings.value.promptSeed == 0L) update { it.copy(promptSeed = java.util.UUID.randomUUID().mostSignificantBits.takeIf { seed -> seed != 0L } ?: 1L) }
         if (!_settings.value.builtinsAdded) update { it.copy(builtinsAdded = true,
             coachBrief = if (DashCard.COACH in it.dashboard) it.coachBrief else false,
             dashboard = (it.dashboard + DashCard.COACH).distinct(),

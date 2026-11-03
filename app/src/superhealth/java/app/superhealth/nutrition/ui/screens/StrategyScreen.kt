@@ -209,6 +209,9 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
 
 @Composable
 private fun CheckInBanner(an: Analytics, onCheckIn: () -> Unit) {
+    val sh by app.superhealth.SuperPrefs.settings.collectAsState()
+    val now = app.superhealth.ui.wellbeing.promptNow()
+    if (an.checkInState == CheckInState.NOW && !app.superhealth.wellbeing.PromptTiming.weighDue(sh, now)) return
     when (an.checkInState) {
         CheckInState.NOW -> MfCard(onClick = onCheckIn) {
             Row(verticalAlignment = Alignment.CenterVertically) {
