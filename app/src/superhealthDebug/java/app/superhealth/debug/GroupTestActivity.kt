@@ -25,6 +25,8 @@ class GroupTestActivity : Activity() {
             try {
                 val db = WorkoutApp.db.first { it != null }!!
                 when (operation) {
+                    "icon" -> app.superhealth.ui.LauncherIcon.apply(this@GroupTestActivity,
+                        app.superhealth.nutrition.domain.AccentColor.valueOf(intent.getStringExtra("accent") ?: "BLUE"))
                     "notification" -> {
                         val device = nodomain.freeyourgadget.gadgetbridge.impl.GBDevice("00:11:22:33:44:55", "Montre de test", null, null,
                             nodomain.freeyourgadget.gadgetbridge.model.DeviceType.TEST)

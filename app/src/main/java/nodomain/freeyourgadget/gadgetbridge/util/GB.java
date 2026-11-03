@@ -204,12 +204,9 @@ public class GB {
     private static PendingIntent getContentIntent(Context context) {
         Intent notificationIntent = new Intent(context, ControlCenterv2.class);
         if ("superhealth".equals(BuildConfig.FLAVOR)) {
-            // Open this installation's launcher (including its selected icon alias),
-            // rather than the inherited Gadgetbridge control centre.
-            notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-            if (notificationIntent == null) {
-                notificationIntent = new Intent().setClassName(context.getPackageName(), "app.superhealth.MainActivity");
-            }
+            // Use the stable activity: launcher aliases can be disabled when the
+            // user changes their accent colour after this notification is posted.
+            notificationIntent = new Intent().setClassName(context.getPackageName(), "app.superhealth.MainActivity");
             notificationIntent.setPackage(context.getPackageName());
             notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             return PendingIntent.getActivity(context, 9051, notificationIntent,
