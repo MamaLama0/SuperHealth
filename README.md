@@ -46,4 +46,4 @@ modifiée aussi. Son code source complet = SideStore à la version indiquée dan
 
 ## Contribuer
 
-Voir le [guide de contribution](https://github.com/MamaLama0/SuperHealth/blob/superhealth/CONTRIBUTING.md). Les PR de signature et de compilation ciblent `sidestore`. Garder `.github/workflows/sidestore.yml` identique sur `sidestore` et `superhealth` ; cette dernière héberge le déclencheur planifié. La vérification du binaire et la compilation macOS doivent réussir avant d’annoncer une nouvelle IPA disponible.
+Voir le [guide de contribution](https://github.com/MamaLama0/SuperHealth/blob/superhealth/CONTRIBUTING.md). Les PR de signature et de compilation ciblent `sidestore`. Maintenir le workflow de compilation sur `sidestore` et son point d’entrée planifié sur `superhealth`. Le point d’entrée par défaut ne se déclenche pas sur une simple mise à jour Android ; il récupère les correctifs de `sidestore`. La vérification du binaire et la compilation macOS doivent réussir avant d’annoncer une nouvelle IPA disponible.
