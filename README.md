@@ -7,8 +7,7 @@ colonne « Apple Developer ») : c'est la liste des fonctions de SideSign, le mo
 l'oublie.
 
 Cette branche compile le [SideStore](https://sidestore.io) officiel, dans la version qu'installe iloader avec
-« SideStore (Stable) » (la dernière version publiée sur GitHub, aujourd'hui `0.7.0-alpha`), avec un seul changement
-de 6 lignes, [`patch_healthkit.py`](patch_healthkit.py) :
+« SideStore (Stable) » (la dernière version publiée sur GitHub, vérifiée le 3 novembre 2026 : `0.7.0-alpha`), avec le correctif [`patch_healthkit.py`](patch_healthkit.py) :
 
 - la capacité HealthKit (`HK421J6T7P`) est activée sur l'identifiant d'app créé pour SuperHealth ;
 - les droits `com.apple.developer.healthkit` et `com.apple.developer.healthkit.access` sont gardés à la signature.
@@ -22,14 +21,13 @@ connexion de SideStore (« -80045 » / « -80046 » dans Réglages > Compte). Le
 serveur Mac par défaut (`new.ani.sidestore.io`) et coupe l'anisette sur l'appareil. Il est sauté automatiquement le
 jour où SideStore l'inclut.
 
-Rien d'autre ne change.
+
 
 ## Télécharger
 
 `SideStore-HealthKit.ipa` est jointe à chaque version iOS de SuperHealth (pré-versions `ios-v…` des
-[versions](https://github.com/MamaLama0/SuperHealth/releases)) et à la pré-version `sidestore-healthkit-<version>`
-compilée par GitHub Actions ([`.github/workflows/sidestore.yml`](.github/workflows/sidestore.yml)) : à chaque envoi
-sur cette branche et chaque lundi quand SideStore sort une nouvelle version. La compilation échoue (au lieu de
+[versions](https://github.com/MamaLama0/SuperHealth/releases)) et à la pré-version `sidestore-healthkit-<version>-<empreinte des correctifs>`
+compilée par GitHub Actions ([`.github/workflows/sidestore.yml`](.github/workflows/sidestore.yml)) : à chaque modification du workflow ou des correctifs, et chaque lundi. Le workflow est également présent sur la branche par défaut `superhealth`, condition nécessaire pour que le cron GitHub fonctionne. Il récupère toujours les sources de la branche `sidestore`. Une nouvelle version amont ou une modification des correctifs produit une nouvelle pré-version ; une compilation hebdomadaire identique est ignorée. La compilation échoue (au lieu de
 publier) si le patch ne s'applique plus ou si la capacité HealthKit manque dans le binaire.
 
 ## Installer
@@ -45,3 +43,7 @@ et SuperHealth perdrait Apple Santé au renouvellement suivant. Pour une nouvell
 SideStore est sous licence [AGPL-3.0](https://github.com/SideStore/SideStore/blob/develop/LICENSE) ; cette version
 modifiée aussi. Son code source complet = SideStore à la version indiquée dans le nom de la pré-version +
 `patch_healthkit.py` + `anisette_80046.patch`.
+
+## Contribuer
+
+Voir le [guide de contribution](https://github.com/MamaLama0/SuperHealth/blob/superhealth/CONTRIBUTING.md). Les PR de signature et de compilation ciblent `sidestore`. Garder `.github/workflows/sidestore.yml` identique sur `sidestore` et `superhealth` ; cette dernière héberge le déclencheur planifié. La vérification du binaire et la compilation macOS doivent réussir avant d’annoncer une nouvelle IPA disponible.

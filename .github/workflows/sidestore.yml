@@ -5,7 +5,11 @@ name: SideStore HealthKit
 # Version suivie : la « latest » de SideStore sur GitHub, celle qu'iloader installe avec « SideStore (Stable) ».
 on:
   push:
-    branches: [ sidestore ]
+    branches: [ sidestore, superhealth ]
+    paths:
+      - .github/workflows/sidestore.yml
+      - patch_healthkit.py
+      - anisette_80046.patch
   schedule:
     - cron: '0 6 * * 1'   # chaque lundi : nouvelle version de SideStore → nouvelle compilation
   workflow_dispatch:
@@ -26,25 +30,31 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 90
     steps:
+      # Le cron vit aussi sur la branche par défaut ; les correctifs viennent toujours de sidestore.
+      - uses: actions/checkout@v4
+        with:
+          ref: sidestore
+          path: patcher
+
       - name: Version de SideStore
         id: v
         env:
           GH_TOKEN: ${{ github.token }}
+          REQUESTED_REF: ${{ inputs.ref }}
         run: |
-          REF="${{ github.event.inputs.ref }}"
+          REF="$REQUESTED_REF"
           [ -n "$REF" ] || REF=$(gh api repos/SideStore/SideStore/releases/latest -q .tag_name)
+          [[ "$REF" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,80}$ ]] || { echo "::error::Tag SideStore non valable"; exit 1; }
+          PATCHSET=$(cat patcher/patch_healthkit.py patcher/anisette_80046.patch patcher/.github/workflows/sidestore.yml | shasum -a 256 | cut -c1-12)
+          TAG="sidestore-healthkit-$REF-$PATCHSET"
+          echo "commit=$(git -C patcher rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "tag=sidestore-healthkit-$REF-anisette" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           # compilation hebdomadaire : rien à faire si cette version est déjà publiée
-          if [ "${{ github.event_name }}" = "schedule" ] && gh release view "sidestore-healthkit-$REF-anisette" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if [ "${{ github.event_name }}" = "schedule" ] && gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
           echo "SideStore $REF"
-
-      - uses: actions/checkout@v4
-        if: steps.v.outputs.skip != 'true'
-        with:
-          path: patcher
 
       - name: SideStore ${{ steps.v.outputs.ref }}
         if: steps.v.outputs.skip != 'true'
@@ -128,14 +138,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.v.outputs.tag }}
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ steps.v.outputs.commit }}
           name: SideStore ${{ steps.v.outputs.ref }} + HealthKit + correctif -80045 (pour SuperHealth iOS)
           prerelease: true
           make_latest: false
           body: |
-            SideStore ${{ steps.v.outputs.ref }} compilé tel quel, avec deux changements : HealthKit autorisé pour les
-            identifiants Apple gratuits (patch_healthkit.py) et le correctif de connexion Apple -80045 / -80046
-            (anisette_80046.patch), tous deux sur la branche sidestore. Sert à installer SuperHealth
-            iOS avec l'accès à Apple Santé. Même numéro de version que l'ipa officielle : ${{ env.VERSION }}.
-            Licence AGPL-3.0, code d'origine : https://github.com/SideStore/SideStore
+            - Installation de SuperHealth avec l’accès à Apple Santé pour les identifiants Apple gratuits.
+            - Correctif de connexion Apple -80045 / -80046 conservé.
+            - Base SideStore : ${{ steps.v.outputs.ref }} ; version de l’app : ${{ env.VERSION }}.
+            - Sources et licence : branche sidestore (AGPL-3.0), https://github.com/SideStore/SideStore
           files: SideStore-HealthKit.ipa
