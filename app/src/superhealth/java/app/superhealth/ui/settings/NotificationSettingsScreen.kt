@@ -44,7 +44,6 @@ fun NotificationSettingsScreen(nav: NavHostController) {
     DetailScaffold(tr("Notifications"), { nav.popBackStack() }) {
         MfCard {
             Text(tr(if (allowed) "Notifications Android autorisées" else "Notifications Android désactivées"), style = MaterialTheme.typography.titleMedium)
-            Text(tr("Choisissez les alertes utiles. Les sons et l'affichage sur l'écran verrouillé se règlent aussi dans Android."), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodySmall)
             PillButton(tr(if (allowed) "Réglages Android" else "Autoriser les notifications"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) {
                 if (!allowed && android.os.Build.VERSION.SDK_INT >= 33) permission.launch(android.Manifest.permission.POST_NOTIFICATIONS) else system()
             }
@@ -58,7 +57,7 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             RowDivider()
             SwitchRow(tr("Réactions à mes publications"), tr("J'aime, je n'aime pas et emojis"), social.notifyReactions) { v -> updateSocial { it.copy(notifyReactions = v) } }
             RowDivider()
-            SwitchRow(tr("Badges et niveaux"), tr("Vos nouvelles récompenses, sans répéter l'historique"), social.notifyProgress) { v -> updateSocial { it.copy(notifyProgress = v) } }
+            SwitchRow(tr("Badges et niveaux"), tr("Nouvelles récompenses"), social.notifyProgress) { v -> updateSocial { it.copy(notifyProgress = v) } }
         }
         Text(tr("Les nouveautés des amis arrivent à la synchronisation. Android peut décaler les passages en arrière-plan."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         SectionLabel(tr("Rappels"))

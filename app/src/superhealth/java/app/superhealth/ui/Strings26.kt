@@ -2,6 +2,20 @@ package app.superhealth.ui
 /** Libellés ajoutés en 2.6 : français → anglais. */
 object Strings26 {
     val map: Map<String, String> = hashMapOf(
+        "Agrandir la photo" to "Expand photo",
+        "Message, photo ou vidéo" to "Message, photo or video",
+        "Réagir" to "React",
+        "Modifier ma réaction" to "Change reaction",
+        "Choisir une réaction" to "Choose a reaction",
+        "Retirer ma réaction" to "Remove my reaction",
+        "J’aime" to "Like",
+        "Je n’aime pas" to "Dislike",
+        "J’adore" to "Love",
+        "Bravo" to "Well done",
+        "Applaudir" to "Applaud",
+        "Rire" to "Laugh",
+        "Nouvelles récompenses" to "New rewards",
+        "Votre message, la note et la version de l'app sont envoyés en privé au mainteneur. Aucun compte GitHub nécessaire." to "Your message, rating and app version are sent privately to the maintainer. No GitHub account needed.",
         "Vous avez atteint le niveau %1\$s !" to "You reached level %1\$s!",
         "%1\$s nouveau(x) badge(s) débloqué(s)." to "%1\$s new badge(s) unlocked.",
         "Bravo pour vos progrès" to "Well done on your progress",

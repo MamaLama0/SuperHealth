@@ -36,12 +36,10 @@ fun FeedbackScreen(nav: NavHostController) {
         if (sent) {
             MfCard {
                 Text(tr("Merci, votre retour a été envoyé."), style = MaterialTheme.typography.titleLarge)
-                Text(tr("Il est conservé dans un espace GitHub privé du mainteneur."), color = Mf.colors.textSecondary)
                 PillButton(tr("Terminé"), Modifier.fillMaxWidth()) { nav.popBackStack() }
             }
         } else {
-            Text(tr("Un problème, une idée ou un avis ?"), style = MaterialTheme.typography.titleLarge)
-            Text(tr("Aucun compte GitHub nécessaire. Seuls votre message, la note choisie et la version de l'app seront envoyés au mainteneur dans un dépôt privé. N'ajoutez pas de données de santé ni de mot de passe."),
+            Text(tr("Votre message, la note et la version de l'app sont envoyés en privé au mainteneur. Aucun compte GitHub nécessaire."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             MfCard {
                 ChipChoice(listOf("BUG", "IDEA", "REVIEW"), kind, { tr(when (it) { "BUG" -> "Problème"; "IDEA" -> "Idée"; else -> "Avis" }) }) { if (!sending) kind = it }

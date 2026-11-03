@@ -8,6 +8,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,12 +23,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
 import app.superhealth.league.*
@@ -70,6 +77,7 @@ fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController) {
         confirmButton = { TextButton({ SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } }) { Text(tr("Compris")) } })
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SocialFeed(nav: NavHostController, active: Boolean) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
@@ -77,6 +85,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
     val progression by ProgressRepository.current.collectAsState()
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showCreate by rememberSaveable { mutableStateOf(false) }
     fun refresh() { scope.launch {
         busy = true; error = null
         try { League.compute(ctx); Relay.sync(ctx); error = League.state.value.syncError }
@@ -122,20 +131,13 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
                 }
             }
         }
-        item(key = "compose") { MfCard {
-            PillButton(tr("Créer une publication"), Modifier.fillMaxWidth(), icon = Icons.Rounded.Add) {
-                SocialPosts.draft.value = null; nav.go("social/compose")
+        item(key = "compose") { MfCard(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Rounded.AddCircleOutline, null, tint = Mf.colors.accent)
+                Text(tr("Créer une publication"), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                Icon(Icons.Rounded.ChevronRight, null, tint = Mf.colors.textTertiary)
             }
-            Text(tr("Un message, une photo ou une vidéo pour vos amis"), style = MaterialTheme.typography.bodySmall,
-                color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
-            PillButton(tr("Partager une séance"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.FitnessCenter) {
-                SocialPosts.draft.value = null; nav.go("social/share/workout")
-            }
-            PillButton(tr("Partager une activité"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false, icon = Icons.Rounded.DirectionsRun) {
-                SocialPosts.draft.value = null; nav.go("social/share/activity")
-            }
-            Text(tr("Choisissez dans votre historique, puis vérifiez l'aperçu avant de publier."),
-                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
         } }
         if (busy) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         error?.let { message -> item(key = "error") { Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
@@ -146,24 +148,46 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         items(posts, key = { (post, friend) -> (friend?.id ?: "me") + ":" + post.id }) { (post, friend) ->
             SocialPostCard(post, friend)
         }
-        item(key = "footer") { Text(tr("Publications des 34 derniers jours · visibles par vos amis"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary) }
+    }
+    if (showCreate) ModalBottomSheet(onDismissRequest = { showCreate = false }, containerColor = Mf.colors.background) {
+        fun open(route: String) {
+            showCreate = false; SocialPosts.draft.value = null; nav.go(route)
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
+            Text(tr("Créer une publication"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
+            SettingRow(tr("Message, photo ou vidéo"), icon = Icons.Rounded.AddPhotoAlternate) { open("social/compose") }
+            SettingRow(tr("Partager une séance"), icon = Icons.Rounded.FitnessCenter) { open("social/share/workout") }
+            SettingRow(tr("Partager une activité"), icon = Icons.Rounded.DirectionsRun) { open("social/share/activity") }
+        }
     }
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
     var media by remember(post.id) { mutableStateOf<File?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var play by remember { mutableStateOf(false) }
+    var viewPhoto by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val league by League.state.collectAsState()
     val author = friend?.id ?: remember { League.myId() }
     val counts = remember(league.reactions, league.friends, author, post.id) { SocialReactions.counts(league.reactions, league.friends, author, post.id) }
     val selected = SocialReactions.selected(league.reactions, author, post.id)
     var reacting by remember { mutableStateOf(false) }
+    var showReactions by rememberSaveable(post.id) { mutableStateOf(false) }
+    fun react(kind: String) {
+        showReactions = false
+        scope.launch {
+            reacting = true; error = null
+            try { if (!SocialReactions.react(ctx, author, post, kind)) error = tr("Réaction enregistrée. Elle sera envoyée à la prochaine synchronisation.") }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { error = tr("Réaction impossible. Réessayez.") }
+            finally { reacting = false }
+        }
+    }
     val video = post.media?.mime?.startsWith("video/") == true
     LaunchedEffect(post.id) {
         if (post.media != null && !video && media == null) {
@@ -196,7 +220,8 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
         if (post.title.isNotBlank()) Text(post.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
         if (post.detail.isNotBlank()) Text(post.detail, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
         if (post.text.isNotBlank()) Text(post.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 12.dp))
-        photo?.let { Image(it, tr("Photo partagée"), Modifier.fillMaxWidth().heightIn(max = 400.dp).padding(top = 12.dp), contentScale = ContentScale.Fit) }
+        photo?.let { Image(it, tr("Agrandir la photo"), Modifier.fillMaxWidth().padding(top = 12.dp).heightIn(max = 400.dp)
+            .clickable { viewPhoto = true }, contentScale = ContentScale.Fit) }
         if (post.media != null && (media == null || video)) TextButton(enabled = !busy, onClick = { scope.launch {
             busy = true; error = null
             try { media = SocialPosts.download(ctx, post, friend); if (video) play = true }
@@ -206,33 +231,69 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
         } }) { Icon(if (video) Icons.Rounded.PlayCircle else Icons.Rounded.Image, null); Spacer(Modifier.width(8.dp)); Text(tr(if (video) "Lire la vidéo" else "Afficher la photo")) }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.padding(top = 8.dp)) {
-            SocialReactions.choices.forEach { (kind, emoji) ->
-                FilterChip(selected = selected == kind, enabled = !reacting, onClick = { scope.launch {
-                    reacting = true; error = null
-                    try { if (!SocialReactions.react(ctx, author, post, kind)) error = tr("Réaction enregistrée. Elle sera envoyée à la prochaine synchronisation.") }
-                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                    catch (_: Exception) { error = tr("Réaction impossible. Réessayez.") }
-                    finally { reacting = false }
-                } }, label = { Text(emoji + " " + (counts[kind] ?: 0)) })
+            TextButton(onClick = { showReactions = true }, enabled = !reacting) {
+                Icon(Icons.Rounded.AddReaction, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(tr(if (selected == null) "Réagir" else "Modifier ma réaction"))
+            }
+            SocialReactions.choices.filterKeys { (counts[it] ?: 0) > 0 }.forEach { (kind, emoji) ->
+                FilterChip(selected = selected == kind, enabled = !reacting, onClick = { react(kind) },
+                    label = { Text(emoji + " " + counts.getValue(kind)) })
             }
         }
-        Text(tr("Réactions visibles par vos amis communs"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+    }
+    if (showReactions) ModalBottomSheet(onDismissRequest = { showReactions = false }, containerColor = Mf.colors.background) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
+            Text(tr("Choisir une réaction"), style = MaterialTheme.typography.titleLarge)
+            val labels = listOf("J’aime", "Je n’aime pas", "J’adore", "Bravo", "Applaudir", "Rire")
+            FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SocialReactions.choices.entries.forEachIndexed { index, (kind, emoji) ->
+                    FilterChip(selected = selected == kind, enabled = !reacting, onClick = { react(kind) },
+                        label = { Text("$emoji ${tr(labels[index])}") })
+                }
+            }
+            if (selected != null) TextButton(onClick = { react(selected) }, enabled = !reacting) { Text(tr("Retirer ma réaction")) }
+        }
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text(tr("Supprimer cette publication ?")) },
         confirmButton = { TextButton({ confirmDelete = false; scope.launch { busy = true
             try { SocialPosts.delete(ctx, post.id) } catch (_: Exception) { error = tr("Suppression distante à réessayer.") } finally { busy = false }
         } }) { Text(tr("Supprimer")) } }, dismissButton = { TextButton({ confirmDelete = false }) { Text(tr("Annuler")) } })
-    if (play && media != null) Dialog(onDismissRequest = { play = false }) {
+    if (viewPhoto && photo != null) Dialog(onDismissRequest = { viewPhoto = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        var zoom by remember { mutableFloatStateOf(1f) }
+        var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+        var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+        val transform = rememberTransformableState { scale, pan, _ ->
+            zoom = (zoom * scale).coerceIn(1f, 5f)
+            val limitX = size.width * (zoom - 1) / 2
+            val limitY = size.height * (zoom - 1) / 2
+            val moved = offset + pan
+            offset = androidx.compose.ui.geometry.Offset(moved.x.coerceIn(-limitX, limitX), moved.y.coerceIn(-limitY, limitY))
+        }
+        Box(Modifier.fillMaxSize().background(Color.Black).systemBarsPadding()) {
+            Box(Modifier.fillMaxSize().onSizeChanged { size = it }.transformable(transform), contentAlignment = Alignment.Center) {
+                Image(photo!!, tr("Photo partagée"), Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = zoom; scaleY = zoom; translationX = offset.x; translationY = offset.y
+                }, contentScale = ContentScale.Fit)
+            }
+            IconButton({ viewPhoto = false }, Modifier.align(Alignment.TopEnd).padding(8.dp).background(Color.Black.copy(alpha = .5f), RoundedCornerShape(50))) {
+                Icon(Icons.Rounded.Close, tr("Fermer"), tint = Color.White)
+            }
+        }
+    }
+    if (play && media != null) Dialog(onDismissRequest = { play = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         var player by remember { mutableStateOf<VideoView?>(null) }
         DisposableEffect(Unit) { onDispose { player?.stopPlayback() } }
-        Column(Modifier.fillMaxWidth().background(Mf.colors.background).padding(12.dp)) {
+        Box(Modifier.fillMaxSize().background(Color.Black).systemBarsPadding()) {
             AndroidView(factory = { context -> VideoView(context).apply {
                 player = this; val view = this; setMediaController(MediaController(context).apply { setAnchorView(view) })
                 setVideoPath(media!!.path); setOnPreparedListener { start() }
                 setOnErrorListener { _, _, _ -> error = tr("Vidéo illisible sur cet appareil."); play = false; true }
-            } }, modifier = Modifier.fillMaxWidth().height(360.dp))
-            TextButton({ play = false }) { Text(tr("Fermer")) }
+            } }, modifier = Modifier.fillMaxSize().align(Alignment.Center))
+            IconButton({ play = false }, Modifier.align(Alignment.TopEnd).padding(8.dp).background(Color.Black.copy(alpha = .5f), RoundedCornerShape(50))) {
+                Icon(Icons.Rounded.Close, tr("Fermer"), tint = Color.White)
+            }
         }
     }
 }
@@ -271,8 +332,6 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
         finally { loadingActivities = false }
     }
     DetailScaffold(tr("Partager avec mes amis"), { if (!busy) nav.popBackStack() }, contentSpacing = 12.dp) {
-        Text(tr("Aperçu de votre publication"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(tr("Visible par vos amis SuperHealth. Relisez votre publication avant de l'envoyer."), color = Mf.colors.textSecondary)
         OutlinedTextField(text, { text = it.take(500) }, label = { Text(tr("Votre message")) },
             supportingText = { Text("${text.length}/500") }, minLines = 3, enabled = !busy && !published, modifier = Modifier.fillMaxWidth())
         if (!published) {
