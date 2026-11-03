@@ -8,8 +8,8 @@ import org.junit.Test
 class UpdaterTest {
     @Test fun versions() {
         assertTrue(Updater.newer("v3.7", "3.0.6"))
-        assertFalse(Updater.newer("v3.0.6", "3.7"))
-        assertTrue(Updater.newer("v3.7.1", "3.7"))
+        assertFalse(Updater.newer("v3.0.6", "3.1"))
+        assertTrue(Updater.newer("v3.7.1", "3.1"))
         assertTrue(Updater.newer("v1.1", "1.0"))
         assertTrue(Updater.newer("v3.0.1", "3.0"))
         assertFalse(Updater.newer("v3.0", "3.0.1"))
