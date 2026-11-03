@@ -2,6 +2,7 @@ package app.superhealth.nutrition.domain
 
 import app.superhealth.platform.*
 
+
 import kotlinx.serialization.Serializable
 
 // Enums alignés sur ceux observés dans MacroFactor (notes/09 §3, objs.txt de dae).
@@ -66,7 +67,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable enum class GoalType(val label: String) { CUT("Perte"), MAINTENANCE("Maintien"), BULK("Prise") }
 
-@Serializable enum class ProgramStyle(val label: String) { COACHED("Coaché (automatique)"), MANUAL("Manuel") }
+@Serializable enum class ProgramStyle(val label: String) { COACHED("Coaché (automatique)"), MANUAL("Manuel"), COLLABORATIVE("Collaboratif") }
 
 @Serializable enum class TdeeMode(val label: String) { DYNAMIC("Dynamique"), STATIC("Valeur fixe") }
 
@@ -145,10 +146,22 @@ data class Program(
     val startEpochDay: Long? = null,
     /** Jours à calories plus élevées (1 = lundi … 7 = dimanche) ; vide = cibles identiques toute la semaine. */
     val highDays: Set<Int> = emptySet(),
+    /** Suivi du poids indépendant des cibles alimentaires. */
+    val weightGoalEnabled: Boolean = true,
+    /** Cibles manuelles lundi → dimanche ; vide = identiques chaque jour. */
+    val manualDays: List<DayTarget> = emptyList(),
+    /** Remplacements datés, prioritaires sur les check-ins, sans changer le programme. */
+    val overrides: List<TargetOverride> = emptyList(),
 )
 
 @Serializable
+data class TargetOverride(val startDay: Long, val endDay: Long? = null, val target: DayTarget) {
+    fun includes(day: Long) = day >= startDay && (endDay == null || day <= endDay)
+}
+
+@Serializable
 data class Settings(
+    val foodSummaryCollapsed: Boolean = false,
     val weightUnit: WeightUnit = WeightUnit.KG,
     val energyUnit: EnergyUnit = EnergyUnit.KCAL,
     val trendAlpha: TrendAlpha = TrendAlpha.EMA9,

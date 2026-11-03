@@ -58,7 +58,9 @@ object HealthRepository {
     private const val NONE = Double.NaN
     private val dbPermits = Semaphore(4)
 
-    fun invalidate() { cache.clear(); Scores.invalidate() }
+    private val revisionCounter = kotlinx.coroutines.flow.MutableStateFlow(0L)
+    val revision: Long get() = revisionCounter.value
+    fun invalidate() { cache.clear(); Scores.invalidate(); synchronized(revisionCounter) { revisionCounter.value++ } }
 
     /** Sources gérées (Apple Santé) ; vide quand le module santé est désactivé. */
     fun devices(): List<SourceDevice> = app.superhealth.bridge.Watch.devices()

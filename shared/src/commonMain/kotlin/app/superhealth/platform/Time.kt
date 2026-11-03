@@ -296,3 +296,9 @@ data class Period(val years: Int, val months: Int, val days: Int) {
         }
     }
 }
+
+object IsoFields { const val WEEK_BASED_YEAR = 1; const val WEEK_OF_WEEK_BASED_YEAR = 2 }
+fun LocalDate.get(field: Int): Int {
+    val thursday=plusDays(4-dayOfWeek.value)
+    return if(field==IsoFields.WEEK_BASED_YEAR)thursday.year else ((thursday.dayOfYear-1)/7)+1
+}

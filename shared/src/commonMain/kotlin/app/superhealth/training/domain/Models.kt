@@ -2,6 +2,7 @@ package app.superhealth.training.domain
 
 import app.superhealth.platform.*
 
+
 import kotlinx.serialization.Serializable
 
 // Modèle calqué sur MacroFactor Workouts 1.4.1 (Workouts-analyse/notes/02-modele-de-donnees.md).
@@ -118,11 +119,14 @@ data class ProgramExercise(
     val cycles: List<List<TargetSet>>,
     /** Exercices consécutifs avec le même groupe forment un superset. */
     val supersetGroup: Int? = null,
+    /** Cycles où cet exercice n'est pas programmé (programmes additionnels Workouts). */
+    val skippedCycles: Set<Int> = emptySet(),
 )
 
 @Serializable
 data class ProgramDay(val id: String, val name: String, val exercises: List<ProgramExercise> = emptyList()) {
     val isRest get() = exercises.isEmpty()
+    fun isRestAt(cycle: Int) = exercises.none { cycle !in it.skippedCycles }
 }
 
 @Serializable
@@ -200,7 +204,12 @@ data class Session(
     val current: Int = 0,
     /** Forme du jour appliquée : +1 un cran plus lourd (pousser) ou −1 une série de moins (alléger) ; le programme ne change pas. */
     val adjust: Int = 0,
+    /** Séance construite au fil de l'eau : seule l'action Terminer met fin à sa construction.
+     * Les anciennes séances sans programme restent conservatrices tant que leur origine est inconnue. */
+    val freeForm: Boolean = programId == null,
 ) {
+    fun shouldSuggestFinish(): Boolean = !freeForm && exercises.any { it.sets.isNotEmpty() } && exercises.all { e -> e.sets.all { it.done } }
+
     /** Durée effective en secondes, pauses déduites. */
     fun elapsedSec(now: Long): Long = ((now - startTime - pausedMs - (pausedAt?.let { now - it } ?: 0)) / 1000).coerceAtLeast(0)
 }
@@ -220,6 +229,8 @@ data class Workout(
     val dayId: String? = null,
     /** Effort ressenti de la séance (échelle CR-10, 1–10) : sa charge ressentie entre dans l'Effort du jour. */
     val rpe: Int? = null,
+    /** Nombre de séances prévues dans le cycle au moment de l'enregistrement. */
+    val plannedSessions: Int? = null,
 )
 
 // ----- Salles et réglages -----

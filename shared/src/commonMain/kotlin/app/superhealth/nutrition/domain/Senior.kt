@@ -2,6 +2,7 @@ package app.superhealth.nutrition.domain
 
 import app.superhealth.platform.*
 
+
 import kotlin.math.max
 import kotlin.math.min
 
@@ -162,8 +163,16 @@ object Senior {
      * de la zone d'IMC de l'adulte ni sous le bas de la zone des 65 ans et plus (la mortalité y est minimale vers 25–30) ;
      * sous la zone, 5 % sans passer le plancher. Prise : jusqu'au bas de la zone, sinon 5 kg. null = maintien.
      */
+    fun showBmiGuidance(age: Int?, kg: Double, heightCm: Double): Boolean =
+        band(age) != Band.ADULT || (heightCm > 0 && bmi(kg, heightCm) >= 30.0)
+
     fun suggestedTargetKg(age: Int?, kg: Double, heightCm: Double, goal: GoalType): Double? {
         val r = rules(age)
+        if (!showBmiGuidance(age, kg, heightCm)) return when (goal) {
+            GoalType.MAINTENANCE -> null
+            GoalType.BULK -> kg + 5
+            GoalType.CUT -> max(kg * 0.95, minTargetKg(age, heightCm, kg))
+        }
         return when (goal) {
             GoalType.MAINTENANCE -> null
             GoalType.BULK -> weightAtBmi(r.zone.start, heightCm).takeIf { it > kg + 1 } ?: (kg + 5)

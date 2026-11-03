@@ -2,6 +2,7 @@ package app.superhealth.ui.wellbeing
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -390,12 +391,14 @@ fun CycleScreen(vm: SuperViewModel, nav: NavHostController) {
 private val patterns = listOf(
     // 6 respirations par minute : la fréquence de résonance de la plupart des adultes (Lehrer 2000)
     "Cohérence" to listOf(Triple("Inspirez", 5.0, 1f), Triple("Expirez", 5.0, 0f)),
+    "4-6" to listOf(Triple("Inspirez", 4.0, 1f), Triple("Expirez", 6.0, 0f)),
     "4-7-8" to listOf(Triple("Inspirez", 4.0, 1f), Triple("Retenez", 7.0, 1f), Triple("Expirez", 8.0, 0f)),
     "Carré" to listOf(Triple("Inspirez", 4.0, 1f), Triple("Retenez", 4.0, 1f), Triple("Expirez", 4.0, 0f), Triple("Retenez", 4.0, 0f)),
 )
 
 @Composable
 fun BreatheScreen(nav: NavHostController) {
+    val breatheCtx = app.superhealth.platform.LocalContext.current
     var pattern by remember { mutableIntStateOf(0) }
     var minutes by remember { mutableIntStateOf(5) }
     var running by remember { mutableStateOf(false) }
@@ -411,7 +414,11 @@ fun BreatheScreen(nav: NavHostController) {
         while (running) {
             withFrameMillis { }
             elapsed = System.currentTimeMillis() - start
-            if (elapsed >= total) { running = false; elapsed = total; haptic.performHapticFeedback(HapticFeedbackType.LongPress); break }
+            if (elapsed >= total) {
+                running = false; elapsed = total; haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                if (app.superhealth.meditation.Meditation.available()) app.superhealth.meditation.Meditation.record(breatheCtx, minutes, "breathing")
+                break
+            }
             val t = (elapsed / 1000.0) % cycle
             var acc = 0.0; var idx = 0
             for ((i, p) in phases.withIndex()) { if (t < acc + p.second) { idx = i; break }; acc += p.second }
@@ -526,7 +533,7 @@ fun RemindersScreen(vm: SuperViewModel, nav: NavHostController) {
 fun CheckinScreen(nav: NavHostController) {
     val days by Checkin.days.collectAsState()
     val done = days[LocalDate.now().toEpochDay()] != null
-    LaunchedEffect(done) { if (done && nav.currentBackStackEntry?.destination?.route == "checkin") nav.popBackStack() }
+    LaunchedEffect(done) { if (done && nav.currentBackStackEntry?.destination?.route == "feel") nav.popBackStack() }
     DetailScaffold(tr("Ressenti du matin"), onBack = { nav.popBackStack() }) {
         GroupCard { Column(Modifier.padding(16.dp)) { CheckinPickers() } }
         Text(tr("Noté avant de voir vos scores, pour qu'ils n'influencent pas votre ressenti."), style = MaterialTheme.typography.bodySmall,

@@ -2,6 +2,7 @@ package app.superhealth.ui
 
 import app.superhealth.platform.*
 
+
 /**
  * Routes acceptées depuis l'extérieur de l'app (widgets, raccourcis, notification) : l'activité principale est exportée,
  * n'importe quelle app peut donc lui envoyer une route. Seuls ces écrans d'entrée sont ouverts, jamais un écran
@@ -18,9 +19,11 @@ object Routes {
         // notification du rappel médication
         "meds",
         // 1.8 : rappels et raccourcis du bien-être
-        "journal", "mood", "cycle", "breathe", "form", "checkin",
+        "journal", "mood", "cycle", "breathe", "form", "checkin", "feel",
         // 2.1 : écran Constantes (widget)
         "h/vitals",
+        // 2.5 : widgets des plugins
+        "league", "progress", "quests", "friends", "social", "widgets",
     )
     private val patterns = listOf(Regex("search/[01]/-1"), Regex("h/metric/[A-Z0-9_]{1,32}"), Regex("exercise/[A-Za-z0-9_-]{1,64}"))
 

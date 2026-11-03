@@ -2,6 +2,9 @@ package app.superhealth.ui.settings
 
 import app.superhealth.platform.*
 
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -13,6 +16,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -98,12 +108,15 @@ import kotlinx.coroutines.launch
 
 /** Couleur et symbole d'un module (sa couleur d'index si elle est donnée). */
 internal fun moduleHue(kind: String, color: String?): Color = color?.let { runCatching { parseColor(it) }.getOrNull() }
-    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); Modules.MEALS -> Color(0xFFF2994A); Modules.MEDS -> Color(0xFF3FA7D6); else -> Color(0xFF6B9BF2) }
+    ?: when (kind) { Modules.COACH -> Color(0xFF8E7CF0); Modules.MEALS -> Color(0xFFF2994A); Modules.MEDS -> Color(0xFF3FA7D6); Modules.MEDITATION -> Color(0xFF7B8CDE); Modules.STRETCH -> Color(0xFF3BBFA0); Modules.LEAGUE -> Color(0xFF4FA8E8); else -> Color(0xFF6B9BF2) }
 
 internal fun moduleIcon(kind: String): ImageVector = when (kind) {
     Modules.COACH -> Icons.Rounded.AutoAwesome
     Modules.MEALS -> Icons.Rounded.RestaurantMenu
     Modules.MEDS -> Icons.Rounded.Medication
+    Modules.MEDITATION -> Icons.Rounded.SelfImprovement
+    Modules.STRETCH -> Icons.Rounded.AccessibilityNew
+    Modules.LEAGUE -> Icons.Rounded.EmojiEvents
     else -> Icons.Rounded.Extension
 }
 
@@ -116,8 +129,8 @@ internal fun ModulesRow(nav: NavHostController) {
     val updates = remember(installed, catalog) { Modules.updates(ctx).size }
     SettingRow(tr("Plugins"), subtitle = when {
         updates > 0 -> trf(if (updates > 1) "%1\$s mises à jour disponibles" else "%1\$s mise à jour disponible", updates)
-        installed.isEmpty() -> tr("Coach IA, repas, médication…")
-        else -> installed.joinToString(" · ") { it.name }
+        installed.isEmpty() -> tr("Repas, médication, méditation…")
+        else -> trf("%1\$s plugins installés · %2\$s actifs", installed.size, installed.count { it.enabled })
     }, icon = Icons.Rounded.Extension, hue = app.superhealth.ui.theme.HealthHues.Sleep) { nav.go("modules") }
 }
 
@@ -125,6 +138,7 @@ internal fun ModulesRow(nav: NavHostController) {
  * Modules : catalogue des sources (officielle, puis celles ajoutées), installation animée, activation, mise à jour,
  * options propres à chaque module ; en bas, les sources non vérifiées.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
@@ -139,11 +153,16 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
     LaunchedEffect(sh.moduleSources) { Modules.refresh() }
     val updates = remember(installed, catalog) { Modules.updates(ctx) }
     var adding by remember { mutableStateOf(false) }
+    var options by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var filter by remember { mutableStateOf("Tous") }
+    var selected by remember { mutableStateOf<String?>(null) }
 
     DetailScaffold(tr("Plugins"), onBack = { nav.popBackStack() }, action = {
+        IconButton(onClick = { options = !options }) { Icon(Icons.Rounded.Settings, tr("Options"), tint = Mf.colors.textSecondary) }
         IconButton(onClick = { scope.launch { Modules.refresh() } }, enabled = !loading) { Icon(Icons.Rounded.Refresh, tr("Actualiser"), tint = Mf.colors.textSecondary) }
     }) {
-        Text(tr("Ajoutez des fonctions à SuperHealth. Un plugin n'apporte que du contenu (images, textes, consignes), jamais de code."),
+        Text(tr("Choisissez vos fonctions optionnelles. Touchez un plugin pour voir ses détails et ses réglages."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         Text(when {
             loading -> tr("Recherche de mises à jour…")
@@ -158,22 +177,61 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
 
-        // installés d'abord (même hors ligne), puis ce que proposent les sources
-        val ids = (installed.map { it.id } + catalog.map { it.module.id }).distinct()
+        OutlinedTextField(query, { query = it }, label = { Text(tr("Rechercher un plugin")) }, singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Tous", "Installés", "Mises à jour", "Nutrition", "Bien-être", "Coaching").forEach { label ->
+                FilterChip(filter == label, { filter = label }, label = { Text(tr(label)) })
+            }
+        }
+        val ids = (installed.map { it.id } + catalog.map { it.module.id }).distinct().filter { id ->
+            val entry = catalog.firstOrNull { it.module.id == id }; val inst = installed.firstOrNull { it.id == id }
+            val m = entry?.module; val kind = m?.kind ?: inst?.kind
+            val matches = when (filter) {
+                "Installés" -> inst != null; "Mises à jour" -> updates.any { it.module.id == id }
+                "Nutrition" -> kind == Modules.MEALS
+                "Bien-être" -> kind in setOf(Modules.MEDS, Modules.MEDITATION, Modules.STRETCH)
+                "Coaching" -> kind == Modules.COACH
+                else -> true
+            }
+            kind != Modules.LEAGUE && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
+                .any { it.contains(query.trim(), ignoreCase = true) }
+        }
         if (ids.isEmpty()) MfCard {
-            // une réponse HTTP (404 : dépôt privé ou déplacé) n'est pas un problème de connexion
-            val http = errors[Modules.OFFICIAL]?.takeIf { it.startsWith("HTTP") }
-            Text(when {
-                loading -> tr("Lecture du catalogue…")
-                http != null -> trf("Catalogue indisponible (%1\$s).", http)
-                else -> tr("Catalogue indisponible : vérifiez la connexion.")
-            }, color = Mf.colors.textSecondary)
+            Text(tr(if (loading) "Lecture du catalogue…" else "Aucun plugin à afficher"), color = Mf.colors.textSecondary)
+            errors[Modules.OFFICIAL]?.let { Text(trf("Erreur : %1\$s", it), style = MaterialTheme.typography.bodySmall) }
         }
         ids.forEach { id ->
-            Spacer(Modifier.height(10.dp))
-            ModuleCard(id, catalog.firstOrNull { it.module.id == id }, installed.firstOrNull { it.id == id }, nav)
+            val entry = catalog.firstOrNull { it.module.id == id }; val inst = installed.firstOrNull { it.id == id }
+            val m = entry?.module; val kind = m?.kind ?: inst?.kind.orEmpty()
+            val name = (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
+            val summary = (if (Lang.english) m?.summaryEn else null) ?: m?.summary.orEmpty()
+            Spacer(Modifier.height(8.dp))
+            GroupCard {
+                Row(Modifier.fillMaxWidth().clickable { selected = id }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ModuleBadge(kind, moduleHue(kind, m?.color), jobs[id], 40.dp)
+                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Text(name, style = MaterialTheme.typography.titleSmall)
+                        Text(when {
+                            jobs[id] is Modules.Job.Downloading -> tr("Téléchargement en cours")
+                            jobs[id] is Modules.Job.Installing -> tr("Installation…")
+                            jobs[id] is Modules.Job.Failed -> tr("Installation à réessayer")
+                            updates.any { it.module.id == id } -> tr("Mise à jour disponible")
+                            inst != null -> tr(if (inst.enabled) "Activé" else "Désactivé")
+                            else -> summary
+                        }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (inst != null) Switch(inst.enabled, { Modules.setEnabled(ctx, id, it) }, enabled = jobs[id] !is Modules.Job.Downloading && jobs[id] !is Modules.Job.Installing)
+                    else Icon(Icons.Rounded.Add, tr("Détails"), tint = Mf.colors.textSecondary)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        GroupCard {
+            SettingRow(tr("Amis et indice de santé"), subtitle = tr("Inclus dans l'application"), icon = Icons.Rounded.EmojiEvents) { nav.go("league") }
         }
 
+        if (options) {
         app.superhealth.nutrition.ui.components.GroupHeader(tr("Options"), Modifier.padding(start = 0.dp))
         GroupCard {
             SwitchRow(tr("Mises à jour automatiques"), tr("Les plugins installés se mettent à jour seuls, une fois par jour"), sh.modulesAuto) { v ->
@@ -200,9 +258,18 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
         }
         Text(tr("Une source non vérifiée peut proposer des images ou des textes trompeurs. Les archives sont toujours contrôlées (empreinte) et ne contiennent pas de code."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+        }
         Spacer(Modifier.height(24.dp))
     }
 
+    selected?.let { id ->
+        ModalBottomSheet(onDismissRequest = { selected = null }, containerColor = Mf.colors.background,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
+                ModuleCard(id, catalog.firstOrNull { it.module.id == id }, installed.firstOrNull { it.id == id }, nav)
+            }
+        }
+    }
     if (adding) {
         // curseur après « https:// » pour qu'une adresse collée ou tapée le complète
         var field by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue("https://", androidx.compose.ui.text.TextRange(8))) }
@@ -327,6 +394,14 @@ private fun openModule(kind: String, nav: NavHostController) {
         Modules.COACH -> nav.go("coach")
         Modules.MEALS -> nav.openTab("log")
         Modules.MEDS -> nav.go("meds")
+        Modules.MEDITATION, Modules.STRETCH -> {
+            app.superhealth.SuperPrefs.update { s ->
+                val section = if (kind == Modules.MEDITATION) "MEDITATION" else "STRETCH"
+                s.copy(activityCurrent = section, activitySections = (s.activitySections.ifEmpty { listOf("STRENGTH", "RUN") } + section).distinct())
+            }
+            nav.openTab("activities")
+        }
+        Modules.LEAGUE -> nav.go("league")
     }
 }
 

@@ -2,6 +2,7 @@ package app.superhealth.nutrition.data
 
 import app.superhealth.platform.*
 
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -23,7 +24,7 @@ import app.superhealth.platform.Base64
 @Serializable
 enum class AiProvider(val label: String, val baseUrl: String, val defaultModel: String, val keyHelp: String) {
     /** Offerte par SuperHealth : adresse, modèle et clé intégrés à la compilation (voir [AiGift]). */
-    OFFERED("IA offerte", "", "", "Sans clé à créer."),
+    OFFERED("IA offerte", "", "", "Sans clé à créer. GPT-5.4 max."),
     GEMINI("Google AI Studio", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-flash-lite-latest",
         "Clé gratuite sur aistudio.google.com."),
     OPENROUTER("OpenRouter", "https://openrouter.ai/api/v1", "google/gemini-3.1-flash-lite",

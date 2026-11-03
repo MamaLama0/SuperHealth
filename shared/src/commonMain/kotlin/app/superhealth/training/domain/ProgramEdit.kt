@@ -2,11 +2,18 @@ package app.superhealth.training.domain
 
 import app.superhealth.platform.*
 
+
 /**
  * Organisation d'un programme : ajout, retrait et déplacement des jours. Le jour courant est suivi par son identifiant,
  * pas par sa position : déplacer ou retirer un autre jour ne change pas la prochaine séance proposée.
  */
 object ProgramEdit {
+    /** Choisir explicitement un cycle courant, même si le précédent est incomplet. L'historique est indépendant. */
+    fun jumpToCycle(p: Program, cycle: Int): Program {
+        if (cycle !in 0 until p.numCycles || cycle == p.cycleIndex) return p
+        return fixCursor(p.copy(cycleIndex = cycle, dayIndex = 0, doneDayIds = emptyList()))
+    }
+
     /** [from] déplacé en [to] (les autres glissent). */
     fun <T> List<T>.moved(from: Int, to: Int): List<T> {
         if (from !in indices || to !in indices || from == to) return this
@@ -46,8 +53,8 @@ object ProgramEdit {
         val done = p.doneDayIds.filter { it in ids }
         val start = p.dayIndex.coerceIn(0, p.days.lastIndex)
         val order = (start until p.days.size) + (0 until start)
-        val idx = order.firstOrNull { !p.days[it].isRest && p.days[it].id !in done }
-            ?: order.firstOrNull { !p.days[it].isRest } ?: start
+        val idx = order.firstOrNull { !p.days[it].isRestAt(p.cycleIndex) && p.days[it].id !in done }
+            ?: order.firstOrNull { !p.days[it].isRestAt(p.cycleIndex) } ?: start
         return if (idx == p.dayIndex && done.size == p.doneDayIds.size) p else p.copy(dayIndex = idx, doneDayIds = done)
     }
 }

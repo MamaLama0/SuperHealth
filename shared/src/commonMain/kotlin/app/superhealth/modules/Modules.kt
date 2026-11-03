@@ -2,6 +2,7 @@ package app.superhealth.modules
 
 import app.superhealth.platform.*
 
+
 import app.superhealth.platform.Context
 import app.superhealth.SuperPrefs
 import app.superhealth.module
@@ -34,7 +35,10 @@ object Modules {
     const val COACH = "coach"
     const val MEALS = "meals"
     const val MEDS = "meds"
-    val engines = setOf(COACH, MEALS, MEDS)
+    const val STRETCH = "stretch"
+    const val MEDITATION = "meditation"
+    const val LEAGUE = "league"
+    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION)
 
     @Serializable
     data class Module(
@@ -61,6 +65,7 @@ object Modules {
     data class Index(val name: String = "", val modules: List<Module> = emptyList())
 
     /** Module disponible dans une source, avec l'adresse absolue de son archive. */
+    @Serializable
     data class Entry(val module: Module, val source: String, val verified: Boolean, val archive: String)
 
     @Serializable
@@ -103,6 +108,12 @@ object Modules {
         root = File(ctx.filesDir, "modules").apply { mkdirs() }
         val saved = runCatching { json.decodeFromString(ListSerializer(Installed.serializer()), File(root, "installed.json").readText()) }
             .getOrDefault(emptyList()).filter { File(root, it.id).isDirectory }
+        catalog.value = runCatching {
+            json.decodeFromString(ListSerializer(Entry.serializer()), File(root, "catalog.json").readText())
+        }.getOrElse {
+            runCatching { json.decodeFromString(Index.serializer(), ctx.assets.open("plugins/index.json").bufferedReader().use { it.readText() }) }
+                .getOrDefault(Index()).modules.filter { it.kind in engines }.map { Entry(it, OFFICIAL, true, URI(OFFICIAL).resolve(it.url).toString()) }
+        }.filter { it.module.kind in engines && it.source in sources().map { source -> source.first } }
         // module dont le moteur a quitté l'app (l'Aventure, retirée en 1.3) : effacé
         val (kept, gone) = saved.partition { it.kind in engines }
         gone.forEach { File(root, it.id).deleteRecursively() }
@@ -116,7 +127,11 @@ object Modules {
 
     /** Module du type [kind] installé et activé (le premier s'il y en a plusieurs : un seul est activé à la fois). */
     fun active(kind: String): Installed? = _installed.value.firstOrNull { it.kind == kind && it.enabled }
-    fun isActive(kind: String) = active(kind) != null
+    fun isActive(kind: String) = when (kind) {
+        COACH -> SuperPrefs.settings.value.coachEnabled
+        LEAGUE -> SuperPrefs.settings.value.leagueEnabled
+        else -> active(kind) != null
+    }
 
     /** Dossier du module actif du type [kind] (contenu décompressé), ou null. */
     fun dir(kind: String): File? = active(kind)?.let { File(root, it.id) }?.takeIf { it.isDirectory }
@@ -133,6 +148,7 @@ object Modules {
         loading.value = true
         val errors = HashMap<String, String>()
         val out = ArrayList<Entry>()
+        val previous = catalog.value
         for ((src, verified) in sources()) {
             runCatching {
                 if (!acceptable(src)) error(tr("adresse refusée (HTTPS requis)"))
@@ -140,15 +156,16 @@ object Modules {
                 if (code !in 200..299) error("HTTP $code")
                 if (body.size > 512 * 1024) error("Réponse trop volumineuse")
                 val idx = json.decodeFromString(Index.serializer(), body.decodeToString())
-                idx.modules.filter { it.id.matches(Regex("[a-z0-9_-]{1,40}")) }.forEach { m ->
+                idx.modules.filter { it.kind in engines && it.id.matches(Regex("[a-z0-9_-]{1,40}")) }.forEach { m ->
                     out += Entry(m, src, verified, URI(src).resolve(m.url).toString())
                 }
-            }.onFailure { errors[src] = it.message ?: "?" }
+            }.onFailure { errors[src] = it.message ?: "?"; out += previous.filter { it.source == src } }
         }
         // un module vérifié l'emporte sur une copie du même id venue d'une source non vérifiée
         catalog.value = out.groupBy { it.module.id }.map { (_, l) -> l.firstOrNull { it.verified } ?: l.first() }
+        File(root, "catalog.json").writeText(json.encodeToString(ListSerializer(Entry.serializer()), catalog.value))
         sourceErrors.value = errors
-        if (out.isNotEmpty() || errors.isEmpty()) lastRefresh.value = System.currentTimeMillis()
+        if (errors.size < sources().size) lastRefresh.value = System.currentTimeMillis()
         loading.value = false
     }
 
@@ -202,6 +219,7 @@ object Modules {
             save(others + Installed(m.id, m.kind, m.name, m.version, e.source, e.verified, enabled = prev?.enabled ?: true,
                 installedAt = prev?.installedAt ?: System.currentTimeMillis()))
             onChanged(ctx, m.kind)
+            if (prev == null) addSection(m.kind)
             // l'animation de téléchargement a le temps de se voir, même pour une petite archive
             kotlinx.coroutines.delay((1600 - (System.currentTimeMillis() - started)).coerceAtLeast(0))
         }.fold({ setJob(m.id, Job.Done); true }, { setJob(m.id, Job.Failed(it.message ?: "?")); false })
@@ -227,6 +245,12 @@ object Modules {
         onChanged(ctx, m.kind)
     }
 
+    /** Plugin d'activité téléchargé ou réactivé : sa section rejoint l'onglet Activités. */
+    private fun addSection(kind: String) {
+        val section = when (kind) { MEDITATION -> "MEDITATION"; STRETCH -> "STRETCH"; else -> return }
+        SuperPrefs.update { s -> if (s.activitySections.isEmpty()) s else s.copy(activitySections = (s.activitySections + section).distinct()) }
+    }
+
     fun setEnabled(ctx: Context, id: String, on: Boolean) {
         val m = _installed.value.firstOrNull { it.id == id } ?: return
         save(_installed.value.map {
@@ -236,6 +260,8 @@ object Modules {
                 else -> it
             }
         })
+        // réactivé : sa section revient dans l'onglet Activités (désactivé ou désinstallé, elle n'y est plus)
+        if (on) addSection(m.kind)
         onChanged(ctx, m.kind)
     }
 
@@ -255,7 +281,24 @@ object Modules {
             }
             MEALS -> app.superhealth.meals.MealPlanner.invalidate()
             MEDS -> { app.superhealth.meds.Meds.invalidate(); app.superhealth.meds.Meds.schedule(ctx) }
+            STRETCH -> { app.superhealth.stretch.Stretch.invalidate(); if (on) addCard(app.superhealth.DashCard.STRETCH) }
+            MEDITATION -> { app.superhealth.meditation.Meditation.invalidate(); if (on) addCard(app.superhealth.DashCard.MEDITATION) }
+            LEAGUE -> if (on) addCard(app.superhealth.DashCard.LEAGUE)
         }
+    }
+
+    private fun addCard(c: app.superhealth.DashCard) = SuperPrefs.update { s -> if (c in s.dashboard) s else s.copy(dashboard = s.dashboard + c) }
+
+    /**
+     * Le plugin de ce type, installé et activé si besoin (choix des activités). Faux si le catalogue est injoignable ou l'installation échoue.
+     * Le catalogue est toujours relu : c'est un choix de la personne, pas une tâche de fond répétée.
+     */
+    suspend fun ensure(ctx: Context, kind: String): Boolean {
+        if (isActive(kind)) return true
+        _installed.value.firstOrNull { it.kind == kind }?.let { setEnabled(ctx, it.id, true); return true }
+        if (catalog.value.none { it.module.kind == kind }) refresh()
+        val e = catalog.value.filter { it.module.kind == kind && compatible(ctx, it.module) }.let { l -> l.firstOrNull { it.verified } ?: l.firstOrNull() } ?: return false
+        return install(ctx, e)
     }
 
     /** Mises à jour automatiques (vérification quotidienne) : modules installés dont une version plus récente est publiée. */

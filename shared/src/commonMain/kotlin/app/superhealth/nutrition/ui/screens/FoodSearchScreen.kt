@@ -2,6 +2,7 @@ package app.superhealth.nutrition.ui.screens
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
@@ -341,7 +342,7 @@ private fun FoodRow(food: FoodEntity, s: Settings, onClick: () -> Unit) {
             val per = if (food.servingGrams != 100.0) food.servingGrams else 100.0
             val k = per / 100
             MacroLine(Macros(food.kcal100 * k, food.protein100 * k, food.fat100 * k, food.carbs100 * k), { s.energyValue(it) },
-                suffix = listOf(if (per != 100.0) trf("%1\$s (%2\$s g)", food.servingName, (per.toInt())) else tr("100 g"), food.brand).filter { it.isNotBlank() }.joinToString(" · "))
+                suffix = listOf(if (per != 100.0) trf("%1\$s (%2\$s g)", servingUnit(food.servingName), (per.toInt())) else tr("100 g"), food.brand).filter { it.isNotBlank() }.joinToString(" · "))
         }
         if (checked) Icon(Icons.Rounded.CheckCircle, null, Modifier.padding(start = 8.dp), tint = Mf.colors.accent)
     }

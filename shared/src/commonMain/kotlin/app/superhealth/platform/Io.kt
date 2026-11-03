@@ -41,6 +41,13 @@ open class InputStream(private val data: ByteArray) : Closeable {
 class ByteArrayInputStream(data: ByteArray) : InputStream(data)
 
 class Reader(private val text: String) : Closeable {
+    private var position = 0
+    fun read(chars: CharArray): Int {
+        if (position >= text.length) return -1
+        val n = minOf(chars.size, text.length-position)
+        text.toCharArray().copyInto(chars, 0, position, position+n); position += n
+        return n
+    }
     fun readText() = text
     fun readLines() = text.lines()
     fun lineSequence() = text.lineSequence()

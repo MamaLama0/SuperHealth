@@ -66,6 +66,10 @@ object SuperHealth {
         app.superhealth.wellbeing.Journal.init(appContext)
         app.superhealth.wellbeing.Checkin.init(appContext)
         app.superhealth.wellbeing.Cycle.init(appContext)
+        app.superhealth.league.League.load(appContext)
+        app.superhealth.meditation.Meditation.load(appContext)
+        app.superhealth.stretch.Stretch.load(appContext)
+        app.superhealth.ui.ProfilePhoto.load(appContext)
         NutriApp.init(appContext)
         WorkoutApp.init(appContext)
         Bridge.start(appContext)
@@ -74,6 +78,8 @@ object SuperHealth {
         launchRoute?.let { vm.pendingRoute.value = it; launchRoute = null }
         // tâches périodiques d'Android (WorkManager) : faites au lancement sur iOS
         scope.launch {
+            runCatching { app.superhealth.modules.PluginSelectionWorker.runPending(appContext) }
+            runCatching { app.superhealth.league.LeagueWorker.runIfDue(appContext) }
             runCatching { app.superhealth.modules.Modules.autoUpdate(appContext) }
             runCatching { app.superhealth.backup.BackupWorker.runIfDue(appContext) }
             runCatching { app.superhealth.meds.Meds.schedule(appContext) }
@@ -85,6 +91,15 @@ object SuperHealth {
 
     /** Route ouverte depuis l'extérieur (notification, raccourci, widget). */
     fun openRoute(route: String?) {
+        if (route?.startsWith("superhealth://league?") == true) {
+            init()
+            scope.launch {
+                val ok = runCatching { app.superhealth.league.InvitationCodes.receive(appContext,route) }.getOrDefault(false)
+                if (!ok) app.superhealth.league.League.incomingError.value=true
+            }
+            vm.pendingRoute.value="friends"
+            return
+        }
         val r = app.superhealth.ui.Routes.external(route) ?: return
         if (started) vm.pendingRoute.value = r else launchRoute = r
     }

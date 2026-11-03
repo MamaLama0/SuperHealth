@@ -27,6 +27,7 @@ struct SuperHealthApp: App {
 
     /// superhealth://open?route=log, ou superhealth://log
     static func route(of url: Foundation.URL) -> String? {
+        if url.scheme == "superhealth", url.host == "league" { return url.absoluteString }
         if let r = Foundation.URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "route" })?.value { return r }
         guard let host = url.host else { return nil }
         return host + url.path

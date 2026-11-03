@@ -3,6 +3,17 @@ package app.superhealth.ui
 /** Textes propres à la version iOS (Apple Santé à la place de la montre Gadgetbridge et de Health Connect). */
 object StringsIos {
     val map: Map<String, String> = mapOf(
+        "Widgets iPhone" to "iPhone widgets",
+        "Faites un appui long sur l'écran d'accueil, touchez Modifier puis Ajouter un widget. Recherchez SuperHealth et choisissez la taille." to "Touch and hold the Home Screen, tap Edit, then Add Widget. Search for SuperHealth and choose a size.",
+        "Petit, moyen ou grand : choisissez le format dans la galerie iOS. Un appui ouvre le détail dans SuperHealth." to "Small, medium or large: choose a size in the iOS gallery. Tap to open its details in SuperHealth.",
+        "Petit, moyen et grand" to "Small, medium and large",
+        "Les widgets affichent le dernier instantané de l'app. iOS décide des actualisations en arrière-plan ; ouvrez SuperHealth pour rafraîchir vos données." to "Widgets show the app's latest snapshot. iOS schedules background updates; open SuperHealth to refresh your data.",
+        "Vue sociale" to "Social overview",
+        "Votre progression et vos amis" to "Your progress and friends",
+        "Code ou QR" to "Code or QR",
+        "Sept jours terminés" to "Seven completed days",
+        "iOS décide quand actualiser les données en arrière-plan." to "iOS decides when to refresh data in the background.",
+
         "Apple Santé" to "Apple Health",
         "Repos terminé" to "Rest over",
         "Série suivante" to "Next set",

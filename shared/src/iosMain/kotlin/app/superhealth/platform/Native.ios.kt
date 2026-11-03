@@ -64,7 +64,7 @@ actual fun inflateRaw(data: ByteArray, size: Int): ByteArray {
 
 actual fun secureRandomBytes(n: Int): ByteArray {
     val b = ByteArray(n)
-    if (n > 0) b.usePinned { SecRandomCopyBytes(kSecRandomDefault, n.convert(), it.addressOf(0)) }
+    if (n > 0) b.usePinned { check(SecRandomCopyBytes(kSecRandomDefault, n.convert(), it.addressOf(0)) == 0) { "Secure random unavailable" } }
     return b
 }
 

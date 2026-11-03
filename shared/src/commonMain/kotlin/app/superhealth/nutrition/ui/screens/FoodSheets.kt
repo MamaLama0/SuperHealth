@@ -2,6 +2,7 @@ package app.superhealth.nutrition.ui.screens
 
 import app.superhealth.platform.*
 
+import app.superhealth.ui.drawPixelArt
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import androidx.compose.foundation.background
@@ -121,8 +122,11 @@ fun TargetImpact(m: Macros, target: Macros?) {
 
 @Composable
 private fun SheetHeader(name: String, subtitle: String?, onClose: () -> Unit, trailing: @Composable () -> Unit = {}) {
+    var picking by remember { mutableStateOf(false) }
+    if (picking) FoodIconPicker(name) { picking = false }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        FoodIcon(name, 48.dp)
+        // toucher l'icône : en choisir une autre
+        FoodIcon(name, 48.dp, Modifier.clickable(onClickLabel = tr("Changer l'icône")) { picking = true })
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 2)
@@ -180,6 +184,49 @@ fun EntrySheet(
         }
     }
 }
+
+/** Choix de l'icône d'un aliment : toutes les icônes, avec recherche. Elle vaut pour tous les aliments de ce nom. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun FoodIconPicker(name: String, onDismiss: () -> Unit) {
+    var q by remember { mutableStateOf("") }
+    val list = remember(q) { app.superhealth.nutrition.ui.FoodIcons.all(q) }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Mf.colors.background) {
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Text(tr("Icône de l'aliment"), style = MaterialTheme.typography.titleLarge)
+            Text(name, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+            app.superhealth.nutrition.ui.components.TextInput(tr("Rechercher"), q, { q = it }, placeholder = tr("pomme, whey, riz…"))
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Adaptive(56.dp), Modifier.height(420.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(list.size) { i ->
+                    val id = list[i]
+                    val px = remember(id) { app.superhealth.nutrition.ui.FoodIcons.pixel(id) }
+                    Box(Modifier.size(56.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(Mf.colors.chip)
+                        .clickable { app.superhealth.nutrition.ui.FoodIcons.choose(name, id); onDismiss() }, contentAlignment = Alignment.Center) {
+                        if (px != null) androidx.compose.foundation.Canvas(Modifier.size(42.dp)) { drawPixelArt(px, center, size.minDimension) }
+                    }
+                }
+            }
+            androidx.compose.material3.TextButton(onClick = { app.superhealth.nutrition.ui.FoodIcons.choose(name, null); onDismiss() }, Modifier.padding(vertical = 6.dp)) {
+                Text(tr("Icône automatique"), color = Mf.colors.accent)
+            }
+        }
+    }
+}
+
+/**
+ * Nom de portion sans ce qui est affiché à côté : Open Food Facts donne « 1 scoop (30 g) », ce qui faisait « 1 1 scoop (30 g) (30 g) ».
+ * Le « 1 » de tête et les grammes sont retirés ; un nom qui n'est qu'un poids (« 30 g ») devient « portion ».
+ */
+internal fun servingUnit(raw: String): String {
+    val noWeight = raw.trim().replace(Regex("""\s*[(\[]\s*\d+([.,]\d+)?\s*(g|ml|cl|kg|l)\s*[)\]]\s*$""", RegexOption.IGNORE_CASE), "")
+    if (noWeight.matches(Regex("""\d+([.,]\d+)?\s*(g|ml|cl|kg|l)""", RegexOption.IGNORE_CASE)) || noWeight.isBlank()) return tr("portion")
+    return noWeight.replace(Regex("""^1\s*[x×]?\s+"""), "")
+}
+
+/** Raccourci d'une portion : « 1 scoop », mais « 2 tranches » garde son nombre. */
+internal fun servingOne(raw: String): String = servingUnit(raw).let { if (it.firstOrNull()?.isDigit() == true) it else "1 $it" }
 
 /** Unités de saisie de la quantité : grammes, portions, ou énergie (« log by calories »). */
 private enum class QtyUnit { GRAMS, SERVINGS, ENERGY }
@@ -245,7 +292,7 @@ fun FoodSheet(
             val units = listOfNotNull(QtyUnit.SERVINGS.takeIf { hasServing }, QtyUnit.GRAMS, QtyUnit.ENERGY.takeIf { food.kcal100 > 0 })
             ChipChoice(units, unit, {
                 when (it) {
-                    QtyUnit.SERVINGS -> trf("%1\$s (%2\$s g)", food.servingName, (num(food.servingGrams, 0)))
+                    QtyUnit.SERVINGS -> trf("%1\$s (%2\$s g)", servingUnit(food.servingName), (num(food.servingGrams, 0)))
                     QtyUnit.GRAMS -> "grammes"
                     QtyUnit.ENERGY -> s.energyUnit.label.tr()
                 }
@@ -274,7 +321,7 @@ fun FoodSheet(
                 QtyChip("½") { grams?.let { setGrams(it / 2) } }
                 QtyChip("×2") { grams?.let { setGrams(it * 2) } }
                 last?.let { g -> QtyChip(trf("Dernière : %1\$s g", num(g, 0))) { setGrams(g) } }
-                if (hasServing) QtyChip(trf("1 %1\$s", food.servingName)) { setGrams(food.servingGrams) }
+                if (hasServing) QtyChip(servingOne(food.servingName)) { setGrams(food.servingGrams) }
                 QtyChip("100 g") { setGrams(100.0) }
             }
             if (unit == QtyUnit.ENERGY && grams != null) Text(trf("= %1\$s g", (num(grams, 0))), style = MaterialTheme.typography.bodySmall,

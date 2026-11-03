@@ -2,8 +2,10 @@ package app.superhealth.nutrition.ui
 
 import app.superhealth.platform.*
 
+
 import app.superhealth.platform.Context
 import app.superhealth.platform.LruCache
+import app.superhealth.SuperPrefs
 import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -50,7 +52,27 @@ object FoodIcons {
     }
 
     /** Identifiant d'icône (ex. « i1000 ») le plus pertinent pour un nom d'aliment, ou null. */
-    fun match(name: String): String? = matchCache.getOrPut(name) { compute(name) }
+    fun match(name: String): String? = chosen(name) ?: matchCache.getOrPut(name) { compute(name) }
+
+    /** Icône choisie à la main pour cet aliment (Réglages, sauvegardée avec eux). */
+    private fun chosen(name: String) = SuperPrefs.settings.value.foodIcons[normalize(name)]
+
+    fun choose(name: String, id: String?) = SuperPrefs.update { s ->
+        val k = normalize(name)
+        s.copy(foodIcons = if (id == null) s.foodIcons - k else s.foodIcons + (k to id))
+    }
+
+    /** Toutes les icônes pixel-art, sans doublon d'image, filtrées par mot (français ou anglais). */
+    fun all(query: String): List<String> {
+        val q = normalize(query)
+        val en = FR_EN[q] ?: FR_EN[q.removeSuffix("s")]
+        val list = entries.filter { e ->
+            pixelKnown(e.i) && (q.isEmpty() || e.n.contains(q, true) || e.w.any { it.contains(q) } || (en != null && (e.n.contains(en, true) || e.w.any { it.contains(en) })))
+        }
+        return list.distinctBy { alias[it.i] ?: pack[it.i]?.toString() ?: it.i }.map { it.i }
+    }
+
+    private fun pixelKnown(id: String) = id in pack || id in generated || id in alias
 
     /** Icône des aliments non reconnus (repas et boisson). */
     const val GENERIC = "i14"

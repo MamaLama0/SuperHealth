@@ -1,9 +1,10 @@
 package app.superhealth.nutrition.ui.screens
 
+import app.superhealth.platform.*
+
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.container
 import androidx.compose.runtime.LaunchedEffect
-import app.superhealth.platform.*
 
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.Lang
@@ -98,6 +99,7 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.platform.LocalDate
 import app.superhealth.platform.LocalTime
 import app.superhealth.ui.theme.dashCardBackground
+import app.superhealth.ui.theme.edge
 
 private val DAY_LETTERS get() = (1..7).map { app.superhealth.nutrition.ui.dayLetter(it) }
 
@@ -131,7 +133,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
 
     if (mealHours) MealHoursDialog { mealHours = false }
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 110.dp)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = app.superhealth.ui.LocalTabBarInset.current + 76.dp)) {
             item {
                 Column(Modifier.fillMaxWidth().statusBarsPadding()) {
                     // grand titre du jour (toucher : revenir à aujourd'hui), calendrier et options en boutons ronds
@@ -173,8 +175,11 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                     Spacer(Modifier.height(12.dp))
                     val box = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
                     Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(box).dashCardBackground(app.superhealth.ui.theme.CaloriesColor)
-                        .clickable(enabled = entries.isNotEmpty()) { nutrients = !nutrients }.padding(14.dp)) {
-                        app.superhealth.nutrition.ui.components.EnergySummary(total, target, { s.energyValue(it) }, tr(s.energyUnit.label))
+                        .clickable(onClickLabel = tr(if (s.foodSummaryCollapsed) "Déplier le résumé" else "Replier le résumé")) {
+                            nutrients = false
+                            vm.repo.prefs.setSettings(vm.repo.prefs.settings.value.let { it.copy(foodSummaryCollapsed = !it.foodSummaryCollapsed) })
+                        }.padding(horizontal = 12.dp, vertical = if (s.foodSummaryCollapsed) 9.dp else 10.dp)) {
+                        app.superhealth.nutrition.ui.components.EnergySummary(total, target, { s.energyValue(it) }, tr(s.energyUnit.label), collapsed = s.foodSummaryCollapsed)
                     }
                 }
             }
@@ -228,11 +233,11 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        SearchPill(Modifier.align(Alignment.BottomCenter), onSearch = { nav.openSearch() }, onScan = { nav.openSearch(SearchMode.SCAN) },
+        SearchPill(Modifier.align(Alignment.BottomCenter).padding(bottom = app.superhealth.ui.LocalTabBarInset.current), onSearch = { nav.openSearch() }, onScan = { nav.openSearch(SearchMode.SCAN) },
             onAi = if (s.aiEnabled) ({ nav.navigate("ai") }) else null)
         if (undo.isNotEmpty()) {
             val gone = undo
-            Row(Modifier.align(Alignment.BottomCenter).padding(start = 14.dp, end = 14.dp, bottom = 74.dp).fillMaxWidth()
+            Row(Modifier.align(Alignment.BottomCenter).padding(start = 14.dp, end = 14.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 74.dp).fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp)).background(Mf.colors.text).padding(start = 16.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(if (gone.size == 1) tr("Aliment supprimé") else trf("%1\$s aliments supprimés", gone.size), color = Mf.colors.background,
@@ -388,13 +393,12 @@ private fun EmptyLog(onAdd: () -> Unit) {
 
 @Composable
 private fun SearchPill(modifier: Modifier, onSearch: () -> Unit, onScan: () -> Unit, onAi: (() -> Unit)?) {
-    // flotte au-dessus de la liste (qui défile dessous et s'efface en bas), toujours à portée de pouce
-    Row(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background.copy(alpha = 0.92f))))
-        .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    // flotte au-dessus de la liste, qui défile dessous, toujours à portée de pouce
+    Row(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
             Modifier.weight(1f).height(52.dp).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.16f),
                 spotColor = Color.Black.copy(alpha = if (Mf.colors.dark) 0.6f else 0.12f))
-                .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, CircleShape)
+                .clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.edge, CircleShape)
                 .clickable(onClick = onSearch).padding(start = 16.dp, end = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

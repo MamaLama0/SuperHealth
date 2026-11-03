@@ -2,6 +2,7 @@ package app.superhealth.ui
 
 import app.superhealth.platform.*
 
+
 import androidx.lifecycle.viewModelScope
 import app.superhealth.SuperPrefs
 import app.superhealth.bridge.Bridge
@@ -16,6 +17,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import app.superhealth.meditation.Meditation
+import app.superhealth.stretch.Stretch
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -35,7 +40,12 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     fun bind(n: NutritionViewModel, t: TrainingViewModel) {
+        if (::nutrition.isInitialized && nutrition === n && training === t) return
         nutrition = n; training = t
+        n.analytics.drop(1).onEach { bump() }.launchIn(viewModelScope)
+        t.state.map { it.history }.distinctUntilChanged().drop(1).onEach { bump() }.launchIn(viewModelScope)
+        Meditation.log.drop(1).onEach { bump() }.launchIn(viewModelScope)
+        Stretch.log.drop(1).onEach { bump() }.launchIn(viewModelScope)
     }
 
     val settings = SuperPrefs.settings
@@ -63,6 +73,7 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
     fun onResume(ctx: Context) {
         if (::nutrition.isInitialized) nutrition.refreshDay()
         HealthRepository.invalidate()
+        app.superhealth.league.LeagueWorker.onOpen(ctx)
         val s = settings.value
         val stale = System.currentTimeMillis() - s.lastHcSync > 15 * 60_000L
         viewModelScope.launch {

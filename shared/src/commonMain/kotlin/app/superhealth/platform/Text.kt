@@ -63,7 +63,13 @@ object Printf {
                 "f" -> fixed(toDouble(arg), prec ?: 6, flags, locale)
                 "e", "E" -> sci(toDouble(arg), prec ?: 6, conv == "E")
                 "g", "G" -> fixed(toDouble(arg), prec ?: 6, flags, locale)
-                "x", "X" -> (arg as? Number)?.toLong()?.toString(16)?.let { if (conv == "X") it.uppercase() else it } ?: "null"
+                "x", "X" -> when(arg) {
+                    is Byte -> (arg.toInt() and 0xff).toString(16)
+                    is Short -> (arg.toInt() and 0xffff).toString(16)
+                    is Int -> arg.toUInt().toString(16)
+                    is Long -> arg.toULong().toString(16)
+                    else -> "null"
+                }.let { if(conv=="X")it.uppercase()else it }
                 "c" -> arg.toString()
                 "b", "B" -> (arg != null && arg != false).toString()
                 "s", "S" -> (if (prec != null) arg.toString().take(prec) else arg.toString()).let { if (conv == "S") it.uppercase() else it }
@@ -72,7 +78,7 @@ object Printf {
             when {
                 body.length >= width -> body
                 '-' in flags -> body.padEnd(width)
-                '0' in flags && conv in setOf("d", "f") -> {
+                '0' in flags && conv in setOf("d", "f", "x", "X") -> {
                     val neg = body.startsWith('-') || body.startsWith('+')
                     if (neg) body[0] + body.drop(1).padStart(width - 1, '0') else body.padStart(width, '0')
                 }

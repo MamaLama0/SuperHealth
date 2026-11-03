@@ -2,6 +2,7 @@ package app.superhealth.nutrition.ui.screens
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.material.icons.rounded.Balance
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.automirrored.rounded.TrendingDown
@@ -12,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -58,6 +60,7 @@ import app.superhealth.nutrition.domain.Activity
 import app.superhealth.nutrition.domain.Athlete
 import app.superhealth.nutrition.domain.BmrEquation
 import app.superhealth.nutrition.domain.CalorieFloor
+import app.superhealth.nutrition.domain.CheckIn
 import app.superhealth.nutrition.domain.DietPreference
 import app.superhealth.nutrition.domain.ExerciseLevel
 import app.superhealth.nutrition.domain.Goal
@@ -91,6 +94,7 @@ import app.superhealth.ui.theme.CaloriesColor
 import app.superhealth.ui.theme.CarbsColor
 import app.superhealth.ui.theme.FatColor
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.ProteinColor
 import app.superhealth.nutrition.ui.toKcal
 import app.superhealth.nutrition.ui.toKg
@@ -102,6 +106,7 @@ import app.superhealth.platform.DateTimeFormatter
 import app.superhealth.platform.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.first
 
 val DAY_NAMES = listOf(tr("Lundi"), tr("Mardi"), tr("Mercredi"), tr("Jeudi"), tr("Vendredi"), tr("Samedi"), tr("Dimanche"))
 private val longFmt get() = DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.nutrition.ui.Lang.locale)
@@ -129,6 +134,10 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
             Spacer(Modifier.height(12.dp))
             GoalCard(an, s, onEdit = { nav.navigate("goal") })
 
+            Spacer(Modifier.height(10.dp))
+            PillButton(tr("Remplacer mes cibles"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("targets/override") }
+            if (app.superhealth.nutrition.domain.ManualTargets.overrideAt(p, an.today) != null)
+                Text(tr("Remplacement actif"), color = Mf.colors.accent, modifier = Modifier.padding(6.dp))
             SectionLabel(tr("Cibles de la semaine"))
             val monday = an.today - LocalDate.ofEpochDay(an.today).dayOfWeek.value + 1
             GroupCard {
@@ -148,7 +157,7 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
 
             SectionLabel(tr("Programme"))
             GroupCard {
-                SettingRow(tr("Style"), when (p.style) { ProgramStyle.COACHED -> tr("Coaché"); ProgramStyle.MANUAL -> tr("Manuel") }) { nav.navigate("program") }
+                SettingRow(tr("Style"), when (p.style) { ProgramStyle.COACHED -> tr("Coaché"); ProgramStyle.MANUAL -> tr("Manuel"); ProgramStyle.COLLABORATIVE -> tr("Collaboratif") }) { nav.navigate("program") }
                 RowDivider()
                 SettingRow(tr("Diète"), p.dietPreference.label.tr()) { nav.navigate("program") }
                 RowDivider()
@@ -402,6 +411,15 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), trend, an.lbmAt(an.today), an.program, g, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear, an.profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE))
             onBack()
         }
+        if (an.program.weightGoalEnabled) {
+            Spacer(Modifier.height(10.dp))
+            PillButton(tr("Désactiver l'objectif de poids"), Modifier.fillMaxWidth(), strong = false) {
+                val np = an.program.copy(weightGoalEnabled = false)
+                vm.repo.prefs.setProgram(np)
+                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.currentTdee, trend, an.lbmAt(an.today), np, null, an.profile.heightCm))
+                onBack()
+            }
+        }
         current?.let { cur ->
             Spacer(Modifier.height(10.dp))
             if (cur.status == GoalStatus.IN_PROGRESS) PillButton(tr("Marquer l'objectif comme atteint"), Modifier.fillMaxWidth(), strong = false) {
@@ -412,83 +430,146 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 }
 
-/** Parcours de check-in hebdomadaire : pesée, revue de la semaine (jeûne / incomplet), mise à jour du programme. */
+/** Nom d'un jour de la semaine (1 = lundi) dans la langue de l'interface. */
+fun checkInDayName(day: Int): String =
+    app.superhealth.platform.dayOfWeekOf(day.coerceIn(1, 7)).getDisplayName(app.superhealth.platform.DateTextStyle.FULL, app.superhealth.ui.Lang.locale)
+        .replaceFirstChar { it.uppercase(app.superhealth.ui.Lang.locale) }
+
+/** Check-in hebdomadaire, en plein écran (depuis Stratégie ou « À faire »). */
 @Composable
 fun CheckInScreen(vm: AppViewModel, onBack: () -> Unit) {
+    DetailScaffold(tr("Check-in de la semaine"), onBack) {
+        CheckInForm(vm, onBack)
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Le même, en fenêtre par-dessus l'accueil. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun CheckInSheet(vm: AppViewModel, onDismiss: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        val a by vm.analytics.collectAsState()
+        val day = a?.program?.checkInDay ?: 1
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp).navigationBarsPadding().verticalScroll(rememberScrollState())) {
+            Row(Modifier.padding(start = 2.dp, end = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(app.superhealth.ui.theme.HealthHues.Body.container(1.3f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.EventAvailable, null, Modifier.size(22.dp), tint = app.superhealth.ui.theme.HealthHues.Body)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(tr("Check-in de la semaine"), style = MaterialTheme.typography.titleLarge)
+                    Text(trf("Chaque %1\$s : poids analysé, calories recalculées.", checkInDayName(day).lowercase()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                }
+            }
+            CheckInForm(vm, onDismiss)
+        }
+    }
+}
+
+/**
+ * Poids du jour et revue de la semaine ; valider calcule les nouvelles cibles et les montre face aux anciennes, sans
+ * les appliquer : on accepte le nouveau programme, ou on garde ses cibles et le check-in revient la semaine suivante.
+ */
+@Composable
+private fun CheckInForm(vm: AppViewModel, onDone: () -> Unit) {
     val a by vm.analytics.collectAsState()
     val s by vm.settings.collectAsState()
     val flags by vm.dayFlags.collectAsState()
-    var step by remember { mutableIntStateOf(0) }
-    var weight by remember { mutableStateOf("") }
     val an = a ?: return
+    val ctx = LocalContext.current
+    val todayWeight = an.days.firstOrNull { it.epochDay == an.today }?.weightKg
+    var weight by remember(todayWeight == null) { mutableStateOf(todayWeight?.let { num(s.weightValue(it), 1) } ?: "") }
+    var busy by remember { mutableStateOf(false) }
+    // cibles en vigueur, puis proposition calculée mais pas encore appliquée
+    val current = an.checkInFor(an.today) ?: an.checkIns.firstOrNull()
+    var proposal by remember { mutableStateOf<Pair<CheckIn?, CheckIn>?>(null) }
+    val p = proposal
+    if (p != null) {
+        val (prev, next) = p
+        val delta = prev?.let { next.forDayOfWeek(1).kcal - it.forDayOfWeek(1).kcal }
+        SectionLabel(tr("Ce que ça changerait"))
+        MfCard {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("${s.energyValue(next.forDayOfWeek(1).kcal).roundToInt()}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(" ${s.energyUnit.label.tr()}", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
+                Spacer(Modifier.weight(1f))
+                if (delta != null && abs(delta) >= 1) Text("${if (delta > 0) "+" else "−"}${abs(delta).roundToInt()}",
+                    style = MaterialTheme.typography.titleMedium, color = if (delta > 0) Mf.colors.text else Mf.colors.accent,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+            Text(tr("par jour"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            Spacer(Modifier.height(12.dp))
+            Row {
+                GoalStat("${s.energyValue(next.tdee).roundToInt()}", tr("Dépense estimée"), Modifier.weight(1f))
+                GoalStat(next.trendKg?.let { s.weight(it) } ?: "—", tr("Tendance"), Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(14.dp))
+            CompareRow(tr("Calories"), prev?.kcal?.let(s::energyValue), s.energyValue(next.kcal), CaloriesColor)
+            CompareRow(tr("Protéines (g)"), prev?.protein, next.protein, ProteinColor)
+            CompareRow(tr("Lipides (g)"), prev?.fat, next.fat, FatColor)
+            CompareRow(tr("Glucides (g)"), prev?.carbs, next.carbs, CarbsColor)
+            if (next.limitedByFloor) Text(tr("Cible limitée par le plancher calorique."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            ageLimitText(next, LocalDate.now().year - an.profile.birthYear)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
+        }
+        Text(tr("Votre pesée est enregistrée. Les cibles ne changent qu'après votre accord."), style = MaterialTheme.typography.bodySmall,
+            color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+        Spacer(Modifier.height(14.dp))
+        PillButton(tr("Appliquer ces cibles"), Modifier.fillMaxWidth()) {
+            vm.repo.saveCheckIn(next)
+            app.superhealth.platform.Toast.makeText(ctx, tr("Nouvelles cibles appliquées"), app.superhealth.platform.Toast.LENGTH_SHORT).show()
+            onDone()
+        }
+        Spacer(Modifier.height(8.dp))
+        PillButton(tr("Garder mes cibles actuelles"), Modifier.fillMaxWidth(), strong = false) {
+            // rien ne change : le check-in est daté d'aujourd'hui, le prochain tombe dans une semaine
+            vm.repo.saveCheckIn(prev?.copy(day = an.today) ?: app.superhealth.nutrition.domain.ManualTargets.keepCurrent(an))
+            app.superhealth.platform.Toast.makeText(ctx, trf("Cibles conservées. Prochain check-in le %1\$s.", checkInDayName(an.program.checkInDay).lowercase()),
+                app.superhealth.platform.Toast.LENGTH_LONG).show()
+            onDone()
+        }
+        return
+    }
     val week = (an.today - 7 until an.today).toList()
     val byDay = an.days.associateBy { it.epochDay }
-    val recentWeigh = an.days.any { it.epochDay > an.today - 7 && it.weightKg != null }
-    DetailScaffold(tr("Check-in hebdomadaire"), onBack) {
-        ProgressBar((step + 1) / 3f, Mf.colors.accent, height = 5.dp)
-        Spacer(Modifier.height(12.dp))
-        when (step) {
-            0 -> {
-                SectionLabel(tr("Pesée"))
-                MfCard {
-                    Text(if (recentWeigh) tr("Vous avez des pesées récentes. Vous pouvez en ajouter une pour aujourd'hui.")
-                         else tr("Aucune pesée depuis 7 jours."),
-                        style = MaterialTheme.typography.bodyMedium)
-                    NumberField(tr("Poids du jour (facultatif)"), weight, { weight = it }, suffix = s.weightUnit.label.tr())
+    val target = an.targetFor(an.today).macros
+    Text(trf("Cibles actuelles : %1\$s kcal et %2\$s g de protéines par jour.", s.energyValue(target.kcal).roundToInt(), target.protein.roundToInt()),
+        style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+    Spacer(Modifier.height(12.dp))
+    MfCard { NumberField(tr("Poids du jour"), weight, { weight = it }, suffix = s.weightUnit.label.tr()) }
+    SectionLabel(tr("Revue de la semaine"))
+    GroupCard {
+        week.forEachIndexed { i, d ->
+            val f = flags[d]
+            val kcal = byDay[d]?.intakeKcal
+            if (i > 0) RowDivider()
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(LocalDate.ofEpochDay(d).format(DateTimeFormatter.ofPattern("EEEE d", app.superhealth.nutrition.ui.Lang.locale)).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium)
+                    Text(kcal?.let { "${s.energyValue(it).roundToInt()} ${s.energyUnit.label.tr()}" } ?: tr("Rien de journalisé"), style = MaterialTheme.typography.bodySmall,
+                        color = if (kcal == null) MaterialTheme.colorScheme.error else Mf.colors.textSecondary)
                 }
-                Spacer(Modifier.height(16.dp))
-                PillButton(tr("Continuer"), Modifier.fillMaxWidth()) {
-                    weight.toNum()?.let { w -> vm.launch { weighIns.upsert(WeighInEntity(an.today, s.toKg(w), null)) } }
-                    step = 1
-                }
-            }
-            1 -> {
-                SectionLabel(tr("Revue de la semaine"))
-                Text(tr("Marquez les jours de jeûne et ceux mal journalisés."),
-                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp))
-                Spacer(Modifier.height(8.dp))
-                GroupCard {
-                    week.forEachIndexed { i, d ->
-                        val f = flags[d]
-                        val kcal = byDay[d]?.intakeKcal
-                        if (i > 0) RowDivider()
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(LocalDate.ofEpochDay(d).format(DateTimeFormatter.ofPattern("EEEE d", app.superhealth.nutrition.ui.Lang.locale)).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium)
-                                Text(kcal?.let { "${s.energyValue(it).roundToInt()} ${s.energyUnit.label.tr()}" } ?: tr("Rien de journalisé"), style = MaterialTheme.typography.bodySmall,
-                                    color = if (kcal == null) MaterialTheme.colorScheme.error else Mf.colors.textSecondary)
-                            }
-                            FlagChip(tr("Jeûne"), f?.fasted == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(fasted = !it.fasted) }) } }
-                            Spacer(Modifier.width(6.dp))
-                            FlagChip(tr("Incomplet"), f?.partial == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(partial = !it.partial) }) } }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                PillButton(tr("Continuer"), Modifier.fillMaxWidth()) { step = 2 }
-            }
-            else -> {
-                val next = an.provisionalCheckIn(an.today)
-                val prev = an.checkInFor(an.today - 1)
-                SectionLabel(tr("Mise à jour du programme"))
-                MfCard {
-                    Row {
-                        GoalStat("${s.energyValue(next.tdee).roundToInt()}", tr("Dépense estimée"), Modifier.weight(1f))
-                        GoalStat(next.trendKg?.let { s.weight(it) } ?: "—", tr("Tendance"), Modifier.weight(1f))
-                    }
-                    Spacer(Modifier.height(14.dp))
-                    CompareRow(tr("Calories"), prev?.kcal?.let(s::energyValue), s.energyValue(next.kcal), CaloriesColor)
-                    CompareRow(tr("Protéines (g)"), prev?.protein, next.protein, ProteinColor)
-                    CompareRow(tr("Lipides (g)"), prev?.fat, next.fat, FatColor)
-                    CompareRow(tr("Glucides (g)"), prev?.carbs, next.carbs, CarbsColor)
-                    if (next.limitedByFloor) Text(tr("Cible limitée par le plancher calorique."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-                    ageLimitText(next, LocalDate.now().year - an.profile.birthYear)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp)) }
-                }
-                Spacer(Modifier.height(16.dp))
-                PillButton(tr("Appliquer le nouveau programme"), Modifier.fillMaxWidth()) { vm.repo.saveCheckIn(next); onBack() }
+                FlagChip(tr("Jeûne"), f?.fasted == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(fasted = !it.fasted) }) } }
+                Spacer(Modifier.width(6.dp))
+                FlagChip(tr("Incomplet"), f?.partial == true) { vm.launch { dayFlags.upsert((f ?: DayFlagEntity(d)).let { it.copy(partial = !it.partial) }) } }
             }
         }
-        Spacer(Modifier.height(24.dp))
+    }
+    Text(tr("Marquez les jours de jeûne et ceux mal journalisés : ils ne faussent pas le calcul."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+        modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+    Spacer(Modifier.height(14.dp))
+    PillButton(tr(if (busy) "Calcul en cours…" else "Calculer mes calories"), Modifier.fillMaxWidth(), enabled = !busy) {
+        busy = true
+        val typed = weight.toNum()
+        val kept = current ?: app.superhealth.nutrition.domain.ManualTargets.keepCurrent(an)
+        vm.launch {
+            if (typed != null && (todayWeight == null || abs(s.toKg(typed) - todayWeight) > 0.01)) weighIns.upsert(WeighInEntity(an.today, s.toKg(typed), weighIns.all().firstOrNull { it.epochDay == an.today }?.bodyFatPct))
+            // tout est relu après l'écriture : le poids et les jours marqués comptent dans ce calcul
+            val fresh = analytics().first()
+            proposal = kept to fresh.provisionalCheckIn(fresh.today)
+            busy = false
+        }
     }
 }
 
@@ -522,16 +603,15 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     var bmr by remember { mutableStateOf(profile.bmrEquation) }
     var staticTdee by remember { mutableStateOf(num(s.energyValue(program.staticTdee), 0)) }
     var initTdee by remember { mutableStateOf(program.initialTdeeOverride?.let { num(s.energyValue(it), 0) } ?: "") }
-    var mk by remember { mutableStateOf(num(s.energyValue(program.manualKcal), 0)) }
-    var mp by remember { mutableStateOf(num(program.manualProtein, 0)) }
-    var mf by remember { mutableStateOf(num(program.manualFat, 0)) }
-    var mc by remember { mutableStateOf(num(program.manualCarbs, 0)) }
+    var validTargets by remember { mutableStateOf(true) }
+    var individualDays by remember { mutableStateOf(program.manualDays.size == 7) }
+    var editDay by remember { mutableIntStateOf(1) }
     val goalType = a?.currentGoal?.type ?: GoalType.MAINTENANCE
 
     DetailScaffold(tr("Programme"), onBack) {
         MfCard {
             FieldTitle(tr("Style de programme"))
-            ChipChoice(ProgramStyle.entries, p.style, { if (it == ProgramStyle.COACHED) tr("Coaché") else tr("Manuel") }) { p = p.copy(style = it) }
+            ChipChoice(listOf(ProgramStyle.COACHED, ProgramStyle.COLLABORATIVE, ProgramStyle.MANUAL), p.style, { it.label.tr() }) { p = p.copy(style = it) }
             Text(if (p.style == ProgramStyle.COACHED) tr("Cibles recalculées à chaque check-in.")
                  else tr("Vous fixez vos cibles ; la dépense et la progression restent suivies."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
@@ -591,12 +671,34 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 FieldTitle(tr("Jour du check-in"))
                 ChipChoice((1..7).toList(), p.checkInDay, { DAY_NAMES[it - 1] }) { p = p.copy(checkInDay = it) }
             } else {
-                NumberField(tr("Énergie"), mk, { mk = it }, suffix = s.energyUnit.label.tr())
-                Row {
-                    NumberField(tr("Protéines"), mp, { mp = it }, Modifier.weight(1f).padding(end = 6.dp), suffix = "g")
-                    NumberField(tr("Lipides"), mf, { mf = it }, Modifier.weight(1f).padding(horizontal = 3.dp), suffix = "g")
-                    NumberField(tr("Glucides"), mc, { mc = it }, Modifier.weight(1f).padding(start = 6.dp), suffix = "g")
+                if (p.style == ProgramStyle.COLLABORATIVE) {
+                    FieldTitle(tr("Plancher calorique"))
+                    ChipChoice(CalorieFloor.entries, p.calorieFloor, { it.label.tr() }) { p = p.copy(calorieFloor = it) }
+                    app.superhealth.nutrition.ui.components.SwitchRow(tr("Jours plus élevés"), tr("Même moyenne sur la semaine"), p.highDays.isNotEmpty()) { on -> p = p.copy(highDays = if (on) setOf(6, 7) else emptySet()) }
+                    if (p.highDays.isNotEmpty()) ChipChoice((1..7).toList(), 0, { d -> (if (d in p.highDays) "✓ " else "") + DAY_NAMES[d - 1].take(3) }) { d ->
+                        p = p.copy(highDays = if (d in p.highDays) p.highDays - d else p.highDays + d)
+                    }
+                    Text(tr("Les calories s'ajustent au check-in. Vous choisissez les proportions des macros à partir de ce modèle."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    ChipChoice((1..7).toList(), p.checkInDay, { DAY_NAMES[it - 1] }) { p = p.copy(checkInDay = it) }
+                } else {
+                    app.superhealth.nutrition.ui.components.SwitchRow(tr("Cibles différentes selon le jour"), null, individualDays) { on ->
+                        individualDays = on
+                        p = p.copy(manualDays = if (on) List(7) { app.superhealth.nutrition.domain.ManualTargets.base(p) } else emptyList())
+                    }
+                    if (individualDays) ChipChoice((1..7).toList(), editDay, { DAY_NAMES[it - 1].take(3) }) { editDay = it }
                 }
+                androidx.compose.runtime.key(p.style, individualDays, editDay) {
+                    TargetEditor(if (individualDays && p.style == ProgramStyle.MANUAL) app.superhealth.nutrition.domain.ManualTargets.forDay(p, editDay) else app.superhealth.nutrition.domain.ManualTargets.base(p), s) { t ->
+                        validTargets = t != null
+                        if (t != null) {
+                            p = p.copy(manualKcal = t.kcal, manualProtein = t.protein, manualFat = t.fat, manualCarbs = t.carbs,
+                                manualDays = if (individualDays && p.style == ProgramStyle.MANUAL) p.manualDays.toMutableList().also { it[editDay - 1] = t } else p.manualDays)
+                        }
+                    }
+                }
+            }
+            app.superhealth.nutrition.ui.components.SwitchRow(tr("Objectif de poids"), tr("Désactivez pour suivre seulement vos calories et macros"), p.weightGoalEnabled) {
+                p = p.copy(weightGoalEnabled = it)
             }
         }
         SectionLabel(tr("Dépense énergétique"))
@@ -608,20 +710,18 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             NumberField(tr("Dépense initiale imposée (facultatif)"), initTdee, { initTdee = it }, suffix = s.energyUnit.label.tr())
         }
         Spacer(Modifier.height(16.dp))
-        PillButton(tr("Enregistrer et mettre à jour les cibles"), Modifier.fillMaxWidth()) {
+        PillButton(tr("Enregistrer et mettre à jour les cibles"), Modifier.fillMaxWidth(), enabled = p.style == ProgramStyle.COACHED || validTargets) {
             val newP = p.copy(
                 staticTdee = staticTdee.toNum()?.let { s.toKcal(it) } ?: p.staticTdee,
                 initialTdeeOverride = initTdee.toNum()?.let { s.toKcal(it) },
-                manualKcal = mk.toNum()?.let { s.toKcal(it) } ?: p.manualKcal,
-                manualProtein = mp.toNum() ?: p.manualProtein, manualFat = mf.toNum() ?: p.manualFat, manualCarbs = mc.toNum() ?: p.manualCarbs,
             )
             vm.repo.prefs.setProgram(newP)
             vm.repo.prefs.setProfile(profile.copy(bmrEquation = bmr))
-            a?.let { an ->
-                val w = an.currentTrendKg ?: Analytics.DEFAULT_WEIGHT
-                vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), w, an.lbmAt(an.today), newP, an.currentGoal, an.profile.heightCm, LocalDate.now().year - an.profile.birthYear, an.profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE))
+            vm.launch {
+                val fresh = analytics().first()
+                saveCheckIn(fresh.provisionalCheckIn(fresh.today))
+                onBack()
             }
-            onBack()
         }
         Spacer(Modifier.height(24.dp))
     }
@@ -635,6 +735,8 @@ fun ProfileScreen(vm: AppViewModel, onBack: () -> Unit) {
     var height by remember { mutableStateOf(num(profile.heightCm, 0)) }
     var bf by remember { mutableStateOf(profile.bodyFatPct?.let { num(it, 1) } ?: "") }
     DetailScaffold(tr("Profil"), onBack) {
+
+        Spacer(Modifier.height(12.dp))
         MfCard {
             FieldTitle(tr("Sexe"))
             ChipChoice(Sex.entries, pr.sex, { if (it == Sex.MALE) tr("Homme") else tr("Femme") }) { pr = pr.copy(sex = it) }

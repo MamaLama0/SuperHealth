@@ -26,6 +26,8 @@ object BackgroundRefresh {
             val job = scope.launch {
                 runCatching {
                     app.superhealth.SuperHealth.init()
+                    app.superhealth.league.LeagueWorker.runIfDue(appContext)
+                    app.superhealth.modules.PluginSelectionWorker.runPending(appContext)
                     app.superhealth.backup.BackupWorker.runIfDue(appContext)
                     app.superhealth.modules.Modules.autoUpdate(appContext)
                     app.superhealth.meds.Meds.schedule(appContext)

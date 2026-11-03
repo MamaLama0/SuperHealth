@@ -2,6 +2,7 @@ package app.superhealth.ui.health
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -154,6 +155,7 @@ private class NightData(
     val watchScore: Double?,
     val needMin: Double,
     val debt: Double?,
+    val debtSettled: Boolean,
     val heart: List<Pair<Long, Int>>,
     val usual: Map<ActivityKind, Double>?,
     val vitals: NightVitals.Night?,
@@ -178,6 +180,7 @@ private fun NightView(vm: SuperViewModel, nav: NavHostController, date: LocalDat
                 val watch = async { runCatching { Bridge.watchSleepScore(ctx, date) }.getOrNull() }
                 val need = async { runCatching { Scores.sleepHabits(ctx).needMin }.getOrDefault(Scores.sleepNeed()) }
                 val debt = async { runCatching { Scores.sleepDebtOf(ctx, date) }.getOrNull() }
+                val settled = async { runCatching { Scores.persistentDebtOf(ctx, date) }.getOrDefault(false) }
                 val history = async { Nights.range(date.minusDays(28), date.minusDays(1)).mapNotNull { it.second } }
                 val vitals = async { runCatching { NightVitals.of(ctx, date) }.getOrNull() }
                 val source = async { runCatching { Bridge.dataSource(Metric.SLEEP, date) }.getOrNull() }
@@ -190,7 +193,7 @@ private fun NightView(vm: SuperViewModel, nav: NavHostController, date: LocalDat
                 val compare = if (sh.sleepCompare) runCatching {
                     Scores.nightParts(date)?.let { last -> Scores.compareToUsual(last, (28L downTo 1L).mapNotNull { Scores.nightParts(date.minusDays(it)) }) }
                 }.getOrNull() else null
-                NightData(n, parts.await(), score.await(), watch.await(), need.await(), debt.await(), heart, usual, vitals.await(), source.await(), compare)
+                NightData(n, parts.await(), score.await(), watch.await(), need.await(), debt.await(), settled.await(), heart, usual, vitals.await(), source.await(), compare)
             }
         }.also { lastNightData = date to it }
     }
@@ -237,7 +240,8 @@ private fun NightView(vm: SuperViewModel, nav: NavHostController, date: LocalDat
         ))
         Spacer(Modifier.height(12.dp))
         Text(listOfNotNull(trf("Besoin %1\$s", formatDuration(d.needMin)),
-            d.debt?.let { if (it <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(it)) }).joinToString(" · "),
+            d.debt?.let { if (it <= 0) tr("Aucune dette de sommeil") else trf("Dette %1\$s", formatDuration(it)) },
+            if (d.debtSettled) tr("Dette installée : la plupart de vos nuits sont trop courtes") else null).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
     }
 

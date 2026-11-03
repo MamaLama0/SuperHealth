@@ -1,5 +1,6 @@
 import java.security.MessageDigest
 import java.util.Random
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // IA offerte par SuperHealth : adresse, modèle et clé lus HORS du dépôt (~/.gradle/gradle.properties : superhealthAiUrl,
@@ -37,6 +38,38 @@ internal object AiGiftValues {
     }
 }
 
+val relayLocal = Properties().apply { rootProject.file("local.server.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) } }
+val relayValues = listOf("url", "key").associateWith { k ->
+    ((findProperty("superhealthRelay" + k.replaceFirstChar { it.uppercase() }) as String?)
+        ?: System.getenv("SUPERHEALTH_RELAY_" + k.uppercase()) ?: relayLocal.getProperty(k, "")).trim()
+}
+val generateRelayDefaults = tasks.register("generateRelayDefaults") {
+    val dir = layout.buildDirectory.dir("generated/sources/relaydefaults")
+    val values = relayValues
+    inputs.property("digest", MessageDigest.getInstance("SHA-256")
+        .digest(values.values.joinToString("\n").toByteArray()).joinToString("") { "%02x".format(it) })
+    outputs.dir(dir)
+    doLast {
+        val rnd = Random(values.values.joinToString("\n").hashCode() * 31L + 7)
+        fun enc(v: String): String {
+            val pad = v.indices.map { rnd.nextInt(0xFFFF) }
+            val data = v.indices.map { v[it].code xor pad[it] }
+            return "d(intArrayOf(${data.joinToString(", ")}), intArrayOf(${pad.joinToString(", ")}))"
+        }
+        val out = dir.get().file("app/superhealth/league/RelayDefaults.kt").asFile
+        out.parentFile.mkdirs()
+        out.writeText("""package app.superhealth.league
+
+/** Généré à la compilation (tâche generateRelayDefaults) : IA offerte, valeurs masquées. Ne pas modifier. */
+internal object RelayDefaults {
+    val url: String get() = ${enc(values.getValue("url"))}
+    val key: String get() = ${enc(values.getValue("key"))}
+    private fun d(a: IntArray, p: IntArray): String = CharArray(a.size) { (a[it] xor p[it]).toChar() }.concatToString()
+}
+""")
+    }
+}
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
@@ -54,7 +87,9 @@ kotlin {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_21) }
     }
 
-    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+    val simulator=iosSimulatorArm64()
+    simulator.testRuns["test"].deviceId=(findProperty("iosTestDevice") as? String) ?: "iPhone 16"
+    listOf(iosArm64(), simulator).forEach { target ->
         target.binaries.framework {
             baseName = "Shared"
             isStatic = true
@@ -77,7 +112,8 @@ kotlin {
     }
 
     sourceSets {
-        commonMain { kotlin.srcDir(generateAiGift) }
+        commonMain { kotlin.srcDir(generateAiGift); kotlin.srcDir(generateRelayDefaults) }
+        commonTest.dependencies { implementation(kotlin("test")) }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -107,6 +143,7 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.coroutines.swing)
                 implementation(libs.ktor.java)
+                implementation("com.google.zxing:core:3.5.3")
             }
         }
     }

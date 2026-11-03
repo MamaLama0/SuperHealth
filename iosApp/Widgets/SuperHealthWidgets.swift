@@ -20,6 +20,13 @@ struct Snapshot: Codable {
     struct Phase: Codable { var row: Int; var start: Double; var end: Double; var color: String }
     struct Night: Codable { var value: String; var fraction: Double; var score: Int?; var times: String; var debt: String?; var staged: Bool; var phases: [Phase] }
 
+    struct SocialRow: Codable { var label: String; var value: String }
+    struct SocialCard: Codable {
+        var id: String; var title: String; var value: String; var caption: String; var detail: String
+        var symbol: String; var color: String; var route: String; var fraction: Double?
+        var rows: [SocialRow]; var chart: [Int]
+    }
+    var social: [SocialCard]?
     var updatedMs: Int64
     var date: String
     var accent: String
@@ -41,8 +48,16 @@ struct Snapshot: Codable {
         return try? JSONDecoder().decode(Snapshot.self, from: data)
     }
 
+    static let socialPreview: [SocialCard] = [
+        SocialCard(id: "league", title: "Classement", value: "746", caption: "Indice global de santé", detail: "2 sur 4", symbol: "trophy.fill", color: "#4FA8E8", route: "league", fraction: nil, rows: [SocialRow(label: "Camille", value: "812"), SocialRow(label: "Moi", value: "746"), SocialRow(label: "Alex", value: "701")], chart: []),
+        SocialCard(id: "progress", title: "Progression", value: "Niv. 8", caption: "420 XP cette semaine", detail: "180 XP avant le prochain niveau", symbol: "bolt.fill", color: "#9BD54B", route: "progress", fraction: 0.68, rows: [], chart: [70, 100, 40, 90, 80, 40, 0]),
+        SocialCard(id: "streak", title: "Séries", value: "12", caption: "Pas", detail: "12 jours", symbol: "flame.fill", color: "#FF8C36", route: "progress", fraction: nil, rows: [SocialRow(label: "Pas", value: "12 j"), SocialRow(label: "Sommeil", value: "7 j"), SocialRow(label: "Musculation", value: "3 sem.")], chart: []),
+        SocialCard(id: "quests", title: "Quêtes", value: "2 / 3", caption: "Garder le fil du journal", detail: "+80 XP", symbol: "flag.fill", color: "#B38CF7", route: "quests", fraction: 0.67, rows: [SocialRow(label: "Journal", value: "2/3"), SocialRow(label: "Une pause pour vous", value: "1/2")], chart: []),
+        SocialCard(id: "friends", title: "Amis", value: "3", caption: "Mes amis", detail: "Code ou QR", symbol: "person.2.fill", color: "#4CBFAB", route: "friends", fraction: nil, rows: [SocialRow(label: "Camille", value: "Niv. 9"), SocialRow(label: "Alex", value: "Niv. 7"), SocialRow(label: "Sam", value: "Niv. 5")], chart: []),
+        SocialCard(id: "social", title: "Social", value: "Niv. 8", caption: "Mon profil", detail: "Votre progression et vos amis", symbol: "person.crop.circle.fill", color: "#B38CF7", route: "social", fraction: nil, rows: [SocialRow(label: "XP cette semaine", value: "420"), SocialRow(label: "Amis", value: "3"), SocialRow(label: "Badges", value: "8")], chart: [70, 100, 40, 90, 80, 40, 0])
+    ]
     static let preview = Snapshot(
-        updatedMs: 0, date: "", accent: "#4285F4",
+        social: socialPreview, updatedMs: 0, date: "", accent: "#4285F4",
         labels: ["calories": "Calories", "next": "Prochaine séance", "weight": "Tendance du poids", "steps": "Pas", "sleep": "Sommeil", "rings": "Anneaux du jour"],
         calories: Calories(left: "1 240", leftLabel: "Restantes", eaten: 1040, target: 2280, unit: "kcal", macros: [
             Macro(label: "Protéines", value: 62, target: 140, color: "#E5574F"), Macro(label: "Lipides", value: 38, target: 76, color: "#F9B500"),
@@ -599,18 +614,3 @@ struct ClockText: View {
 }
 
 // MARK: - Ensemble
-
-@main
-struct SuperHealthWidgets: WidgetBundle {
-    @WidgetBundleBuilder
-    var body: some Widget {
-        CaloriesWidget()
-        RingsWidget()
-        NextWorkoutWidget()
-        WeightWidget()
-        VitalsWidget()
-        SleepWidget()
-        DayWidget()
-        WorkoutLiveActivity()
-    }
-}

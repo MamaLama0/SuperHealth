@@ -19,6 +19,7 @@ import platform.AVFoundation.AVMetadataMachineReadableCodeObject
 import platform.AVFoundation.AVMetadataObjectTypeEAN13Code
 import platform.AVFoundation.AVMetadataObjectTypeEAN8Code
 import platform.AVFoundation.AVMetadataObjectTypeUPCECode
+import platform.AVFoundation.AVMetadataObjectTypeQRCode
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
@@ -149,7 +150,7 @@ private class ScannerController(val onResult: (String?) -> Unit) : UIViewControl
         val output = AVCaptureMetadataOutput()
         session.addOutput(output)
         output.setMetadataObjectsDelegate(this, dispatch_get_main_queue())
-        output.metadataObjectTypes = listOf(AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeUPCECode)
+        output.metadataObjectTypes = listOf(AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeEAN8Code, AVMetadataObjectTypeUPCECode, AVMetadataObjectTypeQRCode)
         val layer = AVCaptureVideoPreviewLayer(session = session)
         layer.videoGravity = AVLayerVideoGravityResizeAspectFill
         layer.frame = view.bounds

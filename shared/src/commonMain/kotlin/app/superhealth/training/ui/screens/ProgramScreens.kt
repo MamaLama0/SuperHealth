@@ -2,6 +2,7 @@ package app.superhealth.training.ui.screens
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.AutoAwesome
 import app.superhealth.training.ui.tr
@@ -84,6 +85,8 @@ import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.Picker
 import app.superhealth.training.ui.components.ChipChoice
 import app.superhealth.training.ui.components.ExerciseThumb
+import app.superhealth.training.ui.components.GenerationTargetsEditor
+import app.superhealth.training.ui.components.GenerationTargetsState
 import app.superhealth.training.ui.components.GroupCard
 import app.superhealth.training.ui.components.MfCard
 import app.superhealth.training.ui.components.MuscleThumb
@@ -117,6 +120,7 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
     var split by remember { mutableStateOf<Split?>(null) }
     var minutes by remember { mutableIntStateOf(70) }
     var period by remember { mutableStateOf(Periodization.LINEAR) }
+    val generationTargets = remember { GenerationTargetsState() }
     val focus = remember { mutableStateMapOf<MuscleGroup, Int>() }
     var gymId by remember { mutableStateOf(vm.activeGym()?.id) }
     var deload by remember { mutableStateOf(Deload.LAST) }
@@ -130,7 +134,7 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
     if (result != null) { ProgramReview(vm, db, result!!, nav); return }
     if (step > last) { Generating { result = vm.generate(Generator.Input(goal, days, split ?: Split.recommended(days), minutes, period, deload, exp,
         focus.toMap(), (vm.gym(gymId) ?: vm.activeGym())?.equipmentIds ?: emptySet(), st.exerciseConfig.filter { it.value.doNotRecommend }.keys,
-        name.ifBlank { tr("Mon programme") }, color, gymId)) }; return }
+        name.ifBlank { tr("Mon programme") }, color, gymId, targetPreferences = generationTargets.preferences())) }; return }
 
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -163,7 +167,12 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
                     Split.forDays(days).forEach { sp -> Choice(sp.label.tr(), sp.days.joinToString(" · ") { it.label.tr() }, split == sp) { split = sp } }
                 }
                 3 -> { Q(tr("Combien de temps par séance ?")); DURATIONS.forEach { (m, l) -> Choice(l, null, minutes == m) { minutes = m } } }
-                4 -> { Q(tr("Comment vos plages de répétitions doivent-elles évoluer chaque semaine ?")); Periodization.entries.forEach { p -> Choice(p.label.tr(), p.description.tr(), period == p) { period = p } } }
+                4 -> {
+                    Q(tr("Comment vos plages de répétitions doivent-elles évoluer chaque semaine ?"))
+                    Periodization.entries.forEach { p -> Choice(p.label.tr(), p.description.tr(), period == p) { period = p } }
+                    Spacer(Modifier.height(12.dp))
+                    GenerationTargetsEditor(generationTargets, goal)
+                }
                 5 -> {
                     Q(tr("Quels muscles prioriser ou déprioriser ?"))
                     val up = focus.values.filter { it > 0 }.sum(); val down = -focus.values.filter { it < 0 }.sum()
@@ -205,7 +214,7 @@ fun ProgramWizardScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
         }
-        PillButton(if (step == last) tr("Générer le programme") else tr("Suivant"), Modifier.fillMaxWidth().padding(20.dp)) { step++ }
+        PillButton(if (step == last) tr("Générer le programme") else tr("Suivant"), Modifier.fillMaxWidth().padding(20.dp), enabled = step != 4 || generationTargets.isValid) { step++ }
     }
     if (exit) AlertDialog(onDismissRequest = { exit = false }, containerColor = Mf.colors.card,
         title = { Text(tr("Quitter l'assistant ?")) }, text = { Text(tr("Les réglages saisis seront perdus.")) },
@@ -275,10 +284,10 @@ private fun DayCard(d: ProgramDay, db: ExerciseDb, cycle: Int, mark: String? = n
                     modifier = Modifier.clip(CircleShape).background(WorkoutBlue).padding(horizontal = 8.dp, vertical = 2.dp))
             }
             Spacer(Modifier.weight(1f))
-            if (!d.isRest) Text(trf("≈ %1\$s min", (Generator.estimateMinutes(d, cycle))), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            if (!d.isRestAt(cycle)) Text(trf("≈ %1\$s min", (Generator.estimateMinutes(d, cycle))), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
-        if (d.isRest) Text(tr("Aucun exercice prévu ce jour"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-        d.exercises.forEach { pe ->
+        if (d.isRestAt(cycle)) Text(tr("Aucun exercice prévu ce jour"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        d.exercises.filter { cycle !in it.skippedCycles }.forEach { pe ->
             val e = db.exercise(pe.exerciseId)
             val t = Generator.targetsFor(pe, cycle)
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -303,6 +312,8 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         // supprimé : l'écran se retire s'il est encore en haut (le bouton Supprimer a déjà dépilé ; deux retours vidaient la pile)
         LaunchedEffect(Unit) { if (nav.currentBackStackEntry?.destination?.route == "program/{id}") nav.popBackStack() }; return
     }
+    val ctx = app.superhealth.platform.LocalContext.current
+    fun exportProgram() = saveFile("superhealth-program-${p.id}.json", "application/json", app.superhealth.training.domain.ProgramTransfer.export(p).toByteArray())
     val active = st.settings.activeProgramId == id
     var confirm by remember { mutableStateOf<String?>(null) }
     var cycle by remember { mutableIntStateOf(p.cycleIndex.coerceIn(0, p.numCycles - 1)) }
@@ -313,7 +324,7 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     fun save(np: Program) = vm.saveProgram(np)
     if (reorderDays) app.superhealth.training.ui.components.ReorderSheet(p.days.map { it.id to null }, p.days.map { null },
         onMove = { from, to -> save(ProgramEdit.moveDay(vm.state.value.programs.firstOrNull { it.id == id } ?: p, from, to)) },
-        onDismiss = { reorderDays = false }, title = tr("Réorganiser les jours"), names = p.days.map { if (it.isRest) "${it.name} · ${tr("Repos")}" else it.name })
+        onDismiss = { reorderDays = false }, title = tr("Réorganiser les jours"), names = p.days.map { if (it.isRestAt(cycle)) "${it.name} · ${tr("Repos")}" else it.name })
     if (pickCycles) ChoiceSheet(tr("Nombre de cycles"), tr("Un cycle = une rotation complète des jours du programme."), (1..12).toList(), p.numCycles,
         label = { "$it" }, columns = 4, onDismiss = { pickCycles = false }) { n ->
         pickCycles = false
@@ -333,20 +344,20 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     DetailScaffold(p.name, nav, actions = { TextButton(onClick = { rename = true }) { Text(tr("Renommer"), color = Mf.colors.accent) } }) {
         Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(ProgramColors[p.color % ProgramColors.size]))
         Spacer(Modifier.height(10.dp))
-        Text(trf("%1\$s séances par cycle de %2\$s jours · %3\$s", (p.days.count { !it.isRest }), p.days.size, p.goal.label.tr()), color = Mf.colors.textSecondary)
+        Text(trf("%1\$s séances par cycle de %2\$s jours · %3\$s", (p.days.count { !it.isRestAt(cycle) }), p.days.size, p.goal.label.tr()), color = Mf.colors.textSecondary)
         if (active) Text(trf("Programme actif · cycle %1\$s/%2\$s", (p.cycleIndex + 1), p.numCycles), color = WorkoutBlue, style = MaterialTheme.typography.labelLarge)
         app.superhealth.ui.coach.CoachChip(tr("Avis du coach"), trf("Que penses-tu de mon programme « %1\$s » (volume par muscle, choix d'exercices, progression) ? Propose une version améliorée si besoin.", p.name),
             nav, Modifier.padding(top = 8.dp))
         Spacer(Modifier.height(10.dp))
-        if (p.numCycles > 1) ChipChoice((0 until p.numCycles).toList(), cycle, { c -> trf("Cycle %1\$s", (c + 1)) + if ((p.deload == Deload.FIRST && c == 0) || (p.deload == Deload.LAST && c == p.numCycles - 1)) tr(" · décharge") else "" }) { cycle = it }
+        CyclePicker(vm, p, cycle) { cycle = it }
         p.days.forEachIndexed { i, d ->
             val mark = when {
-                !active -> null
+                !active || cycle != p.cycleIndex -> null
                 d.id in p.doneDayIds -> tr("Fait")
                 i == p.dayIndex -> tr("Prochaine")
                 else -> null
             }
-            DayCard(d, db, cycle, mark) { nav.navigate("programday/${p.id}/${i}") }
+            DayCard(d, db, cycle, mark) { nav.navigate("programday/${p.id}/${i}?cycle=$cycle") }
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton(tr("Ajouter un jour"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Add) {
@@ -354,6 +365,7 @@ fun ProgramScreen(vm: AppViewModel, id: String, nav: NavHostController) {
             }
             if (p.days.size > 1) PillButton(tr("Réorganiser"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.SwapVert) { reorderDays = true }
         }
+        PillButton(tr("Exporter ce programme"), Modifier.fillMaxWidth(), strong = false) { exportProgram() }
         SectionLabel(tr("Réglages du programme"))
         GroupCard {
             SettingRow(tr("Cycles"), "${p.numCycles}") { pickCycles = true }
@@ -412,23 +424,49 @@ fun <T> ChoiceSheet(title: String, subtitle: String?, values: List<T>, current: 
 private fun resize(cycles: List<List<TargetSet>>, n: Int): List<List<TargetSet>> =
     if (cycles.size == 1) cycles else List(n) { cycles.getOrElse(it) { cycles.last() } }
 
+/** Le sélecteur consulte les cibles ; le bouton confirme le déplacement réel du programme. */
+@Composable
+private fun CyclePicker(vm: AppViewModel, p: Program, cycle: Int, onSelect: (Int) -> Unit) {
+    if (p.numCycles <= 1) return
+    val st by vm.state.collectAsState()
+    var requested by remember(p.id) { mutableStateOf<Int?>(null) }
+    ChipChoice((0 until p.numCycles).toList(), cycle, { c ->
+        trf("Cycle %1\$s", c + 1) + if ((p.deload == Deload.FIRST && c == 0) || (p.deload == Deload.LAST && c == p.numCycles - 1)) tr(" · décharge") else ""
+    }, onSelect = onSelect)
+    if (st.settings.activeProgramId == p.id) {
+        val target = if (cycle != p.cycleIndex) cycle else p.cycleIndex + 1
+        if (target in 0 until p.numCycles) {
+            Text(trf("Cycle courant : %1\$s · aperçu : %2\$s", p.cycleIndex + 1, cycle + 1), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            PillButton(trf("Passer au cycle %1\$s", target + 1), Modifier.fillMaxWidth().padding(vertical = 8.dp), strong = false) { requested = target }
+        }
+    }
+    requested?.let { target ->
+        AlertDialog(onDismissRequest = { requested = null }, containerColor = Mf.colors.card,
+            title = { Text(trf("Passer au cycle %1\$s ?", target + 1)) },
+            text = { Text(tr("Le cycle choisi devient le cycle courant, à partir de sa première séance. Vos séances déjà enregistrées sont conservées. Vous pouvez avancer même si le cycle précédent est incomplet.") +
+                if (st.session?.programId == p.id) "\n" + tr("La séance en cours reste dans son cycle d'origine et ne fera pas avancer le nouveau cycle.") else "") },
+            confirmButton = { TextButton(onClick = { vm.jumpToCycle(p.id, target); onSelect(target); requested = null }) { Text(tr("Confirmer")) } },
+            dismissButton = { TextButton(onClick = { requested = null }) { Text(tr("Annuler")) } })
+    }
+}
+
 // ----- Jour de programme -----
 
 @Composable
-fun ProgramDayScreen(vm: AppViewModel, pid: String, dayIndex: Int, nav: NavHostController) {
+fun ProgramDayScreen(vm: AppViewModel, pid: String, dayIndex: Int, nav: NavHostController, initialCycle: Int = -1) {
     val st by vm.state.collectAsState()
     val db = vm.db.collectAsState().value ?: return
     val p = st.programs.firstOrNull { it.id == pid } ?: return
     val d = p.days.getOrNull(dayIndex) ?: return
-    var cycle by remember { mutableIntStateOf(p.cycleIndex.coerceIn(0, p.numCycles - 1)) }
+    var cycle by remember(pid, dayIndex, initialCycle) { mutableIntStateOf((initialCycle.takeIf { it >= 0 } ?: p.cycleIndex).coerceIn(0, p.numCycles - 1)) }
     var rename by remember { mutableStateOf(false) }
     var confirmRest by remember { mutableStateOf(false) }
     fun setDay(nd: ProgramDay) = vm.saveProgram(ProgramEdit.setDay(p, dayIndex, nd))
     DetailScaffold(d.name, nav, actions = { TextButton(onClick = { rename = true }) { Text(tr("Renommer"), color = Mf.colors.accent) } }) {
-        if (p.numCycles > 1 && d.exercises.any { it.cycles.size > 1 }) ChipChoice((0 until p.numCycles).toList(), cycle, { trf("Cycle %1\$s", (it + 1)) }) { cycle = it }
-        if (d.isRest) MfCard { Text(tr("Jour de repos. Ajoutez des exercices pour le transformer en séance."), color = Mf.colors.textSecondary) }
+        CyclePicker(vm, p, cycle) { cycle = it }
+        if (d.isRestAt(cycle)) MfCard { Text(tr("Jour de repos. Ajoutez des exercices pour le transformer en séance."), color = Mf.colors.textSecondary) }
         PlanExercises(vm, db, "${pid}:${dayIndex}", d.exercises, cycle, nav)
-        if (!d.isRest) {
+        if (!d.isRestAt(cycle)) {
             PillButton(tr("Commencer cette séance"), Modifier.fillMaxWidth().padding(top = 8.dp), icon = Icons.Rounded.PlayArrow) {
                 if (st.session == null) vm.startProgramDay(p, dayIndex, cycle); nav.navigate("session")
             }

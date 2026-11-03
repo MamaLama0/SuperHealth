@@ -2,6 +2,7 @@ package app.superhealth.nutrition.ui
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -98,6 +99,7 @@ fun NavHostController.openSearch(mode: Int = SearchMode.SEARCH, minute: Int = -1
 fun NavGraphBuilder.nutritionGraph(vm: AppViewModel, nav: NavHostController) {
     composable("strategy") { StrategyScreen(vm, nav) }
     composable("n/settings") { MoreScreen(vm, nav) }
+    composable("n/settings/{section}", listOf(navArgument("section") { type = NavType.StringType })) { MoreScreen(vm, nav, it.arguments?.getString("section")) }
     composable(
         "search/{mode}/{minute}",
         arguments = listOf(navArgument("mode") { type = NavType.IntType }, navArgument("minute") { type = NavType.IntType }),
@@ -108,6 +110,7 @@ fun NavGraphBuilder.nutritionGraph(vm: AppViewModel, nav: NavHostController) {
     composable("weight") { WeightScreen(vm, onBack = { nav.popBackStack() }) }
     composable("expenditure") { ExpenditureScreen(vm, onBack = { nav.popBackStack() }) }
     composable("nutrition") { NutritionScreen(vm, onBack = { nav.popBackStack() }) }
+    composable("targets/override") { app.superhealth.nutrition.ui.screens.TargetOverrideScreen(vm) { nav.popBackStack() } }
     composable("program") { ProgramEditScreen(vm, onBack = { nav.popBackStack() }) }
     composable("profile") { ProfileScreen(vm, onBack = { nav.popBackStack() }) }
     composable("energy") { EnergyBalanceScreen(vm, onBack = { nav.popBackStack() }) }

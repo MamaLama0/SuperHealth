@@ -2,6 +2,7 @@ package app.superhealth.ui
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -123,8 +124,12 @@ import app.superhealth.ui.onboarding.OnboardingScreen
 import app.superhealth.ui.settings.SettingsScreen
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.edge
 import app.superhealth.ui.theme.onContainer
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.SelfImprovement
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -149,7 +154,7 @@ private fun isTabRoute(route: String?) = tabs.any { it.route == route } || (rout
 private fun visibleTabs(s: app.superhealth.SuperSettings) = tabs.filter {
     when (it.route) {
         "log" -> s.has(app.superhealth.Feature.NUTRITION)
-        "activities" -> s.has(app.superhealth.Feature.TRAINING) || s.has(app.superhealth.Feature.HEALTH)
+        "activities" -> s.has(app.superhealth.Feature.TRAINING) || s.has(app.superhealth.Feature.HEALTH) || s.activitySections.isNotEmpty()
         else -> true
     }
 }
@@ -216,9 +221,12 @@ fun SuperRoot(vm: SuperViewModel) {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Mf.colors.background)) {
+    // la barre flotte au-dessus du contenu, qui défile dessous jusqu'au bas de l'écran ; rien autour d'elle
+    var barPx by remember { mutableStateOf(0) }
+    val barInset = with(androidx.compose.ui.platform.LocalDensity.current) { barPx.toDp() }
+    androidx.compose.runtime.CompositionLocalProvider(LocalTabBarInset provides barInset) { Box(Modifier.fillMaxSize().background(Mf.colors.background)) {
         NavHost(
-            nav, startDestination = "home", modifier = Modifier.weight(1f),
+            nav, startDestination = "home", modifier = Modifier.fillMaxSize(),
             // Axe partagé horizontal de Material : glissement court et fondu ; les onglets changent sans transition (le fondu croisé accrochait pendant la construction de l'écran).
             enterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { it / 5 } + fadeIn(tween(220, 60)) },
             exitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { -it / 5 } + fadeOut(tween(120)) },
@@ -227,16 +235,9 @@ fun SuperRoot(vm: SuperViewModel) {
         ) {
             composable("home") { DashboardScreen(vm, nav) }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
-            composable("activities") {
-                // onglet adapté aux parties choisies : musculation, activités de la montre, ou l'endurance d'abord
-                val f by app.superhealth.SuperPrefs.settings.collectAsState()
-                val endurance = vm.nutrition.program.collectAsState().value.training == app.superhealth.nutrition.domain.Training.CARDIO
-                val strength = f.has(app.superhealth.Feature.TRAINING); val health = f.has(app.superhealth.Feature.HEALTH)
-                WorkoutTabScreen(vm.training, nav, strength = strength, cardioFirst = endurance && health,
-                    week = { ActivityWeek(vm, nav, strength, health) },
-                    recent = { RecentActivities(vm, nav, strength, health) },
-                    historyRoute = if (health) "h/activities" else "history")
-            }
+            composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
+            composable("widgets") { app.superhealth.ui.settings.HomeWidgetsScreen(nav) }
+            composable("settings/find") { app.superhealth.ui.settings.FindSettingScreen(nav) }
             composable("settings") { SettingsScreen(vm, nav) }
             composable("dash/edit") { DashboardEditScreen(vm, nav) }
             composable("backup") { app.superhealth.ui.settings.BackupScreen(vm, nav) }
@@ -244,21 +245,43 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("settings/style") { app.superhealth.ui.settings.StyleLabScreen(vm, nav) }
             composable("settings/units") { app.superhealth.ui.settings.UnitsSettingsScreen(vm, nav) }
             composable("settings/hc") { app.superhealth.ui.settings.HealthConnectSettingsScreen(vm, nav) }
-            composable("settings/activities") { app.superhealth.ui.health.ActivityImportScreen(vm, nav) }
+            composable("settings/activity-import") { app.superhealth.ui.health.ActivityImportScreen(vm, nav) }
+            composable("settings/sources") { app.superhealth.ui.settings.SourcesScreen(nav) }
             composable("settings/security") { app.superhealth.ui.settings.SecurityScreen(nav) }
             composable("modules") { app.superhealth.ui.settings.ModulesScreen(vm, nav) }
+            composable("coach/settings") { app.superhealth.ui.coach.CoachSettingsScreen(nav) }
             composable("coach") { app.superhealth.ui.coach.CoachScreen(vm, nav) }
             composable("meds") { app.superhealth.ui.meds.MedsScreen(nav) }
+            composable("stretch/edit") { app.superhealth.ui.stretch.StretchEditorScreen(nav) }
+            composable("stretch/custom") { app.superhealth.ui.stretch.CustomStretchScreen(nav) }
+            composable("stretch/play") { app.superhealth.ui.stretch.StretchPlayScreen(nav) }
+            composable("stretch/all") { app.superhealth.ui.stretch.StretchAllScreen(nav) }
+            composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
+            composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
+            composable("social") { app.superhealth.ui.league.SocialProfileScreen(nav) }
+            composable("social/badges") { app.superhealth.ui.league.ProfileBadgesScreen(nav) }
+            composable("quests") { app.superhealth.ui.league.WeeklyQuestsScreen(nav) }
+            composable("progress") { app.superhealth.ui.league.ProgressScreen(nav) }
+            composable("league/settings") { app.superhealth.ui.league.LeagueSettingsScreen(nav) }
+            composable("friends/add") { app.superhealth.ui.league.AddFriendScreen(nav) }
+            composable("friends") { app.superhealth.ui.league.FriendsScreen(nav) }
+            composable("stretch/ex/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
+                app.superhealth.ui.stretch.StretchExerciseScreen(nav, it.arguments?.getString("id").orEmpty())
+            }
+            composable("meditation/play") { app.superhealth.ui.meditation.MeditationPlayScreen(nav) }
+            composable("league") { app.superhealth.ui.league.LeagueScreen(nav) }
             composable("journal") { app.superhealth.ui.wellbeing.JournalScreen(vm, nav) }
             composable("form") { app.superhealth.ui.wellbeing.FormScreen(vm, nav) }
             composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }
             composable("breathe") { app.superhealth.ui.wellbeing.BreatheScreen(nav) }
-            composable("checkin") { app.superhealth.ui.wellbeing.CheckinScreen(nav) }
+            composable("feel") { app.superhealth.ui.wellbeing.CheckinScreen(nav) }
             composable("settings/reminders") { app.superhealth.ui.wellbeing.RemindersScreen(vm, nav) }
             composable("settings/sleep") { app.superhealth.ui.settings.SleepSettingsScreen(nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
+            composable("setup/nutrition") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.NUTRITION_SETUP) { nav.popBackStack() } }
+            composable("setup/training") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.TRAINING_SETUP) { nav.popBackStack() } }
             composable("sim/nutrition") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.NUTRITION_SIM) { nav.popBackStack() } }
             composable("sim/training") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.TRAINING_SIM) { nav.popBackStack() } }
             composable("h/metric/{metric}", listOf(navArgument("metric") { type = NavType.StringType })) {
@@ -281,18 +304,15 @@ fun SuperRoot(vm: SuperViewModel) {
             nutritionGraph(vm.nutrition, nav)
             trainingGraph(vm.training, nav)
         }
-        if (isTab) Box(Modifier.fillMaxWidth().height(0.dp)) {
-            // fondu au-dessus de la barre flottante : le contenu s'efface au lieu d'être coupé net
-            Box(Modifier.fillMaxWidth().height(22.dp).offset(y = (-22).dp)
-                .background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background))))
+        if (isTab) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { barPx = it.height }) {
+            if (tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
+            BottomBar(current, onTab = { route -> nav.openTab(route) }, onPlus = {
+                // Un seul raccourci choisi : le « + » l'ouvre directement.
+                val single = sh.plusActions.mapNotNull { it.resolve(vm) }.singleOrNull()
+                if (single != null) plusAction = single.action else plus = true
+            })
         }
-        if (isTab && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
-        if (isTab) BottomBar(current, onTab = { route -> nav.openTab(route) }, onPlus = {
-            // Un seul raccourci choisi : le « + » l'ouvre directement.
-            val single = sh.plusActions.mapNotNull { it.resolve(vm) }.singleOrNull()
-            if (single != null) plusAction = single.action else plus = true
-        })
-    }
+    } }
 
     fun runAction(action: String) {
         when (action) {
@@ -305,6 +325,10 @@ fun SuperRoot(vm: SuperViewModel) {
             "sync" -> vm.syncNow(nav.context)
             "next" -> vm.training.activeProgram()?.let { p -> vm.training.startProgramDay(p, p.dayIndex, p.cycleIndex); nav.navigate("session") }
             "empty" -> { vm.training.startEmpty(); nav.navigate("session") }
+            "open:MEDITATION", "open:STRETCH" -> {
+                app.superhealth.SuperPrefs.update { it.copy(activityCurrent = action.removePrefix("open:")) }
+                nav.openTab("activities", fresh = true)
+            }
             else -> nav.go(action)
         }
     }
@@ -315,10 +339,14 @@ fun SuperRoot(vm: SuperViewModel) {
     }
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
     if (app.superhealth.ui.wellbeing.moodSheet) app.superhealth.ui.wellbeing.MoodSheet(nav)
+    app.superhealth.ui.league.LeagueIncomingDialog()
 }
 
 /** Courbe « emphasized decelerate » de Material. */
 private val push = tween<IntOffset>(320, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f))
+
+/** Place prise par la barre flottante en bas de l'écran : à laisser au bas des listes des onglets. */
+val LocalTabBarInset = androidx.compose.runtime.compositionLocalOf { 0.dp }
 
 /**
  * Barre de navigation : une pilule flottante bordée d'un filet, les onglets à parts égales (symbole et nom, l'actif sur une
@@ -332,9 +360,8 @@ private fun BottomBar(current: String?, onTab: (String) -> Unit, onPlus: () -> U
     val shape = RoundedCornerShape(26.dp)
     val pill = Modifier.height(68.dp)
         .shadow(if (dark) 0.dp else 12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
-        .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.line, shape).padding(horizontal = 4.dp)
-    Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Mf.colors.background.copy(alpha = 0f), Mf.colors.background), endY = 40f))
-        .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
+        .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.edge, shape).padding(horizontal = 4.dp)
+    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
         when (sh.plusSide) {
             // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
@@ -377,7 +404,7 @@ private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: ()
     val accent = Mf.colors.accent
     val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
     Column(
-        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { if (!selected) onClick() }),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent), contentAlignment = Alignment.Center) {
@@ -422,6 +449,9 @@ private fun PlusAction.resolve(vm: SuperViewModel): QuickAction? {
         PlusAction.MOOD -> QuickAction("Noter mon moral", Icons.Rounded.SentimentSatisfied, "mood")
         PlusAction.PERIOD -> QuickAction("Règles", Icons.Rounded.CalendarMonth, "cycle")
         PlusAction.BREATHE -> QuickAction("Respirer", Icons.Rounded.Air, "breathe")
+        PlusAction.MEDITATE -> if (app.superhealth.meditation.Meditation.available()) QuickAction("Méditer", Icons.Rounded.SelfImprovement, "open:MEDITATION") else null
+        PlusAction.STRETCH -> if (app.superhealth.stretch.Stretch.available()) QuickAction("S'étirer", Icons.Rounded.AccessibilityNew, "open:STRETCH") else null
+        PlusAction.LEAGUE -> if (app.superhealth.league.League.available()) QuickAction("Classement", Icons.Rounded.EmojiEvents, "league") else null
         PlusAction.SYNC -> if (sh.watchModule && vm.devices.value.isNotEmpty() || sh.healthConnect) QuickAction("Synchroniser", Icons.Rounded.Sync, "sync") else null
     }
 }
@@ -450,10 +480,12 @@ private fun PlusSheet(vm: SuperViewModel, onDismiss: () -> Unit, onEdit: () -> U
                     app.superhealth.DashCard.Section.NUTRITION -> "Nutrition"
                     app.superhealth.DashCard.Section.TRAINING -> "Entraînement"
                     app.superhealth.DashCard.Section.HEALTH -> "Santé"
+                    app.superhealth.DashCard.Section.SOCIAL -> "Social"
                 }), when (section) {
                     app.superhealth.DashCard.Section.NUTRITION -> app.superhealth.ui.theme.Base.Green
                     app.superhealth.DashCard.Section.TRAINING -> app.superhealth.ui.theme.WorkoutBlue
                     app.superhealth.DashCard.Section.HEALTH -> app.superhealth.ui.theme.HealthHues.Heart
+                    app.superhealth.DashCard.Section.SOCIAL -> app.superhealth.ui.theme.HealthHues.Fitness
                 }, actions, onAction)
             }
             if (chosen.isEmpty()) Text(tr("Aucun raccourci : touchez l'icône de réglage pour en choisir."), style = MaterialTheme.typography.bodyMedium,
@@ -493,6 +525,8 @@ private fun ActionTile(a: QuickAction, hue: Color, modifier: Modifier, onClick: 
 }
 
 /** Ouvre un écran depuis n'importe où (cartes du tableau de bord, réglages…) ; un onglet passe par [openTab]. */
+fun openTabFrom(nav: NavHostController, route: String) = nav.openTab(route)
+
 fun NavHostController.go(route: String) = runCatching { if (isTabRoute(route)) openTab(route) else navigate(route) }
 
 /**
@@ -500,6 +534,9 @@ fun NavHostController.go(route: String) = runCatching { if (isTabRoute(route)) o
  * s'ouvre à sa racine au lieu de retrouver l'écran où on l'avait laissé.
  */
 fun NavHostController.openTab(route: String, fresh: Boolean = false) {
+    // Ne pas dépiler/recréer l'écran visible quand on retouche son onglet : défilement et états sont conservés.
+    // Un raccourci explicitement fresh garde son comportement de retour à la racine.
+    if (!fresh && currentBackStackEntry?.destination?.route == route) return
     val start = graph.findStartDestination()
     navigate(route) {
         popUpTo(start.id) { saveState = !fresh }

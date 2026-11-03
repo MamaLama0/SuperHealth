@@ -1,4 +1,4 @@
-# SuperHealth
+# SuperHealth 3.0
 
 Nutrition, musculation et santé dans une app gratuite, sans compte : vos données restent sur le téléphone.
 
@@ -26,9 +26,13 @@ Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](#in
 - **IA offerte** sans clé, ou la vôtre.
 - **Tableau de bord**, widgets, sauvegardes chiffrées, français et anglais.
 
+La version iOS 3.0 reprend les interfaces sociales clarifiées, les quêtes hebdomadaires, les suivis, la méditation, la mobilité et les outils de programmes. Six nouveaux widgets WidgetKit (classement, progression, séries, quêtes, amis et vue sociale) sont proposés en petit, moyen et grand.
+
+[Notes du portage et vérifications](docs/UPDATE-3.0-ios.md).
+
 ## Vie privée
 
-Pas de compte ni de serveur. L'IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
+Pas de compte obligatoire. Le social utilise des cartes signées, échangées directement ou via un relais chiffré facultatif. L'IA ne reçoit ni votre nom, ni e-mail, ni téléphone, ni position.
 
 ## iOS en détail
 
@@ -47,7 +51,7 @@ Elle inclut aussi le correctif des erreurs de connexion -80045 / -80046 ([code](
   récent, ou Linux à jour.
 - Un **câble USB** et le **Wi-Fi** sur l'iPhone.
 - Un **identifiant Apple** (un compte gratuit suffit ; ce n'est pas forcément celui de l'iPhone).
-- Les deux fichiers de la dernière version iOS, [`ios-v1.7.8`](https://github.com/MamaLama0/SuperHealth/releases/tag/ios-v1.7.8)
+- Les deux fichiers de la dernière version iOS, [`ios-v3.0`](https://github.com/MamaLama0/SuperHealth/releases/tag/ios-v3.0)
   (ou une `ios-v…` plus récente dans les [versions](https://github.com/MamaLama0/SuperHealth/releases)) :
   - `SideStore-HealthKit.ipa` : à télécharger **sur l'ordinateur** ;
   - `SuperHealth.ipa` : à télécharger **sur l'iPhone**, avec Safari (elle va dans Fichiers > Téléchargements).
@@ -161,7 +165,7 @@ mais **ses données restent**, et un renouvellement la relance.
 | SuperHealth n'apparaît pas dans Santé > Accès aux données | Même cause : réinstallez depuis SideStore + HealthKit, puis rouvrez Apple Santé dans SuperHealth. |
 | « No Wi-Fi or VPN connection » / échec de connexion AFC | Wi-Fi et LocalDevVPN connectés, bloqueurs DNS désactivés, réessayez ; sinon redémarrez SideStore puis LocalDevVPN ; sinon replacez le fichier d'appairage (ligne suivante). |
 | SideStore n'installe plus rien (après une mise à jour d'iOS, une réinitialisation, ou sans raison) | Le fichier d'appairage a expiré. Dans iloader, iPhone branché : **Delete Stored Pairing**, sélectionnez l'iPhone et touchez **Se fier**, puis **Manage Pairing File** > **Place** à droite de SideStore. |
-| « Failed to Sign In … (-80045) » ou (-80046) | Depuis fin octobre 2026, Apple refuse l'ancienne façon de se connecter de SideStore. La `SideStore-HealthKit.ipa` de la version `ios-v1.7.8` ou plus récente contient le correctif : réinstallez-la avec iloader (Import IPA), sans supprimer SideStore, puis reconnectez-vous **une seule fois** et patientez (des essais répétés font bloquer le compte quelques heures par Apple). Avec une version plus ancienne, à la main : SideStore > Réglages > **User Customizations** : désactivez **On-Device Anisette** ; dans **Anisette Servers**, choisissez **SideStore (New)** et désactivez **Enable Auto Rotation** ; dans **Anisette Client Configuration** > **Remote Server Sync**, touchez **Fetch** puis **Save as Overrides** ; revenez et touchez **Reset adi.pb**. |
+| « Failed to Sign In … (-80045) » ou (-80046) | Depuis fin octobre 2026, Apple refuse l'ancienne façon de se connecter de SideStore. La `SideStore-HealthKit.ipa` de la version `ios-v3.0` ou plus récente contient le correctif : réinstallez-la avec iloader (Import IPA), sans supprimer SideStore, puis reconnectez-vous **une seule fois** et patientez (des essais répétés font bloquer le compte quelques heures par Apple). Avec une version plus ancienne, à la main : SideStore > Réglages > **User Customizations** : désactivez **On-Device Anisette** ; dans **Anisette Servers**, choisissez **SideStore (New)** et désactivez **Enable Auto Rotation** ; dans **Anisette Client Configuration** > **Remote Server Sync**, touchez **Fetch** puis **Save as Overrides** ; revenez et touchez **Reset adi.pb**. |
 | Erreur à la connexion dans SideStore | Souvent le serveur « Anisette » indisponible : réessayez plus tard ou changez « Anisette URL » dans les réglages de SideStore. |
 | L'installation reste bloquée en cours de route | Redémarrez SideStore ; sinon videz le cache (réglages de SideStore), redémarrez l'iPhone, replacez le fichier d'appairage, et en dernier recours réinstallez SideStore avec iloader. |
 | Une app ne s'ouvre plus | Elle a expiré (7 jours) : SideStore > My Apps > touchez son compteur pour la renouveler. Vos données sont intactes. |

@@ -70,6 +70,16 @@ class PortTest {
         }
     }
 
+    @Test fun hexadecimalBytesMatchAndroidExactly() {
+        (-128..127).forEach { value ->
+            val b=value.toByte()
+            assertEquals(java.lang.String.format("%02x", b),Printf.format(Locale.ROOT,"%02x",arrayOf(b)))
+        }
+        listOf<Any>(Short.MIN_VALUE,Int.MIN_VALUE,Long.MIN_VALUE).forEach {value ->
+            assertEquals(java.lang.String.format("%x",value),Printf.format(Locale.ROOT,"%x",arrayOf(value)))
+        }
+    }
+
     @Test fun dates() {
         val d = LocalDate.of(2026, 10, 26)
         assertEquals("lun. 26 oct.", d.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.FRANCE)))

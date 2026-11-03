@@ -2,6 +2,7 @@ package app.superhealth.nutrition.domain
 
 import app.superhealth.platform.*
 
+
 import app.superhealth.platform.DayOfWeek
 import app.superhealth.platform.LocalDate
 import kotlin.math.abs
@@ -181,22 +182,26 @@ object Targets {
     fun checkIn(day: Long, tdee: Double, trendKg: Double, lbmKg: Double, program: Program, goal: Goal?, heightCm: Double = 175.0,
                 ageYears: Int? = null, female: Boolean = false): CheckIn {
         // à partir de 60 ans : protéines sur le poids ajusté, déficit borné (Senior)
-        val minP = Senior.proteinFloorG(ageYears, trendKg, heightCm, female, goal?.type == GoalType.CUT)
-        val type = goal?.type ?: GoalType.MAINTENANCE
+        val activeGoal = goal.takeIf { program.weightGoalEnabled }
+        val minP = Senior.proteinFloorG(ageYears, trendKg, heightCm, female, activeGoal?.type == GoalType.CUT)
+        val type = activeGoal?.type ?: GoalType.MAINTENANCE
         if (program.style == ProgramStyle.MANUAL) {
             return CheckIn(day, tdee, trendKg, program.manualKcal, program.manualProtein, program.manualFat, program.manualCarbs,
-                type, goal?.ratePctPerWeek ?: 0.0, manual = true)
+                type, activeGoal?.ratePctPerWeek ?: 0.0, manual = true, days = program.manualDays)
         }
-        val wanted = tdee + dailyEnergyDelta(weeklyRateKg(goal, trendKg))
+        val wanted = tdee + dailyEnergyDelta(weeklyRateKg(activeGoal, trendKg))
         val (raw, ageLimit) = if (type == GoalType.CUT) Senior.limitCut(ageYears, heightCm, trendKg, tdee, wanted) else wanted to null
         val floorKcal = dynamicFloor(program.calorieFloor, heightCm, lbmKg)
         val kcal = max(raw, floorKcal)
-        val m = macrosFor(kcal, program, type, lbmKg, heightCm, minP)
+        fun macros(k: Double): Macros = if (program.style == ProgramStyle.COLLABORATIVE) {
+            val t = ManualTargets.scale(k, ManualTargets.base(program)); Macros(t.kcal, t.protein, t.fat, t.carbs)
+        } else macrosFor(k, program, type, lbmKg, heightCm, minP)
+        val m = macros(kcal)
         val dist = distribute(kcal, max(floorKcal, dynamicFloor(CalorieFloor.LOW, heightCm, lbmKg)), program.highDays)
         val days = if (!dist.shifted) emptyList() else dist.kcal.map { k ->
-            macrosFor(k, program, type, lbmKg, heightCm, minP).let { DayTarget(k, it.protein, it.fat, it.carbs) }
+            macros(k).let { DayTarget(k, it.protein, it.fat, it.carbs) }
         }
-        return CheckIn(day, tdee, trendKg, kcal, m.protein, m.fat, m.carbs, type, goal?.ratePctPerWeek ?: 0.0, raw < floorKcal,
+        return CheckIn(day, tdee, trendKg, kcal, m.protein, m.fat, m.carbs, type, activeGoal?.ratePctPerWeek ?: 0.0, raw < floorKcal,
             days = days, floorKcal = floorKcal, ageLimit = ageLimit?.name)
     }
 

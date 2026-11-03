@@ -11,6 +11,16 @@ import kotlin.random.Random
 expect fun secureRandomBytes(n: Int): ByteArray
 
 class SecureRandom {
+    fun generateSeed(n: Int) = secureRandomBytes(n)
+    fun nextInt(bound: Int): Int {
+        require(bound > 0)
+        val limit = Int.MAX_VALUE - (Int.MAX_VALUE % bound)
+        while (true) {
+            val b=secureRandomBytes(4)
+            val value=((b[0].toInt() and 0x7f) shl 24) or ((b[1].toInt() and 255) shl 16) or ((b[2].toInt() and 255) shl 8) or (b[3].toInt() and 255)
+            if (value < limit) return value % bound
+        }
+    }
     fun nextBytes(b: ByteArray) { secureRandomBytes(b.size).copyInto(b) }
 }
 

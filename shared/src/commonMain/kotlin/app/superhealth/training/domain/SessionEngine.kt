@@ -2,6 +2,7 @@ package app.superhealth.training.domain
 
 import app.superhealth.platform.*
 
+
 import app.superhealth.platform.UUID
 import kotlin.math.max
 import kotlin.math.round
@@ -55,12 +56,13 @@ class SessionEngine(private val db: ExerciseDb) {
 
     fun fromProgram(program: Program, day: ProgramDay, cycle: Int, history: List<Workout>, settings: Settings, gym: Gym?): Session {
         val worked = mutableSetOf<MuscleGroup>()
-        val exercises = day.exercises.map { pe ->
+        val exercises = day.exercises.filter { cycle !in it.skippedCycles }.map { pe ->
             val ex = buildExercise(pe.exerciseId, Generator.targetsFor(pe, cycle), history, settings, gym, worked)
             db.exercise(pe.exerciseId)?.muscleGroups?.let(worked::addAll)
             ex.copy(supersetGroup = pe.supersetGroup)
         }
-        return Session(uid(), day.name, System.currentTimeMillis(), exercises, gym?.id, program.id, cycle, day.id)
+        val groups = Supersets.normalize(exercises.map { it.supersetGroup })
+        return Session(uid(), day.name, System.currentTimeMillis(), exercises.mapIndexed { i, e -> e.copy(supersetGroup = groups[i]) }, gym?.id, program.id, cycle, day.id)
     }
 
     fun fromCustom(w: CustomWorkout, history: List<Workout>, settings: Settings, gym: Gym?): Session {
@@ -70,10 +72,10 @@ class SessionEngine(private val db: ExerciseDb) {
             db.exercise(pe.exerciseId)?.muscleGroups?.let(worked::addAll)
             ex
         }
-        return Session(uid(), w.name, System.currentTimeMillis(), exercises, gym?.id)
+        return Session(uid(), w.name, System.currentTimeMillis(), exercises, gym?.id, freeForm = false)
     }
 
-    fun empty(gym: Gym?) = Session(uid(), "Entraînement libre", System.currentTimeMillis(), emptyList(), gym?.id)
+    fun empty(gym: Gym?) = Session(uid(), "Entraînement libre", System.currentTimeMillis(), emptyList(), gym?.id, freeForm = true)
 
     /** Ajoute un exercice en cours de séance (3 séries de 8-12 à RIR 2 par défaut). */
     fun addExercise(s: Session, exerciseId: String, history: List<Workout>, settings: Settings, gym: Gym?): Session {
@@ -228,17 +230,25 @@ class SessionEngine(private val db: ExerciseDb) {
      * Jour [doneDayId] fait : il est marqué fait dans le cycle, le prochain jour proposé est le suivant pas encore fait
      * (en revenant au début si besoin). Les jours sautés restent à faire ; le cycle change quand tous sont faits.
      */
-    fun advance(p: Program, doneDayId: String?): Program {
+    fun advance(p: Program, doneDayId: String?, completedCycle: Int = p.cycleIndex): Program {
+        // Une séance commencée avant un saut manuel reste dans son cycle d'origine.
+        if (completedCycle != p.cycleIndex) return p
         val idx = p.days.indexOfFirst { it.id == doneDayId }.takeIf { it >= 0 } ?: p.dayIndex
         val day = p.days.getOrNull(idx) ?: return p
         val done = (p.doneDayIds + day.id).distinct()
-        val training = p.days.indices.filter { !p.days[it].isRest }
+        val training = p.days.indices.filter { !p.days[it].isRestAt(p.cycleIndex) }
         if (training.isEmpty()) return p
         val next = ((idx + 1 until p.days.size) + (0..idx)).firstOrNull { it in training && p.days[it].id !in done }
         if (next != null) return p.copy(dayIndex = next, doneDayIds = done)
         var c = p.cycleIndex + 1
         if (c >= p.numCycles && p.runIndefinitely) c = 0
-        return p.copy(dayIndex = training.first(), cycleIndex = c, doneDayIds = emptyList())
+        // A block can deliberately skip entire days in later cycles.
+        var attempts = 0
+        while (c < p.numCycles && p.days.all { it.isRestAt(c) } && attempts++ < p.numCycles) {
+            c++
+            if (c >= p.numCycles && p.runIndefinitely) c = 0
+        }
+        return ProgramEdit.fixCursor(p.copy(dayIndex = 0, cycleIndex = c, doneDayIds = emptyList()))
     }
 
     companion object {
@@ -255,7 +265,7 @@ class SessionEngine(private val db: ExerciseDb) {
             if (ws.isEmpty() || history.any { it.programId == p.id && it.dayId != null }) return p
             val ids = ws.mapNotNull { w -> p.days.firstOrNull { it.name == w.name }?.id }.distinct()
             if (ids.isEmpty()) return p
-            val training = p.days.filter { !it.isRest }
+            val training = p.days.filter { !it.isRestAt(p.cycleIndex) }
             val next = training.firstOrNull { it.id !in ids } ?: return p
             return p.copy(doneDayIds = ids, dayIndex = p.days.indexOf(next))
         }

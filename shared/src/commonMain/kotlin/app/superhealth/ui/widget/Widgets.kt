@@ -53,6 +53,7 @@ object Widgets {
         val labels: Map<String, String>,
         val calories: Calories?, val rings: List<Ring>, val next: Next?, val weight: Weight?, val vitals: Vitals?,
         val steps: String?, val sleep: String?, val night: Night? = null,
+        val social: List<SocialWidgetCard> = emptyList(),
     )
 
     private val json = Json { encodeDefaults = true }
@@ -124,7 +125,7 @@ object Widgets {
             mapOf("app" to "SuperHealth", "calories" to tr("Calories"), "next" to tr("Prochaine séance"), "session" to tr("Séance en cours"),
                 "weight" to tr("Tendance du poids"), "steps" to tr("Pas"), "sleep" to tr("Sommeil"), "rings" to tr("Anneaux du jour"),
                 "open" to tr("Ouvrez l'app pour commencer.")),
-            calories, rings, next(), weight, vitals, steps, sleep, night)
+            calories, rings, next(), weight, vitals, steps, sleep, night, socialWidgets())
     }
 
     /** Nuit qui se termine aujourd'hui, comme le widget Sommeil d'Android (phases seulement si la source les mesure). */

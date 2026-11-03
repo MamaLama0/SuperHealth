@@ -2,6 +2,7 @@ package app.superhealth.ui.dashboard
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +37,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -158,14 +161,14 @@ private val blank @Composable get() = Mf.colors.text.copy(alpha = 0.16f)
 
 /** Texte d'une ligne ; [num] : chiffres en Inter Display. */
 @Composable
-private fun Tq(text: String, size: TextUnit, color: Color? = null, weight: FontWeight = FontWeight.Normal, num: Boolean = false, modifier: Modifier = Modifier, brush: Brush? = null) =
+internal fun Tq(text: String, size: TextUnit, color: Color? = null, weight: FontWeight = FontWeight.Normal, num: Boolean = false, modifier: Modifier = Modifier, brush: Brush? = null) =
     Text(text, modifier, style = (if (num) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyMedium).let { if (brush != null) it.copy(brush = brush) else it },
         color = if (brush != null) Color.Unspecified else color ?: Mf.colors.text, fontSize = size, lineHeight = size * 1.2f, fontWeight = weight, maxLines = 1,
         overflow = TextOverflow.Ellipsis, letterSpacing = if (num) (-0.02 * size.value).sp else 0.sp)
 
 /** Valeur : chiffre en grand, unité plus petite en gris sur la même ligne de base ; [v2] pour « 7 h 32 ». */
 @Composable
-private fun V(v: String, unit: String? = null, size: TextUnit = 24.sp, v2: String? = null, unit2: String? = null, color: Color? = null) {
+internal fun V(v: String, unit: String? = null, size: TextUnit = 24.sp, v2: String? = null, unit2: String? = null, color: Color? = null) {
     val us = maxOf(12f, size.value * 0.5f).sp
     val ink = color ?: LocalInk.current
     Row(verticalAlignment = Alignment.Bottom) {
@@ -185,7 +188,7 @@ private fun Hm(min: Double?, size: TextUnit, unit2: String? = null) {
 }
 
 @Composable
-private fun Head(icon: ImageVector, label: String, c: Color, trailing: String? = null, tc: Color = c) = CardHead(icon, label, c, trailing, tc)
+internal fun Head(icon: ImageVector, label: String, c: Color, trailing: String? = null, tc: Color = c) = CardHead(icon, label, c, trailing, tc)
 
 @Composable
 private fun Tile(c: Color, modifier: Modifier, onClick: () -> Unit, hPad: Dp, vPad: Dp, center: Boolean = false, content: @Composable ColumnScope.() -> Unit) =
@@ -295,7 +298,7 @@ internal fun WeekDots(days: List<Boolean>, hue: Color, modifier: Modifier = Modi
 
 /** Bandeau : pastille teintée, valeur en couleur et nom dessous, repère à droite. */
 @Composable
-private fun Wide(m: Modifier, onClick: () -> Unit, icon: ImageVector, c: Color, label: String, value: @Composable () -> Unit, rightW: Dp = 130.dp, right: @Composable BoxScope.() -> Unit) {
+internal fun Wide(m: Modifier, onClick: () -> Unit, icon: ImageVector, c: Color, label: String, value: @Composable () -> Unit, rightW: Dp = 130.dp, right: @Composable BoxScope.() -> Unit) {
     val (chipBg, chipTint) = app.superhealth.ui.theme.dashChipColors(c)
     Tile(c, m.fillMaxWidth().heightIn(min = 72.dp), onClick, 12.dp, 10.dp, center = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -309,12 +312,12 @@ private fun Wide(m: Modifier, onClick: () -> Unit, icon: ImageVector, c: Color, 
 }
 
 @Composable
-private fun Large(m: Modifier, onClick: () -> Unit, icon: ImageVector, label: String, c: Color, trailing: String? = null, tc: Color = c, content: @Composable ColumnScope.() -> Unit) =
+internal fun Large(m: Modifier, onClick: () -> Unit, icon: ImageVector, label: String, c: Color, trailing: String? = null, tc: Color = c, content: @Composable ColumnScope.() -> Unit) =
     Tile(c, m.fillMaxWidth(), onClick, 16.dp, 16.dp) { Head(icon, label, c, trailing, tc); Spacer(Modifier.height(12.dp)); content() }
 
 /** Colonne « libellé / valeur » des grandes cartes. */
 @Composable
-private fun Stat(label: String, value: String, modifier: Modifier = Modifier, c: Color? = null) =
+internal fun Stat(label: String, value: String, modifier: Modifier = Modifier, c: Color? = null) =
     Column(modifier) { Tq(label, 12.sp, sub); Tq(value, 16.sp, c, FontWeight.SemiBold, true) }
 
 @Composable
@@ -520,6 +523,7 @@ private fun DayAxis(modifier: Modifier = Modifier) =
 @Composable
 internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: NavHostController, h: HealthSnap, an: Analytics, s: NutritionSettings, m: Modifier, tab: (String) -> Unit): Boolean {
     val i = c.icon()
+    val refresh by vm.refresh.collectAsState()
     val large = size == CardSize.L
     when {
         c == DashCard.SCORES -> WForme(size, i, h.watch, m) { nav.go("form") }
@@ -537,6 +541,13 @@ internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: Na
         c == DashCard.NEXT_WORKOUT -> WSeance(size, i, vm, m, nav, tab)
         c == DashCard.TRAINING_WEEK -> WSemaine(size, i, vm, h, m) { nav.go("t/insights") }
         c == DashCard.RUNNING -> WCourse(size, i, h, m) { nav.go("h/activities") }
+        c == DashCard.MEDITATION -> WMeditation(size, i, m) { openSection("MEDITATION", tab) }
+        c == DashCard.STRETCH -> WEtirements(size, i, m) { openSection("STRETCH", tab) }
+        c == DashCard.LEAGUE -> WClassement(size, i, m, refresh) { nav.go("league") }
+        c == DashCard.QUESTS -> WQuests(size, i, m, refresh) { nav.go("quests") }
+        c == DashCard.PROGRESSION -> WProgression(size, i, m, refresh) { nav.go("progress") }
+        c == DashCard.FRIENDS -> WFriends(size, i, m) { nav.go("friends") }
+        c == DashCard.STREAKS -> WStreaksHero(size, m, refresh) { nav.go("progress") }
         else -> return false
     }
     return true
@@ -906,47 +917,79 @@ private fun usual(v: List<Double>): Pair<Double, Double>? {
     return avg - sd to avg + sd
 }
 
+/**
+ * Pouls à afficher : en direct quand une montre le diffuse (médiane des 10 dernières secondes, lissage de NOOP), sinon la dernière
+ * mesure du jour. L'écoute ne dure que le temps où la carte est à l'écran, puis la montre repasse en économie (LiveHeart).
+ */
+@Composable
+private fun liveBpm(h: HealthSnap): Pair<Double?, Long?> {
+    val canLive = remember(h) { app.superhealth.bridge.LiveHeart.available() }
+    var window by remember { mutableStateOf(emptyList<Pair<Long, Int>>()) }
+    if (canLive) androidx.compose.runtime.LaunchedEffect(Unit) {
+        app.superhealth.bridge.LiveHeart.samples.collect { s ->
+            val bpm = s.bpm ?: return@collect
+            window = (window + (s.timeMs to bpm)).filter { it.first >= s.timeMs - 10_000 }
+        }
+    }
+    val fresh = window.takeIf { it.isNotEmpty() && it.last().first >= System.currentTimeMillis() - 30_000 }
+    if (fresh != null) return fresh.map { it.second }.sorted()[fresh.size / 2].toDouble() to null
+    return h.heartToday.lastOrNull()?.let { it.value to it.timestampMs } ?: (null to null)
+}
+
+/** « en direct », ou l'âge de la dernière mesure. */
+@Composable
+private fun heartAge(at: Long?, hasValue: Boolean): String = when {
+    !hasValue -> tr("Pas de mesure")
+    at == null -> tr("en direct")
+    else -> {
+        val min = ((System.currentTimeMillis() - at) / 60_000).coerceAtLeast(0)
+        when { min < 1 -> tr("à l'instant"); min < 60 -> trf("il y a %1\$s min", min); else -> trf("il y a %1\$s h", min / 60) }
+    }
+}
+
 @Composable
 private fun WCoeur(sz: CardSize, icon: ImageVector, h: HealthSnap, m: Modifier, onClick: () -> Unit) {
     val hist = h.series[Metric.RESTING_HR].orEmpty().mapNotNull { it.second }
     val rest = hist.lastOrNull()
-    val v = rest ?: h.heartToday.lastOrNull()?.value
-    val range = usual(hist.dropLast(1)); val avg = hist.dropLast(1).takeIf { it.size >= 3 }?.average()
-    val diff = if (rest != null && avg != null) (rest - avg).roundToInt() else null
-    val t = Sc.heart; val c = t.a; val txt = v?.let { formatNumber(it) } ?: "—"; val bpm = tr("bpm")
-    @Composable fun D() { if (diff != null && diff != 0) Delta(trf("%1\$s vs moy.", abs(diff)), up = diff > 0, good = diff < 0) }
-    @Composable fun Dot(mod: Modifier) { if (rest != null && range != null) RangeDot(rest, range.first, range.second, minOf(range.first, rest) - 4, maxOf(range.second, rest) + 4, c, mod) }
+    val (now, at) = liveBpm(h)
+    val range = usual(hist.dropLast(1))
+    val t = Sc.heart; val c = t.a; val txt = now?.let { formatNumber(it) } ?: "—"; val bpm = tr("bpm")
+    val age = heartAge(at, now != null)
+    val pts = h.heartToday
+    val start = HealthRepository.startMs(LocalDate.now())
+    // pouls de la journée par quart d'heure
+    val slots = remember(pts) { pts.groupBy { ((it.timestampMs - start) / 900_000).toInt() }.mapValues { e -> e.value.map { it.value }.average() } }
+    val last = (slots.keys.maxOrNull() ?: 0).coerceAtLeast(1)
+    val day = remember(slots) { (0..last).map { slots[it] } }
     when (sz) {
-        CardSize.S -> CurveTile(m, onClick, icon, tr("Repos"), c, txt, bpm) { LineT(hist, t, it, area = true) }
-        CardSize.M -> MediumShell(m, onClick, icon, tr("Cœur au repos"), c, value = txt, unit = bpm, captionSlot = { D() }) {
+        CardSize.S -> CurveTile(m, onClick, icon, tr("Cœur"), c, txt, bpm) { if (pts.size >= 2) LineT(day.takeLast(32), t, it, area = true) else LineT(hist, t, it, area = true) }
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Rythme cardiaque"), c, value = txt, unit = bpm, caption = age) {
             when {
+                pts.size >= 2 -> LineT(day.takeLast(32), t, Modifier.fillMaxSize(), area = true)
                 range != null -> BandLine(hist, range.first, range.second, t, Modifier.fillMaxSize(), false)
                 hist.size >= 2 -> LineT(hist, t, Modifier.fillMaxSize(), area = true)
                 else -> EmptyDots()
             }
         }
-        CardSize.W -> Wide(m, onClick, icon, c, tr("Cœur au repos"), { V(txt, bpm, 20.sp) }, 120.dp) {
+        CardSize.W -> Wide(m, onClick, icon, c, tr("Rythme cardiaque"), { V(txt, bpm, 20.sp) }, 120.dp) {
             Column(horizontalAlignment = Alignment.End) {
-                Dot(Modifier.width(112.dp)); Spacer(Modifier.height(4.dp))
-                if (range != null) Tq(trf("habituel %1\$s–%2\$s", range.first.roundToInt(), range.second.roundToInt()), 12.sp, sub)
+                Tq(age, 12.sp, sub)
+                rest?.let { Tq(trf("repos %1\$s", formatNumber(it)), 12.sp, sub) }
             }
         }
-        else -> Large(m, onClick, icon, tr("Rythme cardiaque"), c, tr("aujourd'hui"), sub) {
-            val pts = h.heartToday
+        else -> Large(m, onClick, icon, tr("Rythme cardiaque"), c, age, sub) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Box(Modifier.weight(1f)) { V(txt, tr("bpm au repos"), 30.sp) }
+                Box(Modifier.weight(1f)) { V(txt, bpm, 30.sp) }
+                rest?.let { Stat(tr("Repos"), formatNumber(it), Modifier.padding(start = 14.dp)) }
                 pts.minOfOrNull { it.value }?.let { Stat(tr("Min"), formatNumber(it), Modifier.padding(start = 14.dp)) }
                 pts.maxOfOrNull { it.value }?.let { Stat(tr("Max"), formatNumber(it), Modifier.padding(start = 14.dp)) }
             }
             Spacer(Modifier.height(10.dp))
             if (pts.size >= 2) {
-                // pouls de la journée par quart d'heure ; pointillés pour les heures à venir
-                val start = HealthRepository.startMs(LocalDate.now())
-                val slots = remember(pts) { pts.groupBy { ((it.timestampMs - start) / 900_000).toInt() }.mapValues { e -> e.value.map { it.value }.average() } }
-                val last = (slots.keys.maxOrNull() ?: 0).coerceAtLeast(1)
+                // pointillés pour les heures à venir
                 val done = ((last + 1) / 96f).coerceIn(0.1f, 1f); val track = faint
                 Box(Modifier.fillMaxWidth().height(86.dp)) {
-                    LineT((0..last).map { slots[it] }, t, Modifier.fillMaxWidth(done).fillMaxHeight(), area = true)
+                    LineT(day, t, Modifier.fillMaxWidth(done).fillMaxHeight(), area = true)
                     Canvas(Modifier.fillMaxSize()) {
                         if (done < 1f) drawLine(track, Offset(size.width * done, size.height - 1), Offset(size.width, size.height - 1), 1.5.dp.toPx(), StrokeCap.Round, PathEffect.dashPathEffect(floatArrayOf(4f, 8f)))
                     }
@@ -1214,6 +1257,94 @@ private fun WCourse(sz: CardSize, icon: ImageVector, h: HealthSnap, m: Modifier,
                     }
                 }
             }
+        }
+    }
+}
+
+// ---- Plugins -------------------------------------------------------------------------------------------------------
+
+private fun openSection(section: String, tab: (String) -> Unit) {
+    app.superhealth.SuperPrefs.update { it.copy(activityCurrent = section) }
+    tab("activities")
+}
+
+/** Minutes par jour de la semaine en cours, du lundi à aujourd'hui. */
+private fun weekBars(minutes: (Long) -> Int): List<Double?> {
+    val today = LocalDate.now()
+    val monday = today.with(app.superhealth.platform.TemporalAdjusters.previousOrSame(app.superhealth.platform.DayOfWeek.MONDAY))
+    return (0..6).map { d -> monday.plusDays(d.toLong()).takeIf { !it.isAfter(today) }?.let { day -> minutes(day.toEpochDay()).toDouble() } }
+}
+
+/** Carte d'un plugin à minutes : objectif hebdomadaire en anneau (petit), courbe de la semaine (moyen et grand). */
+@Composable
+private fun MinutesCard(sz: CardSize, icon: ImageVector, title: String, hue: Color, goal: Int, week: Int, today: Int, bars: List<Double?>, detail: String?, m: Modifier, onClick: () -> Unit) {
+    val t = Tone(hue, hue); val min = tr("min")
+    when (sz) {
+        CardSize.S -> RingTile(m, onClick, hue, (week.toFloat() / goal).coerceIn(0f, 1f)) { RingCenter(icon, hue, week.toString(), min) }
+        CardSize.M -> MediumShell(m, onClick, icon, title, hue, value = week.toString(), unit = min, caption = tr("cette semaine")) {
+            LineT(bars.filterNotNull(), t, Modifier.fillMaxSize(), area = true)
+        }
+        CardSize.W -> Wide(m, onClick, icon, hue, title, { V(week.toString(), min, 20.sp) }, 120.dp) {
+            Column(horizontalAlignment = Alignment.End) {
+                Tq(tr("cette semaine"), 12.sp, sub)
+                detail?.let { Tq(it, 12.sp, sub) }
+            }
+        }
+        else -> Large(m, onClick, icon, title, hue, detail, sub) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Box(Modifier.weight(1f)) { V(week.toString(), trf("min sur %1\$s", goal), 30.sp) }
+                Stat(tr("Aujourd'hui"), "$today", Modifier.padding(start = 14.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            LineT(bars.filterNotNull(), t, Modifier.fillMaxWidth().height(70.dp), area = true)
+        }
+    }
+}
+
+@Composable
+private fun WMeditation(sz: CardSize, icon: ImageVector, m: Modifier, onClick: () -> Unit) {
+    val log by app.superhealth.meditation.Meditation.log.collectAsState()
+    val today = LocalDate.now().toEpochDay()
+    val bars = remember(log) { weekBars { d -> app.superhealth.meditation.Meditation.minutes(d, d) } }
+    val streak = remember(log) { app.superhealth.meditation.Meditation.streak() }
+    MinutesCard(sz, icon, tr("Méditation"), DashCard.MEDITATION.hue(), 70, bars.filterNotNull().sum().toInt(), remember(log) { app.superhealth.meditation.Meditation.minutes(today, today) },
+        bars, if (streak > 1) trf("%1\$s jours d'affilée", streak) else null, m, onClick)
+}
+
+@Composable
+private fun WEtirements(sz: CardSize, icon: ImageVector, m: Modifier, onClick: () -> Unit) {
+    val log by app.superhealth.stretch.Stretch.log.collectAsState()
+    val today = LocalDate.now().toEpochDay()
+    val bars = remember(log) { weekBars { d -> app.superhealth.stretch.Stretch.minutes(d, d) } }
+    MinutesCard(sz, icon, tr("Étirements"), DashCard.STRETCH.hue(), 70, bars.filterNotNull().sum().toInt(), remember(log) { app.superhealth.stretch.Stretch.minutes(today, today) }, bars, null, m, onClick)
+}
+
+@Composable
+private fun WClassement(sz: CardSize, icon: ImageVector, m: Modifier, refresh: Int, onClick: () -> Unit) {
+    val ctx = LocalContext.current
+    val mine by app.superhealth.league.League.mine.collectAsState()
+    val st by app.superhealth.league.League.state.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(refresh) { runCatching { app.superhealth.league.League.compute(ctx) } }
+    val hue = DashCard.LEAGUE.hue()
+    val entries = dashboardScoreEntries(mine, st.friends, System.currentTimeMillis() / 1000, tr("Vous"))
+    val me = entries.firstOrNull { it.me }
+    val score = me?.score?.toString() ?: "—"
+    val rank = when {
+        mine == null -> tr("Score en préparation")
+        me == null -> tr("3 domaines requis")
+        entries.size == 1 -> tr("En solo")
+        else -> trf("%1\$s sur %2\$s", dashboardRank(entries, me), entries.size)
+    }
+    val ahead = me?.let { self -> entries.lastOrNull { it.score > self.score } }
+    val detail = ahead?.let { trf("%1\$s points pour rejoindre %2\$s", it.score - (me?.score ?: 0), it.name) }
+        ?: if (entries.size > 1) tr("Vous êtes en tête") else tr("Comparez avec vos amis")
+    if (sz == CardSize.W) SocialStrip(m, icon, tr("Classement"), rank, score, hue, onClick)
+    else SocialCard(sz, m, icon, tr("Classement"), hue, onClick) {
+        SocialValue(score, if (me != null) "/ 1000 · $rank" else rank, hue, sz == CardSize.S)
+        if (sz != CardSize.S && me != null) {
+            SocialBar(me.score / 1000f, hue)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

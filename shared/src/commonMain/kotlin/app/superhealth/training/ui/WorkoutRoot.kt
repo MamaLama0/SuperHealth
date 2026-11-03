@@ -2,6 +2,7 @@ package app.superhealth.training.ui
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.ui.draw.shadow
 import app.superhealth.ui.openTab
 import androidx.compose.animation.fadeIn
@@ -106,12 +107,18 @@ fun NavGraphBuilder.trainingGraph(vm: AppViewModel, nav: NavHostController) {
     composable("history") { HistoryScreen(vm, nav) }
     composable("levels") { LevelsScreen(vm, nav) }
     composable("t/insights") { DashboardScreen(vm, nav) }
+    composable("t/programs/bonus") { app.superhealth.training.ui.screens.BonusProgramsScreen(vm, nav) }
+    composable("t/warmups") { app.superhealth.training.ui.screens.WarmUpSettingsScreen(vm, nav) }
     composable("t/settings") { MoreScreen(vm, nav) }
+    composable("t/settings/{section}", listOf(navArgument("section") { type = NavType.StringType })) { MoreScreen(vm, nav, it.arguments?.getString("section")) }
+    composable("t/setup") { app.superhealth.training.ui.screens.TrainingGuideScreen(vm, nav) }
+    composable("t/setup/library") { app.superhealth.training.ui.screens.TrainingGuideScreen(vm, nav, "library") }
+    composable("t/setup/manual") { app.superhealth.training.ui.screens.TrainingGuideScreen(vm, nav, "manual") }
     composable("gyms") { GymsScreen(vm, nav) }
     composable("gym/{id}", listOf(navArgument("id") { type = NavType.StringType })) { GymEditScreen(vm, it.arguments!!.getString("id")!!, nav) }
     composable("program/{id}", listOf(navArgument("id") { type = NavType.StringType })) { ProgramScreen(vm, it.arguments!!.getString("id")!!, nav) }
-    composable("programday/{id}/{day}", listOf(navArgument("id") { type = NavType.StringType }, navArgument("day") { type = NavType.IntType })) {
-        ProgramDayScreen(vm, it.arguments!!.getString("id")!!, it.arguments!!.getInt("day"), nav)
+    composable("programday/{id}/{day}?cycle={cycle}", listOf(navArgument("id") { type = NavType.StringType }, navArgument("day") { type = NavType.IntType }, navArgument("cycle") { type = NavType.IntType; defaultValue = -1 })) {
+        ProgramDayScreen(vm, it.arguments!!.getString("id")!!, it.arguments!!.getInt("day"), nav, it.arguments!!.getInt("cycle"))
     }
     composable("workoutedit/{id}", listOf(navArgument("id") { type = NavType.StringType })) { app.superhealth.training.ui.screens.WorkoutEditScreen(vm, it.arguments!!.getString("id")!!, nav) }
     composable("workoutdetail/{id}", listOf(navArgument("id") { type = NavType.StringType })) { WorkoutDetailScreen(vm, it.arguments!!.getString("id")!!, nav) }

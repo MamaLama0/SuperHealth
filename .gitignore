@@ -14,3 +14,5 @@ build-desktop.log
 build-m*.png
 screenshots/
 xcuserdata/
+
+local.server.properties

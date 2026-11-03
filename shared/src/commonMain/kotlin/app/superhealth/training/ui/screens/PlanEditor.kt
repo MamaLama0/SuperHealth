@@ -2,6 +2,7 @@ package app.superhealth.training.ui.screens
 
 import app.superhealth.platform.*
 
+
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import androidx.compose.foundation.background
@@ -160,17 +161,18 @@ private fun supersetLetters(list: List<ProgramExercise>): Map<Int, Char> =
  */
 @Composable
 fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: List<ProgramExercise>, cycle: Int, nav: NavHostController) {
-    var editing by remember { mutableStateOf<Int?>(null) }
+    var editing by remember(target) { mutableStateOf<String?>(null) }
     var reorder by remember { mutableStateOf(false) }
     val letters = supersetLetters(exercises)
     val sizes = exercises.groupingBy { it.supersetGroup }.eachCount()
     exercises.forEachIndexed { i, pe ->
+        androidx.compose.runtime.key(pe.id) {
         val e = db.exercise(pe.exerciseId)
         val t = Generator.targetsFor(pe, cycle)
         val g = pe.supersetGroup
         val linkedNext = g != null && exercises.getOrNull(i + 1)?.supersetGroup == g
         val linkedPrev = g != null && exercises.getOrNull(i - 1)?.supersetGroup == g
-        MfCard(Modifier.padding(top = if (linkedPrev) 0.dp else 5.dp, bottom = if (linkedNext) 0.dp else 5.dp), onClick = { editing = i }) {
+        MfCard(Modifier.padding(top = if (linkedPrev) 0.dp else 5.dp, bottom = if (linkedNext) 0.dp else 5.dp), onClick = { editing = pe.id }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (g != null) Box(Modifier.width(4.dp).height(44.dp).clip(CircleShape).background(WorkoutBlue))
                 if (g != null) Spacer(Modifier.width(8.dp))
@@ -180,7 +182,7 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
                     if (g != null) Text(Supersets.label(sizes[g] ?: 2).tr() + " " + (letters[g] ?: 'A'), style = MaterialTheme.typography.labelSmall, color = WorkoutBlue,
                         fontWeight = FontWeight.Bold)
                     Text(e?.name ?: "?", style = MaterialTheme.typography.titleSmall, maxLines = 2)
-                    Text(trf("%1\$s · repos %2\$s", targetSummary(t), restLabel(t.firstOrNull()?.restSec ?: 120)), style = MaterialTheme.typography.bodySmall,
+                    Text(if (cycle in pe.skippedCycles) tr("Non prévu pour ce cycle") else trf("%1\$s · repos %2\$s", targetSummary(t), restLabel(t.firstOrNull()?.restSec ?: 120)), style = MaterialTheme.typography.bodySmall,
                         color = Mf.colors.textSecondary)
                 }
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Mf.colors.textTertiary)
@@ -191,6 +193,7 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
             Icon(Icons.Rounded.Link, null, Modifier.size(14.dp), tint = WorkoutBlue)
         }
     }
+    }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PillButton(tr("Ajouter des exercices"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Add) {
             nav.navigate("picker/${Picker.DAY}?target=${target}")
@@ -200,15 +203,16 @@ fun PlanExercises(vm: AppViewModel, db: ExerciseDb, target: String, exercises: L
     if (reorder) app.superhealth.training.ui.components.ReorderSheet(exercises.map { it.id to db.exercise(it.exerciseId) }, exercises.map { it.supersetGroup },
         onMove = { from, to -> vm.movePlan(target, from, to) },
         onDismiss = { reorder = false })
-    editing?.let { i ->
-        val pe = exercises.getOrNull(i) ?: run { editing = null; return }
+    editing?.let { id ->
+        val i = exercises.indexOfFirst { it.id == id }
+        val pe = exercises.getOrNull(i) ?: return@let
         // le groupe s'étend depuis son dernier membre, quel que soit l'exercice ouvert
         var groupEnd = i
         while (pe.supersetGroup != null && exercises.getOrNull(groupEnd + 1)?.supersetGroup == pe.supersetGroup) groupEnd++
         PlanExerciseSheet(pe, cycle, db.exercise(pe.exerciseId)?.name ?: "", inSuperset = pe.supersetGroup != null, canLink = groupEnd < exercises.lastIndex,
             onDismiss = { editing = null },
-            onSave = { ne -> vm.updatePlan(target) { l -> l.toMutableList().also { it[i] = ne } }; editing = null },
-            onSaveAll = { ne -> vm.updatePlan(target) { l -> l.toMutableList().also { it[i] = ne } }; editing = null },
+            onSave = { ne -> vm.updatePlan(target) { l -> l.map { if (it.id == id) ne else it } }; editing = null },
+            onSaveAll = { ne -> vm.updatePlan(target) { l -> l.map { if (it.id == id) ne else it } }; editing = null },
             onLink = { vm.updatePlan(target) { regroup(it) { g -> Supersets.link(g, groupEnd) } }; editing = null },
             onUnlink = { vm.updatePlan(target) { regroup(it) { g -> Supersets.unlink(g, i) } }; editing = null },
             onReorder = { editing = null; reorder = true },
@@ -230,8 +234,9 @@ private fun PlanExerciseSheet(
     onDismiss: () -> Unit, onSave: (ProgramExercise) -> Unit, onSaveAll: (ProgramExercise) -> Unit,
     onLink: () -> Unit, onUnlink: () -> Unit, onReorder: () -> Unit, onUp: (() -> Unit)?, onDown: (() -> Unit)?, onSwap: () -> Unit, onRemove: () -> Unit,
 ) {
-    val cur = Generator.targetsFor(pe, cycle)
-    var sets by remember { mutableIntStateOf(cur.size) }
+    val cur = pe.cycles.getOrNull(cycle.coerceIn(0, (pe.cycles.size - 1).coerceAtLeast(0))).orEmpty()
+    var scheduled by remember { mutableStateOf(cycle !in pe.skippedCycles) }
+    var sets by remember { mutableIntStateOf(cur.size.coerceAtLeast(1)) }
     var min by remember { mutableIntStateOf(cur.firstOrNull()?.minReps ?: 8) }
     var max by remember { mutableIntStateOf(cur.firstOrNull()?.maxReps ?: 12) }
     var rir by remember { mutableIntStateOf(cur.firstOrNull()?.rir ?: 2) }
@@ -242,6 +247,7 @@ private fun PlanExerciseSheet(
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 20.dp).navigationBarsPadding()) {
             Text(name, style = MaterialTheme.typography.titleLarge)
             if (multiCycle) Text(trf("Cycle %1\$s", cycle + 1), color = Mf.colors.textSecondary)
+            if (multiCycle) app.superhealth.training.ui.components.SwitchRow(tr("Prévu dans ce cycle"), null, scheduled) { scheduled = it }
             PlanStepper(tr("Séries"), sets, 1, 10) { sets = it }
             PlanStepper(tr("Répétitions min."), min, 1, 50) { min = it; if (max < it) max = it }
             PlanStepper(tr("Répétitions max."), max, 1, 60) { max = it.coerceAtLeast(min) }
@@ -250,10 +256,11 @@ private fun PlanExerciseSheet(
             Spacer(Modifier.height(14.dp))
             if (multiCycle) {
                 PillButton(tr("Enregistrer pour ce cycle"), Modifier.fillMaxWidth()) {
-                    onSave(pe.copy(cycles = pe.cycles.toMutableList().also { it[cycle.coerceIn(0, it.lastIndex)] = built() }))
+                    onSave(pe.copy(cycles = pe.cycles.toMutableList().also { it[cycle.coerceIn(0, it.lastIndex)] = built() },
+                        skippedCycles = if (scheduled) pe.skippedCycles - cycle else pe.skippedCycles + cycle))
                 }
                 PillButton(tr("Enregistrer pour tous les cycles"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false) {
-                    onSaveAll(pe.copy(cycles = pe.cycles.map { built() }))
+                    onSaveAll(pe.copy(cycles = pe.cycles.map { built() }, skippedCycles = if (scheduled) emptySet() else pe.cycles.indices.toSet()))
                 }
             } else PillButton(tr("Enregistrer"), Modifier.fillMaxWidth()) { onSaveAll(pe.copy(cycles = pe.cycles.map { built() }.ifEmpty { listOf(built()) })) }
             Spacer(Modifier.height(14.dp))

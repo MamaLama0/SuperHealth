@@ -1,0 +1,3 @@
+SuperHealth 1.3 : trois pauses avec des repères écrits, sans enregistrement vocal.
+Gongs et ambiances : synthétisés pour SuperHealth (tools/plugins/build_meditation_audio.py).
+Les anciens fichiers vocaux conservés dans les sources ne sont pas inclus dans cette archive ; leurs crédits figurent dans audio/voice/NOTICE.txt.

@@ -2,6 +2,7 @@ package app.superhealth.ui
 
 import app.superhealth.platform.*
 
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,7 +30,7 @@ object Lang {
 
 /** Dictionnaires de la coque, puis des modules nutrition et entraînement. */
 private val dictionaries by lazy {
-    listOf(StringsIos.map, SuperStrings.map, Strings11.map, Strings12.map, Strings13.map, Strings14.map, Strings15.map, Strings16.map, Strings17.map, Strings18.map, Strings21.map, Strings22.map, Strings23.map, Strings24.map, app.superhealth.nutrition.ui.EnStrings.map, app.superhealth.training.ui.EnStrings.map)
+    listOf(StringsIos.map, SuperStrings.map, Strings11.map, Strings12.map, Strings13.map, Strings14.map, Strings15.map, Strings16.map, Strings17.map, Strings18.map, Strings21.map, Strings22.map, Strings23.map, Strings24.map, Strings25.map, Strings26.map, app.superhealth.nutrition.ui.EnStrings.map, app.superhealth.training.ui.EnStrings.map)
 }
 private val reverse: Map<String, String> by lazy { dictionaries.reversed().flatMap { it.entries }.associate { (k, v) -> v to k } }
 

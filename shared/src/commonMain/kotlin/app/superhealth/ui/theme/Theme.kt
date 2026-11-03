@@ -1,6 +1,7 @@
 package app.superhealth.ui.theme
 
 import app.superhealth.platform.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalContentColor
@@ -243,6 +244,12 @@ data class MfColors(
     val strong: Color,
     val onStrong: Color,
 )
+
+/**
+ * Filet des surfaces flottantes (barre du bas, barre de recherche, bulles) : les cartes du thème d'origine n'en ont pas,
+ * mais posées sur le fond clair, une pilule blanche sans bord se confond avec les cartes blanches qui défilent dessous.
+ */
+val MfColors.edge: Color get() = if (dark) Color(0x1FFFFFFF) else Color(0x1A000000)
 
 private fun onAccent(accent: Color) = if (accent.luminance() > 0.62f) Color(0xFF1C1C1E) else Color.White
 

@@ -2,6 +2,7 @@ package app.superhealth.nutrition.ui.screens
 
 import app.superhealth.platform.*
 
+
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import androidx.compose.foundation.background
@@ -94,10 +95,12 @@ import kotlin.math.roundToInt
 enum class Range(val label: String, val days: Int?) { W1("1S", 7), M1("1M", 30), M3("3M", 90), M6("6M", 182), Y1("1A", 365), ALL(tr("Tout"), null) }
 
 @Composable
-fun DetailScaffold(title: String, onBack: () -> Unit, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+fun DetailScaffold(title: String, onBack: () -> Unit, action: (@Composable () -> Unit)? = null, contentSpacing: androidx.compose.ui.unit.Dp = 0.dp, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxSize().background(Mf.colors.background).statusBarsPadding()) {
         app.superhealth.nutrition.ui.components.NavBar(tr(title), onBack) { action?.invoke() }
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding(), content = content)
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding()
+            .padding(top = if (contentSpacing > 0.dp) 8.dp else 0.dp, bottom = if (contentSpacing > 0.dp) 24.dp else 0.dp),
+            verticalArrangement = Arrangement.spacedBy(contentSpacing), content = content)
     }
 }
 
