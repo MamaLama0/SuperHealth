@@ -47,9 +47,22 @@ internal object HcOutdoorSync {
             )
         }
     }
-    /** Ignore incidental overlaps and different sports. */
-    fun duplicate(a: Bridge.Kind, start: Long, end: Long, b: Bridge.Kind, otherStart: Long, otherEnd: Long): Boolean {
-        if(a!=b || end<=start || otherEnd<=otherStart) return false
-        return (minOf(end,otherEnd)-maxOf(start,otherStart)).coerceAtLeast(0)>0.75*maxOf(end-start,otherEnd-otherStart)
+    /** Les sources peuvent fournir un chrono actif ou un temps écoulé pour une même sortie. */
+    fun sameStartAndDistance(start: Long, end: Long, distanceM: Double?, otherStart: Long, otherEnd: Long, otherDistanceM: Double?): Boolean {
+        if (end - start < 60000 || otherEnd - otherStart < 60000) return false
+        if (distanceM == null || otherDistanceM == null || !distanceM.isFinite() || !otherDistanceM.isFinite()) return false
+        if (distanceM <= 0 || otherDistanceM <= 0 || kotlin.math.abs(start - otherStart) > 60000) return false
+        return kotlin.math.abs(distanceM - otherDistanceM) <= maxOf(50.0, 0.03 * maxOf(distanceM, otherDistanceM))
+    }
+
+    /** Ignore les chevauchements fortuits et les sports ou distances incompatibles. */
+    fun duplicate(a: Bridge.Kind, start: Long, end: Long, b: Bridge.Kind, otherStart: Long, otherEnd: Long,
+                  distanceM: Double? = null, otherDistanceM: Double? = null): Boolean {
+        if (a != b || end <= start || otherEnd <= otherStart) return false
+        if (distanceM != null && otherDistanceM != null && distanceM > 0 && otherDistanceM > 0 &&
+            kotlin.math.abs(distanceM - otherDistanceM) > maxOf(100.0, 0.15 * maxOf(distanceM, otherDistanceM))) return false
+        val overlap = (minOf(end, otherEnd) - maxOf(start, otherStart)).coerceAtLeast(0)
+        return overlap > 0.75 * maxOf(end - start, otherEnd - otherStart) ||
+            sameStartAndDistance(start, end, distanceM, otherStart, otherEnd, otherDistanceM)
     }
 }

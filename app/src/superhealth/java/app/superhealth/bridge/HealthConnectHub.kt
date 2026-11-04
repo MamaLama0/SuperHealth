@@ -3,6 +3,9 @@ package app.superhealth.bridge
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.DistanceRecord
@@ -66,6 +69,7 @@ const val DEMO_RECORD_PREFIX = "shdemo-"
 private fun Metadata.foreign(me: String) = dataOrigin.packageName != me || clientRecordId?.startsWith(DEMO_RECORD_PREFIX) == true
 
 object HealthConnectHub {
+    private val syncMutex = Mutex()
     private fun read(c: KClass<out androidx.health.connect.client.records.Record>) = HealthPermission.getReadPermission(c)
     private fun write(c: KClass<out androidx.health.connect.client.records.Record>) = HealthPermission.getWritePermission(c)
 
@@ -73,7 +77,7 @@ object HealthConnectHub {
         read(StepsRecord::class), read(WeightRecord::class), read(BodyFatRecord::class),
         read(HeartRateRecord::class), read(RestingHeartRateRecord::class), read(SleepSessionRecord::class),
         read(HeartRateVariabilityRmssdRecord::class), read(OxygenSaturationRecord::class), read(ExerciseSessionRecord::class),
-        read(RespiratoryRateRecord::class), read(DistanceRecord::class), read(ActiveCaloriesBurnedRecord::class), read(Vo2MaxRecord::class),
+        read(RespiratoryRateRecord::class), read(DistanceRecord::class), read(ActiveCaloriesBurnedRecord::class), read(TotalCaloriesBurnedRecord::class), read(Vo2MaxRecord::class),
         write(WeightRecord::class), write(BodyFatRecord::class), write(NutritionRecord::class),
         write(ExerciseSessionRecord::class), write(HydrationRecord::class),
         write(DistanceRecord::class), write(ActiveCaloriesBurnedRecord::class),
@@ -105,7 +109,33 @@ object HealthConnectHub {
             ?: trf("%1\$s j lus · %2\$s pesée(s) · %3\$s activité(s) · %4\$s envoi(s)", readDays, weightsIn, sessionsIn, written)
     }
 
-    suspend fun sync(ctx: Context): Result {
+    /** Relit seulement les entêtes de séances au retour d'une app de sport. */
+    suspend fun activitiesChanged(ctx: Context): Boolean {
+        if (!SuperPrefs.settings.value.healthConnect || status(ctx) != Status.AVAILABLE) return false
+        return try {
+            val client = HealthConnectClient.getOrCreate(ctx)
+            if (read(ExerciseSessionRecord::class) !in client.permissionController.getGrantedPermissions()) return false
+            val zone = ZoneId.systemDefault()
+            val today = LocalDate.now()
+            val from = today.minusDays(WINDOW_DAYS).atStartOfDay(zone).toInstant()
+            val range = TimeRangeFilter.between(from, today.plusDays(1).atStartOfDay(zone).toInstant())
+            val recent = readAll(client, ExerciseSessionRecord::class, range)
+                .filter { it.metadata.foreign(ctx.packageName) }.map { it.header() }
+            HcSessions.metadataChanged(SuperPrefs.hc.value.sessions, recent, from.toEpochMilli())
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun ExerciseSessionRecord.header() = HcSession(metadata.id, exerciseType, title,
+        startTime.toEpochMilli(), endTime.toEpochMilli(), metadata.dataOrigin.packageName,
+        clientRecordId = metadata.clientRecordId, modifiedAt = metadata.lastModifiedTime.toEpochMilli())
+
+    suspend fun sync(ctx: Context): Result = syncMutex.withLock { syncLocked(ctx) }
+
+    private suspend fun syncLocked(ctx: Context): Result {
         if (!SuperPrefs.settings.value.healthConnect) return Result(0, 0, 0, 0, "Health Connect désactivé")
         if (status(ctx) != Status.AVAILABLE) return Result(0, 0, 0, 0, "Health Connect indisponible")
         val client = HealthConnectClient.getOrCreate(ctx)
@@ -154,7 +184,7 @@ object HealthConnectHub {
                 repo.weighIns.upsertAll(news); weightsIn = news.size
             }
             // Constantes et séances d'autres apps : servent quand la montre n'est pas gérée par SuperHealth.
-            SuperPrefs.setHc(readHealth(client, granted, range, me, zone, ctx.packageManager))
+            SuperPrefs.setHc(readHealth(client, granted, range, me, zone, ctx.packageManager, from.atStartOfDay(zone).toInstant().toEpochMilli()))
             sessionsIn = SuperPrefs.hc.value.sessions.size
 
             // Écriture : pesées, total nutritionnel du jour, séances de musculation, hydratation (clientRecordId stable → remplacement).
@@ -231,8 +261,11 @@ object HealthConnectHub {
                 written += records.size
             }
             Result(readDays, weightsIn, sessionsIn, written)
-        }.getOrElse { Result(readDays, weightsIn, sessionsIn, written, it.message ?: it.javaClass.simpleName) }
-        SuperPrefs.update { it.copy(lastHcSync = System.currentTimeMillis(), lastHcSummary = result.summary()) }
+        }.getOrElse {
+            if (it is kotlinx.coroutines.CancellationException) throw it
+            Result(readDays, weightsIn, sessionsIn, written, it.message ?: it.javaClass.simpleName)
+        }
+        SuperPrefs.update { it.copy(lastHcSync = if (result.error == null) System.currentTimeMillis() else it.lastHcSync, lastHcSummary = result.summary()) }
         return result
     }
 
@@ -250,7 +283,7 @@ object HealthConnectHub {
     }
 
     private suspend fun readHealth(client: HealthConnectClient, granted: Set<String>, range: TimeRangeFilter, me: String, zone: ZoneId,
-                                   pm: android.content.pm.PackageManager): HcCache {
+                                   pm: android.content.pm.PackageManager, fromMs: Long): HcCache {
         fun Instant.day() = atZone(zone).toLocalDate().toEpochDay()
         fun <T> List<T>.avgBy(day: (T) -> Long, v: (T) -> Double) = groupBy(day).mapValues { (_, l) -> l.map(v).average() }
         val prev = SuperPrefs.hc.value
@@ -262,8 +295,8 @@ object HealthConnectHub {
         suspend fun <R : androidx.health.connect.client.records.Record> others(type: KClass<R>): List<R>? =
             if (read(type) in granted) readAll(client, type, range).filter { it.metadata.foreign(me) } else null
         // Pouls : moyenne du jour, et minute par minute dans des fichiers (Effort, zones, courbe du jour).
-        val hrSamples = others(HeartRateRecord::class)?.noteOrigin(Metric.HEART_RATE) { it.endTime }
-            ?.flatMap { r -> r.samples.map { it.time.toEpochMilli() to it.beatsPerMinute } }
+        val hrRecords = others(HeartRateRecord::class)?.noteOrigin(Metric.HEART_RATE) { it.endTime }
+        val hrSamples = hrRecords?.flatMap { r -> r.samples.map { it.time.toEpochMilli() to it.beatsPerMinute } }
         val hr = hrSamples?.let { s ->
             val minutes = HcHeart.byMinute(s, zone)
             HcHeart.store(minutes)
@@ -307,27 +340,50 @@ object HealthConnectHub {
         }.getOrNull()
         val distance = daily(DistanceRecord::class, DistanceRecord.DISTANCE_TOTAL) { (it as androidx.health.connect.client.units.Length).inKilometers } ?: prev.distanceKm
         val kcal = daily(ActiveCaloriesBurnedRecord::class, ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL) { (it as Energy).inKilocalories } ?: prev.activeKcal
-        if (distance.isNotEmpty()) others(DistanceRecord::class)?.noteOrigin(Metric.DISTANCE) { it.endTime }
+        val distanceRecords = others(DistanceRecord::class)?.noteOrigin(Metric.DISTANCE) { it.endTime }
+        val activeRecords = others(ActiveCaloriesBurnedRecord::class)
+        val totalRecords = others(TotalCaloriesBurnedRecord::class)
         // Séances : distance et calories de l'appli qui les a écrites, pouls d'après les minutes lues ci-dessus.
-        val sessions = others(ExerciseSessionRecord::class)?.map { r ->
+        val incoming = others(ExerciseSessionRecord::class)?.map { r ->
             val sr = TimeRangeFilter.between(r.startTime, r.endTime)
             val origin = setOf(r.metadata.dataOrigin)
-            val agg = runCatching {
-                client.aggregate(AggregateRequest(setOf(DistanceRecord.DISTANCE_TOTAL, ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), sr, origin))
+            val app = r.metadata.dataOrigin.packageName
+            val distanceId = HcSessions.metricClientId(app, r.metadata.clientRecordId, distance = true)
+            val calorieId = HcSessions.metricClientId(app, r.metadata.clientRecordId, distance = false)
+            val aggregate = runCatching {
+                val metrics = buildSet {
+                    if (read(DistanceRecord::class) in granted) add(DistanceRecord.DISTANCE_TOTAL)
+                    if (read(ActiveCaloriesBurnedRecord::class) in granted) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+                    if (read(TotalCaloriesBurnedRecord::class) in granted) add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+                }
+                if (metrics.isEmpty() || distanceId != null && calorieId != null) null
+                else client.aggregate(AggregateRequest(metrics, sr, origin))
             }.getOrNull()
-            val bpm = hrSamples?.filter { it.first in r.startTime.toEpochMilli()..r.endTime.toEpochMilli() && it.second in 30..230 }?.map { it.second }
-            // l'agrégat peut échouer (filtre d'origine refusé) : on additionne alors les mesures elles-mêmes
-            val dist = agg?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters ?: runCatching {
-                readAll(client, DistanceRecord::class, sr, origin).sumOf { it.distance.inMeters }
-            }.getOrNull()
-            val burned = agg?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories ?: runCatching {
-                readAll(client, ActiveCaloriesBurnedRecord::class, sr, origin).sumOf { it.energy.inKilocalories }
-            }.getOrNull()
-            HcSession(r.metadata.id, r.exerciseType, r.title, r.startTime.toEpochMilli(), r.endTime.toEpochMilli(), r.metadata.dataOrigin.packageName,
-                distanceM = dist?.takeIf { it > 0 },
-                kcal = burned?.takeIf { it > 0 },
-                avgHr = bpm?.takeIf { it.isNotEmpty() }?.average()?.toInt(), maxHr = bpm?.maxOrNull()?.toInt())
-        } ?: prev.sessions
+            fun Metadata.belongsTo(clientId: String) = dataOrigin.packageName == app && clientRecordId == clientId
+            val dist = if (distanceId != null) distanceRecords?.filter { it.metadata.belongsTo(distanceId) }?.sumOf { it.distance.inMeters }
+                else aggregate?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters ?: if (read(DistanceRecord::class) in granted) runCatching {
+                    readAll(client, DistanceRecord::class, sr, origin).sumOf { it.distance.inMeters }
+                }.getOrNull() else null
+            val burned = if (calorieId != null) activeRecords?.filter { it.metadata.belongsTo(calorieId) }?.sumOf { it.energy.inKilocalories }
+                else aggregate?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories ?: if (read(ActiveCaloriesBurnedRecord::class) in granted) runCatching {
+                    readAll(client, ActiveCaloriesBurnedRecord::class, sr, origin).sumOf { it.energy.inKilocalories }
+                }.getOrNull() else null
+            val total = if (calorieId != null) totalRecords?.filter { it.metadata.belongsTo(calorieId) }?.sumOf { it.energy.inKilocalories }
+                else aggregate?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories ?: if (read(TotalCaloriesBurnedRecord::class) in granted) runCatching {
+                    readAll(client, TotalCaloriesBurnedRecord::class, sr, origin).sumOf { it.energy.inKilocalories }
+                }.getOrNull() else null
+            // Les mesures d'une autre application ou d'un autre appareil ne sont pas attribuées à cette séance.
+            val samples = hrRecords?.filter { it.metadata.dataOrigin.packageName == app }
+                ?.flatMap { it.samples }?.filter { it.time >= r.startTime && it.time < r.endTime && it.beatsPerMinute in 30..230 }
+                .orEmpty()
+            val bpm = samples.map { it.beatsPerMinute }
+            val minutes = HcHeart.byMinute(samples.map { it.time.toEpochMilli() to it.beatsPerMinute }, zone).values.flatten().sortedBy { it.first }
+            r.header().copy(distanceM = dist?.takeIf { it.isFinite() && it > 0 },
+                kcal = burned?.takeIf { it.isFinite() && it > 0 },
+                avgHr = bpm.takeIf { it.isNotEmpty() }?.average()?.toInt(), maxHr = bpm.maxOrNull()?.toInt(),
+                totalKcal = total?.takeIf { it.isFinite() && it > 0 }, heartRate = minutes)
+        }
+        val sessions = incoming?.let { HcSessions.merge(prev.sessions, it, fromMs) } ?: prev.sessions
         // règles : périodes et jours de flux des autres applis (les 30 jours relus remplacent l'import précédent sur cette fenêtre)
         if (granted.containsAll(CYCLE_PERMISSIONS)) runCatching {
             val periods = others(androidx.health.connect.client.records.MenstruationPeriodRecord::class).orEmpty()

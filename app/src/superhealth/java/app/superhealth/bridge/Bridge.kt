@@ -278,11 +278,11 @@ object Bridge {
         // Séances Health Connect : on écarte celles qui recouvrent une séance déjà listée (même activité vue deux fois).
         val known = gym + watch + imported
         val hc = SuperPrefs.hc.value.sessions.filter { it.start in fromMs..toMs }.filter { s ->
-            raw || known.none { HcOutdoorSync.duplicate(it.kind,it.start,it.end,hcKind(s.type),s.start,s.end) }
+            raw || known.none { HcOutdoorSync.duplicate(it.kind,it.start,it.end,hcKind(s.type),s.start,s.end,it.distanceM,s.distanceM) }
         }.map { s -> Activity("h-${s.id}", hcKind(s.type), s.title ?: hcLabel(s.type), s.start, s.end, Source.HEALTH_CONNECT, hc = s) }
-        val distinctHc = hc.sortedByDescending { (if(it.hc?.distanceM != null) 2 else 0) + (if(it.hc?.avgHr != null) 1 else 0) }
+        val distinctHc = hc.sortedByDescending { (if(it.hc?.distanceM != null) 2 else 0) + (if(it.hc?.avgHr != null) 1 else 0) + (if(it.hc?.kcal != null) 1 else 0) + (if(it.hc?.totalKcal != null) 1 else 0) }
             .fold(emptyList<Activity>()) { accepted, activity ->
-                if(accepted.any { HcOutdoorSync.duplicate(it.kind,it.start,it.end,activity.kind,activity.start,activity.end) }) accepted else accepted+activity
+                if(accepted.any { HcOutdoorSync.duplicate(it.kind,it.start,it.end,activity.kind,activity.start,activity.end,it.distanceM,activity.distanceM) }) accepted else accepted+activity
             }
         return (known + distinctHc).sortedByDescending { it.start }
     }
@@ -316,7 +316,8 @@ object Bridge {
                 val duration = maxOf(other.end - other.start, record.end - record.start)
                 val a = other.distanceM
                 val b = record.distanceM
-                duration > 0 && overlap >= 0.8 * duration &&
+                duration > 0 && (overlap >= 0.8 * duration ||
+                    HcOutdoorSync.sameStartAndDistance(other.start, other.end, a, record.start, record.end, b)) &&
                     (a == null || b == null || a <= 0 || b <= 0 || kotlin.math.abs(a - b) <= maxOf(100.0, 0.15 * maxOf(a, b)))
             }
             val index = matches.singleOrNull()

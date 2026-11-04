@@ -169,7 +169,7 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             nav.askCoach(p?.replace("{details}", facts) ?: app.superhealth.ui.trf("Analyse cette séance : %1\$s", facts))
         }) { Icon(Icons.Rounded.AutoAwesome, tr("Analyse du coach"), tint = app.superhealth.ui.coach.CoachHue) }
         // séance importée (fichier GPX, TCX, FIT) : peut être retirée
-        if (detail != null && id < 0) IconButton(onClick = { confirmDelete = true }) {
+        if (detail != null && id < 0 && !app.superhealth.bridge.HcWorkouts.isHc(id)) IconButton(onClick = { confirmDelete = true }) {
             Icon(Icons.Rounded.Delete, tr("Supprimer"), tint = Mf.colors.textSecondary)
         }
     }) {
@@ -221,7 +221,7 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             .background(Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f)))).padding(16.dp)) {
             Row {
                 detail.distanceM?.let { Big(km(it), "km", tr("Distance"), hue, Modifier.weight(1f)) }
-                Big(clock(detail.activeSec), null, tr("Temps en mouvement"), hue, Modifier.weight(1f))
+                Big(clock(detail.activeSec), null, tr(if (detail.activeTimeKnown) "Temps en mouvement" else "Durée de séance"), hue, Modifier.weight(1f))
                 detail.avgSpeedMps?.let { v ->
                     if (detail.usesPace) Big(pace(1000 / v), "/km", tr("Allure moy."), hue, Modifier.weight(1f))
                     else Big(formatNumber(v * 3.6, 1), "km/h", tr("Vitesse moy."), hue, Modifier.weight(1f))
@@ -230,7 +230,8 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             val small = listOfNotNull(
                 detail.avgHr?.let { "$it" to tr("FC moy.") },
                 detail.maxHr?.let { "$it" to tr("FC max.") },
-                detail.kcal?.let { formatNumber(it) to tr("Calories") },
+                detail.kcal?.let { formatNumber(it) to tr(if (app.superhealth.bridge.HcWorkouts.isHc(id)) "Calories actives" else "Calories") },
+                detail.totalKcal?.let { formatNumber(it) to tr("Calories totales") },
                 detail.ascentM?.let { "${it.roundToInt()} m" to tr("Dénivelé +") },
                 detail.descentM?.let { "${it.roundToInt()} m" to tr("Dénivelé −") },
                 detail.avgCadence?.let { "${it.roundToInt()}" to tr(if (detail.usesPace) "Cadence (pas/min)" else "Cadence") },

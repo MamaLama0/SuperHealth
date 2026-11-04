@@ -98,6 +98,8 @@ import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
 import app.superhealth.has
 import app.superhealth.bridge.HealthConnectHub
+import app.superhealth.bridge.HcBackground
+import app.superhealth.bridge.SyncWorker
 import app.superhealth.nutrition.data.AppJson
 import app.superhealth.nutrition.data.Backup
 import app.superhealth.nutrition.domain.AccentColor
@@ -452,6 +454,26 @@ fun HealthConnectSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     val syncing by vm.syncing.collectAsState()
     DetailScaffold(tr("Health Connect"), onBack = { nav.popBackStack() }) {
         HealthConnectSection(vm, syncing)
+        Spacer(Modifier.height(12.dp))
+        MfCard {
+            Text(tr("Strava et Garmin Connect"), style = MaterialTheme.typography.titleMedium)
+            Text(tr("Activez le partage vers Health Connect dans votre app de sport, puis autorisez SuperHealth à lire les séances, la distance et les calories."),
+                style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+            Text(tr("Pour une sortie Strava manquante, ouvrez Strava et actualisez son fil. Les données disponibles dépendent de l’app source. Un fichier FIT ou GPX peut compléter un tracé absent."),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        }
+        val cache by app.superhealth.SuperPrefs.hc.collectAsState()
+        if (cache.sessions.isNotEmpty()) {
+            SectionLabel(tr("Sources des activités"))
+            GroupCard {
+                cache.sessions.groupBy { it.app }.entries.sortedBy { it.key }.forEachIndexed { index, (sourceApp, sessions) ->
+                    if (index > 0) RowDivider()
+                    SettingRow(app.superhealth.health.data.DataSource.appName(sourceApp) ?: sourceApp,
+                        trf("%1\$s activité(s)", sessions.size),
+                        subtitle = trf("Dernière séance %1\$s", app.superhealth.ui.relativeDay(app.superhealth.ui.localDate(sessions.maxOf { it.start }))))
+                }
+            }
+        }
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -500,12 +522,27 @@ private fun Label(text: String) {
 private fun HealthConnectSection(vm: SuperViewModel, syncing: Boolean) {
     val ctx = LocalContext.current
     val sh by vm.settings.collectAsState()
-    val status = remember { HealthConnectHub.status(ctx) }
+    val lifecycle by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    val status = remember(lifecycle) { HealthConnectHub.status(ctx) }
+    val backgroundAvailable = remember(status, lifecycle) { HcBackground.supported(ctx) }
+    val scope = rememberCoroutineScope()
     var granted by remember { mutableStateOf<Set<String>>(emptySet()) }
-    LaunchedEffect(sh.healthConnect, sh.lastHcSync) { granted = HealthConnectHub.granted(ctx) }
+    LaunchedEffect(sh.healthConnect, sh.lastHcSync, lifecycle) {
+        if (lifecycle.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+            granted = HealthConnectHub.granted(ctx)
+            SyncWorker.schedule(ctx)
+        }
+    }
     val ask = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { g ->
-        granted = g
         if (g.isNotEmpty()) { SuperPrefs.update { it.copy(healthConnect = true) }; vm.syncNow(ctx) }
+        scope.launch { granted = HealthConnectHub.granted(ctx); SyncWorker.schedule(ctx) }
+    }
+    val askBackground = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
+        scope.launch {
+            granted = HealthConnectHub.granted(ctx)
+            SyncWorker.schedule(ctx)
+            if (SuperPrefs.settings.value.healthConnect) vm.syncNow(ctx)
+        }
     }
     GroupCard {
         when (status) {
@@ -516,18 +553,31 @@ private fun HealthConnectSection(vm: SuperViewModel, syncing: Boolean) {
                 }
             }
             HealthConnectHub.Status.AVAILABLE -> {
-                val on = sh.healthConnect && granted.isNotEmpty()
+                val permissionCount = granted.count { it in HealthConnectHub.PERMISSIONS }
+                val on = sh.healthConnect && permissionCount > 0
                 SwitchRow(tr("Health Connect"), tr("Pas, poids, cœur, sommeil, repas et séances"), on) { v ->
-                    if (v) ask.launch(HealthConnectHub.PERMISSIONS) else SuperPrefs.update { it.copy(healthConnect = false) }
+                    if (v) ask.launch(HealthConnectHub.PERMISSIONS) else {
+                        SuperPrefs.update { it.copy(healthConnect = false) }
+                        SyncWorker.schedule(ctx)
+                    }
                 }
                 if (on) {
                     RowDivider()
                     SettingRow(tr("Synchroniser maintenant"), if (syncing) tr("En cours…") else null,
                         subtitle = sh.lastHcSummary?.let { app.superhealth.ui.relativeDay(app.superhealth.ui.localDate(sh.lastHcSync)) + " " +
                             app.superhealth.ui.timeOf(sh.lastHcSync) + " · " + it }, icon = Icons.Rounded.Sync) { vm.syncNow(ctx) }
-                    if (granted.size < HealthConnectHub.PERMISSIONS.size) {
+                    if (backgroundAvailable) {
                         RowDivider()
-                        SettingRow(tr("Autorisations"), subtitle = trf("%1\$s sur %2\$s accordées", granted.size, HealthConnectHub.PERMISSIONS.size)) {
+                        val background = HcBackground.PERMISSION in granted
+                        SettingRow(tr("Synchronisation en arrière-plan"), tr(if (background) "Activé" else "Autoriser"),
+                            subtitle = tr("Les activités peuvent être récupérées sans ouvrir SuperHealth. Android choisit le moment de la mise à jour.")) {
+                            if (background) runCatching { ctx.startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)) }
+                            else askBackground.launch(setOf(HcBackground.PERMISSION))
+                        }
+                    }
+                    if (permissionCount < HealthConnectHub.PERMISSIONS.size) {
+                        RowDivider()
+                        SettingRow(tr("Autorisations"), subtitle = trf("%1\$s sur %2\$s accordées", permissionCount, HealthConnectHub.PERMISSIONS.size)) {
                             ask.launch(HealthConnectHub.PERMISSIONS)
                         }
                     }

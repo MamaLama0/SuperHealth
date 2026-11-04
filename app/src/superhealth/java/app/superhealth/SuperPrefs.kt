@@ -444,7 +444,9 @@ data class HcPhase(val kind: String, val start: Long, val end: Long)
 /** Séance d'exercice enregistrée par une autre app (course, marche, vélo…). */
 @Serializable
 data class HcSession(val id: String, val type: Int, val title: String?, val start: Long, val end: Long, val app: String,
-                     val distanceM: Double? = null, val kcal: Double? = null, val avgHr: Int? = null, val maxHr: Int? = null)
+                     val distanceM: Double? = null, val kcal: Double? = null, val avgHr: Int? = null, val maxHr: Int? = null,
+                     val totalKcal: Double? = null, val clientRecordId: String? = null, val modifiedAt: Long? = null,
+                     val heartRate: List<Pair<Long, Int>>? = null)
 
 private val SuperJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; coerceInputValues = true }
 

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -289,6 +290,9 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
                     }
                 }
                 RecentActivities(vm, nav, false, true, app.superhealth.bridge.Bridge.Kind.RUN)
+                PillButton(tr("Synchronisation des apps"), Modifier.fillMaxWidth().padding(top = 10.dp), strong = false, icon = Icons.Rounded.Sync) {
+                    nav.go("settings/hc")
+                }
                 ImportActivitiesCard(vm, nav)
             }
             ActivitySection.MEDITATION -> Frame(tr("Méditation"), nav, null) { MeditationSection(nav) }

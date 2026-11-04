@@ -56,7 +56,20 @@ object HcWorkouts {
     /** Identifiants négatifs sous ceux des séances importées (bornées à 2⁴⁶ secondes). */
     private const val BASE = 1L shl 47
 
-    fun idOf(s: app.superhealth.HcSession): Long = -(BASE + s.start / 1000)
+    fun idOf(s: app.superhealth.HcSession): Long = stableId(s.app, s.clientRecordId ?: s.id)
+
+    private fun stableId(app: String, recordId: String): Long {
+        val identity = app + "\u0000" + recordId
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8))
+        val hash = java.nio.ByteBuffer.wrap(digest).long ushr 17
+        return -((1L shl 48) + hash)
+    }
+
+    private fun legacyId(s: app.superhealth.HcSession) = -(BASE + s.start / 1000)
+
+    internal fun sessionFor(id: Long, sessions: List<app.superhealth.HcSession>): app.superhealth.HcSession? =
+        sessions.firstOrNull { idOf(it) == id || stableId(it.app, it.id) == id }
+            ?: sessions.firstOrNull { legacyId(it) == id }
     fun isHc(id: Long) = id <= -BASE
 
     private val routes = ConcurrentHashMap<String, List<Pair<Double, Double>>>()
@@ -71,16 +84,16 @@ object HcWorkouts {
                 .readRecord(androidx.health.connect.client.records.ExerciseSessionRecord::class, s.id).record
             (rec.exerciseRouteResult as? androidx.health.connect.client.records.ExerciseRouteResult.Data)?.exerciseRoute?.route
                 ?.map { it.latitude to it.longitude }
-        }.getOrNull().orEmpty().also { routes[s.id] = it }
+        }.getOrNull().orEmpty().also { if (it.size >= 2) routes[s.id] = it }
         return r.takeIf { it.size >= 2 }
     }
 
     fun detail(id: Long): app.superhealth.health.data.WorkoutDetail? {
-        val s = app.superhealth.SuperPrefs.hc.value.sessions.firstOrNull { idOf(it) == id } ?: return null
+        val s = sessionFor(id, app.superhealth.SuperPrefs.hc.value.sessions) ?: return null
         val zone = java.time.ZoneId.systemDefault()
         val days = generateSequence(java.time.Instant.ofEpochMilli(s.start).atZone(zone).toLocalDate()) { it.plusDays(1) }
             .takeWhile { !it.isAfter(java.time.Instant.ofEpochMilli(s.end).atZone(zone).toLocalDate()) }.toList()
-        val pts = days.flatMap { HcHeart.minutes(it) }.filter { it.first * 1000 in s.start..s.end }
+        val pts = (s.heartRate ?: days.flatMap { HcHeart.minutes(it) }).filter { it.first * 1000 in s.start..s.end }
             .map { (t, bpm) -> app.superhealth.health.data.TrackPoint((t * 1000 - s.start) / 1000.0, 0.0, null, null, null, bpm, null, null) }
         val kind = when (Bridge.hcKindOf(s.type)) {
             Bridge.Kind.RUN -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.RUNNING
@@ -98,7 +111,7 @@ object HcWorkouts {
             activeSec = (s.end - s.start) / 1000.0, distanceM = s.distanceM, kcal = s.kcal, avgHr = s.avgHr, maxHr = s.maxHr,
             ascentM = null, descentM = null, avgCadence = null, maxSpeedMps = null, steps = null, aerobicTe = null, anaerobicTe = null,
             recoverySec = null, poolLengthM = null, swolf = null, strokes = null, predictions = emptyList(), zoneBounds = null,
-            points = pts, laps = emptyList(),
+            points = pts, laps = emptyList(), totalKcal = s.totalKcal, activeTimeKnown = false,
         )
     }
 }

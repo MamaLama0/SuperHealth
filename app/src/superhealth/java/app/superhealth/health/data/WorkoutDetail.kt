@@ -49,6 +49,9 @@ data class WorkoutDetail(
     val zoneBounds: List<Int>?,
     val points: List<TrackPoint>,
     val laps: List<Lap>,
+    val totalKcal: Double? = null,
+    /** false lorsque la source ne distingue pas les pauses dans la durée de séance. */
+    val activeTimeKnown: Boolean = true,
 ) {
     val hasGps: Boolean get() = points.count { it.lat != null } >= 2
     val isSwim: Boolean get() = kind.name.contains("SWIM")

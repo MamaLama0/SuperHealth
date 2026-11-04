@@ -114,7 +114,7 @@ fun ActivityRow(a: Bridge.Activity, horizontal: androidx.compose.ui.unit.Dp = 16
         Column(Modifier.weight(1f)) {
             Text(tr(a.title), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(listOfNotNull(relativeDay(localDate(a.start)), a.distanceM?.takeIf { it >= 100 }?.let { km(it) + " km" },
-                formatDuration(a.minutes.toDouble()), a.run?.app ?: tr(a.source.label)).joinToString(" · "),
+                formatDuration(a.minutes.toDouble()), a.run?.app ?: a.hc?.app?.let { app.superhealth.health.data.DataSource.appName(it) ?: it } ?: tr(a.source.label)).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         hr?.let {
@@ -582,6 +582,6 @@ internal fun filterActivityHistory(list: List<Bridge.Activity>, kind: Bridge.Kin
     val search = query.trim()
     return list.filter { a ->
         (kind == null || a.kind == kind) && (search.isEmpty() ||
-            listOf(a.title, tr(Bridge.kindLabel(a.kind.name)), a.run?.app ?: tr(a.source.label)).any { it.contains(search, ignoreCase = true) })
+            listOf(a.title, tr(Bridge.kindLabel(a.kind.name)), a.run?.app ?: a.hc?.app?.let { app.superhealth.health.data.DataSource.appName(it) ?: it } ?: tr(a.source.label)).any { it.contains(search, ignoreCase = true) })
     }.sortedByDescending { it.start }
 }

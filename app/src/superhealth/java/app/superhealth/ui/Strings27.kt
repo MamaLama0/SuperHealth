@@ -2,6 +2,15 @@ package app.superhealth.ui
 
 object Strings27 {
     val map = mapOf(
+        "%1\$s activité(s)" to "%1\$s activity/activities",
+        "Synchronisation des apps" to "App sync",
+        "Strava et Garmin Connect" to "Strava and Garmin Connect",
+        "Activez le partage vers Health Connect dans votre app de sport, puis autorisez SuperHealth à lire les séances, la distance et les calories." to "Enable Health Connect sharing in your sports app, then allow SuperHealth to read workouts, distance and calories.",
+        "Pour une sortie Strava manquante, ouvrez Strava et actualisez son fil. Les données disponibles dépendent de l’app source. Un fichier FIT ou GPX peut compléter un tracé absent." to "If a Strava activity is missing, open Strava and refresh its feed. Available data depends on the source app; a FIT or GPX file can add a missing route.",
+        "Sources des activités" to "Activity sources",
+        "Dernière séance %1\$s" to "Latest workout %1\$s",
+        "Durée de séance" to "Session duration",
+        "Calories totales" to "Total calories",
         "Vos courses apparaîtront ici après synchronisation ou import d’un fichier." to "Your runs will appear here after syncing or importing a file.",
         "Rechercher une activité" to "Search activities",
         "Aucune activité ne correspond aux filtres." to "No activities match the filters.",
@@ -142,5 +151,7 @@ object Strings27 {
         "Record du %1\$s" to "Personal best on %1\$s",
         "Séance du %1\$s" to "Workout on %1\$s",
         "Activité du %1\$s" to "Activity on %1\$s",
+        "Synchronisation en arrière-plan" to "Background sync",
+        "Les activités peuvent être récupérées sans ouvrir SuperHealth. Android choisit le moment de la mise à jour." to "Activities can be retrieved without opening SuperHealth. Android decides when updates run.",
     )
 }

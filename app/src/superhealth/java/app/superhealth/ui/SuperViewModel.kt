@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import app.superhealth.SuperPrefs
 import app.superhealth.bridge.Bridge
 import app.superhealth.bridge.HealthConnectHub
+import app.superhealth.bridge.SyncWorker
 import app.superhealth.bridge.Watch
 import app.superhealth.health.data.DeviceUi
 import app.superhealth.health.data.HealthRepository
@@ -93,11 +94,13 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }.launchIn(viewModelScope)
         ManualLogStore.get(app).changes.drop(1).onEach { HealthRepository.invalidate(); bump() }.launchIn(viewModelScope)
+        SuperPrefs.hc.drop(1).onEach { HealthRepository.invalidate(); bump() }.launchIn(viewModelScope)
     }
 
     fun bump() { _refresh.value++ }
 
     fun onResume(ctx: Context) {
+        SyncWorker.schedule(ctx)
         if (::nutrition.isInitialized) nutrition.refreshDay()
         if (Watch.enabled) runCatching { GBApplication.deviceService().requestDeviceInfo() }
         // Montre déconnectée (après une mise à jour, hors de portée…) : reconnexion tout de suite plutôt qu'au prochain essai du moteur.
@@ -113,7 +116,9 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
         val s = settings.value
         val stale = System.currentTimeMillis() - s.lastHcSync > 15 * 60_000L
         viewModelScope.launch {
-            if (s.healthConnect && stale) runCatching { HealthConnectHub.sync(ctx.applicationContext) }
+            if (s.healthConnect && (stale || HealthConnectHub.activitiesChanged(ctx.applicationContext))) {
+                runCatching { HealthConnectHub.sync(ctx.applicationContext) }
+            }
             runCatching { Bridge.pullWatch(ctx.applicationContext) }
             bump()
         }
