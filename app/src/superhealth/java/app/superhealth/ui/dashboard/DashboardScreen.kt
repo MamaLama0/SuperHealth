@@ -456,6 +456,13 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                     CheckInBanner(vm, an, now)
                     WeighBanner(vm, an, now)
                     MoodBanner(vm, sh, now, refresh)
+                    // bilan de la semaine : dimanche soir et lundi matin, jusqu'à ouverture
+                    val recapWindow = app.superhealth.league.WeeklyRecap.due(java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime(), sh.recapSeenWeek)
+                    // pas de bilan sans activité suivie dans la semaine
+                    val recapDue by produceState(false, recapWindow) { value = recapWindow && runCatching { !app.superhealth.league.WeeklyRecap.compute(ctx).empty }.getOrDefault(false) }
+                    PromptBanner(recapDue, Icons.Rounded.Insights, HealthHues.Fitness, tr("Le bilan de votre semaine"), { nav.go("recap") }) {
+                        app.superhealth.SuperPrefs.update { it.copy(recapSeenWeek = app.superhealth.league.WeeklyRecap.weekFor(java.time.LocalDate.now())) }
+                    }
                 }
                 Spacer(Modifier.height(6.dp))
             }

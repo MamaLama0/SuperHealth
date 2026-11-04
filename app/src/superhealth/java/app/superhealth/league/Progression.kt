@@ -20,7 +20,8 @@ object Progression {
         val weekStart: Long = 0, val throughDay: Long = 0, val days: List<DayXp> = emptyList(), val streaks: List<Streak> = emptyList(), val records: Int = 0, val totals: Map<String, Long> = emptyMap(),
         /** Quêtes terminées de la semaine [weekStart] (noms de [WeeklyQuests.Metric]), pour le défi miroir entre amis. */
         val questsDone: List<String> = emptyList())
-    data class Result(val summary: Summary, val since: Long) {
+    /** [daily] : XP de chaque jour calculé (hors quêtes), pour le bilan d'une semaine passée ; jamais partagé. */
+    data class Result(val summary: Summary, val since: Long, val daily: Map<Long, Int> = emptyMap()) {
         val intoLevel get() = summary.totalXp - threshold(summary.level)
         val nextLevel get() = threshold(summary.level + 1) - threshold(summary.level)
     }
@@ -73,6 +74,6 @@ object Progression {
             streaks = Track.entries.filter { it in tracked }.map { t -> streak(t, valid.filterValues { t in it }.keys, today, goals[t.name] ?: if (t.weekly) 2 else 1, since,
                 dailyCounts = sessions.takeIf { t == Track.STRENGTH }, weeklyGoals = strengthGoals.takeIf { t == Track.STRENGTH }.orEmpty()) },
             records = records.filterKeys { it <= today }.values.sum())
-        return Result(summary, since)
+        return Result(summary, since, xp)
     }
 }

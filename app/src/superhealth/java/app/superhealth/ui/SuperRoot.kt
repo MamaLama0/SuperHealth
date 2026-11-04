@@ -286,6 +286,7 @@ fun SuperRoot(vm: SuperViewModel) {
                 app.superhealth.ui.league.ProfileBadgesScreen(nav,it.arguments?.getString("category") ?: "xp")
             }
             composable("quests") { app.superhealth.ui.league.WeeklyQuestsScreen(nav) }
+            composable("recap") { app.superhealth.ui.league.RecapScreen(nav) }
             composable("progress") { app.superhealth.ui.league.ProgressScreen(nav) }
             composable("league/settings") { app.superhealth.ui.league.LeagueSettingsScreen(nav) }
             composable("group/sharing") { app.superhealth.ui.league.GroupSharingScreen(nav) }

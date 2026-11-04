@@ -1,5 +1,6 @@
 package app.superhealth.training.ui.screens
 
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.CheckCircle
 import app.superhealth.ui.theme.container
 import androidx.compose.ui.draw.shadow
@@ -467,12 +468,21 @@ private fun ExercisePage(
             }
         }
     }
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    /** Appui long sur l'exercice : charges et répétitions exactes de la dernière séance. */
+    fun repeatLast() {
+        val n = vm.repeatLast(index)
+        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        android.widget.Toast.makeText(ctx, if (n > 0) tr("Séries reprises de la dernière séance") else tr("Pas encore de séance précédente pour cet exercice"), android.widget.Toast.LENGTH_SHORT).show()
+    }
     val inSuperset = ex.supersetGroup != null
     val groupSize = if (inSuperset) s.exercises.count { it.supersetGroup == ex.supersetGroup } else 0
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 160.dp)) {
         Hero(e, settings, index, s.exercises.size, groupSize,
-            ex.supersetGroup?.let { g -> s.exercises.mapNotNull { it.supersetGroup }.distinct().indexOf(g).takeIf { it >= 0 }?.let { 'A' + it } }) { nav.navigate("exercise/${ex.exerciseId}") }
+            ex.supersetGroup?.let { g -> s.exercises.mapNotNull { it.supersetGroup }.distinct().indexOf(g).takeIf { it >= 0 }?.let { 'A' + it } },
+            onRepeat = { repeatLast() }) { nav.navigate("exercise/${ex.exerciseId}") }
         // Actions de l'exercice (workout_exercise_builder) : repos et remplacement à portée de pouce, le reste dans une petite
         // fenêtre d'options. Plus de rangée glissante : un glissement raté y emmenait à l'exercice voisin.
         val st by vm.state.collectAsState()
@@ -492,6 +502,7 @@ private fun ExercisePage(
                 if (s.exercises.size > 1 && (!inSuperset || groupEnd < s.exercises.size - 1))
                     add(ExOption(Icons.Rounded.Link, if (!inSuperset) tr("Superset") else if (groupSize == 2) tr("Triset") else tr("Lier au suivant")) { vm.linkNext(groupEnd) })
                 if (inSuperset) add(ExOption(Icons.Rounded.LinkOff, tr("Détacher"), active = true) { vm.unlink(index) })
+                add(ExOption(Icons.Rounded.History, tr("Comme la dernière fois")) { repeatLast() })
                 add(ExOption(Icons.Rounded.Flag, tr("Objectifs"), onClick = onTargets))
                 add(ExOption(Icons.Rounded.StickyNote2, tr("Note"), active = ex.note.isNotBlank(), onClick = onNote))
                 add(ExOption(Icons.Rounded.FitnessCenter, tr("Calculateur")) { onPlates(ex.sets.firstOrNull { !it.done && it.type != SetType.WARMUP }?.let { it.weight ?: it.autoWeight } ?: 0.0) })
@@ -595,14 +606,15 @@ private fun ExercisePage(
 
 /** En-tête : photo de l'exercice (angles a/b/c, en touchant), dégradé, nom et muscles. */
 @Composable
-private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, groupSize: Int, supersetLetter: Char? = null, onInfo: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, groupSize: Int, supersetLetter: Char? = null, onRepeat: (() -> Unit)? = null, onInfo: () -> Unit) {
     val angles = e?.images.orEmpty()
     var angle by remember(e?.id) { mutableIntStateOf(0) }
     val path = angles.getOrNull(angle)?.let { "ex/${e!!.id}_${it}.webp" } ?: e?.thumbnail()
     val heroStyle = app.superhealth.ui.theme.StyleLab.hero()
     if (heroStyle == app.superhealth.ui.theme.StyleLab.Hero.NONE) {
         // labo de style : en-tête sans photo, vignette ronde et nom
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onInfo).padding(vertical = 4.dp),
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).combinedClickable(onClick = onInfo, onLongClick = onRepeat).padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             AsyncAsset(e?.thumbnail(), Modifier.size(56.dp).clip(CircleShape).background(Mf.colors.chip), fallback = e?.name ?: "?", sample = 2)
             Spacer(Modifier.width(12.dp))
@@ -622,7 +634,7 @@ private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, group
     val heroHeight = if (heroStyle == app.superhealth.ui.theme.StyleLab.Hero.COMPACT) 150.dp else 230.dp
     Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(heroHeight).clip(RoundedCornerShape(24.dp))
         .background(Mf.colors.chip)
-        .clickable { if (angles.size > 1) angle = (angle + 1) % angles.size else onInfo() }) {
+        .combinedClickable(onClick = { if (angles.size > 1) angle = (angle + 1) % angles.size else onInfo() }, onLongClick = onRepeat)) {
         if (path != null && angles.isNotEmpty()) AsyncAsset(path, Modifier.fillMaxSize(), fallback = e?.name ?: "?")
         else if (e != null) {
             // Pas de photo dans l'APK : silhouette des muscles travaillés (principaux en plein, secondaires atténués)

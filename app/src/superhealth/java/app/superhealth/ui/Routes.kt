@@ -20,7 +20,7 @@ object Routes {
         // 2.1 : écran Constantes (widget)
         "h/vitals",
         // 2.5 : widgets des plugins
-        "league", "progress", "quests", "friends", "social", "feed", "widgets",
+        "league", "progress", "quests", "recap", "friends", "social", "feed", "widgets",
     )
     private val patterns = listOf(Regex("group/circles\\?circle=[a-f0-9]{32}(&post=[a-f0-9]{32})?"),Regex("group/post/[a-f0-9]{16}/[a-f0-9]{32}(\\?reply=[a-f0-9]{32})?"), Regex("search/[01]/-1"), Regex("h/metric/[A-Z0-9_]{1,32}"), Regex("exercise/[A-Za-z0-9_-]{1,64}"))
 

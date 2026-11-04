@@ -107,9 +107,51 @@ object Reminders {
         val open = PendingIntent.getActivity(ctx, 7400 + k.ordinal, Intent(ctx, MainActivity::class.java)
             .putExtra(MainActivity.EXTRA_ROUTE, if (k == Kind.WEIGH && checkInDue()) "checkin" else k.route).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        nm.notify(7500 + k.ordinal, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_notification)
+        val builder = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_notification)
             .setContentTitle(tr(k.title)).setContentText(body).setContentIntent(open).setAutoCancel(true)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER).build())
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+        // pesée simple (pas de check-in) : le poids se saisit directement dans la notification
+        if (k == Kind.WEIGH && !checkInDue()) builder.addAction(weighAction(ctx))
+        nm.notify(7500 + k.ordinal, builder.build())
+    }
+
+    const val WEIGH_INPUT = "app.superhealth.WEIGH_INPUT"
+    private const val WEIGHT_KEY = "weight"
+
+    private fun weighAction(ctx: Context): NotificationCompat.Action {
+        val unit = app.superhealth.nutrition.NutriApp.repository.prefs.settings.value.weightUnit.label
+        val input = androidx.core.app.RemoteInput.Builder(WEIGHT_KEY).setLabel(trf("Poids (%1\$s)", unit)).build()
+        val reply = PendingIntent.getBroadcast(ctx, 7600, Intent(ctx, RemindersReceiver::class.java).setAction(WEIGH_INPUT),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+        return NotificationCompat.Action.Builder(android.R.drawable.ic_menu_edit, tr("Saisir mon poids"), reply).addRemoteInput(input).build()
+    }
+
+    /** Poids saisi dans la notification : « 72,4 », « 72.4 kg »… null si illisible ou hors de 25–400 kg. */
+    internal fun parseWeight(text: String?, lb: Boolean): Double? {
+        val v = text?.trim()?.replace(',', '.')?.let { Regex("[0-9]+(\\.[0-9]+)?").find(it)?.value }?.toDoubleOrNull() ?: return null
+        val kg = if (lb) v * 0.45359237 else v
+        return kg.takeIf { it in 25.0..400.0 }
+    }
+
+    /** Enregistre la pesée du jour depuis la notification, puis remplace la notification par une confirmation. */
+    suspend fun weighFromNotification(ctx: Context, intent: Intent) {
+        val repo = app.superhealth.nutrition.NutriApp.repository
+        val settings = repo.prefs.settings.value
+        val text = androidx.core.app.RemoteInput.getResultsFromIntent(intent)?.getCharSequence(WEIGHT_KEY)?.toString()
+        val kg = parseWeight(text, settings.weightUnit == app.superhealth.nutrition.domain.WeightUnit.LB)
+        val nm = ctx.getSystemService(NotificationManager::class.java)
+        val builder = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_notification)
+            .setContentTitle(tr(Kind.WEIGH.title)).setAutoCancel(true).setOnlyAlertOnce(true).setSilent(true)
+        if (kg == null) {
+            nm.notify(7500 + Kind.WEIGH.ordinal, builder.setContentText(tr("Poids illisible. Réessayez, par exemple 72,4.")).addAction(weighAction(ctx)).build())
+            return
+        }
+        val today = LocalDate.now().toEpochDay()
+        val fat = repo.weighIns.all().firstOrNull { it.epochDay == today }?.bodyFatPct
+        repo.weighIns.upsert(app.superhealth.nutrition.data.WeighInEntity(today, kg, fat))
+        val shown = if (settings.weightUnit == app.superhealth.nutrition.domain.WeightUnit.LB) kg / 0.45359237 else kg
+        nm.notify(7500 + Kind.WEIGH.ordinal, builder.setContentText(trf("Pesée enregistrée : %1\$s %2\$s", "%.1f".format(app.superhealth.ui.Lang.locale, shown), settings.weightUnit.label))
+            .setTimeoutAfter(8000).build())
     }
 }
 
@@ -120,6 +162,7 @@ class RemindersReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.Default).launch {
             runCatching {
                 when (intent.action) {
+                    Reminders.WEIGH_INPUT -> Reminders.weighFromNotification(app, intent)
                     "app.superhealth.REMINDER" -> Reminders.Kind.entries.firstOrNull { it.name == intent.getStringExtra("kind") }?.let { Reminders.fire(app, it) }
                     else -> Reminders.schedule(app)
                 }

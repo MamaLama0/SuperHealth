@@ -370,10 +370,10 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         val q = query.trim()
         local = if (q.isEmpty()) emptyList() else vm.repo.foods.search(q)
         swiss = if (q.length < 2 || !s.swissDbEnabled) emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            SwissFoods.search(ctx, q).map(SwissFoods::toFood)
+            app.superhealth.nutrition.data.GenericFoods.swiss(ctx, q)
         }
         usda = if (q.length < 2 || !s.usdaOn) emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            app.superhealth.nutrition.data.UsdaFoods.search(ctx, q, 25).map(app.superhealth.nutrition.data.UsdaFoods::toFood)
+            app.superhealth.nutrition.data.GenericFoods.usda(ctx, q, 25)
         }
         remote = emptyList(); searched = false
         if (q.length >= 3 && s.openFoodFactsEnabled) {
@@ -392,13 +392,19 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
             Text(tr("Tapez le nom d'un aliment."),
                 Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         }
-        if (swiss.isNotEmpty()) item { ListHeader(tr("Base suisse des valeurs nutritives")) }
-        items(swiss, key = { "s" + it.name }) { FoodRow(it, s) { onPick(it) } }
-        if (usda.isNotEmpty()) item { ListHeader(tr("USDA FoodData Central")) }
-        items(usda, key = { "u" + it.name }) { FoodRow(it, s) { onPick(it) } }
+        // la base dans la langue de l'app d'abord, Open Food Facts ensuite, l'autre langue en dernier
+        val frenchFirst = app.superhealth.nutrition.data.GenericFoods.frenchFirst()
+        val first = if (frenchFirst) swiss else usda
+        val last = if (frenchFirst) usda else swiss
+        val firstTitle = tr(if (frenchFirst) "Base suisse des valeurs nutritives" else "USDA FoodData Central")
+        val lastTitle = tr(if (frenchFirst) "USDA FoodData Central" else "Base suisse des valeurs nutritives")
+        if (first.isNotEmpty()) item(key = "h-first") { ListHeader(firstTitle) }
+        items(first, key = { "a" + it.source + it.name }) { FoodRow(it, s) { onPick(it) } }
         if (loading) item { Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Mf.colors.accent, strokeWidth = 2.dp, modifier = Modifier.size(28.dp)) } }
         if (remote.isNotEmpty()) item { ListHeader(tr("Open Food Facts")) }
         items(remote) { FoodRow(it, s) { onPick(it) } }
+        if (last.isNotEmpty()) item(key = "h-last") { ListHeader(lastTitle) }
+        items(last, key = { "b" + it.source + it.name }) { FoodRow(it, s) { onPick(it) } }
         if (searched && remote.isEmpty() && local.isEmpty() && swiss.isEmpty() && usda.isEmpty()) item {
             Text(tr("Aucun résultat (ou pas de réseau). Essayez « Créer » ou « Ajout rapide »."), Modifier.padding(16.dp), color = Mf.colors.textSecondary)
         }

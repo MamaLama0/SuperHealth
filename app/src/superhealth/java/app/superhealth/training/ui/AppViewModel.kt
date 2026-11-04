@@ -199,6 +199,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startEmpty() { val e = engine ?: return; update { it.copy(session = e.empty(activeGym()).copy(name = tr("Entraînement libre"))) } }
 
+    /**
+     * Reprend la dernière séance de l'exercice [index] : charges et répétitions exactes, série par série, sur les séries de
+     * travail pas encore faites. Elles sont marquées comme choisies à la main, la progression ne les réécrit pas.
+     * Rend le nombre de séries remplies.
+     */
+    fun repeatLast(index: Int): Int {
+        val e = engine ?: return 0
+        var filled = 0
+        update { s ->
+            val sess = s.session ?: return@update s
+            val ex = sess.exercises.getOrNull(index) ?: return@update s
+            val last = e.lastSets(ex.exerciseId, s.history)
+            if (last.isEmpty()) return@update s
+            var k = 0
+            val sets = ex.sets.map { set ->
+                if (set.done || set.type == SetType.WARMUP) return@map set
+                val p = last.getOrNull(k++) ?: return@map set
+                filled++
+                set.copy(weight = p.weight, reps = p.reps, partialReps = p.partials, weightEdited = true, repsEdited = true)
+            }
+            s.copy(session = sess.copy(exercises = sess.exercises.toMutableList().also { it[index] = ex.copy(sets = sets) }))
+        }
+        return filled
+    }
+
     fun session(f: (Session) -> Session) = update { s -> s.session?.let { s.copy(session = f(it)) } ?: s }
 
     fun addExercises(ids: List<String>) {

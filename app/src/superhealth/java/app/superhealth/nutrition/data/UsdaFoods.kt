@@ -26,12 +26,31 @@ object UsdaFoods {
     }
 }
 
-/** Activée par défaut quand l'app est en anglais ; le réglage explicite l'emporte. */
-val Settings.usdaOn get() = usdaDbEnabled ?: app.superhealth.ui.Lang.english
+/** Activée par défaut (ses résultats passent après ceux de la langue de l'app) ; le réglage explicite l'emporte. */
+val Settings.usdaOn get() = usdaDbEnabled ?: true
 
-/** Bases génériques embarquées (suisse puis USDA) selon les réglages, pour l'IA et les repas. */
+/**
+ * Bases génériques embarquées pour la recherche, l'IA et les repas. Chaque base est d'abord cherchée telle quelle, puis avec
+ * la requête traduite ([FoodLexicon]) ; la base dans la langue de l'app passe en premier.
+ */
 object GenericFoods {
-    fun search(context: Context, s: Settings, query: String, limit: Int): List<FoodEntity> =
-        (if (s.swissDbEnabled) SwissFoods.search(context, query, limit).map(SwissFoods::toFood) else emptyList()) +
-            (if (s.usdaOn) UsdaFoods.search(context, query, limit).map(UsdaFoods::toFood) else emptyList())
+    private fun merged(native: List<FoodEntity>, translated: List<FoodEntity>, limit: Int) =
+        (native + translated).distinctBy { it.name }.take(limit)
+
+    fun swiss(context: Context, query: String, limit: Int = 40): List<FoodEntity> = merged(
+        SwissFoods.search(context, query, limit).map(SwissFoods::toFood),
+        FoodLexicon.translate(query, toEnglish = false)?.let { q -> SwissFoods.search(context, q, limit).map(SwissFoods::toFood) }.orEmpty(), limit)
+
+    fun usda(context: Context, query: String, limit: Int = 40): List<FoodEntity> = merged(
+        UsdaFoods.search(context, query, limit).map(UsdaFoods::toFood),
+        FoodLexicon.translate(query, toEnglish = true)?.let { q -> UsdaFoods.search(context, q, limit).map(UsdaFoods::toFood) }.orEmpty(), limit)
+
+    /** Vrai si la base suisse (française) doit passer avant l'USDA. */
+    fun frenchFirst() = !app.superhealth.ui.Lang.english
+
+    fun search(context: Context, s: Settings, query: String, limit: Int): List<FoodEntity> {
+        val swiss = if (s.swissDbEnabled) swiss(context, query, limit) else emptyList()
+        val usda = if (s.usdaOn) usda(context, query, limit) else emptyList()
+        return if (frenchFirst()) swiss + usda else usda + swiss
+    }
 }
