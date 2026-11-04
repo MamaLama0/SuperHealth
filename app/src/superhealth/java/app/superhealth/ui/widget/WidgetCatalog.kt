@@ -29,6 +29,9 @@ object WidgetCatalog {
         Entry("chargeeffort", "Santé", ChargeEffortWidgetReceiver::class.java, R.string.widget_chargeeffort_name, R.string.widget_chargeeffort_desc),
         Entry("today", "Nutrition", TodayWidgetReceiver::class.java, R.string.widget_today_name, R.string.widget_today_desc),
         Entry("kcal", "Nutrition", KcalWidgetReceiver::class.java, R.string.widget_kcal_name, R.string.widget_kcal_desc),
+        Entry("macros", "Nutrition", app.superhealth.nutrition.widget.MacrosWidgetReceiver::class.java, R.string.widget_macros_name, R.string.widget_macros_desc),
+        Entry("weekcalories", "Nutrition", app.superhealth.nutrition.widget.WeeklyCaloriesWidgetReceiver::class.java, R.string.widget_weekcalories_name, R.string.widget_weekcalories_desc),
+        Entry("weekmacros", "Nutrition", app.superhealth.nutrition.widget.WeeklyMacrosWidgetReceiver::class.java, R.string.widget_weekmacros_name, R.string.widget_weekmacros_desc),
         Entry("weight", "Nutrition", WeightWidgetReceiver::class.java, R.string.widget_weight_name, R.string.widget_weight_desc),
         Entry("next", "Musculation", NextWorkoutWidgetReceiver::class.java, R.string.widget_next_name, R.string.widget_next_desc),
     )

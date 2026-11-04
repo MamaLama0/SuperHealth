@@ -43,6 +43,11 @@ import androidx.compose.ui.unit.DpSize
 import app.superhealth.MainActivity
 import app.superhealth.nutrition.NutriApp
 import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.nutrition.domain.Macros
+import app.superhealth.nutrition.domain.NutritionWidgetWeek
+import app.superhealth.ui.widget.WK
+import app.superhealth.ui.widget.WidgetHeader
+import app.superhealth.ui.widget.WidgetCard
 import app.superhealth.nutrition.domain.Settings
 import app.superhealth.nutrition.ui.SearchMode
 import app.superhealth.nutrition.ui.energy
@@ -78,6 +83,7 @@ private data class Snapshot(
     val trendKg: Double?, val trendDelta7: Double?, val tdee: Double?,
     /** Tendance des 30 derniers jours (null : pas de valeur ce jour-là). */
     val trend30: List<Double?> = emptyList(),
+    val week: NutritionWidgetWeek = NutritionWidgetWeek(emptyList()),
 )
 
 private suspend fun snapshot(ctx: Context): Snapshot = snapshots(ctx).first()
@@ -89,19 +95,23 @@ private suspend fun snapshot(ctx: Context): Snapshot = snapshots(ctx).first()
 private fun snapshots(ctx: Context): Flow<Snapshot> {
     val repo = NutriApp.repository
     val today = LocalDate.now().toEpochDay()
-    return combine(repo.analytics(), repo.entriesForDay(today), repo.prefs.settings) { an, es, s -> build(s, an, es, today) }
+    return combine(repo.analytics(), repo.entries.rangeFlow(today - 6, today), repo.prefs.settings) { an, es, s -> build(s, an, es, today) }
 }
 
 private fun build(s: Settings, an: app.superhealth.nutrition.data.Analytics, es: List<app.superhealth.nutrition.data.FoodEntryEntity>, today: Long): Snapshot {
+    val week = NutritionWidgetWeek.of(today, es.groupBy { it.epochDay }.mapValues { (_, entries) ->
+        entries.fold(Macros.ZERO) { a, e -> a + Macros(e.kcal, e.protein, e.fat, e.carbs) }
+    }) { an.targetFor(it).macros }
+    val day = es.filter { it.epochDay == today }
     val t = an.targetFor(today).macros
     val trend = an.currentTrendKg
     val before = an.trendByDay[today - 7]
     return Snapshot(
-        s, s.onboarded, es.sumOf { it.kcal }, t.kcal,
-        es.sumOf { it.protein }, t.protein, es.sumOf { it.fat }, t.fat, es.sumOf { it.carbs }, t.carbs,
+        s, s.onboarded, day.sumOf { it.kcal }, t.kcal,
+        day.sumOf { it.protein }, t.protein, day.sumOf { it.fat }, t.fat, day.sumOf { it.carbs }, t.carbs,
         trend, if (trend != null && before != null) trend - before else null,
         an.expenditure.lastOrNull()?.tdee,
-        (today - 29..today).map { an.trendByDay[it] },
+        (today - 29..today).map { an.trendByDay[it] }, week,
     )
 }
 
@@ -381,11 +391,150 @@ object Widgets {
         runCatching { app.superhealth.ui.widget.DayWidgets.refresh(ctx) }
         val mgr = android.appwidget.AppWidgetManager.getInstance(ctx)
         val glance = androidx.glance.appwidget.GlanceAppWidgetManager(ctx)
-        listOf(TodayWidgetReceiver::class.java to TodayWidget(), WeightWidgetReceiver::class.java to WeightWidget(), KcalWidgetReceiver::class.java to KcalWidget())
+        listOf(TodayWidgetReceiver::class.java to TodayWidget(), WeightWidgetReceiver::class.java to WeightWidget(), KcalWidgetReceiver::class.java to KcalWidget(),
+            MacrosWidgetReceiver::class.java to MacrosWidget(), WeeklyCaloriesWidgetReceiver::class.java to WeeklyCaloriesWidget(),
+            WeeklyMacrosWidgetReceiver::class.java to WeeklyMacrosWidget())
             .forEach { (receiver, widget) ->
                 mgr.getAppWidgetIds(android.content.ComponentName(ctx, receiver)).forEach { id ->
                     runCatching { widget.update(ctx, glance.getGlanceIdBy(id)) }
                 }
             }
+    }
+}
+
+/** Variantes dédiées, disponibles dans les mêmes quatre formats que les autres cartes. */
+abstract class NutritionVariantWidget(private val kind: Kind) : GlanceAppWidget() {
+    enum class Kind { MACROS, WEEK_CALORIES, WEEK_MACROS }
+    override val sizeMode = SizeMode.Responsive(WK.ALL)
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val first = runCatching { snapshot(context) }.getOrNull()
+        provideContent {
+            val s = live(context, first)
+            if (kind == Kind.WEEK_CALORIES) WeeklyCaloriesContent(context, s)
+            else MacroVariantContent(context, s, kind == Kind.WEEK_MACROS)
+        }
+    }
+}
+class MacrosWidget : NutritionVariantWidget(Kind.MACROS)
+class WeeklyCaloriesWidget : NutritionVariantWidget(Kind.WEEK_CALORIES)
+class WeeklyMacrosWidget : NutritionVariantWidget(Kind.WEEK_MACROS)
+class MacrosWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget = MacrosWidget() }
+class WeeklyCaloriesWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget = WeeklyCaloriesWidget() }
+class WeeklyMacrosWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget = WeeklyMacrosWidget() }
+
+@Composable
+private fun MacroVariantContent(ctx: Context, s: Snapshot?, weekly: Boolean) {
+    val shape = WK.size(LocalSize.current)
+    val small = shape == WShape.SMALL
+    val average = s?.week?.average
+    val target = s?.week?.averageTarget
+    val values = if (weekly) listOf(average?.protein, average?.fat, average?.carbs) else listOf(s?.p, s?.f, s?.c)
+    val targets = if (weekly) listOf(target?.protein, target?.fat, target?.carbs) else listOf(s?.pT, s?.fT, s?.cT)
+    val labels = listOf(tr("Protéines"), tr("Lipides"), tr("Glucides"))
+    val short = listOf(tr("P"), tr("L"), tr("G"))
+    val colors = listOf(app.superhealth.ui.theme.ProteinColor, app.superhealth.ui.theme.FatColor, app.superhealth.ui.theme.CarbsColor)
+    WidgetCard(WK.open(ctx, "macros"), colors[0], padding = if (small) 2.dp else if (shape == WShape.STRIP) 6.dp else 8.dp) {
+        if (s == null || !s.onboarded) { Text(tr("Ouvrir SuperHealth"), style = TextStyle(color = W.sub, fontSize = 11.sp)); return@WidgetCard }
+        if (small) {
+            Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
+                Column {
+                    short.forEachIndexed { i, label ->
+                        if (i > 0) Spacer(GlanceModifier.height(1.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, style = TextStyle(color = W.c(colors[i]), fontSize = 8.sp, fontWeight = FontWeight.Bold))
+                            Spacer(GlanceModifier.width(2.dp))
+                            Text(values[i]?.let { "${it.roundToInt()} g" } ?: "—", style = TextStyle(color = W.text, fontSize = 8.sp), maxLines = 1)
+                        }
+                    }
+                }
+                if (weekly) { Spacer(GlanceModifier.width(3.dp)); Text(tr("7 j"), style = TextStyle(color = W.sub, fontSize = 7.sp), maxLines = 1) }
+            }
+            return@WidgetCard
+        }
+        if (shape == WShape.MEDIUM || shape == WShape.LARGE) {
+            WidgetHeader(R.drawable.ic_w_food, colors[0], tr(if (weekly) { if (shape == WShape.MEDIUM) "7 j · Macros" else "Macros · 7 j" } else "Macros du jour"),
+                if (weekly) "${s.week.loggedDays}/7" else null)
+            Spacer(GlanceModifier.height(4.dp))
+        }
+        if (shape == WShape.STRIP || shape == WShape.LARGE) {
+            Row(GlanceModifier.fillMaxWidth()) {
+                if (weekly && shape == WShape.STRIP) Text(tr("7 j"), modifier = GlanceModifier.width(22.dp), style = TextStyle(color = W.sub, fontSize = 9.sp))
+                labels.forEachIndexed { i, label ->
+                    if (i > 0) Spacer(GlanceModifier.width(10.dp))
+                    Column(GlanceModifier.defaultWeight()) {
+                        Text(label, style = TextStyle(color = W.c(colors[i]), fontSize = 10.sp), maxLines = 1)
+                        Text(values[i]?.let { "${it.roundToInt()} g" } ?: "—", style = TextStyle(color = W.text, fontSize = if (shape == WShape.LARGE) 20.sp else 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                        LinearProgressIndicator(((values[i] ?: 0.0) / (targets[i] ?: 1.0).coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f),
+                            GlanceModifier.fillMaxWidth().height(4.dp), color = W.c(colors[i]), backgroundColor = W.track)
+                        if (shape == WShape.LARGE) Text(targets[i]?.let { "/ ${it.roundToInt()} g" } ?: "—", style = TextStyle(color = W.sub, fontSize = 10.sp))
+                    }
+                }
+            }
+        } else Column(GlanceModifier.fillMaxWidth()) {
+            short.forEachIndexed { i, label ->
+                if (i > 0) Spacer(GlanceModifier.height(if (small) 1.dp else 3.dp))
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = TextStyle(color = W.c(colors[i]), fontSize = if (small) 8.sp else 10.sp, fontWeight = FontWeight.Bold))
+                    Spacer(GlanceModifier.width(3.dp))
+                    Text(values[i]?.let { v -> if (small) "${v.roundToInt()} g" else "${v.roundToInt()} / ${(targets[i] ?: 0.0).roundToInt()} g" } ?: "—",
+                        style = TextStyle(color = W.text, fontSize = if (small) 8.sp else 10.sp), maxLines = 1)
+                }
+                if (!small) LinearProgressIndicator(((values[i] ?: 0.0) / (targets[i] ?: 1.0).coerceAtLeast(1.0)).toFloat().coerceIn(0f, 1f),
+                    GlanceModifier.fillMaxWidth().height(3.dp), color = W.c(colors[i]), backgroundColor = W.track)
+            }
+        }
+        if (weekly && (shape == WShape.MEDIUM || shape == WShape.LARGE)) {
+            Spacer(GlanceModifier.height(3.dp))
+            Text(tr("Moy./jour suivi"), style = TextStyle(color = W.sub, fontSize = 10.sp), maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun WeeklyCaloriesContent(ctx: Context, s: Snapshot?) {
+    val size = LocalSize.current
+    val shape = WK.size(size)
+    val small = shape == WShape.SMALL
+    val hue = app.superhealth.ui.theme.CaloriesColor
+    val average = s?.week?.average?.kcal
+    val value = if (s != null && average != null) s.settings.energyValue(average).roundToInt().toString() else "—"
+    val unit = if (s?.settings?.energyUnit == app.superhealth.nutrition.domain.EnergyUnit.KJ) "kJ" else "kcal"
+    WidgetCard(WK.open(ctx, "nutrition"), hue, padding = if (small) 4.dp else 8.dp) {
+        if (s == null || !s.onboarded) { Text(tr("Ouvrir SuperHealth"), style = TextStyle(color = W.sub, fontSize = 11.sp)); return@WidgetCard }
+        if (small) {
+            Text(value, style = TextStyle(color = W.c(hue), fontSize = if (small) 14.sp else 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Text("$unit · " + tr("7 j"), style = TextStyle(color = W.sub, fontSize = 9.sp), maxLines = 1)
+            return@WidgetCard
+        }
+        val points = s.week.days.map { it.eaten?.kcal?.let(s.settings::energyValue) }
+        val chartDescription = s.week.days.joinToString(" · ") { day ->
+            val date = LocalDate.ofEpochDay(day.epochDay)
+            "${date.dayOfMonth}/${date.monthValue} " + (day.eaten?.kcal?.let { "${s.settings.energyValue(it).roundToInt()} $unit" } ?: "—")
+        }
+        if (shape == WShape.STRIP) Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(GlanceModifier.defaultWeight()) {
+                Text("$value $unit", style = TextStyle(color = W.c(hue), fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(tr("Moy./jour suivi") + " · ${s.week.loggedDays}/7", style = TextStyle(color = W.sub, fontSize = 10.sp), maxLines = 1)
+            }
+            Image(ImageProvider(WK.bars(points, null, hue, WK.px(ctx, 90.dp), WK.px(ctx, 32.dp))), chartDescription, GlanceModifier.width(90.dp).height(32.dp))
+        } else {
+            WidgetHeader(R.drawable.ic_w_food, hue, tr(if (shape == WShape.MEDIUM) "7 jours" else "Calories · 7 j"), "${s.week.loggedDays}/7")
+            Spacer(GlanceModifier.height(4.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("$value $unit", style = TextStyle(color = W.c(hue), fontSize = 19.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                if (shape == WShape.LARGE) { Spacer(GlanceModifier.width(8.dp)); Text(tr("Moy./jour suivi"), style = TextStyle(color = W.sub, fontSize = 10.sp), maxLines = 1) }
+            }
+            if (shape == WShape.MEDIUM) Text(tr("Moy./jour suivi"), style = TextStyle(color = W.sub, fontSize = 9.sp), maxLines = 1)
+            Spacer(GlanceModifier.height(4.dp))
+            Image(ImageProvider(WK.bars(points, null, hue, WK.px(ctx, size.width - 20.dp), WK.px(ctx, 34.dp))), chartDescription, GlanceModifier.fillMaxWidth().height(34.dp))
+            Row(GlanceModifier.fillMaxWidth()) {
+                s.week.days.forEach { day ->
+                    Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(app.superhealth.ui.dayLetter(LocalDate.ofEpochDay(day.epochDay)), style = TextStyle(color = W.sub, fontSize = 9.sp))
+                        if (shape == WShape.LARGE) Text(day.eaten?.kcal?.let { s.settings.energyValue(it).roundToInt().toString() } ?: "—", style = TextStyle(color = W.sub, fontSize = 8.sp), maxLines = 1)
+                    }
+                }
+            }
+        }
     }
 }

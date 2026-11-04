@@ -3,6 +3,19 @@ package app.superhealth.nutrition.ui
 /** Dictionnaire français → anglais (libellés MacroFactor quand ils existent). Généré depuis les appels tr()/trf(). */
 object EnStrings {
     val map: Map<String, String> = hashMapOf(
+        "7 j · Macros" to "7 days · Macros",
+        "7 jours" to "7 days",
+
+        "Macros du jour" to "Daily macros",
+        "Calories sur 7 jours" to "Calories over 7 days",
+        "Macros sur 7 jours" to "Macros over 7 days",
+        "Macros · 7 j" to "Macros · 7 days",
+        "Calories · 7 j" to "Calories · 7 days",
+        "Moy./jour suivi" to "Avg./logged day",
+        "Calories quotidiennes et moyenne sur les jours renseignés." to "Daily calories and average across logged days.",
+        "Moyennes des macros et objectifs sur les jours renseignés." to "Average macros and targets across logged days.",
+        "Protéines, lipides et glucides face aux objectifs du jour." to "Protein, fat and carbs against your daily targets.",
+
         "Aujourd'hui" to "Today",
         "Programme et objectif" to "Program & goal",
         "IA" to "AI",

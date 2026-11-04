@@ -23,6 +23,7 @@ import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.action.clickable
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.color.ColorProvider
@@ -276,7 +277,7 @@ internal fun WidgetValue(value: String, unit: String?, color: Color, size: Int) 
 /** En-tête de widget : pastille colorée et titre. */
 @Composable
 internal fun WidgetHeader(icon: Int, color: Color, title: String, trailing: String? = null) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         // comme le titre des cartes : symbole et titre dans la couleur de la mesure
         Image(ImageProvider(icon), null, GlanceModifier.size(15.dp), colorFilter = ColorFilter.tint(WK.on(color)))
         Spacer(GlanceModifier.width(5.dp))

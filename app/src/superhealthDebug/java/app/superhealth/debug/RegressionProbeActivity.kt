@@ -214,6 +214,18 @@ class RegressionProbeActivity : Activity() {
                             it.friends.filterNot { f -> f.id.startsWith("qa-v3-ranking-") } + fixtures) }
                     }
                     "socialseed" -> socialSeed()
+                    "nutrition-widgets-fixture" -> {
+                        seed()
+                        val repo = NutriApp.repository
+                        repo.prefs.setSettings(repo.prefs.settings.value.copy(onboarded = true))
+                        repo.entries.clear()
+                        val today = LocalDate.now().toEpochDay()
+                        listOf(2000.0, 2200.0, null, 2400.0, null, 1800.0, 1000.0).forEachIndexed { i, kcal ->
+                            if (kcal != null) repo.entries.insert(app.superhealth.nutrition.data.FoodEntryEntity(epochDay = today - 6 + i, meal = 1,
+                                name = "Nutrition QA", grams = 400.0, kcal = kcal, protein = kcal / 20, fat = kcal / 40, carbs = kcal / 10))
+                        }
+                        SuperPrefs.update { it.copy(leagueEnabled = false) }
+                    }
                     "free" -> {
                         val db = WorkoutApp.db.first { it != null }!!
                         val e = db.exercises.first { it.usesWeight && it.usesReps }

@@ -225,6 +225,18 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_kcal" />
         </receiver>
+        <receiver android:name="app.superhealth.nutrition.widget.MacrosWidgetReceiver" android:exported="true" android:label="@string/widget_macros_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_macros" />
+        </receiver>
+        <receiver android:name="app.superhealth.nutrition.widget.WeeklyCaloriesWidgetReceiver" android:exported="true" android:label="@string/widget_weekcalories_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weekcalories" />
+        </receiver>
+        <receiver android:name="app.superhealth.nutrition.widget.WeeklyMacrosWidgetReceiver" android:exported="true" android:label="@string/widget_weekmacros_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weekmacros" />
+        </receiver>
         <receiver android:name="app.superhealth.ui.widget.DayWidgetReceiver" android:exported="true" android:label="@string/widget_day_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_day" />

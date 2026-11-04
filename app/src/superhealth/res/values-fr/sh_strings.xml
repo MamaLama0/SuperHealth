@@ -43,4 +43,10 @@
     <string name="widget_friends_desc">Mes amis et accès aux invitations</string>
     <string name="widget_social_name">Groupe · Vue d’ensemble</string>
     <string name="widget_social_desc">Niveau, badges et quêtes de la semaine</string>
+    <string name="widget_macros_name">Macros du jour</string>
+    <string name="widget_macros_desc">Protéines, lipides et glucides face aux objectifs du jour</string>
+    <string name="widget_weekcalories_name">Calories sur 7 jours</string>
+    <string name="widget_weekcalories_desc">Calories quotidiennes et moyenne sur les jours renseignés</string>
+    <string name="widget_weekmacros_name">Macros sur 7 jours</string>
+    <string name="widget_weekmacros_desc">Moyennes des macros et objectifs sur les jours renseignés</string>
 </resources>

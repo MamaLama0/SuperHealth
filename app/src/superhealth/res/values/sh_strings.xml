@@ -42,4 +42,10 @@
     <string name="widget_friends_desc">Your friends and invitations</string>
     <string name="widget_social_name">Group · Overview</string>
     <string name="widget_social_desc">Level, badges and weekly quests</string>
+    <string name="widget_macros_name">Daily macros</string>
+    <string name="widget_macros_desc">Protein, fat and carbs against your daily targets</string>
+    <string name="widget_weekcalories_name">Calories over 7 days</string>
+    <string name="widget_weekcalories_desc">Daily calories and average across logged days</string>
+    <string name="widget_weekmacros_name">Macros over 7 days</string>
+    <string name="widget_weekmacros_desc">Average macros and targets across logged days</string>
 </resources>
