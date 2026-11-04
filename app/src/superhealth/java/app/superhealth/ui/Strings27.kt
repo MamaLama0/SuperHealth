@@ -2,6 +2,15 @@ package app.superhealth.ui
 
 object Strings27 {
     val map = mapOf(
+        "Vos courses apparaîtront ici après synchronisation ou import d’un fichier." to "Your runs will appear here after syncing or importing a file.",
+        "Rechercher une activité" to "Search activities",
+        "Aucune activité ne correspond aux filtres." to "No activities match the filters.",
+        "Impossible de charger les activités." to "Unable to load activities.",
+        "Cette activité est indisponible. Réessayez après synchronisation." to "This activity is unavailable. Try again after syncing.",
+        "Aucun tracé GPS pour cette activité." to "No GPS track for this activity.",
+        "Temps en mouvement" to "Moving time",
+        "Impossible de charger les performances." to "Unable to load performance data.",
+        "Synchronisez une activité ou importez un fichier pour voir vos performances." to "Sync an activity or import a file to see your performance data.",
         "Le commentaire n’est plus disponible." to "This comment is no longer available.",
         "Commentaire indisponible" to "Comment unavailable",
         "En réponse à %1\$s" to "In reply to %1\$s",

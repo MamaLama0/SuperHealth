@@ -3,6 +3,8 @@ package app.superhealth.training.ui
 /** Dictionnaire français → anglais (libellés MacroFactor Workouts quand ils existent). Généré depuis tr()/trf(). */
 object EnStrings {
     val map: Map<String, String> = hashMapOf(
+        "%1\$s série(s) validée(s). Tout enregistrer ajoutera %2\$s série(s) renseignée(s) mais non cochée(s)." to "%1\$s completed set(s). Logging all will add %2\$s filled-in but unchecked set(s).",
+        "Tout enregistrer (%1\$s)" to "Log all (%1\$s)",
         "Refaire cette séance" to "Repeat this workout",
         "Reprendre la séance en cours" to "Resume current workout",
         "Record" to "PR",

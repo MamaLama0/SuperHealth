@@ -321,7 +321,9 @@ fun SuperRoot(vm: SuperViewModel) {
             }
             composable("h/vitals") { app.superhealth.ui.health.VitalsScreen(vm, nav) }
             composable("h/devices") { DevicesScreen(vm, nav) }
-            composable("h/activities") { ActivitiesHistoryScreen(vm, nav) }
+            composable("h/activities?kind={kind}", listOf(navArgument("kind") { type = NavType.StringType; nullable = true; defaultValue = null })) {
+                ActivitiesHistoryScreen(vm, nav, it.arguments?.getString("kind"))
+            }
             composable("h/permissions") { PermissionsScreen(vm, nav) }
             composable("h/performance") { app.superhealth.ui.health.PerformanceScreen(vm, nav) }
             composable("h/workout/{id}", listOf(navArgument("id") { type = NavType.LongType })) {

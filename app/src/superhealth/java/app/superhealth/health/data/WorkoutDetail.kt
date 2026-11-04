@@ -53,7 +53,7 @@ data class WorkoutDetail(
     val hasGps: Boolean get() = points.count { it.lat != null } >= 2
     val isSwim: Boolean get() = kind.name.contains("SWIM")
     /** Allure (course, marche, randonnée) plutôt que vitesse (vélo…). */
-    val usesPace: Boolean get() = kind.name.let { "RUN" in it || "WALK" in it || "HIK" in it || "JOG" in it || "TRAIL" in it }
+    val usesPace: Boolean get() = kind.name.let { "RUN" in it || "WALK" in it || "HIK" in it || "JOG" in it || "TRAIL" in it || "TREADMILL" in it }
     val avgSpeedMps: Double? get() = distanceM?.takeIf { it > 0 && activeSec > 0 }?.let { it / activeSec }
 }
 

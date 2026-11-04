@@ -338,7 +338,7 @@ object Bridge {
         "CYCL" in name || "BIK" in name -> Kind.BIKE
         "HIK" in name -> Kind.HIKE
         "WALK" in name -> Kind.WALK
-        "RUN" in name || "JOG" in name -> Kind.RUN
+        "RUN" in name || "JOG" in name || "TREADMILL" in name -> Kind.RUN
         "YOGA" in name -> Kind.YOGA
         "STRENGTH" in name || "WEIGHT" in name -> Kind.STRENGTH
         else -> Kind.OTHER
