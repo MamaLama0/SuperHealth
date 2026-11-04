@@ -164,7 +164,12 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             if (section == "session") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Échauffements"), Modifier.padding(start = 0.dp))
             MfCard {
-                ChipChoice(WarmUpMode.entries, s.warmUp, { it.label.tr() }) { v -> vm.settings { it.copy(warmUp = v) } }
+                SwitchRow(tr("Échauffements automatiques"), tr("Pour tous les exercices"), s.warmUp != WarmUpMode.NONE) { on ->
+                    vm.settings { it.copy(warmUp = if (on) WarmUpMode.SMART else WarmUpMode.NONE) }
+                }
+                if (s.warmUp != WarmUpMode.NONE) ChipChoice(WarmUpMode.entries.filter { it != WarmUpMode.NONE }, s.warmUp, { it.label.tr() }) { v -> vm.settings { it.copy(warmUp = v) } }
+                Text(tr("Désactiver retire les échauffements à venir et conserve les séries déjà faites."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+
                 if (s.warmUp == WarmUpMode.SCHEME) Text(tr("Schéma : ") + s.warmUpScheme.joinToString(" · ") { trf("%1\$s %% × %2\$s", ((it.percent * 100).toInt()), it.reps) },
                     style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 6.dp))
             }

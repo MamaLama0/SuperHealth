@@ -5,6 +5,16 @@ import app.superhealth.platform.*
 /** Dictionnaire français → anglais (libellés MacroFactor Workouts quand ils existent). Généré depuis tr()/trf(). */
 object EnStrings {
     val map: Map<String, String> = hashMapOf(
+        "Échauffements automatiques" to "Automatic warm-ups",
+        "Pour tous les exercices" to "For all exercises",
+        "Échauffements pour cet exercice" to "Warm-ups for this exercise",
+        "Pour cet exercice" to "For this exercise",
+        "Conservé pour les prochaines séances" to "Saved for future sessions",
+        "Échauffements désactivés" to "Warm-ups disabled",
+        "Désactiver retire les échauffements à venir et conserve les séries déjà faites." to "Disabling removes upcoming warm-ups and keeps completed sets.",
+        "Ajouter les échauffements" to "Add warm-ups",
+        "Réglages des échauffements" to "Warm-up settings",
+
         "%1\$s série(s) validée(s). Tout enregistrer ajoutera %2\$s série(s) renseignée(s) mais non cochée(s)." to "%1\$s completed set(s). Logging all will add %2\$s filled-in but unchecked set(s).",
         "Tout enregistrer (%1\$s)" to "Log all (%1\$s)",
         "Refaire cette séance" to "Repeat this workout",

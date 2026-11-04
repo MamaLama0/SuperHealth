@@ -3,7 +3,9 @@ import SwiftUI
 
 /// Six cartes, une destination chacune. Les tailles moyennes donnent du contexte, les grandes développent les suivis.
 struct SocialWidgetView: View {
-    @Environment(\.widgetFamily) var family
+    @Environment(\.widgetFamily) private var environmentFamily
+    var familyOverride: WidgetFamily? = nil
+    private var family: WidgetFamily { familyOverride ?? environmentFamily }
     var entry: Entry
     var id: String
     var card: Snapshot.SocialCard? { entry.snap?.social?.first { $0.id == id } }

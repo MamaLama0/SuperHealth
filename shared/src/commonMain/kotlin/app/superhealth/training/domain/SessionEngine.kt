@@ -8,7 +8,7 @@ import kotlin.math.max
 import kotlin.math.round
 
 /** Construction et déroulement d'une séance (WorkoutSession) : pré-remplissage, échauffements, progression en séance. */
-class SessionEngine(private val db: ExerciseDb) {
+class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<String, ExerciseConfig> = emptyMap()) {
 
     private fun uid() = UUID.randomUUID().toString()
 
@@ -68,7 +68,7 @@ class SessionEngine(private val db: ExerciseDb) {
     fun fromCustom(w: CustomWorkout, history: List<Workout>, settings: Settings, gym: Gym?): Session {
         val worked = mutableSetOf<MuscleGroup>()
         val exercises = w.exercises.map { pe ->
-            val ex = buildExercise(pe.exerciseId, pe.cycles.first(), history, settings, gym, worked)
+            val ex = buildExercise(pe.exerciseId, pe.cycles.first(), history, settings, gym, worked).copy(supersetGroup = pe.supersetGroup)
             db.exercise(pe.exerciseId)?.muscleGroups?.let(worked::addAll)
             ex
         }
@@ -92,10 +92,12 @@ class SessionEngine(private val db: ExerciseDb) {
         val last = lastSets(exerciseId, history)
         val ladder = ladderFor(exerciseId, gym)
         val oneRm = if (e?.usesWeight == true) Progression.currentOneRm(last, upper) else null
+        val mode = SessionWarmUps.mode(settings, exerciseConfig[exerciseId])
+        val planned = if (mode == WarmUpMode.NONE) targets.filter { it.type != SetType.WARMUP } else targets
         val suggestions = if (oneRm != null && oneRm > 0) Progression.suggest(
-            oneRm, targets, upper, ladder, last.firstOrNull()?.weight, settings.weightMatch, settings.expandRepRange,
+            oneRm, planned, upper, ladder, last.firstOrNull()?.weight, settings.weightMatch, settings.expandRepRange,
         ) else null
-        val work = targets.mapIndexed { i, t ->
+        val work = planned.mapIndexed { i, t ->
             val sg = suggestions?.getOrNull(i)
             val prev = last.getOrNull(i) ?: last.lastOrNull()
             val (w, r) = when {
@@ -105,7 +107,8 @@ class SessionEngine(private val db: ExerciseDb) {
             }
             SetLog(uid(), t.type, weight = w, reps = r, rir = t.rir, target = t, autoWeight = sg?.weight, autoReps = sg?.reps)
         }
-        val warmUps = warmUps(e, work.firstOrNull()?.weight, oneRm, settings, ladder, worked)
+        val warmUps = if (work.any { it.type == SetType.WARMUP }) emptyList() else
+            warmUps(e, work.firstOrNull()?.weight, oneRm, settings.copy(warmUp = mode), ladder, worked)
         val rest = targets.firstOrNull()?.restSec ?: settings.restDefaultSec
         return SessionExercise(uid(), exerciseId, warmUps + work, restSec = rest)
     }
@@ -123,7 +126,7 @@ class SessionEngine(private val db: ExerciseDb) {
             WarmUpMode.SCHEME -> settings.warmUpScheme.map {
                 val w = ladder.nearest(workWeight * it.percent).let { x -> if (settings.simplifyWarmUpPlates) simplify(x, ladder) else x }
                 SetLog(uid(), SetType.WARMUP, weight = w, reps = it.reps)
-            }.filter { (it.weight ?: 0.0) < workWeight }
+            }.filter { (it.weight ?: 0.0) > 0 && (it.weight ?: 0.0) < workWeight }.distinctBy { it.weight }
             WarmUpMode.SMART -> {
                 if (oneRm == null || oneRm <= 0) return emptyList()
                 if (e.muscleGroups.isNotEmpty() && worked.containsAll(e.muscleGroups)) return emptyList()

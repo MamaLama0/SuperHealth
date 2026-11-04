@@ -301,6 +301,11 @@ fun ExerciseInfoScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         }
         SectionLabel(tr("Réglages"))
         GroupCard {
+            SwitchRow(tr("Échauffements pour cet exercice"), tr("Conservé pour les prochaines séances"), cfg.warmUp != app.superhealth.training.domain.WarmUpMode.NONE) { v ->
+                vm.setExerciseWarmUps(id, v)
+            }
+            RowDivider()
+
             SwitchRow(tr("Ne pas recommander"), tr("Exclu de la génération de programmes et des remplacements"), cfg.doNotRecommend) { v ->
                 vm.update { s -> s.copy(exerciseConfig = s.exerciseConfig + (id to cfg.copy(doNotRecommend = v))) }
             }

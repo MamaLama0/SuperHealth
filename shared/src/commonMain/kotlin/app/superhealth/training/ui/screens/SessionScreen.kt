@@ -126,6 +126,9 @@ import app.superhealth.training.domain.Analytics
 import app.superhealth.training.domain.Exercise
 import app.superhealth.training.domain.Plates
 import app.superhealth.training.domain.Session
+import app.superhealth.training.domain.WarmUpMode
+import app.superhealth.training.domain.SessionWarmUps
+import app.superhealth.training.ui.components.SwitchRow
 import app.superhealth.training.domain.SessionExercise
 import app.superhealth.training.domain.SetLog
 import app.superhealth.training.domain.SetType
@@ -222,7 +225,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
                             vm.toggleSet(page, si)
                             if (!wasDone) vm.state.value.session?.let { ns ->
                                 if (ns.shouldSuggestFinish()) allDonePrompt = true
-                                else vm.nextFocus(ns, page)?.let { n -> scope.launch { delay(350); pager.animateScrollToPage(n) } }
+                                else vm.nextFocus(ns, page, si)?.let { n -> scope.launch { delay(350); pager.animateScrollToPage(n) } }
                             }
                         })
                 }
@@ -350,21 +353,23 @@ private fun TopBar(s: Session, now: Long, onMinimize: () -> Unit, onOptions: () 
     val done = s.exercises.sumOf { e -> e.sets.count { it.done } }
     val total = s.exercises.sumOf { it.sets.size }.coerceAtLeast(1)
     Column {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onMinimize) { Icon(Icons.Rounded.KeyboardArrowDown, tr("Réduire")) }
-            Column(Modifier.weight(1f)) {
-                Text(s.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clip(CircleShape).clickable(onClick = onPause)) {
-                    Icon(if (s.pausedAt != null) Icons.Rounded.PlayArrow else Icons.Rounded.Timer, null, Modifier.size(14.dp),
-                        tint = if (s.pausedAt != null) Mf.colors.accent else Mf.colors.textSecondary)
-                    Spacer(Modifier.width(3.dp))
-                    Text(if (s.pausedAt != null) trf("En pause · %1\$s", (duration(s.elapsedSec(now)))) else duration(s.elapsedSec(now)),
-                        style = MaterialTheme.typography.bodySmall, color = if (s.pausedAt != null) Mf.colors.accent else Mf.colors.textSecondary)
+        Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp).height(64.dp)) {
+            Row(Modifier.align(Alignment.CenterStart).fillMaxWidth(0.5f).padding(end = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onMinimize) { Icon(Icons.Rounded.KeyboardArrowDown, tr("Réduire")) }
+                Column(Modifier.weight(1f)) {
+                    Text(s.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(duration(s.elapsedSec(now)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
             }
-            IconButton(onClick = onOptions) { Icon(Icons.Rounded.MoreHoriz, tr("Options de la séance")) }
-            Text(tr("Terminer"), Modifier.padding(end = 10.dp).clip(CircleShape).background(Mf.colors.strong).clickable(onClick = onFinish)
-                .padding(horizontal = 16.dp, vertical = 8.dp), color = Mf.colors.onStrong, style = MaterialTheme.typography.labelLarge)
+            Row(Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.5f).padding(start = 24.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onOptions) { Icon(Icons.Rounded.MoreHoriz, tr("Options de la séance")) }
+                Text(tr("Terminer"), Modifier.weight(1f, fill = false).clip(CircleShape).background(Mf.colors.strong).clickable(onClick = onFinish)
+                    .padding(horizontal = 12.dp, vertical = 10.dp), color = Mf.colors.onStrong, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            IconButton(onClick = onPause, modifier = Modifier.align(Alignment.Center).clip(CircleShape).background(Mf.colors.elevated)) {
+                Icon(if (s.pausedAt != null) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                    if (s.pausedAt != null) tr("Reprendre la séance") else tr("Mettre en pause"), tint = Mf.colors.accent)
+            }
         }
         val frac by animateFloatAsState(done.toFloat() / total, tween(400), label = "progress")
         Box(Modifier.fillMaxWidth().height(3.dp).background(Mf.colors.chip)) {
@@ -436,6 +441,7 @@ private fun ExercisePage(
 ) {
     fun edit(f: (SessionExercise) -> SessionExercise) = vm.session { ss -> ss.copy(exercises = ss.exercises.toMutableList().also { it[index] = f(it[index]) }) }
     var more by remember { mutableStateOf(false) }
+    var warmOptions by remember(ex.id) { mutableStateOf(false) }
     var editing by remember(ex.id) { mutableStateOf<SetLog?>(null) }
     editing?.let { original ->
         var draft by remember(original.id) { mutableStateOf(original) }
@@ -474,8 +480,6 @@ private fun ExercisePage(
             var groupEnd = index
             while (inSuperset && s.exercises.getOrNull(groupEnd + 1)?.supersetGroup == ex.supersetGroup) groupEnd++
             val options = buildList {
-                // échauffements calculés (réglage d'échauffement) depuis la charge de travail
-                if (ex.sets.none { it.type == SetType.WARMUP && !it.done }) add(ExOption(Icons.Rounded.LocalFireDepartment, tr("Échauffement")) { vm.addWarmUps(index) })
                 // superset, puis triset en reliant aussi l'exercice suivant
                 if (s.exercises.size > 1 && (!inSuperset || groupEnd < s.exercises.size - 1))
                     add(ExOption(Icons.Rounded.Link, if (!inSuperset) tr("Superset") else if (groupSize == 2) tr("Triset") else tr("Lier au suivant")) { vm.linkNext(groupEnd) })
@@ -492,6 +496,30 @@ private fun ExercisePage(
             Box {
                 OptionsButton(active = inSuperset || ex.note.isNotBlank()) { more = true }
                 ExOptionsMenu(more, options) { more = false }
+            }
+        }
+        val st by vm.state.collectAsState()
+        val enabled = st.exerciseConfig[ex.exerciseId]?.warmUp != WarmUpMode.NONE
+        val globalEnabled = settings.warmUp != WarmUpMode.NONE
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
+            ActionChip(Icons.Rounded.LocalFireDepartment,
+                if (enabled && globalEnabled) tr("Échauffements") else tr("Échauffements désactivés")) { warmOptions = true }
+        }
+        if (warmOptions) ModalBottomSheet(onDismissRequest = { warmOptions = false }, containerColor = Mf.colors.background,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
+                Text(tr("Échauffements"), style = MaterialTheme.typography.titleLarge)
+                Text(e?.name ?: "", color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
+                SwitchRow(tr("Pour cet exercice"), tr("Conservé pour les prochaines séances"), enabled) { vm.setExerciseWarmUps(ex.exerciseId, it) }
+                SwitchRow(tr("Échauffements automatiques"), tr("Pour tous les exercices"), globalEnabled) { on ->
+                    vm.settings { it.copy(warmUp = if (on) WarmUpMode.SMART else WarmUpMode.NONE) }
+                }
+                Text(tr("Désactiver retire les échauffements à venir et conserve les séries déjà faites."),
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
+                if (globalEnabled && enabled && SessionWarmUps.canAdd(ex) && ex.sets.none { it.type == SetType.WARMUP }) {
+                    TextButton(onClick = { vm.addWarmUps(index); warmOptions = false }) { Text(tr("Ajouter les échauffements")) }
+                }
+                TextButton(onClick = { warmOptions = false; nav.navigate("t/settings/session") }) { Text(tr("Réglages des échauffements")) }
             }
         }
         if (ex.note.isNotBlank()) Row(Modifier.padding(horizontal = 16.dp, vertical = 2.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))

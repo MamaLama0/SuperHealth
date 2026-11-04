@@ -16,6 +16,10 @@ import app.superhealth.training.domain.PlanDiff
 import app.superhealth.training.domain.Program
 import app.superhealth.training.domain.ProgramDay
 import app.superhealth.training.domain.Session
+import app.superhealth.training.domain.SessionWarmUps
+import app.superhealth.training.domain.SessionFlow
+import app.superhealth.training.domain.WarmUpMode
+import app.superhealth.training.domain.ExerciseConfig
 import app.superhealth.training.domain.SessionEngine
 import app.superhealth.training.domain.SetType
 import app.superhealth.training.domain.Settings
@@ -41,8 +45,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val db: StateFlow<ExerciseDb?> = WorkoutApp.db
     private var engineFor: ExerciseDb? = null
     private var engineCache: SessionEngine? = null
+    private var engineConfigs: Map<String, ExerciseConfig>? = null
     private val engine: SessionEngine?
-        get() = db.value?.let { d -> if (d === engineFor) engineCache else SessionEngine(d).also { engineFor = d; engineCache = it } }
+        get() = db.value?.let { d -> if (d === engineFor && engineConfigs === state.value.exerciseConfig) engineCache else SessionEngine(d, state.value.exerciseConfig).also { engineFor = d; engineCache = it; engineConfigs = state.value.exerciseConfig } }
 
     init {
         // programmes enregistrés avant le suivi des jours faits : on les retrouve dans l'historique
@@ -54,7 +59,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val settings get() = state.value.settings
     fun update(f: (AppState) -> AppState) = store.update(f)
-    fun settings(f: (Settings) -> Settings) = store.update { it.copy(settings = f(it.settings)) }
+    fun settings(f: (Settings) -> Settings) = store.update { s ->
+        val settings = f(s.settings)
+        s.copy(settings = settings, session = s.session?.let {
+            if (settings.warmUp == WarmUpMode.NONE) SessionWarmUps.withoutPending(it) else it
+        })
+    }
+
+    fun setExerciseWarmUps(exerciseId: String, enabled: Boolean) = update { s ->
+        val config = s.exerciseConfig[exerciseId] ?: ExerciseConfig()
+        s.copy(exerciseConfig = s.exerciseConfig + (exerciseId to config.copy(warmUp = if (enabled) null else WarmUpMode.NONE)),
+            session = s.session?.let { if (enabled) it else SessionWarmUps.withoutPending(it, exerciseId) })
+    }
 
     fun activeGym(): Gym? = state.value.let { s -> s.gyms.firstOrNull { it.id == s.settings.activeGymId } ?: s.gyms.firstOrNull() }
     fun gym(id: String?) = state.value.gyms.firstOrNull { it.id == id }
@@ -204,20 +220,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         update { s ->
             val sess = s.session ?: return@update s
             val ex = sess.exercises.getOrNull(exIndex) ?: return@update s
+            val mode = SessionWarmUps.mode(s.settings, s.exerciseConfig[ex.exerciseId])
+            if (mode == WarmUpMode.NONE || !SessionWarmUps.canAdd(ex)) return@update s
+            val warmSettings = s.settings.copy(warmUp = mode)
             val exercise = db.value?.exercise(ex.exerciseId)
             val work = ex.sets.firstOrNull { it.type != SetType.WARMUP }
             val weight = work?.weight ?: work?.autoWeight
             val ladder = e.ladderFor(ex.exerciseId, gym(sess.gymId))
             val oneRm = if (exercise?.usesWeight == true) app.superhealth.training.domain.Progression.currentOneRm(e.lastSets(ex.exerciseId, s.history), exercise.upperBody) else null
-            val smart = s.settings.warmUp == app.superhealth.training.domain.WarmUpMode.SMART
+            val smart = mode == WarmUpMode.SMART
             // demandés à la main : les muscles déjà travaillés ne les suppriment pas
-            var warm = if (smart) e.warmUps(exercise, weight, oneRm, s.settings, ladder, emptySet()) else emptyList()
-            if (warm.isEmpty()) warm = e.warmUps(exercise, weight, oneRm, s.settings.copy(warmUp = app.superhealth.training.domain.WarmUpMode.SCHEME), ladder, emptySet())
+            var warm = if (smart) e.warmUps(exercise, weight, oneRm, warmSettings, ladder, emptySet()) else emptyList()
+            if (warm.isEmpty()) warm = e.warmUps(exercise, weight, oneRm, warmSettings.copy(warmUp = WarmUpMode.SCHEME), ladder, emptySet())
             if (warm.isEmpty()) warm = listOf(app.superhealth.training.domain.SetLog(UUID.randomUUID().toString(), SetType.WARMUP))
-            val kept = ex.sets.filter { it.done || it.type != SetType.WARMUP }
-            val doneWarm = kept.takeWhile { it.type == SetType.WARMUP }
-            val sets = doneWarm + warm + kept.drop(doneWarm.size)
-            s.copy(session = sess.copy(exercises = sess.exercises.toMutableList().also { it[exIndex] = ex.copy(sets = sets) }))
+            s.copy(session = sess.copy(exercises = sess.exercises.toMutableList().also { it[exIndex] = SessionWarmUps.replace(ex, warm) }))
         }
     }
 
@@ -242,7 +258,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // repos de l'exercice dans la séance (initialisé depuis la cible, modifiable en séance)
                     else -> ex.restSec
                 }
-                val inSuperset = ex.supersetGroup != null && sess.exercises.getOrNull(exIndex + 1)?.supersetGroup == ex.supersetGroup
+                val inSuperset = set.type != SetType.WARMUP && ex.supersetGroup != null && sess.exercises.getOrNull(exIndex + 1)?.let { it.supersetGroup == ex.supersetGroup && it.sets.any { set -> !set.done } } == true
                 val r = if (inSuperset) 0 else rest
                 next = next.copy(restEndsAt = if (r > 0) System.currentTimeMillis() + r * 1000L else null, restDuration = r)
                 if (r > 0) RestTimer.schedule(getApplication(), next.restEndsAt!!, s.settings.restSound) else RestTimer.cancel(getApplication())
@@ -305,17 +321,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Exercice à afficher après une série validée en [i] : partenaire de superset ayant encore des séries,
      * sinon l'exercice suivant non terminé ; null = rester sur place.
      */
-    fun nextFocus(s: Session, i: Int): Int? {
-        val ex = s.exercises.getOrNull(i) ?: return null
-        fun pending(k: Int) = s.exercises[k].sets.any { !it.done }
-        if (ex.supersetGroup != null) {
-            val group = s.exercises.indices.filter { s.exercises[it].supersetGroup == ex.supersetGroup }
-            val order = group.dropWhile { it != i }.drop(1) + group.takeWhile { it != i }
-            order.firstOrNull { pending(it) }?.let { return it }
-        }
-        if (pending(i)) return null
-        return ((i + 1 until s.exercises.size) + (0 until i)).firstOrNull { pending(it) }
-    }
+    fun nextFocus(s: Session, i: Int, completedSet: Int): Int? = SessionFlow.nextFocus(s, i, completedSet)
 
     fun adjustRest(deltaSec: Int) = session { s ->
         val end = s.restEndsAt ?: return@session s
