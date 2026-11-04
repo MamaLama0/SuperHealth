@@ -228,12 +228,47 @@ object Bridge {
         return (known + hc).sortedByDescending { it.start }
     }
 
+    internal fun reconcile(records: List<Activity>): List<Activity> {
+        val groups = mutableListOf<Activity>()
+        val active = mutableListOf<Int>()
+        for (record in records.distinctBy { it.key }.sortedBy { it.start }) {
+            active.removeAll { groups[it].end <= record.start }
+            val matches = active.filter { i ->
+                val other = groups[i]
+                val alreadyIncluded = when (record.source) {
+                    Source.GYM -> other.gymId != null
+                    Source.WATCH -> other.watch != null
+                    Source.HEALTH_CONNECT -> other.hc != null
+                    Source.IMPORT -> other.run != null
+                }
+                if (alreadyIncluded || other.source == record.source || record.kind == Kind.OTHER || other.kind != record.kind) return@filter false
+                val overlap = minOf(other.end, record.end) - maxOf(other.start, record.start)
+                val duration = maxOf(other.end - other.start, record.end - record.start)
+                val a = other.distanceM
+                val b = record.distanceM
+                duration > 0 && overlap >= 0.8 * duration &&
+                    (a == null || b == null || a <= 0 || b <= 0 || kotlin.math.abs(a - b) <= maxOf(100.0, 0.15 * maxOf(a, b)))
+            }
+            val index = matches.singleOrNull()
+            if (index == null) {
+                active += groups.size
+                groups += record
+            } else {
+                val previous = groups[index]
+                val primary = if (record.source.ordinal < previous.source.ordinal) record else previous
+                groups[index] = primary.copy(gymId = previous.gymId ?: record.gymId, watch = previous.watch ?: record.watch,
+                    hc = previous.hc ?: record.hc, run = previous.run ?: record.run)
+            }
+        }
+        return groups.sortedByDescending { it.start }
+    }
+
     fun kindOf(name: String): Kind = when {
         "SWIM" in name -> Kind.SWIM
         "CYCL" in name || "BIK" in name -> Kind.BIKE
         "HIK" in name -> Kind.HIKE
         "WALK" in name -> Kind.WALK
-        "RUN" in name || "JOG" in name -> Kind.RUN
+        "RUN" in name || "JOG" in name || "TREADMILL" in name -> Kind.RUN
         "YOGA" in name -> Kind.YOGA
         "STRENGTH" in name || "WEIGHT" in name -> Kind.STRENGTH
         else -> Kind.OTHER

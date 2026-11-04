@@ -120,7 +120,7 @@ jobs:
           # pré-version : la « dernière version » reste l'APK Android (lue par la mise à jour intégrée)
           prerelease: true
           make_latest: false
-          name: SuperHealth iOS 3.0 (expérimental)
+          name: SuperHealth iOS 3.3.1 (expérimental)
           body: |
             Installation : guide « Installer sur iPhone » du README de la branche ios
             (https://github.com/MamaLama0/SuperHealth/tree/ios#installer-sur-iphone).

@@ -42,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -145,20 +146,22 @@ private suspend fun tabActivities(fromMs: Long, strength: Boolean, health: Boole
  * (minutes d'activité, en dégradé) à droite ; points pour les jours sans activité. Le toucher ouvre les performances.
  */
 @Composable
-fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean) {
+fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean, kind: Bridge.Kind? = null) {
     val refresh by vm.refresh.collectAsState()
     val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
     val sh by vm.settings.collectAsState()
     val devices by vm.devices.collectAsState()
-    val today = LocalDate.now()
+    val today = app.superhealth.platform.LocalDate.now()
     val start = app.superhealth.training.domain.Analytics.weekStart(today)
     val history by vm.training.state.collectAsState()
     // dernière lecture réaffichée dès l'ouverture (lue à l'avance au démarrage) : le panneau ne repart pas de zéro
-    val read by produceState(lastWeek, refresh, imported, history.history.size) {
-        value = weekActivities(strength, health).also { lastWeek = it }
+    val cacheKey = strength to health
+    val read by produceState(lastWeek[cacheKey].orEmpty(), refresh, imported, history.history, strength, health, today) {
+        value = weekActivities(strength, health).also { lastWeek[cacheKey] = it }
     }
-    val list = read.filter { !localDate(it.start).isBefore(start) }
+    val list = filterActivityHistory(read, kind).filter { localDate(it.start) in start..today }
     val route = when {
+        kind == Bridge.Kind.RUN -> "h/activities?kind=RUN"
         health && sh.watchModule && devices.isNotEmpty() -> "h/performance"
         strength -> "t/insights"
         else -> null
@@ -180,6 +183,8 @@ fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strengt
             }
             Text(trf("%1\$s cette semaine", formatDuration(minutes.toDouble())), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary, maxLines = 1)
+            if (kind == Bridge.Kind.RUN) Text(km(list.sumOf { it.distanceM ?: 0.0 }) + " km",
+                style = MaterialTheme.typography.labelLarge, color = hue)
         }
         (0L..6L).forEach { i ->
             val d = start.plusDays(i)
@@ -207,7 +212,7 @@ fun ColumnScope.ActivityWeek(vm: SuperViewModel, nav: NavHostController, strengt
  * il existe), puis les deux activités suivantes en petites tuiles (volume soulevé, distance ou durée).
  */
 @Composable
-fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean) {
+fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, strength: Boolean, health: Boolean, kind: Bridge.Kind? = null) {
     val ctx = LocalContext.current
     val refresh by vm.refresh.collectAsState()
     val sh by vm.settings.collectAsState()
@@ -215,16 +220,18 @@ fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, str
     val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
     val history by vm.training.state.collectAsState()
     // dernière lecture réaffichée dès l'ouverture ; lue à l'avance au démarrage (voir preloadRecent)
-    val recent by produceState(lastRecent, refresh, sh.watchModule, imported, history.history.size) {
+    val cacheKey = strength to health
+    val cached = lastRecent[cacheKey] ?: Recent(emptyList(), emptyMap())
+    val recent by produceState(cached, refresh, sh.watchModule, imported, history.history, strength, health) {
         // les dernières, quel que soit leur âge (historique rapatrié de la montre, pause hivernale…) : la liste tout de suite, les tracés ensuite
         val l = tabActivities(0L, strength, health)
-        value = Recent(l, lastRecent.routes).also { lastRecent = it }
-        value = Recent(l, routesOf(ctx, l)).also { lastRecent = it }
+        value = Recent(l, cached.routes).also { lastRecent[cacheKey] = it }
+        value = Recent(l, routesOf(ctx, l)).also { lastRecent[cacheKey] = it }
     }
-    val list = recent.list
+    val list = filterActivityHistory(recent.list, kind)
     val routes = recent.routes
     SectionLabel(tr("Récentes")) {
-        if (list.isNotEmpty()) Text(tr("Tout voir"), Modifier.clickable { nav.navigate(if (health) "h/activities" else "history") }, color = Mf.colors.accent,
+        if (list.isNotEmpty()) Text(tr("Tout voir"), Modifier.clickable { nav.navigate(if (kind != null) "h/activities?kind=${kind.name}" else if (health) "h/activities" else "history") }, color = Mf.colors.accent,
             style = MaterialTheme.typography.labelLarge)
     }
     if (list.isEmpty()) {
@@ -233,6 +240,7 @@ fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, str
             Icon(Icons.Rounded.Watch, null, Modifier.size(28.dp), tint = Mf.colors.accent)
             Spacer(Modifier.width(12.dp))
             Text(when {
+                kind == Bridge.Kind.RUN -> tr("Vos courses apparaîtront ici après synchronisation ou import d’un fichier.")
                 !health -> tr("Vos séances terminées apparaîtront ici.")
                 sh.watchModule && devices.isNotEmpty() -> tr("Lancez une activité sur la montre : elle apparaîtra ici après synchronisation.")
                 sh.healthConnect -> tr("Les activités de vos autres apps (Apple Santé) apparaîtront ici.")
@@ -257,30 +265,36 @@ fun ColumnScope.RecentActivities(vm: SuperViewModel, nav: NavHostController, str
 
 /** Activités récentes et tracés des premières (clé de l'activité → tracé). */
 private class Recent(val list: List<Bridge.Activity>, val routes: Map<String, List<Pair<Double, Double>>>)
-private var lastRecent = Recent(emptyList(), emptyMap())
-private var lastWeek = emptyList<Bridge.Activity>()
+private val lastRecent = app.superhealth.platform.ConcurrentHashMap<Pair<Boolean, Boolean>, Recent>()
+private val lastWeek = app.superhealth.platform.ConcurrentHashMap<Pair<Boolean, Boolean>, List<Bridge.Activity>>()
 
-private suspend fun weekActivities(strength: Boolean, health: Boolean) = tabActivities(
-    app.superhealth.training.domain.Analytics.weekStart(LocalDate.now()).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), strength, health)
+private suspend fun weekActivities(strength: Boolean, health: Boolean) = Bridge.reconcile(tabActivities(
+    app.superhealth.training.domain.Analytics.weekStart(app.superhealth.platform.LocalDate.now()).atStartOfDay(app.superhealth.platform.ZoneId.systemDefault()).toInstant().toEpochMilli(), strength, health))
 
 private suspend fun routesOf(ctx: Context, l: List<Bridge.Activity>) =
-    l.take(5).filter { (it.distanceM ?: 0.0) >= 100 }.mapNotNull { a -> routeOf(ctx, a)?.let { a.key to it } }.toMap()
+    (l.take(5) + l.filter { it.kind == Bridge.Kind.RUN }.take(3)).distinctBy { it.key }
+        .filter { (it.distanceM ?: 0.0) >= 100 }.mapNotNull { a -> routeOf(ctx, a)?.let { a.key to it } }.toMap()
 
 /** Lit à l'avance les activités récentes et leurs tracés : l'onglet Activités les montre dès son ouverture. */
 suspend fun preloadRecent(ctx: Context, strength: Boolean, health: Boolean) {
-    lastWeek = weekActivities(strength, health)
+    val cacheKey = strength to health
+    lastWeek[cacheKey] = weekActivities(strength, health)
     val l = tabActivities(0L, strength, health)
-    lastRecent = Recent(l, lastRecent.routes)
-    lastRecent = Recent(l, routesOf(ctx, l))
+    lastRecent[cacheKey] = Recent(l, lastRecent[cacheKey]?.routes.orEmpty())
+    lastRecent[cacheKey] = Recent(l, routesOf(ctx, l))
 }
 
 /** Temps d'une activité : « 28:41 », ou « 1:05:12 » au-delà d'une heure. */
 internal fun clock(sec: Long): String = if (sec >= 3600) "%d:%02d:%02d".format(sec / 3600, sec / 60 % 60, sec % 60) else "%d:%02d".format(sec / 60, sec % 60)
 
+/** Durée active connue pour les imports, sinon durée écoulée disponible dans le résumé. */
+private fun activitySeconds(a: Bridge.Activity): Double =
+    a.run?.activeSec?.takeIf { it.isFinite() && it > 0 } ?: ((a.end - a.start) / 1000.0)
+
 /** Allure (course, marche, randonnée) ou vitesse (vélo…) moyenne. */
 internal fun pace(a: Bridge.Activity): String? {
     val m = a.distanceM?.takeIf { it >= 100 } ?: return null
-    val sec = (a.end - a.start) / 1000
+    val sec = activitySeconds(a)
     if (sec <= 0) return null
     return if (a.kind == Bridge.Kind.BIKE) formatNumber(m / 1000 / (sec / 3600.0), 1) + " km/h"
     else (sec / (m / 1000)).roundToLong().let { "%d:%02d /km".format(it / 60, it % 60) }
@@ -299,7 +313,7 @@ private fun RouteTile(a: Bridge.Activity, route: List<Pair<Double, Double>>?, on
                     modifier = Modifier.alignByBaseline())
                 Text(" km", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.alignByBaseline())
             }
-            Text(listOfNotNull(clock((a.end - a.start) / 1000), pace(a)).joinToString(" · "), style = MaterialTheme.typography.bodySmall,
+            Text(listOfNotNull(clock(activitySeconds(a)), pace(a)).joinToString(" · "), style = MaterialTheme.typography.bodySmall,
                 color = Mf.colors.textSecondary, maxLines = 1)
         }
         route?.let { RouteTrace(it, hue, Modifier.padding(start = 8.dp).size(118.dp, 74.dp)) }
@@ -503,20 +517,44 @@ fun rememberFitImport(vm: SuperViewModel, nav: NavHostController): () -> Unit {
 
 /** Historique complet de toutes les activités, par mois. */
 @Composable
-fun ActivitiesHistoryScreen(vm: SuperViewModel, nav: NavHostController) {
+fun ActivitiesHistoryScreen(vm: SuperViewModel, nav: NavHostController, initialKind: String? = null) {
     val ctx = LocalContext.current
     val refresh by vm.refresh.collectAsState()
     val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
-    val list by produceState(emptyList<Bridge.Activity>(), refresh, imported) {
-        value = runCatching { Bridge.activities(0L) }.getOrDefault(emptyList())
+    val history by vm.training.state.collectAsState()
+    var selected by rememberSaveable(initialKind) { mutableStateOf(initialKind) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var attempt by remember { mutableStateOf(0) }
+    val result by produceState<Result<List<Bridge.Activity>>?>(null, refresh, imported, history.history, attempt) {
+        value = null
+        value = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Bridge.activities(0L) } }
+            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
     }
+    val list = result?.getOrNull().orEmpty()
+    val kind = Bridge.Kind.entries.firstOrNull { it.name == selected }
+    val filtered = filterActivityHistory(list, kind, query)
     val import = rememberFitImport(vm, nav)
     DetailScaffold(tr("Toutes les activités"), onBack = { nav.popBackStack() }, action = {
         IconButton(onClick = import) { Icon(Icons.Rounded.FileOpen, tr("Importer des activités")) }
     }) {
-        if (list.isEmpty()) MfCard { Text(tr("Aucune activité pour l'instant."), color = Mf.colors.textSecondary) }
-        list.groupBy { localDate(it.start).withDayOfMonth(1) }.forEach { (month, items) ->
-            SectionLabel(month.format(DateTimeFormatter.ofPattern("LLLL yyyy", app.superhealth.ui.Lang.locale))
+        app.superhealth.nutrition.ui.components.ChipChoice(
+            listOf<Bridge.Kind?>(null) + Bridge.Kind.entries.filter { k -> k == kind || list.any { it.kind == k } },
+            kind, { it?.let { k -> Bridge.kindLabel(k.name) } ?: "Toutes" }) { selected = it?.name }
+        Spacer(Modifier.height(10.dp))
+        androidx.compose.material3.OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(),
+            label = { Text(tr("Rechercher une activité")) }, singleLine = true,
+            trailingIcon = { if (query.isNotEmpty()) TextButton(onClick = { query = "" }) { Text(tr("Effacer")) } })
+        Spacer(Modifier.height(10.dp))
+        when {
+            result == null -> LinearProgressIndicator(Modifier.fillMaxWidth(), color = HealthHues.Fitness)
+            result?.isFailure == true -> MfCard {
+                Text(tr("Impossible de charger les activités."), color = Mf.colors.textSecondary)
+                TextButton(onClick = { attempt++ }) { Text(tr("Réessayer")) }
+            }
+            filtered.isEmpty() -> MfCard { Text(tr(if (list.isEmpty()) "Aucune activité pour l'instant." else "Aucune activité ne correspond aux filtres."), color = Mf.colors.textSecondary) }
+        }
+        filtered.groupBy { localDate(it.start).withDayOfMonth(1) }.forEach { (month, items) ->
+            SectionLabel(month.format(app.superhealth.platform.DateTimeFormatter.ofPattern("LLLL yyyy", app.superhealth.ui.Lang.locale))
                 .replaceFirstChar { it.uppercase(app.superhealth.ui.Lang.locale) })
             GroupCard {
                 items.forEachIndexed { i, a ->
@@ -526,4 +564,12 @@ fun ActivitiesHistoryScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
     }
+}
+
+internal fun filterActivityHistory(list: List<Bridge.Activity>, kind: Bridge.Kind?, query: String = ""): List<Bridge.Activity> {
+    val search = query.trim()
+    return list.filter { a ->
+        (kind == null || a.kind == kind) && (search.isEmpty() ||
+            listOf(a.title, tr(Bridge.kindLabel(a.kind.name)), a.run?.app ?: tr(a.source.label)).any { it.contains(search, ignoreCase = true) })
+    }.sortedByDescending { it.start }
 }

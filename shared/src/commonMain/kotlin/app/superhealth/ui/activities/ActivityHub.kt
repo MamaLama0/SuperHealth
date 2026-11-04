@@ -80,6 +80,7 @@ import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.coach.askCoach
 import app.superhealth.ui.coach.coachAvailable
 import app.superhealth.ui.go
+import app.superhealth.ui.health.ImportActivitiesCard
 import app.superhealth.ui.health.ActivityWeek
 import app.superhealth.ui.health.RecentActivities
 import app.superhealth.ui.longToday
@@ -274,8 +275,8 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
             ActivitySection.STRENGTH -> WorkoutTabScreen(vm.training, nav, strength = strength, cardioFirst = false,
                 week = { ActivityWeek(vm, nav, strength, mixed) }, recent = { RecentActivities(vm, nav, strength, mixed) },
                 historyRoute = if (health) "h/activities" else "history", title = tr("Musculation"))
-            ActivitySection.RUN -> Frame(tr("Course"), nav, "h/activities") {
-                ActivityWeek(vm, nav, false, true)
+            ActivitySection.RUN -> Frame(tr("Course"), nav, "h/activities?kind=RUN") {
+                ActivityWeek(vm, nav, false, true, app.superhealth.bridge.Bridge.Kind.RUN)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                     PillButton(tr("Performances"), Modifier.weight(1f), strong = false, icon = Icons.Rounded.Speed) { nav.go("h/performance") }
@@ -283,7 +284,8 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
                         nav.askCoach(tr("Analyse mes dernières sorties de course et ma charge : que faire cette semaine ?"))
                     }
                 }
-                RecentActivities(vm, nav, false, true)
+                RecentActivities(vm, nav, false, true, app.superhealth.bridge.Bridge.Kind.RUN)
+                ImportActivitiesCard(vm, nav)
             }
             ActivitySection.MEDITATION -> Frame(tr("Méditation"), nav, null) { MeditationSection(nav) }
             ActivitySection.STRETCH -> Frame(tr("Étirements"), nav, null) { StretchSection(nav) }

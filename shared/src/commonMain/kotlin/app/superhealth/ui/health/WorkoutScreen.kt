@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -142,8 +143,13 @@ private fun teLabel(v: Double) = when {
 @Composable
 fun WorkoutScreen(nav: NavHostController, id: Long) {
     val ctx = LocalContext.current
-    val w by produceState<WorkoutDetail?>(null, id) { value = runCatching { WorkoutDetails.load(ctx, id) }.getOrNull() }
-    val detail = w
+    var attempt by remember(id) { mutableIntStateOf(0) }
+    val result by produceState<Result<WorkoutDetail?>?>(null, id, attempt) {
+        value = null
+        value = runCatching { WorkoutDetails.load(ctx, id) }
+            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+    }
+    val detail = result?.getOrNull()
     val kind = detail?.kind?.name?.let { Bridge.kindOf(it) } ?: Bridge.Kind.OTHER
     val hue = kind.hue()
     var confirmDelete by remember { mutableStateOf(false) }
@@ -168,7 +174,11 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             }) { Text(tr("Supprimer"), color = app.superhealth.ui.theme.Base.Red) } },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text(tr("Annuler"), color = Mf.colors.text) } })
         if (detail == null) {
-            Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = hue) }
+            if (result == null) Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = hue) }
+            else MfCard {
+                Text(tr("Cette activité est indisponible. Réessayez après synchronisation."), color = Mf.colors.textSecondary)
+                androidx.compose.material3.TextButton(onClick = { attempt++ }) { Text(tr("Réessayer")) }
+            }
             return@DetailScaffold
         }
         // En-tête : type, date, montre.
@@ -197,7 +207,7 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
             .background(Brush.verticalGradient(listOf(hue.container(1.35f), hue.container(0.8f)))).padding(16.dp)) {
             Row {
                 detail.distanceM?.let { Big(km(it), "km", tr("Distance"), hue, Modifier.weight(1f)) }
-                Big(clock(detail.activeSec), null, tr("Durée"), hue, Modifier.weight(1f))
+                Big(clock(detail.activeSec), null, tr("Temps en mouvement"), hue, Modifier.weight(1f))
                 detail.avgSpeedMps?.let { v ->
                     if (detail.usesPace) Big(pace(1000 / v), "/km", tr("Allure moy."), hue, Modifier.weight(1f))
                     else Big(formatNumber(v * 3.6, 1), "km/h", tr("Vitesse moy."), hue, Modifier.weight(1f))
@@ -344,9 +354,20 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
 @Composable
 fun WorkoutMapScreen(nav: NavHostController, id: Long) {
     val ctx = LocalContext.current
-    val w by produceState<WorkoutDetail?>(null, id) { value = runCatching { WorkoutDetails.load(ctx, id) }.getOrNull() }
+    var attempt by remember(id) { mutableIntStateOf(0) }
+    val result by produceState<Result<WorkoutDetail?>?>(null, id, attempt) {
+        value = null
+        value = runCatching { WorkoutDetails.load(ctx, id) }
+            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+    }
     Box(Modifier.fillMaxSize().background(Mf.colors.background)) {
-        w?.let { d ->
+        val detail = result?.getOrNull()
+        if (result == null) CircularProgressIndicator(Modifier.align(Alignment.Center), color = Mf.colors.accent)
+        else if (detail == null || !detail.hasGps) Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(tr(if (detail == null) "Cette activité est indisponible. Réessayez après synchronisation." else "Aucun tracé GPS pour cette activité."), color = Mf.colors.textSecondary)
+            androidx.compose.material3.TextButton(onClick = { attempt++ }) { Text(tr("Réessayer")) }
+        }
+        detail?.takeIf { it.hasGps }?.let { d ->
             val track = remember(d) { d.points.mapNotNull { p -> if (p.lat != null && p.lon != null) p.lat to p.lon else null } }
             TrackMap(track, Bridge.kindOf(d.kind.name).hue(), Modifier.fillMaxSize(), interactive = true)
         }
@@ -363,7 +384,7 @@ private fun Big(value: String, unit: String?, label: String, hue: Color, modifie
             Text(value, style = MaterialTheme.typography.headlineSmall, color = hue.onContainer(), maxLines = 1)
             unit?.let { Text(" $it", style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 3.dp), maxLines = 1) }
         }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 

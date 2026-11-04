@@ -1,6 +1,7 @@
 package app.superhealth.health.data
 
 import app.superhealth.platform.*
+import app.superhealth.bridge.Bridge
 
 import app.superhealth.platform.Context
 import app.superhealth.platform.File
@@ -57,14 +58,14 @@ object Performance {
 
     /** Lit les séances (montre), complète le cache avec les nouvelles et calcule les modules. */
     suspend fun snapshot(ctx: Context): Snapshot = withContext(Dispatchers.IO) {
-        val workouts = runCatching { HealthRepository.workouts(0L, System.currentTimeMillis()) }.getOrDefault(emptyList())
+        val activities = Bridge.reconcile(Bridge.activities(0L).filter { it.watch != null || it.run != null })
+        val ids = activities.mapNotNull { it.watch?.id ?: it.run?.id }.toSet()
         val cache = lock.withLock {
             val m = memory ?: runCatching { json.decodeFromString(ser, file(ctx).readText()).toMutableMap() }.getOrNull() ?: mutableMapOf()
             memory = m
-            val missing = workouts.filter { it.id !in m }
-            missing.forEach { w -> runCatching { WorkoutDetails.load(ctx, w.id) }.getOrNull()?.let { m[w.id] = entry(it) } }
+            val missing = ids.filter { it !in m }
+            missing.forEach { id -> runCatching { WorkoutDetails.load(ctx, id) }.getOrNull()?.let { m[id] = entry(it) } }
             // Séances supprimées : retirées du cache.
-            val ids = workouts.map { it.id }.toSet()
             m.keys.retainAll(ids)
             if (missing.isNotEmpty()) runCatching { file(ctx).writeText(json.encodeToString(ser, m)) }
             m.values.sortedByDescending { it.start }

@@ -258,6 +258,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
         onDiscard = { options = false; confirmDiscard = true })
     if (confirmFinish) {
         val left = s.exercises.sumOf { ex -> ex.sets.count { !it.done && it.type != SetType.WARMUP } }
+        val done = s.exercises.sumOf { ex -> ex.sets.count { it.done } }
         // CompleteWorkoutDialog : « Log All Sets » / « Log Only Completed Sets » quand des séries restent à cocher
         val fillable = s.exercises.sumOf { ex -> ex.sets.count { !it.done && (it.reps ?: 0) > 0 } }
         // aucune série faite ni remplie : rien à enregistrer, le programme n'avance pas
@@ -268,11 +269,11 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
             dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text(tr("Continuer"), color = Mf.colors.text) } })
         else if (left > 0 && fillable > 0) AlertDialog(onDismissRequest = { confirmFinish = false }, containerColor = Mf.colors.card,
             title = { Text(tr("Terminer l'entraînement ?")) },
-            text = { Text(trf("%1\$s série(s) de travail ne sont pas cochées.", left)) },
+            text = { Text(trf("%1\$s série(s) validée(s). Tout enregistrer ajoutera %2\$s série(s) renseignée(s) mais non cochée(s).", done, fillable)) },
             confirmButton = {
                 Column(horizontalAlignment = Alignment.End) {
-                    TextButton(onClick = { confirmFinish = false; vm.finishSession(logAll = true) }) { Text(tr("Enregistrer toutes les séries"), color = Mf.colors.accent) }
-                    TextButton(onClick = { confirmFinish = false; vm.finishSession() }) { Text(tr("Seulement les séries faites"), color = Mf.colors.accent) }
+                    if (done > 0) TextButton(onClick = { confirmFinish = false; vm.finishSession() }) { Text(tr("Seulement les séries faites"), color = Mf.colors.accent) }
+                    TextButton(onClick = { confirmFinish = false; vm.finishSession(logAll = true) }) { Text(trf("Tout enregistrer (%1\$s)", done + fillable), color = Mf.colors.textSecondary) }
                     TextButton(onClick = { confirmFinish = false }) { Text(tr("Continuer la séance"), color = Mf.colors.text) }
                 }
             })

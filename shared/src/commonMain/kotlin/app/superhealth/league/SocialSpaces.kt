@@ -69,7 +69,7 @@ object SocialSpaces {
         private fun file() = AtomicFile(File(ctx.filesDir, "league/spaces.json").apply { parentFile?.mkdirs() })
         private fun exists() = File(ctx.filesDir, "league/spaces.json").isFile
         override fun now() = System.currentTimeMillis()
-        override fun randomId() = java.util.UUID.randomUUID().toString().replace("-", "")
+        override fun randomId() = UUID.randomUUID().toString().replace("-", "")
         override fun newKey() = RelayCrypto.newKey()
         override fun hash(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
         override fun validContact(contact: SpaceContact) = SocialSpaces.validContact(contact)

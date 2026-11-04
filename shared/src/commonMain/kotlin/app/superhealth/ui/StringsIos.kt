@@ -3,6 +3,15 @@ package app.superhealth.ui
 /** Textes propres à la version iOS (Apple Santé à la place de la montre Gadgetbridge et de Health Connect). */
 object StringsIos {
     val map: Map<String, String> = mapOf(
+        "Vos courses apparaîtront ici après synchronisation ou import d’un fichier." to "Your runs will appear here after syncing or importing a file.",
+        "Rechercher une activité" to "Search activities",
+        "Aucune activité ne correspond aux filtres." to "No activities match the filters.",
+        "Impossible de charger les activités." to "Unable to load activities.",
+        "Cette activité est indisponible. Réessayez après synchronisation." to "This activity is unavailable. Try again after syncing.",
+        "Aucun tracé GPS pour cette activité." to "No GPS track for this activity.",
+        "Temps en mouvement" to "Moving time",
+        "Impossible de charger les performances." to "Unable to load performance data.",
+        "Synchronisez une activité ou importez un fichier pour voir vos performances." to "Sync an activity or import a file to see your performance data.",
         "Sur iPhone, installez les nouvelles versions avec SideStore + HealthKit." to "On iPhone, install new versions with SideStore + HealthKit.",
         "Voir les versions iOS" to "View iOS releases",
         "Série en cours" to "Current streak",

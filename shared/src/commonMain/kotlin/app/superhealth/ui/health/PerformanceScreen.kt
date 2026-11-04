@@ -28,6 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,9 +89,22 @@ fun RecoveryRing(hours: Double?, size: androidx.compose.ui.unit.Dp, stroke: andr
 fun PerformanceScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
     val refresh by vm.refresh.collectAsState()
-    val snap by produceState<Performance.Snapshot?>(null, refresh) { value = runCatching { Performance.snapshot(ctx) }.getOrNull() }
+    val imported by app.superhealth.bridge.RunImport.runs.collectAsState()
+    var attempt by remember { mutableIntStateOf(0) }
+    val result by produceState<Result<Performance.Snapshot>?>(null, refresh, imported, attempt) {
+        value = null
+        value = runCatching { Performance.snapshot(ctx) }
+            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+    }
     DetailScaffold(tr("Performances"), onBack = { nav.popBackStack() }) {
-        val s = snap ?: run {
+        val s = result?.getOrNull() ?: run {
+            if (result?.isFailure == true) {
+                MfCard {
+                    Text(tr("Impossible de charger les performances."), color = Mf.colors.textSecondary)
+                    TextButton(onClick = { attempt++ }) { Text(tr("Réessayer")) }
+                }
+                return@DetailScaffold
+            }
             Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = HealthHues.Fitness)
@@ -98,7 +115,7 @@ fun PerformanceScreen(vm: SuperViewModel, nav: NavHostController) {
             return@DetailScaffold
         }
         if (s.entries.isEmpty()) {
-            MfCard { Text(tr("Synchronisez la montre pour voir vos performances."), color = Mf.colors.textSecondary) }
+            MfCard { Text(tr("Synchronisez une activité ou importez un fichier pour voir vos performances."), color = Mf.colors.textSecondary) }
             return@DetailScaffold
         }
 
