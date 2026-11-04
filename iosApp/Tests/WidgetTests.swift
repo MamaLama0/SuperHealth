@@ -39,6 +39,7 @@ final class WidgetTests: XCTestCase {
                         .frame(width: size.width, height: size.height)
                         .background(dark ? Color.black : Color.white)
                     let controller = UIHostingController(rootView: view)
+                    if #available(iOS 16.4, *) { controller.safeAreaRegions = [] }
                     let window = UIWindow(frame: CGRect(origin: .zero, size: size))
                     window.rootViewController = controller
                     window.makeKeyAndVisible()
@@ -76,6 +77,7 @@ final class WidgetTests: XCTestCase {
                     let view = content.preferredColorScheme(dark ? .dark : .light).padding(16)
                         .frame(width: size.width, height: size.height).background(dark ? Color.black : Color.white)
                     let controller = UIHostingController(rootView: view)
+                    if #available(iOS 16.4, *) { controller.safeAreaRegions = [] }
                     let window = UIWindow(frame: CGRect(origin: .zero, size: size))
                     window.rootViewController = controller
                     window.makeKeyAndVisible()

@@ -21,7 +21,7 @@ extension Snapshot.NutritionWeek {
 
 private func nutritionNumber(_ value: Double?) -> String {
     guard let value, value.isFinite else { return "—" }
-    return value.formatted(.number.precision(.fractionLength(0)))
+    return value.formatted(.number.precision(.fractionLength(0)).grouping(.never))
 }
 
 struct MacroWidgetView: View {
@@ -41,7 +41,7 @@ struct MacroWidgetView: View {
     var body: some View {
         Group {
             if !macros.isEmpty {
-                VStack(alignment: .leading, spacing: family == .systemSmall ? 7 : 10) {
+                VStack(alignment: .leading, spacing: family == .systemSmall ? 4 : 6) {
                     HStack {
                         Image(systemName: "chart.pie.fill").foregroundStyle(Color(hex: macros[0].color))
                         Text(title).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
@@ -63,7 +63,7 @@ struct MacroWidgetView: View {
                     } else {
                         HStack(spacing: 12) {
                             ForEach(macros, id: \.label) { m in
-                                VStack(spacing: 5) {
+                                VStack(spacing: 3) {
                                     Text(m.label).font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
                                     ZStack {
                                         RingView(fraction: fraction(m), color: Color(hex: m.color), width: 6)
