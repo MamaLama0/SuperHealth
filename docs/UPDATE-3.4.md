@@ -1,6 +1,6 @@
 # SuperHealth 3.4
 
-- Les courses des apps compatibles sont récupérées via Health Connect, au retour dans SuperHealth et en arrière-plan avec l’autorisation correspondante.
-- L’historique conserve les anciennes sorties et rapproche mieux les doublons, même lorsque les pauses diffèrent.
-- Les calories actives et totales sont séparées et le cardio Garmin associé à sa séance. Les détails ouverts se rafraîchissent.
-- Un accès depuis Course explique comment relier Strava et Garmin Connect.
+- Les courses des apps compatibles sont récupérées via Health Connect, avec une synchronisation de fond autorisable et un meilleur rapprochement des doublons.
+- Les anciennes sorties sont conservées, les calories actives et totales séparées et le cardio Garmin associé à sa séance.
+- Le bouton pause/reprise est centré en haut de la séance.
+- Les échauffements restent sur leur exercice en superset, évitent les ajouts répétés et se désactivent durablement, globalement ou par exercice.

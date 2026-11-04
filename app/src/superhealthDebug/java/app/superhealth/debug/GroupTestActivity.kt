@@ -166,6 +166,21 @@ class GroupTestActivity : Activity() {
                         bitmap.recycle(); app.superhealth.ui.ProfilePhoto.load(this@GroupTestActivity)
                         Relay.sync(this@GroupTestActivity)
                     }
+                    "friend-code-publish", "friend-code-renew" -> {
+                        val invitation = InvitationCodes.publish(this@GroupTestActivity, renew = operation.endsWith("renew"))
+                        File(directory, "friend-code.txt").writeText(invitation.code)
+                    }
+                    "friend-code-add" -> {
+                        check(InvitationCodes.lookup(this@GroupTestActivity, intent.getStringExtra("code")!!, "http://127.0.0.1:18787"))
+                        val card = checkNotNull(League.incoming.value)
+                        InvitationCodes.confirm(this@GroupTestActivity, card)
+                        League.incoming.value = null
+                        Relay.sync(this@GroupTestActivity)
+                    }
+                    "friend-code-collect" -> {
+                        InvitationCodes.collectResponses(this@GroupTestActivity)
+                        Relay.sync(this@GroupTestActivity)
+                    }
                     "add" -> { check(League.receive(this@GroupTestActivity, intent.getStringExtra("card")!!));
                         League.incoming.value?.let { League.accept(this@GroupTestActivity, it); League.incoming.value = null }; Relay.sync(this@GroupTestActivity) }
                     "publish" -> {
