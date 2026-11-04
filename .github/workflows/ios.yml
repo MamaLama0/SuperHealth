@@ -120,13 +120,8 @@ jobs:
           # pré-version : la « dernière version » reste l'APK Android (lue par la mise à jour intégrée)
           prerelease: true
           make_latest: false
-          name: SuperHealth iOS 3.3.1 (expérimental)
-          body: |
-            Installation : guide « Installer sur iPhone » du README de la branche ios
-            (https://github.com/MamaLama0/SuperHealth/tree/ios#installer-sur-iphone).
-            - SideStore-HealthKit.ipa : à installer d'abord, avec iloader (Import IPA), depuis l'ordinateur.
-            - SuperHealth.ipa : à installer ensuite depuis SideStore (My Apps > +), sur l'iPhone.
-            - SuperHealth-simulator.zip : pour le simulateur iOS sur Mac.
+          name: SuperHealth iOS 3.4 (expérimental)
+          body_path: docs/UPDATE-3.4-ios.md
           files: |
             SuperHealth.ipa
             SideStore-HealthKit.ipa
