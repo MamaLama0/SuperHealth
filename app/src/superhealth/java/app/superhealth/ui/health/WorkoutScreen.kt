@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -144,7 +145,11 @@ private fun teLabel(v: Double) = when {
 fun WorkoutScreen(nav: NavHostController, id: Long) {
     val ctx = LocalContext.current
     var attempt by remember(id) { mutableIntStateOf(0) }
-    val result by produceState<Result<WorkoutDetail?>?>(null, id, attempt) {
+    val session = if (app.superhealth.bridge.HcWorkouts.isHc(id)) {
+        val cache by app.superhealth.SuperPrefs.hc.collectAsState()
+        app.superhealth.bridge.HcWorkouts.sessionFor(id, cache.sessions)
+    } else null
+    val result by produceState<Result<WorkoutDetail?>?>(null, id, attempt, session) {
         value = null
         value = runCatching { WorkoutDetails.load(ctx, id) }
             .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }

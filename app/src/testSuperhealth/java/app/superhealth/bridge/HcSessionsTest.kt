@@ -19,6 +19,15 @@ class HcSessionsTest {
         assertNull(HcSessions.metricClientId("com.strava", "strava-exercise-123/route", distance = true))
     }
 
+    @Test fun garminHeartRateUsesTheFirstSampleAndAnExactClientId() {
+        val app = "com.garmin.android.apps.connectmobile"
+        assertEquals("1231700000000123", HcSessions.heartClientId(app, "123", 1700000000123))
+        assertNotEquals(HcSessions.heartClientId(app, "12", 1700000000123), HcSessions.heartClientId(app, "123", 1700000000123))
+        assertNull(HcSessions.heartClientId("com.strava", "strava-exercise-123", 1700000000123))
+        assertNull(HcSessions.heartClientId(app, "unknown-format", 1700000000123))
+        assertNull(HcSessions.metricClientId(app, "unknown-format", distance = true))
+    }
+
     @Test fun refreshRetainsOlderHistoryAndRemovesDeletedSessionsInsideItsWindow() {
         val old = session("old", 100, client = "strava-exercise-1")
         val deleted = session("deleted", 500, client = "strava-exercise-2")

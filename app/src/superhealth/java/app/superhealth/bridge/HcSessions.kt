@@ -20,13 +20,18 @@ internal object HcSessions {
         }
     }
 
+    fun heartClientId(app: String, sessionClientId: String?, firstSampleMs: Long?): String? {
+        if (app != "com.garmin.android.apps.connectmobile" || firstSampleMs == null) return null
+        return metricClientId(app, sessionClientId, distance = true)?.let { it + firstSampleMs }
+    }
+
     /** null indique un fournisseur dont la convention d'identifiants n'est pas connue. */
     fun metricClientId(app: String, sessionClientId: String?, distance: Boolean): String? {
         if (sessionClientId.isNullOrBlank()) return null
         return when (app) {
-            "com.garmin.android.apps.connectmobile" -> sessionClientId
+            "com.garmin.android.apps.connectmobile" -> sessionClientId.takeIf { it.all { c -> c in '0'..'9' } }
             "com.strava" -> sessionClientId.removePrefix("strava-exercise-")
-                .takeIf { sessionClientId.startsWith("strava-exercise-") && it.isNotEmpty() && it.all(Char::isDigit) }
+                .takeIf { sessionClientId.startsWith("strava-exercise-") && it.isNotEmpty() && it.all { c -> c in '0'..'9' } }
                 ?.let { "strava-${if (distance) "distance" else "calories"}-$it" }
             else -> null
         }

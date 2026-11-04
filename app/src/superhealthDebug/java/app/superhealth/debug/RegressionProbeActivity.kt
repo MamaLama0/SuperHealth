@@ -152,6 +152,12 @@ class RegressionProbeActivity : Activity() {
                             saved.delete()
                         }
                     }
+                    "hc-cache-fixture" -> {
+                        val sessions = app.superhealth.nutrition.data.AppJson.decodeFromString(
+                            kotlinx.serialization.builtins.ListSerializer(app.superhealth.HcSession.serializer()),
+                            intent.getStringExtra("sessions") ?: "[]")
+                        SuperPrefs.setHc(SuperPrefs.hc.value.copy(sessions = sessions))
+                    }
                     "seed" -> seed()
                     "relay-live-reset" -> {
                         app.superhealth.league.League.configure(this@RegressionProbeActivity) { it.copy(friends = emptyList(), customRelay = false, relayUrl = "", relayEnabled = true, syncsPerDay = 0, refreshOnOpen = false, syncError = null) }

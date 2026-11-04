@@ -372,8 +372,13 @@ object HealthConnectHub {
                 else aggregate?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories ?: if (read(TotalCaloriesBurnedRecord::class) in granted) runCatching {
                     readAll(client, TotalCaloriesBurnedRecord::class, sr, origin).sumOf { it.energy.inKilocalories }
                 }.getOrNull() else null
-            // Les mesures d'une autre application ou d'un autre appareil ne sont pas attribuées à cette séance.
+            // Garmin associe les séries actives à l'activité et à leur premier échantillon.
             val samples = hrRecords?.filter { it.metadata.dataOrigin.packageName == app }
+                ?.filter { record ->
+                    val linkedId = HcSessions.heartClientId(app, r.metadata.clientRecordId,
+                        record.samples.minOfOrNull { it.time.toEpochMilli() })
+                    linkedId == null || record.metadata.clientRecordId == linkedId
+                }
                 ?.flatMap { it.samples }?.filter { it.time >= r.startTime && it.time < r.endTime && it.beatsPerMinute in 30..230 }
                 .orEmpty()
             val bpm = samples.map { it.beatsPerMinute }
