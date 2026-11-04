@@ -11,7 +11,7 @@ Les médias ont la même rétention de cinq ans et restent accessibles quand seu
 
 `/v2/cards/<ancienne-boîte>/<capacité>/handoffs/<destinataire32hex>` conserve les changements d’adresse individuellement chiffrés pour les amis conservés. Il n’existe pas de liste de ces messages. Après révocation, seule leur lecture reste possible. Les amis ayant déjà échangé leurs nouvelles clés suivent automatiquement le changement ; les anciennes versions nécessitent une nouvelle invitation.
 
-`/v2/recovery/<capacité64hex>` conserve une copie chiffrée de l’identité sociale, des contacts, des titres, badges et références d’avatar. La capacité, la clé AES et le secret propriétaire sont dérivés séparément d’un code aléatoire. Ni le code ni les journaux de santé ne sont envoyés. Cette récupération ne remplace pas un système complet de gestion et révocation des appareils.
+`/v2/recovery/<capacité64hex>` conserve une copie chiffrée de l’identité sociale, des contacts, des titres, badges et références d’avatar. La capacité, la clé AES et le secret propriétaire sont dérivés séparément d’un code aléatoire. Ni le code ni les journaux de santé ne sont envoyés. Le propriétaire peut supprimer définitivement cette capacité. Les tombstones de propriété empêchent un ancien appareil de recréer la même boîte après redémarrage du serveur.
 
 Les paramètres par défaut sont : quota médias 100 Go, 100000 fichiers, 20000 médias par boîte, 200000 événements sociaux et 50000 événements par boîte. Le quota des événements est séparé, plafonné à 2 Go de chiffrés et métadonnées. Le tas Node est plafonné à 160 Mio dans l’image, dans le conteneur de 256 Mio. Ces limites ne sont pas des mesures de charge. Le quota de création est de 12 nouvelles boîtes ou copies de récupération par heure et par adresse réseau directe (`MAX_NEW_MAILBOXES_PER_HOUR`). Derrière un proxy, cette limite peut être partagée. Pour un serveur privé, conserver le contrôle d’admission par `PUBLISH_KEY` ; une distribution publique demande une stratégie d’admission supplémentaire.
 
@@ -152,3 +152,18 @@ La route `POST /v2/feedback` accepte une note facultative, un type de retour, un
 Configurer `FEEDBACK_GITHUB_REPO=owner/private-repo` et un jeton dédié `FEEDBACK_GITHUB_TOKEN` limité à ce dépôt avec **Issues: Read and write**. Le jeton reste dans l’environnement privé du serveur, jamais dans l’app ou Git. Une installation gérant les secrets fichiers peut employer `FEEDBACK_GITHUB_TOKEN_FILE` à la place. Le serveur vérifie que le dépôt est privé avant chaque création d’issue. Sans configuration ou si le dépôt devient public, l’envoi est refusé et le relais continue de fonctionner. `/health` indique `feedback:1` quand la passerelle est configurée, sans révéler le dépôt ou le jeton.
 
 Après mise à jour de l’image, recréer le service avec le même volume. Les médias autorisent désormais les vidéos de 50 Mio (+28 octets de chiffrement), en flux, avec un délai maximal de requête de 300 s. Adapter également le reverse proxy à 51 Mio et 300 s. Le quota global de 100 Go, les propriétaires des fichiers et les cartes restent conservés.
+
+
+### Cercles et révocation des anciennes capacités
+
+Le moteur social étendu réutilise un second flux `/social`, avec des capacités indépendantes des cartes de santé. Le relais conserve des paquets opaques. Il ne connaît ni les cercles, ni leurs membres, ni leurs clés. Le maximum d’un événement de transport reste 24 Ko.
+
+`POST /v2/cards/<boîte>/<capacité>/freeze` nécessite le jeton propriétaire et l’autorisation de publication habituelle. Il fige définitivement les écritures de cette boîte, de ses événements et médias. Les lectures restent possibles pour que les destinataires récupèrent les dernières décisions de départ. `DELETE` reste disponible et révoque ensuite les lectures. Le gel et la révocation persistent après redémarrage. Une autorisation est vérifiée de nouveau après une réception lente pour empêcher une validation après gel ou suppression.
+
+`GET /v2/cards/<boîte>/<capacité>/status` renvoie uniquement `revoked` et `frozen` pour une capacité réservée. L’application peut vérifier une révocation sans réactiver la boîte. `GET /health` ajoute `recoveryRevocation:1`, `streamFreeze:1` et `capabilityStatus:1`. Les parcours de suppression et de sécurisation exigent ces capacités.
+
+Un nouvel essai de `PUT /media/<id64hex>` peut fournir `X-Content-SHA256`. Le relais renvoie 204 lorsque la taille et le hachage correspondent exactement au fichier chiffré déjà validé pour cette boîte. Une reprise divergente reçoit 409. Les anciens clients restent compatibles.
+
+La rotation des liens personnels utilise les handoffs chiffrés existants. La découverte d’un retrait reste lisible après suppression de la carte principale. Le flux étendu est gelé avant d’attendre les confirmations distantes, puis supprimé. Les clients anciens ne sachant pas confirmer doivent être mis à jour ou révoquer leur ancien lien. Les données déjà copiées par un destinataire ne peuvent pas être effacées à distance.
+
+Validation locale `node --test server.test.mjs`. Aucun déploiement distant n’est requis par cette modification des sources.

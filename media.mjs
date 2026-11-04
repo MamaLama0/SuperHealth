@@ -44,13 +44,18 @@ export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAUL
         'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' });
       await pipeline(createReadStream(file(id)), res); return;
     }
-    if (!authorized) { req.resume(); return send(res, 403); }
+    if (!(typeof authorized === 'function' ? authorized() : authorized)) { req.resume(); return send(res, 403); }
     if (req.method === 'DELETE') { req.resume(); await remove(id); return send(res, 204); }
     if (req.method !== 'PUT') { req.resume(); return send(res, 405); }
     if (uploading) { req.resume(); res.setHeader('Retry-After', '2'); return send(res, 503); }
     const length = Number(req.headers['content-length']);
     if (Number.isFinite(length) && (length > MAX_MEDIA || length < 29)) { req.resume(); return send(res, 413); }
-    if (entries.has(id)) { req.resume(); return send(res, 409); }
+    if (entries.has(id)) {
+      const existing = entries.get(id);
+      const same = existing.parent === createHash('sha256').update(parent).digest('hex') &&
+        req.headers['x-content-sha256'] === existing.hash && Number(req.headers['content-length']) === existing.size;
+      req.resume(); return send(res, same ? 204 : 409);
+    }
     uploading = true;
     const tmp = file(id) + '.' + randomUUID() + '.tmp';
     let size = 0; const hash = createHash('sha256');
@@ -85,6 +90,10 @@ export async function createMediaStore(dataDir, { now = Date.now, quota = DEFAUL
       await rename(tmp, file(id));
       await writeFile(tmp + '.meta.tmp', JSON.stringify(meta), { flag: 'wx', mode: 0o600 });
       await rename(tmp + '.meta.tmp', join(dir, id + '.json'));
+      if (!(typeof authorized === 'function' ? authorized() : authorized)) {
+        await unlink(file(id)).catch(() => {}); await unlink(join(dir, id + '.json')).catch(() => {});
+        return send(res, 403);
+      }
       entries.set(id, meta); used += size;
       return send(res, 204);
     } catch (e) { if (!res.headersSent && !res.destroyed) send(res, e.status || 500); }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto';
 import { request } from 'node:http';
 import { mkdtemp, rm, readFile, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -439,6 +439,12 @@ test('social recovery has its own long-lived opaque slot and owner authorization
     f.advance(TTL_MS + 1); await f.restart();
     assert.equal(decrypt(await (await fetch(f.base + path)).text(), path), 'social credentials only');
     const health = await (await fetch(f.base + '/health')).json(); assert.equal(health.social, 1); assert.equal(health.recovery, 1);
+    assert.equal(health.recoveryRevocation, 1);
+    assert.equal((await fetch(f.base + path, { method: 'DELETE', headers: headers() })).status, 204);
+    assert.equal((await fetch(f.base + path)).status, 404);
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers(), body: encrypt(f.now + 1, path) })).status, 403);
+    await f.restart();
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers(), body: encrypt(f.now + 2, path) })).status, 403);
   } finally { await f.close(); }
 });
 
@@ -452,5 +458,67 @@ test('mailbox creation is limited independently from existing users publications
     const response = await put(third); assert.equal(response.status, 429); assert.equal(response.headers.get('retry-after'), '3600');
     f.advance(1); assert.equal((await put(route)).status, 204);
     f.advance(3600000); assert.equal((await put(third)).status, 204);
+  } finally { await f.close(); }
+});
+
+
+test('freezing a social stream preserves reads and refuses every subsequent mutation after restart', async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await fetch(f.base + route, { method: 'PUT', headers: headers(), body: encrypt(f.now) })).status, 204);
+    const path = route + '/social/' + 'a'.repeat(32);
+    const body = encrypt(f.now, path, 'final membership decision');
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers(), body })).status, 204);
+    assert.equal((await fetch(f.base + route + '/freeze', { method: 'POST', headers: headers('f'.repeat(64)) })).status, 403);
+    assert.equal((await fetch(f.base + route + '/freeze', { method: 'POST', headers: headers() })).status, 204);
+    await f.restart();
+    assert.equal(decrypt(await (await fetch(f.base + path)).text(), path), 'final membership decision');
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers(), body: encrypt(f.now + 1, path) })).status, 403);
+    assert.equal((await fetch(f.base + route, { method: 'PUT', headers: headers(), body: encrypt(f.now + 1) })).status, 403);
+    assert.equal((await fetch(f.base + route, { method: 'DELETE', headers: headers() })).status, 204);
+    assert.equal((await fetch(f.base + route, { method: 'PUT', headers: headers(), body: encrypt(f.now + 2) })).status, 403);
+  } finally { await f.close(); }
+});
+
+
+test('media retries require the same ciphertext hash and slow uploads cannot commit after freezing', async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await fetch(f.base + route, { method: 'PUT', headers: headers(), body: encrypt(f.now) })).status, 204);
+    const path = route + '/media/' + '9'.repeat(64), bytes = randomBytes(128);
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    const put = (digest) => fetch(f.base + path, { method: 'PUT', headers: { ...headers(), 'X-Content-SHA256': digest }, body: bytes });
+    assert.equal((await put(hash)).status, 204);
+    assert.equal((await put(hash)).status, 204);
+    assert.equal((await put('0'.repeat(64))).status, 409);
+    const slow = route + '/media/' + '8'.repeat(64);
+    let upload;
+    const status = new Promise((resolve, reject) => {
+      upload = request(f.base + slow, { method: 'PUT', headers: { ...headers(), 'Content-Length': 128 } }, res => { res.resume(); resolve(res.statusCode); });
+      upload.on('error', reject);
+    });
+    const started = f.waitForRequest(); upload.write(bytes.subarray(0, 32)); await started;
+    assert.equal((await fetch(f.base + route + '/freeze', { method: 'POST', headers: headers() })).status, 204);
+    upload.end(bytes.subarray(32));
+    assert.equal(await status, 403);
+    assert.equal((await fetch(f.base + slow)).status, 404);
+    assert.deepEqual(await (await fetch(f.base + route + '/status')).json(), { revoked: false, frozen: true });
+    assert.equal((await fetch(f.base + route, { method: 'DELETE', headers: headers() })).status, 204);
+    assert.deepEqual(await (await fetch(f.base + route + '/status')).json(), { revoked: true, frozen: true });
+    await f.restart();
+    assert.equal((await fetch(f.base + path)).status, 404);
+  } finally { await f.close(); }
+});
+
+
+test('revoking an unused recovery code reserves a permanent bounded tombstone', async () => {
+  const f = await fixture({ maxNewMailboxesPerHour: 1 });
+  const path = '/v2/recovery/' + '2'.repeat(64);
+  try {
+    assert.equal((await fetch(f.base + path, { method: 'DELETE', headers: headers() })).status, 204);
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers(), body: encrypt(f.now, path) })).status, 403);
+    assert.equal((await fetch(f.base + '/v2/recovery/' + '3'.repeat(64), { method: 'DELETE', headers: headers() })).status, 429);
+    await f.restart();
+    assert.equal((await fetch(f.base + path, { method: 'PUT', headers: headers(), body: encrypt(f.now + 1, path) })).status, 403);
   } finally { await f.close(); }
 });

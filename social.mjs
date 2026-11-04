@@ -66,13 +66,14 @@ export async function createSocialStore(dataDir, { now = Date.now, retentionDays
       return send(res, 200, { items, next: eligible.length > page.length && last ? `${String(last[1].revision).padStart(16, '0')}:${last[0]}` : null });
     }
     if (req.method !== 'PUT' || !ID.test(id || '')) { req.resume(); return send(res, 405); }
-    if (!authorized) { req.resume(); return send(res, 403); }
+    if (!(typeof authorized === 'function' ? authorized() : authorized)) { req.resume(); return send(res, 403); }
     const rawBody = await readBody(req);
     if (Buffer.byteLength(rawBody) > MAX_ENTRY) return send(res, 413);
     let envelope;
     try { envelope = validateEnvelope(rawBody, now()); } catch { return send(res, 400); }
     const raw = JSON.stringify(envelope);
     return serialized(async () => {
+      if (!(typeof authorized === 'function' ? authorized() : authorized)) return send(res, 403);
       const entries = boxes.get(box) || new Map(); const previous = entries.get(id);
       if (previous && envelope.revision < previous.revision) return send(res, 409);
       if (previous && envelope.revision === previous.revision) {

@@ -95,7 +95,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
     const envelope = validateEnvelope(record.raw, record.updatedAt);
     if (record.revision !== envelope.revision) throw new Error('invalid stored revision');
     if (record.kind != null && !['invite', 'recovery'].includes(record.kind)) throw new Error('invalid stored kind');
-    if (record.kind == null && !owners.has(name.slice(0, -5))) await saveOwner(name.slice(0, -5), { writeHash: record.writeHash, revoked: false });
+    if (record.kind !== 'invite' && !owners.has(name.slice(0, -5))) await saveOwner(name.slice(0, -5), { writeHash: record.writeHash, revoked: false });
     if (record.updatedAt <= now() - ttl(record)) { await unlink(path); continue; }
     if (index.size >= maxCards) throw new Error('stored mailboxes exceed MAX_CARDS');
     index.set(name.slice(0, -5), { writeHash: record.writeHash, updatedAt: record.updatedAt,
@@ -136,12 +136,14 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
-    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, feedback: feedback.enabled ? 1 : 0 }));
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, recoveryRevocation: 1, streamFreeze: 1, capabilityStatus: 1, feedback: feedback.enabled ? 1 : 0 }));
     if (req.url === '/v2/feedback') return feedback(req, res);
     const archiveRoute = (req.url || '').match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/social(?:\/([a-f0-9]{32}))?(?:\?before=([0-9]{16}%3A[a-f0-9]{32}|[0-9]{16}:[a-f0-9]{32}))?$/);
     const handoffRoute = (req.url || '').match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/handoffs\/([a-f0-9]{32})$/);
+    const statusRoute = /^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/status$/.exec(req.url || '');
+    const freezeRoute = /^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/freeze$/.exec(req.url || '');
     const recoveryRoute = /^\/v2\/recovery\/[a-f0-9]{64}$/.test(req.url || '');
-    if (!ROUTE.test(req.url || '') && !archiveRoute && !handoffRoute && !recoveryRoute) return send(res, 404);
+    if (!ROUTE.test(req.url || '') && !archiveRoute && !handoffRoute && !recoveryRoute && !freezeRoute && !statusRoute) return send(res, 404);
     if (!['GET', 'PUT', 'POST', 'DELETE'].includes(req.method)) return send(res, 405, '', { Allow: 'GET, PUT, DELETE' });
     if (inFlight >= maxInFlight) { req.resume(); return send(res, 503, '', { 'Retry-After': '2' }); }
     // Bound all connections, including unauthenticated attempts; behind a proxy this is a shared limit.
@@ -155,23 +157,44 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
     if (requests > (invitation ? Math.min(12, rateLimitPerMinute) : rateLimitPerMinute)) { req.resume(); return send(res, 429, '', { 'Retry-After': '60' }); }
     inFlight++;
     try {
+      if (statusRoute) {
+        req.resume(); if (req.method !== 'GET') return send(res, 405);
+        const owner = owners.get(digest(statusRoute[1]));
+        return owner ? send(res, 200, JSON.stringify({ revoked: owner.revoked, frozen: Boolean(owner.frozen) })) : send(res, 404);
+      }
+      if (freezeRoute) {
+        req.resume();
+        if (req.method !== 'POST') return send(res, 405);
+        const owner = owners.get(digest(freezeRoute[1]));
+        const token = req.headers['x-write-token'];
+        if (!owner || owner.revoked || typeof token !== 'string' || !HEX_SECRET.test(token) || !equal(owner.writeHash, digest(token)) ||
+            (secret && !equal(req.headers.authorization || '', secret))) return send(res, 403);
+        return await serialized(async () => {
+          const current = owners.get(digest(freezeRoute[1]));
+          if (!current || current.revoked) return send(res, 403);
+          await saveOwner(digest(freezeRoute[1]), { ...current, frozen: true });
+          send(res, 204);
+        });
+      }
       if (handoffRoute || archiveRoute) {
         const match = handoffRoute || archiveRoute;
         const parent = owners.get(digest(match[1]));
         const token = req.headers['x-write-token'];
         const exists = parent && (!parent.revoked || Boolean(handoffRoute));
-        const authorized = exists && !parent.revoked && (!secret || equal(req.headers.authorization || '', secret)) &&
+        const authorized = exists && !parent.revoked && !parent.frozen && (!secret || equal(req.headers.authorization || '', secret)) &&
           typeof token === 'string' && HEX_SECRET.test(token) && equal(parent.writeHash, digest(token));
-        return await (handoffRoute ? handoffs : social)(req, res, { parent: match[1], id: match[2], before: match[3] ? decodeURIComponent(match[3]) : null, exists, authorized, readBody, validateEnvelope });
+        return await (handoffRoute ? handoffs : social)(req, res, { parent: match[1], id: match[2], before: match[3] ? decodeURIComponent(match[3]) : null, exists,
+          authorized: () => authorized && !owners.get(digest(match[1]))?.revoked && !owners.get(digest(match[1]))?.frozen,
+          readBody, validateEnvelope });
       }
       const mediaRoute = req.url.match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/media\/[a-f0-9]{64}$/);
       if (mediaRoute) {
         const parent = owners.get(digest(mediaRoute[1]));
         const exists = parent && !parent.revoked;
         const token = req.headers['x-write-token'];
-        const authorized = exists && (!secret || equal(req.headers.authorization || '', secret)) &&
+        const authorized = exists && !parent.frozen && (!secret || equal(req.headers.authorization || '', secret)) &&
           typeof token === 'string' && HEX_SECRET.test(token) && equal(parent.writeHash, digest(token));
-        return await media(req, res, { exists, authorized, parent: mediaRoute[1] });
+        return await media(req, res, { exists, authorized: () => authorized && !owners.get(digest(mediaRoute[1]))?.revoked && !owners.get(digest(mediaRoute[1]))?.frozen, parent: mediaRoute[1] });
       }
       const responseRoute = req.url.match(/^(\/v2\/invites\/[a-f0-9]{64})\/responses(?:\/([a-f0-9]{64}))?$/);
       const id = digest(responseRoute ? responseRoute[1] : req.url);
@@ -243,6 +266,16 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
           if (existing && !equal(existing.writeHash, writeHash)) return send(res, 403);
           const owner = owners.get(id);
           if (owner && !equal(owner.writeHash, writeHash)) return send(res, 403);
+          if (!owner && recoveryRoute) {
+            if (owners.size >= maxCards * 10) return send(res, 507);
+            const address = digest(req.socket.remoteAddress || '?'); const hour = Math.floor(now() / 3600000);
+            for (const [key, value] of creationRates) if (value.hour !== hour) creationRates.delete(key);
+            const previous = creationRates.get(address);
+            if ((previous?.count || 0) >= maxNewMailboxesPerHour) return send(res, 429, '', { 'Retry-After': '3600' });
+            if (!previous && creationRates.size >= 1024) return send(res, 503, '', { 'Retry-After': '60' });
+            creationRates.set(address, { hour, count: (previous?.count || 0) + 1 });
+            await saveOwner(id, { writeHash, revoked: true });
+          }
           if (owner) {
             await saveOwner(id, { ...owner, revoked: true });
             await social.purge(req.url); await media.purge(req.url);
@@ -260,8 +293,8 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
         await prune();
         const existing = index.get(id);
         const owner = owners.get(id);
-        if (owner && (owner.revoked || !equal(owner.writeHash, writeHash))) return send(res, 403);
-        if (!invitation && !recoveryRoute && !owner && owners.size >= maxCards * 10) return send(res, 507);
+        if (owner && (owner.revoked || owner.frozen || !equal(owner.writeHash, writeHash))) return send(res, 403);
+        if (!invitation && !owner && owners.size >= maxCards * 10) return send(res, 507);
         if (!existing && !owner && !invitation) {
           const address = digest(req.socket.remoteAddress || '?'); const hour = Math.floor(now() / 3600000);
           for (const [key, value] of creationRates) if (value.hour !== hour) creationRates.delete(key);
@@ -277,7 +310,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
           // Retrying an identical PUT does not refresh expiry or rewrite a disk block.
           if (etag === existing.etag) return send(res, 204, '', { ETag: etag });
         } else if (index.size >= maxCards) return send(res, 507);
-        if (!invitation && !recoveryRoute && !owner) await saveOwner(id, { writeHash, revoked: false });
+        if (!invitation && !owner) await saveOwner(id, { writeHash, revoked: false });
         const updatedAt = now();
         const tmp = fileFor(id) + '.' + randomUUID() + '.tmp';
         try {
