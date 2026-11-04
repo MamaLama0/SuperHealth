@@ -30,7 +30,8 @@ object NutriApp {
         repository = Repository(AppDatabase.build(app), Prefs(app))
         // Widgets : instantané recalculé à chaque changement du journal, des pesées ou des réglages.
         scope.launch {
-            merge(repository.entries.allFlow().map { }, repository.weighIns.allFlow().map { }, repository.prefs.settings.map { })
+            merge(repository.entries.allFlow().map { }, repository.weighIns.allFlow().map { }, repository.prefs.settings.map { },
+                repository.prefs.profile.map { }, repository.prefs.program.map { }, repository.prefs.goals.map { }, repository.prefs.checkIns.map { })
                 .debounce(300).collect { WidgetSnapshots.publish() }
         }
     }

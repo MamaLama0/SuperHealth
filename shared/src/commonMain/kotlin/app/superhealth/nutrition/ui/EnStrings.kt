@@ -6,6 +6,9 @@ import app.superhealth.platform.*
 /** Dictionnaire français → anglais (libellés MacroFactor quand ils existent). Généré depuis les appels tr()/trf(). */
 object EnStrings {
     val map: Map<String, String> = hashMapOf(
+        "7 j · Macros" to "7 days · Macros",
+        "7 jours" to "7 days",
+
         "Macros du jour" to "Daily macros",
         "Calories sur 7 jours" to "Calories over 7 days",
         "Macros sur 7 jours" to "Macros over 7 days",
