@@ -65,13 +65,22 @@ jobs:
             ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
           cd build/sim/Build/Products/Debug-iphonesimulator && zip -qry "$GITHUB_WORKSPACE/SuperHealth-simulator.zip" SuperHealth.app
 
-      - name: Tests et captures WidgetKit (36 variantes)
+      - name: Tests et captures WidgetKit (54 variantes)
         run: |
           DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import sys,json;d=json.load(sys.stdin);print(next(x["udid"] for a in d["devices"].values() for x in a if "iPhone" in x["name"]))')
           xcodebuild -project iosApp/SuperHealth.xcodeproj -scheme SuperHealth -configuration Debug \
             -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/sim \
             -resultBundlePath build/WidgetTests.xcresult ARCHS=arm64 CODE_SIGNING_ALLOWED=NO test
           xcrun xcresulttool export attachments --path build/WidgetTests.xcresult --output-path build/widget-captures
+
+      - name: Résultats WidgetKit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SuperHealth-widget-validation
+          path: |
+            build/widget-captures/
+            build/WidgetTests.xcresult/
 
       - name: Build iPhone (Release, non signé)
         run: |

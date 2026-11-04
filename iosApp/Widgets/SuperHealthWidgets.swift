@@ -13,6 +13,11 @@ struct Snapshot: Codable {
     struct Ring: Codable { var label: String; var value: Double; var goal: Double; var color: String; var text: String }
     struct Macro: Codable { var label: String; var value: Double; var target: Double; var color: String }
     struct Calories: Codable { var left: String; var leftLabel: String; var eaten: Double; var target: Double; var unit: String; var macros: [Macro] }
+    struct NutritionDay: Codable { var label: String; var date: String; var energy: Double?; var target: Double; var macros: [Double]? }
+    struct NutritionWeek: Codable {
+        var days: [NutritionDay]; var average: Double?; var unit: String; var loggedDays: Int
+        var caption: String; var macros: [Macro]; var title: String; var macrosTitle: String
+    }
     struct Weight: Codable { var value: String; var unit: String; var delta: String?; var points: [Double] }
     struct Next: Codable { var title: String; var subtitle: String; var action: String; var route: String; var week: [Bool]; var dayLetters: [String]; var progress: Double? }
     struct Vital: Codable { var label: String; var value: String; var status: String }
@@ -27,6 +32,7 @@ struct Snapshot: Codable {
         var rows: [SocialRow]; var chart: [Int]
     }
     var social: [SocialCard]?
+    var nutritionWeek: NutritionWeek? = nil
     var updatedMs: Int64
     var date: String
     var accent: String
@@ -57,8 +63,8 @@ struct Snapshot: Codable {
         SocialCard(id: "social", title: "Social", value: "Niv. 8", caption: "Mon profil", detail: "Votre progression et vos amis", symbol: "person.crop.circle.fill", color: "#B38CF7", route: "social", fraction: nil, rows: [SocialRow(label: "XP cette semaine", value: "420"), SocialRow(label: "Amis", value: "3"), SocialRow(label: "Badges", value: "8")], chart: [70, 100, 40, 90, 80, 40, 0])
     ]
     static let preview = Snapshot(
-        social: socialPreview, updatedMs: 0, date: "", accent: "#4285F4",
-        labels: ["calories": "Calories", "next": "Prochaine séance", "weight": "Tendance du poids", "steps": "Pas", "sleep": "Sommeil", "rings": "Anneaux du jour"],
+        social: socialPreview, nutritionWeek: .preview, updatedMs: 0, date: "", accent: "#4285F4",
+        labels: ["macros": "Macros du jour", "calories": "Calories", "next": "Prochaine séance", "weight": "Tendance du poids", "steps": "Pas", "sleep": "Sommeil", "rings": "Anneaux du jour"],
         calories: Calories(left: "1 240", leftLabel: "Restantes", eaten: 1040, target: 2280, unit: "kcal", macros: [
             Macro(label: "Protéines", value: 62, target: 140, color: "#E5574F"), Macro(label: "Lipides", value: 38, target: 76, color: "#F9B500"),
             Macro(label: "Glucides", value: 120, target: 260, color: "#3F7DE8")]),

@@ -22,7 +22,7 @@ fun HomeWidgetsScreen(nav: NavHostController) {
         listOf(
             "Social" to listOf("Classement","Progression","Séries","Quêtes de la semaine","Amis","Vue sociale"),
             "Santé" to listOf("Anneaux du jour","Pas","Sommeil","Constantes","Ma journée"),
-            "Nutrition" to listOf("Calories","Poids"),
+            "Nutrition" to listOf("Calories","Macros du jour","Calories sur 7 jours","Macros sur 7 jours","Poids"),
             "Musculation" to listOf("Prochaine séance")
         ).forEach { (section,items) ->
             SectionLabel(tr(section))

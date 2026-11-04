@@ -6,6 +6,7 @@ struct SuperHealthWidgets: WidgetBundle {
     @WidgetBundleBuilder
     var body: some Widget {
         CoreWidgets().body
+        NutritionWidgets().body
         LeagueWidget()
         ProgressWidget()
         StreakWidget()

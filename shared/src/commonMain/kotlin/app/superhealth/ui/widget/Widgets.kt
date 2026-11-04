@@ -38,6 +38,9 @@ object Widgets {
     @Serializable data class Calories(val left: String, val leftLabel: String, val eaten: Double, val target: Double, val unit: String,
                                       val macros: List<Macro>)
     @Serializable data class Macro(val label: String, val value: Double, val target: Double, val color: String)
+    @Serializable data class NutritionDay(val label: String, val date: String, val energy: Double?, val target: Double, val macros: List<Double>?)
+    @Serializable data class NutritionWeek(val days: List<NutritionDay>, val average: Double?, val unit: String,
+        val loggedDays: Int, val caption: String, val macros: List<Macro>, val title: String, val macrosTitle: String)
     @Serializable data class Weight(val value: String, val unit: String, val delta: String?, val points: List<Double>)
     @Serializable data class Next(val title: String, val subtitle: String, val action: String, val route: String, val week: List<Boolean>,
                                   val dayLetters: List<String>, val progress: Double? = null)
@@ -54,6 +57,7 @@ object Widgets {
         val calories: Calories?, val rings: List<Ring>, val next: Next?, val weight: Weight?, val vitals: Vitals?,
         val steps: String?, val sleep: String?, val night: Night? = null,
         val social: List<SocialWidgetCard> = emptyList(),
+        val nutritionWeek: NutritionWeek? = null,
     )
 
     private val json = Json { encodeDefaults = true }
@@ -80,7 +84,8 @@ object Widgets {
         val s = repo.prefs.settings.value
         val today = LocalDate.now()
         val an = runCatching { repo.analytics().first() }.getOrNull()
-        val entries = repo.entries.all().filter { it.epochDay == today.toEpochDay() }
+        val recentEntries = repo.entries.rangeFlow(today.toEpochDay() - 6, today.toEpochDay()).first()
+        val entries = recentEntries.filter { it.epochDay == today.toEpochDay() }
 
         val calories = an?.let { a ->
             val target = a.targetFor(a.today).macros
@@ -92,6 +97,26 @@ object Widgets {
                     Macro(tr("Lipides"), eaten.fat, target.fat, hex(app.superhealth.ui.theme.FatColor)),
                     Macro(tr("Glucides"), eaten.carbs, target.carbs, hex(app.superhealth.ui.theme.CarbsColor)),
                 ))
+        }
+
+        val nutritionWeek = an?.let { a ->
+            val week = app.superhealth.nutrition.domain.NutritionWidgetWeek.of(today.toEpochDay(),
+                recentEntries.groupBy { it.epochDay }.mapValues { (_, es) -> es.fold(app.superhealth.nutrition.domain.Macros.ZERO) { acc, e -> acc + e.macros() } }) {
+                a.targetFor(it).macros
+            }
+            val average = week.average
+            val target = week.averageTarget
+            NutritionWeek(week.days.map { day ->
+                val date = LocalDate.ofEpochDay(day.epochDay)
+                NutritionDay(app.superhealth.ui.dayLetter(date), "${date.dayOfMonth}/${date.monthValue}",
+                    day.eaten?.kcal?.let { s.energyValue(it) }, s.energyValue(day.target.kcal),
+                    day.eaten?.let { listOf(it.protein, it.fat, it.carbs) })
+            }, average?.kcal?.let { s.energyValue(it) }, tr(s.energyUnit.label), week.loggedDays,
+                tr("Moy./jour suivi"), if (average == null || target == null) emptyList() else listOf(
+                    Macro(tr("Protéines"), average.protein, target.protein, hex(app.superhealth.ui.theme.ProteinColor)),
+                    Macro(tr("Lipides"), average.fat, target.fat, hex(app.superhealth.ui.theme.FatColor)),
+                    Macro(tr("Glucides"), average.carbs, target.carbs, hex(app.superhealth.ui.theme.CarbsColor))
+                ), tr("Calories sur 7 jours"), tr("Macros sur 7 jours"))
         }
 
         val apple = runCatching { if (app.superhealth.bridge.Watch.devices().isNotEmpty()) HealthSources.current.activitySummary(today) else null }.getOrNull()
@@ -124,8 +149,8 @@ object Widgets {
         return Snapshot(nowMs(), today.toString(), hex(s.accent.color()),
             mapOf("app" to "SuperHealth", "calories" to tr("Calories"), "next" to tr("Prochaine séance"), "session" to tr("Séance en cours"),
                 "weight" to tr("Tendance du poids"), "steps" to tr("Pas"), "sleep" to tr("Sommeil"), "rings" to tr("Anneaux du jour"),
-                "open" to tr("Ouvrez l'app pour commencer.")),
-            calories, rings, next(), weight, vitals, steps, sleep, night, socialWidgets())
+                "open" to tr("Ouvrez l'app pour commencer."), "macros" to tr("Macros du jour")),
+            calories, rings, next(), weight, vitals, steps, sleep, night, socialWidgets(), nutritionWeek)
     }
 
     /** Nuit qui se termine aujourd'hui, comme le widget Sommeil d'Android (phases seulement si la source les mesure). */
