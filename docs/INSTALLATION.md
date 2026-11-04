@@ -28,7 +28,7 @@ Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](#in
 
 La version iOS 3.0 reprend les interfaces sociales clarifiées, les quêtes hebdomadaires, les suivis, la méditation, la mobilité et les outils de programmes. Six nouveaux widgets WidgetKit (classement, progression, séries, quêtes, amis et vue sociale) sont proposés en petit, moyen et grand.
 
-[Notes du portage et vérifications](docs/UPDATE-3.0-ios.md).
+[Notes du portage et vérifications](UPDATE-3.0-ios.md).
 
 ## Vie privée
 

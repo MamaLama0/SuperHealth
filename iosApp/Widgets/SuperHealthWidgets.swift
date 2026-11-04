@@ -109,7 +109,7 @@ extension Color {
 extension View {
     /// Fond du widget : celui du système (iOS 17) ou une couleur de carte.
     @ViewBuilder func widgetCard() -> some View {
-        if #available(iOS 17.0, *) {
+        if #available(iOSApplicationExtension 17.0, *) {
             containerBackground(for: .widget) { Color(UIColor.secondarySystemBackground) }
         } else {
             padding().background(Color(UIColor.secondarySystemBackground))

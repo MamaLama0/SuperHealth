@@ -6,8 +6,6 @@ struct SocialWidgetView: View {
     @Environment(\.widgetFamily) var family
     var entry: Entry
     var id: String
-    var previewFamily: WidgetFamily? = nil
-    private var sizeFamily: WidgetFamily { previewFamily ?? family }
     var card: Snapshot.SocialCard? { entry.snap?.social?.first { $0.id == id } }
 
     var body: some View {
@@ -25,34 +23,34 @@ struct SocialWidgetView: View {
     @ViewBuilder
     private func content(_ c: Snapshot.SocialCard) -> some View {
         let hue = Color(hex: c.color)
-        VStack(alignment: .leading, spacing: sizeFamily == .systemSmall ? 7 : 8) {
+        VStack(alignment: .leading, spacing: family == .systemSmall ? 7 : 8) {
             HStack(spacing: 7) {
                 Chip(symbol: c.symbol, color: hue)
                 Text(c.title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 0)
-                if sizeFamily != .systemSmall {
+                if family != .systemSmall {
                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                 }
             }
-            if sizeFamily == .systemMedium {
+            if family == .systemMedium {
                 HStack(alignment: .center, spacing: 18) {
                     metric(c, hue: hue)
                     if !c.chart.isEmpty && c.rows.isEmpty { bars(c.chart, hue: hue).frame(maxWidth: 130).frame(height: 65) }
                     else if !c.rows.isEmpty { rows(Array(c.rows.prefix(2)), hue: hue).frame(maxWidth: .infinity) }
                 }
             } else {
-                if sizeFamily == .systemSmall { Spacer(minLength: 0) }
+                if family == .systemSmall { Spacer(minLength: 0) }
                 metric(c, hue: hue)
             }
             if let fraction = c.fraction {
                 ProgressView(value: min(max(fraction, 0), 1)).tint(hue).accessibilityLabel(c.detail)
             }
-            if sizeFamily == .systemLarge {
+            if family == .systemLarge {
                 if !c.chart.isEmpty && c.rows.isEmpty { bars(c.chart, hue: hue).frame(height: 65) }
                 if !c.rows.isEmpty { rows(Array(c.rows.prefix(5)), hue: hue) }
                 Spacer(minLength: 0)
             }
-            if sizeFamily != .systemSmall {
+            if family != .systemSmall {
                 Text(c.detail).font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
         }
@@ -61,9 +59,9 @@ struct SocialWidgetView: View {
 
     private func metric(_ c: Snapshot.SocialCard, hue: Color) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(c.value).font(.system(size: sizeFamily == .systemSmall ? 29 : 34, weight: .bold, design: .rounded))
+            Text(c.value).font(.system(size: family == .systemSmall ? 29 : 34, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary).minimumScaleFactor(0.65).lineLimit(1)
-            Text(c.caption).font(.caption).foregroundStyle(.secondary).lineLimit(sizeFamily == .systemSmall ? 2 : 3)
+            Text(c.caption).font(.caption).foregroundStyle(.secondary).lineLimit(family == .systemSmall ? 2 : 3)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
