@@ -191,10 +191,12 @@ data class Settings(
     /** Cibles de micronutriments personnalisées (MicroGoalType.custom) ; absent = référence automatique. */
     val microTargets: Map<String, Double> = emptyMap(),
     val useFilteredWeightForExpenditure: Boolean = false,
-    val learnFoodPatterns: Boolean = false,
     val confirmedFoodMatches: Map<String, Long> = emptyMap(),
-    val learnActivityEnergy: Boolean = false,
-)
+) {
+    /** Apprentissages toujours actifs : chacun ne s'applique qu'après avoir battu la règle de base sur deux blocs futurs. */
+    val learnFoodPatterns get() = true
+    val learnActivityEnergy get() = true
+}
 
 /** Objectif de pas du jour [date] : celui de son jour de la semaine s'il est fixé, sinon l'objectif quotidien. */
 fun Settings.stepGoalFor(date: java.time.LocalDate): Int = stepGoalDays.getOrNull(date.dayOfWeek.value - 1)?.takeIf { it > 0 } ?: stepGoal

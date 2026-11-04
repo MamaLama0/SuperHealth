@@ -86,12 +86,31 @@ object WeeklyQuests {
                     Metric.STEPS -> (baseline + 1).coerceIn(1, 7)
                     else -> (baseline + 1).coerceIn(1, 3)
                 }
-                Quest(c.metric, minOf(goal, (counts[c.metric] ?: 0) + remaining).coerceAtLeast(1), reward = if (i == 0) PRIMARY_REWARD else SECONDARY_REWARD,
+                val tuned = tune(c.metric, goal, history.filter { it.start < start })
+                Quest(c.metric, minOf(tuned, (counts[c.metric] ?: 0) + remaining).coerceAtLeast(1), reward = if (i == 0) PRIMARY_REWARD else SECONDARY_REWARD,
                     secondary = i > 0, reason = if (i > 0 && c.weakness < .5) Reason.VARIETY else c.reason)
             }
         }
         return Week(start, plan.map { q -> if (q.claimed) q else q.copy(progress = (counts[q.metric] ?: 0).coerceIn(0, q.target)) }, old?.focuses ?: focuses)
     }
+    /**
+     * Difficulté juste : vise environ 75 % de quêtes réussies sur ce domaine. Réussite estimée sur les six dernières
+     * quêtes du même type, a priori 75 % ; au-dessus de 85 % la cible gagne un cran, sous 60 % elle en perd un.
+     * Jamais au-delà de 140 % du réalisé médian ni sous 1, et jamais au-dessus de la borne propre au domaine.
+     */
+    internal fun tune(metric: Metric, goal: Int, past: List<Week>): Int {
+        val same = past.sortedBy { it.start }.flatMap { w -> w.quests.filter { it.metric == metric } }.takeLast(6)
+        if (same.size < 3) return goal
+        val rate = (same.count { it.complete } + 1.5) / (same.size + 2)
+        // Séances et sorties suivent l'objectif choisi : la quête peut s'alléger, jamais demander plus que lui.
+        val step = when { rate > 0.85 && metric !in setOf(Metric.STRENGTH, Metric.RUN) -> 1; rate < 0.60 -> -1; else -> 0 }
+        val done = same.map { it.progress }.sorted()
+        val cap = kotlin.math.ceil(1.4 * done[done.size / 2]).toInt().coerceAtLeast(1)
+        val max = when (metric) { Metric.FOOD, Metric.STEPS, Metric.ACTIVE -> 7; Metric.HIKE, Metric.STRENGTH_REVIEW -> 2; else -> 3 }
+        val tuned = goal + step
+        return (if (step > 0) minOf(tuned, maxOf(cap, goal)) else tuned).coerceIn(1, maxOf(max, goal))
+    }
+
     /** Trois séances comparables au minimum ; une absence d'historique n'est jamais un plateau. */
     fun plateau(values: List<Double>): Boolean = values.takeLast(4).let { tail -> tail.size >= 3 && tail.all { it.isFinite() && it > 0 } && tail.drop(1).maxOrNull()!! <= tail.first() * 1.01 }
     fun claim(week: Week, metric: Metric, today: Long): Week = if (week.start != Progression.week(today)) week else

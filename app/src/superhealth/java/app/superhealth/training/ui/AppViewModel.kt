@@ -1,5 +1,6 @@
 package app.superhealth.training.ui
 
+import app.superhealth.training.domain.TargetTuning
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -71,6 +72,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun activeGym(): Gym? = state.value.let { s -> s.gyms.firstOrNull { it.id == s.settings.activeGymId } ?: s.gyms.firstOrNull() }
     fun gym(id: String?) = state.value.gyms.firstOrNull { it.id == id }
+    /** Proposition de cible la plus nette pour le programme actif, ou null. */
+    fun targetTip(): TargetTuning.Tip? {
+        val s = state.value
+        val program = activeProgram() ?: return null
+        return TargetTuning.tips(program, s.history, s.settings.dismissedTargetTips).firstOrNull()
+    }
+
+    fun applyTargetTip(tip: TargetTuning.Tip) = update { s ->
+        s.copy(programs = s.programs.map { if (it.id == s.settings.activeProgramId) TargetTuning.apply(it, tip) else it },
+            settings = s.settings.copy(dismissedTargetTips = s.settings.dismissedTargetTips + tip.key))
+    }
+
+    fun dismissTargetTip(tip: TargetTuning.Tip) = settings { it.copy(dismissedTargetTips = it.dismissedTargetTips + tip.key) }
+
     fun activeProgram(): Program? = state.value.let { s -> s.programs.firstOrNull { it.id == s.settings.activeProgramId } }
 
     // ----- Salles -----
@@ -92,7 +107,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun generate(input: Generator.Input): Program? = db.value?.let { database ->
         val st = state.value
-        val recent = if (!st.settings.preferPracticedExercises) emptyMap() else {
+        val recent = run {
             val now = System.currentTimeMillis()
             st.history.filter { it.startTime in (now - 56L * 86_400_000)..now }
                 .flatMap { w -> w.exercises.filter { app.superhealth.training.domain.Analytics.workingSets(it).isNotEmpty() }.map { it.exerciseId }.distinct() }
@@ -167,7 +182,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val ladder = e.ladderFor(ex.exerciseId, g)
                 val firstWork = ex.sets.firstOrNull { it.type != SetType.WARMUP && !it.done }
                 ex.copy(sets = ex.sets.map { set ->
-                    if (s.settings.adaptiveStrength && set.id != firstWork?.id) return@map set
+                    if (set.id != firstWork?.id) return@map set
                     val w = set.weight ?: set.autoWeight
                     if (set.type == app.superhealth.training.domain.SetType.WARMUP || set.done || set.weightEdited || w == null || w <= 0) return@map set
                     val next = ladder.above(w)
@@ -272,7 +287,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val r = if (inSuperset) 0 else rest
                 next = next.copy(restEndsAt = if (r > 0) System.currentTimeMillis() + r * 1000L else null, restDuration = r)
                 if (r > 0) RestTimer.schedule(getApplication(), next.restEndsAt!!, s.settings.restSound) else RestTimer.cancel(getApplication())
-                next = e.afterSetCompleted(next, exIndex, s.settings, gym(sess.gymId))
+                next = e.afterSetCompleted(next, exIndex, s.settings, gym(sess.gymId), s.history)
             }
             s.copy(session = next)
         }

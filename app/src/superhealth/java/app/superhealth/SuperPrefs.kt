@@ -342,6 +342,8 @@ data class SuperSettings(
     val checkInSkipDay: Long = 0,
     /** Bandeau du moral replié jusqu'au lendemain. */
     val moodSkipDay: Long = 0,
+    /** Derniers « pas aujourd'hui » du moral (14 au plus), pour espacer les bandeaux refusés. */
+    val moodSkips: List<Long> = emptyList(),
     /** Fonds de carte OpenStreetMap des activités (seule connexion liée à vos parcours ; sans eux, le tracé seul). */
     val onlineMaps: Boolean = true,
     /** Sauvegarde automatique chiffrée : destination (nom de backup.Remote.Kind), serveur WebDAV, dossier (arbre SAF), fréquence en jours (0 : jamais). */

@@ -34,7 +34,7 @@ class RegressionProbeActivity : Activity() {
                         val original = repo.prefs.settings.value
                         val originalProgram = repo.prefs.program.value
                         try {
-                            repo.prefs.setSettings(original.copy(learnFoodPatterns = true, learnActivityEnergy = true))
+                            repo.prefs.setSettings(original)
                             val an = withTimeout(30000) { repo.analytics().first() }
                             check(an.program == originalProgram && an.currentTdee.isFinite())
                             val facts = app.superhealth.bridge.Bridge.activityFacts(System.currentTimeMillis() - 90L * 86_400_000)

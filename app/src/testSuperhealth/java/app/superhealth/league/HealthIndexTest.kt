@@ -39,8 +39,9 @@ class HealthIndexTest {
     @Test fun monthlyAverageKeepsOnlyMatchingModelDaysAndCoverage() {
         val history = mapOf("v2:50:49" to 900, "v3:50:49" to 999, "v4:50:48" to 900, "v4:22:49" to 900,
             "v5:23:49" to 800, "v5:50:49" to 850)
-        assertEquals(825.0, HealthIndex.mean28(history, 50, 49)!!, 0.0)
-        assertNull(HealthIndex.mean28(history, 50, 7))
+        assertEquals(825.0, HealthIndex.mean28(history, 50, 49, model = 5)!!, 0.0)
+        assertNull(HealthIndex.mean28(history, 50, 7, model = 5))
+        assertNull(HealthIndex.mean28(history, 50, 49))
     }
 
     @Test fun onlyComparableRunsContributeAndFasterFiveKCanOutscoreTheSameDistance() {

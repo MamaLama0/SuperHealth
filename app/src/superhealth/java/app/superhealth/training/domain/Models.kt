@@ -294,6 +294,6 @@ data class Settings(
     val restSound: Boolean = true,
     val activeGymId: String? = null,
     val activeProgramId: String? = null,
-    val adaptiveStrength: Boolean = false,
-    val preferPracticedExercises: Boolean = false,
+    /** Propositions de cibles refusées ([TargetTuning.Tip.key]). */
+    val dismissedTargetTips: Set<String> = emptySet(),
 )

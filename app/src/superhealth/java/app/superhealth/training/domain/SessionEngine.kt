@@ -54,29 +54,43 @@ class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<
 
     private fun Workout.matchesGym(gym: Gym?) = if (gymId != null) gymId == gym?.id else gymName == gym?.name
 
-    /** Les anciennes séances identifient la salle par son nom. */
+    private data class Context(val key: Triple<Int, String?, Experience>, val bias: Double, val trust: Double)
+    @Volatile private var context: Context? = null
+
+    /** Biais de RIR et confiance du filtre : calculés une fois par état de l'historique. */
+    private fun context(history: List<Workout>, experience: Experience): Context {
+        val key = Triple(history.size, history.maxByOrNull { it.startTime }?.id, experience)
+        context?.takeIf { it.key == key }?.let { return it }
+        val bias = StrengthModel.rirBias(history, db)
+        return Context(key, bias, StrengthModel.trust(history, db, experience, bias)).also { context = it }
+    }
+
+    /** Biais de RIR appris (RIR annoncé − RIR réel), pour les écrans et le coach. */
+    fun rirBias(history: List<Workout>, experience: Experience) = context(history, experience).bias
+
+    /**
+     * Force attendue pour la séance qui commence, progression comprise ([StrengthModel]). Les exercices assistés ou sans
+     * répétitions gardent la règle d'origine : meilleure série de la dernière séance, + 1 %.
+     */
     fun openingStrength(exercise: Exercise, history: List<Workout>, settings: Settings, gym: Gym?,
                         last: List<PastSet> = lastSets(exercise.id, history), now: Long = System.currentTimeMillis()): Double? {
-        if (!settings.adaptiveStrength || !exercise.usesReps || "aw" in exercise.metrics)
-            return Progression.currentOneRm(last, exercise.upperBody)
-        val recent = history.asSequence().distinctBy { it.id }
-            .filter { it.startTime in (now - 56L * 86_400_000)..now }
-            .filter { it.matchesGym(gym) }
-            .sortedByDescending { it.startTime }
-            .mapNotNull { workout ->
-                val blocks = workout.exercises.filter { it.exerciseId == exercise.id }
-                val estimates = blocks.mapNotNull { block ->
-                    Progression.typicalFreshStrength(Analytics.workingSets(block), exercise.upperBody, block.restSec)
-                }
-                estimates.takeIf { it.isNotEmpty() }?.average()
-            }.take(5).toList()
-        if (recent.isEmpty()) return null
-        if (recent.size < 3) return recent.first()
-        // La médiane résiste à une séance atypique. Le dernier résultat fait évoluer
-        // l'estimation progressivement, sans déplacer l'ancrage de plus de 5 %.
-        val sorted = recent.sorted()
-        val anchor = (sorted[(sorted.lastIndex) / 2] + sorted[sorted.size / 2]) / 2
-        return anchor + 0.5 * (recent.first() - anchor).coerceIn(-0.10 * anchor, 0.10 * anchor)
+        if (!exercise.usesReps || "aw" in exercise.metrics)
+            return Progression.currentOneRm(last, exercise.upperBody)?.times(Strength.SESSION_PROGRESS)
+        return estimate(exercise, history, settings, gym, now)?.oneRm
+    }
+
+    fun estimate(exercise: Exercise, history: List<Workout>, settings: Settings, gym: Gym?, now: Long = System.currentTimeMillis()): StrengthModel.Estimate? {
+        if (!exercise.usesReps || "aw" in exercise.metrics) return null
+        val c = context(history, settings.experience)
+        return StrengthModel.estimate(exercise, history, gym, settings.experience, c.bias, c.trust, now)
+    }
+
+    /** 1RM frais mesuré sur les séries déjà faites, fusionné avec l'estimation d'ouverture selon leurs incertitudes. */
+    fun inSessionStrength(exercise: Exercise, done: List<SetLog>, restSec: Int, history: List<Workout>, settings: Settings, gym: Gym?): Double? {
+        val c = context(history, settings.experience)
+        val m = StrengthModel.measure(listOf(SessionExercise("now", exercise.id, done, restSec = restSec)), exercise.upperBody, c.bias, 0) ?: return null
+        val opening = if (history.isEmpty()) null else estimate(exercise, history, settings, gym)
+        return kotlin.math.exp(StrengthModel.combine(opening?.oneRm?.let { kotlin.math.ln(it) }, (opening?.sd ?: 1.0).let { it * it + 0.03 * 0.03 }, m))
     }
 
     // ----- Construction -----
@@ -116,8 +130,7 @@ class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<
     ): SessionExercise {
         val e = db.exercise(exerciseId)
         val upper = e?.upperBody ?: true
-        val compatible = if (settings.adaptiveStrength && settings.smartProgression && settings.fillWithSmart)
-            history.filter { it.matchesGym(gym) } else history
+        val compatible = if (settings.smartProgression && settings.fillWithSmart) history.filter { it.matchesGym(gym) }.ifEmpty { history } else history
         val last = lastSets(exerciseId, compatible)
         val ladder = ladderFor(exerciseId, gym)
         val oneRm = if (e?.usesWeight == true) openingStrength(e, history, settings, gym, last) else null
@@ -125,7 +138,7 @@ class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<
         val planned = if (mode == WarmUpMode.NONE) targets.filter { it.type != SetType.WARMUP } else targets
         val suggestions = if (oneRm != null && oneRm > 0) Progression.suggest(
             oneRm, planned, upper, ladder, last.firstOrNull()?.weight, settings.weightMatch, settings.expandRepRange,
-            progress = if (settings.adaptiveStrength && e?.usesReps == true && "aw" !in e.metrics) 1.0 else Strength.SESSION_PROGRESS,
+            progress = 1.0,
         ) else null
         val work = planned.mapIndexed { i, t ->
             val sg = suggestions?.getOrNull(i)
@@ -177,12 +190,12 @@ class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<
      * Le 1RM est ré-estimé depuis la série réalisée en tenant compte de la fatigue accumulée ; une charge changée à la main
      * est gardée et seules ses répétitions sont recalculées.
      */
-    fun afterSetCompleted(s: Session, exIndex: Int, settings: Settings, gym: Gym?): Session {
+    fun afterSetCompleted(s: Session, exIndex: Int, settings: Settings, gym: Gym?, history: List<Workout> = emptyList()): Session {
         if (!settings.smartProgression) return s
         val ex = s.exercises[exIndex]
         val forced = ex.sets.withIndex().filter { (_, v) -> v.isPlanned && v.weight != null && (v.weightEdited || v.weight != v.autoWeight) }
             .associate { it.index to it.value.weight!! }
-        return replan(s, exIndex, emptyList(), settings, gym, forced, fromIndex = 0)
+        return replan(s, exIndex, history, settings, gym, forced, fromIndex = 0)
     }
 
     /**
@@ -212,22 +225,20 @@ class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<
         val prevWeight: Double?
         val progress: Double
         if (done.isNotEmpty()) {
-            val adaptive = settings.adaptiveStrength && e.usesReps && "aw" !in e.metrics
-            val rm = if (adaptive) Progression.typicalFreshStrength(done, e.upperBody, ex.restSec) else {
+            val rm = (if (e.usesReps && "aw" !in e.metrics) inSessionStrength(e, done, ex.restSec, history, settings, gym) else {
                 val actual = done.map { PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }
                 Progression.currentOneRm(actual, e.upperBody, ex.restSec / 60.0)
-            } ?: return s
+            }) ?: return s
             var fatigue = 0.0
             done.forEachIndexed { i, set ->
-                val rest = if (adaptive) Progression.restMinutes(set, done.getOrNull(i + 1), ex.restSec) else ex.restSec / 60.0
-                fatigue = Strength.recover(fatigue + Strength.fatiguingReps(set.reps!!, set.partialReps), rest)
+                fatigue = Strength.recover(fatigue + Strength.fatiguingReps(set.reps!!, set.partialReps), Progression.restMinutes(set, done.getOrNull(i + 1), ex.restSec))
             }
             oneRm = rm * (1 - Strength.fatigueDrop(fatigue)); prevWeight = done.last().weight; progress = 1.0
         } else {
-            val last = lastSets(ex.exerciseId, if (settings.adaptiveStrength) history.filter { it.matchesGym(gym) } else history)
+            val last = lastSets(ex.exerciseId, history.filter { it.matchesGym(gym) }.ifEmpty { history })
             oneRm = openingStrength(e, history, settings, gym, last) ?: return s
             prevWeight = last.firstOrNull()?.weight
-            progress = if (settings.adaptiveStrength && e.usesReps && "aw" !in e.metrics) 1.0 else Strength.SESSION_PROGRESS
+            progress = 1.0
         }
         if (oneRm <= 0) return s
         val pending = ex.sets.withIndex().filter { it.value.isPlanned }

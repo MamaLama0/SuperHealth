@@ -51,7 +51,7 @@ object ProgressRepository {
     private var lastAt = 0L
     val current = MutableStateFlow<Progression.Result?>(null)
     val foodRange = MutableStateFlow(Progression.nutritionRange())
-    private fun foodRangeAt(nutrition: app.superhealth.nutrition.data.Analytics, day: Long): Progression.NutritionRange {
+    internal fun foodRangeAt(nutrition: app.superhealth.nutrition.data.Analytics, day: Long): Progression.NutritionRange {
         val checkIn = nutrition.checkInFor(day) ?: nutrition.checkIns.firstOrNull()
         val type = nutrition.goalAt(day)?.type ?: checkIn?.goalType ?: nutrition.program.goalType
         val manual = nutrition.program.style == app.superhealth.nutrition.domain.ProgramStyle.MANUAL || checkIn?.manual == true
@@ -113,7 +113,7 @@ object ProgressRepository {
         }
         val mindfulMinutes = (Meditation.log.value.map { it.day to it.minutes } + Stretch.log.value.map { it.day to it.minutes })
             .groupBy { it.first }.mapValues { (_, rows) -> rows.sumOf { it.second } }
-        mindfulMinutes.filterValues { it >= 10 }.keys.forEach { add(it, Progression.Track.MIND) }
+        mindfulMinutes.filter { (_, m) -> DailyScore.validated(m.toDouble(), 10.0, DailyScore.MIND) }.keys.forEach { add(it, Progression.Track.MIND) }
         val hiking = HikingProgress.collect(ctx,LocalDate.ofEpochDay(from).atStartOfDay(zone).toInstant().toEpochMilli())
         hiking.forEach { add(HikingProgress.day(it,zone),Progression.Track.HIKE) }
         val savedHealth = League.state.value.observedHealthDays
@@ -131,8 +131,8 @@ object ProgressRepository {
                 val steps = Bridge.healthValue(ctx, Metric.STEPS, date)
                 val sleep = Bridge.healthValue(ctx, Metric.SLEEP, date)
                 if (d in (day - 14) until day && (steps != null || sleep != null)) hasRecentHealthData = true
-                if ((steps ?: 0.0) >= nutrition.settings.stepGoalFor(date).takeIf { it > 0 }?.toDouble().let { it ?: Double.POSITIVE_INFINITY }) add(d, Progression.Track.STEPS)
-                if ((sleep ?: 0.0) >= app.superhealth.health.data.Scores.sleepNeed()) add(d, Progression.Track.SLEEP)
+                if (DailyScore.validated(steps, nutrition.settings.stepGoalFor(date).takeIf { it > 0 }?.toDouble(), DailyScore.STEPS)) add(d, Progression.Track.STEPS)
+                if (DailyScore.validated(sleep, app.superhealth.health.data.Scores.sleepNeed(), DailyScore.SLEEP)) add(d, Progression.Track.SLEEP)
             }
         }
         val observedHealth = if (sh.has(Feature.HEALTH)) listOf(Progression.Track.RUN, Progression.Track.STEPS, Progression.Track.SLEEP).associate { t ->
@@ -160,7 +160,14 @@ object ProgressRepository {
                 val bestSet = Analytics.bestPerformance(exercise, Analytics.workingSets(e)) ?: return@mapNotNull null
                 e.exerciseId to (Analytics.day(w.startTime).toEpochDay() to bestSet)
             } }.groupBy({ it.first }, { it.second })
-        val stagnant = comparisons.values.count { samples -> samples.size >= 3 && samples.last().first - samples.first().first >= 14 && WeeklyQuests.plateau(samples.map { it.second }) } >= 2
+        // Plateau : au moins deux exercices dont la tendance de force est nulle et bien mesurée ([StrengthModel]).
+        val experience = training.settings.experience
+        val bias = app.superhealth.training.domain.StrengthModel.rirBias(history, db)
+        val stagnant = comparisons.keys.count { id ->
+            val e = db.exercise(id) ?: return@count false
+            app.superhealth.training.domain.StrengthModel.trend(e, history, experience, bias, Long.MAX_VALUE)
+                ?.let { (slope, sd) -> slope < 0.0005 && sd < 0.003 } ?: (comparisons[id]!!.let { s -> s.size >= 3 && s.last().first - s.first().first >= 14 && WeeklyQuests.plateau(s.map { it.second }) })
+        } >= 2
         val selectedFocus = League.state.value.questFocus
         val questWeek = if (selectedFocus == null) null else WeeklyQuests.update(
             League.state.value.questWeeks.firstOrNull { it.start == weekStart }, day, tracks, questCounts(weekStart, day), selectedFocus,

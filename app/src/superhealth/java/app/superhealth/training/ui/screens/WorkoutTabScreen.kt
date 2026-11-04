@@ -112,6 +112,7 @@ fun WorkoutTabScreen(
                 if (active != null) ActiveProgramCard(active, db!!, st.settings.sex, nav, resume = st.session != null,
                     onStart = { i -> vm.startProgramDay(active, i, active.cycleIndex); nav.navigate("session") },
                     onAdjusted = { delta -> app.superhealth.ui.wellbeing.startAdjusted(vm, nav, delta) })
+                if (active != null) TargetTipCard(vm, db)
                 else MfCard(onClick = { create = true }) {
                     // pas de programme actif : une seule invitation, qui ouvre les mêmes choix que « Créer »
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -327,4 +328,29 @@ private fun FormHint(onAdjusted: (Int) -> Unit) {
         color = a.verdict.color().onContainer(),
         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     else PillButton(label, Modifier.fillMaxWidth(), strong = false) { onAdjusted(delta) }
+}
+
+/** Une proposition de cible à la fois, tirée des séries réellement faites ([TargetTuning]). */
+@Composable
+private fun TargetTipCard(vm: AppViewModel, db: app.superhealth.training.domain.ExerciseDb?) {
+    val st by vm.state.collectAsState()
+    val tip = androidx.compose.runtime.remember(st.history.size, st.programs, st.settings.dismissedTargetTips, st.settings.activeProgramId) { vm.targetTip() } ?: return
+    val name = db?.exercise(tip.exerciseId)?.name?.let { tr(it) } ?: return
+    val (text, action) = when (tip.kind) {
+        app.superhealth.training.domain.TargetTuning.Kind.RIR ->
+            trf("%1\$s : vos séries finissent plutôt à RIR %2\$s (cible %3\$s).", name, tip.toRir, tip.fromRir) to trf("Viser RIR %1\$s", tip.toRir)
+        app.superhealth.training.domain.TargetTuning.Kind.REPS ->
+            trf("%1\$s : vous faites surtout des séries hors de la plage %2\$s–%3\$s.", name, tip.fromMin, tip.fromMax) to trf("Passer à %1\$s–%2\$s reps", tip.toMin, tip.toMax)
+        app.superhealth.training.domain.TargetTuning.Kind.LAST_SET_FAILURE ->
+            trf("%1\$s : vous ajoutez souvent des partielles à la dernière série.", name) to tr("Dernière série à l'échec")
+    }
+    Spacer(Modifier.height(10.dp))
+    MfCard {
+        Text(tr("Ajuster une cible"), style = MaterialTheme.typography.titleSmall)
+        Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 4.dp))
+        Row(Modifier.padding(top = 10.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            app.superhealth.nutrition.ui.components.PillButton(action, Modifier.weight(1f)) { vm.applyTargetTip(tip) }
+            app.superhealth.nutrition.ui.components.PillButton(tr("Ignorer"), Modifier.weight(1f), strong = false) { vm.dismissTargetTip(tip) }
+        }
+    }
 }

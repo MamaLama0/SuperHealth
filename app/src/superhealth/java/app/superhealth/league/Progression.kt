@@ -36,10 +36,9 @@ object Progression {
     fun nutritionQualified(kcal: Double, goal: Double, type: GoalType = GoalType.MAINTENANCE, manual: Boolean = false): Boolean {
         return nutritionQualified(kcal, goal, nutritionRange(type, manual))
     }
-    fun nutritionQualified(kcal: Double, goal: Double, range: NutritionRange): Boolean {
-        if (!kcal.isFinite() || !goal.isFinite() || goal <= 0) return false
-        return kcal >= goal * range.minPercent / 100 - 1e-7 && kcal <= goal * range.maxPercent / 100 + 1e-7
-    }
+    /** Même zone verte que l'indice ([DailyScore]) : un jour validé ici vaut 100 dans la partie nutrition. */
+    fun nutritionQualified(kcal: Double, goal: Double, range: NutritionRange): Boolean =
+        DailyScore.validated(kcal, goal, DailyScore.food(range))
 
     fun streak(track: Track, days: Set<Long>, today: Long, target: Int = if (track.weekly) 2 else 1, since: Long = days.minOrNull() ?: today,
         dailyCounts: Map<Long, Int>? = null, weeklyGoals: Map<Long, Int> = emptyMap()): Streak {

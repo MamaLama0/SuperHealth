@@ -49,10 +49,12 @@ class UnifiedAlgorithmsTest {
                 listOf(SetLog("s", weight = kg, reps = 8, rir = 2, done = true)))), gym.name, gymId = gymId)
         val normal = listOf(workout(9, 40.0), workout(6, 40.0), workout(3, 40.0))
         val history = normal + workout(2, 80.0) + workout(1, 140.0, "other")
-        val adaptive = Settings(adaptiveStrength = true)
-        val base = engine.openingStrength(ex, normal, adaptive, gym, now = now)!!
-        assertEquals(base * 1.05, engine.openingStrength(ex, history, adaptive, gym, now = now)!!, 1e-8)
-        assertEquals(Strength.e1rm(140.0, 8, 2, ex.upperBody), engine.openingStrength(ex, history, Settings(), gym)!!, 1e-8)
+        val adaptive = Settings()
+        // la séance d'une autre salle n'est pas lue ; tant que le filtre n'a pas fait ses preuves, la règle d'origine
+        // (dernière séance de la salle + 1 %) s'applique
+        val local = engine.openingStrength(ex, history, adaptive, gym, now = now)!!
+        assertTrue(local < Strength.e1rm(140.0, 8, 2, ex.upperBody))
+        assertEquals(Strength.e1rm(80.0, 8, 2, ex.upperBody) * Strength.SESSION_PROGRESS, local, 0.5)
         val future = SetLog("future", weight = 25.0, reps = 11, target = TargetSet(), repsEdited = true, weightEdited = true)
         val session = engine.empty(gym).copy(exercises = listOf(SessionExercise("e", ex.id, listOf(
             SetLog("done", weight = 50.0, reps = 8, done = true), future))))

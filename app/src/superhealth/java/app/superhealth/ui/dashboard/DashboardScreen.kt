@@ -609,7 +609,7 @@ private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, no
         if (eligible && sh.moodPromptShownDay != today) app.superhealth.SuperPrefs.update { it.copy(moodPromptShownDay = today) }
     }
     PromptBanner(pending && due.first == today && due.second, Icons.Rounded.SentimentSatisfied, HealthHues.Mind,
-        tr("Moral du jour"), { app.superhealth.ui.wellbeing.moodSheet = true }) { app.superhealth.SuperPrefs.update { it.copy(moodSkipDay = today) } }
+        tr("Moral du jour"), { app.superhealth.ui.wellbeing.moodSheet = true }) { app.superhealth.SuperPrefs.update { it.copy(moodSkipDay = today, moodSkips = (it.moodSkips + today).distinct().takeLast(14)) } }
 }
 
 /** Bandeau du haut de l'accueil : un toucher ouvre sa fenêtre, la flèche le replie jusqu'à demain. */

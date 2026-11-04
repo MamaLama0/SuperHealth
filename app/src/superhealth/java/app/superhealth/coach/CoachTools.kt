@@ -254,7 +254,7 @@ object CoachTools {
                     app.superhealth.training.domain.SessionEngine(db).openingStrength(match, history, state.settings, gym) else null
                 Outcome(buildString {
                     appendLine(match.name)
-                    estimate?.let { appendLine("App opening strength estimate: ${n(it, 1)} kg; multi-session option: ${state.settings.adaptiveStrength}. A suggestion, not a tested maximum.") }
+                    estimate?.let { appendLine("App opening strength estimate: ${n(it, 1)} kg, from all recent sessions in this gym. A suggestion, not a tested maximum.") }
                     history.mapNotNull { w ->
                         val sets = w.exercises.filter { it.exerciseId == match.id }.flatMap { TrainingAnalytics.workingSets(it) }
                         val value = TrainingAnalytics.bestPerformance(match, sets) ?: return@mapNotNull null

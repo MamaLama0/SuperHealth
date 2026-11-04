@@ -28,17 +28,19 @@ object PromptTiming {
         val time = Instant.ofEpochMilli(now).atZone(zone)
         val day = time.toLocalDate().toEpochDay()
         if (settings.moodPromptShownDay == day) return true
-        if (stepGoal > 0 && steps != null && steps >= stepGoal) return true
-        if (activityEnds.any { end ->
+        // Trois « pas aujourd'hui » de suite : le moral attend le soir, sans se glisser après les pas ou une activité.
+        val declining = (1L..3L).all { (day - it) in settings.moodSkips }
+        if (!declining && stepGoal > 0 && steps != null && steps >= stepGoal) return true
+        if (!declining && activityEnds.any { end ->
                 val elapsed = now - end
                 Instant.ofEpochMilli(end).atZone(zone).toLocalDate() == LocalDate.ofEpochDay(day) &&
                     elapsed in activityDelayMinutes(end, settings.promptSeed) * 60_000L..120 * 60_000L
             }) return true
-        val historyMinutes = history.asSequence()
-            .filter { (d, entry) -> d in day - 28 until day && entry.at > 0 }
-            .mapNotNull { (d, entry) -> Instant.ofEpochMilli(entry.at).atZone(zone).takeIf { it.toLocalDate().toEpochDay() == d }
-                ?.let { it.hour * 60 + it.minute } }.filter { it in 17 * 60..19 * 60 }.sorted().toList()
-        val minute = if (historyMinutes.size >= 7) historyMinutes[historyMinutes.size / 2] else eveningMinute(day, settings.promptSeed)
+        val examples = history.mapNotNull { (d, entry) ->
+            if (entry.at <= 0) null else Instant.ofEpochMilli(entry.at).atZone(zone).takeIf { it.toLocalDate().toEpochDay() == d }
+                ?.let { Attention.Example(d, it.hour * 60 + it.minute) }
+        }
+        val minute = Attention.preferredMinute(examples, 17 * 60..19 * 60, day) ?: eveningMinute(day, settings.promptSeed)
         return time.hour * 60 + time.minute >= minute
     }
 }

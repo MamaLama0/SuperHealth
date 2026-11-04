@@ -1161,9 +1161,11 @@ private fun SetCalc(vm: AppViewModel, settings: Settings, ex: SessionExercise?, 
         history.sortedByDescending { it.startTime }.firstNotNullOfOrNull { w -> w.exercises.firstOrNull { it.exerciseId == ex?.exerciseId } }
             ?.let { Analytics.workingSets(it) }.orEmpty()
     }
-    val oneRm = if (settings.adaptiveStrength && e != null && e.usesWeight && e.usesReps && "aw" !in e.metrics) {
-        if (done.isNotEmpty()) app.superhealth.training.domain.Progression.typicalFreshStrength(done, upper, ex?.restSec ?: settings.restDefaultSec)
-        else vm.db.value?.let { app.superhealth.training.domain.SessionEngine(it).openingStrength(e, history, settings, vm.gym(vm.state.value.session?.gymId)) }
+    val engine = vm.db.value?.let { app.superhealth.training.domain.SessionEngine(it) }
+    val gym = vm.gym(vm.state.value.session?.gymId)
+    val oneRm = if (e != null && e.usesWeight && e.usesReps && "aw" !in e.metrics && engine != null) {
+        if (done.isNotEmpty()) engine.inSessionStrength(e, done, ex?.restSec ?: settings.restDefaultSec, history, settings, gym)
+        else engine.openingStrength(e, history, settings, gym)
     } else app.superhealth.training.domain.Progression.currentOneRm(
         past.filter { it.weight != null && it.reps != null }.map { app.superhealth.training.domain.PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }, upper)
     var reps by remember { mutableStateOf("8") }

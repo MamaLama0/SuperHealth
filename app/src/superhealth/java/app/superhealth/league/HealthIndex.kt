@@ -9,7 +9,8 @@ import kotlin.math.roundToInt
 /** Indice d'habitudes SuperHealth v4, sur sept jours terminés. Pas une estimation médicale. */
 object HealthIndex {
     const val CLASSIC = 4
-    const val MODEL = 5
+    /** 5 : indice unifié 3.2 ; 6 : note quotidienne commune avec les XP et tendances de force et de course (3.5). */
+    const val MODEL = 6
     const val MIN_DOMAINS = 3
     val weights = listOf(20, 20, 15, 25, 15, 5)
 
@@ -65,6 +66,30 @@ object HealthIndex {
         if (parts.count { it != null } < MIN_DOMAINS) return null
         val used = parts.mapIndexedNotNull { i, p -> p?.let { it.coerceIn(0, 100) to weights[i] } }
         return used.sumOf { it.first * it.second * 10 } / used.sumOf { it.second }
+    }
+
+    /** Variante pondérée par la couverture de chaque domaine (part des jours observés, 1 pour les domaines hebdomadaires). */
+    fun total(parts: List<Int?>, coverage: List<Double>): Int? {
+        if (parts.count { it != null } < MIN_DOMAINS) return null
+        var num = 0.0; var den = 0.0
+        parts.forEachIndexed { i, p -> if (p != null) { val w = weights[i] * coverage.getOrElse(i) { 1.0 }.coerceIn(4 / 7.0, 1.0); num += p.coerceIn(0, 100) * w; den += w } }
+        return (num * 10 / den).roundToInt().coerceIn(0, 1000)
+    }
+
+    /** Vitesse de course ramenée à 5 km (Riegel, exposant 1,06), pour comparer des distances différentes. */
+    fun normalizedSpeed(run: Bridge.Activity): Double? = runSpeed(run)?.let { it * Math.pow(run.distanceM!! / 5000.0, 0.06) }
+
+    /**
+     * Tendance de la vitesse normalisée (log, par semaine) et son incertitude, filtre commun niveau + pente.
+     * Null sous quatre courses d'au moins 1 km.
+     */
+    fun runTrend(runs: List<Bridge.Activity>): Pair<Double, Double>? {
+        val points = runs.mapNotNull { r -> normalizedSpeed(r)?.let { r.start / 86_400_000.0 to kotlin.math.ln(it) } }.sortedBy { it.first }
+        if (points.size < 4) return null
+        val f = app.superhealth.adaptive.LevelTrend(qLevel = 2e-5, qSlope = 5e-8, slopeSd0 = 0.002, slopeMin = -0.003, slopeMax = 0.003)
+        var s = f.start(points[0].first, points[0].second, 0.03 * 0.03)
+        for ((day, z) in points.drop(1)) s = f.update(s, day, z, 0.03 * 0.03)
+        return s.slope * 7 to s.slopeSd * 7
     }
 
     /** Les jours absents ne deviennent pas des zéros. Au moins quatre observations pour une partie quotidienne. */

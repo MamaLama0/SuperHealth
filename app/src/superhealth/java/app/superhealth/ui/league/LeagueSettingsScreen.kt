@@ -147,13 +147,14 @@ fun GroupScoreScreen(nav: NavHostController) {
         }
         GroupCard { SettingRow(tr("Comment c'est calculé"), subtitle = tr("Indice global de santé")) { healthRules = !healthRules } }
         if (healthRules) MfCard {
-            Text(tr("Le score porte sur les sept derniers jours terminés. Il faut au moins trois domaines. La moyenne sur 1 000 utilise uniquement leurs poids."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Le score porte sur les sept derniers jours terminés. Il faut au moins trois domaines. Chaque domaine compte selon son poids et la part des jours mesurés."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Un jour validé pour les XP vaut 100 dans son domaine. En dehors, la note baisse avec l'écart à la zone visée."), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
             listOf(
-                "Musculation (poids 20) · Jusqu’à 90 points pour votre objectif de séances et 10 pour le progrès moyen des exercices comparables aux 28 jours précédents.",
-                "Cardio (poids 20) · Jusqu’à 90 points pour 150 minutes et 10 pour un gain de vitesse sur une course comparable. Vos jours de course comptent pour un cinquième.",
-                "Pas (poids 15) · Moyenne des jours renseignés face à votre objectif de pas. Au moins 4 jours.",
-                "Sommeil (poids 25) · Durée face à votre besoin personnel, et régularité pour un cinquième. Au moins 4 nuits.",
-                "Nutrition (poids 15) · Calories proches de la cible et protéines atteintes, sur les journées complètes uniquement. Au moins 4 jours.",
+                "Musculation (poids 20) · Séances prévues pour 85 %, et votre tendance de force pour 15 %, selon toutes vos séries récentes.",
+                "Cardio (poids 20) · 150 minutes et vos jours de course pour 85 %, et la tendance de votre allure pour 15 %.",
+                "Pas (poids 15) · Chaque jour face à votre objectif de pas, qui vaut 100 une fois atteint. Au moins 4 jours.",
+                "Sommeil (poids 25) · Chaque nuit face à votre objectif de sommeil, et régularité pour un cinquième. Au moins 4 nuits.",
+                "Nutrition (poids 15) · Calories dans la zone de validation et protéines atteintes, sur les journées complètes. Au moins 4 jours.",
                 "Esprit et mobilité (poids 5) · Méditation et étirements face à 70 min sur 7 jours."
             ).forEach { Text(tr(it), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
         }

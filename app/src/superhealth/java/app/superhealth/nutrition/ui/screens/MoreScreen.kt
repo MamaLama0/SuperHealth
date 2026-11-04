@@ -230,14 +230,6 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                     set { it.copy(predictiveGoalAdjustment = v) }
                 }
                 RowDivider()
-                SwitchRow(tr("Ajustement aux semaines sportives"), tr("Teste si la musculation, le vélo ou la natation affinent la dépense au-delà des pas"), s.learnActivityEnergy) { v ->
-                    set { it.copy(learnActivityEnergy = v) }
-                }
-                RowDivider()
-                SwitchRow(tr("Apprendre de mon journal alimentaire"), tr("Personnalise les parts des repas et teste le lien entre glucides et fluctuations du poids"), s.learnFoodPatterns) { v ->
-                    set { it.copy(learnFoodPatterns = v) }
-                }
-                RowDivider()
                 SwitchRow(tr("Poids connu au jour du calcul"), tr("Estime la dépense de chaque jour avec les pesées disponibles à cette date"), s.useFilteredWeightForExpenditure) { v ->
                     set { it.copy(useFilteredWeightForExpenditure = v) }
                 }

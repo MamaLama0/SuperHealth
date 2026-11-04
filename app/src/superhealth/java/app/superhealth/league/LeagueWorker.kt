@@ -13,6 +13,7 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             catch (_: Exception) { Result.retry() }
         }
         if (!League.available() || !League.state.value.relayEnabled) return Result.success()
+        app.superhealth.wellbeing.Attention.refresh(applicationContext)
         if (League.state.value.syncsPerDay == 0 && !inputData.getBoolean("onOpen", false)) return Result.success()
         return try {
             SocialPreferences.finishRevocations(applicationContext)

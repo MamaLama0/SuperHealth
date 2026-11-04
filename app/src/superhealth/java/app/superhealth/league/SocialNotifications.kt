@@ -108,6 +108,8 @@ object SocialNotifications {
         val notification = NotificationCompat.Builder(ctx, channel).setSmallIcon(R.drawable.ic_stat_update)
             .setContentTitle(title).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(open).setAutoCancel(true).setOnlyAlertOnce(true)
+            // heures calmes et budget du jour : la notification arrive sans son plutôt que de disparaître
+            .setSilent(!app.superhealth.wellbeing.Attention.alert(ctx, social = channel != "progress_rewards"))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(public).build()
         runCatching { nm.notify(notificationKey, id, notification) }
     }
