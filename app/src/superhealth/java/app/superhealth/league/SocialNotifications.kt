@@ -81,6 +81,12 @@ object SocialNotifications {
         show(ctx, "progress_rewards", "${level ?: 0}:$badges:${java.time.LocalDate.now()}", tr("Bravo pour vos progrès"), text, "progress", requiresRelay = false)
     }
 
+    /** Défi miroir : rare, une notification par défi, dans le canal des progrès. */
+    fun mirrorChallenge(ctx: Context, name: String, metric: WeeklyQuests.Metric) {
+        show(ctx, "progress_rewards", "mirror:${metric.name}:${java.time.LocalDate.now()}", tr("Défi miroir"),
+            trf("%1\$s a déjà bouclé « %2\$s ». Ripostez avant dimanche : +%3\$s XP.", name, tr(metric.title), WeeklyQuests.MIRROR_BONUS), "quests", requiresRelay = false)
+    }
+
     private fun show(ctx: Context, channel: String, key: String, title: String, text: String, route: String, requiresRelay: Boolean = true, group: String? = null) {
         if (!League.available()) return
         SocialInbox.add(ctx, channel + key, title, text, route, group)

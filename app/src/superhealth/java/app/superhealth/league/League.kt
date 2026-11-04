@@ -122,8 +122,11 @@ object League {
         val week = s.questWeeks.firstOrNull { it.start == Progression.week(today) } ?: return@configure s
         val updated = WeeklyQuests.claim(week, metric, today)
         val claimed = updated.quests.filter { q -> q.claimed && week.quests.none { it.metric == q.metric && it.claimed } }
-        s.copy(questWeeks = s.questWeeks.map { if (it.start == week.start) updated else it },
-            questXp = s.questXp + claimed.sumOf { it.reward }, questsCompleted = s.questsCompleted + claimed.size)
+        // riposte au défi miroir : bonus une seule fois, dans la semaine du défi
+        val riposte = week.mirror?.takeIf { m -> !m.answered && claimed.any { it.metric == m.metric } }
+        val final = if (riposte == null) updated else updated.copy(mirror = riposte.copy(answered = true))
+        s.copy(questWeeks = s.questWeeks.map { if (it.start == week.start) final else it },
+            questXp = s.questXp + claimed.sumOf { it.reward } + (if (riposte != null) WeeklyQuests.MIRROR_BONUS else 0), questsCompleted = s.questsCompleted + claimed.size)
     }
     fun remove(ctx: Context, id: String) = configure(ctx) { it.copy(friends = it.friends.filter { f -> f.id != id }) }
 

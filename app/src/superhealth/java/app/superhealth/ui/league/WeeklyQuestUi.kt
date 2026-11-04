@@ -2,6 +2,10 @@ package app.superhealth.ui.league
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Tune
@@ -131,6 +135,7 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                 Text("${q.progress} / ${q.target}", style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
                 Text(tr(q.reason.text), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
+                week?.mirror?.takeIf { it.metric == q.metric }?.let { m -> MirrorLine(m, week.start) }
                 LinearProgressIndicator(progress = { (q.progress.toFloat() / q.target).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), color = if (q.complete) QuestGreen else Mf.colors.accent)
                 when {
                     q.claimed -> Text(trf("+%1\$s XP récupérés", q.reward), color = QuestGreen.onContainer(), style = MaterialTheme.typography.labelLarge)
@@ -155,5 +160,20 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
         val past = state.questWeeks.filter { it.start < Progression.week(today.toEpochDay()) }.sortedByDescending { it.start }.take(4)
         if (past.isEmpty()) Text(tr("Vos prochaines semaines viendront s'ajouter ici."), color = Mf.colors.textSecondary)
         past.forEach { w -> SettingRow(LocalDate.ofEpochDay(w.start).format(DateTimeFormatter.ofPattern("d MMM", app.superhealth.ui.Lang.locale)), subtitle = trf("%1\$s / %2\$s accomplies", w.quests.count { it.complete }, w.quests.size)) }
+    }
+}
+
+/** Défi miroir : une ligne joueuse sur la quête, le texte varie d'un défi à l'autre. */
+@Composable
+private fun MirrorLine(m: WeeklyQuests.Mirror, weekStart: Long) {
+    val text = if (m.answered) trf("Riposte réussie face à %1\$s. Le miroir est à vous.", m.name) else when (Math.floorMod(weekStart + m.friend.hashCode(), 3L)) {
+        0L -> trf("Défi miroir : %1\$s a déjà bouclé cette quête. Ripostez avant dimanche : +%2\$s XP.", m.name, WeeklyQuests.MIRROR_BONUS)
+        1L -> trf("%1\$s vous attend de l'autre côté du miroir. Même quête, déjà finie. +%2\$s XP si vous suivez.", m.name, WeeklyQuests.MIRROR_BONUS)
+        else -> trf("Reflet suspect : %1\$s a fini exactement la même quête. Rendez-lui la pareille : +%2\$s XP.", m.name, WeeklyQuests.MIRROR_BONUS)
+    }
+    Row(Modifier.padding(top = 10.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(app.superhealth.ui.theme.Hues.pack.purple.copy(alpha = .14f))
+        .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(18.dp), tint = app.superhealth.ui.theme.Hues.pack.purple)
+        Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp))
     }
 }

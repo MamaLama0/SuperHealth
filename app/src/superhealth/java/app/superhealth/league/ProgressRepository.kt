@@ -169,9 +169,14 @@ object ProgressRepository {
                 ?.let { (slope, sd) -> slope < 0.0005 && sd < 0.003 } ?: (comparisons[id]!!.let { s -> s.size >= 3 && s.last().first - s.first().first >= 14 && WeeklyQuests.plateau(s.map { it.second }) })
         } >= 2
         val selectedFocus = League.state.value.questFocus
+        val previousWeek = League.state.value.questWeeks.firstOrNull { it.start == weekStart }
         val questWeek = if (selectedFocus == null) null else WeeklyQuests.update(
-            League.state.value.questWeeks.firstOrNull { it.start == weekStart }, day, tracks, questCounts(weekStart, day), selectedFocus,
+            previousWeek, day, tracks, questCounts(weekStart, day), selectedFocus,
             WeeklyQuests.Evidence(questCounts(day - 14, day - 1), fullGoal, League.state.value.weeklyTargets["RUN"] ?: 2, stagnant, hasRecentHealthData, Progression.Track.HIKE in defaults), League.state.value.questWeeks)
+            .let { w -> w.copy(mirror = previousWeek?.mirror ?: WeeklyQuests.mirror(w, League.state.value.friends.map { WeeklyQuests.Rival(it.key, it.shown, it.progress) },
+                League.state.value.questWeeks, day)) }
+        if (questWeek?.mirror != null && previousWeek?.mirror == null)
+            SocialNotifications.mirrorChallenge(ctx, questWeek.mirror.name, questWeek.mirror.metric)
         val weeks = if (questWeek == null) League.state.value.questWeeks else
             (League.state.value.questWeeks.filterNot { it.start == weekStart } + questWeek).sortedBy { it.start }.takeLast(52)
         if (weeks != League.state.value.questWeeks) League.configure(ctx) { it.copy(questWeeks = weeks) }
@@ -180,7 +185,7 @@ object ProgressRepository {
         Progression.calculate(events, day, tracks, League.state.value.weeklyTargets + ("STRENGTH" to fullGoal) + ("HIKE" to (League.state.value.weeklyTargets["HIKE"] ?: 1)), records, events.keys.minOrNull() ?: day,
             sessions, strengthGoals).let { raw ->
             val limited = raw.summary.streaks.map { s -> if (s.track in setOf("RUN", "STEPS", "SLEEP")) s.copy(capped = s.current > 0 && (if (s.weekly) s.current * 7 >= day - (healthSince ?: from) - 5 else s.current >= day - (healthSince ?: from))) else s.copy(capped = false, percent = percent.takeIf { s.track == "FOOD" }) }
-            raw.copy(summary = raw.summary.copy(totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
+            raw.copy(summary = raw.summary.copy(questsDone = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.complete }.map { it.metric.name }, totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
                 "quests" to League.state.value.questsCompleted,
                 "sessions" to sessions.filterKeys { it <= day }.values.sum().toLong(),
                 "foodDays" to events.count { it.key <= day && Progression.Track.FOOD in it.value }.toLong(),

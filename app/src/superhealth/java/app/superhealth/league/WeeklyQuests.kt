@@ -37,7 +37,13 @@ object WeeklyQuests {
         val secondary: Boolean = false, val reason: Reason = Reason.START) {
         val complete get() = progress >= target
     }
-    @Serializable data class Week(val start: Long, val quests: List<Quest>, val focuses: Set<Focus> = emptySet())
+    @Serializable data class Week(val start: Long, val quests: List<Quest>, val focuses: Set<Focus> = emptySet(), val mirror: Mirror? = null)
+
+    /** Défi miroir : un ami a déjà fini la même quête cette semaine. Y répondre avant dimanche rapporte [MIRROR_BONUS] XP. */
+    @Serializable data class Mirror(val metric: Metric, val friend: String, val name: String, val answered: Boolean = false)
+    const val MIRROR_BONUS = 25
+    /** Ami vu par le défi miroir : clé, nom affiché, progression partagée. */
+    data class Rival(val key: String, val name: String, val progress: Progression.Summary?)
     data class Evidence(val previous14: Map<Metric, Int> = emptyMap(), val strengthGoal: Int = 2, val runGoal: Int = 2, val plateau: Boolean = false, val healthData: Boolean = true, val hikingEnabled: Boolean = false)
     private data class Candidate(val metric: Metric, val weakness: Double, val reason: Reason)
 
@@ -109,6 +115,23 @@ object WeeklyQuests {
         val max = when (metric) { Metric.FOOD, Metric.STEPS, Metric.ACTIVE -> 7; Metric.HIKE, Metric.STRENGTH_REVIEW -> 2; else -> 3 }
         val tuned = goal + step
         return (if (step > 0) minOf(tuned, maxOf(cap, goal)) else tuned).coerceIn(1, maxOf(max, goal))
+    }
+
+    /**
+     * Défi miroir, volontairement rare : au plus un toutes les quatre semaines, seulement du lundi au vendredi pour laisser
+     * le temps de répondre, sur une quête encore ouverte qu'un ami a terminée, et un tirage stable sur trois.
+     */
+    fun mirror(week: Week, rivals: List<Rival>, history: List<Week>, today: Long): Mirror? {
+        week.mirror?.let { return it }
+        if (today - week.start > 4) return null
+        if (history.any { it.start in week.start - 21 until week.start && it.mirror != null }) return null
+        for (q in week.quests.sortedBy { it.secondary }) {
+            if (q.complete || q.claimed) continue
+            val rival = rivals.filter { r -> r.progress?.weekStart == week.start && q.metric.name in r.progress.questsDone }
+                .firstOrNull { r -> Math.floorMod(31 * week.start + 7 * r.key.hashCode() + q.metric.ordinal, 3L) == 0L } ?: continue
+            return Mirror(q.metric, rival.key, rival.name)
+        }
+        return null
     }
 
     /** Trois séances comparables au minimum ; une absence d'historique n'est jamais un plateau. */

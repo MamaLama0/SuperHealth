@@ -70,5 +70,11 @@ object Strings28 {
         "%1\$s : vous ajoutez souvent des partielles à la dernière série." to "%1\$s: you often add partials to the last set.",
         "Dernière série à l'échec" to "Last set to failure",
         "Ajuster une cible" to "Adjust a target",
+        "Défi miroir" to "Mirror challenge",
+        "%1\$s a déjà bouclé « %2\$s ». Ripostez avant dimanche : +%3\$s XP." to "%1\$s already finished “%2\$s”. Strike back before Sunday: +%3\$s XP.",
+        "Riposte réussie face à %1\$s. Le miroir est à vous." to "You answered %1\$s. The mirror is yours.",
+        "Défi miroir : %1\$s a déjà bouclé cette quête. Ripostez avant dimanche : +%2\$s XP." to "Mirror challenge: %1\$s already finished this quest. Strike back before Sunday: +%2\$s XP.",
+        "%1\$s vous attend de l'autre côté du miroir. Même quête, déjà finie. +%2\$s XP si vous suivez." to "%1\$s is waiting on the other side of the mirror. Same quest, already done. +%2\$s XP if you follow.",
+        "Reflet suspect : %1\$s a fini exactement la même quête. Rendez-lui la pareille : +%2\$s XP." to "Suspicious reflection: %1\$s finished the exact same quest. Return the favour: +%2\$s XP.",
     )
 }

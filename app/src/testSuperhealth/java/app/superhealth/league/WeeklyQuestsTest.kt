@@ -87,4 +87,23 @@ class WeeklyQuestsTest {
         assertEquals(WeeklyQuests.Metric.MIND, w.quests.single().metric)
         assertTrue(w.quests.none { it.metric in setOf(WeeklyQuests.Metric.RUN, WeeklyQuests.Metric.STEPS) })
     }
+
+    @Test fun mirrorChallengeIsRareFriendlyAndPaysOnce() {
+        val week = WeeklyQuests.Week(monday, listOf(WeeklyQuests.Quest(WeeklyQuests.Metric.FOOD, 4, 1)))
+        fun rival(key: String, done: List<String> = listOf("FOOD"), start: Long = monday) =
+            WeeklyQuests.Rival(key, key, Progression.Summary(weekStart = start, questsDone = done))
+        // un seul tirage sur trois retient un ami donné : on en propose assez pour en trouver un
+        val rivals = (1..30).map { rival("k$it") }
+        val m = WeeklyQuests.mirror(week, rivals, emptyList(), monday + 1)!!
+        assertEquals(WeeklyQuests.Metric.FOOD, m.metric)
+        assertTrue(rivals.count { r -> WeeklyQuests.mirror(week, listOf(r), emptyList(), monday) != null } in 3..20)
+        assertNull(WeeklyQuests.mirror(week, rivals.map { rival(it.key, listOf("STEPS")) }, emptyList(), monday))
+        assertNull(WeeklyQuests.mirror(week, rivals.map { rival(it.key, start = monday - 7) }, emptyList(), monday))
+        assertNull(WeeklyQuests.mirror(week, rivals, emptyList(), monday + 5)) // samedi : trop tard pour répondre
+        assertNull(WeeklyQuests.mirror(week, rivals, listOf(WeeklyQuests.Week(monday - 14, emptyList(), mirror = m)), monday))
+        assertNull(WeeklyQuests.mirror(week.copy(quests = listOf(week.quests[0].copy(progress = 4))), rivals, emptyList(), monday))
+        assertEquals(m, WeeklyQuests.mirror(week.copy(mirror = m), emptyList(), emptyList(), monday + 6))
+        val old = Json { ignoreUnknownKeys = true }.decodeFromString(Progression.Summary.serializer(), "{\"weekStart\":5}")
+        assertTrue(old.questsDone.isEmpty())
+    }
 }
