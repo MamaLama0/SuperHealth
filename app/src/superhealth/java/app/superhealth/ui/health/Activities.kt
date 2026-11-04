@@ -104,7 +104,13 @@ fun Bridge.Kind.icon(): ImageVector = when (this) {
 /** Ligne d'activité commune (musculation, montre, Health Connect), avec la FC moyenne de la montre quand elle existe. */
 @Composable
 fun ActivityRow(a: Bridge.Activity, horizontal: androidx.compose.ui.unit.Dp = 16.dp, chip: androidx.compose.ui.graphics.Color? = null, onClick: () -> Unit) {
-    val hr by produceState<Int?>(null, a.key) { value = a.hc?.avgHr ?: runCatching { Bridge.averageHeartRate(a.start, a.end) }.getOrNull() }
+    val hr by produceState<Int?>(null, a) {
+        value = when (a.source) {
+            Bridge.Source.HEALTH_CONNECT -> a.hc?.avgHr
+            Bridge.Source.IMPORT -> a.run?.avgHr
+            else -> runCatching { Bridge.averageHeartRate(a.start, a.end) }.getOrNull()
+        }
+    }
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = horizontal, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         val tint = a.kind.hue()
         Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(chip ?: tint.container()), contentAlignment = Alignment.Center) {
