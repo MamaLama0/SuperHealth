@@ -62,6 +62,9 @@ interface HealthSource {
     /** Phases de sommeil qui se terminent entre [fromMs] et [toMs]. */
     suspend fun sleep(fromMs: Long, toMs: Long): List<HealthRepository.SleepPhase>
 
+    /** Signale les ajouts, modifications et suppressions de séances pendant que la source est observée. */
+    fun workoutChanges(): kotlinx.coroutines.flow.Flow<Unit>? = null
+
     suspend fun workouts(fromMs: Long, toMs: Long): List<Workout>
 
     suspend fun workoutDetail(id: Long): WorkoutDetail?

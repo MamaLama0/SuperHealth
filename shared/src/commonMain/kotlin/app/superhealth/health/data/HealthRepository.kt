@@ -21,6 +21,7 @@ data class Workout(
     val device: SourceDevice,
     val distanceM: Double? = null,
     val kcal: Double? = null,
+    val sourceApp: String? = null,
 )
 
 /** Weekly cardio minutes (Apple : minutes d'exercice) against the weekly target. */
@@ -264,7 +265,7 @@ object HealthRepository {
     // ---- Workouts & timeline ----------------------------------------------------------------
 
     suspend fun workouts(from: Long, to: Long): List<Workout> =
-        if (devices().isEmpty()) emptyList() else safe { source.workouts(from, to) }.orEmpty().sortedByDescending { it.start.time }
+        if (devices().isEmpty()) emptyList() else WorkoutMerge.reconcile(safe { source.workouts(from, to) }.orEmpty())
 
     suspend fun timeline(context: Context, date: LocalDate, days: Long = 1): List<TimelineEvent> {
         val from = startMs(date.minusDays(days - 1))

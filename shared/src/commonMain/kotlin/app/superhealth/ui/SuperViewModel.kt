@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
+import app.superhealth.health.data.HealthSources
 import kotlinx.coroutines.flow.distinctUntilChanged
 import app.superhealth.meditation.Meditation
 import app.superhealth.stretch.Stretch
@@ -64,6 +66,10 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
     val syncing = MutableStateFlow(false)
 
     init {
+        settings.map { it.healthConnect }.distinctUntilChanged().flatMapLatest { enabled ->
+            if (enabled) HealthSources.current.workoutChanges() ?: kotlinx.coroutines.flow.emptyFlow()
+            else kotlinx.coroutines.flow.emptyFlow()
+        }.onEach { HealthRepository.invalidate(); bump() }.launchIn(viewModelScope)
         ManualLogStore.get(app).changes.drop(1).onEach { HealthRepository.invalidate(); bump() }.launchIn(viewModelScope)
     }
 

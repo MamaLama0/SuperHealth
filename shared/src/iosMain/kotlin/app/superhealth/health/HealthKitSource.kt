@@ -512,6 +512,16 @@ object HealthKitSource : HealthSource {
 
     private fun device(w: HKWorkout) = SourceDevice("healthkit", w.sourceRevision.source.name, w.sourceRevision.productType)
 
+    override fun workoutChanges(): Flow<Unit> = callbackFlow {
+        val predicate = HKQuery.predicateForSamplesWithStartDate(date(nowMs() - 30L * 86400000), null, 0u)
+        val query = HKAnchoredObjectQuery(HKObjectType.workoutType(), predicate, null as HKQueryAnchor?, HKObjectQueryNoLimit) { _, _, _, _, error ->
+            if (error == null) trySend(Unit)
+        }
+        query.setUpdateHandler { _, _, _, _, error -> if (error == null) trySend(Unit) }
+        store.executeQuery(query)
+        awaitClose { store.stopQuery(query) }
+    }
+
     override suspend fun workouts(fromMs: Long, toMs: Long): List<Workout> {
         val list = samples(HKObjectType.workoutType(), range(fromMs.coerceAtLeast(0), toMs.coerceAtMost(nowMs() + 86_400_000L)), newestFirst = true)
             .filterIsInstance<HKWorkout>()
@@ -522,7 +532,8 @@ object HealthKitSource : HealthSource {
             @Suppress("DEPRECATION")
             Workout(id, null, kindOf(w.workoutActivityType), Date(w.startDate.ms()), Date(w.endDate.ms()), device(w),
                 w.totalDistance?.doubleValueForUnit(HKUnit.meterUnit())?.takeIf { it > 0 },
-                w.totalEnergyBurned?.doubleValueForUnit(HKUnit.kilocalorieUnit())?.takeIf { it > 0 })
+                w.totalEnergyBurned?.doubleValueForUnit(HKUnit.kilocalorieUnit())?.takeIf { it > 0 },
+                sourceApp = w.sourceRevision.source.bundleIdentifier)
         }
     }
 
