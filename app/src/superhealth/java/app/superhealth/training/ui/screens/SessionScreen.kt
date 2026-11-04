@@ -475,6 +475,9 @@ private fun ExercisePage(
             ex.supersetGroup?.let { g -> s.exercises.mapNotNull { it.supersetGroup }.distinct().indexOf(g).takeIf { it >= 0 }?.let { 'A' + it } }) { nav.navigate("exercise/${ex.exerciseId}") }
         // Actions de l'exercice (workout_exercise_builder) : repos et remplacement à portée de pouce, le reste dans une petite
         // fenêtre d'options. Plus de rangée glissante : un glissement raté y emmenait à l'exercice voisin.
+        val st by vm.state.collectAsState()
+        val enabled = st.exerciseConfig[ex.exerciseId]?.warmUp != WarmUpMode.NONE
+        val globalEnabled = settings.warmUp != WarmUpMode.NONE
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
             ActionChip(Icons.Rounded.Timer, trf("Repos %1\$s", (restLabel(ex.restSec))), onClick = onRest)
@@ -484,6 +487,7 @@ private fun ExercisePage(
             var groupEnd = index
             while (inSuperset && s.exercises.getOrNull(groupEnd + 1)?.supersetGroup == ex.supersetGroup) groupEnd++
             val options = buildList {
+                add(ExOption(Icons.Rounded.LocalFireDepartment, tr("Échauffements")) { warmOptions = true })
                 // superset, puis triset en reliant aussi l'exercice suivant
                 if (s.exercises.size > 1 && (!inSuperset || groupEnd < s.exercises.size - 1))
                     add(ExOption(Icons.Rounded.Link, if (!inSuperset) tr("Superset") else if (groupSize == 2) tr("Triset") else tr("Lier au suivant")) { vm.linkNext(groupEnd) })
@@ -501,13 +505,6 @@ private fun ExercisePage(
                 OptionsButton(active = inSuperset || ex.note.isNotBlank()) { more = true }
                 ExOptionsMenu(more, options) { more = false }
             }
-        }
-        val st by vm.state.collectAsState()
-        val enabled = st.exerciseConfig[ex.exerciseId]?.warmUp != WarmUpMode.NONE
-        val globalEnabled = settings.warmUp != WarmUpMode.NONE
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
-            ActionChip(Icons.Rounded.LocalFireDepartment,
-                if (enabled && globalEnabled) tr("Échauffements") else tr("Échauffements désactivés")) { warmOptions = true }
         }
         if (warmOptions) ModalBottomSheet(onDismissRequest = { warmOptions = false }, containerColor = Mf.colors.background,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
