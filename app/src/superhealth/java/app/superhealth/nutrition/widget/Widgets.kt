@@ -452,7 +452,7 @@ private fun MacroVariantContent(ctx: Context, s: Snapshot?, weekly: Boolean) {
             return@WidgetCard
         }
         if (shape == WShape.MEDIUM || shape == WShape.LARGE) {
-            WidgetHeader(R.drawable.ic_w_food, colors[0], tr(if (weekly) { if (shape == WShape.MEDIUM) "7 j · Macros" else "Macros · 7 j" } else "Macros du jour"),
+            WidgetHeader(R.drawable.ic_w_food, colors[0], tr(if (weekly) { if (shape == WShape.MEDIUM) "Macros" else "Macros · 7 j" } else "Macros du jour"),
                 if (weekly) "${s.week.loggedDays}/7" else null)
             Spacer(GlanceModifier.height(4.dp))
         }
@@ -506,6 +506,7 @@ private fun WeeklyCaloriesContent(ctx: Context, s: Snapshot?) {
             Text("$unit · " + tr("7 j"), style = TextStyle(color = W.sub, fontSize = 9.sp), maxLines = 1)
             return@WidgetCard
         }
+        val chartHeight = if (ctx.resources.configuration.fontScale > 1.1f) 22.dp else 34.dp
         val points = s.week.days.map { it.eaten?.kcal?.let(s.settings::energyValue) }
         val chartDescription = s.week.days.joinToString(" · ") { day ->
             val date = LocalDate.ofEpochDay(day.epochDay)
@@ -526,7 +527,7 @@ private fun WeeklyCaloriesContent(ctx: Context, s: Snapshot?) {
             }
             if (shape == WShape.MEDIUM) Text(tr("Moy./jour suivi"), style = TextStyle(color = W.sub, fontSize = 9.sp), maxLines = 1)
             Spacer(GlanceModifier.height(4.dp))
-            Image(ImageProvider(WK.bars(points, null, hue, WK.px(ctx, size.width - 20.dp), WK.px(ctx, 34.dp))), chartDescription, GlanceModifier.fillMaxWidth().height(34.dp))
+            Image(ImageProvider(WK.bars(points, null, hue, WK.px(ctx, size.width - 20.dp), WK.px(ctx, chartHeight))), chartDescription, GlanceModifier.fillMaxWidth().height(chartHeight))
             Row(GlanceModifier.fillMaxWidth()) {
                 s.week.days.forEach { day ->
                     Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {

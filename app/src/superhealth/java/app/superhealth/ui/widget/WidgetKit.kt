@@ -283,6 +283,6 @@ internal fun WidgetHeader(icon: Int, color: Color, title: String, trailing: Stri
         Spacer(GlanceModifier.width(5.dp))
         Text(title, style = TextStyle(color = WK.on(color), fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1,
             modifier = GlanceModifier.defaultWeight())
-        trailing?.let { Text(it, style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1) }
+        trailing?.let { Spacer(GlanceModifier.width(6.dp)); Text(it, style = TextStyle(color = WK.sub, fontSize = 11.sp), maxLines = 1) }
     }
 }
