@@ -2,15 +2,21 @@ import WidgetKit
 import SwiftUI
 
 extension Snapshot.NutritionWeek {
-    static let preview = Snapshot.NutritionWeek(
-        days: (0..<7).map { i in Snapshot.NutritionDay(label: ["J", "V", "S", "D", "L", "M", "M"][i], date: "\(i + 1)/11",
-            energy: i == 3 ? nil : [2180.0, 2350, 2050, 0, 2420, 2210, 1040][i], target: 2280,
-            macros: i == 3 ? nil : [135.0 + Double(i), 72.0, 240.0]) },
-        average: 2042, unit: "kcal", loggedDays: 6, caption: "Moy./jour suivi",
-        macros: [Snapshot.Macro(label: "Protéines", value: 138, target: 140, color: "#E5574F"),
-                 Snapshot.Macro(label: "Lipides", value: 72, target: 76, color: "#F9B500"),
-                 Snapshot.Macro(label: "Glucides", value: 240, target: 260, color: "#3F7DE8")],
-        title: "Calories sur 7 jours", macrosTitle: "Macros sur 7 jours")
+    static let preview: Snapshot.NutritionWeek = {
+        let labels = ["J", "V", "S", "D", "L", "M", "M"]
+        let energies: [Double?] = [2180, 2350, 2050, nil, 2420, 2210, 1040]
+        var days: [Snapshot.NutritionDay] = []
+        for i in 0..<7 {
+            let grams: [Double]? = energies[i] == nil ? nil : [135.0 + Double(i), 72.0, 240.0]
+            days.append(Snapshot.NutritionDay(label: labels[i], date: "\(i + 1)/11", energy: energies[i], target: 2280, macros: grams))
+        }
+        let macros = [Snapshot.Macro(label: "Protéines", value: 138, target: 140, color: "#E5574F"),
+                      Snapshot.Macro(label: "Lipides", value: 72, target: 76, color: "#F9B500"),
+                      Snapshot.Macro(label: "Glucides", value: 240, target: 260, color: "#3F7DE8")]
+        return Snapshot.NutritionWeek(days: days, average: 2042, unit: "kcal", loggedDays: 6, caption: "Moy./jour suivi",
+            macros: macros, title: "Calories sur 7 jours", macrosTitle: "Macros sur 7 jours")
+    }()
+
 }
 
 private func nutritionNumber(_ value: Double?) -> String {
