@@ -277,10 +277,10 @@ object MealPlanner {
             Row(slot, p[1], AiFood.Item(p[2], g, "g", g, "generic", d(4), d(5), d(6), d(7), d(8), p.getOrNull(9) ?: p[2]))
         }
         if (rows.isEmpty()) throw PlanException(tr("Réponse du modèle illisible."))
-        val swiss = NutriApp.repository.prefs.settings.value.swissDbEnabled
+        val foodSettings = NutriApp.repository.prefs.settings.value
         val matched = AiFood.match(cfg, rows.map { it.item }, candidates = { q ->
             withContext(Dispatchers.Default) {
-                NutriApp.repository.foods.search(q).take(3) + (if (swiss) SwissFoods.search(ctxApp, q, 5).map(SwissFoods::toFood) else emptyList())
+                NutriApp.repository.foods.search(q).take(3) + app.superhealth.nutrition.data.GenericFoods.search(ctxApp, foodSettings, q, 5)
             }
         })
         val saved = HashMap<String, FoodEntity>()

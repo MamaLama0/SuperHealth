@@ -25,6 +25,18 @@ internal fun GroupSurface(modifier: Modifier = Modifier, onClick: (() -> Unit)? 
     }
 }
 
+/**
+ * Carte « Créer une publication » : en sombre, même traitement que le dashboard ; en clair, un voile d'accent très léger
+ * et un liseré, car les styles colorés teintent trop fort un fond blanc.
+ */
+@Composable
+internal fun ComposeSurface(onClick: () -> Unit, padding: PaddingValues, content: @Composable ColumnScope.() -> Unit) {
+    if (Mf.colors.dark) return GroupSurface(onClick = onClick, padding = padding, content = content)
+    val shape = RoundedCornerShape(CardRadius)
+    Column(Modifier.fillMaxWidth().clip(shape).background(androidx.compose.ui.graphics.lerp(Mf.colors.card, Mf.colors.accent, 0.05f))
+        .border(1.dp, Mf.colors.accent.copy(alpha = .18f), shape).clickable(onClick = onClick).padding(padding), content = content)
+}
+
 /** Posts stay calm and readable regardless of the dashboard's colored card variant. */
 @Composable
 internal fun PostSurface(content: @Composable ColumnScope.() -> Unit) {

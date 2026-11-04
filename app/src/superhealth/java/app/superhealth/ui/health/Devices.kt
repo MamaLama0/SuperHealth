@@ -71,7 +71,6 @@ import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import nodomain.freeyourgadget.gadgetbridge.activities.AboutUserPreferencesActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2
-import nodomain.freeyourgadget.gadgetbridge.activities.DataManagementActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.preferences.HealthConnectPreferencesActivity
@@ -141,8 +140,8 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
                 ctx.startActivity(Intent(ctx, HealthConnectPreferencesActivity::class.java))
             }
             RowDivider()
-            SettingRow(tr("Données de la montre"), subtitle = tr("Export, import et sauvegarde automatique"), icon = Icons.Rounded.Storage) {
-                ctx.startActivity(Intent(ctx, DataManagementActivity::class.java))
+            SettingRow(tr("Sauvegarde"), subtitle = tr("Les données de la montre sont incluses dans la sauvegarde de l'app"), icon = Icons.Rounded.Storage) {
+                nav.navigate("backup")
             }
             RowDivider()
             SettingRow(tr("Réglages Gadgetbridge"), subtitle = tr("Notifications, connexion, journal"), icon = Icons.Rounded.Settings) {

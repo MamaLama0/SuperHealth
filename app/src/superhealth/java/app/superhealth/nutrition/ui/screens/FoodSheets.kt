@@ -328,8 +328,8 @@ fun FoodSheet(
             MicrosSection(app.superhealth.nutrition.data.Micros.parse(food.microsJson).mapValues { it.value * k })
             // produit à code-barres : fiche Open Food Facts (scores, ingrédients, allergènes)
             food.barcode?.takeIf { s.openFoodFactsEnabled && it.length >= 8 && it.all(Char::isDigit) }?.let { OffSection(it) }
-            if (food.source == app.superhealth.nutrition.data.SwissFoods.SOURCE) Text(trf("Source : %1\$s", app.superhealth.nutrition.data.SwissFoods.CREDIT),
-                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 8.dp))
+            when (food.source) { app.superhealth.nutrition.data.SwissFoods.SOURCE -> app.superhealth.nutrition.data.SwissFoods.CREDIT; app.superhealth.nutrition.data.UsdaFoods.SOURCE -> app.superhealth.nutrition.data.UsdaFoods.CREDIT; else -> null }?.let { credit -> Text(trf("Source : %1\$s", credit),
+                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 8.dp)) }
         }
         // Bouton fixé en bas de la fiche, comme dans MacroFactor
         Column(Modifier.fillMaxWidth().background(Mf.colors.card).padding(horizontal = 20.dp, vertical = 12.dp)) {

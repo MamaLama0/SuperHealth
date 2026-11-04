@@ -56,13 +56,8 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.backup.BackupWorker.schedule(this)
         app.superhealth.update.UpdateWorker.schedule(this)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { app.superhealth.modules.Modules.upgradeBundled(this@SuperHealthApp) }
-        // icône du lanceur : l'icône pixel-art de l'Aventure (1.2) avait pu désactiver l'alias de base
-        runCatching {
-            val launcher = android.content.ComponentName(this, "app.superhealth.Launcher")
-            if (packageManager.getComponentEnabledSetting(launcher) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)
-                packageManager.setComponentEnabledSetting(launcher, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
-                    android.content.pm.PackageManager.DONT_KILL_APP)
-        }
+        // icône du lanceur : exactement un alias actif (l'ancien code réactivait le rose à côté de la couleur choisie)
+        runCatching { app.superhealth.ui.LauncherIcon.repair(this, NutriApp.repository.prefs.settings.value.accent) }
     }
 
     /** Écrans Gadgetbridge (réglages de la montre, association…) : police et formes de SuperHealth. */

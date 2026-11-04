@@ -126,7 +126,7 @@ fun LeagueScreen(nav: NavHostController) {
     var showParts by rememberSaveable { mutableStateOf(false) }
     var metricPicker by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    LaunchedEffect(st.unifiedScore, st.tracked, st.weeklyTargets) { runCatching { League.compute(ctx) } }
+    LaunchedEffect(st.tracked, st.weeklyTargets) { runCatching { League.compute(ctx) } }
     val name = userName() ?: tr("Moi")
     val s = mine
     val endDay = s?.endDay ?: LocalDate.now().minusDays(1).toEpochDay()

@@ -96,15 +96,6 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             Toast.makeText(ctx, if (result.isSuccess) tr("Programme ajouté à la bibliothèque") else result.exceptionOrNull()?.message ?: tr("Fichier illisible"), Toast.LENGTH_LONG).show()
         }
     }
-    val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let { runCatching { ctx.contentResolver.openOutputStream(it)?.use { o -> o.write(vm.exportJson().toByteArray()) } }
-            .onSuccess { Toast.makeText(ctx, tr("Sauvegarde exportée"), Toast.LENGTH_SHORT).show() } }
-    }
-    val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { u -> val txt = runCatching { ctx.contentResolver.openInputStream(u)?.use { it.readBytes().decodeToString() } }.getOrNull()
-            val ok = txt != null && vm.importJson(txt).isSuccess
-            Toast.makeText(ctx, if (ok) tr("Sauvegarde restaurée") else tr("Fichier illisible"), Toast.LENGTH_SHORT).show() }
-    }
     val title = tr(when (section) { "program" -> "Programme et expérience"; "gyms" -> "Salles et matériel"; "progression" -> "Progression et séries"; "session" -> "Échauffements et repos"; "data" -> "Données musculation"; else -> "Musculation" })
     DetailScaffold(title, nav) {
         Column {
@@ -121,7 +112,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 RowDivider()
                 SettingRow(tr("Échauffements et repos"), subtitle = tr("Séries préparatoires, minuteurs et sons")) { nav.navigate("t/settings/session") }
                 RowDivider()
-                SettingRow(tr("Données musculation"), subtitle = tr("Importer, exporter et restaurer")) { nav.navigate("t/settings/data") }
+                SettingRow(tr("Données musculation"), subtitle = tr("Importer un programme")) { nav.navigate("t/settings/data") }
             }
             }
             if (section == "program") {
@@ -210,9 +201,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             GroupCard {
                 SettingRow(tr("Importer un programme"), subtitle = tr("JSON SuperHealth ou Workouts ; ajouté sans remplacer vos données"), icon = Icons.Rounded.Download) { importProgram.launch(arrayOf("application/json", "*/*")) }
                 RowDivider()
-                SettingRow(tr("Exporter une sauvegarde"), subtitle = tr("JSON complet"), icon = Icons.Rounded.Download) { export.launch("superhealth-musculation-${LocalDate.now()}.json") }
-                RowDivider()
-                SettingRow(tr("Restaurer une sauvegarde"), subtitle = tr("Remplace toutes les données"), icon = Icons.Rounded.Upload) { import.launch(arrayOf("application/json", "*/*")) }
+                SettingRow(tr("Sauvegarde"), subtitle = tr("Une seule sauvegarde chiffrée pour toute l'app"), icon = Icons.Rounded.Upload) { nav.navigate("backup") }
             }
             }
             Spacer(Modifier.height(24.dp))

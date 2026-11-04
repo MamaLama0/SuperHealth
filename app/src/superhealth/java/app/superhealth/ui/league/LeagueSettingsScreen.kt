@@ -118,19 +118,13 @@ fun GroupScoreScreen(nav: NavHostController) {
     val selected = st.tracked ?: ProgressRepository.selectedTracks(sh).map { it.name }.toSet()
     var healthRules by remember { mutableStateOf(false) }
     DetailScaffold(tr("Suivis et objectifs"), onBack = { nav.popBackStack() }, contentSpacing = 12.dp) {
-        GroupCard {
-            SwitchRow(tr("Indice unifié"), tr("Associe les tendances de vos suivis. Désactivez pour retrouver le calcul classique."), st.unifiedScore) { on ->
-                League.setUnifiedScore(ctx, on)
-                scope.launch { League.compute(ctx) }
-            }
-        }
         GroupHeader(tr("Suivis comptés"), Modifier.padding(start = 0.dp))
         Text(modifier = Modifier.padding(horizontal = 4.dp), text = tr("Seuls les suivis cochés entrent dans votre score. Il faut au moins trois domaines renseignés."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         Text(modifier = Modifier.padding(horizontal = 4.dp), text = tr("Chaque suivi a un objectif. La musculation suit les séances du programme ; les jours de repos restent libres."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         GroupCard {
             available.forEachIndexed { i, t ->
                 if (i > 0) RowDivider()
-                SwitchRow(tr(t.label), trackingGoal(t), t.name in selected) { on ->
+                SwitchRow(tr(t.label), trackingGoal(t).takeIf { t != Progression.Track.FOOD }, t.name in selected) { on ->
                     League.configure(ctx) { it.copy(tracked = if (on) selected + t.name else selected - t.name) }
                     scope.launch { ProgressRepository.compute(ctx) }
                 }
@@ -154,18 +148,14 @@ fun GroupScoreScreen(nav: NavHostController) {
         GroupCard { SettingRow(tr("Comment c'est calculé"), subtitle = tr("Indice global de santé")) { healthRules = !healthRules } }
         if (healthRules) MfCard {
             Text(tr("Le score porte sur les sept derniers jours terminés. Il faut au moins trois domaines. La moyenne sur 1 000 utilise uniquement leurs poids."), style = MaterialTheme.typography.bodySmall)
-            if (st.unifiedScore) Text(tr("La force suit le progrès moyen des exercices comparables. Le cardio tient compte des jours de course. Le sommeil combine durée et régularité, la nutrition calories et protéines sur les journées complètes."), style = MaterialTheme.typography.bodySmall)
-            else {
-            Text(tr("Chaque pourcent de progrès vaut un point sur 100 dans le domaine sportif. La référence est votre meilleur résultat des 28 jours précédant la période. Sans référence, seuls les points de volume comptent."), style = MaterialTheme.typography.bodySmall)
             listOf(
-                "Musculation (poids 20) · Jusqu’à 90 points pour votre objectif de séances et 10 pour un gain de force estimée ou de répétitions sur le même exercice.",
-                "Cardio (poids 20) · Jusqu’à 90 points pour 150 minutes et 10 pour un gain de vitesse sur une course d’au moins 1 km de distance comparable (±10 %).",
-                "Moyenne des jours renseignés face à votre objectif de pas. Au moins 4 jours. Poids relatif : 15.",
-                "Moyenne des nuits renseignées face à 7 h. Au moins 4 nuits. Poids relatif : 25.",
-                "Écart relatif entre apports et cibles, évalué progressivement. Au moins 4 jours renseignés. Poids relatif : 15.",
-                "Méditation et étirements face à 70 min sur 7 jours. Poids relatif : 5."
+                "Musculation (poids 20) · Jusqu’à 90 points pour votre objectif de séances et 10 pour le progrès moyen des exercices comparables aux 28 jours précédents.",
+                "Cardio (poids 20) · Jusqu’à 90 points pour 150 minutes et 10 pour un gain de vitesse sur une course comparable. Vos jours de course comptent pour un cinquième.",
+                "Pas (poids 15) · Moyenne des jours renseignés face à votre objectif de pas. Au moins 4 jours.",
+                "Sommeil (poids 25) · Durée face à votre besoin personnel, et régularité pour un cinquième. Au moins 4 nuits.",
+                "Nutrition (poids 15) · Calories proches de la cible et protéines atteintes, sur les journées complètes uniquement. Au moins 4 jours.",
+                "Esprit et mobilité (poids 5) · Méditation et étirements face à 70 min sur 7 jours."
             ).forEach { Text(tr(it), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
-            }
         }
     }
 }

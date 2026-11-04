@@ -261,7 +261,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
     /** Enregistre un aliment OFF dans la bibliothèque (dédupliqué par code-barres). */
     suspend fun saveFood(food: FoodEntity): FoodEntity {
         val existing = food.barcode?.let { foods.byBarcode(it) }
-            ?: if (food.source == SwissFoods.SOURCE) foods.byNameSource(food.name, food.source) else null
+            ?: if (food.source == SwissFoods.SOURCE || food.source == UsdaFoods.SOURCE) foods.byNameSource(food.name, food.source) else null
         if (existing != null && food.id == 0L) return existing
         val id = foods.insert(food)
         return food.copy(id = id)

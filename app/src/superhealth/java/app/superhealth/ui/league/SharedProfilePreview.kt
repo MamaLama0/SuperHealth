@@ -17,7 +17,7 @@ fun SharedProfilePreview(nav: NavHostController) {
     var card by remember { mutableStateOf<League.Card?>(null) }
     var error by remember { mutableStateOf(false) }
     LaunchedEffect(state.shareIndex, state.sharePillars, state.shareActivities, state.shareProgress, state.shareProfilePhoto,
-        state.profileTitle, state.profileBadges, state.profileAvatar, state.unifiedScore) {
+        state.profileTitle, state.profileBadges, state.profileAvatar) {
         card = null; error = false
         try { card = League.parse(League.myCard(ctx, detailed = true, includeRelayKey = false)); error = card == null }
         catch (e: kotlinx.coroutines.CancellationException) { throw e }

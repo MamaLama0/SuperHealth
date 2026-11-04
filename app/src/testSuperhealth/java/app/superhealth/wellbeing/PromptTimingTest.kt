@@ -21,7 +21,6 @@ class PromptTimingTest {
         assertFalse(due(at(10), steps = 7999.0))
         assertFalse(due(at(10), steps = 8000.0, goal = 0))
         assertTrue(due(at(10), steps = 8000.0))
-        assertFalse(due(at(10), steps = 8000.0, s = settings.copy(moodAfterSteps = false)))
     }
 
     @Test fun completedActivityOnlyTriggersWithinThirtyMinutesToTwoHours() {
@@ -33,7 +32,6 @@ class PromptTimingTest {
         assertTrue(due(chosen, ends = listOf(end)))
         assertTrue(due(end + 120 * 60_000, ends = listOf(end)))
         assertFalse(due(end + 120 * 60_000 + 1, ends = listOf(end)))
-        assertFalse(due(chosen, ends = listOf(end), s = settings.copy(moodAfterActivity = false)))
     }
 
     @Test fun fallbackWorksWithoutHealthSourcesAndIsStableThroughoutTheDay() {

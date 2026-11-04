@@ -213,14 +213,14 @@ private fun ComposeSheet(day: Long, entries: List<FoodEntryEntity>, target: Macr
     var query by remember { mutableStateOf("") }
     val chosen = remember { androidx.compose.runtime.mutableStateListOf<FoodEntity>() }
     val recent by app.superhealth.nutrition.NutriApp.repository.foods.recent(30).collectAsState(emptyList())
-    val swiss = app.superhealth.nutrition.NutriApp.repository.prefs.settings.collectAsState().value.swissDbEnabled
+    val foodSettings = app.superhealth.nutrition.NutriApp.repository.prefs.settings.collectAsState().value
     val found by produceState<List<FoodEntity>?>(null, query) {
         val q = query.trim()
         if (q.length < 2) { value = null; return@produceState }
         kotlinx.coroutines.delay(250)
         value = withContext(Dispatchers.IO) {
             app.superhealth.nutrition.NutriApp.repository.foods.search(q).take(15) +
-                (if (swiss) app.superhealth.nutrition.data.SwissFoods.search(ctx, q, 15).map(app.superhealth.nutrition.data.SwissFoods::toFood) else emptyList())
+                app.superhealth.nutrition.data.GenericFoods.search(ctx, foodSettings, q, 15)
         }
     }
     val config by produceState<MealPlanner.Content?>(null, day) { value = MealPlanner.planningContent(day) }

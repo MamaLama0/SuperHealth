@@ -205,7 +205,7 @@ fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit, on
                     try {
                         val items = AiFood.analyze(cfg, text, image, candidates = { q ->
                             withContext(Dispatchers.Default) {
-                                vm.repo.foods.search(q).take(3) + (if (s.swissDbEnabled) SwissFoods.search(ctx, q, 5).map(SwissFoods::toFood) else emptyList())
+                                vm.repo.foods.search(q).take(3) + app.superhealth.nutrition.data.GenericFoods.search(ctx, s, q, 5)
                             }
                         }) { stage = it }
                         plate = items.map { item ->

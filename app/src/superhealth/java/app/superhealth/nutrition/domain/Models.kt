@@ -165,6 +165,8 @@ data class Settings(
     val openFoodFactsEnabled: Boolean = true,
     /** Base suisse des valeurs nutritives (embarquée). */
     val swissDbEnabled: Boolean = true,
+    /** USDA FoodData Central (embarquée, en anglais) ; null suit la langue de l'app. */
+    val usdaDbEnabled: Boolean? = null,
     /** Fonctions IA (description / photo) visibles. */
     val aiEnabled: Boolean = true,
     val onboarded: Boolean = false,

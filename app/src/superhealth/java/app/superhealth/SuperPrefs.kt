@@ -333,9 +333,6 @@ data class SuperSettings(
     val weighPromptMinute: Int = -1,
     /** Tirages quotidiens stables, propres à cette installation. */
     val promptSeed: Long = 0,
-    val moodAfterSteps: Boolean = true,
-    val learnMoodPrompt: Boolean = false,
-    val moodAfterActivity: Boolean = true,
     /** Une fois proposé, le moral reste disponible jusqu'à la saisie ou « pas aujourd'hui ». */
     val moodPromptShownDay: Long = 0,
     /** Demande de pesée après l'heure choisie ; [weighSkipDay] : « pas aujourd'hui ». */

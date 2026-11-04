@@ -318,9 +318,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 RowDivider(56.dp)
                 SettingRow(tr("Donner mon avis"), subtitle = tr("Note, idée ou problème · retour privé"), icon = Icons.Rounded.Feedback, hue = Mf.colors.accent) { nav.go("settings/feedback") }
                 RowDivider(56.dp)
-                SettingRow(tr("Sources"), icon = Icons.Rounded.Info, hue = app.superhealth.ui.theme.Base.Grey) { nav.go("settings/sources") }
-                RowDivider(56.dp)
-                SettingRow(tr("Code source"), subtitle = tr("Consulter le projet sur GitHub"), icon = Icons.Rounded.Code, hue = app.superhealth.ui.theme.Base.Grey) {
+                SettingRow(tr("Sources et crédits"), subtitle = tr("Code, licences et données sur GitHub"), icon = Icons.Rounded.Code, hue = app.superhealth.ui.theme.Base.Grey) {
                     uriHandler.openUri("https://github.com/MamaLama0/SuperHealth/tree/superhealth")
                 }
             }

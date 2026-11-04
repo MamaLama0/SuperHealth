@@ -505,18 +505,8 @@ fun RemindersScreen(vm: SuperViewModel, nav: NavHostController) {
         }
     }
     DetailScaffold(tr("Rappels"), onBack = { nav.popBackStack() }) {
-        GroupCard {
-            if (sh.has(app.superhealth.Feature.NUTRITION)) WeighPromptTimeRow()
-            if (sh.has(app.superhealth.Feature.JOURNAL)) {
-                if (sh.has(app.superhealth.Feature.NUTRITION)) RowDivider()
-                SwitchRow(tr("Adapter le bandeau du soir"), tr("Utilise les heures de saisie du moral entre 17 h et 19 h"), sh.learnMoodPrompt) { on -> app.superhealth.SuperPrefs.update { it.copy(learnMoodPrompt = on) } }
-                RowDivider()
-                SwitchRow(tr("Moral après l'objectif de pas"), tr("Proposer le journal quand l'objectif du jour est atteint"), sh.moodAfterSteps) { v -> SuperPrefs.update { it.copy(moodAfterSteps = v) } }
-                RowDivider()
-                SwitchRow(tr("Moral après une activité"), tr("Entre 30 min et 2 h après une activité terminée"), sh.moodAfterActivity) { v -> SuperPrefs.update { it.copy(moodAfterActivity = v) } }
-            }
-        }
-        if (sh.has(app.superhealth.Feature.JOURNAL)) Text(tr("Sinon, le journal apparaît entre 17 h et 19 h, à une heure tirée au sort chaque jour. Vous pouvez toujours le remplir depuis le bouton +."),
+        if (sh.has(app.superhealth.Feature.NUTRITION)) GroupCard { WeighPromptTimeRow() }
+        if (sh.has(app.superhealth.Feature.JOURNAL)) Text(tr("Le journal du moral apparaît quand l'objectif de pas est atteint, 30 min à 2 h après une activité, ou le soir entre 17 h et 19 h, à votre heure habituelle de saisie. Vous pouvez toujours le remplir depuis le bouton +."),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
         Text(tr("Notifications"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 8.dp))
         GroupCard {

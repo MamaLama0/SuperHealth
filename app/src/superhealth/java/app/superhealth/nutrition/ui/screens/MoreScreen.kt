@@ -1,5 +1,6 @@
 package app.superhealth.nutrition.ui.screens
 
+import app.superhealth.nutrition.data.usdaOn
 import androidx.compose.material.icons.rounded.Add
 import app.superhealth.nutrition.ui.trf
 import android.content.Context
@@ -120,12 +121,6 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
     fun safely(block: suspend () -> String) = scope.launch { toast(runCatching { block() }.getOrElse { trf("Erreur : %1\$s", it.message) }) }
     fun set(f: (app.superhealth.nutrition.domain.Settings) -> app.superhealth.nutrition.domain.Settings) = vm.repo.prefs.setSettings(f(s))
 
-    val exportJson = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let { safely { write(ctx, it, AppJson.encodeToString(Backup.serializer(), vm.repo.backup())); tr("Sauvegarde exportée") } }
-    }
-    val importJson = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { safely { vm.repo.restore(AppJson.decodeFromString(Backup.serializer(), read(ctx, it))); tr("Sauvegarde restaurée") } }
-    }
     // un seul export : archive ZIP avec le journal, les pesées et tendance, la dépense et les cibles
     val exportCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let { safely {
@@ -154,7 +149,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 RowDivider()
                 SettingRow(tr("Aliments et IA"), subtitle = tr("Bases de recherche et saisie assistée")) { nav.navigate("n/settings/food") }
                 RowDivider()
-                SettingRow(tr("Données nutrition"), subtitle = tr("Importer, exporter et restaurer")) { nav.navigate("n/settings/data") }
+                SettingRow(tr("Données nutrition"), subtitle = tr("Exports CSV, pesées et effacement")) { nav.navigate("n/settings/data") }
             }
             }
             if (section == "program") {
@@ -223,6 +218,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
                 RowDivider()
                 SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }
+                RowDivider()
+                SwitchRow(tr("Base américaine (USDA)"), tr("Hors ligne · aliments génériques en anglais"), s.usdaOn) { v -> set { it.copy(usdaDbEnabled = v) } }
             }
 
             }
@@ -252,9 +249,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             if (section == "data") {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Données"), Modifier.padding(start = 0.dp))
             GroupCard {
-                SettingRow(tr("Exporter une sauvegarde"), subtitle = tr("JSON complet"), icon = Icons.Rounded.Backup) { exportJson.launch("superhealth-nutrition-${stamp}.json") }
-                RowDivider()
-                SettingRow(tr("Restaurer une sauvegarde"), subtitle = tr("Remplace toutes les données"), icon = Icons.Rounded.Restore) { importJson.launch(arrayOf("application/json", "*/*")) }
+                SettingRow(tr("Sauvegarde"), subtitle = tr("Une seule sauvegarde chiffrée pour toute l'app"), icon = Icons.Rounded.Backup) { nav.navigate("backup") }
                 RowDivider()
                 SettingRow(tr("Exporter les données"), subtitle = tr("CSV (ZIP) : journal, pesées, dépense et cibles"), icon = Icons.Rounded.TableChart) { exportCsv.launch("superhealth-nutrition-${stamp}.zip") }
                 RowDivider()

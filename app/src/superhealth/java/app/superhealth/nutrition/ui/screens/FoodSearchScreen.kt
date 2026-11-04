@@ -1,5 +1,6 @@
 package app.superhealth.nutrition.ui.screens
 
+import app.superhealth.nutrition.data.usdaOn
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
@@ -359,6 +360,7 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
     var local by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     var remote by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     var swiss by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
+    var usda by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var loading by remember { mutableStateOf(false) }
     var searched by remember { mutableStateOf(false) }
@@ -369,6 +371,9 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         local = if (q.isEmpty()) emptyList() else vm.repo.foods.search(q)
         swiss = if (q.length < 2 || !s.swissDbEnabled) emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             SwissFoods.search(ctx, q).map(SwissFoods::toFood)
+        }
+        usda = if (q.length < 2 || !s.usdaOn) emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            app.superhealth.nutrition.data.UsdaFoods.search(ctx, q, 25).map(app.superhealth.nutrition.data.UsdaFoods::toFood)
         }
         remote = emptyList(); searched = false
         if (q.length >= 3 && s.openFoodFactsEnabled) {
@@ -389,10 +394,12 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         }
         if (swiss.isNotEmpty()) item { ListHeader(tr("Base suisse des valeurs nutritives")) }
         items(swiss, key = { "s" + it.name }) { FoodRow(it, s) { onPick(it) } }
+        if (usda.isNotEmpty()) item { ListHeader(tr("USDA FoodData Central")) }
+        items(usda, key = { "u" + it.name }) { FoodRow(it, s) { onPick(it) } }
         if (loading) item { Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Mf.colors.accent, strokeWidth = 2.dp, modifier = Modifier.size(28.dp)) } }
         if (remote.isNotEmpty()) item { ListHeader(tr("Open Food Facts")) }
         items(remote) { FoodRow(it, s) { onPick(it) } }
-        if (searched && remote.isEmpty() && local.isEmpty() && swiss.isEmpty()) item {
+        if (searched && remote.isEmpty() && local.isEmpty() && swiss.isEmpty() && usda.isEmpty()) item {
             Text(tr("Aucun résultat (ou pas de réseau). Essayez « Créer » ou « Ajout rapide »."), Modifier.padding(16.dp), color = Mf.colors.textSecondary)
         }
         if (!s.openFoodFactsEnabled && query.isNotBlank()) item {

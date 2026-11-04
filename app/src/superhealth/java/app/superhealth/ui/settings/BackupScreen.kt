@@ -232,11 +232,11 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
 
         app.superhealth.nutrition.ui.components.GroupHeader(tr("Fichier"), Modifier.padding(start = 0.dp))
         GroupCard {
-            SettingRow(tr("Exporter"), subtitle = tr("Fichier chiffré : nutrition, musculation, montre, réglages"), icon = Icons.Rounded.Backup) {
+            SettingRow(tr("Exporter"), subtitle = tr("Un seul fichier chiffré : nutrition, musculation, montre, Groupe, plugins et réglages"), icon = Icons.Rounded.Backup) {
                 exportFile.launch(Archive.fileName())
             }
             RowDivider()
-            SettingRow(tr("Restaurer un fichier"), subtitle = tr("SuperHealth (chiffré ou non), La Bouffe ou La Salle"), icon = Icons.Rounded.Restore) {
+            SettingRow(tr("Restaurer un fichier"), subtitle = tr("Sauvegarde SuperHealth, anciens exports nutrition ou musculation, La Bouffe ou La Salle"), icon = Icons.Rounded.Restore) {
                 importFile.launch(arrayOf("*/*"))
             }
         }

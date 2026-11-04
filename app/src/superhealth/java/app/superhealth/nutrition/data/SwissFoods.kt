@@ -27,40 +27,12 @@ object SwissFoods {
         val sat: Double, val salt: Double, val micros: Map<String, Double>, val key: String,
     )
 
-    @Volatile private var items: List<Item>? = null
-    var version: String = ""; private set
+    private val table = FoodTable("swissfcdb.json")
+    val version get() = table.version
 
-    private fun norm(s: String) = Normalizer.normalize(s.lowercase().replace("œ", "oe").replace("æ", "ae"), Normalizer.Form.NFD)
-        .replace(Regex("\\p{M}+"), "").replace(Regex("[^a-z0-9 ]+"), " ").replace(Regex("\\s+"), " ").trim()
+    fun load(context: Context): List<Item> = table.load(context)
 
-    /** Espaces en double dans certains noms de la base (« cuite,  égouttée »). */
-    private val spaces = Regex("\\s{2,}")
-
-    fun load(context: Context): List<Item> = items ?: synchronized(this) {
-        items ?: runCatching {
-            val root = Json.parseToJsonElement(context.assets.open("swissfcdb.json").use { it.readBytes().decodeToString() }).jsonObject
-            version = root["v"]!!.jsonPrimitive.content
-            val codes = root["n"]!!.jsonArray.map { it.jsonPrimitive.content }
-            root["f"]!!.jsonArray.map { e ->
-                val a = e as JsonArray
-                fun d(i: Int) = (a[i] as JsonPrimitive).double
-                val m = (a[12] as JsonObject).mapNotNull { (k, v) -> (v as JsonPrimitive).doubleOrNull?.let { codes[k.toInt()] to it } }.toMap()
-                val name = a[1].jsonPrimitive.content.replace(spaces, " ").trim(); val syn = a[2].jsonPrimitive.content
-                Item(a[0].jsonPrimitive.int, name, syn, a[3].jsonPrimitive.content, d(4), d(5), d(6), d(7), d(8), d(9), d(10), d(11), m, norm("$name $syn"))
-            }
-        }.getOrDefault(emptyList()).also { items = it }
-    }
-
-    /** Recherche : tous les mots de la requête présents ; score = début du nom, mot entier, longueur courte. */
-    fun search(context: Context, query: String, limit: Int = 40): List<Item> {
-        val words = norm(query).split(' ').filter { it.length >= 2 }
-        if (words.isEmpty()) return emptyList()
-        val q = norm(query)
-        return load(context).asSequence()
-            .filter { item -> words.all { item.key.contains(it) } }
-            .sortedWith(compareBy<Item>({ !norm(it.name).startsWith(q) }, { !words.all { w -> " ${it.key} ".contains(" $w ") } }, { it.name.length }))
-            .take(limit).toList()
-    }
+    fun search(context: Context, query: String, limit: Int = 40): List<Item> = table.search(context, query, limit)
 
     fun toFood(i: Item): FoodEntity {
         val micros = i.micros + mapOf("sugar" to i.sugar, "sat" to i.sat).filterValues { it > 0 }
@@ -70,5 +42,43 @@ object SwissFoods {
             sugars100 = i.sugar, satFat100 = i.sat, sodiumMg100 = i.micros["sodium"] ?: (i.salt * 393.4),
             source = SOURCE, microsJson = Micros.encode(micros),
         )
+    }
+}
+
+/** Table d'aliments embarquée, au format compact de tools/import_*.py (base suisse, USDA). Chargée une fois, hors ligne. */
+class FoodTable(private val asset: String) {
+    @Volatile private var items: List<SwissFoods.Item>? = null
+    var version: String = ""; private set
+
+    private fun norm(s: String) = Normalizer.normalize(s.lowercase().replace("œ", "oe").replace("æ", "ae"), Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"), "").replace(Regex("[^a-z0-9 ]+"), " ").replace(Regex("\\s+"), " ").trim()
+
+    /** Espaces en double dans certains noms de la base (« cuite,  égouttée »). */
+    private val spaces = Regex("\\s{2,}")
+
+    fun load(context: Context): List<SwissFoods.Item> = items ?: synchronized(this) {
+        items ?: runCatching {
+            val root = Json.parseToJsonElement(context.assets.open(asset).use { it.readBytes().decodeToString() }).jsonObject
+            version = root["v"]!!.jsonPrimitive.content
+            val codes = root["n"]!!.jsonArray.map { it.jsonPrimitive.content }
+            root["f"]!!.jsonArray.map { e ->
+                val a = e as JsonArray
+                fun d(i: Int) = (a[i] as JsonPrimitive).double
+                val m = (a[12] as JsonObject).mapNotNull { (k, v) -> (v as JsonPrimitive).doubleOrNull?.let { codes[k.toInt()] to it } }.toMap()
+                val name = a[1].jsonPrimitive.content.replace(spaces, " ").trim(); val syn = a[2].jsonPrimitive.content
+                SwissFoods.Item(a[0].jsonPrimitive.int, name, syn, a[3].jsonPrimitive.content, d(4), d(5), d(6), d(7), d(8), d(9), d(10), d(11), m, norm("$name $syn"))
+            }
+        }.getOrDefault(emptyList()).also { items = it }
+    }
+
+    /** Recherche : tous les mots de la requête présents ; score = début du nom, mot entier, longueur courte. */
+    fun search(context: Context, query: String, limit: Int = 40): List<SwissFoods.Item> {
+        val words = norm(query).split(' ').filter { it.length >= 2 }
+        if (words.isEmpty()) return emptyList()
+        val q = norm(query)
+        return load(context).asSequence()
+            .filter { item -> words.all { item.key.contains(it) } }
+            .sortedWith(compareBy<SwissFoods.Item>({ !norm(it.name).startsWith(q) }, { !words.all { w -> " ${it.key} ".contains(" $w ") } }, { it.name.length }))
+            .take(limit).toList()
     }
 }

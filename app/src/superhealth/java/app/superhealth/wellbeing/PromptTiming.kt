@@ -6,7 +6,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Random
 
-/** Règles d'apparition sur l'accueil ; les accès manuels restent disponibles à toute heure. */
+/** Règles d'apparition sur l'accueil, toujours actives : objectif de pas, après une activité, puis le soir
+ * (heure habituelle de saisie après sept saisies, sinon tirage). Les accès manuels restent disponibles à toute heure. */
 object PromptTiming {
     fun weighMinute(settings: SuperSettings): Int =
         settings.weighPromptMinute.takeIf { it in 0..1439 }
@@ -27,13 +28,13 @@ object PromptTiming {
         val time = Instant.ofEpochMilli(now).atZone(zone)
         val day = time.toLocalDate().toEpochDay()
         if (settings.moodPromptShownDay == day) return true
-        if (settings.moodAfterSteps && stepGoal > 0 && steps != null && steps >= stepGoal) return true
-        if (settings.moodAfterActivity && activityEnds.any { end ->
+        if (stepGoal > 0 && steps != null && steps >= stepGoal) return true
+        if (activityEnds.any { end ->
                 val elapsed = now - end
                 Instant.ofEpochMilli(end).atZone(zone).toLocalDate() == LocalDate.ofEpochDay(day) &&
                     elapsed in activityDelayMinutes(end, settings.promptSeed) * 60_000L..120 * 60_000L
             }) return true
-        val historyMinutes = if (!settings.learnMoodPrompt) emptyList() else history.asSequence()
+        val historyMinutes = history.asSequence()
             .filter { (d, entry) -> d in day - 28 until day && entry.at > 0 }
             .mapNotNull { (d, entry) -> Instant.ofEpochMilli(entry.at).atZone(zone).takeIf { it.toLocalDate().toEpochDay() == d }
                 ?.let { it.hour * 60 + it.minute } }.filter { it in 17 * 60..19 * 60 }.sorted().toList()

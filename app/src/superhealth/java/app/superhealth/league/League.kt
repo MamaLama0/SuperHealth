@@ -89,7 +89,8 @@ object League {
     private const val ALIAS = "superhealth_league"
     private const val PREFIX = "SH1"
     const val MAX_CARD = 65_536
-    val currentModel get() = if (state.value.unifiedScore) HealthIndex.MODEL else HealthIndex.CLASSIC
+    /** L'indice unifié est le seul calcul affiché ; le classique reste dans la carte pour les anciennes versions. */
+    val currentModel get() = HealthIndex.MODEL
     fun available() = SuperPrefs.settings.value.leagueEnabled
     val state = MutableStateFlow(State())
     val mine = MutableStateFlow<Score?>(null)
@@ -98,7 +99,9 @@ object League {
     val incomingError = MutableStateFlow(false)
 
     private fun file(ctx: Context) = File(File(ctx.filesDir, "league").apply { mkdirs() }, "state.json")
-    fun load(ctx: Context) { state.value = runCatching { json.decodeFromString(State.serializer(), android.util.AtomicFile(file(ctx)).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(State()).let { if (it.relayUrl.isNotBlank() && !it.customRelay) it.copy(customRelay = true) else it } }
+    fun load(ctx: Context) { state.value = runCatching { json.decodeFromString(State.serializer(), android.util.AtomicFile(file(ctx)).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(State()).let { if (it.relayUrl.isNotBlank() && !it.customRelay) it.copy(customRelay = true) else it }
+        // Ancien choix « calcul classique » : on repasse les amis sur l'indice unifié.
+        .let { if (it.unifiedScore) it else it.copy(unifiedScore = true, friends = it.friends.map { f -> f.withIndex(HealthIndex.MODEL) }) } }
     @Synchronized private fun save(ctx: Context, s: State) {
         val atomic = android.util.AtomicFile(file(ctx))
         val out = atomic.startWrite()
@@ -106,11 +109,6 @@ object League {
         catch (e: Exception) { atomic.failWrite(out); throw e }
         state.value = s
     }
-    fun setUnifiedScore(ctx: Context, on: Boolean) = configure(ctx) { old ->
-        val model = if (on) HealthIndex.MODEL else HealthIndex.CLASSIC
-        old.copy(unifiedScore = on, friends = old.friends.map { it.withIndex(model) })
-    }
-
     internal fun Friend.withIndex(selected: Int): Friend {
         val value = (if (selected == HealthIndex.CLASSIC) classicIndex else unifiedIndex) ?: return this
         return copy(model = selected, score = value.total ?: 0, ready = value.total != null,

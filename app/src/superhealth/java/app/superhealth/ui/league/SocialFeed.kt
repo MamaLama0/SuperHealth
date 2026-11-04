@@ -10,11 +10,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
@@ -126,19 +123,18 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
             }
         }
         item(key = "group-navigation") {
-            // la rangée déborde jusqu'aux bords de l'écran : les pastilles défilent sans être coupées par la marge du fil
-            Row(Modifier.layout { m, c ->
-                    val extra = 32.dp.roundToPx()
-                    val p = m.measure(c.copy(minWidth = c.maxWidth + extra, maxWidth = c.maxWidth + extra))
-                    layout(c.maxWidth, p.height) { p.place(-extra / 2, 0) }
-                }.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                GroupNavChip(Icons.Rounded.Groups, tr("Cercles et défis"), app.superhealth.ui.theme.Hues.pack.purple) { nav.go("group/circles") }
-                GroupNavChip(Icons.Rounded.People, tr("Amis"), LeagueHue) { nav.go("friends") }
-                GroupNavChip(Icons.Rounded.EmojiEvents, tr("Classement"), RankGold) { nav.go("league") }
-                GroupNavChip(Icons.Rounded.Settings, tr("Réglages"), Mf.colors.textSecondary) { nav.go("league/settings") }
+            // tout tient sur une ligne : le classement en premier et plus large, les réglages en simple pastille ronde
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                GroupNavChip(Icons.Rounded.EmojiEvents, tr("Classement"), RankGold, Modifier.weight(1.3f)) { nav.go("league") }
+                GroupNavChip(Icons.Rounded.People, tr("Amis"), LeagueHue, Modifier.weight(0.9f)) { nav.go("friends") }
+                GroupNavChip(Icons.Rounded.Groups, tr("Cercles"), app.superhealth.ui.theme.Hues.pack.purple, Modifier.weight(1.05f)) { nav.go("group/circles") }
+                Box(Modifier.size(38.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Mf.colors.textSecondary.copy(alpha = .12f))
+                    .clickable { nav.go("league/settings") }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Settings, tr("Réglages du Groupe"), Modifier.size(18.dp), tint = Mf.colors.textSecondary)
+                }
             }
         }
-        item(key = "compose") { GroupSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+        item(key = "compose") { ComposeSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
             Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(34.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
@@ -222,14 +218,14 @@ private fun ShareShortcut(icon: androidx.compose.ui.graphics.vector.ImageVector,
     }
 }
 
-/** Pastille de navigation du Groupe, au style des actions d'exercice (fond de carte, forme ronde). */
+/** Pastille de navigation du Groupe : largeur donnée par la rangée, libellé raccourci si la police est grande. */
 @Composable
-private fun GroupNavChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, onClick: () -> Unit) {
-    Row(Modifier.clip(androidx.compose.foundation.shape.CircleShape).background(hue.copy(alpha = .14f)).clickable(onClick = onClick)
-        .padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun GroupNavChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, modifier: Modifier, onClick: () -> Unit) {
+    Row(modifier.height(38.dp).clip(androidx.compose.foundation.shape.CircleShape).background(hue.copy(alpha = .14f)).clickable(onClick = onClick)
+        .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
         Icon(icon, null, Modifier.size(16.dp), tint = hue)
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        Spacer(Modifier.width(5.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 
