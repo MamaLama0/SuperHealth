@@ -227,7 +227,7 @@ fun LeagueScreen(nav: NavHostController) {
             if (metric != null) Text(if (metric.lowerWins) tr("La valeur la plus basse arrive en tête.") else tr("La valeur la plus élevée arrive en tête."), style = MaterialTheme.typography.bodySmall)
             if (month) Text(tr("Moyenne des indices disponibles sur 28 jours ; les jours absents restent absents."), style = MaterialTheme.typography.bodySmall)
         }
-        if (mode == "HEALTH" && s?.ready != true) PillButton(tr("Choisir mes activités"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("league/settings") }
+        if (mode == "HEALTH" && s?.ready != true) PillButton(tr("Choisir mes activités"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("group/score") }
         if (refreshError) Text(tr("Actualisation impossible. Réessayez."), color = MaterialTheme.colorScheme.error)
         if (ranked.size >= 2) RankingPodium(ranked.take(3).map { row ->
             PodiumEntry(row.name, number(row.score!!) + suffix, ranked.indexOfFirst { it.score == row.score } + 1, row.friend == null, row.friend)

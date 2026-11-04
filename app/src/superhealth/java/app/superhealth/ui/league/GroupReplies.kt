@@ -81,16 +81,7 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String, highlighte
         }
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if(author==League.myId()) TextButton(enabled=!busy,onClick={scope.launch {
-            busy=true
-            try { spaces.moderateLegacy(post.id,"CLOSE",active=!closed);spaces.sync() } catch(e:kotlinx.coroutines.CancellationException){throw e} catch(_:Exception){error=tr("Changement enregistré. Actualisez pour réessayer.")} finally{busy=false}
-        }}) { Text(tr(if(closed)"Rouvrir les réponses" else "Fermer les réponses")) }
-        if(closed) Text(tr("Les réponses sont fermées."))
-        if (replies.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_group_comments),
-                null, Modifier.size(16.dp), tint = Mf.colors.textSecondary)
-            Text(tr("Réponses") + " · " + replies.size, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
-        }
+        if(closed) Text(tr("Les réponses sont fermées."), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
         if (rows.count { it.depth == 0 } > visible) TextButton(onClick = { visible += 10 }, contentPadding = PaddingValues(0.dp)) {
             Text(trf("Afficher %1\$s autres réponses", rows.count { it.depth == 0 } - visible), style = MaterialTheme.typography.labelMedium)
         }
@@ -176,9 +167,10 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String, highlighte
             }
             IconButton(onClick = { parentId = null; parentKey = null }) { Icon(Icons.Rounded.Close, tr("Annuler la réponse"), Modifier.size(18.dp)) }
         }
-        Text(tr("Votre réponse est visible par les personnes qui peuvent lire cette publication."),
+        // réponses fermées : le fil reste lisible, sans champ de saisie désactivé
+        if (!closed) Text(tr("Votre réponse est visible par les personnes qui peuvent lire cette publication."),
             style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!closed) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FriendAvatar(null, app.superhealth.ui.userName() ?: tr("Vous"), 28.dp)
             OutlinedTextField(text, { text = it.take(1000) },enabled=!closed,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),

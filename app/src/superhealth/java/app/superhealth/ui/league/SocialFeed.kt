@@ -6,9 +6,15 @@ import android.widget.VideoView
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
@@ -99,35 +105,54 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         SocialPreferences.hidden(author, post.id) || SocialPreferences.muted(author) || (friend != null && SocialPreferences.blocked(friend.key))
     } }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding().imePadding(),
+    // Actualiser en tirant le fil vers le bas, comme les autres listes Android, plutôt qu'avec un bouton d'en-tête.
+    PullToRefreshBox(isRefreshing = busy && state.lastSync > 0L, onRefresh = { refresh(userInitiated = true) },
+        modifier = Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding()) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().imePadding(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // En-tête au format des onglets (TabHeader + boutons ronds) ; l'avatar ouvre le profil social comme sur le dashboard.
         item(key = "header") {
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 14.dp, bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
-                    Text(tr("Groupe"), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                    Text(tr("Vos efforts, ensemble"), color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodySmall)
+                    app.superhealth.ui.theme.Overline(tr("Vos efforts, ensemble"))
+                    Text(tr("Groupe"), style = MaterialTheme.typography.headlineLarge, maxLines = 1)
                 }
-                NotificationBell(nav)
-                IconButton({ refresh(userInitiated = true) }, enabled = !busy) { Icon(Icons.Rounded.Refresh, tr("Actualiser")) }
-                IconButton({ nav.go("friends/add") }) { Icon(Icons.Rounded.PersonAdd, tr("Ajouter un ami")) }
-                IconButton({ nav.go("league/settings") }) { Icon(Icons.Rounded.Settings, tr("Paramètres du Groupe")) }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    NotificationBell(nav)
+                    CircleAction(Icons.Rounded.PersonAdd, tr("Ajouter un ami")) { nav.go("friends/add") }
+                    SettingsAvatar { nav.go("social") }
+                }
             }
         }
         item(key = "group-navigation") {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip(onClick = { nav.go("social") }, label = { Text(tr("Mon profil")) })
-                AssistChip(onClick = { nav.go("group/circles") }, label = { Text(tr("Cercles et défis")) })
-                AssistChip(onClick = { nav.go("friends") }, label = { Text(tr("Amis")) })
-                AssistChip(onClick = { nav.go("league") }, label = { Text(tr("Classement")) })
+            // la rangée déborde jusqu'aux bords de l'écran : les pastilles défilent sans être coupées par la marge du fil
+            Row(Modifier.layout { m, c ->
+                    val extra = 32.dp.roundToPx()
+                    val p = m.measure(c.copy(minWidth = c.maxWidth + extra, maxWidth = c.maxWidth + extra))
+                    layout(c.maxWidth, p.height) { p.place(-extra / 2, 0) }
+                }.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GroupNavChip(Icons.Rounded.Groups, tr("Cercles et défis"), app.superhealth.ui.theme.Hues.pack.purple) { nav.go("group/circles") }
+                GroupNavChip(Icons.Rounded.People, tr("Amis"), LeagueHue) { nav.go("friends") }
+                GroupNavChip(Icons.Rounded.EmojiEvents, tr("Classement"), RankGold) { nav.go("league") }
+                GroupNavChip(Icons.Rounded.Settings, tr("Réglages"), Mf.colors.textSecondary) { nav.go("league/settings") }
             }
         }
         item(key = "compose") { GroupSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
             Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Rounded.AddCircleOutline, null, tint = Mf.colors.accent)
+                Box(Modifier.size(34.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Add, null, Modifier.size(20.dp), tint = Mf.colors.onStrong)
+                }
                 Text(tr("Créer une publication"), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                Icon(Icons.Rounded.ChevronRight, null, tint = Mf.colors.textTertiary)
+            }
+            // raccourcis colorés : chaque type de partage s'ouvre directement, avec la teinte de son domaine
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                fun open(route: String) { SocialPosts.draft.value = null; nav.go(route) }
+                ShareShortcut(Icons.Rounded.AddPhotoAlternate, tr("Photo"), app.superhealth.ui.theme.Hues.pack.pink, Modifier.weight(1f)) { open("social/compose") }
+                ShareShortcut(Icons.Rounded.FitnessCenter, tr("Séance"), app.superhealth.ui.theme.HealthHues.Fitness, Modifier.weight(1f)) { open("social/share/workout") }
+                ShareShortcut(Icons.Rounded.DirectionsRun, tr("Activité"), app.superhealth.ui.theme.HealthHues.Activity, Modifier.weight(1f)) { open("social/share/activity") }
+                ShareShortcut(Icons.Rounded.EmojiEvents, tr("PR"), RankGold, Modifier.weight(1f)) { open("social/share/pr") }
             }
         } }
         if (history.pending.isNotEmpty()) item(key = "pending") {
@@ -171,6 +196,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
             } }) { Text(tr("Charger les publications plus anciennes")) }
         }
     }
+    }
     if (showCreate) ModalBottomSheet(onDismissRequest = { showCreate = false }, containerColor = Mf.colors.background) {
         fun open(route: String) {
             showCreate = false; SocialPosts.draft.value = null; nav.go(route)
@@ -186,11 +212,33 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
     }
 }
 
+/** Raccourci de partage : icône sur pastille teintée, libellé dessous. */
+@Composable
+private fun ShareShortcut(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(14.dp)).background(hue.copy(alpha = .12f)).clickable(onClick = onClick).padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, Modifier.size(20.dp), tint = hue)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Mf.colors.text, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/** Pastille de navigation du Groupe, au style des actions d'exercice (fond de carte, forme ronde). */
+@Composable
+private fun GroupNavChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, onClick: () -> Unit) {
+    Row(Modifier.clip(androidx.compose.foundation.shape.CircleShape).background(hue.copy(alpha = .14f)).clickable(onClick = onClick)
+        .padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, Modifier.size(16.dp), tint = hue)
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+    }
+}
+
 @Composable
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, highlightedReply: String? = null) {
     val ctx = LocalContext.current
-    val controls by SocialSpaces.repository(ctx).state.collectAsState(); val scope = rememberCoroutineScope()
+    val spaces = SocialSpaces.repository(ctx)
+    val controls by spaces.state.collectAsState(); val scope = rememberCoroutineScope()
     var media by remember(post.id) { mutableStateOf(SocialPosts.localMedia(ctx, post)) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -210,6 +258,11 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
     val selected = GroupHistory.selectedReaction(author, post.id)
     var reacting by remember { mutableStateOf(false) }
     var showReactions by rememberSaveable(post.id) { mutableStateOf(false) }
+    // Les réponses restent repliées dans le fil ; une notification ciblée les ouvre directement.
+    var repliesOpen by rememberSaveable(post.id) { mutableStateOf(highlightedReply != null) }
+    val replyCount = remember(history, controls, author, post.id) { GroupHistory.replies(author, post.id).count { !spaces.legacyHidden(author, post.id, it.id) } }
+    val closed = spaces.legacyClosed(author, post.id)
+    val pending = friend == null && post.id in history.pending
     fun react(kind: String) {
         showReactions = false
         scope.launch {
@@ -246,8 +299,16 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
                 Text(friend?.shown ?: tr("Vous"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { if (friend != null) showProfile = true })
                 ProfileDecor(friend?.profileTitle ?: if (friend == null) league.profileTitle else null,
                     friend?.profileBadges ?: if (friend == null) league.profileBadges else emptyList(), compact = true)
-                Text(Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(if (Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).year == java.time.LocalDate.now().year) "d MMM · HH:mm" else "d MMM yyyy · HH:mm", app.superhealth.ui.Lang.locale)),
-                    style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(if (Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).year == java.time.LocalDate.now().year) "d MMM · HH:mm" else "d MMM yyyy · HH:mm", app.superhealth.ui.Lang.locale)),
+                        style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                    // état d'envoi : une coche discrète une fois envoyé, un libellé seulement s'il reste en attente
+                    if (friend == null) {
+                        Spacer(Modifier.width(6.dp))
+                        if (pending) Text("· " + tr("En attente d'envoi"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent)
+                        else Icon(Icons.Rounded.CloudDone, tr("Envoyé au Groupe"), Modifier.size(13.dp), tint = Mf.colors.textTertiary)
+                    }
+                }
             }
             Box {
                 IconButton({ options = true }) { Icon(Icons.Rounded.MoreHoriz, tr("Options de la publication")) }
@@ -259,11 +320,38 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
                     if (friend != null) DropdownMenuItem(text = { Text(tr("Masquer cette publication")) }, onClick = {
                         options = false; SocialPreferences.hide(ctx, author, post.id)
                     })
+                    if (friend == null) DropdownMenuItem(text = { Text(tr(if (closed) "Rouvrir les réponses" else "Fermer les réponses")) }, enabled = !busy, onClick = {
+                        options = false
+                        scope.launch {
+                            busy = true
+                            try { spaces.moderateLegacy(post.id, "CLOSE", active = !closed); spaces.sync() }
+                            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                            catch (_: Exception) { error = tr("Changement enregistré. Actualisez pour réessayer.") }
+                            finally { busy = false }
+                        }
+                    })
+                    if (friend == null) DropdownMenuItem(text = { Text(tr("Supprimer"), color = MaterialTheme.colorScheme.error) }, enabled = !busy,
+                        leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) },
+                        onClick = { options = false; confirmDelete = true })
                 }
             }
-            if (friend == null) IconButton({ confirmDelete = true }, enabled = !busy) { Icon(Icons.Rounded.DeleteOutline, tr("Supprimer"), tint = Mf.colors.textTertiary) }
         }
-        if (post.title.isNotBlank()) Text(post.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+        // badge de type coloré : on repère d'un coup d'œil une séance, une sortie ou un record
+        val kind = when {
+            post.record != null -> Triple(Icons.Rounded.EmojiEvents, tr("Record"), RankGold)
+            sharedWorkout != null -> Triple(Icons.Rounded.FitnessCenter, tr("Séance"), app.superhealth.ui.theme.HealthHues.Fitness)
+            sharedActivity != null -> Triple(Icons.Rounded.DirectionsRun, tr("Activité"), app.superhealth.ui.theme.HealthHues.Activity)
+            else -> null
+        }
+        kind?.let { (icon, label, hue) ->
+            Row(Modifier.padding(top = 14.dp).clip(androidx.compose.foundation.shape.CircleShape).background(hue.copy(alpha = .14f))
+                .padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, Modifier.size(14.dp), tint = hue)
+                Spacer(Modifier.width(4.dp))
+                Text(label, style = MaterialTheme.typography.labelMedium, color = hue, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        if (post.title.isNotBlank()) Text(post.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = if (kind != null) 8.dp else 16.dp))
         if (post.record != null || sharedWorkout != null || sharedActivity != null) {
             SharedPostVisual(post.record, sharedWorkout, sharedActivity)
         } else {
@@ -289,8 +377,6 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
             finally { busy = false }
         } }) { Icon(if (video) Icons.Rounded.PlayCircle else Icons.Rounded.Image, null); Spacer(Modifier.width(8.dp)); Text(tr(if (video) "Lire la vidéo" else "Afficher la photo")) }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if (friend == null) Text(tr(if (post.id in history.pending) "En attente d'envoi" else "Envoyé au Groupe"),
-            style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
         HorizontalDivider(Modifier.padding(top = 12.dp), color = Mf.colors.divider.copy(alpha = .6f))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { showReactions = true }, enabled = !reacting) {
@@ -298,6 +384,11 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
                 else Text(SocialReactions.emoji(selected), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.width(6.dp))
                 Text(tr(if (selected == null) "Réagir" else "Ma réaction"))
+            }
+            if (!closed || replyCount > 0) TextButton(onClick = { repliesOpen = !repliesOpen }) {
+                Icon(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_group_comments), null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (replyCount > 0) tr("Répondre") + " · " + replyCount else tr("Répondre"))
             }
             Spacer(Modifier.weight(1f))
             counts.entries.sortedByDescending { it.value }.take(4).forEach { (kind, count) ->
@@ -310,14 +401,14 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
                 }
             }
         }
-        if (friend == null && post.id in history.pending) TextButton(enabled = !busy, onClick = { scope.launch {
+        if (pending) TextButton(enabled = !busy, onClick = { scope.launch {
             busy = true; error = null
             try { Relay.publishOnly(ctx) }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { error = tr("Envoi impossible. Réessayez.") }
             finally { busy = false }
         } }) { Text(tr("Réessayer l'envoi")) }
-        GroupPostReplies(post, author, highlightedReply)
+        AnimatedVisibility(repliesOpen && (!closed || replyCount > 0 || highlightedReply != null)) { GroupPostReplies(post, author, highlightedReply) }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
     }
     if (showReactions) GroupReactionPicker(selected, onDismiss = { showReactions = false }, onSelect = ::react)

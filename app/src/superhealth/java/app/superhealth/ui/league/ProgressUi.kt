@@ -250,7 +250,7 @@ fun ProgressScreen(nav: NavHostController) {
                 }
                 Spacer(Modifier.height(10.dp))
                 StreakJourney(streak)
-            } else SettingRow(tr("Choisir mes suivis")) { nav.go("league/settings") }
+            } else SettingRow(tr("Choisir mes suivis")) { nav.go("group/score") }
             SectionLabel(tr("Cette semaine"))
             WeekCalendar(p)
             SettingRow(tr("Profil du Groupe")) { nav.go("social") }

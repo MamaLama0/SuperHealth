@@ -27,10 +27,8 @@ internal fun NotificationBell(nav: NavHostController) {
     val notifications by SocialInbox.items.collectAsState()
     val unread = notifications.count { !it.read }
     var open by remember { mutableStateOf(false) }
-    IconButton({ open = true }) {
-        BadgedBox(badge = { if (unread > 0) Badge { Text(if (unread > 99) "99+" else "$unread") } }) {
-            Icon(Icons.Rounded.NotificationsNone, tr("Notifications"))
-        }
+    BadgedBox(badge = { if (unread > 0) Badge { Text(if (unread > 99) "99+" else "$unread") } }) {
+        app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.NotificationsNone, tr("Notifications")) { open = true }
     }
     if (open) ModalBottomSheet(onDismissRequest = { open = false }, containerColor = Mf.colors.background,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {

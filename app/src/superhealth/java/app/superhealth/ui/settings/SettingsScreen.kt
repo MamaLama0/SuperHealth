@@ -1,6 +1,11 @@
 package app.superhealth.ui.settings
 
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Widgets
+import androidx.compose.material.icons.rounded.DirectionsRun
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material.icons.rounded.Group
@@ -189,33 +194,21 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
 
-            Group(tr("Général")) {
+            // Réglages courants d'abord, puis l'app (parties, accueil, Groupe), le bien-être, les données et l'à-propos.
+            SettingsGroup(tr("Général")) {
                 SettingRow(tr("Notifications"), subtitle = tr("Rappels, amis, séances et mises à jour"), icon = Icons.Rounded.NotificationsActive, hue = Mf.colors.accent) { nav.go("settings/notifications") }
                 RowDivider(56.dp)
                 SettingRow(tr("Apparence et langue"), subtitle = "${tr(s.themeMode.label)} · ${s.accent.let { tr(it.label) }} · ${if (Lang.english) "English" else "Français"}",
                     icon = Icons.Rounded.Palette, hue = Mf.colors.accent) { nav.go("settings/look") }
                 RowDivider(56.dp)
-                SettingRow(tr("Unités et objectifs"), "${tr(s.weightUnit.label)} · ${tr(s.energyUnit.label)}",
+                SettingRow(tr("Unités et objectifs"), subtitle = "${tr(s.weightUnit.label)} · ${tr(s.energyUnit.label)}",
                     icon = Icons.Rounded.Straighten, hue = HealthHues.Activity) { nav.go("settings/units") }
                 RowDivider(56.dp)
-                SettingRow(tr("Sécurité"), if (sh.appLock) tr("Verrouillage par empreinte ou code") else tr("Verrouillage désactivé"),
+                SettingRow(tr("Sécurité"), subtitle = if (sh.appLock) tr("Verrouillage par empreinte ou code") else tr("Verrouillage désactivé"),
                     icon = androidx.compose.material.icons.Icons.Rounded.Lock, hue = HealthHues.Respiration) { nav.go("settings/security") }
-                RowDivider(56.dp)
-                IconSwitchRow(tr("Coach IA"), tr("Inclus dans l'application"), Icons.Rounded.Favorite, HealthHues.Mind, sh.coachEnabled,
-                    onClick = { nav.go("coach/settings") }) { on -> SuperPrefs.update { it.copy(coachEnabled = on) } }
             }
 
-            Group(tr("Accueil")) {
-                SettingRow(tr("Cartes"), trf("%1\$s configurées", sh.dashboard.size), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
-                RowDivider(56.dp)
-                SettingRow(tr("Widgets Android"), subtitle = tr("Ajouter mes suivis sur l'écran d'accueil"), icon = Icons.Rounded.Dashboard) { nav.go("widgets") }
-                RowDivider(56.dp)
-                SettingRow(tr("Bouton +"), trf("%1\$s raccourcis", sh.plus.size), icon = Icons.Rounded.AddCircle, hue = HealthHues.Activity) { nav.go("plus/edit") }
-                RowDivider(56.dp)
-                SettingRow(tr("Activités affichées"), subtitle = tr("Choisir les sections et leur ordre"), icon = Icons.Rounded.FitnessCenter) { nav.go("settings/activities") }
-            }
-
-            Group(tr("Fonctionnalités")) {
+            SettingsGroup(tr("Fonctionnalités")) {
                 // chaque partie se coupe d'un geste (onglets, cartes et « + » suivent) ; toucher la ligne ouvre ses réglages
                 fun toggle(f: app.superhealth.Feature, on: Boolean) = SuperPrefs.update { it.copy(features = if (on) it.features + f.name else it.features - f.name) }
                 IconSwitchRow(tr("Nutrition"), if (sh.has(app.superhealth.Feature.NUTRITION)) tr("Journal, calories, poids") else tr("Désactivée"),
@@ -231,30 +224,33 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     vm.setWatchModule(on)
                 }
                 RowDivider(56.dp)
+                IconSwitchRow(tr("Coach IA"), if (sh.coachEnabled) tr("Inclus dans l'application") else tr("Désactivé"), Icons.Rounded.AutoAwesome, HealthHues.Mind, sh.coachEnabled,
+                    onClick = { nav.go("coach/settings") }) { on -> SuperPrefs.update { it.copy(coachEnabled = on) } }
+                RowDivider(56.dp)
                 ModulesRow(nav)
             }
 
-            // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
-            Group(tr("Groupe")) {
-                IconSwitchRow(tr("Fil des amis"), tr("Glissez vers la droite depuis l’accueil pour voir les publications"),
-                    Icons.Rounded.Group, HealthHues.Fitness, sh.socialFeedEnabled) { enabled ->
-                    SuperPrefs.update { it.copy(socialFeedEnabled = enabled) }
-                }
-                RowDivider(56.dp)
-                SettingRow(tr("Profil du Groupe"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social") }
-                RowDivider(56.dp)
-                SettingRow(tr("Paramètres du Groupe"), subtitle = tr("Amis, publications, réactions et photo de profil"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Fitness) { nav.go("league/settings") }
-                RowDivider(56.dp)
-                val friends by app.superhealth.league.League.state.collectAsState()
-                SettingRow(tr("Amis du Groupe"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Comparer mes progrès et ajouter un ami"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
-                RowDivider(56.dp)
-                IconSwitchRow(tr("Classement et progression"), tr("Niveaux, séries et comparaisons entre amis"), Icons.Rounded.Group, HealthHues.Fitness, sh.leagueEnabled,
-                    onClick = { nav.go("league") }) { on ->
-                    SuperPrefs.update { it.copy(leagueEnabled = on) }; app.superhealth.league.LeagueWorker.schedule(photoCtx)
-                }
+            // le Groupe tient en une ligne : fil, classement, partage et confidentialité se règlent sur sa propre page
+            SettingsGroup(tr("Groupe et amis")) {
+                val league by app.superhealth.league.League.state.collectAsState()
+                SettingRow(tr("Groupe"), league.friends.size.takeIf { it > 0 }?.let { trf(if (it > 1) "%1\$s amis" else "%1\$s ami", it) },
+                    subtitle = when {
+                        !sh.leagueEnabled && !sh.socialFeedEnabled -> tr("Fil et classement désactivés")
+                        else -> tr("Fil, classement, partage et confidentialité")
+                    }, icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("league/settings") }
             }
 
-            Group(tr("Bien-être")) {
+            SettingsGroup(tr("Écran d'accueil")) {
+                SettingRow(tr("Cartes du tableau de bord"), sh.dashboard.size.toString(), icon = Icons.Rounded.Dashboard, hue = HealthHues.Body) { nav.go("dash/edit") }
+                RowDivider(56.dp)
+                SettingRow(tr("Widgets Android"), subtitle = tr("Ajouter mes suivis sur l'écran d'accueil"), icon = Icons.Rounded.Widgets) { nav.go("widgets") }
+                RowDivider(56.dp)
+                SettingRow(tr("Raccourcis du bouton +"), sh.plus.size.toString(), icon = Icons.Rounded.AddCircle, hue = HealthHues.Activity) { nav.go("plus/edit") }
+                RowDivider(56.dp)
+                SettingRow(tr("Activités affichées"), subtitle = tr("Choisir les sections et leur ordre"), icon = Icons.Rounded.DirectionsRun) { nav.go("settings/activities") }
+            }
+
+            SettingsGroup(tr("Bien-être")) {
                 fun toggle(f: app.superhealth.Feature, on: Boolean) = SuperPrefs.update { it.copy(features = if (on) it.features + f.name else it.features - f.name) }
                 IconSwitchRow(tr("Journal du moral"), if (!sh.has(app.superhealth.Feature.JOURNAL)) tr("Désactivé")
                     else if (sh.morningCheck) tr("Humeur, notes et ressenti du matin") else tr("Humeur et notes"),
@@ -278,18 +274,17 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     nav.go("settings/sleep")
                 }
                 RowDivider(56.dp)
-                SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Sleep) {
+                SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.Alarm, hue = HealthHues.Sleep) {
                     nav.go("settings/reminders")
                 }
             }
 
-            Group(tr("Données")) {
+            SettingsGroup(tr("Données")) {
                 SettingRow(tr("Health Connect"), if (sh.healthConnect) tr("Activé") else tr("Désactivé"), icon = Icons.Rounded.Favorite, hue = HealthHues.Heart) {
                     nav.go("settings/hc")
                 }
-
                 RowDivider(56.dp)
-                SettingRow(tr("Import d'activités"), tr("Fichiers GPX, TCX, FIT ou ZIP, historique de la montre"), icon = Icons.Rounded.FileOpen,
+                SettingRow(tr("Importer des activités"), subtitle = tr("Fichiers GPX, TCX, FIT ou ZIP, historique de la montre"), icon = Icons.Rounded.FileOpen,
                     hue = HealthHues.Fitness) { nav.go("settings/activity-import") }
                 RowDivider(56.dp)
                 SettingRow(tr("Sauvegarde"), subtitle = when {
@@ -298,13 +293,13 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     else -> tr("Chiffrée, vers Google Drive, un fichier ou WebDAV")
                 }, icon = Icons.Rounded.Backup, hue = HealthHues.Respiration) { nav.go("backup") }
                 RowDivider(56.dp)
-                IconSwitchRow(tr("Cartes en ligne"), tr("Fond OpenStreetMap sous les tracés"), Icons.Rounded.Map, HealthHues.Activity, sh.onlineMaps) { v ->
+                IconSwitchRow(tr("Fonds de carte en ligne"), tr("OpenStreetMap sous les tracés"), Icons.Rounded.Map, HealthHues.Activity, sh.onlineMaps) { v ->
                     SuperPrefs.update { it.copy(onlineMaps = v) }
                 }
             }
-            Note(tr("Aucun compte, aucun traceur. Les sauvegardes ne quittent le téléphone que chiffrées."))
+            SettingsNote(tr("Aucun compte, aucun traceur. Les sauvegardes ne quittent le téléphone que chiffrées."))
 
-            Group(tr("Outils")) {
+            SettingsGroup(tr("Outils")) {
                 SettingRow(tr("Simuler des cibles caloriques"), icon = Icons.Rounded.Calculate, hue = HealthHues.Mind) { nav.go("sim/nutrition") }
                 RowDivider(56.dp)
                 SettingRow(tr("Simuler un programme"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) { nav.go("sim/training") }
@@ -314,14 +309,14 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
 
-            Group(tr("À propos")) {
-                SettingRow(tr("Donner mon avis"), subtitle = tr("Note, idée ou problème · retour privé"), icon = Icons.Rounded.Edit, hue = Mf.colors.accent) { nav.go("settings/feedback") }
-                RowDivider(56.dp)
+            SettingsGroup(tr("À propos")) {
                 VersionRow(nav)
                 RowDivider(56.dp)
-                IconSwitchRow(tr("Vérifier chaque jour"), tr("Une requête par jour à GitHub"), Icons.Rounded.Autorenew, null, sh.updateCheck) { v ->
+                IconSwitchRow(tr("Vérifier les mises à jour"), tr("Une requête par jour à GitHub"), Icons.Rounded.Autorenew, null, sh.updateCheck) { v ->
                     SuperPrefs.update { it.copy(updateCheck = v) }
                 }
+                RowDivider(56.dp)
+                SettingRow(tr("Donner mon avis"), subtitle = tr("Note, idée ou problème · retour privé"), icon = Icons.Rounded.Feedback, hue = Mf.colors.accent) { nav.go("settings/feedback") }
                 RowDivider(56.dp)
                 SettingRow(tr("Sources"), icon = Icons.Rounded.Info, hue = app.superhealth.ui.theme.Base.Grey) { nav.go("settings/sources") }
                 RowDivider(56.dp)
@@ -480,13 +475,13 @@ fun HealthConnectSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
 
 /** Groupe de la page d'accueil des réglages : petit intitulé, puis une carte de lignes. */
 @Composable
-private fun Group(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     app.superhealth.nutrition.ui.components.GroupHeader(title)
     GroupCard(content = content)
 }
 
 @Composable
-private fun Note(text: String) = Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+internal fun SettingsNote(text: String) = Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
 /**
@@ -494,7 +489,7 @@ private fun Note(text: String) = Text(text, style = MaterialTheme.typography.bod
  * il est actif (montre → appareils) ; sinon tout appui bascule l'interrupteur.
  */
 @Composable
-private fun IconSwitchRow(title: String, value: String, icon: ImageVector, hue: Color?, checked: Boolean, onClick: (() -> Unit)? = null, onChange: (Boolean) -> Unit) {
+internal fun IconSwitchRow(title: String, value: String, icon: ImageVector, hue: Color?, checked: Boolean, onClick: (() -> Unit)? = null, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clickable { if (checked && onClick != null) onClick() else onChange(!checked) }
         .padding(start = 16.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically) {

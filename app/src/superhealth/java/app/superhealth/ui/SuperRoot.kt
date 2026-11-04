@@ -289,6 +289,9 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("quests") { app.superhealth.ui.league.WeeklyQuestsScreen(nav) }
             composable("progress") { app.superhealth.ui.league.ProgressScreen(nav) }
             composable("league/settings") { app.superhealth.ui.league.LeagueSettingsScreen(nav) }
+            composable("group/sharing") { app.superhealth.ui.league.GroupSharingScreen(nav) }
+            composable("group/score") { app.superhealth.ui.league.GroupScoreScreen(nav) }
+            composable("group/sync") { app.superhealth.ui.league.GroupSyncScreen(nav) }
             composable("friends/add") { app.superhealth.ui.league.AddFriendScreen(nav) }
             composable("friends") { app.superhealth.ui.league.FriendsScreen(nav) }
             composable("stretch/ex/{id}", listOf(navArgument("id") { type = NavType.StringType })) {
