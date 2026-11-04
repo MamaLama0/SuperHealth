@@ -39,6 +39,11 @@ fun LeagueSettingsScreen(nav: NavHostController) {
             SettingRow(tr("Retrouver mon Groupe"), subtitle = tr("Code de récupération · profil et amis, sans journaux de santé")) { nav.go("group/recovery") }
             SettingRow(tr("Réglages de l'application")) { nav.go("settings") }
         }
+        GroupCard { SettingRow(tr("Contenus masqués et sourdines")) { nav.go("group/preferences") } }
+        GroupCard {
+            SettingRow(tr("Mes données sociales"), subtitle = tr("Export, suppression et appareil perdu")) { nav.go("group/lifecycle") }
+            SettingRow(tr("Envois en attente")) { nav.go("social/outbox") }
+        }
         SectionLabel(tr("Mes activités et mon score"))
         GroupCard {
             SwitchRow(tr("Indice unifié"), tr("Associe les tendances de vos suivis. Désactivez pour retrouver le calcul classique."), st.unifiedScore) { on ->
@@ -66,6 +71,10 @@ fun LeagueSettingsScreen(nav: NavHostController) {
         }
         SectionLabel(tr("Ce que je partage"))
         GroupCard {
+            SwitchRow(tr("Partager mon indice"), tr("Le score et ses composantes peuvent être masqués tout en participant au Groupe."), st.shareIndex) { on ->
+                League.configure(ctx) { it.copy(shareIndex = on) }; LeagueWorker.onOpen(ctx, force = true)
+            }
+            RowDivider()
             SwitchRow(tr("Photo de profil"), tr("Une petite vignette chiffrée, visible par vos amis"), st.shareProfilePhoto) { on ->
                 League.configure(ctx) { it.copy(shareProfilePhoto = on) }; LeagueWorker.onOpen(ctx, force = true)
             }

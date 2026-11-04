@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
     var message by remember { mutableStateOf<String?>(null) }; var confirm by remember { mutableStateOf(false) }
     DetailScaffold(tr("Retrouver mon Groupe"), onClose) {
         Text(tr("Profil, amis, titres et badges : une copie chiffrée, sans vos journaux de santé."))
-        val code = remember { Secrets.backupCode(ctx) }
+        val code = Secrets.backupCode(ctx)
         Text(if (show) code else "•••• •••• •••• •••• •••• •••• •••• ••••", style = MaterialTheme.typography.titleMedium)
         Row {
             TextButton({ show = !show }) { Text(tr(if (show) "Masquer" else "Afficher le code")) }
@@ -65,7 +65,7 @@ import kotlinx.coroutines.launch
         text = { Text(tr("Le profil du Groupe et sa liste d'amis remplaceront ceux de cette installation. Vos journaux de santé restent conservés.")) },
         confirmButton = { TextButton({ confirm = false; scope.launch {
             busy = true
-            try { GroupRecovery.recover(ctx, input, server); message = tr("Groupe retrouvé. Vos publications se chargent progressivement.") }
+            try { GroupRecovery.recover(ctx, input, server); message = tr("Groupe retrouvé. Vos préférences de partage ont été restaurées lorsque la sauvegarde les contient.") }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { message = tr("Groupe introuvable. Vérifiez le code et le serveur.") }
             finally { busy = false }

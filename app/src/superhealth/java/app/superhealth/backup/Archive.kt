@@ -35,7 +35,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
 
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
 
@@ -77,6 +77,7 @@ object Archive {
      * ce qui a été restauré.
      */
     suspend fun restore(ctx: Context, bytes: ByteArray, code: String? = null): String {
+        check(!app.superhealth.league.SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant une restauration." }
         val plain = if (BackupCrypto.isEncrypted(bytes)) withContext(Dispatchers.Default) {
             if (code != null) BackupCrypto.decrypt(bytes, code).also { Secrets.remember(ctx, code) }
             else Secrets.restoreCodes(ctx).firstNotNullOfOrNull { c -> runCatching { BackupCrypto.decrypt(bytes, c) }.getOrNull() }
@@ -109,6 +110,7 @@ object Archive {
         files["group-recovery.json"]?.let { app.superhealth.league.GroupRecovery.restore(ctx,
             kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(), it), clearHistory = false) }
         app.superhealth.league.GroupHistory.load(ctx)
+        app.superhealth.league.SocialSpaces.reset()
         app.superhealth.meds.Meds.init(ctx); app.superhealth.wellbeing.Journal.init(ctx); app.superhealth.wellbeing.Checkin.init(ctx); app.superhealth.wellbeing.Cycle.init(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }

@@ -1,5 +1,7 @@
 package app.superhealth.ui.league
 
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,11 +32,14 @@ import kotlinx.coroutines.launch
 
 /** A real conversation in the post: recent replies are visible without opening another panel. */
 @Composable
-internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
+internal fun GroupPostReplies(post: SocialPosts.Post, author: String, highlightedReply: String? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val spaces=app.superhealth.league.SocialSpaces.repository(ctx)
+    val controls by spaces.state.collectAsState()
+    val closed=spaces.legacyClosed(author,post.id)
     val history by GroupHistory.state.collectAsState()
     val league by League.state.collectAsState()
     val replyFocus = remember { FocusRequester() }
@@ -43,9 +48,9 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
     var text by rememberSaveable(author, post.id) { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var visible by rememberSaveable(author, post.id) { mutableIntStateOf(2) }
+    var visible by rememberSaveable(author, post.id, highlightedReply) { mutableIntStateOf(if (highlightedReply != null) Int.MAX_VALUE else 2) }
     var profile by remember { mutableStateOf<League.Friend?>(null) }
-    val replies = remember(history, author, post.id, league.friends) { GroupHistory.replies(author, post.id) }
+    val replies = remember(history, controls, author, post.id, league.friends) { GroupHistory.replies(author, post.id).filterNot { spaces.legacyHidden(author,post.id,it.id) } }
     val rows = remember(replies) { GroupHistory.replyRows(replies) }
     val roots = rows.filter { it.depth == 0 }.takeLast(visible).map { it.event.key to it.event.id }.toSet()
     val displayed = buildList {
@@ -58,7 +63,7 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
     val parent = replies.firstOrNull { it.key == parentKey && it.id == parentId }
     fun name(event: GroupHistory.Event) = if (event.key == League.publicKey()) tr("Vous") else league.friends.firstOrNull { it.key == event.key }?.shown ?: event.name
     fun submit() {
-        if (text.isBlank() || busy) return
+        if (text.isBlank() || busy || closed) return
         if (parentId != null && parent == null) { error = tr("Le commentaire n’est plus disponible."); return }
         val submitted = text.trim()
         val submittedParent = parent
@@ -76,6 +81,11 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
         }
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if(author==League.myId()) TextButton(enabled=!busy,onClick={scope.launch {
+            busy=true
+            try { spaces.moderateLegacy(post.id,"CLOSE",active=!closed);spaces.sync() } catch(e:kotlinx.coroutines.CancellationException){throw e} catch(_:Exception){error=tr("Changement enregistré. Actualisez pour réessayer.")} finally{busy=false}
+        }}) { Text(tr(if(closed)"Rouvrir les réponses" else "Fermer les réponses")) }
+        if(closed) Text(tr("Les réponses sont fermées."))
         if (replies.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_group_comments),
                 null, Modifier.size(16.dp), tint = Mf.colors.textSecondary)
@@ -90,7 +100,14 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
                 val own = event.key == League.publicKey()
                 val person = league.friends.firstOrNull { it.key == event.key }
                 var menu by remember { mutableStateOf(false) }
-                Row(Modifier.fillMaxWidth().padding(start = (row.depth * 18).dp)
+                val bringIntoView = remember { BringIntoViewRequester() }
+                LaunchedEffect(highlightedReply) {
+                    if (event.id == highlightedReply) {
+                        kotlinx.coroutines.delay(200)
+                        bringIntoView.bringIntoView()
+                    }
+                }
+                Row(Modifier.fillMaxWidth().bringIntoViewRequester(bringIntoView).then(if (event.id == highlightedReply) Modifier.background(Mf.colors.accent.copy(alpha = .12f), RoundedCornerShape(12.dp)) else Modifier).padding(start = (row.depth * 18).dp)
                     .then(if (row.depth > 0) Modifier.background(Mf.colors.elevated, RoundedCornerShape(12.dp)).padding(8.dp) else Modifier),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.padding(top = 2.dp).clickable(enabled = person != null) { profile = person }) {
@@ -116,22 +133,33 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
                         TextButton(onClick = {
                             parentKey = event.key; parentId = event.id; error = null
                             replyFocus.requestFocus(); keyboard?.show()
-                        }, enabled = !busy, contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 40.dp)) {
+                        }, enabled = !busy && !closed, contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 40.dp)) {
                             Text(tr("Répondre"), style = MaterialTheme.typography.labelMedium)
                         }
                         if (event.id in history.pending) Text(tr("En attente d'envoi"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                     }
-                    if (own) Box {
+                    Box {
                         IconButton(onClick = { menu = true }, modifier = Modifier.size(40.dp)) {
                             Icon(Icons.Rounded.MoreHoriz, tr("Options de la réponse"), Modifier.size(18.dp), tint = Mf.colors.textTertiary)
                         }
                         DropdownMenu(menu, { menu = false }) {
-                            DropdownMenuItem(text = { Text(tr("Supprimer")) }, onClick = {
+                            if (own) DropdownMenuItem(text = { Text(tr("Supprimer")) }, onClick = {
                                 menu = false
                                 scope.launch {
                                     try { GroupHistory.removeReply(ctx, event) }
                                     catch (e: kotlinx.coroutines.CancellationException) { throw e }
                                     catch (_: Exception) { error = tr("Suppression enregistrée. Elle sera envoyée à la prochaine synchronisation.") }
+                                }
+                            })
+                            if(author==League.myId()) DropdownMenuItem(text={Text(tr("Masquer cette réponse"))},onClick={menu=false;scope.launch {
+                                try{spaces.moderateLegacy(post.id,"HIDE",event.id);spaces.sync()} catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error=tr("Changement enregistré. Actualisez pour réessayer.")}
+                            }})
+                            if (!own) DropdownMenuItem(text = { Text(tr("Bloquer cet auteur")) }, onClick = {
+                                menu = false
+                                scope.launch {
+                                    try { app.superhealth.league.SocialPreferences.blockAuthor(ctx, event.key) }
+                                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                                    catch (_: Exception) { error = tr("Blocage local actif. Révocation des accès à réessayer.") }
                                 }
                             })
                         }
@@ -148,16 +176,18 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String) {
             }
             IconButton(onClick = { parentId = null; parentKey = null }) { Icon(Icons.Rounded.Close, tr("Annuler la réponse"), Modifier.size(18.dp)) }
         }
+        Text(tr("Votre réponse est visible par les personnes qui peuvent lire cette publication."),
+            style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FriendAvatar(null, app.superhealth.ui.userName() ?: tr("Vous"), 28.dp)
-            OutlinedTextField(text, { text = it.take(1000) },
+            OutlinedTextField(text, { text = it.take(1000) },enabled=!closed,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { submit() }),
                 placeholder = { Text(tr("Ajouter une réponse…"), style = MaterialTheme.typography.bodyMedium) },
                 modifier = Modifier.weight(1f).focusRequester(replyFocus), shape = RoundedCornerShape(24.dp), maxLines = 4,
                 colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Mf.colors.divider, focusedBorderColor = Mf.colors.accent),
                 trailingIcon = {
-                    IconButton(enabled = text.isNotBlank() && !busy, onClick = ::submit) {
+                    IconButton(enabled = text.isNotBlank() && !busy && !closed, onClick = ::submit) {
                         if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                         else Icon(Icons.AutoMirrored.Rounded.Send, tr("Répondre"), Modifier.size(20.dp))
                     }

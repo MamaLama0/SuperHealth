@@ -36,7 +36,7 @@ object GroupHistory {
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val forward: Forward? = null)
     @Serializable data class Removal(val endpoint: String, val media: String)
     @Serializable data class Store(val events: List<Event> = emptyList(), val pending: Set<String> = emptySet(),
-        val cursors: Map<String, String?> = emptyMap(), val notificationBaseline: Boolean = false, val removals: List<Removal> = emptyList(), val proofs: Map<String, String> = emptyMap())
+        val cursors: Map<String, String?> = emptyMap(), val notificationBaseline: Boolean = false, val removals: List<Removal> = emptyList(), val proofs: Map<String, String> = emptyMap(), val paging:Map<String,app.superhealth.social.PageProgress> = emptyMap())
     @Serializable private data class RemoteItem(val id: String, val raw: String)
     @Serializable private data class Page(val items: List<RemoteItem>, val next: String? = null)
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = false }
@@ -103,11 +103,16 @@ object GroupHistory {
         val old = state.value.events.firstOrNull { it.key == key && it.id == id }
         return Event(id, key, (app.superhealth.ui.userName() ?: "?").take(24), maxOf(System.currentTimeMillis(), (old?.revision ?: 0) + 1), post, reply, deleted)
     }
-    fun record(ctx: Context, post: SocialPosts.Post) {
+    @Synchronized fun record(ctx: Context, post: SocialPosts.Post) {
         val event = ownEvent(post.id, post = post); require(valid(event))
         update(ctx) { it.copy(events = merge(it.events, event), pending = it.pending + post.id) }
     }
-    fun delete(ctx: Context, post: SocialPosts.Post) {
+    @Synchronized fun recordQueued(ctx: Context, post: SocialPosts.Post): Boolean {
+        if (state.value.events.any { it.key == League.publicKey() && it.id == post.id && it.deleted }) return false
+        record(ctx, post)
+        return true
+    }
+    @Synchronized fun delete(ctx: Context, post: SocialPosts.Post) {
         val event = ownEvent(post.id, deleted = true)
         val removal = post.media?.let { media -> Relay.myEndpoint(ctx)?.let { Removal(it, media.id) } }
         update(ctx) { it.copy(events = merge(it.events, event), pending = it.pending + event.id,
@@ -116,6 +121,7 @@ object GroupHistory {
     private fun reactionId(author: String, post: String) = java.security.MessageDigest.getInstance("SHA-256")
         .digest(("SuperHealth reaction v1:" + author + ":" + post).toByteArray()).take(16).joinToString("") { "%02x".format(it) }
     fun recordReaction(ctx: Context, author: String, post: String, kind: String?) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
         val id = reactionId(author, post)
         val event = if (kind == null) ownEvent(id, deleted = true) else ownEvent(id).copy(reaction = SocialReactions.Reaction(author, post, kind, System.currentTimeMillis()))
         require(valid(event)); update(ctx) { it.copy(events = merge(it.events, event), pending = it.pending + id) }
@@ -125,13 +131,15 @@ object GroupHistory {
         return if (event != null) event.reaction?.kind else SocialReactions.selected(League.state.value.reactions, author, post)
     }
     fun reactionCounts(author: String, post: String): Map<String, Int> {
-        val people = listOf(League.publicKey() to League.state.value.reactions) + League.state.value.friends.distinctBy { it.key }.map { it.key to it.reactions }
+        val people = listOf(League.publicKey() to League.state.value.reactions) + League.state.value.friends.filterNot { SocialPreferences.blocked(it.key) }.distinctBy { it.key }.map { it.key to it.reactions }
         return people.mapNotNull { (key, legacy) ->
             val event = state.value.events.firstOrNull { it.key == key && it.id == reactionId(author, post) }
             if (event != null) event.reaction?.kind else SocialReactions.visible(legacy).firstOrNull { it.author == author && it.post == post }?.kind
         }.groupingBy { it }.eachCount()
     }
     suspend fun reply(ctx: Context, target: String, post: SocialPosts.Post, text: String, parent: Event? = null) = withContext(Dispatchers.IO) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
+        require(!SocialSpaces.repository(ctx).legacyClosed(target,post.id)) { "Les réponses sont fermées." }
         require(text.trim().isNotBlank() && text.trim().length <= 1000)
         require(target == League.myId() || League.state.value.friends.any { it.id == target })
         require(parent == null || replies(target, post.id).any { it.key == parent.key && it.id == parent.id })
@@ -141,6 +149,7 @@ object GroupHistory {
         try { Relay.publishOnly(ctx); true } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
     }
     suspend fun removeReply(ctx: Context, event: Event) = withContext(Dispatchers.IO) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
         check(event.key == League.publicKey())
         val deleted = ownEvent(event.id, deleted = true)
         update(ctx) { it.copy(events = merge(it.events, deleted), pending = it.pending + event.id) }
@@ -150,7 +159,7 @@ object GroupHistory {
         val own = League.publicKey()
         val friends = League.state.value.friends
         val owner = if (target == League.myId()) own else friends.firstOrNull { it.id == target }?.key ?: return emptyList()
-        return conversation(state.value.events, target, post, owner, (friends.map { it.key } + own).toSet())
+        return conversation(state.value.events, target, post, owner, (friends.map { it.key } + own).toSet()).filterNot { SocialPreferences.blocked(it.key) }
     }
     /** Resolve only a visible reply in the same post; never quote another thread or a deleted message. */
     fun replyParent(event: Event, candidates: List<Event>): Event? {
@@ -240,7 +249,7 @@ object GroupHistory {
             if (!valid(event)) continue
             update(ctx) { it.copy(events = merge(it.events,event),pending = it.pending + wrapperId) }
         }
-        for (id in state.value.pending.toList()) {
+        for (id in state.value.pending.toList().filterNot { it in SocialOutbox.pendingIds(ctx) }) {
             var event = state.value.events.firstOrNull { it.id == id && it.key == League.publicKey() } ?: continue
             // A previous HTTP response may have been lost after the server committed it.
             // Persist a newer revision before every retry because AES-GCM creates a fresh nonce.
@@ -291,7 +300,7 @@ object GroupHistory {
                 json.decodeFromString(Page.serializer(), body(it))
             } ?: continue
             require(page.items.size <= 20 && (page.next == null || page.next.matches(Regex("[0-9]{16}:[a-f0-9]{32}"))))
-            val newReplies = mutableListOf<String>()
+            val newReplies = mutableListOf<Event>()
             for (item in page.items) {
                 val path = endpoint.toHttpUrlOrNull()!!.encodedPath + "/social/" + item.id
                 val signed = RelayCrypto.decrypt(item.raw, aes, path)
@@ -304,7 +313,7 @@ object GroupHistory {
                 val repliesToMe = received?.author == League.myId() ||
                     (received?.to?.author == author(League.publicKey()) && comment != null && replyParent(comment, state.value.events)?.key == League.publicKey())
                 if (!older && state.value.notificationBaseline && key != League.publicKey() && received != null && repliesToMe &&
-                    received.created >= System.currentTimeMillis() - 86400000 && state.value.events.none { it.key == key && it.id == event.id }) newReplies += event.id
+                    received.created >= System.currentTimeMillis() - 86400000 && state.value.events.none { it.key == key && it.id == event.id }) newReplies += comment
                 update(ctx) { store -> store.copy(events = merge(store.events, event),
                     proofs = if (key != League.publicKey() && event.forward == null && (event.reply != null || event.deleted))
                         store.proofs + ((key + ":" + event.id) to signed) else store.proofs) }
@@ -314,8 +323,13 @@ object GroupHistory {
                     }) }
                 }
             }
-            if (newReplies.isNotEmpty()) League.state.value.friends.firstOrNull { it.key == key }?.let { SocialNotifications.groupRepliesReceived(ctx, it, newReplies.sorted().joinToString()) }
-            update(ctx) { it.copy(cursors = it.cursors + (key to (if (!older && key in it.cursors) it.cursors[key] ?: page.next else page.next))) }
+            League.state.value.friends.firstOrNull { it.key == key }?.let { friend ->
+                newReplies.forEach { SocialNotifications.groupRepliesReceived(ctx, friend, it) }
+            }
+            update(ctx) {
+                val paging=(it.paging[key]?:app.superhealth.social.PageProgress.legacy(it.cursors[key])).advance(cursor,page.next)
+                it.copy(cursors=it.cursors+(key to paging.next),paging=it.paging+(key to paging))
+            }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { failures += e }
         }

@@ -26,7 +26,11 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.stretch.Stretch.load(this)
         app.superhealth.meditation.Meditation.load(this)
         app.superhealth.league.League.load(this); app.superhealth.league.GroupHistory.load(this)
+        runCatching { app.superhealth.league.GroupRecovery.resumeRestore(this) }.onFailure {
+            app.superhealth.league.League.configure(this) { state -> state.copy(relayEnabled = false, syncError = "Restauration du Groupe à terminer dans les paramètres.") }
+        }
         app.superhealth.league.SocialInbox.load(this)
+        app.superhealth.league.League.pendingMediaPosts = app.superhealth.league.SocialOutbox.pendingIds(this)
         app.superhealth.ui.ProfilePhoto.load(this)
         app.superhealth.coach.Coach.init(this)
         app.superhealth.bridge.RunImport.init(this)

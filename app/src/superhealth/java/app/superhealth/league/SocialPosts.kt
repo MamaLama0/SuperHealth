@@ -130,59 +130,83 @@ object SocialPosts {
         val (bytes, _) = read(ctx, uri)
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }
-    suspend fun publish(ctx: Context, text: String, source: Draft?, uri: Uri?): Published = withContext(Dispatchers.IO) {
+    suspend fun publish(ctx: Context, text: String, source: Draft?, uri: Uri?, publicationId: String = UUID.randomUUID().toString().replace("-", "")): Published = withContext(Dispatchers.IO) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
         require(text.isNotBlank() || source != null || uri != null) { "Ajoutez un message ou un média." }
-        val endpoint = Relay.myEndpoint(ctx) ?: error("Activez le serveur dans les préférences sociales.")
-        try { Relay.publishOnly(ctx) }
-        catch (e: kotlinx.coroutines.CancellationException) { throw e }
-        catch (_: Exception) { error("Connexion au serveur impossible. Réessayez.") }
-        var uploaded: Media? = null
-        var committed = false
+        require(Relay.base() != null) { "Activez le serveur dans les préférences sociales." }
+        require(publicationId.matches(Regex("[a-f0-9]{32}")))
+        GroupHistory.posts(ctx).firstOrNull { it.second == null && it.first.id == publicationId }?.let {
+            val sent = try { Relay.publishOnly(ctx); true } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
+            return@withContext Published(it.first, sent)
+        }
+        val upload = uri?.let { prepareUpload(ctx, it) }
         try {
-            if (uri != null) {
-                val upload = prepareUpload(ctx, uri)
-                try {
-                    uploaded = upload.media
-                    http.newCall(Relay.auth(ctx, Request.Builder().url(path(endpoint, uploaded.id)))
-                        .put(upload.encrypted.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use {
-                        check(it.isSuccessful) { when (it.code) {
-                            404 -> "Mettez à jour le serveur pour les photos et vidéos."
-                            413 -> "Cette vidéo dépasse la limite du serveur. Mettez le serveur à jour ou choisissez une vidéo plus courte."
-                            else -> "Envoi du média impossible. Réessayez."
-                        } }
-                    }
-                    upload.plain.copyTo(cache(ctx, uploaded), overwrite = true)
-                    trimCache(ctx)
-                } finally { upload.plain.delete(); upload.encrypted.delete() }
-            }
-            val post = bounded(Post(UUID.randomUUID().toString().replace("-", ""), System.currentTimeMillis(), text.trim().take(500),
-                source?.kind ?: uploaded?.let { if (it.mime.startsWith("video/")) "VIDEO" else "PHOTO" } ?: "TEXT",
-                source?.title.orEmpty().take(100), source?.detail.orEmpty().take(1500), uploaded, source?.record, source?.workout, source?.activity))
-            check(valid(post))
+            val post = bounded(Post(publicationId, System.currentTimeMillis(), text.trim().take(500),
+                source?.kind ?: upload?.let { if (it.media.mime.startsWith("video/")) "VIDEO" else "PHOTO" } ?: "TEXT",
+                source?.title.orEmpty().take(100), source?.detail.orEmpty().take(1500), upload?.media, source?.record, source?.workout, source?.activity))
+            require(valid(post))
+            // Persist the encrypted attachment and its exact post before any network operation.
+            SocialOutbox.enqueue(ctx, post, upload?.encrypted)
             GroupHistory.record(ctx, post)
             League.configure(ctx) { it.copy(posts = visible(listOf(post) + it.posts)) }
-            committed = true
+            upload?.let { it.plain.copyTo(cache(ctx, it.media), overwrite = true); trimCache(ctx) }
             val sent = try { Relay.publishOnly(ctx); true }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (_: Exception) {
-                League.configure(ctx) { it.copy(syncError = "Publication enregistrée. Actualisez le fil pour réessayer l'envoi.") }
-                false
-            }
+            catch (_: Exception) { false }
             Published(post, sent)
-        } catch (e: Exception) {
-            if (!committed) uploaded?.let { media -> runCatching { http.newCall(Relay.auth(ctx, Request.Builder().url(path(endpoint, media.id))).delete().build()).execute().close() } }
-            throw e
+        } finally { upload?.plain?.delete(); upload?.encrypted?.delete() }
+    }
+
+    suspend fun edit(ctx: Context, post: Post, text: String): Boolean = withContext(Dispatchers.IO) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
+        require(GroupHistory.posts(ctx).any { it.second == null && it.first.id == post.id })
+        val updated = post.copy(text = text.trim().take(500))
+        require(valid(updated) && (updated.text.isNotBlank() || updated.media != null || updated.kind != "TEXT"))
+        SocialSpaces.repository(ctx).moderateLegacy(post.id,"EDIT")
+        SocialOutbox.replace(ctx, updated)
+        GroupHistory.record(ctx, updated)
+        League.configure(ctx) { state -> state.copy(posts = state.posts.map { if (it.id == post.id) updated else it }) }
+        try { Relay.publishOnly(ctx); true }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { false }
+    }
+
+    internal fun localMedia(ctx: Context, post: Post): File? = post.media?.let { cache(ctx, it).takeIf(File::exists) }
+    internal fun sendAttachment(ctx: Context, endpoint: String, media: Media, file: File, writer: String? = null) {
+        require(file.isFile && file.length() == media.bytes.toLong())
+        val digest = MessageDigest.getInstance("SHA-256")
+        java.security.DigestInputStream(file.inputStream(), digest).use { input -> val buffer = ByteArray(65536); while (input.read(buffer) >= 0) { } }
+        require(digest.digest().joinToString("") { "%02x".format(it) } == media.hash)
+        val request = Relay.auth(ctx, Request.Builder().url(path(endpoint, media.id))).header("X-Content-SHA256", media.hash)
+        writer?.let { request.header("X-Write-Token", it) }
+        http.newCall(request.put(file.asRequestBody("application/octet-stream".toMediaType())).build()).execute().use {
+            if (it.code == 409) {
+                http.newCall(Request.Builder().url(path(endpoint, media.id)).get().build()).execute().use { existing ->
+                    check(existing.isSuccessful)
+                    val previous = MessageDigest.getInstance("SHA-256"); var count = 0L
+                    existing.body.byteStream().use { input -> val buffer = ByteArray(65536); while (true) {
+                        val n = input.read(buffer); if (n < 0) break; count += n; require(count <= media.bytes); previous.update(buffer, 0, n)
+                    } }
+                    require(count == media.bytes.toLong() && previous.digest().joinToString("") { b -> "%02x".format(b) } == media.hash)
+                }
+                return
+            }
+            check(it.isSuccessful) { when (it.code) {
+                413 -> "Ce média dépasse la limite du serveur."
+                507 -> "Le stockage du serveur est plein."
+                else -> "Envoi du média impossible. Réessayez."
+            } }
         }
     }
     suspend fun download(ctx: Context, post: Post, friend: League.Friend?): File = withContext(Dispatchers.IO) {
         require(valid(post)); val media = post.media ?: error("Média absent.")
         downloadMedia(ctx, media, friend)
     }
-    internal suspend fun downloadMedia(ctx: Context, media: Media, friend: League.Friend?): File = withContext(Dispatchers.IO) {
+    internal suspend fun downloadMedia(ctx: Context, media: Media, friend: League.Friend?, endpointOverride: String? = null): File = withContext(Dispatchers.IO) {
         require(validMedia(media))
         val cached = cache(ctx, media)
         if (cached.exists()) { cached.setLastModified(System.currentTimeMillis()); return@withContext cached }
-        val endpoint = (if (friend == null) Relay.myEndpoint(ctx) else friend.remote)?.takeIf(Relay::encryptedEndpoint) ?: error("Média indisponible.")
+        val endpoint = (endpointOverride ?: if (friend == null) Relay.myEndpoint(ctx) else friend.remote)?.takeIf(Relay::encryptedEndpoint) ?: error("Média indisponible.")
         val encrypted = File.createTempFile("social-download-", ".enc", ctx.cacheDir)
         val plain = File.createTempFile("social-download-", ".plain", ctx.cacheDir)
         try {
@@ -213,6 +237,34 @@ object SocialPosts {
             trimCache(ctx)
             cached
         } finally { encrypted.delete(); plain.delete() }
+    }
+
+    suspend fun prepareCircleMedia(ctx: Context, uri: Uri): app.superhealth.social.SpaceAttachment = withContext(Dispatchers.IO) {
+        val repository = SocialSpaces.repository(ctx)
+        repository.initialize()
+        val endpoint = repository.state.value.own!!.endpoint
+        val directory = File(ctx.filesDir, "league/space-media").apply { mkdirs() }
+        require(directory.listFiles().orEmpty().sumOf { it.length() } < 250L * 1024 * 1024) { "La file de médias est pleine." }
+        val upload = prepareUpload(ctx, uri)
+        try {
+            val target = android.util.AtomicFile(File(directory, upload.media.id + ".enc")); val out = target.startWrite()
+            try { upload.encrypted.inputStream().use { it.copyTo(out) }; target.finishWrite(out) }
+            catch (e: Exception) { target.failWrite(out); throw e }
+            upload.plain.copyTo(cache(ctx, upload.media), overwrite = true)
+            val media = upload.media
+            app.superhealth.social.SpaceAttachment(media.id, media.key, media.mime, media.hash, media.bytes, endpoint)
+        } finally { upload.plain.delete(); upload.encrypted.delete() }
+    }
+    fun sendCircleMedia(ctx: Context, media: app.superhealth.social.SpaceAttachment) {
+        require(media.endpoint == SocialSpaces.contact()?.endpoint)
+        val directory = File(ctx.filesDir, "league/space-media")
+        val marker = File(directory, media.id + ".uploaded")
+        if (marker.isFile) return
+        val file = File(directory, media.id + ".enc")
+        sendAttachment(ctx, media.endpoint, Media(media.id, media.key, media.mime, media.hash, media.bytes), file, app.superhealth.backup.Secrets.get(ctx, "social_space_writer"))
+        val atomic = android.util.AtomicFile(marker); val out = atomic.startWrite()
+        try { out.write(media.hash.toByteArray()); atomic.finishWrite(out) } catch (e: Exception) { atomic.failWrite(out); throw e }
+        file.delete()
     }
 
     private data class Upload(val media: Media, val plain: File, val encrypted: File)
@@ -268,8 +320,10 @@ object SocialPosts {
         return media
     }
     suspend fun delete(ctx: Context, id: String) = withContext(Dispatchers.IO) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
         val post = GroupHistory.posts(ctx).firstOrNull { it.second == null && it.first.id == id }?.first ?: return@withContext
         GroupHistory.delete(ctx, post)
+        SocialOutbox.cancel(ctx, id)
         League.configure(ctx) { it.copy(posts = it.posts.filterNot { p -> p.id == id }) }
         Relay.publishOnly(ctx)
         post.media?.let { cache(ctx, it).delete() }

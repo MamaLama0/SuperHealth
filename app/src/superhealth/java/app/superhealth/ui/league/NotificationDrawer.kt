@@ -56,12 +56,13 @@ internal fun NotificationBell(nav: NavHostController) {
                 Row(Modifier.fillMaxWidth().background(if (item.read) Mf.colors.background else Mf.colors.accent.copy(alpha = .08f))
                     .clickable {
                         SocialInbox.read(ctx, item.id); open = false
-                        if (item.route != "feed") nav.go(item.route)
+                        app.superhealth.ui.Routes.external(item.route)?.let { nav.go(it) }
                     }.padding(horizontal = 20.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(if (item.read) Icons.Rounded.NotificationsNone else Icons.Rounded.NotificationsActive, null,
                         tint = if (item.read) Mf.colors.textTertiary else Mf.colors.accent)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = if (item.read) FontWeight.Normal else FontWeight.Bold)
+                        if (item.count > 1) Text(app.superhealth.ui.trf("%1\$s événements regroupés", item.count), style = MaterialTheme.typography.labelSmall)
                         Text(item.text, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                         Text(android.text.format.DateUtils.getRelativeTimeSpanString(item.time, System.currentTimeMillis(),
                             android.text.format.DateUtils.MINUTE_IN_MILLIS).toString(), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)

@@ -102,7 +102,7 @@ fun FriendsScreen(nav: NavHostController) {
                         FriendAvatar(f, f.shown, 44.dp)
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(f.shown, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != League.currentModel) tr("Ancienne carte : demander une mise à jour") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
+                            Text(if (f.time <= 0 && f.remote == null) tr("Nouvelle invitation nécessaire") else if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != League.currentModel) tr("Ancienne carte : demander une mise à jour") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                         }
                         f.progress?.let { Text(trf("Niveau %1\$s", it.level), style = MaterialTheme.typography.labelMedium, color = LeagueHue.onContainer()) }
@@ -128,6 +128,7 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
     val f = st.friends.firstOrNull { it.id == f0.id } ?: f0
     var alias by remember(f.id) { mutableStateOf(f.alias.orEmpty()) }
     var removing by remember { mutableStateOf(false) }
+    var blocking by remember { mutableStateOf(false) }
     var management by remember(f.id) { mutableStateOf(false) }
     var metrics by remember(f.id) { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = { League.rename(ctx, f.id, alias); onDismiss() }, containerColor = Mf.colors.background,
@@ -137,7 +138,7 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                 FriendAvatar(f, f.shown, 48.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(f.shown, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(if (f.time <= 0) tr("En attente d'actualisation") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    Text(if (f.time <= 0 && f.remote == null) tr("Nouvelle invitation nécessaire") else if (f.time <= 0) tr("En attente d'actualisation") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
                 if (f.model == League.currentModel && f.ready) Column(horizontalAlignment = Alignment.End) {
                     Text(f.score.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = LeagueHue.onContainer())
@@ -193,6 +194,14 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                 if (management) {
                     RowDivider()
                     Column(Modifier.padding(16.dp)) {
+                        SwitchRow(tr("Mettre en sourdine"), tr("Masquer ses publications dans le fil et couper ses nouvelles alertes sur ce téléphone."), app.superhealth.league.SocialPreferences.muted(f.id)) { on ->
+                            app.superhealth.league.SocialPreferences.mute(ctx, f.id, on)
+                        }
+                        SwitchRow(tr("Couper uniquement les alertes"), tr("Conserver ses publications dans le fil."), f.id in st.quietSocialFriends) { on ->
+                            app.superhealth.league.SocialPreferences.quiet(ctx, f.id, on)
+                        }
+                        TextButton(onClick = { blocking = true }) { Text(tr("Bloquer cette personne"), color = MaterialTheme.colorScheme.error) }
+                        revokeError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         TextInput(tr("Surnom"), alias, { alias = it.take(24) }, placeholder = f.name)
                         Text(trf("Empreinte : %1\$s", League.fingerprint(f.key)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
                         TextButton(onClick = { removing = true }) { Text(tr("Retirer cet ami"), color = MaterialTheme.colorScheme.error) }
@@ -201,6 +210,15 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
             }
         }
     }
+    if (blocking) AlertDialog(onDismissRequest = { blocking = false }, title = { Text(tr("Bloquer cette personne ?")) },
+        text = { Text(tr("Ses interventions sont masquées. Ses accès futurs sont révoqués. Vous quittez les cercles communs que vous ne gérez pas.")) },
+        confirmButton = { TextButton(enabled = !revoking, onClick = { scope.launch {
+            revoking = true
+            try { app.superhealth.league.SocialPreferences.block(ctx, f); blocking = false; onDismiss() }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { blocking = false; revokeError = tr("Blocage local actif. Révocation des accès à réessayer.") }
+            finally { revoking = false }
+        } }) { Text(tr("Bloquer")) } }, dismissButton = { TextButton({ blocking = false }) { Text(tr("Annuler")) } })
     if (removing) AlertDialog(onDismissRequest = { removing = false }, containerColor = Mf.colors.card,
         title = { Text(trf("Retirer %1\$s ?", f.shown)) },
         text = { Column {

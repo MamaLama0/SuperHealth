@@ -7,13 +7,19 @@ import kotlinx.coroutines.CancellationException
 
 class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
+        if (SocialLifecycle.pending(applicationContext)) {
+            return try { if (SocialLifecycle.resume(applicationContext)) Result.success() else Result.retry() }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { Result.retry() }
+        }
         if (!League.available() || !League.state.value.relayEnabled) return Result.success()
         if (League.state.value.syncsPerDay == 0 && !inputData.getBoolean("onOpen", false)) return Result.success()
         return try {
+            SocialPreferences.finishRevocations(applicationContext)
             Relay.sync(applicationContext)
             // Mettre à jour les cartes d'accueil après la réception des scores, sans attendre l'ouverture de l'app.
             app.superhealth.ui.widget.DayWidgets.refresh(applicationContext)
-            if (League.state.value.syncError == null) Result.success() else Result.retry()
+            if (League.state.value.syncError == null && League.state.value.pendingSocialRevocations.isEmpty()) Result.success() else Result.retry()
         }
         catch (e: CancellationException) { throw e }
         catch (e: Exception) {

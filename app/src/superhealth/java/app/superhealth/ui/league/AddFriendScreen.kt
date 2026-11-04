@@ -46,6 +46,8 @@ fun AddFriendScreen(nav: NavHostController) {
     var server by remember { mutableStateOf(state.relayUrl) }
     var mine by remember { mutableStateOf<InvitationCodes.Invitation?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var confirmed by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var showQr by remember { mutableStateOf(false) }
     var offlineQr by remember { mutableStateOf<String?>(null) }
@@ -75,7 +77,12 @@ fun AddFriendScreen(nav: NavHostController) {
     LaunchedEffect(mine?.code, lifecycle) {
         if (mine == null || !lifecycle.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) return@LaunchedEffect
         while (true) {
-            try { InvitationCodes.collectResponses(ctx) }
+            try {
+                val before = League.state.value.friends.map { it.id }.toSet()
+                InvitationCodes.collectResponses(ctx)
+                confirmed += League.state.value.friends.count { it.id !in before }
+                clock = System.currentTimeMillis()
+            }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { }
             kotlinx.coroutines.delay(15000)
@@ -89,7 +96,10 @@ fun AddFriendScreen(nav: NavHostController) {
         MfCard {
             Text(tr("Mon code ami"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Valable 24 h pour les nouveaux ajouts. Un nouveau code conserve vos amitiés et leurs mises à jour."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            if (confirmed > 0) Text(trf("%1\$s nouvel ami confirmé", confirmed), color = Mf.colors.accent)
             mine?.let { invitation ->
+                Text(if (clock >= invitation.expires) tr("Cette invitation a expiré. Renouvelez le code.") else trf("Valable jusqu’au %1\$s",
+                    java.time.Instant.ofEpochMilli(invitation.expires).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMM · HH:mm", app.superhealth.ui.Lang.locale))))
                 Text(invitation.text, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Mf.colors.accent,
                     modifier = Modifier.padding(vertical = 16.dp))
                 Text(tr(if (state.customRelay) "Créé sur votre serveur personnalisé" else "Créé sur le serveur SuperHealth"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
@@ -106,6 +116,13 @@ fun AddFriendScreen(nav: NavHostController) {
                     }) { Text(tr("Partager")) }
                 }
                 TextButton(enabled = !busy, onClick = { publish(true) }) { Text(tr("Renouveler mon code")) }
+                TextButton(enabled = !busy, onClick = { scope.launch {
+                    busy = true
+                    try { InvitationCodes.revokeCurrent(ctx); mine = null }
+                    catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { message = tr("Révocation du code à réessayer.") }
+                    finally { busy = false }
+                } }) { Text(tr("Révoquer cette invitation")) }
             } ?: PillButton(tr("Révéler mon code"), Modifier.fillMaxWidth().padding(top = 12.dp), enabled = !busy) { publish() }
         }
         MfCard {

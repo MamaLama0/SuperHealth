@@ -45,6 +45,7 @@ fun SocialProfileScreen(nav: NavHostController) {
                 ProfileDecor(state.profileTitle, state.profileBadges)
                 Text(tr("Votre titre et vos badges sont visibles par vos amis."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
             }
+            TextButton({ nav.go("social/preview") }) { Text(tr("Voir mon profil comme un ami")) }
             TextButton({ nav.go("social/badges") }, Modifier.fillMaxWidth()) { Text(tr("Personnaliser mon profil")) }
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -54,8 +55,10 @@ fun SocialProfileScreen(nav: NavHostController) {
         }
         SectionLabel(tr("Avec mes amis"))
         GroupCard {
+            SettingRow(tr("Cercles et défis"), icon = Icons.Rounded.Groups) { nav.go("group/circles") }
             SettingRow(tr("Mes amis"), icon = Icons.Rounded.People) { nav.go("friends") }
             RowDivider(); SettingRow(tr("Ajouter un ami"), subtitle = tr("Code ou QR"), icon = Icons.Rounded.PersonAdd) { nav.go("friends/add") }
+            RowDivider(); SettingRow(tr("PR récents"), icon = Icons.Rounded.EmojiEvents) { nav.go("group/records") }
             RowDivider(); SettingRow(tr("Classement"), subtitle = tr("Score global"), icon = Icons.Rounded.EmojiEvents) { nav.go("league") }
         }
         SectionLabel(tr("Mon parcours"))

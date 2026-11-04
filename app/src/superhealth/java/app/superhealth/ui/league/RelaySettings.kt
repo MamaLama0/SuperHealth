@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun RelaySettings() {
     val ctx = LocalContext.current
+    if(SocialLifecycle.pending(ctx)){Text(tr("Terminez la sécurisation du Groupe avant un nouveau partage."));return}
     val scope = rememberCoroutineScope()
     val state by League.state.collectAsState()
     var custom by remember { mutableStateOf(state.customRelay) }

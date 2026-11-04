@@ -30,7 +30,8 @@ object SocialNotifications {
     }
 
     fun postsReceived(ctx: Context, old: League.Friend?, next: League.Friend) {
-        val posts = newPosts(old, next)
+        if (SocialPreferences.quiet(next.id)) return
+        val posts = newPosts(old, next).filterNot { SocialPreferences.hidden(next.id, it.id) }
         if (posts.isEmpty()) return
         val text = if (posts.size > 1) trf("%1\$s a partagé %2\$s nouvelles publications.", next.shown, posts.size)
         else trf(when (posts.first().kind) {
@@ -41,20 +42,38 @@ object SocialNotifications {
             "VIDEO" -> "%1\$s a partagé une vidéo."
             else -> "%1\$s a publié dans le fil."
         }, next.shown)
-        show(ctx, POSTS, next.id + posts.joinToString { it.id }, tr("Du nouveau dans le Groupe"), text, "feed")
+        show(ctx, POSTS, next.id + posts.joinToString { it.id }, tr("Du nouveau dans le Groupe"), text, if (posts.size == 1) SocialPreferences.route(next.id, posts.first().id) else "feed")
     }
 
     fun reactionsReceived(ctx: Context, old: League.Friend?, next: League.Friend) {
-        if (old == null || old.time <= 0 || next.reactions.isEmpty()) return
+        if (SocialPreferences.quiet(next.id) || old == null || old.time <= 0 || next.reactions.isEmpty()) return
         val me = League.myId()
-        val posts = League.state.value.posts.map { it.id }.toSet()
-        val fresh = SocialReactions.visible(next.reactions).filter { r -> r.author == me && r.post in posts &&
+        val posts = GroupHistory.posts(ctx).filter { it.second == null }.map { it.first.id }.toSet()
+        val fresh = SocialReactions.visible(next.reactions).filter { r -> r.author == me && r.post in posts && !SocialPreferences.silent(me, r.post) &&
             r.at > System.currentTimeMillis() - 86400000 && old.reactions.none { it.author == r.author && it.post == r.post && it.kind == r.kind && it.at >= r.at } }
-        if (fresh.isNotEmpty()) show(ctx, REACTIONS, next.id + fresh.maxOf { it.at }, tr("Réaction à votre publication"), trf("%1\$s a réagi à votre publication.", next.shown), "feed")
+        fresh.groupBy { it.post }.forEach { (post, reactions) ->
+            show(ctx, REACTIONS, next.id + post + reactions.maxOf { it.at }, tr("Réaction à votre publication"),
+                trf("%1\$s a réagi à votre publication.", next.shown), SocialPreferences.route(me, post), group = "reaction:" + post)
+        }
     }
 
-    fun groupRepliesReceived(ctx: Context, friend: League.Friend, eventId: String = "") {
-        show(ctx, "group_replies", friend.id + eventId, tr("Réponse à votre publication"), trf("%1\$s a répondu dans le Groupe.", friend.shown), "feed")
+    fun groupRepliesReceived(ctx: Context, friend: League.Friend, event: GroupHistory.Event) {
+        val reply = event.reply ?: return
+        val commenter = League.state.value.friends.firstOrNull { it.key == event.key }?.id ?: GroupHistory.author(event.key)
+        if (SocialPreferences.quiet(friend.id) || SocialPreferences.quiet(commenter) || SocialPreferences.blocked(event.key) ||
+            SocialPreferences.silent(reply.author, reply.post) || SocialPreferences.hidden(reply.author, reply.post)) return
+        show(ctx, "group_replies", commenter + event.id, tr("Réponse à votre publication"),
+            trf("%1\$s a répondu dans le Groupe.", event.name), SocialPreferences.route(reply.author, reply.post, event.id))
+    }
+
+    fun spacesReceived(ctx:Context,before:app.superhealth.social.SpaceStore,after:app.superhealth.social.SpaceStore) {
+        app.superhealth.social.spaceAlerts(before,after,System.currentTimeMillis()).forEach { alert ->
+            val author=if(alert.category=="INVITE")after.invitations.firstOrNull{it.circle==alert.circle}?.owner?.id else alert.id.substringBefore(':')
+            if(author!=null && SocialPreferences.quiet(author))return@forEach
+            val channel=when(alert.category){"INVITE"->FRIENDS;"REACTION"->REACTIONS;"REPLY"->"group_replies";else->POSTS}
+            val route="group/circles?circle="+alert.circle+(alert.post?.let{"&post="+it}?:"")
+            show(ctx,channel,alert.id,tr("Du nouveau dans les cercles"),tr("Un partage ou une invitation vous attend dans vos cercles privés."),route,group="circle:"+alert.circle)
+        }
     }
 
     fun progressEarned(ctx: Context, badges: Int, level: Int?) {
@@ -62,9 +81,9 @@ object SocialNotifications {
         show(ctx, "progress_rewards", "${level ?: 0}:$badges:${java.time.LocalDate.now()}", tr("Bravo pour vos progrès"), text, "progress", requiresRelay = false)
     }
 
-    private fun show(ctx: Context, channel: String, key: String, title: String, text: String, route: String, requiresRelay: Boolean = true) {
+    private fun show(ctx: Context, channel: String, key: String, title: String, text: String, route: String, requiresRelay: Boolean = true, group: String? = null) {
         if (!League.available()) return
-        SocialInbox.add(ctx, channel + key, title, text, route)
+        SocialInbox.add(ctx, channel + key, title, text, route, group)
         val settings = League.state.value
         val enabled = when (channel) {
             FRIENDS -> settings.notifyFriends
@@ -80,7 +99,8 @@ object SocialNotifications {
         nm.createNotificationChannel(NotificationChannel(REACTIONS, tr("Réactions aux publications"), NotificationManager.IMPORTANCE_DEFAULT))
         nm.createNotificationChannel(NotificationChannel("progress_rewards", tr("Badges et niveaux"), NotificationManager.IMPORTANCE_DEFAULT))
         nm.createNotificationChannel(NotificationChannel("group_replies", tr("Réponses aux publications"), NotificationManager.IMPORTANCE_DEFAULT))
-        val id = (channel + key).hashCode()
+        val notificationKey = group ?: (channel + key)
+        val id = notificationKey.hashCode()
         val open = PendingIntent.getActivity(ctx, id, Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_ROUTE, route)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val public = NotificationCompat.Builder(ctx, channel).setSmallIcon(R.drawable.ic_stat_update)
@@ -89,6 +109,6 @@ object SocialNotifications {
             .setContentTitle(title).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(open).setAutoCancel(true).setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(public).build()
-        runCatching { nm.notify(channel + key, id, notification) }
+        runCatching { nm.notify(notificationKey, id, notification) }
     }
 }

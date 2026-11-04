@@ -28,7 +28,7 @@ object Relay {
     private fun token() = SecureRandom().generateSeed(32).joinToString("") { "%02x".format(it) }
     fun readKey(ctx: Context) = secret(ctx, "league_aes_read_key", RelayCrypto::newKey)
     private fun allowedTransport(url: okhttp3.HttpUrl) = url.isHttps ||
-        ((nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.grouptest" ||
+        ((nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID in setOf("app.superhealth.grouptest", "app.superhealth.socialtest") ||
             (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG && nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID in setOf("app.superhealth.qa", "app.superhealth.hikingtest"))) &&
             url.scheme == "http" && url.host == "127.0.0.1")
     fun validBase(raw: String): Boolean = raw.toHttpUrlOrNull()?.let {
@@ -83,11 +83,26 @@ object Relay {
             Secrets.put(ctx, "league_published_hash_v2", digest); Secrets.put(ctx, "league_published_at_v2", System.currentTimeMillis().toString())
         }
     }
+    internal suspend fun ensureSocialDescriptor(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
+        SocialSpaces.repository(ctx).initialize()
+        val endpoint = myEndpoint(ctx) ?: error("Activez le serveur du Groupe")
+        publishCard(ctx, endpoint, withAvatar = false, force = true)
+    } }
     /** Explicit publication does not depend on whether a friend's server answers. */
-    internal suspend fun publishOnly(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
+    internal suspend fun publishOnly(ctx: Context) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
+        SocialPreferences.finishRevocations(ctx)
+        publishLocked(ctx)
+    }
+    private suspend fun publishLocked(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
         check(League.available())
         finishRotation(ctx)
+        try { SocialSpaces.sync(ctx) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { }
         val endpoint = myEndpoint(ctx) ?: error("Activez le serveur dans les préférences sociales.")
+        publishCard(ctx, endpoint)
+        SocialOutbox.flush(ctx, endpoint)
         publishCard(ctx, endpoint)
         GroupHistory.publish(ctx, endpoint)
         // A failed recovery backup must not report an already published post as unsent.
@@ -95,9 +110,18 @@ object Relay {
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { /* The next synchronization retries; recovery has an explicit status screen. */ }
     } }
-    suspend fun sync(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
+    internal suspend fun withIdentityLock(block:suspend ()->Unit)=lock.withLock { block() }
+    suspend fun sync(ctx: Context) {
+        if (SocialLifecycle.pending(ctx)) { SocialLifecycle.resume(ctx); return }
+        SocialPreferences.finishRevocations(ctx)
+        syncLocked(ctx)
+    }
+    private suspend fun syncLocked(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
         if (!League.available() || !League.state.value.relayEnabled) return@withContext
         finishRotation(ctx)
+        try { SocialSpaces.sync(ctx) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { /* Spaces retain their own durable error state. */ }
         val errors = java.util.Collections.synchronizedList(mutableListOf<String>())
         try { InvitationCodes.collectResponses(ctx) }
         catch (e: CancellationException) { throw e }
@@ -106,7 +130,7 @@ object Relay {
             try { publishCard(ctx, endpoint) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { errors += "Publication impossible. Vérifiez la connexion ou les réglages du serveur." }
-            try { GroupHistory.publish(ctx, endpoint) }
+            try { SocialOutbox.flush(ctx, endpoint); publishCard(ctx, endpoint); GroupHistory.publish(ctx, endpoint) }
             catch (e: CancellationException) { throw e }
             catch (_: Exception) { errors += "Des commentaires ou publications attendent encore leur envoi. Réessayez." }
         }
@@ -174,7 +198,7 @@ object Relay {
             val parsed = League.parse(card) ?: error("Carte du Groupe non valable")
             val encrypted = RelayCrypto.encrypt(card, rotation.aes, endpoint.toHttpUrlOrNull()!!.encodedPath, parsed.revision)
             transfer.newCall(authorized(endpoint).put(encrypted.toRequestBody("application/json".toMediaType())).build()).execute().use { check(it.isSuccessful) }
-            val media = (GroupHistory.posts(ctx).filter { it.second == null }.mapNotNull { it.first.media } + listOfNotNull(League.state.value.profileAvatar)).distinctBy { it.id }
+            val media = (GroupHistory.posts(ctx).filter { it.second == null && it.first.id !in SocialOutbox.pendingIds(ctx) }.mapNotNull { it.first.media } + listOfNotNull(League.state.value.profileAvatar)).distinctBy { it.id }
             for (item in media) {
                 if (item.id in rotation.completedMedia) continue
                 val tmp = java.io.File.createTempFile("group-rotation-", ".enc", ctx.cacheDir)

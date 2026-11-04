@@ -35,13 +35,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
+import app.superhealth.social.boundedForCircle
 import app.superhealth.league.*
 import app.superhealth.nutrition.ui.components.*
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.dashboard.DashboardScreen
-import app.superhealth.ui.dashboard.dashboardScoreEntries
-import app.superhealth.ui.dashboard.dashboardRank
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.tabBackground
 import app.superhealth.ui.theme.Mf
@@ -81,8 +80,7 @@ fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.com
 @Composable
 fun SocialFeed(nav: NavHostController, active: Boolean) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
-    val state by League.state.collectAsState(); val score by League.mine.collectAsState()
-    val progression by ProgressRepository.current.collectAsState()
+    val state by League.state.collectAsState()
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var showCreate by rememberSaveable { mutableStateOf(false) }
@@ -96,8 +94,12 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
     } }
     LaunchedEffect(active) { if (active && System.currentTimeMillis() - state.lastSync > 60000) refresh() }
     val history by GroupHistory.state.collectAsState()
-    val posts = remember(state.posts, state.friends, history) { GroupHistory.posts(ctx) }
-    LazyColumn(Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding().imePadding(),
+    val posts = remember(state, history) { GroupHistory.posts(ctx).filterNot { (post, friend) ->
+        val author = friend?.id ?: League.myId()
+        SocialPreferences.hidden(author, post.id) || SocialPreferences.muted(author) || (friend != null && SocialPreferences.blocked(friend.key))
+    } }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding().imePadding(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item(key = "header") {
@@ -115,30 +117,9 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         item(key = "group-navigation") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(onClick = { nav.go("social") }, label = { Text(tr("Mon profil")) })
+                AssistChip(onClick = { nav.go("group/circles") }, label = { Text(tr("Cercles et défis")) })
                 AssistChip(onClick = { nav.go("friends") }, label = { Text(tr("Amis")) })
                 AssistChip(onClick = { nav.go("league") }, label = { Text(tr("Classement")) })
-                AssistChip(onClick = { nav.go("group/records") }, label = { Text(tr("PR récents")) })
-                AssistChip(onClick = { nav.go("settings") }, label = { Text(tr("Réglages de l'application")) })
-            }
-        }
-        item(key = "bricks") {
-            val entries = dashboardScoreEntries(score, state.friends, System.currentTimeMillis() / 1000, tr("Vous"))
-            val me = entries.firstOrNull { it.me }
-            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GroupSurface(Modifier.weight(1f).fillMaxHeight(), onClick = { nav.go("league") }, padding = PaddingValues(12.dp), hue = RankGold) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GameArt(GameArtKind.TROPHY, Modifier.size(32.dp)); Text(tr("Classement"), style = MaterialTheme.typography.labelMedium)
-                    }
-                    Text(me?.let { "#${dashboardRank(entries, it)}" } ?: "—", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text(me?.let { trf("%1\$s / 1000", it.score) } ?: tr("3 domaines requis"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
-                }
-                GroupSurface(Modifier.weight(1f).fillMaxHeight(), onClick = { nav.go("progress") }, padding = PaddingValues(12.dp), hue = app.superhealth.ui.theme.Base.Green) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GameArt(GameArtKind.XP, Modifier.size(32.dp)); Text(tr("Progression"), style = MaterialTheme.typography.labelMedium)
-                    }
-                    Text(trf("Niv. %1\$s", progression?.summary?.level ?: 1), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text(trf("%1\$s XP cette semaine", progression?.summary?.weekXp ?: 0), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
-                }
             }
         }
         item(key = "compose") { GroupSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
@@ -153,16 +134,30 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
             GroupSurface {
                 Text(tr("Des publications ou réponses attendent leur envoi"), style = MaterialTheme.typography.bodySmall)
                 TextButton(enabled = !busy, onClick = { refresh(userInitiated = true) }) { Text(tr("Réessayer")) }
+                TextButton({ nav.go("social/outbox") }) { Text(tr("Envois en attente")) }
             }
         }
         if (busy && posts.isEmpty() && state.lastSync == 0L) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         error?.let { message -> item(key = "error") { Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
-        if (posts.isEmpty()) item(key = "empty") { GroupSurface {
-            Text(tr("Votre Groupe commence ici"), style = MaterialTheme.typography.titleLarge)
+        if (state.friends.isEmpty()) item(key = "invite") { GroupSurface {
+            Text(tr("Invitez votre premier ami"), style = MaterialTheme.typography.titleLarge)
+            Text(tr("Partagez vos activités et encouragez-vous. Vous choisissez les informations publiées."), color = Mf.colors.textSecondary)
+            TextButton({ nav.go("friends/add") }) { Text(tr("Inviter ou saisir un code")) }
+        } }
+        if (state.lastSuccessfulSync > 0) item(key = "last-sync") {
+            Text(trf("Dernière actualisation · %1\$s", android.text.format.DateUtils.getRelativeTimeSpanString(
+                state.lastSuccessfulSync, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()),
+                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+        }
+        if (posts.isEmpty() && state.friends.isNotEmpty()) item(key = "empty") { GroupSurface {
+            Text(tr(if (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty()) "Votre fil est vide" else "Votre Groupe commence ici"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Partagez votre première séance ou ajoutez vos amis. Leurs publications apparaîtront ici."), modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
-            TextButton({ nav.go("friends/add") }) { Text(tr("Ajouter un ami")) }
+            TextButton({ nav.go("social/compose") }) { Text(tr("Écrire un message")) }
             TextButton({ nav.go("social/share/workout") }) { Text(tr("Partager une séance")) }
         } }
+        if (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty()) item(key = "reading-preferences") {
+            TextButton({ nav.go("group/preferences") }) { Text(tr("Contenus masqués et sourdines")) }
+        }
         items(posts, key = { (post, friend) -> (friend?.id ?: "me") + ":" + post.id }) { (post, friend) ->
             SocialPostCard(post, friend)
         }
@@ -182,6 +177,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(tr("Créer une publication"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
+            SettingRow(tr("Cercle privé"), icon = Icons.Rounded.Groups) { open("group/circles") }
             SettingRow(tr("Message, photo ou vidéo"), icon = Icons.Rounded.AddPhotoAlternate) { open("social/compose") }
             SettingRow(tr("Partager une séance"), icon = Icons.Rounded.FitnessCenter) { open("social/share/workout") }
             SettingRow(tr("Partager une activité"), icon = Icons.Rounded.DirectionsRun) { open("social/share/activity") }
@@ -192,14 +188,18 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
-internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
-    val ctx = LocalContext.current; val scope = rememberCoroutineScope()
-    var media by remember(post.id) { mutableStateOf<File?>(null) }
+internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, highlightedReply: String? = null) {
+    val ctx = LocalContext.current
+    val controls by SocialSpaces.repository(ctx).state.collectAsState(); val scope = rememberCoroutineScope()
+    var media by remember(post.id) { mutableStateOf(SocialPosts.localMedia(ctx, post)) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var play by remember { mutableStateOf(false) }
     var viewPhoto by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var options by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
+    var editedText by remember(post.text) { mutableStateOf(post.text) }
     var showProfile by remember { mutableStateOf(false) }
     val history by GroupHistory.state.collectAsState()
     val league by League.state.collectAsState()
@@ -249,6 +249,18 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
                 Text(Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(if (Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).year == java.time.LocalDate.now().year) "d MMM · HH:mm" else "d MMM yyyy · HH:mm", app.superhealth.ui.Lang.locale)),
                     style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
             }
+            Box {
+                IconButton({ options = true }) { Icon(Icons.Rounded.MoreHoriz, tr("Options de la publication")) }
+                DropdownMenu(options, { options = false }) {
+                    if (friend == null) DropdownMenuItem(text = { Text(tr("Modifier le texte")) }, onClick = { options = false; editing = true })
+                    DropdownMenuItem(text = { Text(tr(if (SocialPreferences.silent(author, post.id)) "Réactiver les alertes" else "Rendre la discussion silencieuse")) }, onClick = {
+                        options = false; SocialPreferences.silence(ctx, author, post.id, !SocialPreferences.silent(author, post.id))
+                    })
+                    if (friend != null) DropdownMenuItem(text = { Text(tr("Masquer cette publication")) }, onClick = {
+                        options = false; SocialPreferences.hide(ctx, author, post.id)
+                    })
+                }
+            }
             if (friend == null) IconButton({ confirmDelete = true }, enabled = !busy) { Icon(Icons.Rounded.DeleteOutline, tr("Supprimer"), tint = Mf.colors.textTertiary) }
         }
         if (post.title.isNotBlank()) Text(post.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
@@ -265,6 +277,7 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
             }
         }
         }
+        if (controls.legacy.any{it.owner==author && it.post==post.id && it.kind=="EDIT"}) Text(tr("Modifié"),style=MaterialTheme.typography.labelSmall)
         if (post.text.isNotBlank()) Text(post.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 12.dp))
         photo?.let { Image(it, tr("Agrandir la photo"), Modifier.fillMaxWidth().padding(top = 12.dp).heightIn(max = 400.dp)
             .clickable { viewPhoto = true }, contentScale = ContentScale.Fit) }
@@ -297,11 +310,27 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?) {
                 }
             }
         }
-        GroupPostReplies(post, author)
+        if (friend == null && post.id in history.pending) TextButton(enabled = !busy, onClick = { scope.launch {
+            busy = true; error = null
+            try { Relay.publishOnly(ctx) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { error = tr("Envoi impossible. Réessayez.") }
+            finally { busy = false }
+        } }) { Text(tr("Réessayer l'envoi")) }
+        GroupPostReplies(post, author, highlightedReply)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
     }
     if (showReactions) GroupReactionPicker(selected, onDismiss = { showReactions = false }, onSelect = ::react)
     if (showProfile && friend != null) FriendSheet(friend) { showProfile = false }
+    if (editing) AlertDialog(onDismissRequest = { editing = false }, title = { Text(tr("Modifier le texte")) },
+        text = { OutlinedTextField(editedText, { editedText = it.take(500) }, label = { Text(tr("Votre message")) }) },
+        confirmButton = { TextButton(enabled = !busy, onClick = { scope.launch {
+            busy = true
+            try { SocialPosts.edit(ctx, post, editedText); editing = false }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { error = tr("Modification impossible. Réessayez.") }
+            finally { busy = false }
+        } }) { Text(tr("Enregistrer")) } }, dismissButton = { TextButton({ editing = false }) { Text(tr("Annuler")) } })
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text(tr("Supprimer cette publication ?")) },
         confirmButton = { TextButton({ confirmDelete = false; scope.launch { busy = true
             try { SocialPosts.delete(ctx, post.id) } catch (_: Exception) { error = tr("Suppression distante à réessayer.") } finally { busy = false }
@@ -371,8 +400,14 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
     LaunchedEffect(text, sourceJson, uri, published, shareRoute, shareDetails) {
         if (!published) {
             kotlinx.coroutines.delay(300)
-            withContext(Dispatchers.IO) { GroupDraft.save(ctx, GroupDraft.Draft(text, sourceJson, uri, shareRoute, shareDetails)) }
+            try { GroupDraft.save(ctx, GroupDraft.Draft(text, sourceJson, uri, shareRoute, shareDetails, savedDraft.publicationId)) }
+            catch (_: Exception) { error = tr("Brouillon non enregistré. Vérifiez l’espace disponible.") }
         }
+    }
+    val latestDraft by rememberUpdatedState(GroupDraft.Draft(text, sourceJson, uri, shareRoute, shareDetails, savedDraft.publicationId))
+    val latestPublished by rememberUpdatedState(published)
+    DisposableEffect(Unit) {
+        onDispose { if (!latestPublished) runCatching { GroupDraft.save(ctx, latestDraft) } }
     }
     val preview by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, uri) {
         value = null
@@ -399,7 +434,12 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 picker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }
             preview?.let { Image(it, tr("Photo partagée"), Modifier.fillMaxWidth().heightIn(max = 240.dp), contentScale = ContentScale.Fit) }
-            uri?.let { Text(tr("Média sélectionné · photo 15 Mo, vidéo 50 Mo maximum"), color = Mf.colors.accent); TextButton({ uri = null }, enabled = !busy) { Text(tr("Retirer le média")) } }
+            uri?.let {
+                Text(tr("Média sélectionné · photo 15 Mo, vidéo 50 Mo maximum"), color = Mf.colors.accent)
+                Text(tr("Les photos sont réduites et leurs métadonnées retirées. Les vidéos conservent leur fichier d’origine."),
+                    style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                TextButton({ uri = null }, enabled = !busy) { Text(tr("Retirer le média")) }
+            }
             GroupCard {
                 SettingRow(tr("Partager une séance"), subtitle = tr("Choisir une séance de musculation enregistrée"), icon = Icons.Rounded.FitnessCenter) { if (!busy) choosing = "WORKOUT" }
                 RowDivider()
@@ -422,6 +462,17 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 }
             }
         }
+        if (!published) TextButton(enabled=!busy && !sourceLoading,onClick={ scope.launch {
+            busy=true;error=null
+            try {
+                val repo=SocialSpaces.repository(ctx);repo.initialize()
+                val prepared=uri?.let { SocialPosts.prepareCircleMedia(ctx,Uri.parse(it)) }
+                val post=sharedSource?.let { source -> SocialPosts.Post(savedDraft.publicationId,System.currentTimeMillis(),kind=source.kind,title=source.title,detail=source.detail,record=source.record,workout=source.workout,activity=source.activity) }
+                val snapshot=post?.let { kotlinx.serialization.json.Json.decodeFromString(app.superhealth.social.FriendPost.serializer(),kotlinx.serialization.json.Json.encodeToString(SocialPosts.Post.serializer(),it)) }
+                CircleShareHandoff.text=text;CircleShareHandoff.media=prepared;CircleShareHandoff.snapshot=snapshot?.boundedForCircle()
+                nav.navigate("group/circles")
+            } catch(e:kotlinx.coroutines.CancellationException){throw e} catch(e:Exception){error=tr(e.message?:"Partage indisponible.")} finally{busy=false}
+        } }) { Text(tr("Choisir un cercle privé")) }
         Text(tr("Visible par vos amis · seules les informations choisies sont partagées"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (busy || sourceLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -429,7 +480,7 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
             scope.launch {
                 busy = true; error = null
                 try {
-                    sent = SocialPosts.publish(ctx, text, sharedSource, uri?.let(Uri::parse)).sent; published = true
+                    sent = SocialPosts.publish(ctx, text, sharedSource, uri?.let(Uri::parse), savedDraft.publicationId).sent; published = true
                     SocialPosts.draft.value = null; GroupDraft.clear(ctx)
                 } catch (e: kotlinx.coroutines.CancellationException) { throw e }
                 catch (e: Exception) { error = tr(e.message?.takeIf { !it.contains("://") } ?: "Publication impossible. Réessayez.") }

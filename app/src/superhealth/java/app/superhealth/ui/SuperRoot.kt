@@ -242,16 +242,15 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true) }
             composable("social/compose") { app.superhealth.ui.league.SocialComposer(nav) }
             composable("social/share/workout") { app.superhealth.ui.league.SocialComposer(nav, "WORKOUT") }
-            composable("group/post/{author}/{post}", listOf(navArgument("author") { type = NavType.StringType }, navArgument("post") { type = NavType.StringType })) { entry ->
-                val author = entry.arguments?.getString("author")
-                val post = entry.arguments?.getString("post")
-                val group by app.superhealth.league.GroupHistory.state.collectAsState()
-                val selected = app.superhealth.league.GroupHistory.posts(nav.context).firstOrNull { (p, friend) -> p.id == post && (friend?.id ?: app.superhealth.league.League.myId()) == author }
-                app.superhealth.nutrition.ui.screens.DetailScaffold(tr("Publication du Groupe"), { nav.popBackStack() }) {
-                    if (selected != null) app.superhealth.ui.league.SocialPostCard(selected.first, selected.second)
-                    else Text(tr("Publication supprimée ou indisponible"))
-                }
+            composable("group/post/{author}/{post}?reply={reply}", listOf(navArgument("author") { type = NavType.StringType }, navArgument("post") { type = NavType.StringType }, navArgument("reply") { type = NavType.StringType; nullable = true; defaultValue = null })) { entry ->
+                app.superhealth.ui.league.GroupPostScreen(nav, entry.arguments?.getString("author").orEmpty(),
+                    entry.arguments?.getString("post").orEmpty(), entry.arguments?.getString("reply"))
             }
+            composable("social/preview") { app.superhealth.ui.league.SharedProfilePreview(nav) }
+            composable("group/circles?circle={circle}&post={post}",arguments=listOf(androidx.navigation.navArgument("circle"){nullable=true;defaultValue=null},androidx.navigation.navArgument("post"){nullable=true;defaultValue=null})) { entry -> app.superhealth.ui.league.PrivateCirclesScreen(nav,entry.arguments?.getString("circle"),entry.arguments?.getString("post")) }
+            composable("group/lifecycle") { app.superhealth.ui.league.SocialLifecycleScreen(nav) }
+            composable("social/outbox") { app.superhealth.ui.league.SocialOutboxScreen(nav) }
+            composable("group/preferences") { app.superhealth.ui.league.SocialPreferencesScreen(nav) }
             composable("group/recovery") { app.superhealth.ui.league.GroupRecoveryScreen(nav) }
             composable("group/records") { app.superhealth.ui.league.GroupRecordsScreen(nav) }
             composable("social/share/pr") { app.superhealth.ui.league.SocialComposer(nav, "PR") }
