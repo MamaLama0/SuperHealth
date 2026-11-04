@@ -42,3 +42,11 @@ actual class LocalAudio actual constructor() {
     actual fun pause() {}
     actual fun release() {}
 }
+
+actual fun identitySharedSecret(privateKey: ByteArray, publicKey: ByteArray): ByteArray = javax.crypto.KeyAgreement.getInstance("ECDH").run {
+    init(KeyFactory.getInstance("EC").generatePrivate(PKCS8EncodedKeySpec(privateKey)))
+    doPhase(KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(publicKey)), true)
+    generateSecret()
+}
+
+actual fun normalizeSigningIdentity(identity: SigningIdentity) = SigningIdentity(app.superhealth.social.P256Encoding.pkcs8(identity.privateKey, identity.publicKey), identity.publicKey)

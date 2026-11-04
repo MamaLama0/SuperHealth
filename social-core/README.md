@@ -1,0 +1,1 @@
+Sources partagées avec Android, copiées par `SuperHealth/tools/sync-social-core.py`. Modifier la source Android puis synchroniser. `--check` vérifie leur identité. Le projet iOS compile de façon autonome.

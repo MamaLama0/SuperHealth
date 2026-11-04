@@ -90,6 +90,13 @@ object InvitationCodes {
         }
         League.accept(ctx, card)
     }
+    suspend fun revokeCurrent(ctx:Context) = withContext(Dispatchers.IO) {
+        val code=Secrets.get(ctx,"friend_invitation_code")?.let(FriendCode::normalize)?:return@withContext
+        val base=Secrets.get(ctx,"friend_invitation_base")?:return@withContext
+        val owner=Secrets.get(ctx,"friend_invitation_owner")?:return@withContext
+        http.newCall(SocialRequest.Builder().url(base+FriendCode.path(code)).header("Authorization","Bearer "+Relay.publicationKey(ctx)).header("X-Write-Token",owner).delete().build()).execute().use{check(it.isSuccessful||it.code==404)}
+        Secrets.putAll(ctx,mapOf("friend_invitation_code" to null,"friend_invitation_owner" to null,"friend_invitation_expiry" to null,"friend_invitation_base" to null))
+    }
     suspend fun collectResponses(ctx: Context) = withContext(Dispatchers.IO) {
         val code = Secrets.get(ctx, "friend_invitation_code")?.let(FriendCode::normalize) ?: return@withContext
         val base = Secrets.get(ctx, "friend_invitation_base")?.takeIf(Relay::validBase) ?: return@withContext

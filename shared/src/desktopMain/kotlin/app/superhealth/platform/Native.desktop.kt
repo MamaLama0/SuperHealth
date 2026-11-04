@@ -18,7 +18,7 @@ actual fun secureRandomBytes(n: Int): ByteArray = ByteArray(n).also { java.secur
 
 actual fun appVersion(): String = "3.0"
 
-actual fun scheduleNotification(id: String, title: String, body: String, atMs: Long, sound: Boolean, category: String?) {
+actual fun scheduleNotification(id: String, title: String, body: String, atMs: Long, sound: Boolean, category: String?, route: String?) {
     println("notification $id à $atMs : $title — $body")
 }
 

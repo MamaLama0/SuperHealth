@@ -40,7 +40,7 @@ class SocialHttpClient private constructor(private val connect: Long, private va
                 while(true) {
                     val n=channel.readAvailable(buffer,0,buffer.size)
                     if(n<0)break
-                    check(out.size()+n<=16*16384+2048){"Réponse trop volumineuse"}
+                    check(out.size()+n<=request.responseLimit){"Réponse trop volumineuse"}
                     out.write(buffer,0,n)
                 }
             } finally { channel.cancel(null) }
@@ -49,16 +49,18 @@ class SocialHttpClient private constructor(private val connect: Long, private va
         }
     }
 }
-data class SocialRequest(val url: String,val method: String,val headers: Map<String,String>,val body: SocialBody?) {
+data class SocialRequest(val url: String,val method: String,val headers: Map<String,String>,val body: SocialBody?, val responseLimit: Int = 16*16384+2048) {
     class Builder {
         private var url="";private var method="GET";private val headers=mutableMapOf<String,String>();private var body: SocialBody?=null
+        private var responseLimit=16*16384+2048
+        fun maxResponseBytes(value: Int)=apply{require(value in 1..(51*1024*1024));responseLimit=value}
         fun url(value: String)=apply{url=value}
         fun header(key: String,value: String)=apply{headers[key]=value}
         fun get()=apply{method="GET";body=null}
         fun put(value: SocialBody)=apply{method="PUT";body=value}
         fun post(value: SocialBody)=apply{method="POST";body=value}
         fun delete()=apply{method="DELETE";body=null}
-        fun build()=SocialRequest(url,method,headers.toMap(),body)
+        fun build()=SocialRequest(url,method,headers.toMap(),body,responseLimit)
     }
 }
 data class SocialBody(val bytes: ByteArray,val type: String) {

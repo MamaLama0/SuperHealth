@@ -53,3 +53,21 @@ actual fun verifyIdentity(publicKey: ByteArray,message: ByteArray,signature: Byt
     try { SecKeyVerifySignature(key,kSecKeyAlgorithmECDSASignatureMessageX962SHA256,msg,sig,null) }
     finally { CFRelease(key);CFRelease(msg);CFRelease(sig) }
 }.getOrDefault(false)
+
+actual fun identitySharedSecret(privateKey: ByteArray, publicKey: ByteArray): ByteArray {
+    require(publicKey.size == 91 && publicKey.copyOfRange(0, spki.size).contentEquals(spki))
+    val privateAttrs = attrs(false); val privateData = cfData(privateKey)
+    val own = try { SecKeyCreateWithData(privateData, privateAttrs, null) ?: error("Invalid private key") }
+        finally { CFRelease(privateAttrs); CFRelease(privateData) }
+    val publicAttrs = attrs(true); val publicData = cfData(publicKey.copyOfRange(spki.size, publicKey.size))
+    val peer = try { SecKeyCreateWithData(publicData, publicAttrs, null) ?: error("Invalid public key") }
+        finally { CFRelease(publicAttrs); CFRelease(publicData) }
+    val parameters = CFDictionaryCreateMutable(null, 0, kCFTypeDictionaryKeyCallBacks.ptr, kCFTypeDictionaryValueCallBacks.ptr)!!
+    try {
+        val result = SecKeyCopyKeyExchangeResult(own, kSecKeyAlgorithmECDHKeyExchangeStandard, peer, parameters, null)
+            ?: error("ECDH unavailable")
+        return try { bytes(result) } finally { CFRelease(result) }
+    } finally { CFRelease(parameters); CFRelease(peer); CFRelease(own) }
+}
+
+actual fun normalizeSigningIdentity(identity: SigningIdentity) = SigningIdentity(app.superhealth.social.P256Encoding.apple(identity.privateKey, identity.publicKey), identity.publicKey)

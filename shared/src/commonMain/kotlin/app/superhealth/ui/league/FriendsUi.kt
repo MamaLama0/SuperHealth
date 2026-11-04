@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import app.superhealth.league.HealthIndex
+import app.superhealth.league.SocialPrivacy
+import app.superhealth.league.LeagueWorker
+import kotlinx.coroutines.launch
 import app.superhealth.league.League
 import app.superhealth.nutrition.ui.components.*
 import app.superhealth.ui.ProfilePhoto
@@ -36,6 +39,17 @@ import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
+
+@Composable
+internal fun SharedFriendAvatar(friend:League.Friend,size:Dp) {
+ val ctx=LocalContext.current
+ val image by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null,friend.avatar,friend.remote){
+  val media=friend.avatar;val endpoint=friend.remote
+  if(media!=null && endpoint!=null)try{val file=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default){app.superhealth.league.FriendSocial.download(ctx,media,endpoint)};value=BitmapFactory.decodeByteArray(file.readBytes())?.asImageBitmap()}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){}
+ }
+ val bitmap=image
+ if(bitmap==null)Initial(friend.shown,size) else Image(bitmap,tr("Photo de profil partagée"),Modifier.size(size).clip(CircleShape),contentScale=ContentScale.Crop)
+}
 
 @Composable
 internal fun Initial(name: String, size: Dp = 40.dp) {
@@ -69,10 +83,10 @@ fun FriendsScreen(nav: NavHostController) {
                 st.friends.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.shown }).forEachIndexed { i, f ->
                     if (i > 0) RowDivider()
                     Row(Modifier.fillMaxWidth().clickable { opened = f }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Initial(f.shown, 44.dp)
+                        SharedFriendAvatar(f,44.dp)
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                             Text(f.shown, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != HealthIndex.MODEL) tr("Ancienne carte : demander une mise à jour") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
+                            Text(if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != HealthIndex.MODEL) tr("Modèle d’indice différent") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                         }
                         f.progress?.let { Text(trf("Niveau %1\$s", it.level), style = MaterialTheme.typography.labelMedium, color = LeagueHue.onContainer()) }
@@ -91,6 +105,7 @@ fun FriendsScreen(nav: NavHostController) {
 @Composable
 internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
+    val scope=rememberCoroutineScope()
     val st by League.state.collectAsState()
     val f = st.friends.firstOrNull { it.id == f0.id } ?: f0
     var alias by remember(f.id) { mutableStateOf(f.alias.orEmpty()) }
@@ -101,7 +116,7 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 700.dp).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Initial(f.shown, 48.dp)
+                SharedFriendAvatar(f,48.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(f.shown, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(if (f.time <= 0) tr("En attente d'actualisation") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
@@ -162,6 +177,8 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                     Column(Modifier.padding(16.dp)) {
                         TextInput(tr("Surnom"), alias, { alias = it.take(24) }, placeholder = f.name)
                         Text(trf("Empreinte : %1\$s", League.fingerprint(f.key)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
+                        SwitchRow(tr("Mettre en sourdine"),tr("Masquer ses publications et ses alertes"),f.id in st.mutedSocialFriends){on->League.configure(ctx){it.copy(mutedSocialFriends=if(on)it.mutedSocialFriends+f.id else it.mutedSocialFriends-f.id)};scope.launch{app.superhealth.league.FriendSocial.repository(ctx).mute(f.id,on)}}
+                        SwitchRow(tr("Couper uniquement les alertes"),tr("Conserver ses publications dans le fil."),f.id in st.quietSocialFriends){on->League.configure(ctx){it.copy(quietSocialFriends=if(on)it.quietSocialFriends+f.id else it.quietSocialFriends-f.id)}}
                         TextButton(onClick = { removing = true }) { Text(tr("Retirer cet ami"), color = MaterialTheme.colorScheme.error) }
                     }
                 }
@@ -170,6 +187,6 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
     }
     if (removing) AlertDialog(onDismissRequest = { removing = false }, containerColor = Mf.colors.card,
         title = { Text(trf("Retirer %1\$s ?", f.shown)) },
-        confirmButton = { TextButton(onClick = { League.remove(ctx, f.id); removing = false; onDismiss() }) { Text(tr("Retirer")) } },
+        confirmButton = { TextButton(onClick = { scope.launch { try { SocialPrivacy.block(ctx,f.key);removing=false;onDismiss() } catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){LeagueWorker.onOpen(ctx,force=true);removing=false;onDismiss()} } }) { Text(tr("Retirer")) } },
         dismissButton = { TextButton(onClick = { removing = false }) { Text(tr("Annuler")) } })
 }

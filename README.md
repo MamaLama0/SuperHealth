@@ -22,7 +22,7 @@ Pour mettre SuperHealth à jour, installer la nouvelle IPA par-dessus l’ancien
 
 ## Données et confidentialité
 
-Les journaux sont conservés sur le téléphone. Les partages entre amis sont facultatifs. Les sauvegardes sont chiffrées. Les modifications sociales, avatars et recettes de la version Android 3.0.4 doivent être portées et vérifiées séparément sur iOS ; elles ne sont pas annoncées comme livrées par cette mise à jour de documentation.
+Les journaux sont conservés sur le téléphone. Les partages entre amis sont facultatifs. Les sauvegardes sont chiffrées. Le fil d’amis, les médias, les conversations, les cercles, les défis et les parcours de récupération sont portés dans le code commun. La validation locale sur Linux couvre la compilation desktop et les tests de protocole. La compilation et les essais natifs iOS restent nécessaires avant distribution.
 
 ## Développer
 
@@ -31,3 +31,12 @@ Les journaux sont conservés sur le téléphone. Les partages entre amis sont fa
 - Sur Mac : `cd iosApp && xcodegen generate && open SuperHealth.xcodeproj`.
 - Tests communs : `./gradlew :shared:desktopTest`.
 - [Notes du portage](docs/UPDATE-3.0-ios.md), [SideStore HealthKit](https://github.com/MamaLama0/SuperHealth/tree/sidestore), [issues](https://github.com/MamaLama0/SuperHealth/issues).
+
+
+## Moteur social partagé
+
+`social-core/` contient une copie autonome du moteur Android. Les sources sont synchronisées par `SuperHealth/tools/sync-social-core.py`, avec un mode `--check`. Les tests communs comprennent un vecteur ECDH P-256 fixe et la récupération des clés PKCS#8. La CI iOS existante exécute ces tests sur le simulateur, compile Security.framework et le routage des notifications Swift.
+
+Le flux personnel SHG1 reste compatible avec Android. Les cercles utilisent un flux distinct et des clés par époque. Le portage accepte les cartes d’indice des versions Android récentes. Le calcul propre à iOS conserve son modèle actuel et les comparaisons entre modèles différents restent désactivées.
+
+L’export social référence les fichiers multimédias distants. La sécurisation d’un ancien appareil migre les médias personnels et attend les confirmations nécessaires des autres participants. Une révocation ne peut pas effacer les copies déjà reçues. Aucun envoi APNs ne donne de garantie de notification instantanée. iOS choisit les réveils en arrière-plan.

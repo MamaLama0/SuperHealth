@@ -5,8 +5,10 @@ import androidx.compose.ui.Modifier
 
 /** Identité EC P-256 ; seule la clé publique X.509/SPKI quitte le trousseau. */
 data class SigningIdentity(val privateKey: ByteArray, val publicKey: ByteArray)
+expect fun normalizeSigningIdentity(identity: SigningIdentity): SigningIdentity
 expect fun generateSigningIdentity(): SigningIdentity
 expect fun signIdentity(privateKey: ByteArray, message: ByteArray): ByteArray
+expect fun identitySharedSecret(privateKey: ByteArray, publicKey: ByteArray): ByteArray
 expect fun verifyIdentity(publicKey: ByteArray, message: ByteArray, signature: ByteArray): Boolean
 expect fun qrBitmap(text: String, pixels: Int = 720): Bitmap
 expect fun clipboardText(): String

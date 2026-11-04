@@ -36,6 +36,7 @@ fun SocialProfileScreen(nav: NavHostController) {
     val name = app.superhealth.ui.userName() ?: tr("Mon profil")
     LaunchedEffect(Unit) { runCatching { League.compute(ctx) } }
     DetailScaffold(tr("Social"), { nav.popBackStack() }, contentSpacing = 12.dp) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){NotificationBell(nav)}
         MfCard {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(80.dp).clip(CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
@@ -55,6 +56,8 @@ fun SocialProfileScreen(nav: NavHostController) {
         }
         SectionLabel(tr("Avec mes amis"))
         GroupCard {
+            SettingRow(tr("Cercles et défis"), icon = Icons.Rounded.Groups) { nav.go("group/circles") }
+            SettingRow(tr("Fil des amis"), icon = Icons.Rounded.Forum) { nav.go("feed") }
             SettingRow(tr("Mes amis"), icon = Icons.Rounded.People) { nav.go("friends") }
             RowDivider(); SettingRow(tr("Ajouter un ami"), subtitle = tr("Code ou QR"), icon = Icons.Rounded.PersonAdd) { nav.go("friends/add") }
             RowDivider(); SettingRow(tr("Classement"), subtitle = tr("Score global"), icon = Icons.Rounded.EmojiEvents) { nav.go("league") }

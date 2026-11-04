@@ -51,8 +51,22 @@ object Relay {
         while (true) { val n = input.read(buffer); if (n < 0) break; check(out.size() + n <= 98304) { "réponse trop volumineuse" }; out.write(buffer, 0, n) }
         out.toString("UTF-8")
     }
-    suspend fun sync(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
+    internal suspend fun publishOnly(ctx: Context) { check(!SocialLifecycle.pending(ctx));FriendSocial.repository(ctx).publishPending() }
+    internal suspend fun ensureSocialDescriptor(ctx:Context) { SocialSpaces.repository(ctx).initialize();FriendSocial.ensureMailbox(ctx) }
+    internal suspend fun withIdentityLock(block:suspend ()->Unit)=lock.withLock { block() }
+    suspend fun sync(ctx:Context) { if(SocialLifecycle.pending(ctx)){SocialLifecycle.resume(ctx);return};SocialPrivacy.finish(ctx)
+        val before=FriendSocial.repository(ctx).state.value;val friends=League.state.value.friends;val initialized=League.state.value.lastSync>0
+        syncLocked(ctx)
+        if(initialized) {
+            SocialNotifications.timeline(ctx,before,FriendSocial.repository(ctx).state.value)
+            League.state.value.friends.filter{next->friends.none{it.id==next.id}}.forEach{SocialNotifications.show(ctx,"friend:"+it.id,"friends","FRIEND")}
+        }
+ }
+    private suspend fun syncLocked(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
         if (!League.available() || !League.state.value.relayEnabled) return@withContext
+        try { SocialSpaces.sync(ctx) }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { }
         val errors = mutableListOf<String>()
         fun report(message: String) { synchronized(errors) { errors += message } }
         try { InvitationCodes.collectResponses(ctx) }
@@ -89,11 +103,12 @@ object Relay {
                         friend.relayEtag?.takeIf { it.length <= 100 }?.let { builder.header("If-None-Match", it) }
                         http.newCall(builder.get().build()).execute().use { r ->
                             if (r.code == 304) return@use
+                            if(r.code==404&&GroupLinks.resolve(ctx,friend))return@use
                             check(r.isSuccessful) { "HTTP ${r.code}" }
                             val encrypted = readBounded(r)
                             val raw = RelayCrypto.decrypt(encrypted, friend.relayKey!!, endpoint.toHttpUrlOrNull()!!.encodedPath)
                             val card = League.parse(raw) ?: error("signature ou carte non valable")
-                            check(card.k == friend.key && card.remote == endpoint && card.relayKey == null) { "identité ou destination différente" }
+                            check(League.matches(friend, card) && card.remote == endpoint && card.relayKey == null) { "identité ou destination différente" }
                             check(json.decodeFromString(RelayCrypto.Envelope.serializer(), encrypted).revision == card.revision) { "révision incohérente" }
                             if (League.isFriend(card.k)) {
                                 League.accept(ctx, card)
@@ -105,13 +120,10 @@ object Relay {
                 }
             } }.awaitAll()
         }
+        try { FriendSocial.prepareAvatar(ctx); FriendSocial.repository(ctx).sync() }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { report("Des publications attendent leur synchronisation.") }
         League.configure(ctx) { it.copy(lastSync = System.currentTimeMillis(), syncError = errors.take(3).joinToString(" · ").ifBlank { null }) }
     } }
-    /** Révoque toutes les anciennes capacités de lecture ; nécessite un nouvel échange de cartes. */
-    suspend fun rotate(ctx: Context) = lock.withLock { withContext(Dispatchers.IO) {
-        myEndpoint(ctx)?.let { old ->
-            http.newCall(auth(ctx, SocialRequest.Builder().url(old)).delete().build()).execute().use { check(it.isSuccessful || it.code == 404) { "révocation : HTTP ${it.code}" } }
-        }
-        listOf("league_mailbox_v2", "league_read_capability_v2", "league_aes_read_key", "league_owner_token_v2", "league_published_hash_v2", "league_published_at_v2").forEach { Secrets.put(ctx, it, null) }
-    } }
+    suspend fun rotate(ctx:Context,excluded:Set<String> = emptySet()) = lock.withLock { withContext(Dispatchers.IO){ SocialRotation.run(ctx,excluded) } }
 }

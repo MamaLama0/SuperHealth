@@ -112,7 +112,7 @@ kotlin {
     }
 
     sourceSets {
-        commonMain { kotlin.srcDir(generateAiGift); kotlin.srcDir(generateRelayDefaults) }
+        commonMain { kotlin.srcDir(generateAiGift); kotlin.srcDir(generateRelayDefaults); kotlin.srcDir(rootProject.file("social-core/src/commonMain/kotlin")) }
         commonTest.dependencies { implementation(kotlin("test")) }
         commonMain.dependencies {
             implementation(compose.runtime)

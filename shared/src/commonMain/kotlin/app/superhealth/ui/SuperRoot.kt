@@ -259,6 +259,13 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("stretch/all") { app.superhealth.ui.stretch.StretchAllScreen(nav) }
             composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
             composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
+            composable("group/recovery") { app.superhealth.ui.league.GroupRecoveryScreen(nav) }
+            composable("group/post/{author}/{post}") { entry -> app.superhealth.ui.league.FriendsFeedScreen(nav,entry.arguments?.getString("author"),entry.arguments?.getString("post")) }
+            composable("feed") { app.superhealth.ui.league.FriendsFeedScreen(nav) }
+            composable("social/preview") { app.superhealth.ui.league.SharedProfilePreview(nav) }
+            composable("social/reading") { app.superhealth.ui.league.SocialPreferencesScreen(nav) }
+            composable("group/lifecycle") { app.superhealth.ui.league.SocialLifecycleScreen(nav) }
+            composable("group/circles?circle={circle}&post={post}",arguments=listOf(androidx.navigation.navArgument("circle"){nullable=true;defaultValue=null},androidx.navigation.navArgument("post"){nullable=true;defaultValue=null})) { entry -> app.superhealth.ui.league.PrivateCirclesScreen(nav,entry.arguments?.getString("circle"),entry.arguments?.getString("post")) }
             composable("social") { app.superhealth.ui.league.SocialProfileScreen(nav) }
             composable("social/badges") { app.superhealth.ui.league.ProfileBadgesScreen(nav) }
             composable("quests") { app.superhealth.ui.league.WeeklyQuestsScreen(nav) }

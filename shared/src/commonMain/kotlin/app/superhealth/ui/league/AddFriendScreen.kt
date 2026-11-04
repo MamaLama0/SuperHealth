@@ -23,6 +23,7 @@ import app.superhealth.nutrition.ui.components.*
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
+import app.superhealth.ui.trf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -33,6 +34,10 @@ fun AddFriendScreen(nav: NavHostController) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by League.state.collectAsState()
+    val initialFriends=remember{state.friends.map{it.id}.toSet()}
+    val confirmed=state.friends.count{it.id !in initialFriends}
+    var clock by remember{mutableStateOf(System.currentTimeMillis())}
+    LaunchedEffect(Unit){while(true){clock=System.currentTimeMillis();kotlinx.coroutines.delay(1000)}}
     var code by remember { mutableStateOf("") }
     var custom by remember { mutableStateOf(false) }
     var server by remember { mutableStateOf(state.relayUrl) }
@@ -93,7 +98,9 @@ fun AddFriendScreen(nav: NavHostController) {
         MfCard {
             Text(tr("Mon code ami"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Valable 24 heures. Partagez-le avec les personnes que vous souhaitez ajouter."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            if(confirmed>0)Text(trf("%1\$s nouvel ami confirmé",confirmed))
             mine?.let { invitation ->
+                Text(if(clock>=invitation.expires)tr("Cette invitation a expiré. Renouvelez le code.")else trf("Valable jusqu’au %1\$s",Instant.ofEpochMilli(invitation.expires).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM HH:mm",app.superhealth.ui.Lang.locale))))
                 Text(invitation.text, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Mf.colors.accent,
                     modifier = Modifier.padding(vertical = 16.dp))
                 Text(tr(if (state.customRelay) "Créé sur votre serveur personnalisé" else "Créé sur le serveur SuperHealth"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
@@ -107,6 +114,7 @@ fun AddFriendScreen(nav: NavHostController) {
                         app.superhealth.platform.shareText(shareText)
                     }) { Text(tr("Partager")) }
                 }
+                TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{InvitationCodes.revokeCurrent(ctx);mine=null}catch(e:CancellationException){throw e}catch(_:Exception){message=tr("Révocation du code à réessayer.")}finally{busy=false}}}){Text(tr("Révoquer cette invitation"))}
                 TextButton(enabled = !busy, onClick = { publish(true) }) { Text(tr("Renouveler mon code")) }
             } ?: PillButton(tr("Créer mon code"), Modifier.fillMaxWidth().padding(top = 12.dp), enabled = !busy) { publish() }
         }

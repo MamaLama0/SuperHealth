@@ -309,7 +309,7 @@ open class AndroidViewModel(private val app: Context) : androidx.lifecycle.ViewM
 // ---- Notifications locales et sons ---------------------------------------------------------------
 
 /** Notification locale programmée (minuteur de repos, rappel de médicament) ; [atMs] ≤ maintenant : tout de suite. */
-expect fun scheduleNotification(id: String, title: String, body: String, atMs: Long, sound: Boolean = true, category: String? = null)
+expect fun scheduleNotification(id: String, title: String, body: String, atMs: Long, sound: Boolean = true, category: String? = null, route: String? = null)
 expect fun cancelNotification(id: String)
 expect fun cancelNotificationsWithPrefix(prefix: String)
 /** Demande l'autorisation d'afficher des notifications (une seule fois, iOS la retient). */

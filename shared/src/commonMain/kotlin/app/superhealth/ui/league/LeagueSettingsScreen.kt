@@ -13,6 +13,7 @@ import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.ui.components.*
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.go
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import kotlinx.coroutines.launch
@@ -52,8 +53,14 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 }
             }
         }
+        GroupCard { SettingRow(tr("Mes données sociales")) { nav.go("group/lifecycle") } }
+        GroupCard { SettingRow(tr("Retrouver mon Groupe")) { nav.go("group/recovery") } }
+        GroupCard { SettingRow(tr("Contenus masqués et sourdines")) { nav.go("social/reading") };SettingRow(tr("Voir mon profil comme un ami")){nav.go("social/preview")} }
         SectionLabel(tr("Ce que je partage"))
         GroupCard {
+            SwitchRow(tr("Partager mon indice"), tr("Le score et ses composantes peuvent être masqués tout en participant au Groupe."), st.shareIndex) { on -> League.configure(ctx) { it.copy(shareIndex = on) } }
+            SwitchRow(tr("Photo de profil"), tr("Une petite vignette chiffrée, visible par vos amis"), st.shareProfilePhoto) { on -> League.configure(ctx) { it.copy(shareProfilePhoto = on) } }
+
             SwitchRow(tr("Niveaux, XP et séries"), tr("Votre progression agrégée, sans journal détaillé"), st.shareProgress) { on -> League.configure(ctx) { it.copy(shareProgress = on) } }
             RowDivider()
             SwitchRow(tr("Détail par partie"), tr("Partager les composantes de l'indice"), st.sharePillars) { League.setSharePillars(ctx, it) }
@@ -78,6 +85,14 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 "Écart relatif entre apports et cibles, évalué progressivement. Au moins 4 jours renseignés. Poids : 15 %.",
                 "Méditation et étirements face à 70 min sur 7 jours. Poids : 5 %."
             ).forEach { Text(tr(it), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp)) }
+        }
+        SectionLabel(tr("Notifications"))
+        GroupCard {
+            TextButton({requestNotificationPermission()}){Text(tr("Autoriser les notifications du Groupe"))}
+            SwitchRow(tr("Ajouts d’amis"),null,st.notifyFriends){on->League.configure(ctx){it.copy(notifyFriends=on)};if(on)requestNotificationPermission();LeagueWorker.schedule(ctx)}
+            SwitchRow(tr("Publications des amis"),null,st.notifyPosts){on->League.configure(ctx){it.copy(notifyPosts=on)};if(on)requestNotificationPermission();LeagueWorker.schedule(ctx)}
+            SwitchRow(tr("Réponses aux publications"),null,st.notifyReplies){on->League.configure(ctx){it.copy(notifyReplies=on)};if(on)requestNotificationPermission();LeagueWorker.schedule(ctx)}
+            SwitchRow(tr("Réactions aux publications"),null,st.notifyReactions){on->League.configure(ctx){it.copy(notifyReactions=on)};if(on)requestNotificationPermission();LeagueWorker.schedule(ctx)}
         }
         RelaySettings()
         SectionLabel(tr("Confidentialité avancée"))

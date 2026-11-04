@@ -67,6 +67,10 @@ object SuperHealth {
         app.superhealth.wellbeing.Checkin.init(appContext)
         app.superhealth.wellbeing.Cycle.init(appContext)
         app.superhealth.league.League.load(appContext)
+        app.superhealth.league.SocialInbox.load(appContext)
+        runCatching { app.superhealth.league.GroupRecovery.resumeRestore(appContext) }.onFailure {
+            app.superhealth.league.League.configure(appContext){state->state.copy(relayEnabled=false,syncError="Restauration du Groupe à terminer dans les paramètres.")}
+        }
         app.superhealth.meditation.Meditation.load(appContext)
         app.superhealth.stretch.Stretch.load(appContext)
         app.superhealth.ui.ProfilePhoto.load(appContext)

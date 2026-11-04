@@ -71,10 +71,11 @@ actual fun secureRandomBytes(n: Int): ByteArray {
 actual fun appVersion(): String =
     (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String) ?: "1.0"
 
-actual fun scheduleNotification(id: String, title: String, body: String, atMs: Long, sound: Boolean, category: String?) {
+actual fun scheduleNotification(id: String, title: String, body: String, atMs: Long, sound: Boolean, category: String?, route: String?) {
     val content = UNMutableNotificationContent()
     content.setTitle(title)
     content.setBody(body)
+    route?.let { content.setUserInfo(mapOf("route" to it)) }
     if (sound) content.setSound(UNNotificationSound.defaultSound)
     category?.let { content.setCategoryIdentifier(it) }
     val delay = ((atMs - nowMs()) / 1000.0).coerceAtLeast(1.0)

@@ -32,7 +32,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "profile.jpg")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "profile.jpg")
 
     fun fileName(date: app.superhealth.platform.LocalDate = app.superhealth.platform.LocalDate.now()) = "superhealth-$date.$EXT"
 
@@ -46,7 +46,7 @@ object Archive {
         val health = AppJson.encodeToString(kotlinx.serialization.builtins.ListSerializer(LogRow.serializer()), logs)
         return withContext(Dispatchers.IO) {
             Zip.write(listOf("nutrition.json" to nutrition.encodeToByteArray(), "musculation.json" to training.encodeToByteArray(),
-                "superhealth.json" to app.superhealth.SuperPrefs.exportSettings().encodeToByteArray(), "sante.json" to health.encodeToByteArray()) +
+                "superhealth.json" to app.superhealth.SuperPrefs.exportSettings().encodeToByteArray(), "sante.json" to health.encodeToByteArray(),"group-recovery.json" to kotlinx.serialization.json.Json.encodeToString(app.superhealth.league.GroupRecovery.Profile.serializer(),app.superhealth.league.GroupRecovery.export(ctx)).encodeToByteArray()) +
                 PLUGIN_FILES.mapNotNull { name -> File(ctx.filesDir, name).takeIf { it.isFile }?.let { name.replace('/', '_') to it.readBytes() } })
         }
     }
@@ -57,6 +57,7 @@ object Archive {
      * ce qui a été restauré.
      */
     suspend fun restore(ctx: Context, bytes: ByteArray, code: String? = null): String {
+        check(!app.superhealth.league.SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant une restauration." }
         val plain = if (BackupCrypto.isEncrypted(bytes)) withContext(Dispatchers.Default) {
             if (code != null) BackupCrypto.decrypt(bytes, code).also { Secrets.remember(ctx, code) }
             else Secrets.restoreCodes(ctx).firstNotNullOfOrNull { c -> runCatching { BackupCrypto.decrypt(bytes, c) }.getOrNull() }
@@ -74,6 +75,8 @@ object Archive {
             }
         }
         app.superhealth.stretch.Stretch.load(ctx); app.superhealth.meditation.Meditation.load(ctx); app.superhealth.league.League.load(ctx); app.superhealth.ui.ProfilePhoto.load(ctx)
+        files["group-recovery.json"]?.let { app.superhealth.league.GroupRecovery.restore(ctx,kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(),it),clearHistory=false) }
+        app.superhealth.league.SocialSpaces.reset();app.superhealth.league.FriendSocial.resetCache();app.superhealth.league.SocialInbox.load(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }
         files["musculation.json"]?.let { WorkoutApp.store.import(it); done += tr("musculation") }

@@ -3,6 +3,7 @@ import UIKit
 import WidgetKit
 import ActivityKit
 import Shared
+import UserNotifications
 
 // Les noms Kotlin exportés (URL, Date, Context…) peuvent masquer ceux de Foundation et SwiftUI : ils sont qualifiés ici.
 
@@ -83,7 +84,25 @@ final class WorkoutActivityController {
 }
 
 /// Raccourcis de l'icône (appui long) : la scène reçoit l'action, à froid comme à chaud.
-final class AppDelegate: NSObject, UIApplicationDelegate {
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        if let route = response.notification.request.content.userInfo["route"] as? String {
+            DispatchQueue.main.async { MainViewControllerKt.openRoute(route: route) }
+        }
+        completionHandler()
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .badge])
+    }
+
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)

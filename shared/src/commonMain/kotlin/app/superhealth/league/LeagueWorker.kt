@@ -9,10 +9,12 @@ object LeagueWorker {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var pending: Job? = null
     fun schedule(ctx: Context) { onOpen(ctx) }
-    fun onOpen(ctx: Context) {
+    fun onOpen(ctx: Context, force:Boolean=false) {
+        if (SocialLifecycle.pending(ctx)) { synchronized(this) { if (pending?.isActive != true) pending = scope.launch { SocialLifecycle.resume(ctx) } };return }
         if (!League.available() || !League.state.value.relayEnabled) return
         val s = League.state.value
-        if (!s.refreshOnOpen || System.currentTimeMillis()-s.lastSync < TimeUnit.MINUTES.toMillis(10)) return
+        if (!force && !s.refreshOnOpen && !s.notifyPosts && !s.notifyReplies) return
+        if (!force && System.currentTimeMillis()-s.lastSync < 30000) return
         synchronized(this) { if (pending?.isActive != true) pending = scope.launch { sync(ctx) } }
     }
     suspend fun runIfDue(ctx: Context) {
@@ -21,7 +23,7 @@ object LeagueWorker {
         if (System.currentTimeMillis()-s.lastSync >= TimeUnit.HOURS.toMillis((24/s.syncsPerDay).toLong())) sync(ctx)
     }
     private suspend fun sync(ctx: Context) {
-        try { Relay.sync(ctx); Widgets.publish() }
+        try { Relay.sync(ctx); if(League.state.value.pendingSocialRevocations.isNotEmpty())SocialPrivacy.finish(ctx); Widgets.publish() }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { League.configure(ctx) { it.copy(syncError="Synchronisation indisponible. Réessayez plus tard.") } }
     }

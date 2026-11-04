@@ -13,10 +13,22 @@ object Secrets {
     const val WEBDAV_PASSWORD = "webdav_password"
     const val GITHUB_TOKEN = "github_token"
 
-    fun get(ctx: Context, name: String): String? = runCatching { keychainGet(name) }.getOrNull()
-
-    fun put(ctx: Context, name: String, value: String?) {
-        runCatching { if (value.isNullOrEmpty()) keychainDelete(name) else keychainSet(name, value) }
+    private const val TRANSACTION = "superhealth_secret_transaction_v1"
+    private val transactionJson = kotlinx.serialization.json.Json { encodeDefaults = true }
+    private fun transaction(): Map<String, String?> = keychainGet(TRANSACTION)?.let {
+        transactionJson.decodeFromString(kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.serializer<String>(), kotlinx.serialization.serializer<String?>()), it)
+    } ?: emptyMap()
+    fun get(ctx: Context, name: String): String? {
+        val values = transaction()
+        return if (name in values) values[name] else keychainGet(name)
+    }
+    fun put(ctx: Context, name: String, value: String?) = putAll(ctx, mapOf(name to value))
+    fun putAll(ctx: Context, values: Map<String, String?>) {
+        val next = transaction() + values
+        val serializer = kotlinx.serialization.builtins.MapSerializer(kotlinx.serialization.serializer<String>(), kotlinx.serialization.serializer<String?>())
+        val raw = transactionJson.encodeToString(serializer, next)
+        keychainSet(TRANSACTION, raw)
+        check(keychainGet(TRANSACTION) == raw) { "Cannot save secure settings" }
     }
 
     /** Codes d'anciennes sauvegardes (codes saisis à une restauration, code du téléphone Android), un par ligne. */
