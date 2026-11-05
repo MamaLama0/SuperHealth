@@ -56,6 +56,8 @@ object Archive {
                     "sante.json" to health).forEach { (name, text) ->
                     zip.putNextEntry(ZipEntry(name)); zip.write(text.toByteArray()); zip.closeEntry()
                 }
+                // Compte des cartes sur le serveur : sans lui, une restauration repartirait d'une collection vide.
+                app.superhealth.cards.Economy.exportAccount(ctx)?.let { zip.putNextEntry(ZipEntry("cards-economy.json")); zip.write(it.toByteArray()); zip.closeEntry() }
                 zip.putNextEntry(ZipEntry("group-recovery.json"))
                 zip.write(kotlinx.serialization.json.Json.encodeToString(app.superhealth.league.GroupRecovery.Profile.serializer(), app.superhealth.league.GroupRecovery.export(ctx)).toByteArray())
                 zip.closeEntry()
@@ -110,6 +112,8 @@ object Archive {
         files["group-recovery.json"]?.let { app.superhealth.league.GroupRecovery.restore(ctx,
             kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(), it), clearHistory = false) }
         app.superhealth.league.GroupHistory.load(ctx)
+        files["cards-economy.json"]?.let { app.superhealth.cards.Economy.importAccount(ctx, it) }
+        app.superhealth.cards.CardStore.reload(ctx)
         app.superhealth.league.SocialSpaces.reset()
         app.superhealth.meds.Meds.init(ctx); app.superhealth.wellbeing.Journal.init(ctx); app.superhealth.wellbeing.MoodMoments.init(ctx); app.superhealth.wellbeing.Checkin.init(ctx); app.superhealth.wellbeing.Cycle.init(ctx)
         val done = mutableListOf<String>()

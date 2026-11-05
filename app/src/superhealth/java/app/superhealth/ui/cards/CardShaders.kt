@@ -28,7 +28,7 @@ import kotlin.math.abs
  * fois puis gardé : un shader unique avec tous les biomes prenait plusieurs secondes à compiler sur le GPU.
  */
 private const val ART_HEAD = """
-uniform float2 iRes; uniform float iTime; uniform float iSeed; uniform float2 iTilt; uniform float iStyle; uniform float iStyle2; uniform float iRar;
+uniform float2 iRes; uniform float iTime; uniform float iSeed; uniform float2 iTilt; uniform float iStyle; uniform float iStyle2; uniform float iRar; uniform float iChroma;
 uniform float4 cA; uniform float4 cB; uniform float4 cC; uniform float4 dA; uniform float4 dB; uniform float4 dC;
 uniform float4 iF; uniform float4 iF2; uniform float3 iCam; uniform float3 iCam2;
 
@@ -280,6 +280,16 @@ private const val ART_MAIN_END = """  // Style par rareté : commune mate et gra
       col += clamp(abs(fract(k + float3(0.0, 0.333, 0.667)) * 6.0 - 3.0) - 1.0, 0.0, 1.0) * 0.1 * (0.6 + 0.4 * sin(k * 9.0));
     }
   }
+  // Variante chromatique : la teinte tourne en vagues sur la carte (et avec l'inclinaison), bord prismatique.
+  if (iChroma > 0.5) {
+    float a = (uv.x * 1.6 + uv.y * 0.9) * 3.0 + iTime * 0.35 + iTilt.x * 2.0 + 0.6 * fbm(q * 2.0 + iSeed);
+    float3 yiq = float3(dot(col, float3(0.299, 0.587, 0.114)), dot(col, float3(0.596, -0.274, -0.322)), dot(col, float3(0.211, -0.523, 0.312)));
+    float ca = cos(a); float sa = sin(a);
+    yiq.yz = float2(yiq.y * ca - yiq.z * sa, yiq.y * sa + yiq.z * ca) * 1.45;
+    col = float3(yiq.x + 0.956 * yiq.y + 0.621 * yiq.z, yiq.x - 0.272 * yiq.y - 0.647 * yiq.z, yiq.x - 1.106 * yiq.y + 1.703 * yiq.z);
+    float3 prism = clamp(abs(fract(a * 0.16 + float3(0.0, 0.333, 0.667)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
+    col += prism * (0.1 + 0.18 * smoothstep(0.5, 1.0, length(p * float2(1.25, 0.9))));
+  }
   float sweep = smoothstep(0.35, 0.0, abs(uv.x * 0.8 + uv.y * 0.6 - 0.7 - iTilt.x * 0.5 + iTilt.y * 0.3));
   col += sweep * 0.05 * (1.0 + iRar * 0.4);
   float vig = smoothstep(1.15, 0.35, length(p * float2(1.0, 0.8)));
@@ -390,6 +400,7 @@ fun CardArt(card: CardDef, finish: Finish, modifier: Modifier = Modifier, tilt: 
                 art.setFloatUniform("iStyle", if (card.neutral) 8f else card.element.ordinal.toFloat())
                 art.setFloatUniform("iStyle2", card.element2?.ordinal?.toFloat() ?: -1f)
                 art.setFloatUniform("iRar", card.rarity.ordinal.toFloat())
+                art.setFloatUniform("iChroma", if (finish == Finish.CHROMATIQUE) 1f else 0f)
                 art.color("cA", card.palette.a.toColor()); art.color("cB", card.palette.b.toColor()); art.color("cC", card.palette.c.toColor())
                 val p2 = card.palette2 ?: card.palette
                 art.color("dA", p2.a.toColor()); art.color("dB", p2.b.toColor()); art.color("dC", p2.c.toColor())
@@ -399,7 +410,7 @@ fun CardArt(card: CardDef, finish: Finish, modifier: Modifier = Modifier, tilt: 
                     glare.setFloatUniform("iRes", size.width, size.height)
                     glare.setFloatUniform("iTime", time())
                     glare.setFloatUniform("iTilt", tl.x, tl.y)
-                    glare.setFloatUniform("iSpark", if (finish == Finish.ANIMEE) 1f else 0.5f)
+                    glare.setFloatUniform("iSpark", if (finish >= Finish.ANIMEE) 1f else 0.5f)
                     drawRect(ShaderBrush(glare), blendMode = BlendMode.Screen)
                 }
             }

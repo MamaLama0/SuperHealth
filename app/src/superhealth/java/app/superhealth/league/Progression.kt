@@ -19,7 +19,31 @@ object Progression {
     @Serializable data class Summary(val model: Int = MODEL, val totalXp: Long = 0, val weekXp: Int = 0, val level: Int = 1,
         val weekStart: Long = 0, val throughDay: Long = 0, val days: List<DayXp> = emptyList(), val streaks: List<Streak> = emptyList(), val records: Int = 0, val totals: Map<String, Long> = emptyMap(),
         /** Quêtes terminées de la semaine [weekStart] (noms de [WeeklyQuests.Metric]), pour le défi miroir entre amis. */
-        val questsDone: List<String> = emptyList())
+        val questsDone: List<String> = emptyList(),
+        /** Séries à la semaine de chaque suivi (bonus d'éclats et badges de série). */
+        val weekly: List<WeekStreak> = emptyList())
+    /**
+     * Série à la semaine : une semaine compte dès [need] jours tenus (4 sur 7 pour un suivi quotidien, l'objectif de
+     * séances pour la musculation), plus souple qu'une série au jour près. [current] compte la semaine en cours si
+     * elle est déjà tenue ([done]), sinon s'arrête à la semaine passée.
+     */
+    @Serializable data class WeekStreak(val track: String, val current: Int, val best: Int, val done: Boolean, val days: Int, val need: Int)
+
+    fun weekStreaks(events: Map<Long, Set<Track>>, today: Long, tracks: Collection<Track>, need: (Track, Long) -> Int): List<WeekStreak> {
+        val first = events.keys.minOrNull()?.let(::week) ?: week(today)
+        val now = week(today)
+        return tracks.map { t ->
+            val held = generateSequence(first) { it + 7 }.takeWhile { it <= now }.associateWith { w ->
+                (w until w + 7).count { d -> d <= today && t in events[d].orEmpty() } }
+            val ok = held.mapValues { (w, n) -> n >= need(t, w).coerceIn(1, 7) }
+            var best = 0; var run = 0
+            ok.toSortedMap().values.forEach { if (it) { run++; best = maxOf(best, run) } else run = 0 }
+            val done = ok[now] == true
+            var current = 0; var w = if (done) now else now - 7
+            while (ok[w] == true) { current++; w -= 7 }
+            WeekStreak(t.name, current, best, done, held[now] ?: 0, need(t, now).coerceIn(1, 7))
+        }
+    }
     /** [daily] : XP de chaque jour calculé (hors quêtes), pour le bilan d'une semaine passée ; jamais partagé. */
     data class Result(val summary: Summary, val since: Long, val daily: Map<Long, Int> = emptyMap()) {
         val intoLevel get() = summary.totalXp - threshold(summary.level)

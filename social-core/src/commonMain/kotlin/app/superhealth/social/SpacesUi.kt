@@ -26,7 +26,8 @@ data class SpaceSource(val id: String, val title: String, val time: Long)
 fun SpacesScreen(repository: SpaceRepository, contacts: List<SpaceContact>, sources: List<SpaceSource>, onBack: () -> Unit,
     refresh: suspend ()->Unit = {repository.sync()}, initialCircle: String? = null, initialPost: String? = null, initialText: String = "", initialMedia: SpaceAttachment? = null, initialSnapshot: FriendPost? = null, now: () -> Long, idHash: (String) -> String, formatDate: (Long) -> String,
     attachmentPicker: @Composable ((SpaceAttachment) -> Unit) -> Unit = {},
-    attachmentView: @Composable (SpaceAttachment) -> Unit = {}, startOfDay: (Long) -> Long = { it }) {
+    attachmentView: @Composable (SpaceAttachment) -> Unit = {}, startOfDay: (Long) -> Long = { it },
+    snapshotExtra: @Composable (FriendPost) -> Unit = {}) {
     val state by repository.state.collectAsState()
     val scope = rememberCoroutineScope()
     val listState=rememberLazyListState()
@@ -143,7 +144,7 @@ fun SpacesScreen(repository: SpaceRepository, contacts: List<SpaceContact>, sour
                     OutlinedTextField(message, { message = it.take(1000) }, label = { Text(tr("Votre message")) }, modifier = Modifier.fillMaxWidth().bringIntoViewRequester(composerBring))
                     attachmentPicker { attachment = it }
                     snapshot?.let { chosen ->
-                        Text(tr("Aperçu de la publication"));Text(chosen.title);FriendSnapshotView(chosen,preview=true)
+                        Text(tr("Aperçu de la publication"));Text(chosen.title);snapshotExtra(chosen);FriendSnapshotView(chosen,preview=true)
                         TextButton({ snapshot=null }){ Text(tr("Retirer l’activité")) }
                     }
                     attachment?.let { Text(tr("Pièce jointe prête")); TextButton({ attachment = null }) { Text(tr("Retirer le média")) } }
@@ -190,7 +191,7 @@ fun SpacesScreen(repository: SpaceRepository, contacts: List<SpaceContact>, sour
                         Text(record.author.name,modifier=Modifier.bringIntoViewRequester(bring), style = MaterialTheme.typography.titleSmall)
                         Text(if (post.deleted) tr("Publication supprimée") else post.text)
                         if (!post.deleted) {
-                            post.snapshot?.let { Text(it.title);FriendSnapshotView(it) }
+                            post.snapshot?.let { Text(it.title);snapshotExtra(it);FriendSnapshotView(it) }
                             post.media?.let { attachmentView(it) }
                             if (post.modified != null) Text(tr("Modifié"), style = MaterialTheme.typography.labelSmall)
                             if (writable) FlowRow {

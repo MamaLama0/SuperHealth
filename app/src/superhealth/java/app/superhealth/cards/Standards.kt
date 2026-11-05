@@ -117,3 +117,62 @@ object Vo2Norms {
         return (93.0 + 6.0 * (vo2 - row[3]) / (row[3] - row[2])).coerceAtMost(99.0)
     }
 }
+
+/**
+ * Repères du cardio. Chaque table relie une mesure à des points (≈ 70 = la moyenne des pratiquants, 90+ = très bon) ;
+ * entre deux repères on interpole. Sources : ACSM (3 à 5 séances par semaine), OMS (150 à 300 min), Tudor-Locke pour les pas, relevés Garmin et
+ * Strava pour la distance hebdomadaire et l'allure moyenne, Daniels-Gilbert, Uth (2004) et Jackson (1990) pour la VO₂max.
+ */
+object CardioNorms {
+    private fun interp(x: Double, xs: DoubleArray, ys: DoubleArray): Double {
+        if (x <= xs.first()) return ys.first()
+        if (x >= xs.last()) return ys.last()
+        val i = (0 until xs.size - 1).first { x < xs[it + 1] }
+        return ys[i] + (x - xs[i]) / (xs[i + 1] - xs[i]) * (ys[i + 1] - ys[i])
+    }
+
+    /** Séances par semaine. */
+    fun sessions(perWeek: Double) = interp(perWeek, doubleArrayOf(0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.5), doubleArrayOf(30.0, 50.0, 63.0, 75.0, 85.0, 93.0, 99.0))
+    /** Pas par jour, paliers de Tudor-Locke : sédentaire sous 5 000, actif à 10 000, très actif dès 12 500. */
+    fun steps(perDay: Double) = interp(perDay, doubleArrayOf(0.0, 3000.0, 5000.0, 7500.0, 10000.0, 12500.0, 15000.0, 20000.0), doubleArrayOf(30.0, 38.0, 50.0, 63.0, 75.0, 86.0, 93.0, 99.0))
+    /** Meilleure course ramenée au 5 km (Riegel adouci), sur une grille par âge et sexe : 35 min ≈ 40 pts, 19 min ≈ 93 pts. */
+    fun best5k(runs: List<AthleteStatsEngine.Run>, sex: Sex, age: Int): Double? {
+        val best = runs.filter { it.distanceM >= 1000 && it.seconds > 0 }.maxOfOrNull { (it.distanceM / it.seconds) * (it.distanceM / 5000.0).pow(0.06) } ?: return null
+        val seconds = 5000 / best
+        val factor = (if (sex == Sex.FEMALE) 1.12 else 1.0) * (1 + 0.008 * (age - 30).coerceAtLeast(0))
+        val levels = doubleArrayOf(2100.0, 1800.0, 1560.0, 1320.0, 1140.0).map { it * factor }
+        val pts = doubleArrayOf(40.0, 55.0, 70.0, 83.0, 93.0)
+        return when {
+            seconds >= levels[0] -> 40.0 - (seconds - levels[0]) / 60.0
+            seconds <= levels[4] -> 93.0 + 6.0 * (levels[4] - seconds) / (levels[3] - levels[4])
+            else -> (0 until 4).first { seconds >= levels[it + 1] }.let { i -> pts[i] + (levels[i] - seconds) / (levels[i] - levels[i + 1]) * (pts[i + 1] - pts[i]) }
+        }.coerceIn(25.0, 99.0)
+    }
+    /** Kilomètres par semaine en équivalent course. */
+    fun distance(km: Double) = interp(km, doubleArrayOf(0.0, 5.0, 12.0, 25.0, 40.0, 55.0, 70.0), doubleArrayOf(30.0, 45.0, 62.0, 75.0, 85.0, 92.0, 99.0))
+
+    /** Allure moyenne (s/km), ramenée à celle d'un homme de 20 à 35 ans (+12 % chez les femmes, +0,8 % par an après 35 ans). */
+    fun pace(secondsPerKm: Double, sex: Sex, age: Int): Double {
+        val factor = (if (sex == Sex.FEMALE) 1.12 else 1.0) * (1 + 0.008 * (age - 35).coerceAtLeast(0))
+        val s = secondsPerKm / factor
+        // Plus l'allure est rapide (secondes faibles), plus il y a de points : on lit la table à l'envers.
+        return interp(-s, doubleArrayOf(-480.0, -420.0, -390.0, -350.0, -315.0, -280.0, -240.0, -210.0), doubleArrayOf(35.0, 50.0, 60.0, 70.0, 80.0, 88.0, 95.0, 99.0))
+    }
+
+    /** VDOT de Daniels-Gilbert sur la meilleure course de 1,5 à 50 km : coût en oxygène de la vitesse, divisé par la part de VO₂max tenue sur la durée. */
+    fun vdot(runs: List<AthleteStatsEngine.Run>): Double? = runs.filter { it.distanceM in 1500.0..50_000.0 && it.seconds > 0 }.maxOfOrNull { r ->
+        val t = r.seconds / 60; val v = r.distanceM / t
+        val cost = -4.6 + 0.182258 * v + 0.000104 * v * v
+        val share = 0.8 + 0.1894393 * kotlin.math.exp(-0.012778 * t) + 0.2989558 * kotlin.math.exp(-0.1932605 * t)
+        cost / share
+    }?.takeIf { it in 20.0..85.0 }
+
+    /** Uth et al. (2004) : 15,3 × FCmax / FC au repos, FCmax de Tanaka (208 − 0,7 × âge). */
+    fun uth(age: Int, resting: Double) = 15.3 * (208 - 0.7 * age) / resting
+
+    /** Jackson et al. (1990), sans effort : âge, sexe, IMC et activité (échelle 0 à 7, ici d'après les minutes par semaine). */
+    fun jackson(age: Int, sex: Sex, bmi: Double, weeklyMinutes: Double): Double {
+        val activity = (weeklyMinutes / 45).coerceIn(0.0, 7.0)
+        return 56.363 + 1.921 * activity - 0.381 * age - 0.754 * bmi + if (sex == Sex.FEMALE) 0.0 else 10.987
+    }
+}

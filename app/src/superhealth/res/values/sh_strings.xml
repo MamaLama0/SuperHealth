@@ -38,6 +38,12 @@
     <string name="widget_streak_desc">Your longest active streak and personal best</string>
     <string name="widget_quest_name">Group · Weekly quests</string>
     <string name="widget_quest_desc">Your next challenge or reward to claim</string>
+    <string name="widget_cardpacks_name">Cards · Packs</string>
+    <string name="widget_cardpacks_desc">Packs to open and the next gold pack</string>
+    <string name="widget_cardquests_name">Cards · Quests</string>
+    <string name="widget_cardquests_desc">Today\'s card quests and rewards to claim</string>
+    <string name="widget_athletecard_name">Athlete card</string>
+    <string name="widget_athletecard_desc">Your rating, equipped background and its bonus</string>
     <string name="widget_friends_name">Group · Friends</string>
     <string name="widget_friends_desc">Your friends and invitations</string>
     <string name="widget_social_name">Group · Overview</string>

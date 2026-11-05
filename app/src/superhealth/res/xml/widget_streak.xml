@@ -8,6 +8,7 @@
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
+    android:widgetFeatures="hide_from_picker"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:previewLayout="@layout/glance_default_loading_layout"
     android:description="@string/widget_streak_desc"

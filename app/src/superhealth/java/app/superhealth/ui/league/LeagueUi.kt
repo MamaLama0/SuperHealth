@@ -166,8 +166,8 @@ fun LeagueScreen(nav: NavHostController) {
         IconButton(onClick = { nav.navigate("friends/add") }) { Icon(Icons.Rounded.PersonAdd, tr("Ajouter un ami")) }
         IconButton(onClick = { nav.navigate("league/settings") }) { Icon(Icons.Rounded.Tune, tr("Réglages du classement"), tint = Mf.colors.text) }
     }) {
-        Segmented(listOf(tr("Score global"), tr("XP semaine"), tr("Performances")), listOf("HEALTH", "XP", "PERF").indexOf(mode)) {
-            mode = listOf("HEALTH", "XP", "PERF")[it]
+        Segmented(listOf(tr("Score global"), tr("Performances")), listOf("HEALTH", "PERF").indexOf(mode).coerceAtLeast(0)) {
+            mode = listOf("HEALTH", "PERF")[it]
             part = null
             metricKey = if (mode == "PERF") metrics.firstOrNull()?.key else null
             month = false

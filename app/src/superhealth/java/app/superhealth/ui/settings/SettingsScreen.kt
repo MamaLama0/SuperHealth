@@ -227,24 +227,20 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 IconSwitchRow(tr("Coach IA"), if (sh.coachEnabled) tr("Inclus dans l'application") else tr("Désactivé"), Icons.Rounded.AutoAwesome, HealthHues.Mind, sh.coachEnabled,
                     onClick = { nav.go("coach/settings") }) { on -> SuperPrefs.update { it.copy(coachEnabled = on) } }
                 RowDivider(56.dp)
-                // interrupteur général du social : cartes, packs, duels, amis, fil et classement ; données et amis conservés
-                val social = sh.leagueEnabled || sh.socialFeedEnabled
-                IconSwitchRow(tr("Social"), if (social) tr("Cartes, duels, amis et fil") else tr("Désactivé, données et amis conservés"), Icons.Rounded.Group, HealthHues.Fitness, social,
-                    onClick = { nav.go("league/settings") }) { on ->
-                    SuperPrefs.update { it.copy(leagueEnabled = on, socialFeedEnabled = on) }; app.superhealth.league.LeagueWorker.schedule(photoCtx)
-                }
-                RowDivider(56.dp)
                 ModulesRow(nav)
             }
 
             // le Groupe tient en une ligne : fil, classement, partage et confidentialité se règlent sur sa propre page
+            // le Groupe se coupe d'un geste (cartes, packs, duels, amis, fil, classement ; données et amis conservés) ;
+            // toucher la ligne ouvre sa page : fil, classement, partage et confidentialité
             SettingsGroup(tr("Groupe et amis")) {
                 val league by app.superhealth.league.League.state.collectAsState()
-                SettingRow(tr("Groupe"), league.friends.size.takeIf { it > 0 }?.let { trf(if (it > 1) "%1\$s amis" else "%1\$s ami", it) },
-                    subtitle = when {
-                        !sh.leagueEnabled && !sh.socialFeedEnabled -> tr("Fil et classement désactivés")
-                        else -> tr("Fil, classement, partage et confidentialité")
-                    }, icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("league/settings") }
+                val social = sh.leagueEnabled || sh.socialFeedEnabled
+                val friends = league.friends.size.takeIf { it > 0 }?.let { trf(if (it > 1) "%1\$s amis" else "%1\$s ami", it) }
+                IconSwitchRow(tr("Groupe"), if (social) listOfNotNull(tr("Cartes, quêtes, échanges et fil"), friends).joinToString(" · ") else tr("Désactivé, données et amis conservés"),
+                    Icons.Rounded.Group, HealthHues.Fitness, social, onClick = { nav.go("league/settings") }) { on ->
+                    SuperPrefs.update { it.copy(leagueEnabled = on, socialFeedEnabled = on) }; app.superhealth.league.LeagueWorker.schedule(photoCtx)
+                }
             }
 
             SettingsGroup(tr("Écran d'accueil")) {

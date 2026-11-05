@@ -6,7 +6,7 @@ import app.superhealth.nutrition.data.Net
 import app.superhealth.ui.dashboard.Rings
 import app.superhealth.withRings
 import app.superhealth.withSocialCards
-import app.superhealth.withStreakHero
+import app.superhealth.withQuestHero
 import app.superhealth.CardSize
 import app.superhealth.packRows
 import app.superhealth.sizeOf
@@ -50,14 +50,16 @@ class ShellTest {
         assertFalse(DashCard.LEAGUE in withSocialCards(listOf(DashCard.CALORIES)))
     }
 
-    @Test fun streakHeroIsProposedFirstOnceWithoutReorderingExistingCards() {
+    @Test fun questHeroReplacesStreaksWithoutReorderingExistingCards() {
         val chosen = listOf(DashCard.CALORIES, DashCard.RINGS, DashCard.VITALS, DashCard.LEAGUE)
-        val next = withStreakHero(chosen)
-        assertEquals(DashCard.STREAKS, next.first())
+        val next = withQuestHero(chosen)
+        assertEquals(DashCard.QUESTS, next.first())
         assertEquals(chosen, next.drop(1))
-        assertEquals(next, withStreakHero(next))
-        assertEquals(DashCard.STREAKS, DashCard.defaults.first())
-        assertEquals(CardSize.L, SuperSettings().sizeOf(DashCard.STREAKS))
+        assertEquals(next, withQuestHero(next))
+        val old = withQuestHero(listOf(DashCard.STREAKS, DashCard.RINGS, DashCard.QUESTS))
+        assertEquals(listOf(DashCard.QUESTS, DashCard.RINGS), old)
+        assertEquals(DashCard.QUESTS, DashCard.defaults.first())
+        assertFalse(DashCard.STREAKS in DashCard.defaults)
     }
 
     @Test fun unknownDashboardCardsDoNotWipeSettings() {

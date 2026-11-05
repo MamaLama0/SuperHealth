@@ -36,7 +36,7 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 SuperPrefs.update { it.copy(socialFeedEnabled = on) }
             }
             RowDivider(56.dp)
-            IconSwitchRow(tr("Classement et progression"), if (sh.leagueEnabled) tr("Niveaux, séries et comparaisons entre amis")
+            IconSwitchRow(tr("Classement et progression"), if (sh.leagueEnabled) tr("Cartes, quêtes et comparaisons entre amis")
                 else tr("Les données et les amis restent conservés"), Icons.Rounded.EmojiEvents, HealthHues.Fitness, sh.leagueEnabled) { on ->
                 SuperPrefs.update { it.copy(leagueEnabled = on) }; LeagueWorker.schedule(ctx)
             }
@@ -94,7 +94,7 @@ fun GroupSharingScreen(nav: NavHostController) {
                 League.configure(ctx) { it.copy(shareProfilePhoto = on) }; LeagueWorker.onOpen(ctx, force = true)
             }
             RowDivider()
-            SwitchRow(tr("Niveaux, XP et séries"), tr("Votre progression agrégée, sans journal détaillé"), st.shareProgress) { on -> League.configure(ctx) { it.copy(shareProgress = on) } }
+            SwitchRow(tr("Progression"), tr("Votre progression agrégée, sans journal détaillé"), st.shareProgress) { on -> League.configure(ctx) { it.copy(shareProgress = on) } }
             RowDivider()
             SwitchRow(tr("Détail par partie"), tr("Partager les composantes de l'indice"), st.sharePillars) { League.setSharePillars(ctx, it) }
             if (available.any { it in setOf(Progression.Track.STRENGTH, Progression.Track.RUN, Progression.Track.HIKE) }) {
@@ -138,12 +138,6 @@ fun GroupScoreScreen(nav: NavHostController) {
                     }
                 }
             }
-        }
-        GroupHeader(tr("Progression et calcul"), Modifier.padding(start = 0.dp))
-        MfCard {
-            Text(tr("Une catégorie rapporte ses XP une fois par jour : nutrition 20, musculation 40, course et randonnée 30 chacune, pas 10, sommeil 10, esprit et mobilité 20. Un PR rapporte 10 XP, au plus deux par jour. Le total est plafonné à 120 XP par jour."), style = MaterialTheme.typography.bodySmall)
-            Text(tr("Les XP suivent vos activités et vos objectifs atteints. Ils sont recalculés depuis vos journaux. L'indice de santé reste un calcul séparé."), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
-            Text(tr("La reprise des données de montre est limitée aux 90 derniers jours. Une série qui atteint cette limite porte un + ; les périodes en cours ne sont pas déclarées perdues avant leur fin."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
         }
         GroupCard { SettingRow(tr("Comment c'est calculé"), subtitle = tr("Indice global de santé")) { healthRules = !healthRules } }
         if (healthRules) MfCard {

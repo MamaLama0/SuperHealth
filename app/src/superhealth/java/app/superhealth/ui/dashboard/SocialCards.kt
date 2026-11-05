@@ -187,24 +187,23 @@ internal fun dashboardScoreEntries(score: League.Score?, friends: List<League.Fr
 /** Une quête à reprendre ou une récompense à récupérer, sans répéter tout l'écran des quêtes. */
 @Composable
 internal fun WQuests(size: CardSize, icon: ImageVector, modifier: Modifier, refresh: Int, onClick: () -> Unit) {
+    // Les quêtes des cartes Athlète : celles du jour et de la semaine, qui rapportent les éclats des packs.
     val ctx = LocalContext.current
-    val state by League.state.collectAsState()
-    LaunchedEffect(refresh) { runCatching { ProgressRepository.compute(ctx) } }
-    val week = state.questWeeks.firstOrNull { it.start == Progression.week(LocalDate.now().toEpochDay()) }
-    val quest = dashboardQuest(week?.quests.orEmpty())
+    val st by app.superhealth.cards.CardStore.state.collectAsState()
+    LaunchedEffect(refresh) { app.superhealth.cards.CardStore.load(ctx) }
+    val quests = remember(st.claimed, st.quests, st.demo, refresh, app.superhealth.league.League.state.collectAsState().value.questWeeks) { runCatching { app.superhealth.cards.CardStore.quests() }.getOrDefault(emptyList()) }
+    val quest = quests.firstOrNull { it.complete && !it.claimed } ?: quests.firstOrNull { !it.complete } ?: quests.firstOrNull()
+    val ready = quests.count { it.complete && !it.claimed }
     val hue = DashCard.QUESTS.hue()
-    val title = quest?.let { tr(it.metric.title) } ?: tr(if (state.questFocus == null) "Choisir mes défis" else "Configurer mes suivis")
-    val progress = quest?.let { "${it.progress} / ${it.target}" } ?: "—"
-    val status = quest?.let { tr(if (it.claimed) "Récompense récupérée" else if (it.complete) "Récompense à récupérer" else "À votre rythme cette semaine") } ?: title
+    val title = quest?.let { tr(it.title) } ?: tr("Tes quêtes arrivent")
+    val progress = if (ready > 0) trf("%1\$s à récupérer", ready) else "${quests.count { it.claimed || it.complete }} / ${quests.size}"
     if (size == CardSize.W) SocialStrip(modifier, icon, tr("Quêtes"), title, progress, hue, onClick)
     else SocialCard(size, modifier, icon, tr("Quêtes"), hue, onClick) {
-        SocialValue(progress, if (size == CardSize.S) tr("Cette semaine") else title, hue, size == CardSize.S)
+        SocialValue(progress, if (size == CardSize.S) tr("Aujourd'hui") else title, hue, size == CardSize.S)
         if (size != CardSize.S && quest != null) {
             SocialBar(quest.progress.toFloat() / quest.target.coerceAtLeast(1), hue)
-            Text(if (quest.complete) status else trf("+%1\$s XP", quest.reward),
+            Text(if (quest.complete && !quest.claimed) tr("Récompense à récupérer") else "${quest.progress} / ${quest.target} · +${quest.reward} " + tr("éclats"),
                 style = MaterialTheme.typography.labelSmall, color = hue.onContainer())
-            if (size == CardSize.L && !quest.complete) Text(app.superhealth.ui.league.questGoal(quest),
-                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
     }
 }

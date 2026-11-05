@@ -121,6 +121,9 @@ object ProgressRepository {
             Progression.Track.entries.firstOrNull { it.name == track }?.let { t -> days.filter { it < from }.forEach { add(it, t) } }
         }
         var hasRecentHealthData = false
+        // Distance parcourue chaque jour (mètres) : celle du téléphone ou de la montre, sinon les pas × la foulée.
+        val distance = League.state.value.distanceDays.toMutableMap()
+        val stride = (nutrition.profile.heightCm.takeIf { it in 120.0..230.0 } ?: 170.0) * 0.415 / 100
         if (sh.has(Feature.HEALTH)) {
             Bridge.activityFacts(LocalDate.ofEpochDay(from).atStartOfDay(zone).toInstant().toEpochMilli()).filter { it.kind == Bridge.Kind.RUN && it.minutes > 0 }.forEach {
                 add(java.time.Instant.ofEpochMilli(it.start).atZone(zone).toLocalDate().toEpochDay(), Progression.Track.RUN)
@@ -131,6 +134,8 @@ object ProgressRepository {
                 val steps = Bridge.healthValue(ctx, Metric.STEPS, date)
                 val sleep = Bridge.healthValue(ctx, Metric.SLEEP, date)
                 if (d in (day - 14) until day && (steps != null || sleep != null)) hasRecentHealthData = true
+                (Bridge.healthValue(ctx, Metric.DISTANCE, date)?.takeIf { it > 0 }?.let { it * 1000 } ?: steps?.let { it * stride })
+                    ?.takeIf { it.isFinite() && it < 200_000 }?.let { distance[d] = it.toInt() }
                 if (DailyScore.validated(steps, nutrition.settings.stepGoalFor(date).takeIf { it > 0 }?.toDouble(), DailyScore.STEPS)) add(d, Progression.Track.STEPS)
                 if (DailyScore.validated(sleep, app.superhealth.health.data.Scores.sleepNeed(), DailyScore.SLEEP)) add(d, Progression.Track.SLEEP)
             }
@@ -168,13 +173,12 @@ object ProgressRepository {
             app.superhealth.training.domain.StrengthModel.trend(e, history, experience, bias, Long.MAX_VALUE)
                 ?.let { (slope, sd) -> slope < 0.0005 && sd < 0.003 } ?: (comparisons[id]!!.let { s -> s.size >= 3 && s.last().first - s.first().first >= 14 && WeeklyQuests.plateau(s.map { it.second }) })
         } >= 2
-        val selectedFocus = League.state.value.questFocus
         val previousWeek = League.state.value.questWeeks.firstOrNull { it.start == weekStart }
-        val questWeek = if (selectedFocus == null) null else WeeklyQuests.update(
-            previousWeek, day, tracks, questCounts(weekStart, day), selectedFocus,
-            WeeklyQuests.Evidence(questCounts(day - 14, day - 1), fullGoal, League.state.value.weeklyTargets["RUN"] ?: 2, stagnant, hasRecentHealthData, Progression.Track.HIKE in defaults), League.state.value.questWeeks)
-            .let { w -> w.copy(mirror = previousWeek?.mirror ?: WeeklyQuests.mirror(w, League.state.value.friends.map { WeeklyQuests.Rival(it.key, it.shown, it.progress) },
-                League.state.value.questWeeks, day)) }
+        val questWeek: WeeklyQuests.Week? = WeeklyQuests.update(
+            previousWeek, day, tracks, questCounts(weekStart, day), WeeklyQuests.AUTO,
+            WeeklyQuests.Evidence(questCounts(day - 14, day - 1), fullGoal, League.state.value.weeklyTargets["RUN"] ?: 2, stagnant, hasRecentHealthData), League.state.value.questWeeks)
+            // Plus de défi miroir : une quête partagée avec des amis devient un défi interactif (course ou ensemble, voir Economy).
+            .let { w -> w.copy(mirror = null) }
         if (questWeek?.mirror != null && previousWeek?.mirror == null)
             SocialNotifications.mirrorChallenge(ctx, questWeek.mirror.name, questWeek.mirror.metric)
         val weeks = if (questWeek == null) League.state.value.questWeeks else
@@ -185,12 +189,19 @@ object ProgressRepository {
         Progression.calculate(events, day, tracks, League.state.value.weeklyTargets + ("STRENGTH" to fullGoal) + ("HIKE" to (League.state.value.weeklyTargets["HIKE"] ?: 1)), records, events.keys.minOrNull() ?: day,
             sessions, strengthGoals).let { raw ->
             val limited = raw.summary.streaks.map { s -> if (s.track in setOf("RUN", "STEPS", "SLEEP")) s.copy(capped = s.current > 0 && (if (s.weekly) s.current * 7 >= day - (healthSince ?: from) - 5 else s.current >= day - (healthSince ?: from))) else s.copy(capped = false, percent = percent.takeIf { s.track == "FOOD" }) }
-            raw.copy(summary = raw.summary.copy(questsDone = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.complete }.map { it.metric.name }, totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
+            // Séries à la semaine (sans la randonnée) : 4 jours sur 7, ou l'objectif de séances et de sorties.
+            val weekly = Progression.weekStreaks(events, day, tracks.filter { it != Progression.Track.HIKE }) { t, w -> when (t) {
+                Progression.Track.STRENGTH -> strengthGoals[w] ?: fullGoal
+                Progression.Track.RUN -> League.state.value.weeklyTargets["RUN"] ?: 1
+                else -> 4 } }
+            raw.copy(summary = raw.summary.copy(weekly = weekly, questsDone = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.complete }.map { it.metric.name }, totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
                 "quests" to League.state.value.questsCompleted,
                 "sessions" to sessions.filterKeys { it <= day }.values.sum().toLong(),
                 "foodDays" to events.count { it.key <= day && Progression.Track.FOOD in it.value }.toLong(),
-                "mindMinutes" to mindfulMinutes.filterKeys { it <= day }.values.sum().toLong()
+                "mindMinutes" to mindfulMinutes.filterKeys { it <= day }.values.sum().toLong(),
+                "distanceKm" to distance.filterKeys { it <= day }.values.sumOf { it.toLong() } / 1000
             ) + HikingProgress.totals(hiking))).also { result ->
+                if (distance != League.state.value.distanceDays) League.configure(ctx) { it.copy(distanceDays = distance.toSortedMap().entries.toList().takeLast(4000).associate { e -> e.key to e.value }) }
                 current.value = result; lastKey = inputKey; lastAt = System.currentTimeMillis()
                 val previous = League.state.value
                 val earned = previous.earnedBadges + Achievements.unlocked(result.summary)
@@ -201,6 +212,8 @@ object ProgressRepository {
                     League.configure(ctx) { it.copy(progressNotificationBaseline = true, progressNotificationLevel = result.summary.level) }
                 if (earned != League.state.value.earnedBadges || observedHealth != League.state.value.observedHealthDays || healthSince != League.state.value.healthSince)
                     League.configure(ctx) { it.copy(earnedBadges = it.earnedBadges + earned, observedHealthDays = observedHealth, healthSince = healthSince) }
+                // Départ de la mise à jour Dopamine, dès que les badges déjà obtenus sont connus.
+                runCatching { app.superhealth.cards.CardStore.start(ctx, earned) }
             }
         }
     } }

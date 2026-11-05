@@ -42,14 +42,11 @@ fun SocialProfileScreen(nav: NavHostController) {
                     else Text(name.take(1).uppercase(), style = MaterialTheme.typography.headlineLarge)
                 }
                 Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
-                ProfileDecor(state.profileTitle, state.profileBadges)
-                Text(tr("Votre titre et vos badges sont visibles par vos amis."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
             }
             TextButton({ nav.go("social/preview") }) { Text(tr("Voir mon profil comme un ami")) }
-            TextButton({ nav.go("social/badges") }, Modifier.fillMaxWidth()) { Text(tr("Personnaliser mon profil")) }
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ProfileStat(result?.summary?.level?.toString() ?: "—", tr("Niveau"), Modifier.weight(1f)) { nav.go("progress") }
+            ProfileStat(app.superhealth.cards.CardStore.snapshot.collectAsState().value?.now?.ovr?.toString() ?: "—", tr("Note"), Modifier.weight(1f)) { nav.go("social") }
             ProfileStat(state.friends.size.toString(), tr("Amis"), Modifier.weight(1f)) { nav.go("friends") }
             ProfileStat(state.earnedBadges.size.toString(), tr("Badges"), Modifier.weight(1f)) { nav.go("social/badges") }
         }
@@ -65,7 +62,7 @@ fun SocialProfileScreen(nav: NavHostController) {
         GroupCard {
             SettingRow(tr("Quêtes de la semaine"), icon = Icons.Rounded.Flag) { nav.go("quests") }
             RowDivider(); SettingRow(tr("Ma progression"), icon = Icons.Rounded.TrendingUp) { nav.go("progress") }
-            RowDivider(); SettingRow(tr("Titres et badges"), icon = Icons.Rounded.WorkspacePremium) { nav.go("social/badges") }
+            RowDivider(); SettingRow(tr("Badges et séries"), icon = Icons.Rounded.WorkspacePremium) { nav.go("social/badges") }
         }
         SectionLabel(tr("Sur mon écran d'accueil"))
         GroupCard {
@@ -79,10 +76,6 @@ fun SocialProfileScreen(nav: NavHostController) {
     }
 }
 
-@Composable
-fun ProfileBadgesScreen(nav: NavHostController, initialCategory: String = "xp") {
-    DetailScaffold(tr("Titres et badges"), { nav.popBackStack() }, contentSpacing = 12.dp) { AchievementProfileEditor(initialCategory) }
-}
 
 @Composable
 private fun ProfileStat(value: String, label: String, modifier: Modifier, onClick: () -> Unit) {

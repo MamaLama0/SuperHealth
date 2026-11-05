@@ -7,6 +7,8 @@ object WeeklyQuests {
     private const val PRIMARY_REWARD = 80
     private const val SECONDARY_REWARD = 30
     const val MAX_WEEKLY_BONUS = PRIMARY_REWARD + SECONDARY_REWARD
+    /** Plus de choix de domaine : tout ce qui est suivi dans les paramètres peut devenir une quête. HIKING et HIKE restent pour les anciennes sauvegardes. */
+    val AUTO: Set<Focus> get() = Focus.entries.toSet() - Focus.HIKING
     @Serializable enum class Focus(val label: String) { NUTRITION("Nutrition"), STRENGTH("Musculation"), RUN("Course"), DAILY("Au quotidien"), HIKING("Randonnée") }
     @Serializable enum class Reason(val text: String) {
         START("Un premier objectif concret pour découvrir votre rythme."),
@@ -44,7 +46,7 @@ object WeeklyQuests {
     const val MIRROR_BONUS = 25
     /** Ami vu par le défi miroir : clé, nom affiché, progression partagée. */
     data class Rival(val key: String, val name: String, val progress: Progression.Summary?)
-    data class Evidence(val previous14: Map<Metric, Int> = emptyMap(), val strengthGoal: Int = 2, val runGoal: Int = 2, val plateau: Boolean = false, val healthData: Boolean = true, val hikingEnabled: Boolean = false)
+    data class Evidence(val previous14: Map<Metric, Int> = emptyMap(), val strengthGoal: Int = 2, val runGoal: Int = 2, val plateau: Boolean = false, val healthData: Boolean = true)
     private data class Candidate(val metric: Metric, val weakness: Double, val reason: Reason)
 
     fun update(previous: Week?, today: Long, tracked: Set<Progression.Track>, counts: Map<Metric, Int>, focuses: Set<Focus>, evidence: Evidence,
@@ -52,9 +54,9 @@ object WeeklyQuests {
         val start = Progression.week(today)
         val remaining = (start + 7 - today).toInt().coerceIn(1, 7)
         val old = previous?.takeIf { it.start == start }?.let { week ->
-            // Keep earned rewards; retire unavailable activities and the old generic pause quest.
+            // Keep earned rewards; retire unavailable activities, hiking and the old generic pause quest.
             week.copy(quests = week.quests.filter { q -> q.claimed ||
-                (q.metric.track in tracked && (q.metric != Metric.MIND || (evidence.previous14[Metric.MIND] ?: 0) > 0 || (counts[Metric.MIND] ?: 0) > 0)) })
+                (q.metric != Metric.HIKE && q.metric.track in tracked && (q.metric != Metric.MIND || (evidence.previous14[Metric.MIND] ?: 0) > 0 || (counts[Metric.MIND] ?: 0) > 0)) })
         }?.takeIf { it.quests.isNotEmpty() }
         val plan = old?.quests ?: run {
             fun n(metric: Metric) = evidence.previous14[metric] ?: 0
@@ -65,7 +67,6 @@ object WeeklyQuests {
                         (metric !in setOf(Metric.STEPS, Metric.RUN) || evidence.healthData) &&
                         (metric != Metric.MIND || n(metric) > 0)) add(Candidate(metric, if (metric in setOf(Metric.STEPS, Metric.RUN) && !evidence.healthData) .2 else deficit, if (metric in setOf(Metric.STEPS, Metric.RUN) && !evidence.healthData) Reason.START else if (n(metric) == 0 && evidence.previous14.values.all { it == 0 }) Reason.START else if (deficit < .25) Reason.MAINTAIN else reason))
                 }
-                if(evidence.hikingEnabled) option(Metric.HIKE, gap(Metric.HIKE, 2), Reason.HIKING)
                 option(Metric.FOOD, gap(Metric.FOOD, 14), Reason.FOOD_GAP)
                 val strengthGap = gap(Metric.STRENGTH, evidence.strengthGoal * 2)
                 if (strengthGap >= .5) option(Metric.STRENGTH, strengthGap, Reason.STRENGTH_GAP)

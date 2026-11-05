@@ -86,7 +86,7 @@ data class CardFace(
     /** Niveau du fond (doublons), qui fixe son bonus. */
     val level: Int = 1,
 ) {
-    val bonus get() = Bonus.points(stats, background?.card, level)
+    val bonus get() = Bonus.points(stats, background?.card, level, background?.finish ?: Finish.NORMALE)
 }
 
 /**
@@ -329,7 +329,7 @@ private fun Back(face: CardFace, art: CardDef, tier: Tier, u: Dp) {
             stats?.mostProfitable?.let {
                 Text(tr("Le plus rentable") + " : " + tr(it.mine) + " (${stats[it]})", color = Color(0xFFFFD36B), fontSize = su * 4.2f, fontWeight = FontWeight.Bold)
             }
-            if (!art.neutral) Text(art.elements.joinToString(" + ") { tr(it.label) } + " · " + tr(art.rarity.label) + " · " + tr("Niv.") + " ${face.level} · " + Bonus.label(art, face.level),
+            if (!art.neutral) Text(art.elements.joinToString(" + ") { tr(it.label) } + " · " + art.rarityText() + " · " + tr("Niv.") + " ${face.level} · " + Bonus.label(art, face.level, face.background?.finish ?: Finish.NORMALE),
                 color = art.element.mid.c(), fontSize = su * 3.6f, fontWeight = FontWeight.Bold)
             Text(tr("Touchez pour retourner"), color = Color.White.copy(alpha = 0.45f), fontSize = su * 3.2f, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
@@ -358,14 +358,19 @@ fun CollectibleCard(card: CardDef, finish: Finish, modifier: Modifier = Modifier
         RarityFrame(card.rarity, u, { time }) {
             CardArt(card, finish, Modifier.fillMaxSize(), tilt, { time }, holo = shiny)
             Row(Modifier.align(Alignment.TopStart).padding(u * 7), horizontalArrangement = Arrangement.spacedBy(-u * 3)) { card.elements.forEach { ElementChip(it, u * 1.3f) } }
-            if (finish != Finish.NORMALE) Text(if (finish == Finish.ANIMEE) "✦✦" else "✦", color = Color.White, fontSize = su * 8, modifier = Modifier.align(Alignment.TopEnd).padding(u * 7))
+            if (finish != Finish.NORMALE) Text(when (finish) { Finish.CHROMATIQUE -> "✺"; Finish.ANIMEE -> "✦✦"; else -> "✦" }, color = Color.White, fontSize = su * 8, modifier = Modifier.align(Alignment.TopEnd).padding(u * 7))
+            // Variante chromatique : liseré arc-en-ciel.
+            if (finish == Finish.CHROMATIQUE) Canvas(Modifier.fillMaxSize()) {
+                drawRoundRect(Brush.sweepGradient(listOf(Color(0xFFFF4F7B), Color(0xFFFFD36B), Color(0xFF39D98A), Color(0xFF4FA8FF), Color(0xFFB46CFF), Color(0xFFFF4F7B))),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.05f), style = Stroke(size.width * 0.018f))
+            }
             // Bandeau de rareté : couleur, gemmes et nom, lisibles même en vignette.
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f), Color.Black.copy(alpha = 0.85f))))
                 .padding(horizontal = u * 6).padding(top = u * 10, bottom = u * 7), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(card.name, color = Color.White, fontSize = su * 6.5f, fontWeight = FontWeight.Bold, maxLines = 2, textAlign = TextAlign.Center, lineHeight = su * 7.5f)
                 Row(Modifier.padding(top = u * 2).clip(RoundedCornerShape(50)).background(if (card.rarity == Rarity.EPIQUE) Brush.horizontalGradient(rc) else Brush.horizontalGradient(listOf(rc[3], rc[1], rc[3]))).padding(horizontal = u * 4, vertical = u * 1),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text(card.rarity.symbol + " " + tr(card.rarity.label).uppercase(), color = Color.White, fontSize = su * 4.2f, fontWeight = FontWeight.Black, letterSpacing = su * 0.3f)
+                    Text(card.rarity.symbol + " " + card.rarityText().uppercase(), color = Color.White, fontSize = su * 4.2f, fontWeight = FontWeight.Black, letterSpacing = su * 0.3f)
                 }
                 Text(card.code + (level?.let { "  ·  " + "●".repeat(it) + "○".repeat(Levels.MAX - it) } ?: ""), color = Color.White.copy(alpha = 0.6f), fontSize = su * 4.2f,
                     fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = u * 1.4f))
@@ -374,19 +379,54 @@ fun CollectibleCard(card: CardDef, finish: Finish, modifier: Modifier = Modifier
     }
 }
 
+/**
+ * Dos de carte. Sorti d'un booster, il prend le thème du biome : fond à sa couleur, motif de la matière (veines de
+ * lave, facettes de glace, éclairs, courbes de niveau) et l'haltère au centre d'un cercle runique. [gold] : pack doré.
+ */
+/** « Épique », « Commune Duo » (traduit). */
+internal fun CardDef.rarityText() = tr(rarity.label) + if (duo) " Duo" else ""
+
 @Composable
-fun CardBackside(modifier: Modifier = Modifier, glow: Color? = null, time: () -> Float = { 0f }) {
+fun CardBackside(modifier: Modifier = Modifier, glow: Color? = null, time: () -> Float = { 0f }, element: Element? = null, gold: Boolean = false) {
     BoxWithConstraints(modifier.aspectRatio(0.714f)) {
         val u = maxWidth / 100
-        Box(Modifier.fillMaxSize().clip(CardShape).background(Brush.linearGradient(listOf(Color(0xFF20263A), Color(0xFF0A0C14)))).border(u * 1.6f, glow ?: Color(0xFF3A4260), CardShape)) {
+        val su = with(LocalDensity.current) { u.toSp() }
+        val accent = if (gold) Gold else element?.mid?.c()
+        val top = element?.let { androidx.compose.ui.graphics.lerp(it.outer.c(), Color(0xFF0A0C14), 0.55f) } ?: Color(0xFF20263A)
+        val edge = glow ?: accent?.copy(alpha = 0.8f) ?: Color(0xFF3A4260)
+        Box(Modifier.fillMaxSize().clip(CardShape).background(Brush.linearGradient(listOf(top, Color(0xFF07080D)))).border(u * 1.6f, edge, CardShape)) {
             Canvas(Modifier.fillMaxSize()) {
-                val step = size.width / 7f
-                for (i in -10..20) drawLine(Color.White.copy(alpha = 0.05f), Offset(i * step, 0f), Offset(i * step - size.height * 0.6f, size.height), strokeWidth = step * 0.18f)
-                if (glow != null) drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = 0.55f + 0.25f * kotlin.math.sin(time() * 5f)), Color.Transparent)), radius = size.width * 0.75f)
+                val w = size.width; val h = size.height; val c = Offset(w / 2, h * 0.46f)
+                val line = (accent ?: Color.White).copy(alpha = 0.16f); val sw = w * 0.006f
+                when (element) {
+                    // Veines de lave qui serpentent.
+                    Element.FEU -> for (k in 0 until 7) { val path = Path(); val x0 = w * (k + 0.5f) / 7
+                        for (j in 0..12) { val y = h * j / 12f; val x = x0 + w * 0.05f * kotlin.math.sin(j * 1.3f + k * 2.1f); if (j == 0) path.moveTo(x, y) else path.lineTo(x, y) }
+                        drawPath(path, line, style = Stroke(sw * (1.5f + k % 3))) }
+                    // Facettes de glace : un treillis de losanges.
+                    Element.GLACE -> { val step = w / 6f
+                        for (i in -8..14) { drawLine(line, Offset(i * step, 0f), Offset(i * step + h * 0.58f, h), sw); drawLine(line, Offset(i * step, 0f), Offset(i * step - h * 0.58f, h), sw) } }
+                    // Éclairs en diagonale.
+                    Element.FOUDRE -> for (k in 0 until 6) { val path = Path(); val x0 = w * (k - 1) / 4f
+                        for (j in 0..8) { val y = h * j / 8f; val x = x0 + y * 0.35f + (if (j % 2 == 0) -1 else 1) * w * 0.035f; if (j == 0) path.moveTo(x, y) else path.lineTo(x, y) }
+                        drawPath(path, line, style = Stroke(sw * 1.4f)) }
+                    // Courbes de niveau autour du sommet.
+                    Element.TERRE -> for (k in 1..9) drawOval(line, Offset(c.x - w * 0.09f * k, c.y - h * 0.05f * k), Size(w * 0.18f * k, h * 0.1f * k), style = Stroke(sw))
+                    null -> { val step = w / 7f; for (i in -10..20) drawLine(Color.White.copy(alpha = 0.05f), Offset(i * step, 0f), Offset(i * step - h * 0.6f, h), strokeWidth = step * 0.18f) }
+                }
+                val halo = glow ?: accent
+                if (halo != null) drawCircle(Brush.radialGradient(listOf(halo.copy(alpha = 0.42f + 0.18f * kotlin.math.sin(time() * 4f)), Color.Transparent), c, w * 0.62f), w * 0.62f, c)
+                if (accent != null) with(Vfx) { magicCircle(c, w * 0.3f, time() * 0.6f, accent, 1f, alpha = 0.55f) }
+                if (gold) for (k in 0 until 2) drawRect(Brush.linearGradient(listOf(Color.Transparent, Gold.copy(alpha = 0.28f), Color.Transparent),
+                    Offset(w * (-0.6f + k * 0.8f) + (time() * 0.25f % 1f) * w * 1.6f, 0f), Offset(w * (-0.2f + k * 0.8f) + (time() * 0.25f % 1f) * w * 1.6f, h)), blendMode = BlendMode.Plus)
             }
-            Icon(Icons.Rounded.FitnessCenter, null, Modifier.align(Alignment.Center).size(u * 30), tint = Color.White.copy(alpha = 0.75f))
-            Text("SUPERHEALTH", color = Color.White.copy(alpha = 0.55f), fontWeight = FontWeight.Black, fontSize = with(LocalDensity.current) { (u * 6).toSp() },
-                letterSpacing = with(LocalDensity.current) { (u * 1.2f).toSp() }, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = u * 14))
+            Icon(Icons.Rounded.FitnessCenter, null, Modifier.align(Alignment.Center).offset(y = -u * 6).size(u * 30),
+                tint = accent?.let { androidx.compose.ui.graphics.lerp(Color.White, it, 0.35f) } ?: Color.White.copy(alpha = 0.75f))
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom = u * 11), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("SUPERHEALTH", color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Black, fontSize = su * 6, letterSpacing = su * 1.2f)
+                val sub = if (gold) "PACK DORÉ" else element?.let { tr(it.label).uppercase() }
+                if (sub != null) Text(sub, color = (accent ?: Color.White).copy(alpha = 0.85f), fontWeight = FontWeight.Bold, fontSize = su * 4.2f, letterSpacing = su * 0.9f, modifier = Modifier.padding(top = u * 1))
+            }
         }
     }
 }
@@ -409,4 +449,17 @@ object Rumble {
     fun thud(ctx: Context) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_THUD to 1f) else Unit
     fun rise(ctx: Context) = if (Build.VERSION.SDK_INT >= 31) play(ctx, VibrationEffect.Composition.PRIMITIVE_QUICK_RISE to 0.7f, VibrationEffect.Composition.PRIMITIVE_SPIN to 0.9f) else Unit
     fun reveal(ctx: Context) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_THUD to 1f, VibrationEffect.Composition.PRIMITIVE_CLICK to 1f, VibrationEffect.Composition.PRIMITIVE_CLICK to 0.6f) else Unit
+}
+
+/** Carte partagée dans le Fil ou un Cercle : le fond lui-même, vivant, avec son niveau et la note de l'auteur. */
+@Composable
+fun SharedCardVisual(shared: CardShare.Shared, modifier: Modifier = Modifier) {
+    val tilt by rememberTilt()
+    Column(modifier.fillMaxWidth().padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        CollectibleCard(shared.pull.card, shared.pull.finish, Modifier.fillMaxWidth(0.62f), live = true, tilt = { tilt }, level = shared.level)
+        shared.ovr?.let { ovr ->
+            val tier = Tier.of(ovr)
+            Text(tr("Note") + " $ovr · " + tr(tier.label), color = rarityColors(shared.pull.card.rarity)[1], fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+    }
 }

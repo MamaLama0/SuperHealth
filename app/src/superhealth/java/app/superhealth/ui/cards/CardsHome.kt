@@ -35,6 +35,7 @@ import app.superhealth.cards.*
 import app.superhealth.league.League
 import app.superhealth.ui.go
 import app.superhealth.ui.tr
+import app.superhealth.ui.trf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -111,7 +112,7 @@ internal fun Wallet(state: CardStore.State, modifier: Modifier = Modifier) {
     Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         WalletChip(Icons.Rounded.Diamond, "${state.eclats} " + tr("éclats"), EclatColor)
         if (state.packsAvailable > 0) WalletChip(Icons.Rounded.CardGiftcard, "${state.packsAvailable} " + tr(if (state.packsAvailable > 1) "packs offerts" else "pack offert"), Color(0xFF9AA8FF))
-        if (!state.demo) WalletChip(Icons.Rounded.CalendarMonth, tr("Semaine") + " ${state.weekEarned}/${state.weekCap}", Color.White.copy(alpha = 0.7f))
+        WalletChip(Icons.Rounded.AutoAwesome, if (state.nextGold) tr("Prochain pack doré") else tr("Doré dans") + " ${state.untilGold}", Gold)
     }
 }
 
@@ -171,6 +172,10 @@ fun CardsHome(nav: NavHostController) {
     val tint = (bg?.card ?: Catalog.defaultFor(stats?.tier ?: Tier.BRONZE)).palette.b.c()
     val claimable = remember(state.claimed, snap) { runCatching { CardStore.quests().count { it.complete && !it.claimed } }.getOrDefault(0) }
     CardScaffold("Ma carte", { nav.popBackStack() }, tint, action = {
+        // Partager ma carte : son fond, son niveau et la note globale, rien d'autre.
+        if (bg != null) IconButton({ CardShare.open(bg, state.level(bg.card), CardShare.Event.ATHLETE, stats?.ovr); nav.go("social/compose") }) {
+            Icon(Icons.Rounded.Share, tr("Partager"), tint = Color.White.copy(alpha = 0.7f))
+        }
         IconButton({ nav.go("league/settings") }) { Icon(Icons.Rounded.Settings, tr("Réglages"), tint = Color.White.copy(alpha = 0.7f)) }
     }) {
         Wallet(state, Modifier.padding(top = 4.dp))
@@ -206,7 +211,7 @@ fun CardsHome(nav: NavHostController) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(InkCard).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(tr("Mode démo"), color = Color.White, fontWeight = FontWeight.Bold)
-                    Text(tr("Carte d'exemple, rival fictif, +10 packs, +500 éclats, épique au 1er pack, sans serveur"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+                    Text(tr("Carte d'exemple, rival fictif, +10 packs, +500 éclats, 1er pack doré, sans serveur"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
                 }
                 Switch(state.demo, { on -> CardStore.setDemo(ctx, on); CardStore.snapshot.value = null })
             }
@@ -251,30 +256,27 @@ internal fun LinkRow(icon: ImageVector, title: String, value: String?, onClick: 
 fun CardQuestsScreen(nav: NavHostController) {
     val ctx = LocalContext.current
     val state by CardStore.state.collectAsState()
-    val quests = remember(state.claimed) { runCatching { CardStore.quests() }.getOrDefault(emptyList()) }
+    val league by app.superhealth.league.League.state.collectAsState()
+    LaunchedEffect(Unit) { runCatching { app.superhealth.league.ProgressRepository.compute(ctx) } }
+    val quests = remember(state.claimed, state.quests, league.questWeeks) { runCatching { CardStore.quests() }.getOrDefault(emptyList()) }
     val haptics = app.superhealth.ui.rememberHaptics()
     val scope = rememberCoroutineScope()
     var error by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { runCatching { CardStore.refresh(ctx) } }
     CardScaffold("Quêtes", { nav.popBackStack() }, Gold) {
         Wallet(state)
-        Text(tr("Séances et quêtes rapportent des éclats : ${CardStore.PACK_PRICE} éclats = un pack. En tenant ton objectif de séances, compte 2 à 3 packs par semaine ; au-delà de ${Economy.Rewards.WEEK_CAP} éclats, la semaine est pleine."),
+        Text(tr("Deux ou trois quêtes chaque jour, une grande quête chaque semaine : elles suivent ton rythme et rapportent des éclats pour tes packs."),
             color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
-        // Barre de la semaine : ce que le serveur a déjà crédité, jusqu'au plafond.
-        Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
-            Box(Modifier.fillMaxWidth((state.weekEarned / state.weekCap.toFloat()).coerceIn(0.02f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Color(0xFF2F6FDE), EclatColor))))
-        }
         error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
-        for (group in listOf("Aujourd'hui" to "d:", "Cette semaine" to "w:")) {
+        for (group in listOf("Aujourd'hui" to false, "Cette semaine" to true)) {
             SectionTitle(group.first)
-            quests.filter { it.id.startsWith(group.second) }.forEach { q -> QuestRow(q) { scope.launch {
+            quests.filter { it.weekly == group.second }.sortedByDescending { it.challenge != null }.forEach { q -> QuestRow(q) { scope.launch {
                 runCatching { CardStore.claim(ctx, q) }.onSuccess { error = null; haptics.confirm(); Rumble.reveal(ctx) }.onFailure { error = it.message }
             } } }
         }
-        SectionTitle("Quête principale")
+        // La quête de la semaine se règle sur les domaines choisis (musculation, nutrition, course, quotidien…).
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).clickable { nav.go("quests") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            DifficultyPill(CardStore.Difficulty.NORMAL)
-            Text(tr("Tes quêtes adaptées de la semaine (+${Economy.Rewards.LEAGUE} éclats chacune, 3 par semaine)"), color = Color.White, modifier = Modifier.padding(start = 10.dp).weight(1f))
+            Text(tr(if (quests.none { it.weekly }) "Choisir les domaines de ma quête de la semaine" else "Domaines de ma quête de la semaine"), color = Color.White, modifier = Modifier.weight(1f))
             Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.4f))
         }
         Spacer(Modifier.height(32.dp))
@@ -296,6 +298,8 @@ private fun QuestRow(q: CardStore.Quest, onClaim: () -> Unit) {
             Text("+${q.reward} " + tr("éclats"), color = EclatColor, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
         }
         Text(tr(q.title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 8.dp))
+        // Défi entre amis : qui l'a reçue, et ce qu'il faut pour le bonus.
+        q.note?.let { Text("⚔ " + tr(it), color = Color(0xFFFF8A80), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)) }
         Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
                 Box(Modifier.fillMaxWidth((q.progress.toFloat() / q.target).coerceIn(0.02f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(color))
@@ -314,14 +318,14 @@ private fun QuestRow(q: CardStore.Quest, onClaim: () -> Unit) {
 @Composable
 private fun BackgroundBonus(bg: Pull, level: Int) {
     val card = bg.card
-    val copies = CardStore.state.collectAsState().value.copies(card)
+    val st = CardStore.state.collectAsState().value
     Row(Modifier.padding(top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         card.elements.forEach { ElementChip(it, 3.2.dp, Modifier.padding(end = 6.dp)) }
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
             Text(card.name + " · " + tr("Niv.") + " $level", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(Bonus.label(card, level) + " " + tr("en duel"), color = card.element.mid.c(), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+            Text(Bonus.label(bg, level) + " " + tr("en duel"), color = card.element.mid.c(), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
         }
-        Levels.progress(copies)?.let { (have, need) -> Text("$have/$need " + tr("doublons"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp) }
+        st.fuseCost(card)?.let { need -> Text("${st.spare(card).coerceAtMost(need)}/$need " + tr("doublons"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp) }
             ?: Text(tr("Niveau max"), color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
     }
 }
@@ -329,17 +333,11 @@ private fun BackgroundBonus(bg: Pull, level: Int) {
 @Composable
 fun PackRatesScreen(nav: NavHostController) {
     CardScaffold("Taux des packs", { nav.popBackStack() }) {
-        Text(tr("Deux cartes par pack, et une troisième une fois sur cinq. Chaque booster ne contient que les fonds de son biome, plus les épiques qui le croisent. Aucun achat possible : tout se gagne à l'entraînement."),
+        Text(tr("Trois cartes par pack, et une quatrième une fois sur quatre. Chaque booster contient les 36 fonds de son biome et les duos qui le croisent. Une carte est soit un duo (1 chance sur 200, deux stats renforcées), soit normale, brillante, animée ou chromatique : rien ne se cumule. Pas de boutique : tout se gagne à l'entraînement ou s'échange entre amis."),
             color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-        SectionTitle("Par pack")
-        Column(Modifier.clip(RoundedCornerShape(18.dp)).background(InkCard).padding(vertical = 4.dp)) {
-            for (r in listOf(Rarity.PEU_COMMUNE, Rarity.RARE, Rarity.EPIQUE)) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Text(r.symbol + "  " + tr(r.label) + (if (r != Rarity.EPIQUE) " " + tr("ou mieux") else ""), color = r.color.c(), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("%.1f %%".format(PackEngine.perPack(r) * 100).replace('.', ',') + if (r >= Rarity.RARE) "  ·  " + "%.1f %%".format(PackEngine.withPity(r) * 100).replace('.', ',') + " " + tr("garantie comprise") else "",
-                    color = Color.White, fontWeight = FontWeight.Bold)
-            }
-        }
-        for ((title, table) in listOf("1ʳᵉ carte" to PackEngine.slot1, "2ᵉ carte" to PackEngine.slot2, "3ᵉ carte (1 pack sur 5)" to PackEngine.slot3)) {
+        SectionTitle("Charte des cartes")
+        EffectChart()
+        for ((title, table) in listOf("1ʳᵉ carte" to PackEngine.slot1, "2ᵉ carte" to PackEngine.slot2, "3ᵉ carte" to PackEngine.slot3, "4ᵉ carte (1 pack sur 4)" to PackEngine.slot4)) {
             SectionTitle(title)
             Column(Modifier.clip(RoundedCornerShape(18.dp)).background(InkCard).padding(vertical = 4.dp)) {
                 table.forEach { (r, w) ->
@@ -350,17 +348,19 @@ fun PackRatesScreen(nav: NavHostController) {
                 }
             }
         }
-        SectionTitle("Garanties")
+        SectionTitle("Pack doré et Prisme")
         Column(Modifier.clip(RoundedCornerShape(18.dp)).background(InkCard).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(tr("Pack Prisme : 2 rares et 1 épique, 1 pack sur 1 000."), color = Color.White)
-            Text(tr("Une Rare ou mieux au plus tard au ${PackEngine.RARE_PITY}ᵉ pack, une épique au ${PackEngine.EPIC_PITY}ᵉ."), color = Color.White)
-            Text(tr("Finitions : brillante 8 %, animée 1,5 % (Rare et plus) ; brillante 3 % sinon."), color = Color.White)
+            Text(trf("Un pack sur %1\$s est doré : chances de rare, d'épique, de duo, d'animée, de chromatique et de Prisme multipliées par 3.", PackEngine.GOLD_EVERY), color = Color.White)
+            Text(tr("Pack Prisme : 3 rares et 1 épique, 1 pack sur 1 000 (3 sur 1 000 en doré)."), color = Color.White)
+            Text(tr("Effets par carte (chromatique / animée / brillante) :") + "\n" + PackEngine.EFFECTS.entries.joinToString("\n") { (r, e) ->
+                r.symbol + " " + tr(r.label) + " : " + listOf(e.first, e.second, e.third).joinToString(" / ") { "%.1f %%".format(java.util.Locale.FRANCE, it).replace(",0 ", " ") } } +
+                "\n" + tr("Duo : 0,5 % à toute rareté, toujours en finition normale. Chromatique et animée triplées en doré."), color = Color.White)
         }
         SectionTitle("Doublons et bonus")
         Column(Modifier.clip(RoundedCornerShape(18.dp)).background(InkCard).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(tr("Chaque doublon fait monter le fond d'un niveau : 1, 2, 3 puis 4 doublons pour les niveaux 2 à 5. Au niveau 5, un doublon rend des éclats. Un fond qui manque peut aussi s'acheter en éclats dans l'album."), color = Color.White)
+            Text(tr("Fusionne tes doublons pour renforcer un fond : 2 exemplaires pour +10 % d'effet, 4 pour +20 %, 16 pour +30 %, 256 pour +40 %, contre 20, 40, 80 puis 160 éclats. Un doublon peut aussi s'échanger avec un ami, contre une autre carte de même rareté ou contre des éclats."), color = Color.White)
             Text(tr("Le fond équipé renforce la stat de son biome en duel :") + " " + Rarity.entries.joinToString(" · ") { it.symbol + " " + (it.bonus / 10.0).toString().replace(".0", "").replace('.', ',') + " %" } +
-                tr(", +0,1 % par niveau. Une épique renforce ses deux stats. Régularité et cardio ne se boostent pas. La note globale ne change pas."), color = Color.White)
+                tr(", × 1,1 en brillante, × 1,25 en animée, × 1,5 en chromatique. Chaque fusion ajoute 10 % à ce bonus. Un duo renforce ses deux stats. Régularité et cardio ne se boostent pas. La note globale ne change pas."), color = Color.White)
             Text(Element.entries.joinToString("\n") { tr(it.label) + " → " + it.stat.code + " · " + tr(it.tagline) }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
         }
         Spacer(Modifier.height(32.dp))

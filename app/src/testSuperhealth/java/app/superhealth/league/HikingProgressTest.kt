@@ -28,30 +28,18 @@ class HikingProgressTest {
         val updated=recorded.copy(meters=2700.0)
         assertEquals(listOf(updated),HikingProgress.merge(listOf(updated),merged,now))
     }
-    @Test fun hikingBadgesUseRealTotalsAndCanDecorateTheSocialProfile() {
+    @Test fun hikingTotalsUseRealOutings() {
         val rows=listOf(outing(),outing("two").copy(start=now-7200000,end=now-5400000))
         val totals=HikingProgress.totals(rows)
         assertEquals(2L,totals["hikes"])
         assertEquals(5000L,totals["hikeMeters"])
-        val earned=Achievements.unlocked(Progression.Summary(totals=totals))
-        assertTrue("hikes_1" in earned)
-        assertFalse("hikes_5" in earned)
-        assertTrue("hike_ascent_100" in earned)
-        assertTrue(Achievements.validDecor("hikes_1",listOf("hikes_1")))
-        assertTrue(Achievements.catalog.filter{it.id.startsWith("hike")}.all{it.asset.startsWith("game/hiking/")})
     }
-    @Test fun hikingQuestsAreOptInAchievableAndClaimedOnlyOnce() {
+    @Test fun hikingNeverBecomesAWeeklyQuest() {
         val monday=LocalDate.of(2026,11,2).toEpochDay()
-        val track=setOf(Progression.Track.HIKE);val focus=setOf(WeeklyQuests.Focus.HIKING)
-        assertTrue(WeeklyQuests.update(null,monday,track,emptyMap(),focus,WeeklyQuests.Evidence()).quests.isEmpty())
-        val first=WeeklyQuests.update(null,monday,track,emptyMap(),focus,WeeklyQuests.Evidence(hikingEnabled=true))
-        assertEquals(WeeklyQuests.Metric.HIKE,first.quests.single().metric)
-        assertEquals(1,first.quests.single().target)
-        val complete=WeeklyQuests.update(first,monday,track,mapOf(WeeklyQuests.Metric.HIKE to 1),focus,WeeklyQuests.Evidence(hikingEnabled=true))
-        val claimed=WeeklyQuests.claim(complete,WeeklyQuests.Metric.HIKE,monday)
-        assertTrue(claimed.quests.single().claimed)
-        assertEquals(claimed,WeeklyQuests.claim(claimed,WeeklyQuests.Metric.HIKE,monday))
-        assertEquals(80,claimed.quests.single().reward)
+        val track=setOf(Progression.Track.HIKE)
+        assertTrue(WeeklyQuests.update(null,monday,track,emptyMap(),WeeklyQuests.AUTO,WeeklyQuests.Evidence()).quests.isEmpty())
+        val old=WeeklyQuests.Week(monday,listOf(WeeklyQuests.Quest(WeeklyQuests.Metric.HIKE,1)))
+        assertTrue(WeeklyQuests.update(old,monday,track,emptyMap(),WeeklyQuests.AUTO,WeeklyQuests.Evidence()).quests.none { it.metric==WeeklyQuests.Metric.HIKE })
     }
     @Test fun hikingXpStaysOncePerDayWithinTheExistingDailyCap() {
         val day=LocalDate.now().toEpochDay()

@@ -75,19 +75,14 @@ class GroupTestActivity : Activity() {
                         val next=previous.copy(completed=previous.completed.filterNot{it.route==route.id}+log)
                         File(filesDir,"hiking/library.json").writeText(Json.encodeToString(app.superhealth.hiking.Hiking.Library.serializer(),next))
                         app.superhealth.hiking.Hiking.load(this@GroupTestActivity)
-                        League.configure(this@GroupTestActivity){it.copy(questFocus=setOf(WeeklyQuests.Focus.HIKING))}
                         val progress=ProgressRepository.compute(this@GroupTestActivity)
                         check((progress.summary.totals["hikes"] ?: 0)>=1)
-                        check("hikes_1" in League.state.value.earnedBadges)
-                        val week=League.state.value.questWeeks.first{it.start==app.superhealth.league.Progression.week(java.time.LocalDate.now().toEpochDay())}
-                        check(week.quests.any{it.metric==WeeklyQuests.Metric.HIKE && it.complete})
-                        League.claimQuest(this@GroupTestActivity,WeeklyQuests.Metric.HIKE)
                         val shared=SharedActivity.hikingDraft(route,log).shared(route=false,details=true)
                         check(shared.activity?.route==null)
                         check(SocialPosts.publish(this@GroupTestActivity,"Randonnée synthétique de test",shared,null).sent)
                         League.configure(this@GroupTestActivity){it.copy(profileTitle="hikes_1",profileBadges=listOf("hikes_1"))}
                         Relay.sync(this@GroupTestActivity)
-                        File(directory,"hiking-rewards.txt").writeText("badge=hikes_1 quest=complete gpsShared=false")
+                        File(directory,"hiking-rewards.txt").writeText("gpsShared=false")
                     }
                     "hiking-search" -> {
                         val results = app.superhealth.hiking.Hiking.search(intent.getStringExtra("place") ?: "Chamonix")

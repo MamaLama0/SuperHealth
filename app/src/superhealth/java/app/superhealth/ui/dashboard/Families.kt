@@ -544,7 +544,7 @@ internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: Na
         c == DashCard.MEDITATION -> WMeditation(size, i, m) { openSection("MEDITATION", tab) }
         c == DashCard.STRETCH -> WEtirements(size, i, m) { openSection("STRETCH", tab) }
         c == DashCard.LEAGUE -> WClassement(size, i, m, refresh) { nav.go("league") }
-        c == DashCard.QUESTS -> WQuests(size, i, m, refresh) { nav.go("quests") }
+        c == DashCard.QUESTS -> WQuests(size, i, m, refresh) { nav.go("cards/quests") }
         c == DashCard.PROGRESSION -> WProgression(size, i, m, refresh) { nav.go("progress") }
         c == DashCard.FRIENDS -> WFriends(size, i, m) { nav.go("friends") }
         c == DashCard.STREAKS -> WStreaksHero(size, m, refresh) { nav.go("progress") }

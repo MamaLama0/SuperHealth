@@ -105,7 +105,7 @@ fun FriendsScreen(nav: NavHostController) {
                             Text(if (f.time <= 0 && f.remote == null) tr("Nouvelle invitation nécessaire") else if (f.time <= 0) tr("En attente d'actualisation") else if (f.model != League.currentModel) tr("Ancienne carte : demander une mise à jour") else trf("Mis à jour : %1\$s", Instant.ofEpochSecond(f.time).atZone(ZoneId.systemDefault()).toLocalDate().toString()),
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                         }
-                        f.progress?.let { Text(trf("Niveau %1\$s", it.level), style = MaterialTheme.typography.labelMedium, color = LeagueHue.onContainer()) }
+                        f.athlete?.ovr?.let { Text(trf("Note %1\$s", it), style = MaterialTheme.typography.labelMedium, color = LeagueHue.onContainer()) }
                         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, Modifier.padding(start = 8.dp).size(20.dp), tint = Mf.colors.textTertiary)
                     }
                 }
@@ -146,7 +146,6 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(12.dp))
-            ProfileDecor(f.profileTitle, f.profileBadges)
             FriendProgressDetails(f)
             if (f.pillars.isNotEmpty()) {
                 SectionLabel(tr("Indice global de santé"))

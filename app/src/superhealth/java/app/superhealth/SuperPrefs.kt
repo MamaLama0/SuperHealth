@@ -76,8 +76,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     STRETCH("Étirements", Section.TRAINING),
     LEAGUE("Classement", Section.SOCIAL),
     PROGRESSION("Progression", Section.SOCIAL),
-    QUESTS("Quêtes de la semaine", Section.SOCIAL),
+    QUESTS("Quêtes", Section.SOCIAL),
     FRIENDS("Amis", Section.SOCIAL),
+    /** Retirée en 3.6 (les quêtes remplacent les séries) : gardée pour lire les anciens réglages, jamais affichée. */
     STREAKS("Mes séries", Section.SOCIAL),
     /** 3.6 : cinq semaines d'humeur en pastilles. */
     MOOD("Humeur", Section.HEALTH),
@@ -98,7 +99,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
         val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
 
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
-        val defaults = listOf(STREAKS, RINGS, VITALS, PROGRESSION, QUESTS, LEAGUE, FRIENDS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
+        val defaults = listOf(QUESTS, RINGS, VITALS, LEAGUE, FRIENDS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
     }
 }
 
@@ -144,7 +145,8 @@ val DashCard.module: String? get() = when (this) {
 /** Carte affichable : son module (s'il en faut un) est installé et activé. */
 val DashCard.available: Boolean get() = when (this) {
     DashCard.COACH, DashCard.COACH_WEEK -> SuperPrefs.settings.value.coachEnabled
-    DashCard.QUESTS, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> SuperPrefs.settings.value.leagueEnabled
+    DashCard.STREAKS, DashCard.PROGRESSION -> false
+    DashCard.QUESTS, DashCard.LEAGUE, DashCard.FRIENDS -> SuperPrefs.settings.value.leagueEnabled
     else -> module?.let { app.superhealth.modules.Modules.isActive(it) } ?: true
 }
 
@@ -491,9 +493,12 @@ fun withSocialCards(cards: List<DashCard>): List<DashCard> {
     return out
 }
 
-/** La série devient le premier accès du nouvel accueil ; l'ordre choisi des autres cartes reste intact. */
-fun withStreakHero(cards: List<DashCard>): List<DashCard> =
-    if (DashCard.STREAKS in cards) cards else listOf(DashCard.STREAKS) + cards
+/** Les quêtes prennent la place des séries en tête de l'accueil ; l'ordre choisi des autres cartes reste intact. */
+fun withQuestHero(cards: List<DashCard>): List<DashCard> {
+    val i = cards.indexOf(DashCard.STREAKS)
+    val rest = cards.filter { it != DashCard.STREAKS && it != DashCard.QUESTS }
+    return if (i < 0 && DashCard.QUESTS in cards) cards else listOf(DashCard.QUESTS) + rest
+}
 
 /** Réglages propres à SuperHealth (les modules gardent les leurs). */
 object SuperPrefs {
@@ -583,10 +588,10 @@ object SuperPrefs {
                 it.add((it.indexOf(DashCard.PROGRESSION) + 1).coerceAtLeast(0), DashCard.QUESTS)
             }, questsCardAdded = true)
         }
-        if (!_settings.value.streakHeroAdded) update { s ->
-            s.copy(dashboard = withStreakHero(s.dashboard), streakHeroAdded = true)
+        if (!_settings.value.streakHeroAdded || DashCard.STREAKS in _settings.value.dashboard) update { s ->
+            s.copy(dashboard = withQuestHero(s.dashboard), streakHeroAdded = true)
         }
-        if (newProfile) update { it.copy(dashboard = listOf(DashCard.STREAKS, DashCard.RINGS, DashCard.VITALS) + it.dashboard.filter { c -> c !in setOf(DashCard.STREAKS, DashCard.RINGS, DashCard.VITALS) }) }
+        if (newProfile) update { it.copy(dashboard = listOf(DashCard.QUESTS, DashCard.RINGS, DashCard.VITALS) + it.dashboard.filter { c -> c !in setOf(DashCard.STREAKS, DashCard.QUESTS, DashCard.RINGS, DashCard.VITALS) }) }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }
 

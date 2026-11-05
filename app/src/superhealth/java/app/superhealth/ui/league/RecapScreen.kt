@@ -70,7 +70,6 @@ fun RecapScreen(nav: NavHostController) {
         if (d.volumes.any { it > 0 }) Volume(d, accent)
         if (d.lifts.isNotEmpty()) Lifts(d, accent)
         Wellbeing(d)
-        XpWeek(d, accent)
         if (League.available()) ShareButton(busy, accent) {
             busy = true
             scope.launch {
@@ -292,38 +291,6 @@ private fun Wellbeing(d: WeeklyRecap.Data) {
     }
 }
 
-@Composable
-private fun XpWeek(d: WeeklyRecap.Data, accent: Color) {
-    Section(trf("%1\$s XP cette semaine", d.weekXp), Icons.Rounded.EmojiEvents, Hues.pack.yellow)
-    MfCard {
-        val max = (d.xpDays.maxOrNull() ?: 0).coerceAtLeast(1)
-        val muted = Mf.colors.divider
-        val grow = remember { Animatable(0f) }
-        LaunchedEffect(Unit) { grow.animateTo(1f, tween(900, easing = FastOutSlowInEasing)) }
-        Canvas(Modifier.fillMaxWidth().height(80.dp)) {
-            val slot = size.width / 7
-            d.xpDays.forEachIndexed { i, xp ->
-                val h = (size.height * xp / max * grow.value).coerceAtLeast(6f)
-                drawRoundRect(if (xp > 0) accent else muted, Offset(i * slot + slot * 0.18f, size.height - h), Size(slot * 0.64f, h), CornerRadius(10f, 10f))
-            }
-        }
-        val days = if (app.superhealth.ui.Lang.english) listOf("M", "T", "W", "T", "F", "S", "S") else listOf("L", "M", "M", "J", "V", "S", "D")
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-            days.forEach { Text(it, Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
-        }
-        if (d.quests > 0) Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Flag, null, Modifier.size(16.dp), tint = accent)
-            Text(trf("%1\$s / %2\$s quêtes", d.questsDone, d.quests), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 6.dp))
-            if (d.mirror) {
-                Spacer(Modifier.width(10.dp))
-                Row(Modifier.clip(CircleShape).background(Hues.pack.purple.copy(alpha = .16f)).padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(13.dp), tint = Hues.pack.purple)
-                    Text(tr("défi miroir relevé"), style = MaterialTheme.typography.labelSmall, color = Hues.pack.purple, modifier = Modifier.padding(start = 4.dp))
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun ShareButton(busy: Boolean, accent: Color, onClick: () -> Unit) {

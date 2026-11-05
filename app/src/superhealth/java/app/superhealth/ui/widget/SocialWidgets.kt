@@ -95,25 +95,25 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
                 detail = tr("Comparer nos progrès à notre rythme")
             }
             Kind.OVERVIEW -> {
-                value = summary?.let { trf("Niv. %1\$s", it.level) } ?: "—"
+                value = app.superhealth.cards.CardStore.state.value.let { (it.bonusPacks + it.eclats / app.superhealth.cards.CardStore.PACK_PRICE).toString() }; unit = tr("packs")
                 val friends = trf(if (state.friends.size == 1) "%1\$s ami" else "%1\$s amis", state.friends.size)
                 val badges = trf(if (state.earnedBadges.size == 1) "%1\$s badge" else "%1\$s badges", state.earnedBadges.size)
                 caption = "$friends · $badges"
                 compactCaption = friends
                 val quests = state.questWeeks.firstOrNull { it.start == Progression.week(LocalDate.now().toEpochDay()) }?.quests.orEmpty()
-                detail = if (quests.isEmpty()) tr("Choisir mes défis") else trf("%1\$s / %2\$s accomplies", quests.count { it.complete }, quests.size)
+                detail = if (quests.isEmpty()) tr("Configurer mes suivis") else trf("%1\$s / %2\$s accomplies", quests.count { it.complete }, quests.size)
                 fraction = quests.takeIf { it.isNotEmpty() }?.let { it.count { q -> q.complete }.toFloat() / it.size }
             }
             Kind.QUEST -> {
                 val week = state.questWeeks.firstOrNull { it.start == Progression.week(LocalDate.now().toEpochDay()) }
                 val q = dashboardQuest(week?.quests.orEmpty())
-                if (q == null) caption = tr(if (state.questFocus == null) "Choisir mes défis" else "Configurer mes suivis")
+                if (q == null) caption = tr("Configurer mes suivis")
                 else {
                     value = "${q.progress}/${q.target}"
                     caption = tr(q.metric.title)
                     compactCaption = tr(q.metric.focus.label)
                     fraction = q.progress.toFloat() / q.target.coerceAtLeast(1)
-                    detail = if (q.claimed) tr("Récompense récupérée") else if (q.complete) tr("Récompense à récupérer") else trf("+%1\$s XP", q.reward)
+                    detail = if (q.claimed) tr("Récompense récupérée") else if (q.complete) tr("Récompense à récupérer") else trf("+%1\$s éclats", app.superhealth.ui.league.weeklyEclats(q))
                 }
             }
         }
@@ -240,9 +240,11 @@ class QuestWidget : SocialWidget(Kind.QUEST)
 class FriendsWidget : SocialWidget(Kind.FRIENDS)
 class SocialOverviewWidget : SocialWidget(Kind.OVERVIEW)
 class LeagueWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = LeagueWidget() }
-class ProgressWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = ProgressWidget() }
-class StreakWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = StreakWidget() }
-class QuestWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = QuestWidget() }
+// Les niveaux ont laissé la place aux quêtes : un widget Progression déjà posé affiche les quêtes des cartes.
+class ProgressWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = LegacyQuestWidget() }
+// Séries et quêtes du Groupe ont laissé la place aux quêtes des cartes : les widgets déjà posés les affichent.
+class StreakWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = LegacyQuestWidget() }
+class QuestWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = LegacyQuestWidget() }
 
 class FriendsWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = FriendsWidget() }
 class SocialOverviewWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = SocialOverviewWidget() }

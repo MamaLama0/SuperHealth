@@ -9,58 +9,95 @@ import java.util.SplittableRandom
 class AthleteCardsTest {
     private val day = 86_400_000L
 
-    @Test fun packRatesMatchTheDisplayedTablesAndPityAlwaysHolds() {
-        val rng = SplittableRandom(42)
-        var epic = 0; var rare = 0; var three = 0; var sinceR = 0; var sinceE = 0; var worstR = 0; var gapR = 0; var worstE = 0; var gapE = 0
-        val n = 400_000
-        repeat(n) { k ->
-            val booster = Booster.entries[k % Booster.entries.size]
-            val r = PackEngine.open(rng.nextLong(), sinceR, sinceE, booster)
-            assertTrue(r.pulls.size in 2..3)
-            if (r.pulls.size == 3 && !r.prism) three++
-            // Un booster ne donne que des fonds de son biome (les épiques duo le croisent).
-            assertTrue(r.pulls.all { booster.element in it.card.elements })
-            if (r.pulls.any { it.card.rarity >= Rarity.RARE }) { rare++; worstR = maxOf(worstR, gapR + 1); gapR = 0 } else gapR++
-            if (r.pulls.any { it.card.rarity == Rarity.EPIQUE }) { epic++; worstE = maxOf(worstE, gapE + 1); gapE = 0 } else gapE++
-            sinceR = r.sinceRare; sinceE = r.sinceEpic
+    @Test fun packRatesMatchTheDisplayedTablesAndGoldPacksTripleThem() {
+        fun run(gold: Boolean): Triple<Double, Double, Double> {
+            val rng = SplittableRandom(if (gold) 7 else 42)
+            var epic = 0; var rare = 0; var duo = 0; var chroma = 0
+            val n = 300_000
+            repeat(n) { k ->
+                val booster = Booster.entries[k % Booster.entries.size]
+                val r = PackEngine.open(rng.nextLong(), gold, booster)
+                assertTrue(r.pulls.size in 3..4)
+                // Rien ne se cumule : un duo est toujours en finition normale.
+                assertTrue(r.pulls.none { it.card.duo && it.finish != Finish.NORMALE })
+                // Un booster ne donne que des fonds de son biome (les duos le croisent).
+                assertTrue(r.pulls.all { booster.element in it.card.elements })
+                if (r.pulls.any { it.card.rarity >= Rarity.RARE }) rare++
+                if (r.pulls.any { it.card.rarity == Rarity.EPIQUE }) epic++
+                if (r.pulls.any { it.card.duo }) duo++
+                if (r.pulls.any { it.finish == Finish.CHROMATIQUE }) chroma++
+            }
+            if (!gold) assertEquals(PackEngine.chromaPerPack(), chroma / n.toDouble(), 0.003)
+            return Triple(rare / n.toDouble(), epic / n.toDouble(), duo / n.toDouble())
         }
-        assertEquals(PackEngine.BONUS_ODDS, three / n.toDouble(), 0.01)
-        // Sans garantie ≈ 3 % de Rare ou mieux et 0,6 % d'épique ; garantie comprise ≈ 3,9 % et 0,8 %.
-        assertEquals(0.030, PackEngine.perPack(Rarity.RARE), 0.003)
-        assertTrue(PackEngine.withPity(Rarity.RARE) in 0.03..0.04)
-        assertEquals(0.006, PackEngine.perPack(Rarity.EPIQUE), 0.002)
-        assertEquals(PackEngine.withPity(Rarity.RARE), rare / n.toDouble(), 0.003)
-        assertEquals(PackEngine.withPity(Rarity.EPIQUE), epic / n.toDouble(), 0.0015)
-        assertTrue(epic / n.toDouble() in 0.001..0.01)
-        assertTrue("pity Rare dépassée : $worstR", worstR <= PackEngine.RARE_PITY)
-        assertTrue("pity Épique dépassée : $worstE", worstE <= PackEngine.EPIC_PITY)
+        val (rare, epic, duo) = run(false)
+        assertEquals(PackEngine.perPack(Rarity.RARE), rare, 0.002)
+        assertEquals(PackEngine.perPack(Rarity.EPIQUE), epic, 0.001)
+        assertEquals(PackEngine.duoPerPack(), duo, 0.002)
+        assertTrue(rare in 0.037..0.05); assertTrue(epic in 0.006..0.012)
+        // L'animée, au bonus plus faible, sort plus souvent que la chromatique, à toutes les raretés.
+        assertTrue(Rarity.entries.all { PackEngine.effectOdds(it, Finish.ANIMEE) > PackEngine.effectOdds(it, Finish.CHROMATIQUE) })
+        assertEquals(PackEngine.DUO_ODDS, PackEngine.cardOdds(Rarity.RARE, duo = true), 1e-12)
+        val (gRare, gEpic, _) = run(true)
+        assertEquals(PackEngine.perPack(Rarity.RARE, gold = true), gRare, 0.004)
+        assertEquals(PackEngine.perPack(Rarity.EPIQUE, gold = true), gEpic, 0.002)
+        // Le 10ᵉ pack est doré, puis le 20ᵉ.
+        assertEquals(listOf(9L, 19L), (0L until 20L).filter { PackEngine.isGold(it) })
+        // La charte par carte : les parts de rareté font 100 %.
+        assertEquals(1.0, Rarity.entries.sumOf { PackEngine.share(it) }, 1e-9)
+        assertEquals(1.0, Rarity.entries.sumOf { PackEngine.share(it, gold = true) }, 1e-9)
+        assertEquals(1, PackEngine.untilGold(9)); assertEquals(10, PackEngine.untilGold(10))
     }
 
-    @Test fun catalogHasFourBiomesAndTwoDuosPerPair() {
-        assertEquals(4 * 10 + 12, Catalog.cards.size)
+    @Test fun catalogHas36BackgroundsPerBiomeAndDuosOfEveryRarity() {
+        assertEquals(4 * 36 + 6 * 6, Catalog.cards.size)
         assertEquals(Catalog.cards.size, Catalog.cards.map { it.name }.toSet().size)
-        assertEquals("N001", Catalog.cards.first().id)
-        val pairs = Catalog.ofRarity(Rarity.EPIQUE).groupingBy { setOf(it.element, it.element2!!) }.eachCount()
-        assertEquals(6, pairs.size); assertTrue(pairs.values.all { it == 2 })
-        // Dans un biome, aucun fond ne partage composition et palette avec un autre.
-        Element.entries.forEach { e -> val own = Catalog.cards.filter { it.element == e && it.element2 == null }
-            assertEquals(own.size, own.map { Triple(it.look.features, it.look.horizon, it.palette) }.toSet().size) }
-        Booster.entries.forEach { b -> Rarity.entries.forEach { r -> assertTrue("$b $r", Catalog.ofBooster(b).any { it.rarity == r }) } }
+        assertEquals("N001", Catalog.cards.first().id); assertEquals("N180", Catalog.cards.last().id)
+        val duos = Catalog.cards.filter { it.duo }
+        assertEquals(36, duos.size)
+        assertEquals(6, duos.groupingBy { setOf(it.element, it.element2!!) }.eachCount().size)
+        Rarity.entries.forEach { r -> assertEquals(6 * listOf(2, 2, 1, 1)[r.ordinal], duos.count { it.rarity == r }) }
+        Element.entries.forEach { e -> val own = Catalog.cards.filter { it.element == e && !it.duo }
+            assertEquals(36, own.size)
+            assertEquals(listOf(14, 11, 7, 4), Rarity.entries.map { r -> own.count { it.rarity == r } })
+            // Dans un biome, aucun fond ne partage cadrage, éléments et palette avec un autre.
+            assertEquals(own.size, own.map { Triple(it.look.frame, it.look.features, it.palette) }.toSet().size) }
+        Booster.entries.forEach { b -> Rarity.entries.forEach { r -> listOf(true, false).forEach { d ->
+            assertTrue("$b $r duo=$d", Catalog.ofBooster(b).any { it.rarity == r && it.duo == d }) } } }
         // RÉG et CAR n'ont pas de biome : elles ne se boostent pas.
         assertEquals(Stat.families.toSet(), Element.entries.map { it.stat }.toSet())
         assertNull(Element.of(Stat.REG)); assertNull(Element.of(Stat.CAR))
     }
 
-    @Test fun duplicatesLevelUpAndBonusStaysSmall() {
-        assertEquals(listOf(1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5), (1..12).map { Levels.of(it) })
-        val rare = Catalog.ofRarity(Rarity.RARE).first()
-        assertEquals(14, Bonus.tenths(rare, Levels.MAX))
-        assertEquals(0, Bonus.tenths(Catalog.ofRarity(Rarity.COMMUNE).first(), Levels.MAX))
-        assertEquals(4, Catalog.cards.count { it.element == rare.element && it.element2 == null && it.rarity == Rarity.PEU_COMMUNE })
-        val stats = AthleteStats(values = mapOf(rare.element.stat.code to 80), ovr10 = 800, computedAt = 0)
-        // Rare niveau 1 : 1 % de 80 = +0,8, au dixième.
-        assertEquals(mapOf(rare.element.stat to 0.8), Bonus.points(stats, rare, 1))
+    @Test fun fusionLevelsAndBonusFollowRarity() {
+        // Fusion : 2 exemplaires pour le niveau 2, 4 pour le 3, 16 pour le 4, 256 pour le 5 ; +10 % d'effet par niveau.
+        assertEquals(listOf(1, 2, 2, 3, 3, 4, 4, 5), listOf(1, 2, 3, 4, 15, 16, 255, 256).map { Levels.of(it) })
+        assertEquals(listOf(1, 2, 12, 240, null), (1..5).map { Levels.cost(it) })
+        val single = { r: Rarity -> Catalog.cards.first { it.rarity == r && !it.duo } }
+        assertEquals(listOf(50, 100, 200, 400), Rarity.entries.map { Bonus.hundredths(single(it), 1) })
+        assertEquals(280, Bonus.hundredths(single(Rarity.RARE), Levels.MAX))
+        assertEquals(55, Bonus.hundredths(single(Rarity.COMMUNE), 2))
+        // Chaque effet augmente le bonus : brillante × 1,1, animée × 1,25, chromatique × 1,5.
+        assertEquals(listOf(200, 220, 250, 300), Finish.entries.map { Bonus.hundredths(single(Rarity.RARE), 1, it) })
+        assertEquals(listOf(75, 150, 300, 600), Rarity.entries.map { Bonus.hundredths(single(it), 1, Finish.CHROMATIQUE) })
+        assertEquals("+0,75 % " + single(Rarity.COMMUNE).element.stat.code, Bonus.label(Pull(single(Rarity.COMMUNE), Finish.CHROMATIQUE), 1))
+        val rare = single(Rarity.RARE)
+        val stats = AthleteStats(values = Stat.families.associate { it.code to 80 }, ovr10 = 800, computedAt = 0)
+        // Rare niveau 1 : 2 % de 80 = +1,6, au dixième ; un duo commune renforce deux stats de 0,4.
+        assertEquals(mapOf(rare.element.stat to 1.6), Bonus.points(stats, rare, 1))
+        val duo = Catalog.cards.first { it.duo && it.rarity == Rarity.COMMUNE }
+        assertEquals(mapOf(duo.element.stat to 0.4, duo.element2!!.stat to 0.4), Bonus.points(stats, duo, 1))
         assertTrue(Bonus.points(stats, Catalog.defaultFor(Tier.OR), 1).isEmpty())
+        assertEquals(mapOf(rare.element.stat to 2.4), Bonus.points(stats, rare, 1, Finish.CHROMATIQUE))
+    }
+
+    @Test fun sharedCardsRoundTripThroughAPlainTextPost() {
+        val pull = Pull(Catalog.cards.first { it.duo && it.rarity == Rarity.EPIQUE }, Finish.CHROMATIQUE)
+        val draft = CardShare.draft(pull, 3, CardShare.Event.ATHLETE, ovr = 87)
+        assertEquals("TEXT", draft.kind)
+        assertEquals(CardShare.Shared(pull, 3, 87), CardShare.parse(draft.detail))
+        assertFalse(CardShare.caption(draft.detail).contains("Fond N"))
+        assertNull(CardShare.parse("Fond N999 · NORMALE · Niv. 2"))
     }
 
     @Test fun strengthStandardsPlaceAnIntermediateBenchAroundSeventy() {
@@ -109,5 +146,15 @@ class AthleteCardsTest {
         assertTrue("PEC ${one[Stat.PEC]} → ${two[Stat.PEC]}", two[Stat.PEC]!! > one[Stat.PEC]!!)
         // Les épaules, seulement secondaires, restent sous les pectoraux.
         assertTrue((two.muscles["frontDelts"] ?: 0) < (two.muscles["chest"] ?: 0))
+    }
+}
+
+class FusionStateTest {
+    @Test fun spareCopiesKeepOneOfEachFinish() {
+        val c = Catalog.cards.first()
+        val st = CardStore.State(owned = mapOf("${c.id}:NORMALE" to 3, "${c.id}:BRILLANTE" to 1))
+        assertEquals(2, st.spare(c)); assertEquals(1, st.level(c)); assertTrue(!st.canFuse(c)); assertTrue("il faut aussi 20 éclats", st.copy(eclats = 20).canFuse(c)); assertEquals(20, st.fusePrice(c))
+        val fused = st.copy(owned = mapOf("${c.id}:NORMALE" to 2, "${c.id}:BRILLANTE" to 1), merged = mapOf(c.id to 1))
+        assertEquals(2, fused.level(c)); assertEquals(2, fused.fuseCost(c)); assertTrue(!fused.canFuse(c))
     }
 }

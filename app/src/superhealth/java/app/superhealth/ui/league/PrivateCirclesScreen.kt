@@ -36,7 +36,7 @@ fun PrivateCirclesScreen(nav: NavHostController,initialCircle:String?=null,initi
         }
     }
     SpacesScreen(SocialSpaces.repository(ctx), league.friends.filterNot { SocialPreferences.blocked(it.key) }.mapNotNull { it.space },
-        sources, refresh={Relay.sync(ctx);SocialSpaces.sync(ctx)},initialCircle=initialCircle,initialPost=initialPost, initialText=handoff.first,initialMedia=handoff.second,initialSnapshot=handoff.third, onBack = { nav.popBackStack() }, now = System::currentTimeMillis,
+        sources, refresh={Relay.sync(ctx);SocialSpaces.sync(ctx)},initialCircle=initialCircle,initialPost=initialPost, initialText=handoff.first,initialMedia=handoff.second,snapshotExtra={ post -> app.superhealth.cards.CardShare.parse(post.detail)?.let { app.superhealth.ui.cards.SharedCardVisual(it) } },initialSnapshot=handoff.third, onBack = { nav.popBackStack() }, now = System::currentTimeMillis,
         idHash = { java.security.MessageDigest.getInstance("SHA-256").digest(it.toByteArray()).joinToString("") { b -> "%02x".format(b) } },
         formatDate = { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy", app.superhealth.ui.Lang.locale)) },
         attachmentPicker = { selected -> CircleMediaPicker(selected) }, attachmentView = { CircleMediaView(it) },

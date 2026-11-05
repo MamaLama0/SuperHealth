@@ -305,6 +305,18 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_social" />
         </receiver>
+        <receiver android:name="app.superhealth.ui.widget.CardPacksWidgetReceiver" android:exported="true" android:label="@string/widget_cardpacks_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cardpacks" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.CardQuestsWidgetReceiver" android:exported="true" android:label="@string/widget_cardquests_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cardquests" />
+        </receiver>
+        <receiver android:name="app.superhealth.ui.widget.AthleteCardWidgetReceiver" android:exported="true" android:label="@string/widget_athletecard_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_athletecard" />
+        </receiver>
         <receiver android:name="app.superhealth.training.widget.NextWorkoutWidgetReceiver" android:exported="true" android:label="@string/widget_next_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next" />

@@ -11,11 +11,11 @@ object WidgetCatalog {
     data class Entry(val key: String, val section: String, val receiver: Class<*>, val name: Int, val description: Int)
     val entries = listOf(
         Entry("league", "Social", LeagueWidgetReceiver::class.java, R.string.widget_league_name, R.string.widget_league_desc),
-        Entry("progress", "Social", ProgressWidgetReceiver::class.java, R.string.widget_progress_name, R.string.widget_progress_desc),
-        Entry("streak", "Social", StreakWidgetReceiver::class.java, R.string.widget_streak_name, R.string.widget_streak_desc),
-        Entry("quest", "Social", QuestWidgetReceiver::class.java, R.string.widget_quest_name, R.string.widget_quest_desc),
         Entry("friends", "Social", FriendsWidgetReceiver::class.java, R.string.widget_friends_name, R.string.widget_friends_desc),
         Entry("social", "Social", SocialOverviewWidgetReceiver::class.java, R.string.widget_social_name, R.string.widget_social_desc),
+        Entry("cardpacks", "Social", CardPacksWidgetReceiver::class.java, R.string.widget_cardpacks_name, R.string.widget_cardpacks_desc),
+        Entry("cardquests", "Social", CardQuestsWidgetReceiver::class.java, R.string.widget_cardquests_name, R.string.widget_cardquests_desc),
+        Entry("athletecard", "Social", AthleteCardWidgetReceiver::class.java, R.string.widget_athletecard_name, R.string.widget_athletecard_desc),
         Entry("day", "Santé", DayWidgetReceiver::class.java, R.string.widget_day_name, R.string.widget_day_desc),
         Entry("rings", "Santé", RingsWidgetReceiver::class.java, R.string.widget_rings_name, R.string.widget_rings_desc),
         Entry("ringsfree", "Santé", RingsFreeWidgetReceiver::class.java, R.string.widget_ringsfree_name, R.string.widget_ringsfree_desc),

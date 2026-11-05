@@ -187,6 +187,8 @@ fun SuperRoot(vm: SuperViewModel) {
     var plus by remember { mutableStateOf(false) }
     var plusAction by remember { mutableStateOf<String?>(null) }
     var logSheet by remember { mutableStateOf(false) }
+    // Mise à jour Dopamine : une fois, droit vers les packs offerts.
+    if (sh.leagueEnabled) app.superhealth.ui.cards.DopamineIntro { nav.go("cards/packs") }
 
     // Fin de séance de musculation : écran « séance terminée ».
     val completed by vm.training.completed.collectAsState()
@@ -285,6 +287,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("cards/packs") { app.superhealth.ui.cards.PackShopScreen(nav) }
             composable("cards/album") { app.superhealth.ui.cards.AlbumScreen(nav) }
             composable("cards/quests") { app.superhealth.ui.cards.CardQuestsScreen(nav) }
+            composable("cards/trades") { app.superhealth.ui.cards.TradesScreen(nav) }
             composable("cards/rates") { app.superhealth.ui.cards.PackRatesScreen(nav) }
             composable("cards/cutout") { app.superhealth.ui.cards.CutoutScreen(nav) }
             composable("cards/duel?friend={friend}", listOf(navArgument("friend") { type = NavType.StringType; nullable = true; defaultValue = null })) {

@@ -30,7 +30,6 @@ fun SharedProfilePreview(nav: NavHostController) {
             if (error) Text(tr("Aperçu indisponible. Rouvrez cet écran pour réessayer.")) else LinearProgressIndicator()
         } else {
             Text(shared.n, style = MaterialTheme.typography.headlineSmall)
-            ProfileDecor(shared.profileTitle, shared.profileBadges)
             Text(tr(if (shared.avatar != null) "Photo de profil partagée" else "Photo de profil masquée ou indisponible"))
             val index = shared.unified
             val total = if (index != null) index.total else shared.s.takeIf { shared.ready }
@@ -40,7 +39,7 @@ fun SharedProfilePreview(nav: NavHostController) {
             else League.Pillar.entries.forEachIndexed { i, pillar ->
                 Text(tr(pillar.label) + " · " + (parts.getOrNull(i)?.let { "$it %" } ?: "—"))
             }
-            Text(shared.progress?.let { trf("Niveau partagé · %1\$s", it.level) } ?: tr("Progression masquée ou indisponible"))
+            Text(tr(if (shared.progress != null) "Progression partagée" else "Progression masquée ou indisponible"))
             if (shared.metrics.isEmpty()) Text(tr("Statistiques sportives masquées ou indisponibles"))
             else shared.metrics.forEach { Text(it.label + " · " + app.superhealth.nutrition.ui.num(it.value, 1) + " " + it.unit) }
         }

@@ -18,12 +18,8 @@ fun GameArt(kind: GameArtKind, modifier: Modifier = Modifier, animated: Boolean 
 
 /** Visuel de la catégorie de série, partagé par les missions, le parcours et les profils amis. */
 @Composable
-internal fun TrackArt(track: String, count: Int, modifier: Modifier = Modifier) {
-    if(track=="HIKE") { AssetImage("game/hiking/mountain-gold.png",modifier,crop=false);return }
-    val asset = when (track) {
-        "FOOD" -> "food"; "STRENGTH" -> "strength"; "RUN" -> "run"; "SLEEP" -> "sleep"; "MIND" -> "mind"
-        "STEPS" -> when { count >= 60 -> "steps-60"; count >= 30 -> "steps-30"; count >= 7 -> "steps"; else -> "steps-3" }
-        else -> "steps"
-    }
-    AssetImage("game/garmin/$asset.png", modifier, crop = false)
+internal fun TrackArt(track: String, count: Int, modifier: Modifier = Modifier) = androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+    val weekly = app.superhealth.league.Progression.Track.entries.firstOrNull { it.name == track }?.weekly == true
+    val rank = (if (weekly) listOf(1, 4, 12, 26, 52, 104) else listOf(3, 7, 30, 60, 100, 365, 730)).count { count >= it }.minus(1).coerceAtLeast(0)
+    BadgeEmblem("streak:$track", rank, minOf(maxWidth, maxHeight), locked = count == 0)
 }

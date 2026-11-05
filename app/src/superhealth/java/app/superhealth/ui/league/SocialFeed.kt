@@ -76,7 +76,7 @@ fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.com
         title = { Text(tr("Bienvenue dans le Groupe")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr("Depuis le dashboard, glissez vers la droite : le fil se trouve juste à gauche."))
-            Text(tr("Retrouvez le classement, puis les photos, vidéos, séries et sorties de vos amis. Glissez vers la gauche pour revenir."))
+            Text(tr("Vos cartes, vos quêtes et vos combats, puis les photos, vidéos et sorties de vos amis. Glissez vers la gauche pour revenir."))
             Text(tr("Vous pouvez désactiver ce fil dans Réglages → Groupe. Vos widgets sociaux restent disponibles sur le dashboard."), style = MaterialTheme.typography.bodySmall)
         } },
         confirmButton = { TextButton({ SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } }) { Text(tr("Compris")) } })
@@ -90,7 +90,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var showCreate by rememberSaveable { mutableStateOf(false) }
-    var tab by rememberSaveable { mutableStateOf(GroupTab.FIL) }
+    var tab by rememberSaveable { mutableStateOf(GroupTab.ARENE) }
     fun refresh(userInitiated: Boolean = false) { scope.launch {
         if (busy) return@launch
         busy = true; if (userInitiated) error = null
@@ -127,12 +127,14 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
             }
         }
         item(key = "group-tabs") { GroupTabs(tab) { tab = it } }
-        // Arène : ta carte et ton camp, les duels du jour, les camps du Groupe et les raccourcis des cartes.
+        // Cartes : ta carte et tes packs, le combat, les quêtes, l'album et les échanges, puis les duels du jour.
         if (tab == GroupTab.ARENE) {
             item(key = "arena-hero") { ArenaHero(nav) }
-            item(key = "arena-duels") { ArenaDuels(nav, state.friends) }
-            item(key = "arena-camps") { ArenaCamps(state.friends) }
+            item(key = "arena-combat") { CombatButton(nav, state.friends.count { it.athlete?.ovr10 != null }) }
+            item(key = "arena-quests") { ArenaQuests(nav) }
+            item(key = "arena-badges") { ArenaBadges(nav) }
             item(key = "arena-shortcuts") { ArenaShortcuts(nav) }
+            item(key = "arena-duels") { ArenaDuels(nav, state.friends) }
         }
         if (tab == GroupTab.CERCLES) item(key = "circles") { CirclesPanel(nav, state.friends.size) }
         if (tab == GroupTab.FIL) item(key = "compose") { ComposeSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
@@ -146,6 +148,14 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
             // raccourcis colorés : chaque type de partage s'ouvre directement, avec la teinte de son domaine
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 fun open(route: String) { SocialPosts.draft.value = null; nav.go(route) }
+                // Les cartes d'abord : ma carte Athlète (ou l'album pour choisir un fond).
+                ShareShortcut(Icons.Rounded.Style, tr("Carte"), app.superhealth.ui.cards.Gold, Modifier.weight(1f)) {
+                    val bg = app.superhealth.cards.CardStore.background()
+                    if (bg == null) nav.go("cards/album") else {
+                        app.superhealth.cards.CardShare.open(bg, app.superhealth.cards.CardStore.state.value.level(bg.card), app.superhealth.cards.CardShare.Event.ATHLETE, app.superhealth.cards.CardStore.snapshot.value?.now?.ovr)
+                        nav.go("social/compose")
+                    }
+                }
                 ShareShortcut(Icons.Rounded.AddPhotoAlternate, tr("Photo"), app.superhealth.ui.theme.Hues.pack.pink, Modifier.weight(1f)) { open("social/compose") }
                 ShareShortcut(Icons.Rounded.FitnessCenter, tr("Séance"), app.superhealth.ui.theme.HealthHues.Fitness, Modifier.weight(1f)) { open("social/share/workout") }
                 ShareShortcut(Icons.Rounded.DirectionsRun, tr("Activité"), app.superhealth.ui.theme.HealthHues.Activity, Modifier.weight(1f)) { open("social/share/activity") }
@@ -200,6 +210,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(tr("Créer une publication"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
+            SettingRow(tr("Partager ma carte ou un fond"), icon = Icons.Rounded.Style) { showCreate = false; nav.go("cards/album") }
             SettingRow(tr("Cercle privé"), icon = Icons.Rounded.Groups) { open("group/circles") }
             SettingRow(tr("Message, photo ou vidéo"), icon = Icons.Rounded.AddPhotoAlternate) { open("social/compose") }
             SettingRow(tr("Partager une séance"), icon = Icons.Rounded.FitnessCenter) { open("social/share/workout") }
@@ -294,8 +305,6 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
             Box(Modifier.clickable { if (friend != null) showProfile = true }) { FriendAvatar(friend, friend?.shown ?: app.superhealth.ui.userName() ?: tr("Vous"), 38.dp) }
             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                 Text(friend?.shown ?: tr("Vous"), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { if (friend != null) showProfile = true })
-                ProfileDecor(friend?.profileTitle ?: if (friend == null) league.profileTitle else null,
-                    friend?.profileBadges ?: if (friend == null) league.profileBadges else emptyList(), compact = true)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern(if (Instant.ofEpochMilli(post.created).atZone(ZoneId.systemDefault()).year == java.time.LocalDate.now().year) "d MMM · HH:mm" else "d MMM yyyy · HH:mm", app.superhealth.ui.Lang.locale)),
                         style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
@@ -334,8 +343,10 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
             }
         }
         // badge de type coloré : on repère d'un coup d'œil une séance, une sortie ou un record
+        val sharedCard = remember(post.detail) { app.superhealth.cards.CardShare.parse(post.detail) }
         val kind = when {
             post.record != null -> Triple(Icons.Rounded.EmojiEvents, tr("Record"), RankGold)
+            sharedCard != null -> Triple(Icons.Rounded.Style, tr("Carte"), androidx.compose.ui.graphics.Color(sharedCard.pull.card.rarity.color.toInt()))
             sharedWorkout != null -> Triple(Icons.Rounded.FitnessCenter, tr("Séance"), app.superhealth.ui.theme.HealthHues.Fitness)
             sharedActivity != null -> Triple(Icons.Rounded.DirectionsRun, tr("Activité"), app.superhealth.ui.theme.HealthHues.Activity)
             else -> null
@@ -351,6 +362,11 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
         if (post.title.isNotBlank()) Text(post.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = if (kind != null) 8.dp else 16.dp))
         if (post.record != null || sharedWorkout != null || sharedActivity != null) {
             SharedPostVisual(post.record, sharedWorkout, sharedActivity)
+        } else if (sharedCard != null) {
+            app.superhealth.ui.cards.SharedCardVisual(sharedCard)
+            app.superhealth.cards.CardShare.caption(post.detail).takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
+            }
         } else {
         var expanded by rememberSaveable(post.id) { mutableStateOf(false) }
         if (post.detail.isNotBlank()) {
@@ -534,8 +550,6 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 SettingRow(tr("Partager une activité"), subtitle = tr("Course, vélo, marche et autres sports"), icon = Icons.Rounded.DirectionsRun) { if (!busy) choosing = "ACTIVITY" }
                 RowDivider()
                 SettingRow(tr("Partager un PR"), subtitle = tr("Record récent, avec une vidéo facultative"), icon = Icons.Rounded.EmojiEvents) { if (!busy) choosing = "PR" }
-                RowDivider()
-                SettingRow(tr("Partager une série"), subtitle = tr("Montrer votre régularité"), icon = Icons.Rounded.LocalFireDepartment) { if (!busy) choosing = "STREAK" }
             }
             if (source?.activity?.route != null) SwitchRow(tr("Partager le parcours"), tr("Le tracé GPS sera visible par vos amis."), shareRoute) { shareRoute = it }
             if (source?.activity != null || source?.workout != null || source?.record != null)
@@ -544,7 +558,9 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 Text(tr("Aperçu de la publication"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
                 PostSurface {
                     Text(draft.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    val card = remember(draft.detail) { app.superhealth.cards.CardShare.parse(draft.detail) }
                     if (draft.record != null || draft.workout != null || draft.activity != null) SharedPostVisual(draft.record, draft.workout, draft.activity)
+                    else if (card != null) { app.superhealth.ui.cards.SharedCardVisual(card); Text(app.superhealth.cards.CardShare.caption(draft.detail), modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary) }
                     else Text(draft.detail, modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
                     TextButton({ selectSource(null) }, enabled = !busy) { Text(tr("Retirer")) }
                 }

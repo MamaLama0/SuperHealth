@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,9 +28,10 @@ import app.superhealth.league.League
 import app.superhealth.ui.cards.*
 import app.superhealth.ui.go
 import app.superhealth.ui.tr
+import kotlinx.coroutines.launch
 
-/** Onglets du Groupe : le fil des publications d'abord, puis l'Arène des cartes, puis les cercles et les amis. */
-enum class GroupTab(val label: String) { FIL("Fil"), ARENE("Arène"), CERCLES("Cercles") }
+/** Onglets du Groupe : tout part des cartes (combat, quêtes, échanges), puis le fil des publications, puis les cercles et les amis. */
+enum class GroupTab(val label: String) { ARENE("Cartes"), FIL("Fil"), CERCLES("Cercles") }
 
 @Composable
 internal fun GroupTabs(tab: GroupTab, onTab: (GroupTab) -> Unit) {
@@ -64,7 +66,7 @@ internal fun ArenaHero(nav: NavHostController) {
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Text("@" + handle(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp, maxLines = 1)
             Text(camp?.let { tr("Camp") + " " + tr(it.label) } ?: tr("Sans camp pour l'instant"), color = camp?.mid?.c() ?: Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
-            Text(bg?.let { it.card.name + " · " + tr("Niv.") + " ${st.level(it.card)} · " + Bonus.label(it.card, st.level(it.card)) } ?: tr("Fond de palier : aucun bonus"),
+            Text(bg?.let { it.card.name + " · " + tr("Niv.") + " ${st.level(it.card)} · " + Bonus.label(it, st.level(it.card)) } ?: tr("Fond de palier : aucun bonus"),
                 color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (st.packsAvailable > 0) Pill("${st.packsAvailable} " + tr(if (st.packsAvailable > 1) "packs offerts" else "pack offert"), Color(0xFF9AA8FF))
@@ -79,38 +81,6 @@ internal fun ArenaHero(nav: NavHostController) {
 @Composable
 private fun Pill(text: String, color: Color) = Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp,
     modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.35f)).padding(horizontal = 9.dp, vertical = 3.dp))
-
-/** Répartition des camps dans le Groupe (moi et les amis qui partagent leur carte), avec la stat moyenne de chaque camp. */
-@Composable
-internal fun ArenaCamps(friends: List<League.Friend>) {
-    val snap by CardStore.snapshot.collectAsState()
-    val members = buildList {
-        add(campOf(CardStore.background()?.card, snap?.now) to snap?.now)
-        friends.forEach { f -> f.athlete?.let { add(campOf(f.cardBg?.let(Pull::of)?.card, it) to it) } }
-    }.filter { it.first != null }
-    if (members.isEmpty()) return
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(InkCard).padding(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Camps du Groupe"), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Text("${members.size} " + tr(if (members.size > 1) "membres" else "membre"), color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-        }
-        Row(Modifier.padding(top = 10.dp).fillMaxWidth().height(12.dp).clip(RoundedCornerShape(50))) {
-            Element.entries.forEach { e -> val k = members.count { it.first == e }
-                if (k > 0) Box(Modifier.weight(k.toFloat()).fillMaxHeight().background(Brush.horizontalGradient(listOf(e.outer.c(), e.mid.c())))) }
-        }
-        Row(Modifier.padding(top = 8.dp).fillMaxWidth()) {
-            Element.entries.forEach { e ->
-                val group = members.filter { it.first == e }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Canvas(Modifier.size(22.dp)) { with(Vfx) { emblem(e, center, size.minDimension * 0.42f, if (group.isEmpty()) Color.White.copy(alpha = 0.25f) else e.mid.c()) } }
-                    Text(tr(e.label), color = Color.White.copy(alpha = if (group.isEmpty()) 0.35f else 0.9f), fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                    Text(if (group.isEmpty()) "–" else "${group.size} · ${e.stat.code} " + group.mapNotNull { it.second?.get(e.stat) }.average().let { if (it.isNaN()) "–" else it.toInt().toString() },
-                        color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp)
-                }
-            }
-        }
-    }
-}
 
 /** Défis du jour : les amis les plus proches de ta note d'abord, puis ta carte d'il y a quatre semaines. */
 @Composable
@@ -152,15 +122,33 @@ internal fun ArenaDuels(nav: NavHostController, friends: List<League.Friend>) {
     }
 }
 
-/** Raccourcis vers l'album, les quêtes et la carte. */
+/** Raccourcis vers l'album et les échanges (les quêtes ont leur propre carte au-dessus). */
 @Composable
 internal fun ArenaShortcuts(nav: NavHostController) {
     val st by CardStore.state.collectAsState()
-    val claimable = remember(st.claimed) { runCatching { CardStore.quests().count { it.complete && !it.claimed } }.getOrDefault(0) }
-    // Ta carte s'ouvre depuis l'en-tête de l'Arène et les duels depuis « Tous les duels » : ici, seulement ce qui manque.
+    val fusions = remember(st.owned, st.merged, st.eclats) { Catalog.cards.count { st.canFuse(it) } }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Tile(Icons.Rounded.CollectionsBookmark, "Album", "${Catalog.cards.count { st.owns(it) }}/${Catalog.cards.size}", Modifier.weight(1f), Color(0xFF9AA8FF)) { nav.go("cards/album") }
-        Tile(Icons.Rounded.Flag, "Quêtes", tr("Gagne des éclats"), Modifier.weight(1f), Gold, claimable) { nav.go("cards/quests") }
+        Tile(Icons.Rounded.CollectionsBookmark, "Album", "${Catalog.cards.count { st.owns(it) }}/${Catalog.cards.size}" + if (fusions > 0) " · $fusions " + tr(if (fusions > 1) "fusions" else "fusion") else "",
+            Modifier.weight(1f), Color(0xFF9AA8FF), fusions) { nav.go("cards/album") }
+        Tile(Icons.Rounded.SwapHoriz, "Échanges", tr("Avec tes amis"), Modifier.weight(1f), Color(0xFF6FD3A0), st.pendingTrades) { nav.go("cards/trades") }
+    }
+}
+
+/** Bouton Combat : tuile sobre teintée du rouge des duels. */
+@Composable
+internal fun CombatButton(nav: NavHostController, rivals: Int) {
+    val red = Color(0xFFFF5E5E)
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(androidx.compose.ui.graphics.lerp(InkCard, Color(0xFFB3261E), 0.22f))
+        .border(1.dp, red.copy(alpha = 0.3f), RoundedCornerShape(20.dp)).clickable { nav.go("cards/duel") }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(red.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.SportsMma, null, Modifier.size(20.dp), tint = red)
+        }
+        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+            Text(tr("Combat"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(if (rivals > 0) "$rivals " + tr(if (rivals > 1) "adversaires disponibles" else "adversaire disponible") else tr("Contre ta carte d'il y a 4 semaines"),
+                color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1)
+        }
+        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.5f))
     }
 }
 
@@ -174,5 +162,105 @@ internal fun CirclesPanel(nav: NavHostController, friends: Int) {
         LinkRow(Icons.Rounded.EmojiEvents, "PR récents", null) { nav.go("group/records") }
         LinkRow(Icons.Rounded.Visibility, "Ce que je partage", null) { nav.go("group/sharing") }
         LinkRow(Icons.Rounded.Settings, "Réglages du Groupe", null) { nav.go("league/settings") }
+    }
+}
+
+/** Les quêtes au cœur du Groupe : celles du jour et de la semaine, avec leur jauge, à récupérer d'un geste. */
+@Composable
+internal fun ArenaQuests(nav: NavHostController) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val st by CardStore.state.collectAsState()
+    val league by League.state.collectAsState()
+    LaunchedEffect(Unit) { runCatching { app.superhealth.league.ProgressRepository.compute(ctx) } }
+    val quests = remember(st.claimed, st.quests, st.demo, league.questWeeks) { runCatching { CardStore.quests() }.getOrDefault(emptyList()) }
+    if (quests.isEmpty()) return
+    val ready = quests.count { it.complete && !it.claimed }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFF231A05), InkCard)))
+        .border(1.dp, Gold.copy(alpha = 0.35f), RoundedCornerShape(24.dp)).clickable { nav.go("cards/quests") }.padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("⚑ " + tr("Quêtes"), color = Gold, fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
+            Text(if (ready > 0) "$ready " + tr(if (ready > 1) "à récupérer" else "à récupérer") else "${quests.count { it.claimed }}/${quests.size}",
+                color = if (ready > 0) Ink else Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Black, fontSize = 12.sp,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (ready > 0) Gold else Color.White.copy(alpha = 0.08f)).padding(horizontal = 10.dp, vertical = 4.dp))
+        }
+        quests.sortedWith(compareBy<CardStore.Quest> { it.claimed }.thenByDescending { it.complete }.thenByDescending { it.challenge != null }.thenBy { it.weekly }).take(4).forEach { q ->
+            Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr(q.title), color = Color.White.copy(alpha = if (q.claimed) 0.4f else 1f), fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2)
+                    q.note?.let { Text("⚔ " + tr(it), color = Color(0xFFFF8A80), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 2) }
+                    Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(7.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
+                        Box(Modifier.fillMaxWidth((q.progress / q.target.coerceAtLeast(1).toFloat()).coerceIn(0.03f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50))
+                            .background(Brush.horizontalGradient(listOf(q.difficulty.color.c(), Gold))))
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                if (q.complete && !q.claimed) Text("+${q.reward} ✦", color = Ink, fontWeight = FontWeight.Black, fontSize = 13.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Gold, Color(0xFFFFF2B0)))).clickable {
+                        scope.launch { runCatching { CardStore.claim(ctx, q) }.onSuccess { Rumble.reveal(ctx) } } }.padding(horizontal = 12.dp, vertical = 7.dp))
+                else Text(if (q.claimed) "✓" else "${q.progress}/${q.target}", color = if (q.claimed) Color(0xFF6FD3A0) else Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Black, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+/**
+ * Badges et séries dans l'Arène : le prochain palier de chaque type (avec ses éclats), les séries tenues et leur bonus de
+ * la semaine, et un bouton qui récupère tout d'un coup. Plus secondaire que les quêtes : tout finit en éclats, donc en packs.
+ */
+@Composable
+internal fun ArenaBadges(nav: NavHostController) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val st by CardStore.state.collectAsState()
+    val league by League.state.collectAsState()
+    val progress by app.superhealth.league.ProgressRepository.current.collectAsState()
+    val payout = remember(st.badgesPaid, st.streakPaid, st.demo, league.earnedBadges, progress) { runCatching { CardStore.payout() }.getOrNull() } ?: return
+    val summary = progress?.summary
+    val earned = league.earnedBadges.toSet()
+    val types = listOf("sessions", "records", "mindMinutes", "quests", "distanceKm", "foodDays")
+    val nexts = types.mapNotNull { m -> app.superhealth.league.Achievements.next(m, earned) }
+    val streaks = payout.streaks.filter { it.weeks > 0 || it.days > 0 }
+    var busy by remember { mutableStateOf(false) }
+    val blue = Color(0xFF7FDBFF)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFF0A1A2A), InkCard)))
+        .border(1.dp, blue.copy(alpha = 0.3f), RoundedCornerShape(24.dp)).clickable { nav.go("social/badges") }.padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Badges et séries"), color = blue, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text(tr("Chaque palier et chaque semaine tenue rapportent des éclats"), color = Color.White.copy(alpha = 0.55f), fontSize = 11.sp)
+            }
+            val total = payout.badges.sumOf(app.superhealth.league.Achievements::reward) + payout.streaks.filter { it.claimable }.sumOf { it.reward }
+            if (total > 0) Text(if (busy) "…" else "+$total ✦", color = Ink, fontWeight = FontWeight.Black, fontSize = 13.sp,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Gold, Color(0xFFFFF2B0)))).clickable(enabled = !busy) {
+                    busy = true
+                    scope.launch { runCatching { CardStore.collect(ctx) }.onSuccess { Rumble.reveal(ctx) }; busy = false } }.padding(horizontal = 12.dp, vertical = 7.dp))
+        }
+        Row(Modifier.padding(top = 14.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            nexts.forEach { b ->
+                val value = summary?.let { app.superhealth.league.Achievements.value(b, it) } ?: 0L
+                Column(Modifier.width(74.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    BadgeEmblem(b, 56.dp, locked = true)
+                    Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(5.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
+                        Box(Modifier.fillMaxWidth((value / b.threshold.toFloat()).coerceIn(0.04f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(Color(BadgeTheme.element(b.metric).mid)))
+                    }
+                    Text("$value/${b.threshold}" + if (b.metric == "distanceKm") " km" else "", color = Color.White.copy(alpha = 0.75f), fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("+${app.superhealth.league.Achievements.reward(b)} ✦", color = Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+        if (streaks.isNotEmpty()) Row(Modifier.padding(top = 12.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            streaks.forEach { s ->
+                Row(Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.07f)).padding(start = 4.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    BadgeEmblem("streak:${s.track.name}", (app.superhealth.league.Achievements.STREAK_WEEKS.count { s.best >= it } - 1).coerceAtLeast(0), 28.dp, locked = s.weeks == 0)
+                    Column(Modifier.padding(start = 6.dp)) {
+                        Text(tr(s.track.label) + " · " + s.weeks + " " + tr("sem."), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(when { s.claimable -> "+${s.reward} ✦ " + tr("cette semaine"); s.done -> "✓ " + tr("semaine touchée"); else -> "${s.days}/${s.need} " + tr("jours cette semaine") },
+                            color = when { s.claimable -> Gold; s.done -> Color(0xFF6FD3A0); else -> Color.White.copy(alpha = 0.55f) }, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
+                }
+            }
+        }
     }
 }
