@@ -204,7 +204,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
     val bests = remember(st.history, db) { bestE1rms(st.history, db!!) }
     val scope = rememberCoroutineScope()
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptic = app.superhealth.ui.rememberHaptics()
 
     val count = s.exercises.size + 1 // dernière page : ajouter des exercices / terminer
     val pager = rememberPagerState(initialPage = s.current.coerceIn(0, count - 1)) { count }
@@ -225,8 +225,7 @@ fun SessionScreen(vm: AppViewModel, nav: NavHostController) {
                         onToggle = { si ->
                             focus.clearFocus()
                             val wasDone = ex.sets[si].done
-                            haptic.performHapticFeedback(if (wasDone) androidx.compose.ui.hapticfeedback.HapticFeedbackType.SegmentTick
-                                else androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm)
+                            haptic.let { h -> if (wasDone) h.tick() else h.confirm() }
                             vm.toggleSet(page, si)
                             if (!wasDone) vm.state.value.session?.let { ns ->
                                 if (ns.shouldSuggestFinish()) allDonePrompt = true
@@ -468,12 +467,12 @@ private fun ExercisePage(
             }
         }
     }
-    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptics = app.superhealth.ui.rememberHaptics()
     val ctx = androidx.compose.ui.platform.LocalContext.current
     /** Appui long sur l'exercice : charges et répétitions exactes de la dernière séance. */
     fun repeatLast() {
         val n = vm.repeatLast(index)
-        haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        haptics.longPress()
         android.widget.Toast.makeText(ctx, if (n > 0) tr("Séries reprises de la dernière séance") else tr("Pas encore de séance précédente pour cet exercice"), android.widget.Toast.LENGTH_SHORT).show()
     }
     val inSuperset = ex.supersetGroup != null

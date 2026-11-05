@@ -236,6 +236,10 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.SLEEP_SCHEDULE, DashCard.SLEEP_QUALITY -> HealthHues.Sleep
     DashCard.NIGHT_HEART, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS -> HealthHues.Heart
     DashCard.SCORES -> HealthHues.Sleep
+    DashCard.MOOD -> HealthHues.Mind
+    DashCard.WEEK_COMPARE -> HealthHues.Respiration
+    DashCard.ACTIVE_DAYS -> HealthHues.Fitness
+    DashCard.HOURLY_STEPS -> HealthHues.Activity
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -296,6 +300,10 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.NIGHT_VITALS -> Icons.Rounded.NightsStay
     DashCard.VITALS_TRENDS -> Icons.AutoMirrored.Rounded.ShowChart
     DashCard.SCORES -> Icons.Rounded.DataUsage
+    DashCard.MOOD -> Icons.Rounded.SentimentSatisfied
+    DashCard.WEEK_COMPARE -> Icons.Rounded.DateRange
+    DashCard.ACTIVE_DAYS -> Icons.Rounded.CalendarMonth
+    DashCard.HOURLY_STEPS -> Icons.Rounded.Schedule
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -482,7 +490,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                     val w = if (used == app.superhealth.GRID || onlySquares || size == app.superhealth.CardSize.S) size.span.toFloat()
                         else size.span + (app.superhealth.GRID - used).toFloat() / row.count { sh.sizeOf(it) != app.superhealth.CardSize.S }
                     val fill = if (sameHeight) Modifier.fillMaxHeight() else Modifier
-                    androidx.compose.runtime.CompositionLocalProvider(LocalCardLongPress provides { editing = c }, LocalFillHeight provides (sameHeight && !onlySquares),
+                    androidx.compose.runtime.CompositionLocalProvider(LocalCardLongPress provides { editing = c }, app.superhealth.ui.charts.LocalChartTitle provides tr(c.label), LocalFillHeight provides (sameHeight && !onlySquares),
                         LocalCardHalf provides (size == app.superhealth.CardSize.M && row.count { sh.sizeOf(it) == app.superhealth.CardSize.M } == 2)) {
                         if (!arranging) Card(c, size, vm, nav, health, Modifier.weight(w).then(fill), ::tab)
                         else EditCell(c, arrange, Modifier.weight(w).then(fill), { editing = c }) { Card(c, size, vm, nav, health, Modifier.fillMaxWidth().then(fill), ::tab) }
@@ -599,18 +607,30 @@ private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, no
     val training by app.superhealth.training.WorkoutApp.store.state.collectAsState()
     val hc by app.superhealth.SuperPrefs.hc.collectAsState()
     val runs by app.superhealth.bridge.RunImport.runs.collectAsState()
+    val eaten by vm.nutrition.todayEntries.collectAsState()
+    val meditations by app.superhealth.meditation.Meditation.log.collectAsState()
+    val stretches by app.superhealth.stretch.Stretch.log.collectAsState()
     val today = LocalDate.now().toEpochDay()
     val pending = sh.has(app.superhealth.Feature.JOURNAL) && days[today] == null && sh.moodSkipDay != today
-    val due by produceState(0L to false, pending, now / 60_000, refresh, nutrition, training.history, hc, runs,
+    val due by produceState(0L to false, pending, now / 60_000, refresh, nutrition, training.history, hc, runs, eaten, meditations, stretches,
         sh.moodPromptShownDay, sh.promptSeed) {
+        val T = app.superhealth.wellbeing.PromptTiming
         val eligible = pending && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val date = LocalDate.now()
-            if (app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, null, 0, emptyList(), history = app.superhealth.wellbeing.Journal.days.value)) return@withContext true
-            val steps = runCatching { Bridge.healthValue(ctx, Metric.STEPS, date) }.getOrNull()
+            val history = app.superhealth.wellbeing.Journal.days.value
+            if (T.moodDue(sh, now, history = history)) return@withContext true
+            // avant midi rien ne déclenche : inutile de lire les pas et les activités
+            if (java.time.LocalTime.now().let { it.hour * 60 + it.minute } < T.EARLIEST) return@withContext false
+            val goal = nutrition.stepGoalFor(date)
+            val stepGoalAt = runCatching { T.stepGoalCrossing(Bridge.hourlySteps(ctx, date).map { it.timestampMs to it.value }, goal) }.getOrNull()
             val ends = runCatching {
-                Bridge.activities(date.minusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(), now).map { it.end }
+                Bridge.activities(HealthRepository.startMs(date), now)
+                    .filter { T.meaningful(it.kind == Bridge.Kind.WALK, it.start, it.end) }.map { it.end }
             }.getOrDefault(emptyList())
-            app.superhealth.wellbeing.PromptTiming.moodDue(sh, now, steps, nutrition.stepGoalFor(date), ends, history = app.superhealth.wellbeing.Journal.days.value)
+            val calm = (meditations.filter { it.day == today && it.minutes >= 3 }.map { it.at } +
+                stretches.filter { it.day == today && it.minutes >= 3 }.map { it.at })
+            val dinner = eaten.filter { it.meal == 2 }.minOfOrNull { it.createdAt }
+            T.moodDue(sh, now, app.superhealth.wellbeing.PromptTiming.Signals(stepGoalAt, ends, calm, dinner), history = history)
         }
         value = today to eligible
         if (eligible && sh.moodPromptShownDay != today) app.superhealth.SuperPrefs.update { it.copy(moodPromptShownDay = today) }
@@ -876,7 +896,7 @@ internal fun Tile(
         // en-tête Score : symbole coloré, nom en gris, détail à droite
         CardHead(c.icon(), title, hue, trailing, Mf.colors.textSecondary)
         Spacer(Modifier.height(10.dp))
-        content()
+        androidx.compose.runtime.CompositionLocalProvider(app.superhealth.ui.charts.LocalChartTitle provides title) { content() }
         if (bottom != null) {
             Spacer(Modifier.height(10.dp))
             Spacer(Modifier.weight(1f))
@@ -891,7 +911,9 @@ internal fun Tile(
 internal fun Modifier.cardClick(onClick: (() -> Unit)?): Modifier {
     val long = LocalCardLongPress.current
     return if (onClick == null && long == null) this
-    else this.then(Modifier.combinedClickable(onClick = onClick ?: {}, onLongClick = long))
+    // un graphique de la carte lu au doigt garde le geste pour lui
+    else this.then(Modifier.combinedClickable(onClick = { if (!app.superhealth.ui.charts.ChartTouch.busy()) onClick?.invoke() },
+        onLongClick = long?.let { l -> { if (!app.superhealth.ui.charts.ChartTouch.busy()) l() } }))
 }
 
 /** Fond des pistes (barres, anneaux) posées sur une carte. */
@@ -946,7 +968,8 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     // grand : la version détaillée de chaque carte.
     val special = when (c) {
         DashCard.RINGS, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.COACH, DashCard.COACH_WEEK,
-        DashCard.FORM, DashCard.BEDTIME, DashCard.CYCLE, DashCard.VITALS, DashCard.VITALS_TRENDS, DashCard.NIGHT_VITALS, DashCard.SCORES -> true
+        DashCard.FORM, DashCard.BEDTIME, DashCard.CYCLE, DashCard.VITALS, DashCard.VITALS_TRENDS, DashCard.NIGHT_VITALS, DashCard.SCORES,
+        DashCard.MOOD, DashCard.WEEK_COMPARE, DashCard.ACTIVE_DAYS, DashCard.HOURLY_STEPS -> true
         DashCard.NEXT_WORKOUT -> size == app.superhealth.CardSize.W
         DashCard.MUSCLES -> size != app.superhealth.CardSize.W
         else -> false
@@ -963,6 +986,10 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     when (c) {
         // dessinées par leur famille (ci-dessus)
         DashCard.QUESTS, DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> Unit
+        DashCard.MOOD -> MoodCard(c, modifier, nav)
+        DashCard.WEEK_COMPARE -> WeekCompareCard(c, vm, modifier) { tab("activities") }
+        DashCard.ACTIVE_DAYS -> ActiveDaysCard(c, vm, modifier) { tab("activities") }
+        DashCard.HOURLY_STEPS -> HourlyStepsCard(c, vm, modifier, nav)
         DashCard.CALORIES -> {
             val todayEntries by vm.nutrition.todayEntries.collectAsState()
             val consumed = todayEntries.fold(Macros.ZERO) { acc, e -> acc + e.macros() }
@@ -1001,7 +1028,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
                 LineChart(listOf(
                     Series(pts.filter { it.scale != null }.map { it.epochDay to s.weightValue(it.scale!!) }, c.ink().copy(alpha = 0.45f), dots = true),
                     Series(pts.map { it.epochDay to s.weightValue(it.trend) }, c.ink()),
-                ), height = 56.dp, showAxis = false)
+                ), height = 56.dp, showAxis = false, valueFormat = { formatNumber(it, 1) + " " + tr(s.weightUnit.label) })
             }) {
                 Value(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), color = c.ink().onContainer())
                 Sub(if (week.size >= 2) signed(s.weightValue(week.last().trend - week.first().trend), 2) + tr(" / sem.") else tr("Ajoutez des pesées"))

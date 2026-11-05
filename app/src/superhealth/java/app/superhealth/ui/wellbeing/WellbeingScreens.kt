@@ -51,9 +51,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -400,7 +398,7 @@ fun BreatheScreen(nav: NavHostController) {
     var minutes by remember { mutableIntStateOf(5) }
     var running by remember { mutableStateOf(false) }
     var elapsed by remember { mutableLongStateOf(0L) }
-    val haptic = LocalHapticFeedback.current
+    val haptic = app.superhealth.ui.rememberHaptics()
     val phases = patterns[pattern].second
     val cycle = phases.sumOf { it.second }
     val total = minutes * 60_000L
@@ -412,14 +410,14 @@ fun BreatheScreen(nav: NavHostController) {
             withFrameMillis { }
             elapsed = System.currentTimeMillis() - start
             if (elapsed >= total) {
-                running = false; elapsed = total; haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                running = false; elapsed = total; haptic.longPress()
                 if (app.superhealth.meditation.Meditation.available()) app.superhealth.meditation.Meditation.record(breatheCtx, minutes, "breathing")
                 break
             }
             val t = (elapsed / 1000.0) % cycle
             var acc = 0.0; var idx = 0
             for ((i, p) in phases.withIndex()) { if (t < acc + p.second) { idx = i; break }; acc += p.second }
-            if (idx != lastPhase) { if (lastPhase >= 0) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); lastPhase = idx }
+            if (idx != lastPhase) { if (lastPhase >= 0) haptic.tick(); lastPhase = idx }
         }
     }
     if (running) KeepScreenOn()

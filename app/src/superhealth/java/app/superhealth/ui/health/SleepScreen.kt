@@ -1,6 +1,7 @@
 package app.superhealth.ui.health
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -124,8 +127,6 @@ fun SleepScreen(vm: SuperViewModel, nav: NavHostController) {
             SleepSpan.WEEK, SleepSpan.MONTH -> NightsView(vm, nav, from, to, span == SleepSpan.WEEK)
             SleepSpan.YEAR -> YearView(vm, from, to)
         }
-        SectionLabel(trf("À propos : %1\$s", tr("Sommeil").lowercase(Lang.locale)))
-        MfCard { Text(tr(Metric.SLEEP.about!!), style = MaterialTheme.typography.bodyMedium) }
         Spacer(Modifier.height(12.dp))
         Text(tr("Ces mesures servent au suivi personnel et ne remplacent pas un avis médical."), style = MaterialTheme.typography.bodySmall,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp))
@@ -201,21 +202,12 @@ private fun NightView(vm: SuperViewModel, nav: NavHostController, date: LocalDat
         MfCard { Text(tr("Aucune nuit enregistrée ce jour-là."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary) }
         return
     }
-    // en-tête : durée endormi, Repos (mot et nombre), heures et hypnogramme
+    // en-tête : durée endormi, heures et hypnogramme (le score reste replié plus bas)
     MfCard {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Endormi"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
                 Text(formatDuration(n.asleepMin), style = MaterialTheme.typography.displaySmall, color = SleepHue.onContainer(), maxLines = 1)
-            }
-            d.score?.let { s ->
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(tr(Scores.restWord(s, n.asleepMin, d.needMin).label), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                        color = SleepHue.onContainer(), maxLines = 1,
-                        modifier = Modifier.clip(CircleShape).background(SleepHue.container(1.6f)).padding(horizontal = 10.dp, vertical = 4.dp))
-                    Spacer(Modifier.height(4.dp))
-                    Text(trf("Repos %1\$s / 100", s.roundToInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
-                }
             }
         }
         Text(timeOf(n.bedMs) + " – " + timeOf(n.wakeMs) + " · " + trf("%1\$s au lit", formatDuration(n.inBedMin)),
@@ -243,17 +235,22 @@ private fun NightView(vm: SuperViewModel, nav: NavHostController, date: LocalDat
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
     }
 
+    // le score ne s'affiche que sur demande (les cartes de scores du tableau de bord sont là pour ça)
     d.parts?.let { p ->
-        SectionLabel(tr("Qualité"))
-        MfCard(onClick = { nav.go("h/metric/SLEEP_SCORE") }) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("${p.total.roundToInt()}", style = MaterialTheme.typography.headlineMedium, color = SleepHue.onContainer())
-                Text(" / 100", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
-                Spacer(Modifier.weight(1f))
-                d.watchScore?.let { Text(trf("Score de la montre : %1\$s", it.roundToInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
+        ScoreReveal(tr("Voir le score de la nuit")) {
+            MfCard(onClick = { nav.go("h/metric/SLEEP_SCORE") }) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("${p.total.roundToInt()}", style = MaterialTheme.typography.headlineMedium, color = SleepHue.onContainer())
+                    Text(" / 100", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
+                    Spacer(Modifier.width(10.dp))
+                    d.score?.let { Text(tr(Scores.restWord(it, n.asleepMin, d.needMin).label), style = MaterialTheme.typography.labelLarge,
+                        color = SleepHue.onContainer(), modifier = Modifier.padding(bottom = 6.dp)) }
+                    Spacer(Modifier.weight(1f))
+                    d.watchScore?.let { Text(trf("Score de la montre : %1\$s", it.roundToInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
+                }
+                Spacer(Modifier.height(12.dp))
+                RestPartsRows(p, SleepHue)
             }
-            Spacer(Modifier.height(12.dp))
-            RestPartsRows(p, SleepHue)
         }
     }
 
@@ -372,7 +369,6 @@ private fun NightsView(vm: SuperViewModel, nav: NavHostController, from: LocalDa
             tr("Nuits") to "${present.size}",
             tr("La plus courte") to formatDuration(present.minOf { it.asleepMin }),
             tr("La plus longue") to formatDuration(present.maxOf { it.asleepMin }),
-            d.sri?.let { tr("Régularité") to "${it.roundToInt()} / 100" },
         ))
     }
 
@@ -409,8 +405,7 @@ private fun NightsView(vm: SuperViewModel, nav: NavHostController, from: LocalDa
     }
 
     val sc = d.scores.mapNotNull { (day, v) -> v?.let { day.toEpochDay() to it } }
-    if (sc.isNotEmpty()) {
-        SectionLabel(tr("Repos"))
+    if (sc.isNotEmpty()) ScoreReveal(tr("Voir le score de repos")) {
         MfCard(onClick = { nav.go("h/metric/SLEEP_SCORE") }) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("${sc.map { it.second }.average().roundToInt()}", style = MaterialTheme.typography.headlineMedium, color = SleepHue.onContainer())
@@ -453,4 +448,18 @@ private fun YearView(vm: SuperViewModel, from: LocalDate, to: LocalDate) {
             StatGrid(listOf(tr("Min.") to formatDuration(values.min()), tr("Max.") to formatDuration(values.max()), tr("Nuits") to "${values.size}"))
         }
     }
+}
+
+/** Score replié derrière une ligne discrète : on ne le voit que si on le demande. */
+@Composable
+internal fun ScoreReveal(label: String, content: @Composable () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val haptic = app.superhealth.ui.rememberHaptics()
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth().clip(CircleShape).clickable { open = !open; haptic.toggle() }.padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+        Icon(if (open) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, tint = Mf.colors.textTertiary)
+    }
+    androidx.compose.animation.AnimatedVisibility(open) { Column { content() } }
 }

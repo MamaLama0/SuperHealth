@@ -119,7 +119,9 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
     val pendingNotice by vm.logNotice.collectAsState()
     LaunchedEffect(pendingNotice) { pendingNotice?.let { notice = it; lastIds = emptyList(); added++; vm.logNotice.value = null } }
     /** Après un ajout : confirmation, recherche vidée et prête pour l'aliment suivant. */
+    val haptic = app.superhealth.ui.rememberHaptics()
     fun afterAdd(text: String, ids: List<Long> = emptyList()) {
+        haptic.confirm()
         added++; notice = text; lastIds = ids; message = null; query = ""
         if (tab != SearchTab.ALL) tab = SearchTab.ALL
         runCatching { focus.requestFocus() }

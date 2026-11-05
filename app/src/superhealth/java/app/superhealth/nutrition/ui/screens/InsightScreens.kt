@@ -135,7 +135,7 @@ fun ExpenditureScreen(vm: AppViewModel, onBack: () -> Unit) {
                 Series(pts.map { it.epochDay to s.energyValue(it.short) }, Base.Purple.copy(alpha = 0.35f), width = 1.5f),
                 Series(pts.map { it.epochDay to s.energyValue(it.long) }, Base.Purple.copy(alpha = 0.35f), width = 1.5f, dashed = true),
                 Series(pts.map { it.epochDay to s.energyValue(it.tdee) }, Base.Purple),
-            ), height = 220.dp, format = { it.roundToInt().toString() })
+            ), height = 220.dp, format = { it.roundToInt().toString() }, valueFormat = { app.superhealth.ui.formatNumber(it) + " " + s.energyUnit.label.tr() })
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(width = 14.dp, height = 3.dp).background(Base.Purple)); Text(tr("  Dépense   "), style = MaterialTheme.typography.labelSmall)
@@ -223,7 +223,7 @@ fun WeightScreen(vm: AppViewModel, onBack: () -> Unit) {
                 Series(pts.map { it.epochDay to s.weightValue(it.trend) }, Mf.colors.accent,
                     band = pts.filter { it.sd > 0 }.map { Triple(it.epochDay, s.weightValue(it.trend - 2 * it.sd), s.weightValue(it.trend + 2 * it.sd)) }),
                 proj?.takeIf { range.days == null || range.days!! <= 90 }?.let { Series(it, Mf.colors.accent.copy(alpha = 0.6f), dashed = true) },
-            ), height = 230.dp)
+            ), height = 230.dp, valueFormat = { app.superhealth.ui.formatNumber(it, 1) + " " + s.weightUnit.label.tr() })
             Spacer(Modifier.height(12.dp))
             ChipChoice(Range.entries, range, { it.label.tr() }) { range = it }
         }

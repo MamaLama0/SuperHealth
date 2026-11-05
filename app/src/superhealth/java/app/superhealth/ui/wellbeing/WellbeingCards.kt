@@ -98,10 +98,11 @@ fun moodColor(mood: Int): Color = when (mood) {
 /** Les cinq humeurs, à toucher. */
 @Composable
 fun MoodPicker(selected: Int?, modifier: Modifier = Modifier, labels: List<String> = Journal.MOODS, onPick: (Int) -> Unit) {
+    val haptic = app.superhealth.ui.rememberHaptics()
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         (1..5).forEach { m ->
             val on = selected == m
-            Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable { onPick(m) }.padding(vertical = 6.dp),
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable { if (!on) haptic.confirm(); onPick(m) }.padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) moodColor(m).container(1.8f) else Color.Transparent),
                     contentAlignment = Alignment.Center) {

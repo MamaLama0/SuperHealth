@@ -100,7 +100,7 @@ val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
 fun MfCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(16.dp), content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card).border(1.dp, Mf.colors.line, CardShape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
+            .then(if (onClick != null) Modifier.clickable { if (!app.superhealth.ui.charts.ChartTouch.busy()) onClick() } else Modifier).padding(padding),
         content = content,
     )
 }
@@ -369,7 +369,8 @@ fun SettingRow(title: String, value: String? = null, subtitle: String? = null, i
 /** Interrupteur de Material 3, à la couleur d'accent. [onChange] null : la ligne qui le porte gère l'appui. */
 @Composable
 fun Toggle(checked: Boolean, onChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    androidx.compose.material3.Switch(checked, onChange, modifier, enabled = enabled, colors = androidx.compose.material3.SwitchDefaults.colors(
+    val haptic = app.superhealth.ui.rememberHaptics()
+    androidx.compose.material3.Switch(checked, onChange?.let { f -> { v: Boolean -> haptic.toggle(v); f(v) } }, modifier, enabled = enabled, colors = androidx.compose.material3.SwitchDefaults.colors(
         checkedTrackColor = Mf.colors.accent, checkedThumbColor = Mf.colors.onStrong, checkedBorderColor = Mf.colors.accent,
         uncheckedTrackColor = Mf.colors.chip, uncheckedThumbColor = Mf.colors.textTertiary, uncheckedBorderColor = Mf.colors.textTertiary,
     ))
@@ -377,7 +378,8 @@ fun Toggle(checked: Boolean, onChange: ((Boolean) -> Unit)?, modifier: Modifier 
 
 @Composable
 fun SwitchRow(title: String, subtitle: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clickable { onChange(!checked) }.padding(start = 16.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
+    val haptic = app.superhealth.ui.rememberHaptics()
+    Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clickable { haptic.toggle(!checked); onChange(!checked) }.padding(start = 16.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(tr(title), style = MaterialTheme.typography.bodyLarge)
@@ -421,6 +423,7 @@ fun PillButton(text: String, modifier: Modifier = Modifier, strong: Boolean = tr
 @Composable
 fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier: Modifier = Modifier, onSelect: (T) -> Unit) {
     val labels = options.map { tr(label(it)) }
+    val haptic = app.superhealth.ui.rememberHaptics()
     // segmenté : jusqu'à 4 libellés courts, ou 6 très courts (plages « 1S 1M 3M… »)
     if ((options.size in 2..4 && labels.sumOf { it.length } <= 30 && labels.all { it.length <= 12 }) ||
         (options.size in 5..6 && labels.all { it.length <= 5 })) {
@@ -434,7 +437,7 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
             val shape = RoundedCornerShape(8.dp)
             Row(
                 Modifier.height(34.dp).clip(shape).background(if (sel) Mf.colors.accent.container(1.4f) else Color.Transparent)
-                    .border(1.dp, if (sel) Color.Transparent else Mf.colors.divider.copy(alpha = 1f), shape).clickable { onSelect(o) }
+                    .border(1.dp, if (sel) Color.Transparent else Mf.colors.divider.copy(alpha = 1f), shape).clickable { if (!sel) haptic.tick(); onSelect(o) }
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -449,6 +452,7 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
 @Composable
 fun Segmented(labels: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
     val n = labels.size.coerceAtLeast(1)
+    val haptic = app.superhealth.ui.rememberHaptics()
     // largeur mesurée après coup (pas de BoxWithConstraints : il casse les rangées à hauteur intrinsèque du tableau de bord)
     var widthPx by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -461,7 +465,7 @@ fun Segmented(labels: List<String>, selected: Int, modifier: Modifier = Modifier
         Row(Modifier.fillMaxSize()) {
             labels.forEachIndexed { i, l ->
                 Box(Modifier.weight(1f).fillMaxHeight().clip(CircleShape).clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelect(i) },
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { if (i != selected) haptic.tick(); onSelect(i) },
                     contentAlignment = Alignment.Center) {
                     Text(l, style = MaterialTheme.typography.labelLarge, color = if (i == selected) Mf.colors.accent.onContainer() else Mf.colors.textSecondary,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp))

@@ -75,10 +75,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -385,7 +383,7 @@ fun StretchPlayScreen(nav: NavHostController) {
     val ctx = LocalContext.current
     val routine by Stretch.current.collectAsState()
     val r = routine?.takeIf { it.items.isNotEmpty() } ?: return
-    val haptic = LocalHapticFeedback.current
+    val haptic = app.superhealth.ui.rememberHaptics()
     val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val foreground = lifecycleState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
     var index by rememberSaveable { mutableIntStateOf(0) }
@@ -402,13 +400,13 @@ fun StretchPlayScreen(nav: NavHostController) {
     androidx.activity.compose.BackHandler { close() }
     fun next() {
         if (index >= r.items.lastIndex) { finished = true; Stretch.record(ctx, r, spent) }
-        else { index++; left = r.items[index].seconds; haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+        else { index++; left = r.items[index].seconds; haptic.longPress() }
     }
     LaunchedEffect(running, finished, foreground, index) {
         while (running && !finished && foreground) {
             delay(1000)
             left--; spent++
-            if (e.uni && left == e.seconds / 2) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (e.uni && left == e.seconds / 2) haptic.longPress()
             if (left <= 0) next()
         }
     }

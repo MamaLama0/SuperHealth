@@ -78,7 +78,15 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     PROGRESSION("Progression", Section.SOCIAL),
     QUESTS("Quêtes de la semaine", Section.SOCIAL),
     FRIENDS("Amis", Section.SOCIAL),
-    STREAKS("Mes séries", Section.SOCIAL);
+    STREAKS("Mes séries", Section.SOCIAL),
+    /** 3.6 : cinq semaines d'humeur en pastilles. */
+    MOOD("Humeur", Section.HEALTH),
+    /** 3.6 : cette semaine face à la précédente, aux mêmes jours. */
+    WEEK_COMPARE("Cette semaine", Section.HEALTH),
+    /** 3.6 : douze semaines de jours actifs. */
+    ACTIVE_DAYS("Jours actifs", Section.TRAINING),
+    /** 3.6 : pas d'aujourd'hui heure par heure. */
+    HOURLY_STEPS("Pas par heure", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement"), SOCIAL("Social") }
 
@@ -141,7 +149,12 @@ val DashCard.available: Boolean get() = when (this) {
 }
 
 /** Toutes les cartes ont les quatre tailles, sauf les phrases (Insights) qui n'ont pas de version petite. */
-val DashCard.sizes: List<CardSize> get() = if (this == DashCard.INSIGHTS) listOf(CardSize.M, CardSize.W, CardSize.L) else CardSize.entries
+val DashCard.sizes: List<CardSize> get() = when (this) {
+    DashCard.INSIGHTS -> listOf(CardSize.M, CardSize.W, CardSize.L)
+    // grilles et barres : demi-largeur ou pleine largeur
+    DashCard.MOOD, DashCard.WEEK_COMPARE, DashCard.ACTIVE_DAYS, DashCard.HOURLY_STEPS -> listOf(CardSize.M, CardSize.L)
+    else -> CardSize.entries
+}
 
 val DashCard.defaultSize: CardSize get() = if (this == DashCard.FRIENDS) CardSize.W else if (this in HALF) CardSize.M else CardSize.L
 
@@ -222,7 +235,9 @@ fun DashCard.feature(): Feature? = when (this) {
     DashCard.HABITS, DashCard.BALANCE -> Feature.NUTRITION
     DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS, DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS,
     DashCard.MUSCLE_SETS, DashCard.LIFTS -> Feature.TRAINING
-    DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE, DashCard.FORM -> Feature.HEALTH
+    DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE, DashCard.FORM,
+    DashCard.HOURLY_STEPS, DashCard.ACTIVE_DAYS -> Feature.HEALTH
+    DashCard.MOOD -> Feature.JOURNAL
     DashCard.CYCLE -> Feature.CYCLE
     else -> if (watch) Feature.HEALTH else null
 }
@@ -255,6 +270,8 @@ data class SuperSettings(
     val appLock: Boolean = false,
     val lockDelaySec: Int = 0,
     val secureScreen: Boolean = false,
+    /** Retours haptiques de l'app (graphiques, interrupteurs, validations) ; le réglage système s'applique aussi. */
+    val haptics: Boolean = true,
     /** Module LocalHealth (moteur Gadgetbridge : montres et capteurs Bluetooth). Désactivable. */
     val watchModule: Boolean = true,
     /** Health Connect activé (lecture et écriture, voir HealthConnectHub). */

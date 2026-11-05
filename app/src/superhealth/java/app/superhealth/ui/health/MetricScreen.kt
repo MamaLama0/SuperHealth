@@ -125,17 +125,6 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
     val source by produceState<DataSource?>(null, metric, lastDay, refresh) {
         value = lastDay?.let { runCatching { Bridge.dataSource(metric, it) }.getOrNull() }
     }
-    // Sommeil : le Repos de chaque nuit de la période (phases de la montre ou de Health Connect).
-    val scores by produceState(emptyList<Pair<LocalDate, Double>>(), metric, span, offset, refresh) {
-        value = if (metric == Metric.SLEEP && Bridge.hasSource(Metric.SLEEP_SCORE)) coroutineScope {
-            generateSequence(p.from) { it.plusDays(1) }.takeWhile { !it.isAfter(minOf(p.to, today)) }.toList()
-                .map { d -> async(Dispatchers.IO) { runCatching { Bridge.healthValue(ctx, Metric.SLEEP_SCORE, d) }.getOrNull()?.let { d to it } } }
-                .awaitAll().filterNotNull()
-        } else emptyList()
-    }
-    val scoreSource by produceState<DataSource?>(null, scores.lastOrNull()?.first, refresh) {
-        value = scores.lastOrNull()?.first?.let { runCatching { Bridge.dataSource(Metric.SLEEP_SCORE, it) }.getOrNull() }
-    }
     val logs by produceState(emptyList<ManualLog>(), metric, span, offset, refresh) {
         value = if (metric.manual) ManualLogStore.get(ctx).query(metric, HealthRepository.startMs(p.from), HealthRepository.endMs(p.to)) else emptyList()
     }
@@ -177,10 +166,14 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             if (total != null) source?.let { SourceLine(it) }
             Spacer(Modifier.height(14.dp))
             val color = metric.color
+            // valeur lue au doigt : unité de la mesure, jour ou heure en clair
+            val fmt: (Double) -> String = { formatWithUnit(metric, if (metric == Metric.SLEEP && (span == Span.WEEK || span == Span.MONTH)) it * 60 else it) }
+            androidx.compose.runtime.CompositionLocalProvider(app.superhealth.ui.charts.LocalChartTitle provides tr(metric.label)) {
             when {
                 span == Span.DAY && intraday.isNotEmpty() -> if (metric == Metric.STEPS) {
                     val byHour = (0..23).map { h -> intraday.filter { java.time.Instant.ofEpochMilli(it.timestampMs).atZone(java.time.ZoneId.systemDefault()).hour == h }.sumOf { it.value }.takeIf { v -> v > 0 } }
-                    BarChart(byHour, byHour.map { null }, color, height = 150.dp, labels = (0..23).map { if (it % 6 == 0) "$it" else "" })
+                    BarChart(byHour, byHour.map { null }, color, height = 150.dp, labels = (0..23).map { if (it % 6 == 0) "$it" else "" },
+                        valueFormat = fmt, pointLabel = { "${it}h – ${it + 1}h" })
                 } else if (metric == Metric.HEART_RATE) {
                     val start = HealthRepository.startMs(p.from)
                     HeartChart(intraday.map { it.timestampMs to it.value }, color, height = 170.dp, from = start, to = start + 86_400_000L,
@@ -188,7 +181,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                 } else {
                     val start = HealthRepository.startMs(p.from) / 60_000
                     LineChart(listOf(Series(intraday.map { it.timestampMs / 60000 to it.value }, color, gap = 60.0)), height = 150.dp,
-                        xFrom = start.toDouble(), xTo = (start + 1440).toDouble(), xLabels = listOf(0, 6, 12, 18).map { start + it * 60 to "${it}h" })
+                        xFrom = start.toDouble(), xTo = (start + 1440).toDouble(), xLabels = listOf(0, 6, 12, 18).map { start + it * 60 to "${it}h" }, valueFormat = fmt)
                 }
                 span == Span.DAY -> Text(tr("Pas de détail heure par heure pour ce jour."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                 span == Span.QUARTER || span == Span.YEAR -> {
@@ -197,16 +190,21 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                     val keys = buckets.keys.sorted()
                     val vs = keys.map { k -> aggregate(metric, buckets[k].orEmpty().mapNotNull { it.second }) }
                     val labels = keys.mapIndexed { i, k -> if (span == Span.YEAR) k.month.getDisplayName(java.time.format.TextStyle.NARROW, Lang.locale) else if (i % 3 == 0) "${k.dayOfMonth}/${k.monthValue}" else "" }
-                    if (metric.chart == ChartKind.BARS) BarChart(vs, vs.map { null }, color, height = 150.dp, labels = labels)
-                    else LineChart(listOf(Series(keys.zip(vs).mapNotNull { (k, v) -> v?.let { k.toEpochDay() to it } }, color, markers = true)), height = 150.dp)
+                    val bucket = { i: Int -> keys[i].let { k -> if (span == Span.YEAR) k.format(DateTimeFormatter.ofPattern("LLLL yyyy", Lang.locale)) else trf("Semaine du %1\$s", k.format(DateTimeFormatter.ofPattern("d MMM", Lang.locale))) } }
+                    if (metric.chart == ChartKind.BARS) BarChart(vs, vs.map { null }, color, height = 150.dp, labels = labels, valueFormat = fmt, pointLabel = bucket)
+                    else LineChart(listOf(Series(keys.zip(vs).mapNotNull { (k, v) -> v?.let { k.toEpochDay() to it } }, color, markers = true)), height = 150.dp,
+                        valueFormat = fmt, xFormat = { d -> bucket(keys.indexOf(LocalDate.ofEpochDay(d.toLong())).coerceAtLeast(0)) })
                 }
                 metric.chart == ChartKind.BARS -> {
                     val goal = HealthRepository.goal(metric)?.takeIf { metric != Metric.CARDIO_WEEK }
                     BarChart(days.map { it.second?.let { v -> if (metric == Metric.SLEEP) v / 60 else v } },
                         days.map { goal?.let { g -> if (metric == Metric.SLEEP) g / 60 else g } }, color, height = 150.dp,
-                        labels = days.mapIndexed { i, (d, _) -> if (span == Span.WEEK) dayLetter(d) else if (i % 7 == 0) "${d.dayOfMonth}" else "" })
+                        labels = days.mapIndexed { i, (d, _) -> if (span == Span.WEEK) dayLetter(d) else if (i % 7 == 0) "${d.dayOfMonth}" else "" },
+                        valueFormat = fmt, pointLabel = { app.superhealth.ui.charts.dayLabel(days[it].first) })
                 }
-                else -> LineChart(listOf(Series(days.mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }, color, markers = days.size <= 31, gap = 3.0)), height = 150.dp)
+                else -> LineChart(listOf(Series(days.mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }, color, markers = days.size <= 31, gap = 3.0)), height = 150.dp,
+                    valueFormat = fmt)
+            }
             }
             if (values.size >= 2) {
                 Spacer(Modifier.height(14.dp))
@@ -218,8 +216,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             }
         }
 
-        if (scores.isNotEmpty()) SleepScoreCard(scores, span, scoreSource) { nav.go("h/metric/SLEEP_SCORE") }
-        if (metric == Metric.SLEEP) { UsualNight(); SriRow() }
+        if (metric == Metric.SLEEP) UsualNight()
         if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
 
         if (metric.manual) {
@@ -240,10 +237,6 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             }
         }
 
-        metric.about?.let {
-            SectionLabel(trf("À propos : %1\$s", tr(metric.label).lowercase(Lang.locale)))
-            MfCard { Text(tr(it), style = MaterialTheme.typography.bodyMedium) }
-        }
         Spacer(Modifier.height(12.dp))
         Text(tr("Ces mesures servent au suivi personnel et ne remplacent pas un avis médical."), style = MaterialTheme.typography.bodySmall,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp))
@@ -323,29 +316,6 @@ internal fun SourceLine(src: DataSource, modifier: Modifier = Modifier) {
     }
 }
 
-/** Score de sommeil calculé par la montre : nuit la plus récente de la période, moyenne et appareil qui l'a calculé. */
-@Composable
-private fun SleepScoreCard(scores: List<Pair<LocalDate, Double>>, span: Span, src: DataSource?, onClick: () -> Unit) {
-    SectionLabel(tr("Score de sommeil"))
-    MfCard(onClick = onClick) {
-        val (day, last) = scores.last()
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(formatValue(Metric.SLEEP_SCORE, last), style = MaterialTheme.typography.displaySmall, color = Metric.SLEEP_SCORE.color, maxLines = 1)
-            Text(" / 100", style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
-            Spacer(Modifier.weight(1f))
-            if (span != Span.DAY && scores.size >= 2)
-                Text(trf("Moy. %1\$s", formatValue(Metric.SLEEP_SCORE, scores.map { it.second }.average())),
-                    style = MaterialTheme.typography.titleSmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
-        }
-        if (span != Span.DAY) Text(relativeDay(day), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-        // score de SuperHealth (Repos) pour toutes les montres ; celui que la montre calcule elle-même, en second
-        val ctx = LocalContext.current
-        val watch by produceState<Double?>(null, day) { value = runCatching { Bridge.watchSleepScore(ctx, day) }.getOrNull() }
-        watch?.let { Text(trf("Score de la montre : %1\$s", it.roundToInt()), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
-        src?.let { SourceLine(it) }
-    }
-}
-
 /** La dernière nuit, partie par partie, face à vos habitudes (désactivable dans Réglages > Sommeil). */
 @Composable
 private fun UsualNight() {
@@ -371,16 +341,5 @@ private fun UsualNight() {
             }
             app.superhealth.nutrition.ui.components.SettingRow(tr(name), value = tr(when (v) { -1 -> low; 1 -> high; else -> "Habituelle" }))
         }
-    }
-}
-
-/** Régularité du sommeil (SRI des 2 dernières semaines) : une ligne, absente sans 6 nuits consécutives. */
-@Composable
-private fun SriRow() {
-    val sri by produceState<Double?>(null) { value = runCatching { app.superhealth.health.data.Scores.sriOf(LocalDate.now()) }.getOrNull() }
-    val v = sri ?: return
-    app.superhealth.nutrition.ui.components.GroupCard {
-        app.superhealth.nutrition.ui.components.SettingRow(tr("Régularité"), subtitle = tr("Même état, endormi ou éveillé, d'un jour à l'autre (SRI, 14 jours)"),
-            value = "${v.roundToInt()} / 100")
     }
 }

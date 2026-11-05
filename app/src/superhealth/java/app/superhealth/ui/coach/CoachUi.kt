@@ -409,7 +409,7 @@ private fun Bubble(m: Coach.Msg, onAction: (app.superhealth.coach.CoachTools.Act
     val mine = m.role == "user"
     val text = if (mine) m.text else Coach.split(m.text).first
     var menu by remember { mutableStateOf(false) }
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptic = app.superhealth.ui.rememberHaptics()
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
         if (!mine) { CoachAvatar(26.dp); Spacer(Modifier.width(8.dp)) }
         Box {
@@ -422,7 +422,7 @@ private fun Bubble(m: Coach.Msg, onAction: (app.superhealth.coach.CoachTools.Act
         }
         Column(Modifier.widthIn(max = 300.dp).clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = if (mine) 20.dp else 6.dp, bottomEnd = if (mine) 6.dp else 20.dp))
             .background(if (mine) Mf.colors.strong else Mf.colors.card)
-            .combinedClickable(onClick = {}, onLongClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); menu = true })
+            .combinedClickable(onClick = {}, onLongClick = { haptic.longPress(); menu = true })
             .padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text(if (mine) AnnotatedString(text) else rich(text), style = MaterialTheme.typography.bodyMedium, color = if (mine) Mf.colors.onStrong else Mf.colors.text)
             Text(timeOf(m.time), style = MaterialTheme.typography.labelSmall, color = (if (mine) Mf.colors.onStrong else Mf.colors.textTertiary).copy(alpha = 0.7f),

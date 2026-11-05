@@ -13,18 +13,36 @@ class PromptTimingTest {
     private val day = date.toEpochDay()
     private val settings = SuperSettings(promptSeed = 17423)
     private fun at(hour: Int, minute: Int = 0) = date.atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
-    private fun due(now: Long, steps: Double? = null, goal: Int = 8000, ends: List<Long> = emptyList(), s: SuperSettings = settings) =
-        PromptTiming.moodDue(s, now, steps, goal, ends, zone)
+    private fun due(now: Long, stepsAt: Long? = null, ends: List<Long> = emptyList(), calm: List<Long> = emptyList(), dinner: Long? = null,
+                    s: SuperSettings = settings) =
+        PromptTiming.moodDue(s, now, PromptTiming.Signals(stepsAt, ends, calm, dinner), zone)
 
-    @Test fun morningWithoutCompletedGoalDoesNotPrompt() {
+    @Test fun neverBeforeNoonWhateverHappened() {
         assertFalse(due(at(7)))
-        assertFalse(due(at(10), steps = 7999.0))
-        assertFalse(due(at(10), steps = 8000.0, goal = 0))
-        assertTrue(due(at(10), steps = 8000.0))
+        assertFalse(due(at(10), stepsAt = at(8)))
+        assertFalse(due(at(11, 59), ends = listOf(at(10, 30))))
+        assertFalse(due(at(11, 30), calm = listOf(at(11))))
+    }
+
+    @Test fun stepGoalPromptsSomeTensOfMinutesLater() {
+        val reached = at(14)
+        val chosen = reached + PromptTiming.stepsDelayMinutes(reached, settings.promptSeed) * 60_000L
+        assertFalse(due(reached, stepsAt = reached))
+        assertFalse(due(chosen - 1, stepsAt = reached))
+        assertTrue(due(chosen, stepsAt = reached))
+        assertTrue((0L..200).all { PromptTiming.stepsDelayMinutes(reached + it * 77_000, settings.promptSeed) in 15..45 })
+    }
+
+    @Test fun stepGoalCrossingIsInterpolated() {
+        val hourly = (0..23).map { at(it) to if (it in 9..15) 1500.0 else 0.0 }
+        // 9 h–13 h : 7 500 pas, il en manque 500 sur les 1 500 de 14 h → 14 h 20
+        assertEquals(at(14, 20), PromptTiming.stepGoalCrossing(hourly, 8000))
+        assertNull(PromptTiming.stepGoalCrossing(hourly, 20000))
+        assertNull(PromptTiming.stepGoalCrossing(hourly, 0))
     }
 
     @Test fun completedActivityOnlyTriggersWithinThirtyMinutesToTwoHours() {
-        val end = at(10)
+        val end = at(14)
         assertFalse(due(end - 1, ends = listOf(end)))
         assertFalse(due(end + 29 * 60_000, ends = listOf(end)))
         val chosen = end + PromptTiming.activityDelayMinutes(end, settings.promptSeed) * 60_000L
@@ -32,6 +50,29 @@ class PromptTimingTest {
         assertTrue(due(chosen, ends = listOf(end)))
         assertTrue(due(end + 120 * 60_000, ends = listOf(end)))
         assertFalse(due(end + 120 * 60_000 + 1, ends = listOf(end)))
+    }
+
+    @Test fun shortOrIncidentalActivitiesDoNotCount() {
+        assertFalse(PromptTiming.meaningful(walk = true, at(8), at(8, 12)))
+        assertFalse(PromptTiming.meaningful(walk = false, at(8), at(8, 10)))
+        assertTrue(PromptTiming.meaningful(walk = false, at(8), at(8, 15)))
+        assertTrue(PromptTiming.meaningful(walk = true, at(8), at(8, 25)))
+    }
+
+    @Test fun calmSessionsAndDinnerAreGoodMoments() {
+        val end = at(13)
+        val chosen = end + PromptTiming.calmDelayMinutes(end, settings.promptSeed) * 60_000L
+        assertFalse(due(chosen - 1, calm = listOf(end)))
+        assertTrue(due(chosen, calm = listOf(end)))
+        // un repas noté l'après-midi n'est pas le dîner ; noté après 18 h, il ouvre le moral tout de suite
+        assertFalse(due(at(16, 30), dinner = at(16)))
+        assertEquals(PromptTiming.Trigger.DINNER, PromptTiming.moodTrigger(settings, at(18, 1), PromptTiming.Signals(dinnerAt = at(18)), zone))
+    }
+
+    @Test fun threeSkipsInARowWaitForTheEvening() {
+        val s = settings.copy(moodSkips = listOf(day - 1, day - 2, day - 3))
+        val end = at(13)
+        assertFalse(due(end + 120 * 60_000, ends = listOf(end), s = s))
     }
 
     @Test fun fallbackWorksWithoutHealthSourcesAndIsStableThroughoutTheDay() {

@@ -78,6 +78,10 @@ fun NotificationSettingsScreen(nav: NavHostController) {
         }
         SectionLabel(tr("Application"))
         GroupCard {
+            SwitchRow(tr("Retour haptique"), tr("Légères vibrations au toucher des graphiques, interrupteurs et validations"), settings.haptics) { on ->
+                SuperPrefs.update { it.copy(haptics = on) }
+            }
+            RowDivider()
             SwitchRow(tr("Nouvelles versions"), tr("Être prévenu lorsqu'une mise à jour est disponible"), settings.updateCheck) { on ->
                 SuperPrefs.update { it.copy(updateCheck = on) }
                 if (!on && !app.superhealth.update.Updater.busy()) app.superhealth.update.Updater.cancelNotification(ctx)

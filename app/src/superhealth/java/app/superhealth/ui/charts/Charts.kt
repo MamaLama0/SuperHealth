@@ -1,6 +1,27 @@
 package app.superhealth.ui.charts
 
+import android.content.Intent
+import android.os.SystemClock
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.IosShare
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,7 +49,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.superhealth.ui.Haptics
+import app.superhealth.ui.Lang
 import app.superhealth.ui.formatNumber
+import app.superhealth.ui.rememberHaptics
+import app.superhealth.ui.timeOf
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.isWarm
 import app.superhealth.ui.tr
@@ -39,6 +64,11 @@ import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
  * Charte commune de tous les graphiques de l'app : mêmes traits, grilles, aires, points, barres et axes, pour que
@@ -157,6 +187,151 @@ data class Series(
     val markers: Boolean = false, val gap: Double? = null, val area: Boolean? = null,
 )
 
+
+// ---- Lecture au doigt ----------------------------------------------------------------------------------------------
+
+/**
+ * Graphique tenu au doigt : les cartes qui le portent ignorent alors leur toucher et leur appui long (sinon lâcher le
+ * doigt ouvrirait la carte ou ses réglages).
+ */
+object ChartTouch {
+    @Volatile var active = false
+    @Volatile var endedAt = 0L
+    fun busy() = active || SystemClock.uptimeMillis() - endedAt < 400
+}
+
+/** Nom donné au graphique quand on partage une valeur (titre de la carte ou de l'écran qui le porte). */
+val LocalChartTitle = compositionLocalOf<String?> { null }
+
+/** Maintien avant la lecture : plus court que l'appui long système, pour passer avant celui de la carte. */
+private const val HOLD_MS = 280L
+/** Valeur restée affichée après le lâcher, le temps de la toucher pour la partager. */
+private const val PINNED_MS = 5000L
+
+private class Scrub {
+    /** Indice choisi parmi [xs] (positions en px des valeurs lisibles), mis à jour au dessin. */
+    var sel by mutableStateOf<Int?>(null)
+    var pinned by mutableStateOf(false)
+    var xs = FloatArray(0)
+    var tip = Rect.Zero
+    var share: String? = null
+    fun nearest(x: Float): Int? = if (xs.isEmpty()) null else xs.indices.minBy { abs(xs[it] - x) }
+    fun clear() { sel = null; pinned = false }
+}
+
+@Composable
+private fun rememberScrub(key: Any?): Scrub {
+    val s = remember(key) { Scrub() }
+    LaunchedEffect(s.pinned, s.sel) { if (s.pinned) { delay(PINNED_MS); s.clear() } }
+    return s
+}
+
+/** Attend le maintien ; vrai si le geste s'arrête avant (toucher bref, défilement, geste pris par un autre). */
+private suspend fun AwaitPointerEventScope.endsEarly(id: PointerId, start: Offset, s: Scrub, slop: Float, onShare: (String) -> Unit): Boolean {
+    while (true) {
+        val c = awaitPointerEvent().changes.firstOrNull { it.id == id } ?: return true
+        if (c.isConsumed) return true
+        if (!c.pressed) {
+            // valeur épinglée : la toucher la partage ; toucher ailleurs la retire
+            if (s.pinned && s.tip.contains(start)) { c.consume(); s.share?.let(onShare) }
+            s.clear()
+            return true
+        }
+        if ((c.position - start).getDistance() > slop) return true
+    }
+}
+
+/** Rester appuyé puis glisser : la valeur sous le doigt, un cran haptique à chaque nouvelle valeur. */
+private fun Modifier.scrubbing(s: Scrub, haptic: Haptics, onShare: (String) -> Unit) = pointerInput(s) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        if (withTimeoutOrNull(HOLD_MS) { endsEarly(down.id, down.position, s, viewConfiguration.touchSlop, onShare) } != null) return@awaitEachGesture
+        ChartTouch.active = true
+        s.pinned = false
+        s.sel = s.nearest(down.position.x)
+        if (s.sel != null) haptic.press()
+        while (true) {
+            val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+            c.consume()
+            if (!c.pressed) break
+            val i = s.nearest(c.position.x)
+            if (i != s.sel) { s.sel = i; haptic.tick() }
+        }
+        ChartTouch.active = false
+        ChartTouch.endedAt = SystemClock.uptimeMillis()
+        s.pinned = s.sel != null
+    }
+}
+
+private fun shareText(ctx: android.content.Context, text: String) = runCatching {
+    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), tr("Partager"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}
+
+/** Couleurs, textes et icône de la bulle, lus une fois par composition. */
+private class TipStyle(val measurer: TextMeasurer, val value: TextStyle, val label: TextStyle, val card: Color, val border: Color,
+                       val guide: Color, val icon: Painter, val title: String?, val haptic: Haptics, val onShare: (String) -> Unit)
+
+@Composable
+private fun tipStyle(): TipStyle {
+    val ctx = LocalContext.current
+    return TipStyle(rememberTextMeasurer(), TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Mf.colors.text),
+        TextStyle(fontSize = 11.sp, color = Mf.colors.textSecondary), Mf.colors.card, Mf.colors.divider, Mf.colors.textSecondary.copy(alpha = 0.6f),
+        rememberVectorPainter(Icons.Rounded.IosShare), LocalChartTitle.current, rememberHaptics()) { shareText(ctx, it) }
+}
+
+/**
+ * Repère vertical, points et bulle de la valeur choisie. [values] : (texte, couleur du point) ; [dots] : points sur les
+ * courbes ; [inside] : bulle en haut du tracé (graphique détaillé), sinon au-dessus (petit graphique de carte).
+ */
+private fun DrawScope.drawPick(st: TipStyle, s: Scrub, x: Float, top: Float, bottom: Float, values: List<Pair<String, Color>>, label: String,
+                               dots: List<Pair<Float, Color>>, inside: Boolean) {
+    drawLine(st.guide, Offset(x, top), Offset(x, bottom), 1.dp.toPx())
+    dots.forEach { (y, c) -> drawCircle(st.card, ChartStyle.endDot.toPx() + 1.5.dp.toPx(), Offset(x, y)); drawCircle(c, ChartStyle.endDot.toPx(), Offset(x, y)) }
+    val lines = values.map { (v, c) -> st.measurer.measure(v, st.value) to c }
+    val lab = label.takeIf { it.isNotEmpty() }?.let { st.measurer.measure(it, st.label) }
+    val pad = 8.dp.toPx(); val gap = 2.dp.toPx(); val dot = if (values.size > 1) 10.dp.toPx() else 0f
+    val icon = if (s.pinned) 14.dp.toPx() else 0f
+    val textW = max(lines.maxOfOrNull { it.first.size.width + dot } ?: 0f, lab?.size?.width?.toFloat() ?: 0f)
+    val w = textW + 2 * pad + if (icon > 0) icon + 6.dp.toPx() else 0f
+    val h = lines.sumOf { it.first.size.height } + (lab?.size?.height ?: 0) + gap * (lines.size - 1 + if (lab != null) 1 else 0) + 2 * 6.dp.toPx()
+    val left = (x - w / 2).coerceIn(0f, max(0f, size.width - w))
+    val y0 = if (inside) 0f else -h - 4.dp.toPx()
+    val r = CornerRadius(10.dp.toPx())
+    drawRoundRect(st.card, Offset(left, y0), Size(w, h), r)
+    drawRoundRect(st.border, Offset(left, y0), Size(w, h), r, style = Stroke(1.dp.toPx()))
+    var y = y0 + 6.dp.toPx()
+    lines.forEach { (m, c) ->
+        if (dot > 0) drawCircle(c, 3.dp.toPx(), Offset(left + pad + 3.dp.toPx(), y + m.size.height / 2f))
+        drawText(m, topLeft = Offset(left + pad + dot, y)); y += m.size.height + gap
+    }
+    lab?.let { drawText(it, topLeft = Offset(left + pad, y)) }
+    if (icon > 0) translate(left + w - pad - icon, y0 + (h - icon) / 2) { with(st.icon) { draw(Size(icon, icon), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(st.guide.copy(alpha = 1f))) } }
+    s.tip = Rect(left, y0, left + w, y0 + h)
+    s.share = listOfNotNull(st.title, label.takeIf { it.isNotEmpty() }).joinToString(" · ").let { head ->
+        (if (head.isEmpty()) "" else "$head : ") + values.joinToString(" · ") { it.first }
+    }
+}
+
+/** Valeur lisible sans unité connue : décimales selon l'ordre de grandeur. */
+private fun autoValue(v: Double): String = formatNumber(v, when { abs(v) >= 100 -> 0; abs(v) >= 10 -> 1; else -> 2 })
+    .let { if (it.contains(',') || it.contains('.')) it.trimEnd('0').trimEnd(',', '.') else it }
+
+/** Abscisse lisible d'après son ordre de grandeur : millisecondes, minutes ou jours depuis 1970, sinon un nombre. */
+private fun autoX(x: Double, span: Double): String {
+    fun moment(ms: Long, spanMs: Double) = if (spanMs <= 2 * 86_400_000.0) timeOf(ms)
+        else Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate().let(::dayLabel)
+    return when {
+        x > 1e11 -> moment(x.toLong(), span)
+        x > 1e6 -> moment((x * 60_000).toLong(), span * 60_000)
+        x > 1e4 -> dayLabel(LocalDate.ofEpochDay(x.toLong()))
+        else -> formatNumber(x, if (abs(x) < 100 && x % 1.0 != 0.0) 1 else 0)
+    }
+}
+
+/** « mer. 4 nov. » (avec l'année si ce n'est pas celle en cours). */
+fun dayLabel(d: LocalDate): String = d.format(DateTimeFormatter.ofPattern(if (d.year == LocalDate.now().year) "EEE d MMM" else "d MMM yyyy", Lang.locale))
+
 @Composable
 fun ChartEmpty(modifier: Modifier, height: Dp, text: String = "Pas encore assez de données") {
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
@@ -202,6 +377,7 @@ private fun DrawScope.gridLines(scale: Scale, top: Float, plotW: Float, plotH: F
  * Courbe(s). Avec [showAxis] : axe gradué à valeurs rondes à droite et grille alignée ; sans : la courbe remplit la
  * hauteur (cartes). [xFrom]/[xTo] fixent l'axe des x, [reference] trace une ligne de repère, [invertY] met les petites
  * valeurs en haut (allure), [xLabels] : (x, libellé) sous le graphique, [highlightEnd] : point sur la dernière valeur.
+ * Rester appuyé puis glisser lit la valeur sous le doigt ([valueFormat], sinon [format] ; [xFormat] pour l'abscisse).
  */
 @Composable
 fun LineChart(
@@ -209,6 +385,7 @@ fun LineChart(
     format: ((Double) -> String)? = null, xFrom: Double? = null, xTo: Double? = null, reference: Double? = null,
     invertY: Boolean = false, xLabels: List<Pair<Number, String>> = emptyList(), timeAxis: Boolean = false,
     highlightEnd: Boolean = true, ringedEnd: Boolean = false, emptyText: String = "Pas encore assez de données",
+    valueFormat: ((Double) -> String)? = null, xFormat: ((Double) -> String)? = null,
 ) {
     // bande d'une teinte chaude en sombre : gris neutre (une teinte chaude mêlée au fond sombre vire au brun)
     val darkTheme = Mf.colors.dark
@@ -223,7 +400,10 @@ fun LineChart(
     val card = Mf.colors.card
     val t = axisText()
     val xRow = if (xLabels.isNotEmpty()) 18.dp else 0.dp
-    Canvas(modifier.fillMaxWidth().height(height + xRow)) {
+    val sc = rememberScrub(series)
+    val st = tipStyle()
+    val tipValue = valueFormat ?: format ?: ::autoValue
+    Canvas(modifier.fillMaxWidth().height(height + xRow).scrubbing(sc, st.haptic, st.onShare)) {
         val labelH = t.measurer.measure("0", t.style).size.height.toFloat()
         // marge haute et basse : la moitié d'un libellé avec axe, sinon l'épaisseur du trait et du point final
         val inset = if (showAxis) labelH / 2 else (ChartStyle.endDot.toPx() + 1.dp.toPx())
@@ -276,6 +456,15 @@ fun LineChart(
             drawCircle(s.color, ChartStyle.endDot.toPx(), c)
         }
         if (xLabels.isNotEmpty()) xAxis(t, xLabels.map { x(it.first.toDouble()) to it.second }, plotW, height.toPx() + 4.dp.toPx())
+        // valeurs lisibles au doigt : toutes les abscisses des courbes
+        val plotted = series.filter { it.points.isNotEmpty() }
+        val cand = plotted.flatMap { p -> p.points.map { it.first.toDouble() } }.distinct().sorted()
+        sc.xs = FloatArray(cand.size) { x(cand[it]) }
+        sc.sel?.let(cand::getOrNull)?.let { cx ->
+            val hits = plotted.mapNotNull { p -> p.points.firstOrNull { it.first.toDouble() == cx }?.let { p.color to it.second } }.take(3)
+            drawPick(st, sc, x(cx), inset, inset + plotH, hits.map { tipValue(it.second) to it.first }, xFormat?.invoke(cx) ?: autoX(cx, x1 - x0),
+                hits.map { y(it.second) to it.first }, inside = showAxis)
+        }
     }
 }
 
@@ -289,6 +478,7 @@ fun BarChart(
     values: List<Double?>, target: List<Double?>, color: Color, modifier: Modifier = Modifier, height: Dp = 120.dp,
     labels: List<String> = emptyList(), track: Color = Mf.colors.chip, showAxis: Boolean = height >= ChartStyle.detailed,
     format: ((Double) -> String)? = null, dimBelowGoal: Boolean = false,
+    valueFormat: ((Double) -> String)? = null, pointLabel: ((Int) -> String)? = null,
 ) {
     val top = (values.filterNotNull() + target.filterNotNull()).maxOrNull()?.takeIf { it > 0 } ?: 1.0
     val scale = if (showAxis) Scales.nice(0.0, top, zero = true) else Scale(0.0, top, top)
@@ -297,7 +487,10 @@ fun BarChart(
     val line = Mf.colors.textSecondary
     val t = axisText()
     val xRow = if (labels.any { it.isNotEmpty() }) 18.dp else 0.dp
-    Canvas(modifier.fillMaxWidth().height(height + xRow)) {
+    val sc = rememberScrub(values)
+    val st = tipStyle()
+    val tipValue = valueFormat ?: format ?: ::autoValue
+    Canvas(modifier.fillMaxWidth().height(height + xRow).scrubbing(sc, st.haptic, st.onShare)) {
         val labelH = t.measurer.measure("0", t.style).size.height.toFloat()
         val inset = if (showAxis) labelH / 2 else 0f
         val plotH = height.toPx() - 2 * inset
@@ -329,6 +522,15 @@ fun BarChart(
             }
         }
         if (xRow > 0.dp) xAxis(t, labels.mapIndexed { i, s -> (i + 0.5f) * slot to s }, plotW, height.toPx() + 4.dp.toPx())
+        // une valeur par barre renseignée
+        val filled = values.indices.filter { values[it] != null }
+        sc.xs = FloatArray(filled.size) { (filled[it] + 0.5f) * slot }
+        sc.sel?.let(filled::getOrNull)?.let { i ->
+            val v = values[i]!!
+            val goal = target.getOrNull(i)?.let { " / " + tipValue(it) }.orEmpty()
+            drawPick(st, sc, (i + 0.5f) * slot, inset, inset + plotH, listOf(tipValue(v) + goal to color), pointLabel?.invoke(i) ?: labels.getOrNull(i).orEmpty(),
+                listOf(y(v) to color), inside = showAxis)
+        }
     }
 }
 
@@ -337,6 +539,7 @@ fun BarChart(
 fun SignedBarChart(
     values: List<Double?>, posColor: Color, negColor: Color, modifier: Modifier = Modifier, height: Dp = 140.dp,
     labels: List<String> = emptyList(), showAxis: Boolean = height >= ChartStyle.detailed, format: ((Double) -> String)? = null,
+    pointLabel: ((Int) -> String)? = null,
 ) {
     val maxAbs = values.filterNotNull().maxOfOrNull { abs(it) }?.takeIf { it > 0 } ?: 1.0
     val step = if (showAxis) Scales.niceStep(maxAbs) else maxAbs
@@ -346,7 +549,9 @@ fun SignedBarChart(
     val grid = Mf.colors.divider
     val t = axisText()
     val xRow = if (labels.any { it.isNotEmpty() }) 18.dp else 0.dp
-    Canvas(modifier.fillMaxWidth().height(height + xRow)) {
+    val sc = rememberScrub(values)
+    val st = tipStyle()
+    Canvas(modifier.fillMaxWidth().height(height + xRow).scrubbing(sc, st.haptic, st.onShare)) {
         val labelH = t.measurer.measure("0", t.style).size.height.toFloat()
         val inset = if (showAxis) labelH / 2 else 0f
         val plotH = height.toPx() - 2 * inset
@@ -365,6 +570,15 @@ fun SignedBarChart(
             drawRoundRect(if (v > 0) posColor else negColor, Offset(left, if (v > 0) mid - h else mid), Size(bw, h), CornerRadius(bw / 2))
         }
         if (xRow > 0.dp) xAxis(t, labels.mapIndexed { i, s -> (i + 0.5f) * slot to s }, plotW, height.toPx() + 4.dp.toPx())
+        val filled = values.indices.filter { values[it] != null && values[it] != 0.0 }
+        sc.xs = FloatArray(filled.size) { (filled[it] + 0.5f) * slot }
+        sc.sel?.let(filled::getOrNull)?.let { i ->
+            val v = values[i]!!
+            val txt = (format?.invoke(abs(v)) ?: autoValue(abs(v))).let { if (v > 0) "+$it" else "−$it" }
+            val h = (abs(v) / scale.max * plotH / 2).toFloat()
+            drawPick(st, sc, (i + 0.5f) * slot, inset, inset + plotH, listOf(txt to if (v > 0) posColor else negColor), pointLabel?.invoke(i) ?: labels.getOrNull(i).orEmpty(),
+                listOf((if (v > 0) mid - h else mid + h) to if (v > 0) posColor else negColor), inside = showAxis)
+        }
     }
 }
 
