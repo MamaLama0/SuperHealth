@@ -113,6 +113,8 @@ object Reminders {
         // pesée simple (pas de check-in) : le poids se saisit directement dans la notification
         if (k == Kind.WEIGH && !checkInDue()) builder.addAction(weighAction(ctx))
         nm.notify(7500 + k.ordinal, builder.build())
+        // notification du moral : c'est elle qui présente le moral ce jour-là (voir MoodMoments)
+        if (k == Kind.JOURNAL) MoodMoments.record(ctx, LocalDate.now().toEpochDay(), System.currentTimeMillis(), "NOTIFICATION")
     }
 
     const val WEIGH_INPUT = "app.superhealth.WEIGH_INPUT"

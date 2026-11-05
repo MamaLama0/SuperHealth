@@ -38,6 +38,7 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.meals.MealPlanner.init(this)
         app.superhealth.meds.Meds.init(this)
         app.superhealth.wellbeing.Journal.init(this)
+        app.superhealth.wellbeing.MoodMoments.init(this)
         app.superhealth.wellbeing.Checkin.init(this)
         app.superhealth.wellbeing.Cycle.init(this)
         app.superhealth.wellbeing.Reminders.schedule(this)

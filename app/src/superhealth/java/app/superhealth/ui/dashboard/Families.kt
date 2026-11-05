@@ -618,18 +618,17 @@ private fun WForme(sz: CardSize, icon: ImageVector, w: WatchSnap, m: Modifier, o
 private fun WSommeil(sz: CardSize, icon: ImageVector, h: HealthSnap, m: Modifier, onClick: () -> Unit) {
     val w = h.watch; val n = w.lastNight
     val min = n?.asleepMin ?: h.latest(Metric.SLEEP)?.second
-    val rest = w.sleepScore?.roundToInt()
+    // pas de score ici : il a ses propres cartes (Scores du jour, Qualité du sommeil)
     val t = Sc.sleep; val c = t.b
     val cols = app.superhealth.ui.theme.Base.let { listOf(it.Indigo, it.Purple, it.Cyan, it.Pink) }
     val span = n?.let { "${timeOf(it.bedMs)} → ${timeOf(it.wakeMs)}" }
     val staged = n?.staged == true
     @Composable fun Hyp(mod: Modifier) { if (n != null && staged) Hypnogram(n, mod) }
-    val score = rest?.let { trf("Score %1\$s", it) }
     when (sz) {
         CardSize.S -> RingTile(m, onClick, c, min?.let { (it / (w.needMin ?: 480.0)).toFloat() }) {
-            RingCenter(icon, c, min?.let { formatDuration(it) } ?: "—", rest?.let { trf("score %1\$s", it) })
+            RingCenter(icon, c, min?.let { formatDuration(it) } ?: "—", null)
         }
-        CardSize.M -> MediumShell(m, onClick, icon, tr("Sommeil"), c, rest?.toString(), value = min?.let { formatDuration(it) } ?: "—", caption = span ?: tr("Pas de données")) {
+        CardSize.M -> MediumShell(m, onClick, icon, tr("Sommeil"), c, null, value = min?.let { formatDuration(it) } ?: "—", caption = span ?: tr("Pas de données")) {
             val past = h.series[Metric.SLEEP].orEmpty().map { it.second }
             when {
                 n != null && staged -> Hypnogram(n, Modifier.fillMaxSize())
@@ -637,13 +636,13 @@ private fun WSommeil(sz: CardSize, icon: ImageVector, h: HealthSnap, m: Modifier
                 else -> EmptyDots()
             }
         }
-        CardSize.W -> Wide(m, onClick, icon, c, if (rest != null) "${tr("Sommeil")} · ${trf("score %1\$s", rest)}" else tr("Sommeil"), { Hm(min, 20.sp, "min") }) {
+        CardSize.W -> Wide(m, onClick, icon, c, tr("Sommeil"), { Hm(min, 20.sp, "min") }) {
             Column(horizontalAlignment = Alignment.End) {
                 if (n != null && staged) PhaseBar(n, cols, Modifier.width(124.dp))
                 if (span != null) { Spacer(Modifier.height(5.dp)); Tq(span, 12.sp, sub) }
             }
         }
-        else -> Large(m, onClick, icon, tr("Sommeil"), c, score) {
+        else -> Large(m, onClick, icon, tr("Sommeil"), c, null) {
             // régularité : écart-type de l'heure de coucher sur les nuits lues
             val beds = w.nights.mapNotNull { it.second?.bedClock }
             val spread = beds.takeIf { it.size >= 3 }?.let { b -> val avg = b.average(); sqrt(b.sumOf { (it - avg) * (it - avg) } / b.size) }

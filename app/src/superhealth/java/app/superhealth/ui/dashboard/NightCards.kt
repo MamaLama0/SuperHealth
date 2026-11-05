@@ -153,7 +153,7 @@ internal fun NightHeartCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: 
     }
 }
 
-/** Sommeil, en grand : la nuit, son Repos en mots et les 7 nuits en phases empilées face au besoin. */
+/** Sommeil, en grand : la nuit et les 7 nuits en phases empilées face au besoin. */
 @Composable
 internal fun SleepWeekCard(c: DashCard, h: HealthSnap, modifier: Modifier, nav: NavHostController) {
     val w = h.watch
@@ -163,7 +163,6 @@ internal fun SleepWeekCard(c: DashCard, h: HealthSnap, modifier: Modifier, nav: 
         Row(verticalAlignment = Alignment.Bottom) {
             Value(last?.let { formatDuration(it.asleepMin) } ?: h.latest(app.superhealth.health.data.Metric.SLEEP)?.let { formatValue(app.superhealth.health.data.Metric.SLEEP, it.second) } ?: "—",
                 color = c.ink().onContainer())
-            w.sleepScore?.takeIf { last != null }?.let { Sub(" · " + tr(Scores.restWord(it, last!!.asleepMin, w.needMin ?: Scores.sleepNeed()).label)) }
             Spacer(Modifier.weight(1f))
             week.mapNotNull { it.second?.asleepMin }.takeIf { it.isNotEmpty() }?.let { Sub(trf("Moy. %1\$s", formatDuration(it.average()))) }
         }

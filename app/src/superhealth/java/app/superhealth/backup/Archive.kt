@@ -35,7 +35,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/mood_moments.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
 
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
 
@@ -111,7 +111,7 @@ object Archive {
             kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(), it), clearHistory = false) }
         app.superhealth.league.GroupHistory.load(ctx)
         app.superhealth.league.SocialSpaces.reset()
-        app.superhealth.meds.Meds.init(ctx); app.superhealth.wellbeing.Journal.init(ctx); app.superhealth.wellbeing.Checkin.init(ctx); app.superhealth.wellbeing.Cycle.init(ctx)
+        app.superhealth.meds.Meds.init(ctx); app.superhealth.wellbeing.Journal.init(ctx); app.superhealth.wellbeing.MoodMoments.init(ctx); app.superhealth.wellbeing.Checkin.init(ctx); app.superhealth.wellbeing.Cycle.init(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }
         files["musculation.json"]?.let { WorkoutApp.store.import(it); done += tr("musculation") }

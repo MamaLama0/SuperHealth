@@ -53,6 +53,6 @@ Tout en bas des réglages, **Donner mon avis** permet de transmettre une note, u
 - [Guide de contribution](CONTRIBUTING.md) : branches, compilation, tests et pull requests.
 - [Index de la documentation](docs/README.md) : Android, iOS, SideStore, serveur et modules.
 - [Issues](https://github.com/MamaLama0/SuperHealth/issues) et [solutions étudiées](docs/ISSUES.md).
-- [Notes de la version 3.5.1](docs/UPDATE-3.5.1.md).
+- [Notes de la version 3.5.2](docs/UPDATE-3.5.2.md).
 
 SuperHealth Android s’appuie sur [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge). Son [README d’origine](README.gadgetbridge.md) et ses [contributeurs](CONTRIBUTORS.rst) sont conservés pour l’attribution et la documentation des appareils. Les bugs propres à SuperHealth se signalent dans ce dépôt.

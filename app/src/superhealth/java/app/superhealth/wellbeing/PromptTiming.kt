@@ -63,11 +63,15 @@ object PromptTiming {
     }
 
     fun moodDue(settings: SuperSettings, now: Long, signals: Signals = Signals(), zone: ZoneId = ZoneId.systemDefault(),
-                history: Map<Long, Journal.Entry> = emptyMap()): Boolean = moodTrigger(settings, now, signals, zone, history) != null
+                history: Map<Long, Journal.Entry> = emptyMap(), model: MoodMoments.Model? = null): Boolean =
+        moodTrigger(settings, now, signals, zone, history, model) != null
 
-    /** Raison pour laquelle le moral est proposé maintenant, ou null. */
+    /**
+     * Raison pour laquelle le moral est proposé maintenant, ou null. Avec [model] (moment appris, voir [MoodMoments]) :
+     * l'heure du soir vient du modèle et un événement ne déclenche que dans une heure où la personne répond bien.
+     */
     fun moodTrigger(settings: SuperSettings, now: Long, signals: Signals = Signals(), zone: ZoneId = ZoneId.systemDefault(),
-                    history: Map<Long, Journal.Entry> = emptyMap()): Trigger? {
+                    history: Map<Long, Journal.Entry> = emptyMap(), model: MoodMoments.Model? = null): Trigger? {
         val time = Instant.ofEpochMilli(now).atZone(zone)
         val day = time.toLocalDate().toEpochDay()
         val minute = time.hour * 60 + time.minute
@@ -77,12 +81,13 @@ object PromptTiming {
         fun open(at: Long, delayMin: Int, spanMin: Int) = today(at) && now - at in delayMin * 60_000L..spanMin * 60_000L
         // Trois « pas aujourd'hui » de suite : le moral attend le soir, sans se glisser après un événement.
         val declining = (1L..3L).all { (day - it) in settings.moodSkips }
-        if (!declining) {
+        if (!declining && model?.welcome(time.hour) != false) {
             signals.calmEnds.firstOrNull { open(it, calmDelayMinutes(it, settings.promptSeed), 120) }?.let { return Trigger.CALM }
             signals.activityEnds.firstOrNull { open(it, activityDelayMinutes(it, settings.promptSeed), 120) }?.let { return Trigger.ACTIVITY }
             signals.stepGoalAt?.takeIf { open(it, stepsDelayMinutes(it, settings.promptSeed), 180) }?.let { return Trigger.STEPS }
             signals.dinnerAt?.takeIf { open(it, 0, 180) && Instant.ofEpochMilli(it).atZone(zone).hour >= 18 }?.let { return Trigger.DINNER }
         }
+        if (model != null) return if (minute >= MoodMoments.dailyMinute(model, day, settings.promptSeed)) Trigger.EVENING else null
         val examples = history.mapNotNull { (d, entry) ->
             if (entry.at <= 0) null else Instant.ofEpochMilli(entry.at).atZone(zone).takeIf { it.toLocalDate().toEpochDay() == d }
                 ?.let { Attention.Example(d, it.hour * 60 + it.minute) }

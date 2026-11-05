@@ -612,15 +612,17 @@ private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, no
     val stretches by app.superhealth.stretch.Stretch.log.collectAsState()
     val today = LocalDate.now().toEpochDay()
     val pending = sh.has(app.superhealth.Feature.JOURNAL) && days[today] == null && sh.moodSkipDay != today
-    val due by produceState(0L to false, pending, now / 60_000, refresh, nutrition, training.history, hc, runs, eaten, meditations, stretches,
+    val due by produceState<Pair<Long, app.superhealth.wellbeing.PromptTiming.Trigger?>>(0L to null, pending, now / 60_000, refresh, nutrition, training.history, hc, runs, eaten, meditations, stretches,
         sh.moodPromptShownDay, sh.promptSeed) {
         val T = app.superhealth.wellbeing.PromptTiming
-        val eligible = pending && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val trigger = if (!pending) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val date = LocalDate.now()
             val history = app.superhealth.wellbeing.Journal.days.value
-            if (T.moodDue(sh, now, history = history)) return@withContext true
+            // moment appris pour cette personne (heures où elle répond, et bien)
+            val model = app.superhealth.wellbeing.MoodMoments.current(sh.moodSkips)
+            T.moodTrigger(sh, now, history = history, model = model)?.let { return@withContext it }
             // avant midi rien ne déclenche : inutile de lire les pas et les activités
-            if (java.time.LocalTime.now().let { it.hour * 60 + it.minute } < T.EARLIEST) return@withContext false
+            if (java.time.LocalTime.now().let { it.hour * 60 + it.minute } < T.EARLIEST) return@withContext null
             val goal = nutrition.stepGoalFor(date)
             val stepGoalAt = runCatching { T.stepGoalCrossing(Bridge.hourlySteps(ctx, date).map { it.timestampMs to it.value }, goal) }.getOrNull()
             val ends = runCatching {
@@ -630,12 +632,21 @@ private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, no
             val calm = (meditations.filter { it.day == today && it.minutes >= 3 }.map { it.at } +
                 stretches.filter { it.day == today && it.minutes >= 3 }.map { it.at })
             val dinner = eaten.filter { it.meal == 2 }.minOfOrNull { it.createdAt }
-            T.moodDue(sh, now, app.superhealth.wellbeing.PromptTiming.Signals(stepGoalAt, ends, calm, dinner), history = history)
+            T.moodTrigger(sh, now, app.superhealth.wellbeing.PromptTiming.Signals(stepGoalAt, ends, calm, dinner), history = history, model = model)
         }
-        value = today to eligible
-        if (eligible && sh.moodPromptShownDay != today) app.superhealth.SuperPrefs.update { it.copy(moodPromptShownDay = today) }
+        value = today to trigger
+        if (trigger != null && sh.moodPromptShownDay != today) app.superhealth.SuperPrefs.update { it.copy(moodPromptShownDay = today) }
     }
-    PromptBanner(pending && due.first == today && due.second, Icons.Rounded.SentimentSatisfied, HealthHues.Mind,
+    val visible = pending && due.first == today && due.second != null
+    // le moment appris est celui où le bandeau est vraiment sous les yeux : app au premier plan, accueil affiché
+    // (sans notification du moral, c'est l'ouverture de l'app qui compte)
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val resumed by lifecycle.currentStateFlow.collectAsState()
+    val onScreen = visible && resumed.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    androidx.compose.runtime.LaunchedEffect(onScreen) {
+        if (onScreen) app.superhealth.wellbeing.MoodMoments.record(ctx, today, System.currentTimeMillis(), due.second?.name.orEmpty())
+    }
+    PromptBanner(visible, Icons.Rounded.SentimentSatisfied, HealthHues.Mind,
         tr("Moral du jour"), { app.superhealth.ui.wellbeing.moodSheet = true }) { app.superhealth.SuperPrefs.update { it.copy(moodSkipDay = today, moodSkips = (it.moodSkips + today).distinct().takeLast(14)) } }
 }
 
