@@ -59,7 +59,11 @@ object League {
     @Serializable data class Card(val v: Int = 1, val k: String, val n: String, val w: String, val t: Long, val s: Int, val p: List<Int?> = emptyList(), val st: Int = 0,
         val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
         val metrics: List<Comparison> = emptyList(), val detailSnapshot: Boolean = false, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val hello: Boolean = false, val relayKey: String? = null, val progress: Progression.Summary? = null, val invite: Boolean = false, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList(), val avatar: SocialPosts.Media? = null, val reactions: List<SocialReactions.Reaction> = emptyList(), val previousKey: String? = null, val endorsement: String? = null,
-        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val space: app.superhealth.social.SpaceContact? = null, val unified: IndexCard? = null, @kotlinx.serialization.Transient val classicIndex: IndexCard? = null)
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val space: app.superhealth.social.SpaceContact? = null, val unified: IndexCard? = null, @kotlinx.serialization.Transient val classicIndex: IndexCard? = null,
+        /** Carte Athlète (4.0) : statistiques et fond choisi. Absents des anciennes cartes. */
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val athlete: app.superhealth.cards.AthleteStats? = null,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cardBg: String? = null,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cardLevel: Int? = null)
     /** [model] : version de l'indice étendu (5 avant la 3.5, absent des anciennes cartes). */
     @Serializable data class IndexCard(val total: Int?, val coverage: Int, val parts: List<Int?>, val model: Int = 5)
 
@@ -70,7 +74,8 @@ object League {
                                     val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
                                     val metrics: List<Comparison> = emptyList(), val metricsTime: Long = 0, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val metricsEndDay: Long = 0, val relayKey: String? = null, val progress: Progression.Summary? = null,
                                     val trends: Map<String, List<TrendPoint>> = emptyMap(), val relayEtag: String? = null, val inviteRevision: Long = 0, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val posts: List<SocialPosts.Post> = emptyList(), val avatar: SocialPosts.Media? = null, val reactions: List<SocialReactions.Reaction> = emptyList(), val rootKey: String? = null, val profileRevision: Long = 0,
-                                    val classicIndex: IndexCard? = null, val unifiedIndex: IndexCard? = null, val space: app.superhealth.social.SpaceContact? = null) {
+                                    val classicIndex: IndexCard? = null, val unifiedIndex: IndexCard? = null, val space: app.superhealth.social.SpaceContact? = null,
+                                    val athlete: app.superhealth.cards.AthleteStats? = null, val cardBg: String? = null, val cardLevel: Int? = null) {
         val shown get() = alias?.takeIf { it.isNotBlank() } ?: name
     }
 
@@ -118,7 +123,13 @@ object League {
 
     fun setSharePillars(ctx: Context, on: Boolean) = configure(ctx) { it.copy(sharePillars = on) }
     @Synchronized fun configure(ctx: Context, f: (State) -> State) = save(ctx, f(state.value))
-    fun claimQuest(ctx: Context, metric: WeeklyQuests.Metric, today: Long = LocalDate.now().toEpochDay()) = configure(ctx) { s ->
+    fun claimQuest(ctx: Context, metric: WeeklyQuests.Metric, today: Long = LocalDate.now().toEpochDay()) {
+        val before = state.value.questXp
+        claimQuestXp(ctx, metric, today)
+        // Une quête de la semaine accomplie rapporte aussi quelques éclats (plafonnés par le serveur).
+        if (state.value.questXp > before) app.superhealth.cards.CardStore.earnLeague(ctx, "lq:$today:${metric.name}")
+    }
+    private fun claimQuestXp(ctx: Context, metric: WeeklyQuests.Metric, today: Long) = configure(ctx) { s ->
         val week = s.questWeeks.firstOrNull { it.start == Progression.week(today) } ?: return@configure s
         val updated = WeeklyQuests.claim(week, metric, today)
         val claimed = updated.quests.filter { q -> q.claimed && week.quests.none { it.metric == q.metric && it.claimed } }
@@ -331,7 +342,10 @@ object League {
             posts = if (detailed && !hello && !invite) SocialPosts.visible(state.value.posts).filterNot { it.id in pendingMediaPosts || GroupHistory.state.value.events.any { e -> e.key == pub && e.id == it.id && e.deleted } }.map(SocialPosts::compact) else emptyList(),
             avatar = if (includeAvatar && detailed && !hello && !invite && state.value.shareProfilePhoto) state.value.profileAvatar else null,
             reactions = if (detailed && !hello && !invite) SocialReactions.visible(state.value.reactions) else emptyList(),
-            profileBadges = if (!hello && !invite) state.value.profileBadges.filter { it in state.value.earnedBadges }.take(3) else emptyList())
+            profileBadges = if (!hello && !invite) state.value.profileBadges.filter { it in state.value.earnedBadges }.take(3) else emptyList(),
+            athlete = app.superhealth.cards.CardStore.snapshot.value?.now?.takeIf { !hello && !invite && !app.superhealth.cards.CardStore.state.value.demo },
+            cardBg = app.superhealth.cards.CardStore.state.value.background.takeIf { !hello && !invite },
+            cardLevel = app.superhealth.cards.CardStore.background()?.let { app.superhealth.cards.CardStore.state.value.level(it.card) }?.takeIf { !hello && !invite })
         val body = json.encodeToString(Card.serializer(), boundedCard(sharedIndex(c, state.value.shareIndex))).toByteArray()
         val key = GroupIdentity.privateKey()
         val sig = Signature.getInstance("SHA256withECDSA").run { initSign(key); update(body); sign() }
@@ -484,6 +498,7 @@ object League {
             profileRevision = if (updateDecor) c.revision else base.profileRevision,
             posts = if (c.detailSnapshot) c.posts else base.posts, avatar = if (updateDecor) c.avatar else base.avatar,
             reactions = if (c.detailSnapshot) c.reactions else base.reactions,
+            athlete = c.athlete ?: base.athlete, cardBg = c.cardBg ?: base.cardBg, cardLevel = c.cardLevel ?: base.cardLevel,
             relayEtag = base.relayEtag.takeIf { sameRelay },
             inviteRevision = if (updateMetadata) maxOf(metadataRevision, c.revision) else metadataRevision)
     }

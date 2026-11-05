@@ -281,7 +281,15 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("stretch/all") { app.superhealth.ui.stretch.StretchAllScreen(nav) }
             composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
             composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
-            composable("social") { app.superhealth.ui.league.SocialProfileScreen(nav) }
+            composable("social") { app.superhealth.ui.cards.CardsHome(nav) }
+            composable("cards/packs") { app.superhealth.ui.cards.PackShopScreen(nav) }
+            composable("cards/album") { app.superhealth.ui.cards.AlbumScreen(nav) }
+            composable("cards/quests") { app.superhealth.ui.cards.CardQuestsScreen(nav) }
+            composable("cards/rates") { app.superhealth.ui.cards.PackRatesScreen(nav) }
+            composable("cards/cutout") { app.superhealth.ui.cards.CutoutScreen(nav) }
+            composable("cards/duel?friend={friend}", listOf(navArgument("friend") { type = NavType.StringType; nullable = true; defaultValue = null })) {
+                app.superhealth.ui.cards.DuelScreen(nav, it.arguments?.getString("friend"))
+            }
             composable("social/badges?category={category}", listOf(navArgument("category") { type = NavType.StringType; defaultValue = "xp" })) {
                 app.superhealth.ui.league.ProfileBadgesScreen(nav,it.arguments?.getString("category") ?: "xp")
             }
@@ -302,7 +310,7 @@ fun SuperRoot(vm: SuperViewModel) {
             }
             composable("hiking/live") { app.superhealth.ui.hiking.HikeLiveScreen(nav) }
             composable("meditation/play") { app.superhealth.ui.meditation.MeditationPlayScreen(nav) }
-            composable("league") { app.superhealth.ui.league.LeagueScreen(nav) }
+            composable("league") { app.superhealth.ui.cards.CardsHome(nav) }
             composable("journal") { app.superhealth.ui.wellbeing.JournalScreen(vm, nav) }
             composable("form") { app.superhealth.ui.wellbeing.FormScreen(vm, nav) }
             composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }

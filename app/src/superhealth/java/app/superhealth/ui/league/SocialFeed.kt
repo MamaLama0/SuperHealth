@@ -62,6 +62,9 @@ import java.time.format.DateTimeFormatter
 fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.compose.foundation.pager.PagerState) {
     val settings by SuperPrefs.settings.collectAsState()
     val scope = rememberCoroutineScope()
+    // Les cartes de l'Arène utilisent un gros shader : il se compile en arrière-plan dès l'accueil.
+    val appCtx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { app.superhealth.ui.cards.CardPerf.init(appCtx) }
     if (settings.socialFeedEnabled && settings.leagueEnabled) {
         BackHandler(pager.currentPage == 0) { scope.launch { pager.animateScrollToPage(1) } }
         androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), key = { it }) { page ->
@@ -87,6 +90,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var showCreate by rememberSaveable { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(GroupTab.FIL) }
     fun refresh(userInitiated: Boolean = false) { scope.launch {
         if (busy) return@launch
         busy = true; if (userInitiated) error = null
@@ -117,24 +121,21 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     NotificationBell(nav)
-                    CircleAction(Icons.Rounded.PersonAdd, tr("Ajouter un ami")) { nav.go("friends/add") }
+                    CircleAction(Icons.Rounded.Add, tr("Publier")) { showCreate = true }
                     SettingsAvatar { nav.go("social") }
                 }
             }
         }
-        item(key = "group-navigation") {
-            // tout tient sur une ligne : le classement en premier et plus large, les réglages en simple pastille ronde
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                GroupNavChip(Icons.Rounded.EmojiEvents, tr("Classement"), RankGold, Modifier.weight(1.3f)) { nav.go("league") }
-                GroupNavChip(Icons.Rounded.People, tr("Amis"), LeagueHue, Modifier.weight(0.9f)) { nav.go("friends") }
-                GroupNavChip(Icons.Rounded.Groups, tr("Cercles"), app.superhealth.ui.theme.Hues.pack.purple, Modifier.weight(1.05f)) { nav.go("group/circles") }
-                Box(Modifier.size(38.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Mf.colors.textSecondary.copy(alpha = .12f))
-                    .clickable { nav.go("league/settings") }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Settings, tr("Réglages du Groupe"), Modifier.size(18.dp), tint = Mf.colors.textSecondary)
-                }
-            }
+        item(key = "group-tabs") { GroupTabs(tab) { tab = it } }
+        // Arène : ta carte et ton camp, les duels du jour, les camps du Groupe et les raccourcis des cartes.
+        if (tab == GroupTab.ARENE) {
+            item(key = "arena-hero") { ArenaHero(nav) }
+            item(key = "arena-duels") { ArenaDuels(nav, state.friends) }
+            item(key = "arena-camps") { ArenaCamps(state.friends) }
+            item(key = "arena-shortcuts") { ArenaShortcuts(nav) }
         }
-        item(key = "compose") { ComposeSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+        if (tab == GroupTab.CERCLES) item(key = "circles") { CirclesPanel(nav, state.friends.size) }
+        if (tab == GroupTab.FIL) item(key = "compose") { ComposeSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
             Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(34.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
@@ -151,38 +152,38 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
                 ShareShortcut(Icons.Rounded.EmojiEvents, tr("PR"), RankGold, Modifier.weight(1f)) { open("social/share/pr") }
             }
         } }
-        if (history.pending.isNotEmpty()) item(key = "pending") {
+        if (tab == GroupTab.FIL && (history.pending.isNotEmpty())) item(key = "pending") {
             GroupSurface {
                 Text(tr("Des publications ou réponses attendent leur envoi"), style = MaterialTheme.typography.bodySmall)
                 TextButton(enabled = !busy, onClick = { refresh(userInitiated = true) }) { Text(tr("Réessayer")) }
                 TextButton({ nav.go("social/outbox") }) { Text(tr("Envois en attente")) }
             }
         }
-        if (busy && posts.isEmpty() && state.lastSync == 0L) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (tab == GroupTab.FIL && (busy && posts.isEmpty() && state.lastSync == 0L)) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         error?.let { message -> item(key = "error") { Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
-        if (state.friends.isEmpty()) item(key = "invite") { GroupSurface {
+        if (state.friends.isEmpty() && tab != GroupTab.CERCLES) item(key = "invite") { GroupSurface {
             Text(tr("Invitez votre premier ami"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Partagez vos activités et encouragez-vous. Vous choisissez les informations publiées."), color = Mf.colors.textSecondary)
             TextButton({ nav.go("friends/add") }) { Text(tr("Inviter ou saisir un code")) }
         } }
-        if (state.lastSuccessfulSync > 0) item(key = "last-sync") {
+        if (tab == GroupTab.FIL && (state.lastSuccessfulSync > 0)) item(key = "last-sync") {
             Text(trf("Dernière actualisation · %1\$s", android.text.format.DateUtils.getRelativeTimeSpanString(
                 state.lastSuccessfulSync, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()),
                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
         }
-        if (posts.isEmpty() && state.friends.isNotEmpty()) item(key = "empty") { GroupSurface {
+        if (tab == GroupTab.FIL && (posts.isEmpty() && state.friends.isNotEmpty())) item(key = "empty") { GroupSurface {
             Text(tr(if (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty()) "Votre fil est vide" else "Votre Groupe commence ici"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Partagez votre première séance ou ajoutez vos amis. Leurs publications apparaîtront ici."), modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
             TextButton({ nav.go("social/compose") }) { Text(tr("Écrire un message")) }
             TextButton({ nav.go("social/share/workout") }) { Text(tr("Partager une séance")) }
         } }
-        if (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty()) item(key = "reading-preferences") {
+        if (tab == GroupTab.FIL && (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty())) item(key = "reading-preferences") {
             TextButton({ nav.go("group/preferences") }) { Text(tr("Contenus masqués et sourdines")) }
         }
-        items(posts, key = { (post, friend) -> (friend?.id ?: "me") + ":" + post.id }) { (post, friend) ->
+        if (tab == GroupTab.FIL) items(posts, key = { (post, friend) -> (friend?.id ?: "me") + ":" + post.id }) { (post, friend) ->
             SocialPostCard(post, friend)
         }
-        if (GroupHistory.hasOlder()) item(key = "older") {
+        if (tab == GroupTab.FIL && (GroupHistory.hasOlder())) item(key = "older") {
             TextButton(enabled = !busy, onClick = { scope.launch {
                 busy = true; error = null
                 try { GroupHistory.refresh(ctx, older = true) }

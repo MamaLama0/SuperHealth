@@ -227,6 +227,13 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 IconSwitchRow(tr("Coach IA"), if (sh.coachEnabled) tr("Inclus dans l'application") else tr("Désactivé"), Icons.Rounded.AutoAwesome, HealthHues.Mind, sh.coachEnabled,
                     onClick = { nav.go("coach/settings") }) { on -> SuperPrefs.update { it.copy(coachEnabled = on) } }
                 RowDivider(56.dp)
+                // interrupteur général du social : cartes, packs, duels, amis, fil et classement ; données et amis conservés
+                val social = sh.leagueEnabled || sh.socialFeedEnabled
+                IconSwitchRow(tr("Social"), if (social) tr("Cartes, duels, amis et fil") else tr("Désactivé, données et amis conservés"), Icons.Rounded.Group, HealthHues.Fitness, social,
+                    onClick = { nav.go("league/settings") }) { on ->
+                    SuperPrefs.update { it.copy(leagueEnabled = on, socialFeedEnabled = on) }; app.superhealth.league.LeagueWorker.schedule(photoCtx)
+                }
+                RowDivider(56.dp)
                 ModulesRow(nav)
             }
 

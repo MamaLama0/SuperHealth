@@ -1320,48 +1320,26 @@ private fun WEtirements(sz: CardSize, icon: ImageVector, m: Modifier, onClick: (
 
 @Composable
 private fun WClassement(sz: CardSize, icon: ImageVector, m: Modifier, refresh: Int, onClick: () -> Unit) {
+    // 4.0 : le classement laisse place à la carte Athlète (note, palier, packs à ouvrir).
     val ctx = LocalContext.current
-    val mine by app.superhealth.league.League.mine.collectAsState()
-    val st by app.superhealth.league.League.state.collectAsState()
-    androidx.compose.runtime.LaunchedEffect(refresh) { runCatching { app.superhealth.league.League.compute(ctx) } }
+    val snap by app.superhealth.cards.CardStore.snapshot.collectAsState()
+    val cards by app.superhealth.cards.CardStore.state.collectAsState()
+    val photo by app.superhealth.ui.cards.CardPhoto.bitmap.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(refresh) { app.superhealth.cards.CardStore.load(ctx); app.superhealth.ui.cards.CardPhoto.load(ctx); runCatching { app.superhealth.cards.CardStore.refresh(ctx) } }
     val hue = DashCard.LEAGUE.hue()
-    val entries = dashboardScoreEntries(mine, st.friends, System.currentTimeMillis() / 1000, tr("Vous"))
-    val me = entries.firstOrNull { it.me }
-    val score = me?.score?.toString() ?: "—"
-    val rank = when {
-        mine == null -> tr("Score en préparation")
-        me == null -> tr("3 domaines requis")
-        entries.size == 1 -> tr("En solo")
-        else -> trf("%1\$s sur %2\$s", dashboardRank(entries, me), entries.size)
+    val stats = snap?.now
+    val ovr = stats?.ovr?.toString() ?: "—"
+    val detail = when {
+        stats?.ovr10 == null -> tr("Carte en préparation")
+        cards.packsAvailable > 0 -> trf("%1\$s · %2\$s pack(s) à ouvrir", tr(stats.tier.label), cards.packsAvailable)
+        else -> tr(stats.tier.label) + (stats.mostProfitable?.let { " · " + tr("le plus rentable") + " : " + tr(it.label).lowercase() } ?: "")
     }
-    val ahead = me?.let { self -> entries.lastOrNull { it.score > self.score } }
-    val detail = ahead?.let { trf("%1\$s points pour rejoindre %2\$s", it.score - (me?.score ?: 0), it.name) }
-        ?: if (entries.size > 1) tr("Vous êtes en tête") else tr("Comparez avec vos amis")
-    if (sz == CardSize.W) SocialStrip(m, icon, tr("Classement"), rank, score, hue, onClick)
-    else SocialCard(sz, m, icon, tr("Classement"), hue, onClick) {
-        if (sz != CardSize.S) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            app.superhealth.ui.league.GameArt(app.superhealth.ui.league.GameArtKind.TROPHY, Modifier.size(if (sz == CardSize.L) 60.dp else 42.dp))
-            Column(Modifier.weight(1f)) {
-                SocialValue(if (me != null && entries.size > 1) "#${dashboardRank(entries, me)}" else score,
-                    if (me != null && entries.size > 1) trf("%1\$s points · %2\$s participants", score, entries.size) else rank, hue)
-            }
-        } else SocialValue(if (me != null && entries.size > 1) "#${dashboardRank(entries, me)}" else score,
-            if (me != null) "$score / 1000" else rank, hue, true)
-        if (sz != CardSize.S && me != null) {
-            SocialBar(me.score / 1000f, hue)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (sz == CardSize.L && entries.size >= 2) {
-                entries.take(3).forEach { entry ->
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        app.superhealth.ui.league.RankMedal(dashboardRank(entries, entry))
-                        Text(if (entry.me) tr("Vous") else entry.name, Modifier.weight(1f),
-                            style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(entry.score.toString(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+    if (sz == CardSize.W) SocialStrip(m, icon, tr("Ma carte"), detail, ovr, hue, onClick)
+    else SocialCard(sz, m, icon, tr("Ma carte"), hue, onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (sz != CardSize.S) app.superhealth.ui.cards.AthleteCard(app.superhealth.ui.cards.myFace(stats),
+                Modifier.width(if (sz == CardSize.L) 92.dp else 58.dp), interactive = false, animate = false)
+            Column(Modifier.weight(1f)) { SocialValue(ovr, detail, hue, sz == CardSize.S) }
         }
     }
 }

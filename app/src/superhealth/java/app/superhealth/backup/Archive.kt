@@ -35,7 +35,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "wellbeing/journal.json", "wellbeing/mood_moments.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "cards/state.json", "cards/cutout.png", "wellbeing/journal.json", "wellbeing/mood_moments.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json")
 
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
 

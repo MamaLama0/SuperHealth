@@ -775,7 +775,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                     }
                     Step.SOCIAL -> Page(st, tr("Progresser avec mes amis"), tr("Vos activités choisies définissent vos séries et vos quêtes. Vous gardez le contrôle du partage.")) {
-                        app.superhealth.nutrition.ui.components.SwitchRow(tr("Classement, séries et quêtes"), tr("Un score personnalisé dès trois domaines suivis"), socialEnabled) { socialEnabled = it }
+                        // interrupteur général : sans social, ni cartes, ni amis, ni fil ; réactivable dans Paramètres › Social
+                        app.superhealth.nutrition.ui.components.SwitchRow(tr("Fonctions sociales"), tr("Carte athlète, packs, duels, amis, séries et quêtes. Désactivable à tout moment dans les paramètres."), socialEnabled) { socialEnabled = it }
                         if (socialEnabled) {
                             app.superhealth.nutrition.ui.components.SwitchRow(tr("Fil des amis"), tr("À gauche du dashboard, accessible en glissant vers la droite"), feedEnabled) { feedEnabled = it }
                             Text(listOfNotNull(tr("Nutrition").takeIf { wantsNutrition }, tr("Musculation").takeIf { lifts },

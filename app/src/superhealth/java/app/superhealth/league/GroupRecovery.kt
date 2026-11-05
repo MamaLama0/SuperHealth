@@ -29,7 +29,7 @@ object GroupRecovery {
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val reading: SocialReading? = null,
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val alerts: SocialAlertOptions? = null,
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val spaces: SpaceStore? = null)
-    private val names = listOf("league_mailbox_v2", "league_read_capability_v2", "league_aes_read_key", "league_owner_token_v2", "league_publish_key", "social_space_contact", "social_space_writer")
+    private val names = listOf("league_mailbox_v2", "league_read_capability_v2", "league_aes_read_key", "league_owner_token_v2", "league_publish_key", "social_space_contact", "social_space_writer", "cards_economy_account", "cards_economy_token")
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = false }
     private val http = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).callTimeout(20, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).build()
