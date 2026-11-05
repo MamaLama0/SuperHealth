@@ -145,17 +145,21 @@ Limites : photo de 15 Mio et vidéo de 50 Mio côté app, corps chiffré de 50 M
 
 Pour appliquer le nouveau quota à une installation existante, récupérer la nouvelle image puis recréer le conteneur en conservant son volume de données. Une ancienne valeur explicite de `MEDIA_QUOTA_BYTES` ou `MAX_MEDIA_FILES` dans la configuration prend priorité sur les valeurs par défaut.
 
-## SuperHealth 4.0 — économie des cartes Athlète
+## SuperHealth 3.6 — économie des cartes Athlète
 
-Le portefeuille des cartes (éclats, packs offerts), la collection, les garanties et le tirage des packs sont tenus par le serveur, pour qu'aucune modification locale de l'app ne puisse créer des packs ou des cartes. Code : `economy.mjs`, tests : `node --test economy.test.mjs`.
+Le portefeuille des cartes (éclats, packs offerts), la collection, la fusion des doublons, les échanges entre joueurs, le compteur du pack doré, les quêtes et le tirage des packs sont tenus par le serveur, pour qu'aucune modification locale de l'app ne puisse créer des packs ou des cartes. Code : `economy.mjs`, tests : `node --test economy.test.mjs`.
 
 - Route `POST /v2/economy/{compte}` (64 hex), jeton d'écriture `X-Write-Token` (64 hex), et `Authorization` si `PUBLISH_KEY` est défini. Le compte est créé au premier appel, avec les mêmes limites de création par heure que les boîtes.
-- Opérations : `state`, `events` (séances et quêtes déclarées, 40 au plus), `open` (booster 0 à 3), `craft` (fond précis).
-- L'app ne déclare que des identifiants opaques et des dates. Le serveur fixe les montants, refuse les doublons et les dates hors fenêtre (séance des 4 derniers jours, quête du jour ou de la semaine), puis plafonne la semaine : au-delà de 250 éclats, chaque gain est divisé par deux, avec un plafond à 330.
-- Cadeau de lancement : 2 packs par compte, au premier contact après la mise à jour (`LAUNCH_GIFT`).
-- Données : `DATA_DIR/economy/*.json`. Elles sont sauvegardées avec le reste du volume.
+- Opérations : `state`, `events` (séances et quêtes déclarées, 40 au plus), `open` (booster 0 à 3), `fuse` (fusion des doublons : 2, 4, 16 puis 256 exemplaires, et 20, 40, 80 puis 160 éclats), `trade-browse`, `trade-offer`, `trade-accept`, `trade-decline`, `trade-cancel`. Pas de boutique : une carte ne s'échange que contre une carte de même rareté ou contre des éclats, entre deux comptes ; la mise est gardée de côté sept jours au plus. L'identifiant d'échange d'un compte (son identifiant de stockage) ne permet pas d'y écrire. Chaque requête porte `today`, le jour local de l'app, accepté à un jour près.
+- Catalogue : 4 biomes de 36 fonds et 36 duos (180 fonds), aligné sur `Catalog.kt`. Trois cartes par pack, une quatrième une fois sur quatre. Chaque carte est soit un duo (0,5 %, finition normale), soit normale, brillante, animée ou chromatique (voir `RATES.effects`) : rien ne se cumule. Pas de garantie : un pack sur dix est doré et triple les chances de rare, d’épique, de duo, d'animée, de chromatique et de Prisme.
+- Quêtes : deux ou trois par jour, générées par le serveur pour chaque compte et gardées une fois créées ; leur palier suit les semaines passées. La quête de la semaine est celle du Groupe (calculée dans l'app) : 60 éclats pour la principale, 35 pour la secondaire, une fois chacune par semaine. Aucun plafond n'est appliqué : chaque source de gains est bornée.
+- Défis entre amis : l'app envoie les identifiants d'échange de ses amis (`friends`) ; une fois par semaine, un compte qui a des amis réciproques libres a une chance sur deux de recevoir un défi commun (deux participants, puis 35 %, 12 %, 4 %… pour chaque personne de plus, tous amis entre eux). En course, le premier qui le finit gagne 40 éclats ; ensemble, chacun reçoit 30 éclats quand tous l'ont fini (`challenge-done`). Données : `DATA_DIR/economy/challenges.json`.
+- L'app ne déclare que des identifiants opaques et des dates. Le serveur fixe les montants et refuse les doublons et les dates hors fenêtre.
+- Cadeau de la mise à jour Dopamine : 10 packs par compte (donc au moins un pack doré), au premier contact après la mise à jour (`LAUNCH_GIFT`).
+- Badges et séries (événements `badge`, `streak`, `baseline`) : chaque palier de badge est payé une seule fois selon son rang ; chaque série hebdomadaire tenue rapporte 10 éclats par semaine d'affilée (100 au plus), bornée par les semaines écoulées depuis le dernier bonus. `baseline`, une fois par compte, marque comme payés les badges obtenus avant la mise à jour.
+- Données : `DATA_DIR/economy/*.json`. Elles sont sauvegardées avec le reste du volume. Les comptes des versions précédentes sont repris tels quels ; leurs doublons deviennent fusionnables.
 
-Mettre à jour l'image suffit : aucune variable nouvelle n'est requise. `/health` répond `economy: 1`.
+Mettre à jour l'image suffit : aucune variable nouvelle n'est requise. `/health` répond `economy: 3`.
 
 ## Retours anonymes vers un GitHub privé
 
