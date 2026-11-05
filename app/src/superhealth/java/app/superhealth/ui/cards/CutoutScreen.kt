@@ -41,6 +41,7 @@ import app.superhealth.cards.CardStore
 import app.superhealth.cards.Cutout
 import app.superhealth.cards.PhotoSource
 import app.superhealth.ui.tr
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,31 +67,53 @@ fun CutoutScreen(nav: NavHostController) {
     fun recompute() {
         val s = session ?: return
         if (points.none { it.keep }) { result = null; preview = null; return }
+        if (busy) return
+        val snapshot = points.toList()
         busy = true
         scope.launch {
-            val out = withContext(Dispatchers.Default) { runCatching { s.render(s.mask(points.toList())) }.getOrNull() }
-            result = out; preview = out?.asImageBitmap(); busy = false
+            try {
+                val out = withContext(Dispatchers.Default) { s.render(s.mask(snapshot)) }
+                result = out; preview = out?.asImageBitmap()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = e.message ?: "?"
+            } finally { busy = false }
         }
     }
+
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
+        if (uri == null || busy) return@rememberLauncherForActivityResult
         busy = true; error = null
         scope.launch {
             runCatching {
                 val bmp = withContext(Dispatchers.IO) {
                     if (Build.VERSION.SDK_INT >= 28) ImageDecoder.decodeBitmap(ImageDecoder.createSource(ctx.contentResolver, uri)) { d, info, _ ->
                         d.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                        val k = 2048f / maxOf(info.size.width, info.size.height); if (k < 1f) d.setTargetSize((info.size.width * k).toInt(), (info.size.height * k).toInt())
-                    } else ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
+                        val k = 2048f / maxOf(info.size.width, info.size.height); if (k < 1f) d.setTargetSize((info.size.width * k).toInt().coerceAtLeast(1), (info.size.height * k).toInt().coerceAtLeast(1))
+                    } else {
+                        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, options) }
+                        require(options.outWidth > 0 && options.outHeight > 0) { "Cannot decode photo" }
+                        options.inSampleSize = 1
+                        while (maxOf(options.outWidth, options.outHeight) / options.inSampleSize > 2048) options.inSampleSize *= 2
+                        options.inJustDecodeBounds = false
+                        ctx.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, options) }
+                    } ?: error("Cannot decode photo")
                 }
-                session?.close()
+                session?.close(); session = null
                 val s = Cutout.Session.open(ctx, bmp)
                 session = s
                 points.clear()
                 // Prompt automatique : le centre du cadre et le haut du torse, là où se trouve le sujet d'une photo de profil.
                 points += Cutout.Session.Point(s.image.width * 0.5f, s.image.height * 0.38f, true)
+                busy = false
                 recompute()
-            }.onFailure { error = it.message ?: "?"; busy = false }
+            }.onFailure {
+                busy = false
+                if (it is CancellationException) throw it
+                error = it.message ?: "?"
+            }
         }
     }
     CardScaffold("Ma photo de carte", { nav.popBackStack() }, Color(0xFF1FA67A)) {
@@ -131,14 +154,16 @@ fun CutoutScreen(nav: NavHostController) {
                     modifier = Modifier.padding(top = 24.dp).clickable { CardStore.cutoutFile(ctx).delete(); CardStore.update(ctx) { it.copy(cutout = false, photo = PhotoSource.PROFIL) }; CardPhoto.load(ctx) })
             }
             else -> Editor(session!!, points, keepMode, busy, preview, onMode = { keepMode = it }, onTap = { p ->
+                    if (!busy) {
                     // Un appui sur un point existant le retire ; sinon il ajoute un point « garder » ou « retirer ».
                     val near = points.indexOfFirst { kotlin.math.hypot(it.x - p.x, it.y - p.y) < session!!.image.width * 0.04f }
                     if (near >= 0) points.removeAt(near) else points += p.copy(keep = keepMode)
                     recompute()
+                    }
                 },
-                onUndo = { if (points.isNotEmpty()) { points.removeAt(points.lastIndex); recompute() } },
-                onClear = { points.clear(); recompute() },
-                onAnother = { session?.close(); session = null; preview = null; result = null },
+                onUndo = { if (!busy && points.isNotEmpty()) { points.removeAt(points.lastIndex); recompute() } },
+                onClear = { if (!busy) { points.clear(); recompute() } },
+                onAnother = { if (!busy) { session?.close(); session = null; preview = null; result = null } },
                 card = { AthleteCard(myFace(snap?.now, cutoutOverride = preview), Modifier.fillMaxWidth(0.55f), interactive = false) },
                 onSave = {
                     val r = result ?: return@Editor

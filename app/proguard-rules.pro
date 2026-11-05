@@ -106,3 +106,7 @@
 # jsoup 1.22.1 introduces support for re2j, but falls back to java Regex if not available
 # Since we only use jsoup to clean the html, we do not need the extra dependency
 -dontwarn com.google.re2j.Pattern
+# ONNX Runtime looks up Java constructors, fields and methods from JNI.
+# Keeping only native methods lets R8 remove these entry points and abort the VM.
+# https://onnxruntime.ai/docs/build/android.html#proguard
+-keep class ai.onnxruntime.** { *; }

@@ -70,7 +70,11 @@ object Cutout {
         data class Point(val x: Float, val y: Float, val keep: Boolean)
 
         /** Masque alpha (0..255) à la taille de [image], affiné : plus grande zone contenant un point gardé, bords adoucis. */
+        private var closed = false
+
+        @Synchronized
         fun mask(points: List<Point>): ByteArray {
+            check(!closed) { "Cutout session is closed" }
             val n = points.size + 1
             val coords = FloatArray(n * 2); val labels = FloatArray(n)
             points.forEachIndexed { i, p -> coords[i * 2] = p.x * scale; coords[i * 2 + 1] = p.y * scale; labels[i] = if (p.keep) 1f else 0f }
@@ -115,38 +119,43 @@ object Cutout {
             return if (k < 1f) Bitmap.createScaledBitmap(out, (cw * k).roundToInt().coerceAtLeast(1), 1200, true) else out
         }
 
-        override fun close() = decoder.close()
+        @Synchronized
+        override fun close() {
+            if (!closed) { closed = true; decoder.close() }
+        }
 
         companion object {
             /** Encode la photo (réduite à 1 536 px au plus). Long : à lancer hors du fil principal. */
             suspend fun open(ctx: Context, photo: Bitmap): Session = withContext(Dispatchers.Default) {
                 val env = OrtEnvironment.getEnvironment()
-                val opts = OrtSession.SessionOptions().apply {
-                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
-                    setIntraOpNumThreads(Runtime.getRuntime().availableProcessors().coerceIn(2, 4))
-                }
-                val k = 1536f / max(photo.width, photo.height)
-                val image = if (k < 1f) Bitmap.createScaledBitmap(photo, (photo.width * k).roundToInt(), (photo.height * k).roundToInt(), true) else photo
-                val scale = SIDE.toFloat() / max(image.width, image.height)
-                val sw = (image.width * scale).roundToInt().coerceIn(1, SIDE); val sh = (image.height * scale).roundToInt().coerceIn(1, SIDE)
-                val small = Bitmap.createScaledBitmap(image, sw, sh, true)
-                val px = IntArray(sw * sh); small.getPixels(px, 0, sw, 0, 0, sw, sh)
-                val input = FloatArray(SIDE * SIDE * 3)
-                for (y in 0 until sh) for (x in 0 until sw) {
-                    val c = px[y * sw + x]; val o = (y * SIDE + x) * 3
-                    input[o] = Color.red(c).toFloat(); input[o + 1] = Color.green(c).toFloat(); input[o + 2] = Color.blue(c).toFloat()
-                }
-                val dir = dir(ctx)
-                val (emb, shape) = env.createSession(File(dir, ENCODER.file).absolutePath, opts).use { enc ->
-                    OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(SIDE.toLong(), SIDE.toLong(), 3)).use { t ->
-                        enc.run(mapOf("input_image" to t)).use { r ->
-                            val out = r[0] as OnnxTensor
-                            val fb = out.floatBuffer
-                            FloatArray(fb.remaining()).also { fb.get(it) } to out.info.shape
+                OrtSession.SessionOptions().use { opts ->
+                    opts.apply {
+                        setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+                        setIntraOpNumThreads(Runtime.getRuntime().availableProcessors().coerceIn(2, 4))
+                    }
+                    val k = 1536f / max(photo.width, photo.height)
+                    val image = if (k < 1f) Bitmap.createScaledBitmap(photo, (photo.width * k).roundToInt().coerceAtLeast(1), (photo.height * k).roundToInt().coerceAtLeast(1), true) else photo
+                    val scale = SIDE.toFloat() / max(image.width, image.height)
+                    val sw = (image.width * scale).roundToInt().coerceIn(1, SIDE); val sh = (image.height * scale).roundToInt().coerceIn(1, SIDE)
+                    val small = Bitmap.createScaledBitmap(image, sw, sh, true)
+                    val px = IntArray(sw * sh); small.getPixels(px, 0, sw, 0, 0, sw, sh)
+                    val input = FloatArray(SIDE * SIDE * 3)
+                    for (y in 0 until sh) for (x in 0 until sw) {
+                        val c = px[y * sw + x]; val o = (y * SIDE + x) * 3
+                        input[o] = Color.red(c).toFloat(); input[o + 1] = Color.green(c).toFloat(); input[o + 2] = Color.blue(c).toFloat()
+                    }
+                    val dir = dir(ctx)
+                    val (emb, shape) = env.createSession(File(dir, ENCODER.file).absolutePath, opts).use { enc ->
+                        OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(SIDE.toLong(), SIDE.toLong(), 3)).use { t ->
+                            enc.run(mapOf("input_image" to t)).use { r ->
+                                val out = r[0] as OnnxTensor
+                                val fb = out.floatBuffer
+                                FloatArray(fb.remaining()).also { fb.get(it) } to out.info.shape
+                            }
                         }
                     }
+                    Session(env, env.createSession(File(dir, DECODER.file).absolutePath, opts), emb, shape, image, scale)
                 }
-                Session(env, env.createSession(File(dir, DECODER.file).absolutePath, opts), emb, shape, image.copy(Bitmap.Config.ARGB_8888, false), scale)
             }
         }
     }
