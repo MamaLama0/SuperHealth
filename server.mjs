@@ -1,6 +1,7 @@
 import { createSocialStore, SOCIAL_RETENTION_DAYS } from './social.mjs';
 import { createMediaStore, DEFAULT_MEDIA_QUOTA, MAX_MEDIA_FILES } from './media.mjs';
 import { createFeedbackHandler } from './feedback.mjs';
+import { createEconomy } from './economy.mjs';
 import { createServer } from 'node:http';
 import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, unlink, readdir, stat } from 'node:fs/promises';
@@ -74,6 +75,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   };
   const feedback = createFeedbackHandler({ ...feedbackOptions, now });
   const secret = publishKey ? `Bearer ${publishKey}` : null;
+  const economy = await createEconomy(dataDir, { now, secret, maxAccounts: maxCards * 10, maxNewPerHour: maxNewMailboxesPerHour });
   const index = new Map();
   const rates = new Map();
   const creationRates = new Map();
@@ -136,8 +138,17 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
-    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, recoveryRevocation: 1, streamFreeze: 1, capabilityStatus: 1, feedback: feedback.enabled ? 1 : 0 }));
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, recoveryRevocation: 1, streamFreeze: 1, capabilityStatus: 1, feedback: feedback.enabled ? 1 : 0, economy: 1 }));
     if (req.url === '/v2/feedback') return feedback(req, res);
+    // Économie des cartes : portefeuille, tirage et quêtes décidés par le serveur (voir economy.mjs).
+    const economyRoute = /^\/v2\/economy\/([a-f0-9]{64})$/.exec(req.url || '');
+    if (economyRoute) {
+      if (inFlight >= maxInFlight) { req.resume(); return send(res, 503, '', { 'Retry-After': '2' }); }
+      inFlight++;
+      try { return await economy(req, res, economyRoute[1], readBody); }
+      catch (e) { if (!res.headersSent) send(res, e.status || 500); else res.end(); }
+      finally { inFlight--; }
+    }
     const archiveRoute = (req.url || '').match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/social(?:\/([a-f0-9]{32}))?(?:\?before=([0-9]{16}%3A[a-f0-9]{32}|[0-9]{16}:[a-f0-9]{32}))?$/);
     const handoffRoute = (req.url || '').match(/^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/handoffs\/([a-f0-9]{32})$/);
     const statusRoute = /^(\/v2\/cards\/[a-f0-9]{64}\/[a-f0-9]{64})\/status$/.exec(req.url || '');

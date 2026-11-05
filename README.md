@@ -145,6 +145,18 @@ Limites : photo de 15 Mio et vidéo de 50 Mio côté app, corps chiffré de 50 M
 
 Pour appliquer le nouveau quota à une installation existante, récupérer la nouvelle image puis recréer le conteneur en conservant son volume de données. Une ancienne valeur explicite de `MEDIA_QUOTA_BYTES` ou `MAX_MEDIA_FILES` dans la configuration prend priorité sur les valeurs par défaut.
 
+## SuperHealth 4.0 — économie des cartes Athlète
+
+Le portefeuille des cartes (éclats, packs offerts), la collection, les garanties et le tirage des packs sont tenus par le serveur, pour qu'aucune modification locale de l'app ne puisse créer des packs ou des cartes. Code : `economy.mjs`, tests : `node --test economy.test.mjs`.
+
+- Route `POST /v2/economy/{compte}` (64 hex), jeton d'écriture `X-Write-Token` (64 hex), et `Authorization` si `PUBLISH_KEY` est défini. Le compte est créé au premier appel, avec les mêmes limites de création par heure que les boîtes.
+- Opérations : `state`, `events` (séances et quêtes déclarées, 40 au plus), `open` (booster 0 à 3), `craft` (fond précis).
+- L'app ne déclare que des identifiants opaques et des dates. Le serveur fixe les montants, refuse les doublons et les dates hors fenêtre (séance des 4 derniers jours, quête du jour ou de la semaine), puis plafonne la semaine : au-delà de 250 éclats, chaque gain est divisé par deux, avec un plafond à 330.
+- Cadeau de lancement : 2 packs par compte, au premier contact après la mise à jour (`LAUNCH_GIFT`).
+- Données : `DATA_DIR/economy/*.json`. Elles sont sauvegardées avec le reste du volume.
+
+Mettre à jour l'image suffit : aucune variable nouvelle n'est requise. `/health` répond `economy: 1`.
+
 ## Retours anonymes vers un GitHub privé
 
 La route `POST /v2/feedback` accepte une note facultative, un type de retour, un message et une version d’app. Elle ne demande pas de compte GitHub à la personne qui écrit. Le serveur ajoute ces seuls éléments dans une issue du dépôt privé configuré. Les adresses réseau ne sont ni enregistrées ni envoyées à GitHub. La taille est limitée à 8 Kio et le message à 3 000 caractères ; les envois sont limités et un identifiant de soumission évite les doubles clics au sein du processus courant.
