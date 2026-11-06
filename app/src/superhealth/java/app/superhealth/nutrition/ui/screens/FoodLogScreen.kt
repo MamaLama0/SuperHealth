@@ -20,6 +20,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -195,6 +196,19 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.strong)
                     .padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(trf("%1\$s sélectionné(s)", selection.size), color = Mf.colors.onStrong, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    // copie directe vers maintenant (aujourd'hui, heure actuelle) : le cas le plus fréquent, sans passer par « Coller »
+                    IconButton(onClick = {
+                        val items = entries.filter { it.id in selection }; selection = emptySet()
+                        val now = java.time.LocalTime.now()
+                        vm.launch { paste(items, java.time.LocalDate.now().toEpochDay(), now.hour * 60 + now.minute) }
+                        android.widget.Toast.makeText(ctx, trf("%1\$s aliment(s) copié(s) vers maintenant", items.size), android.widget.Toast.LENGTH_SHORT).show()
+                    }) {
+                        Box {
+                            Icon(Icons.Rounded.ContentCopy, tr("Copier vers maintenant"), tint = Mf.colors.onStrong)
+                            Text("N", Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-5).dp).clip(CircleShape).background(Mf.colors.onStrong)
+                                .padding(horizontal = 3.dp), color = Mf.colors.strong, fontSize = 9.sp, fontWeight = FontWeight.Black, lineHeight = 11.sp)
+                        }
+                    }
                     IconButton(onClick = { vm.clipboard.value = entries.filter { it.id in selection }; selection = emptySet() }) {
                         Icon(Icons.Rounded.ContentCopy, tr("Copier"), tint = Mf.colors.onStrong)
                     }

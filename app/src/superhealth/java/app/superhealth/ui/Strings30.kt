@@ -3,6 +3,8 @@ package app.superhealth.ui
 /** 3.6.4 : widget VO₂ max et semaine manuelle en jours ON / OFF. */
 object Strings30 {
     val map = mapOf(
+        "Copier vers maintenant" to "Copy to now",
+        "%1\$s aliment(s) copié(s) vers maintenant" to "%1\$s food(s) copied to now",
         "Faible" to "Poor",
         "Supérieur" to "Superior",
         "en 30 j" to "in 30 d",
