@@ -105,6 +105,7 @@ fun PackShopScreen(nav: NavHostController) {
     }, backdrop = { BiomeBackdrop(booster, { time }) }) {
         Wallet(state)
         val float by rememberInfiniteTransition(label = "pf").animateFloat(-8f, 8f, infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "f")
+        // Le carrousel coupe ce qui dépasse de ses bords : le halo des packs (glowReach) s'éteint avant.
         HorizontalPager(pager, Modifier.padding(top = 10.dp).fillMaxWidth().height(470.dp), contentPadding = PaddingValues(horizontal = 50.dp), pageSpacing = 0.dp) { page ->
             val off = (pager.currentPage - page + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -112,7 +113,7 @@ fun PackShopScreen(nav: NavHostController) {
                     val s = 1f - 0.18f * off; scaleX = s; scaleY = s; alpha = 1f - 0.45f * off
                     translationY = float * density * (1f - off); rotationY = tilt.x * 14f * (1f - off) + (page - pager.currentPage - pager.currentPageOffsetFraction) * -18f
                     rotationX = -tilt.y * 10f * (1f - off); cameraDistance = 14f * density
-                }, { tilt }, { if (page == pager.currentPage) time else 0f }, glow = if (state.nextGold) Gold else Entries[page].element.mid.c(), glowBoost = 0.2f * (1f - off), gold = state.nextGold)
+                }, { tilt }, { if (page == pager.currentPage) time else 0f }, glow = if (state.nextGold) Gold else Entries[page].element.mid.c(), glowBoost = 0.2f * (1f - off), gold = state.nextGold, glowReach = 0.46f)
             }
         }
         val e = booster.element
@@ -220,11 +221,11 @@ internal fun EffectChart(highlightGold: Boolean = false) {
 
 /** Pochette du booster. [tear] de 0 à 1 arrache la bande du haut ; [cut] trace la ligne incandescente sous le doigt. */
 @Composable
-fun PackVisual(booster: Booster, modifier: Modifier, tilt: () -> Offset, time: () -> Float, glow: Color? = null, tear: Float = 0f, glowBoost: Float = 0f, cut: Float = 0f, gold: Boolean = false) {
+fun PackVisual(booster: Booster, modifier: Modifier, tilt: () -> Offset, time: () -> Float, glow: Color? = null, tear: Float = 0f, glowBoost: Float = 0f, cut: Float = 0f, gold: Boolean = false, glowReach: Float = 0.7f) {
     val density = LocalDensity.current
     Box(modifier.aspectRatio(0.62f).drawBehind {
         if (glow != null) drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = (0.3f + glowBoost * 0.5f + 0.08f * sin(time() * 3f)).coerceIn(0f, 1f)), Color.Transparent)),
-            radius = size.maxDimension * (0.7f + glowBoost * 0.3f))
+            radius = size.maxDimension * (glowReach + glowBoost * 0.3f))
     }) {
         Box(Modifier.fillMaxSize().drawWithContent { clipRect(top = size.height * TEAR_LINE) { this@drawWithContent.drawContent() } }) { PackFace(booster, tilt, time, gold) }
         Box(Modifier.fillMaxSize().graphicsLayer {
@@ -429,6 +430,8 @@ private fun BoxScope.Fan(o: CardStore.Opening, tilt: () -> Offset, time: () -> F
         ) { change, dx -> change.consume(); if (!leaving && walkout == null) dragX += dx }
     }) {
         val w = constraints.maxWidth.toFloat(); val h = constraints.maxHeight.toFloat()
+        // À mi-chemin du geste, la carte qui monte en deuxième place se retourne déjà, au lieu d'apparaître d'un coup.
+        val advanced by remember(w) { derivedStateOf { kotlin.math.abs(dragX) > w * 0.3f } }
         Row(Modifier.fillMaxWidth().padding(16.dp).align(Alignment.TopCenter), verticalAlignment = Alignment.CenterVertically) {
             Text("${(index + 1).coerceAtMost(n)}/$n", color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
             Text(tr("Tout voir"), color = Color.White.copy(alpha = 0.75f), fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.12f))
@@ -444,17 +447,18 @@ private fun BoxScope.Fan(o: CardStore.Opening, tilt: () -> Offset, time: () -> F
         // Lu seulement dans graphicsLayer : glisser ne recompose pas les cartes, l'image suit le doigt à chaque trame.
         for (i in (n - 1) downTo index) {
             val p = pulls[i]; val depth = i - index
-            val hidden = (depth >= 2) || (wantsWalkout(i) && i !in shown)
+            val hidden = (depth >= 3 || (depth == 2 && !advanced)) || (wantsWalkout(i) && i !in shown)
             Box(Modifier.align(Alignment.Center).offset(y = (-12).dp).fillMaxWidth(0.9f).zIndex(-depth.toFloat()).graphicsLayer {
                 val e = enter.value
                 // Position en éventail d'une profondeur donnée ; la carte suivante glisse de sa place vers celle du dessus.
                 fun ty(d: Float) = -d * 26f * density
                 fun tx(d: Int) = d * (if (d % 2 == 1) 14f else -12f) * density
                 fun rz(d: Int) = if (d == 0) 0f else d * (if (d % 2 == 1) 4f else -3f)
-                val k = if (depth == 1) (kotlin.math.abs(dragX) / (w * 0.6f)).coerceIn(0f, 1f) else 0f
+                // Toute la pile avance d'un cran pendant qu'on écarte la carte du dessus : rien ne saute au changement.
+                val k = if (depth >= 1) (kotlin.math.abs(dragX) / (w * 0.6f)).coerceIn(0f, 1f) else 0f
                 translationY = ty(depth - k) + (1 - e) * h * (1f + depth * 0.1f)
-                translationX = tx(depth) * (1 - k)
-                rotationZ = rz(depth) * (1 - k)
+                translationX = tx(depth) + (tx(depth - 1) - tx(depth)) * k
+                rotationZ = rz(depth) + (rz(depth - 1) - rz(depth)) * k
                 val s = 1f - (depth - k) * 0.06f; scaleX = s; scaleY = s
                 if (depth == 0) {
                     translationX = dragX; rotationZ = dragX / w * 18f
