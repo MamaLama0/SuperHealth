@@ -100,23 +100,27 @@ float3 glacier(float2 q, float3 A, float3 B, float3 C, float4 F, float hz) {
     float y = hz + 0.36 - fk * 0.08 + 0.05 * sin(q.x * (3.0 + fk) + t * 0.4 + s + fbm(q * 2.0 + fk) * 2.0);
     col += mix(A, B, fk) * exp(-abs(q.y - y) * 13.0) * 0.6 * (0.6 + 0.4 * fbm(float2(q.x * 6.0, t * 0.2 + fk))); }
   float sp = hz + 0.08 + 0.3 * pow(peaks(q.x * 1.4, s), 2.2);
-  if (q.y < sp) { col = mix(B * 0.7 + A * 0.25, A * 0.9, smoothstep(sp - 0.15, sp, q.y) * 0.7); col += A * 0.3 * smoothstep(0.004, 0.0, sp - q.y); }
+  if (q.y < sp + 0.004) { float3 m = mix(B * 0.7 + A * 0.25, A * 0.9, smoothstep(sp - 0.15, sp, q.y) * 0.7) + A * 0.3 * smoothstep(0.004, 0.0, sp - q.y); col = mix(col, m, smoothstep(sp + 0.003, sp - 0.003, q.y)); }
   float sp2 = hz - 0.04 + 0.18 * pow(peaks(q.x * 2.3 + 4.0, s + 2.0), 2.2);
-  if (q.y < sp2) { col = mix(C * 0.7 + B * 0.35, B * 0.9, smoothstep(sp2 - 0.2, sp2, q.y)); col += A * 0.45 * smoothstep(0.006, 0.0, sp2 - q.y); }
+  if (q.y < sp2 + 0.004) { float3 m = mix(C * 0.7 + B * 0.35, B * 0.9, smoothstep(sp2 - 0.2, sp2, q.y)) + A * 0.45 * smoothstep(0.006, 0.0, sp2 - q.y); col = mix(col, m, smoothstep(sp2 + 0.003, sp2 - 0.003, q.y)); }
   if (F.x > 0.5) {
     float2 c = q - float2(0.03 * sin(s), hz + 0.12); float d = abs(c.x) * 2.6 + abs(c.y) * 1.1;
     if (d < 0.28) { float face = step(0.0, c.x) * 0.25 + step(0.0, c.y) * 0.2; col = mix(B, A, 0.35 + face + 0.3 * (1.0 - d / 0.28)); col += A * smoothstep(0.01, 0.0, abs(c.x)) * 0.5; }
     col += A * exp(-d * 6.0) * 0.5 * (0.8 + 0.2 * sin(t * 2.0));
   }
-  float fg = hz - 0.19 + 0.03 * sin(q.x * 5.0 + s);
-  if (q.y < fg) {
+  // Bord de la banquise irrégulier et fondu dans la brume : une ligne droite coupait la scène net.
+  float fg = hz - 0.19 + 0.03 * sin(q.x * 5.0 + s) + 0.035 * (fbm(float2(q.x * 7.0, s)) - 0.5);
+  if (q.y < fg + 0.01) {
+    float3 fl;
     if (F.w > 0.5) {
       // Lac gelé : la montagne s'y reflète, striée de fissures.
       float ry = 2.0 * fg - q.y; float rsp = hz + 0.08 + 0.3 * pow(peaks(q.x * 1.4, s), 2.2);
-      col = mix(C * 0.8 + B * 0.2, B * 0.6 + A * 0.2, step(ry, rsp) * 0.6 + 0.2) * 0.8;
-      col += A * 0.5 * smoothstep(0.03, 0.0, abs(fract(q.x * 3.0 + n2(q * 8.0) * 0.6 + s) - 0.5) - 0.48);
-      col += A * 0.15 * pow(1.0 - (fg - q.y) * 2.0, 4.0);
-    } else { float2 v = vor(q * 6.0 + s); col = pal(0.2 + 0.6 * v.y, A, B, C); col = mix(col, A, smoothstep(0.05, 0.0, v.x)); }
+      fl = mix(C * 0.8 + B * 0.2, B * 0.6 + A * 0.2, step(ry, rsp) * 0.6 + 0.2) * 0.8;
+      fl += A * 0.5 * smoothstep(0.03, 0.0, abs(fract(q.x * 3.0 + n2(q * 8.0) * 0.6 + s) - 0.5) - 0.48);
+      fl += A * 0.15 * pow(clamp(1.0 - (fg - q.y) * 2.0, 0.0, 1.0), 4.0);
+    } else { float2 v = vor(float2(q.x * 6.0, q.y * 6.0 + 0.6 / (fg - q.y + 0.12)) + s); fl = pal(0.2 + 0.6 * v.y, A, B, C); fl = mix(fl, A, smoothstep(0.05, 0.0, v.x)); }
+    fl = mix(fl, col, smoothstep(fg - 0.1, fg, q.y) * 0.55);
+    col = mix(col, fl, smoothstep(fg + 0.008, fg - 0.008, q.y)); col += A * 0.25 * smoothstep(0.012, 0.0, abs(q.y - fg));
   }
   if (F.z > 0.5) { col = mix(col, A * 0.8 + B * 0.2, 0.25 * fbm(float2(q.x * 3.0 + t * 0.6, q.y * 2.0))); col += A * motes(q, float2(0.35, -0.2), 30.0, 0.01, 0.45); }
   else col += A * motes(q, float2(0.03, -0.1), 26.0, 0.008, 0.62);
@@ -132,21 +136,25 @@ float3 storm(float2 q, float3 A, float3 B, float3 C, float4 F, float hz) {
   col = mix(col, mix(C * 1.6 + B * 0.1, B * 0.45, cl), smoothstep(hz + 0.15, hz + 0.55, q.y) * 0.9);
   if (F.x > 0.5) { float2 c = q - float2(0.05 * sin(s), hz + 0.45); float rr = length(c); float a = atan(c.y, c.x);
     float sp = sin(a * 3.0 + rr * 26.0 - t * 1.6 + s); col += B * smoothstep(0.6, 1.0, sp) * exp(-rr * 4.0) * 0.8; col = mix(col, C * 0.4 + A * 0.05, smoothstep(0.06, 0.0, rr)); }
-  float g = hz + 0.03 * n2(float2(q.x * 3.0, s));
+  float g = hz + 0.03 * n2(float2(q.x * 3.0, s)) + 0.03 * (fbm(float2(q.x * 6.0, s + 1.0)) - 0.5);
   for (int k = 0; k < 3; k++) { float fk = float(k);
     if (fk < 0.5 + F.y * 2.0) {
       float flick = step(0.72, fract(t * (0.45 + fk * 0.21) + fk * 0.37 + s * 0.1));
       float d = bolt(q, (fk - 1.0) * 0.18 + 0.05 * sin(s + fk), fk, t * (0.45 + fk * 0.21) + fk * 0.37);
-      float on = flick * step(g, q.y) * step(q.y, hz + 0.55);
+      float on = flick * smoothstep(g - 0.02, g + 0.04, q.y) * smoothstep(hz + 0.62, hz + 0.5, q.y);
       col += (A * 0.008 / (d + 0.003) + B * 0.04 / (d + 0.04)) * on; flash = max(flash, flick);
     } }
   col += B * 0.12 * flash * smoothstep(hz - 0.1, hz + 0.7, q.y);
-  if (q.y < g) {
+  if (q.y < g + 0.01) {
+    float3 fl;
     if (F.w > 0.5) {
       float wv = sin(q.x * 18.0 + t * 1.5 + fbm(q * 6.0) * 4.0) * 0.5 + 0.5;
-      col = mix(C * 0.4, C * 0.8 + B * 0.25, wv * smoothstep(g - 0.35, g, q.y));
-      col += A * 0.5 * smoothstep(0.9, 1.0, wv) * smoothstep(g - 0.3, g, q.y) + B * 0.3 * flash * smoothstep(g - 0.2, g, q.y);
-    } else { col = C * 0.35 + B * 0.05 * fbm(q * 8.0); col += B * 0.2 * flash * smoothstep(g - 0.2, g, q.y); }
+      fl = mix(C * 0.4, C * 0.8 + B * 0.25, wv * smoothstep(g - 0.35, g, q.y));
+      fl += A * 0.5 * smoothstep(0.9, 1.0, wv) * smoothstep(g - 0.3, g, q.y) + B * 0.3 * flash * smoothstep(g - 0.2, g, q.y);
+    } else { fl = C * 0.35 + B * 0.05 * fbm(q * 8.0); fl += B * 0.2 * flash * smoothstep(g - 0.2, g, q.y); }
+    // La plaine se perd dans le rideau de pluie : pas de bord franc sous le ciel.
+    fl = mix(fl, col, smoothstep(g - 0.14, g, q.y) * 0.6);
+    col = mix(col, fl, smoothstep(g + 0.008, g - 0.008, q.y));
   }
   float dens = 0.86 - 0.14 * F.z;
   float2 rq = float2((q.x + q.y * (0.25 + 0.2 * F.z)) * 70.0, q.y * 3.0 + t * 5.0); float ho = h21(float2(floor(rq.x), 3.0)) * 9.0;
