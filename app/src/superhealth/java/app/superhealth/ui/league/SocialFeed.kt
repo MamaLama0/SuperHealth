@@ -130,7 +130,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         // Cartes : ta carte et tes packs, le combat, les quêtes, l'album et les échanges, puis les duels du jour.
         if (tab == GroupTab.ARENE) {
             item(key = "arena-hero") { ArenaHero(nav) }
-            item(key = "arena-combat") { CombatButton(nav, state.friends.count { it.athlete?.ovr10 != null }) }
+            item(key = "arena-combat") { CombatButton(nav, state.friends) }
             item(key = "arena-quests") { ArenaQuests(nav) }
             item(key = "arena-badges") { ArenaBadges(nav) }
             item(key = "arena-shortcuts") { ArenaShortcuts(nav) }

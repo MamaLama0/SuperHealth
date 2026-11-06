@@ -447,6 +447,13 @@ object Rumble {
     }
     fun tick(ctx: Context, scale: Float = 0.4f) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_TICK to scale) else Unit
     fun thud(ctx: Context) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_THUD to 1f) else Unit
+    /** Choc d'un aller-retour pendant le bras de fer d'une stat. */
+    fun clash(ctx: Context, scale: Float) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_CLICK to scale) else Unit
+    /** Une stat tranchée : coup sourd puis claquement. */
+    fun slam(ctx: Context) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_THUD to 1f, VibrationEffect.Composition.PRIMITIVE_CLICK to 0.8f) else Unit
+    /** Une stat écrasée (5 points d'écart ou plus) : double coup sourd puis claquement. */
+    fun impact(ctx: Context) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_THUD to 1f, VibrationEffect.Composition.PRIMITIVE_THUD to 0.8f,
+        VibrationEffect.Composition.PRIMITIVE_CLICK to 1f) else Unit
     fun rise(ctx: Context) = if (Build.VERSION.SDK_INT >= 31) play(ctx, VibrationEffect.Composition.PRIMITIVE_QUICK_RISE to 0.7f, VibrationEffect.Composition.PRIMITIVE_SPIN to 0.9f) else Unit
     fun reveal(ctx: Context) = if (Build.VERSION.SDK_INT >= 30) play(ctx, VibrationEffect.Composition.PRIMITIVE_THUD to 1f, VibrationEffect.Composition.PRIMITIVE_CLICK to 1f, VibrationEffect.Composition.PRIMITIVE_CLICK to 0.6f) else Unit
 }

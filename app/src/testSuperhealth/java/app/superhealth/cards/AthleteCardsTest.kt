@@ -111,6 +111,68 @@ class AthleteCardsTest {
         assertEquals(73.0, Vo2Norms.points(45.4, Sex.MALE, 25), 0.01)
     }
 
+    @Test fun commonVariantsOfTheDatabaseAreRecognised() {
+        fun lift(n: String) = Standards.match(Exercise(n, n))?.lift
+        assertEquals(Standards.Lift.PULLUP, lift("Overhand grip pull-up"))
+        assertEquals(Standards.Lift.PULLDOWN, lift("Wide grip cable lat pulldown"))
+        assertEquals(Standards.Lift.ROW, lift("Bent-over barbell row"))
+        assertEquals(Standards.Lift.ROW, lift("Seated dual handle cable row (elbows-in)"))
+        assertEquals(Standards.Lift.LEG_PRESS, lift("45° leg press"))
+        assertEquals(Standards.Lift.BENCH, lift("Pin-loaded machine chest press"))
+        assertEquals(Standards.Lift.BENCH, lift("45° incline dumbbell press"))
+        assertEquals(Standards.Lift.OHP, lift("Pin-loaded machine shoulder press"))
+        assertEquals(Standards.Lift.TRICEPS, lift("Cable rope triceps pushdown"))
+        assertEquals(Standards.Lift.DIP, lift("Bodyweight chest dip"))
+        assertNull(lift("Band-assisted chin-up"))
+        // Charte de compatibilité : rattachés à un mouvement de référence, mais avec un poids réduit.
+        fun conf(n: String) = Standards.match(Exercise(n, n))?.confidence
+        assertEquals(1.0, conf("Overhand grip pull-up")!!, 0.0)
+        // Classiques à repères propres : poids plein.
+        assertEquals(Standards.Lift.LEG_EXTENSION, lift("Leg extension")); assertEquals(1.0, conf("Leg extension")!!, 0.0)
+        assertEquals(Standards.Lift.LEG_CURL, lift("Seated leg curl"))
+        assertEquals(Standards.Lift.CALF_RAISE, lift("Standing machine calf raise"))
+        assertEquals(Standards.Lift.SHRUG, lift("Barbell shrug"))
+        assertEquals(Standards.Lift.FLY, lift("Pec deck machine fly"))
+        assertEquals(Standards.Lift.LUNGE, lift("Dumbbell Bulgarian split squat"))
+        assertEquals(Standards.Lift.CURL, lift("Dumbbell hammer curl")); assertEquals(1.0, conf("Dumbbell hammer curl")!!, 0.0)
+        assertEquals(Standards.Lift.LATERAL_RAISE, lift("Dumbbell lateral raise")); assertEquals(1.0, conf("Dumbbell lateral raise")!!, 0.0)
+        assertEquals(Standards.Lift.OHP, lift("Barbell upright row")); assertTrue(conf("Barbell upright row")!! < 1.0)
+        assertNull(lift("Bodyweight squat"))
+        // Un bras sur machine : la moitié de la charge.
+        assertEquals(0.5, Standards.match(Exercise("x", "Single arm cable lat pulldown"))!!.coef, 0.001)
+        // Un tirage vertical se note à la charge de la machine, pas au poids du corps.
+        assertFalse(Standards.Lift.PULLDOWN.bodyweightLoad)
+    }
+
+    @Test fun machinesAndIsolationGiveFairStatsAndHeavyLoadsStillWin() {
+        val press = Exercise("p", "Barbell bench press", metrics = listOf("w", "r"), region = "upper", primaryGroups = listOf("chest"), secondaryGroups = listOf("triceps"))
+        val incline = Exercise("i", "Incline barbell bench press", metrics = listOf("w", "r"), region = "upper", primaryGroups = listOf("chest"))
+        val fly = Exercise("f", "Pec deck machine fly", metrics = listOf("w", "r"), region = "upper", primaryGroups = listOf("chest"))
+        val machine = Exercise("m", "Pin-loaded machine chest press", metrics = listOf("w", "r"), region = "upper", primaryGroups = listOf("chest"))
+        val db = ExerciseDb(ExerciseDbFile("test", listOf(press, incline, fly, machine), emptyList(), emptyMap()))
+        val now = System.currentTimeMillis()
+        fun pec(vararg ex: Pair<Exercise, Double>) = AthleteStatsEngine.compute(AthleteStatsEngine.Input((1..40 step 3).map { d ->
+            Workout("w$d", "S", now - d * day, 3600, ex.map { (e, kg) -> SessionExercise("e" + e.id, e.id, List(4) { SetLog("s$it", weight = kg, reps = 8, rir = 2, done = true) }) }) },
+            db, 80.0, Sex.MALE, 30, now, weeklyTarget = 2))[Stat.PEC]!!
+        val barbell = pec(press to 80.0, incline to 66.0)
+        val machines = pec(machine to 72.0, fly to 50.0)
+        val heavy = pec(machine to 100.0, fly to 70.0)
+        assertTrue("machines $machines vs barres $barbell", machines in barbell - 6..barbell)
+        assertTrue("lourd sur machine $heavy vs barres $barbell", heavy > barbell)
+    }
+
+    @Test fun aRecentAccountIsNotPenalisedForWeeksBeforeItsFirstSession() {
+        val bench = Exercise("b", "Barbell bench press", metrics = listOf("w", "r"), region = "upper", primaryGroups = listOf("chest"))
+        val db = ExerciseDb(ExerciseDbFile("test", listOf(bench), emptyList(), emptyMap()))
+        val now = System.currentTimeMillis()
+        fun w(daysAgo: Int) = Workout("w$daysAgo", "S", now - daysAgo * day, 3600,
+            listOf(SessionExercise("e", bench.id, List(4) { SetLog("s$it", weight = 100.0, reps = 5, rir = 2, done = true) })))
+        // Trois séances par semaine depuis deux semaines seulement, contre la même cadence sur six semaines.
+        val fresh = AthleteStatsEngine.compute(AthleteStatsEngine.Input((1..14 step 2).map(::w), db, 80.0, Sex.MALE, 30, now))
+        val long = AthleteStatsEngine.compute(AthleteStatsEngine.Input((1..42 step 2).map(::w), db, 80.0, Sex.MALE, 30, now))
+        assertTrue("${fresh[Stat.PEC]} vs ${long[Stat.PEC]}", kotlin.math.abs(fresh[Stat.PEC]!! - long[Stat.PEC]!!) <= 1)
+    }
+
     @Test fun statsComeFromRealSessionsAndStayHonestWhenDataIsMissing() {
         val bench = Exercise("b", "Barbell bench press", metrics = listOf("w", "r"), region = "upper", primaryGroups = listOf("chest"), secondaryGroups = listOf("triceps", "frontDelts"))
         val squat = Exercise("s", "Barbell back squat", metrics = listOf("w", "r"), region = "lower", primaryGroups = listOf("quads", "glutes"))

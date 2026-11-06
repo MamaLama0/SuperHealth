@@ -142,15 +142,16 @@ internal fun GlowButton(text: String, modifier: Modifier = Modifier, colors: Lis
 }
 
 @Composable
-internal fun Tile(icon: ImageVector, title: String, subtitle: String?, modifier: Modifier = Modifier, accent: Color = Color.White, badge: Int = 0, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(20.dp)).background(InkCard).border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(14.dp)) {
+internal fun Tile(icon: ImageVector, title: String, subtitle: String?, modifier: Modifier = Modifier, accent: Color = Color.White, badge: Int = 0,
+                  panel: Color = InkCard, fg: Color = Color.White, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(20.dp)).background(panel).border(1.dp, fg.copy(alpha = 0.07f), RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, Modifier.size(22.dp), tint = accent)
             Spacer(Modifier.weight(1f))
             if (badge > 0) Text("$badge", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.clip(CircleShape).background(Color(0xFFFF4F7B)).padding(horizontal = 7.dp, vertical = 1.dp))
         }
-        Text(tr(title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 10.dp))
-        if (subtitle != null) Text(subtitle, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+        Text(tr(title), color = fg, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 10.dp))
+        if (subtitle != null) Text(subtitle, color = fg.copy(alpha = 0.55f), fontSize = 12.sp)
     }
 }
 
@@ -243,12 +244,12 @@ private fun NextLevel(ovr10: Int, stats: AthleteStats) {
 }
 
 @Composable
-internal fun LinkRow(icon: ImageVector, title: String, value: String?, onClick: () -> Unit) {
+internal fun LinkRow(icon: ImageVector, title: String, value: String?, fg: Color = Color.White, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, Modifier.size(20.dp), tint = Color.White.copy(alpha = 0.7f))
-        Text(tr(title), color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp).weight(1f))
-        if (value != null) Text(value, color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
-        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.3f))
+        Icon(icon, null, Modifier.size(20.dp), tint = fg.copy(alpha = 0.7f))
+        Text(tr(title), color = fg, fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp).weight(1f))
+        if (value != null) Text(value, color = fg.copy(alpha = 0.5f), fontSize = 13.sp)
+        Icon(Icons.Rounded.ChevronRight, null, tint = fg.copy(alpha = 0.3f))
     }
 }
 

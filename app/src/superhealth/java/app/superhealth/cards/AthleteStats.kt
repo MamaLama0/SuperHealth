@@ -68,7 +68,7 @@ data class AthleteStats(
 }
 
 object AthleteStatsEngine {
-    const val MODEL = 2
+    const val MODEL = 3
     private const val DAY = 86_400_000L
 
     data class Run(val start: Long, val distanceM: Double, val seconds: Double)
@@ -78,9 +78,19 @@ object AthleteStatsEngine {
     /** Récence : une activité compte pour moitié au bout de 3 semaines ([HALF_LIFE] jours). */
     const val HALF_LIFE = 21.0
     fun recency(start: Long, now: Long) = 0.5.pow(((now - start) / DAY.toDouble()).coerceAtLeast(0.0) / HALF_LIFE)
-    /** Somme hebdomadaire pondérée par la récence sur [days] jours : une semaine récente pèse plus qu'une vieille. */
-    private fun <T> weekly(items: List<T>, now: Long, days: Int, start: (T) -> Long, value: (T) -> Double): Double {
-        val weeks = (0 until days).sumOf { 0.5.pow(it / HALF_LIFE) } / 7
+    /** Fenêtre des activités « récentes » : six mois, l'app étant jeune, les données plus anciennes manquent souvent. */
+    const val WINDOW = 182
+    /** Ancienneté retenue pour la force : le meilleur niveau de l'année, un peu vieilli. */
+    const val YEAR = 365
+
+    /**
+     * Somme hebdomadaire pondérée par la récence sur [days] jours : une semaine récente pèse plus qu'une vieille. On ne
+     * divise que par les jours couverts depuis [origin] (premières données, 4 semaines au moins) : un compte récent
+     * n'est pas noté comme s'il était resté inactif avant.
+     */
+    private fun <T> weekly(items: List<T>, now: Long, days: Int, start: (T) -> Long, origin: Long? = null, value: (T) -> Double): Double {
+        val covered = origin?.let { ((now - it) / DAY).toInt().coerceIn(28, days) } ?: days
+        val weeks = (0 until covered).sumOf { 0.5.pow(it / HALF_LIFE) } / 7
         return items.filter { start(it) in now - days * DAY..now }.sumOf { value(it) * recency(start(it), now) } / weeks
     }
 
@@ -91,35 +101,39 @@ object AthleteStatsEngine {
         val trackedDays: Set<Long> = emptySet(),
         /** Pas moyens par jour sur 28 jours, comptés dans le cardio. */
         val dailySteps28: Double? = null,
-        /** Activités d'endurance des 8 dernières semaines (datées, pour la récence), FC au repos et taille pour estimer la VO₂max. */
+        /** Activités d'endurance datées (six mois comptent, la récence pondère), FC au repos et taille pour estimer la VO₂max. */
         val endurance: List<Endurance>? = null,
         /** Pas par jour (début du jour en ms → pas) sur 8 semaines, pour pondérer par la récence. */
         val steps: List<Pair<Long, Double>>? = null, val restingHr: Double? = null, val heightCm: Double? = null,
         val zone: ZoneId = ZoneId.systemDefault(),
     )
 
-    private class ExerciseBest(var points: Double, var last: Long)
+    private class ExerciseBest(var points: Double, var last: Long, val confidence: Double)
 
     fun compute(input: Input): AthleteStats {
         val now = input.now
         val past = input.history.filter { it.startTime < now }
-        val window = past.filter { it.startTime >= now - 84 * DAY }
+        val window = past.filter { it.startTime >= now - WINDOW * DAY }
+        val year = past.filter { it.startTime >= now - YEAR * DAY }
         val recent = forcePoints(window.filter { it.startTime >= now - 28 * DAY }, input)
-        val all = forcePoints(window, input)
         val older = forcePoints(window.filter { it.startTime < now - 28 * DAY }, input)
-        // Records de toujours : un ancien record compte encore, mais moins (−1 point par mois au-delà de 3 mois, 15 au plus).
+        // La force est le meilleur niveau de l'année ; un record ancien perd 0,5 point par mois au-delà de 3 mois (4 au plus).
+        val best = forcePoints(year, input, aged = true)
+        // Au-delà d'un an, les records de toujours parlent encore, désentraînés.
         val lifetime = forcePoints(past, input, aged = true)
-        val weekly = Analytics.setsByMuscle(window.filter { it.startTime >= now - 42 * DAY }, input.db).mapValues { it.value / 6.0 }
+        // Séries par semaine sur 6 semaines, ou depuis la première séance si elle est plus récente (2 semaines au moins).
+        val volumeWeeks = past.minOfOrNull { it.startTime }?.let { ((now - it) / (7.0 * DAY)).coerceIn(2.0, 6.0) } ?: 6.0
+        val weekly = Analytics.setsByMuscle(window.filter { it.startTime >= now - 42 * DAY }, input.db).mapValues { it.value / volumeWeeks }
 
         val values = linkedMapOf<String, Int>()
         val provisional = mutableSetOf<String>()
         for (stat in Stat.families) {
             val touchingEver = past.filter { w -> w.exercises.any { e -> input.db.exercise(e.exerciseId)?.let { ex -> ex.muscleGroups.any { it in stat.muscles } } == true && Analytics.workingSets(e).isNotEmpty() } }
             if (touchingEver.isEmpty()) continue
-            val touching = touchingEver.filter { it.startTime >= now - 84 * DAY }
+            val touching = touchingEver.filter { it.startTime >= now - YEAR * DAY }
             val old = familyForce(stat, lifetime)
             if (touching.isEmpty()) {
-                // Rien depuis 12 semaines : seuls les anciens records parlent, désentraînés (−0,5 % par jour au-delà de 21 jours, 15 % au plus).
+                // Rien depuis un an : seuls les anciens records parlent, désentraînés (−0,5 % par jour au-delà de 21 jours, 15 % au plus).
                 old ?: continue
                 val idle = ((now - touchingEver.maxOf { it.startTime }) / DAY - 21).coerceAtLeast(0)
                 values[stat.code] = (old * (1 - (0.005 * idle).coerceAtMost(0.15))).roundToInt().coerceIn(25, 99)
@@ -128,13 +142,13 @@ object AthleteStatsEngine {
             }
             val sets = stat.muscles.keys.sumOf { weekly[it] ?: 0.0 }
             val volume = (sets / stat.weeklySets).coerceIn(0.0, 1.2)
-            // L'entraînement récent compte le plus, les records de toujours gardent un tiers du poids.
-            val force = familyForce(stat, all)?.let { r -> old?.let { 0.65 * r + 0.35 * it } ?: r }
+            val force = familyForce(stat, best)
             val value = if (force == null) 35.0 + 45.0 * volume.coerceAtMost(1.0) else {
                 val idle = ((now - touching.maxOf { it.startTime }) / DAY - 21).coerceAtLeast(0)
                 val detrained = force * (1 - (0.005 * idle).coerceAtMost(0.15))
                 val trend = familyForce(stat, recent)?.let { r -> familyForce(stat, older)?.let { o -> ((r - o) / 3).coerceIn(-2.0, 2.0) } } ?: 0.0
-                detrained + ((volume - 0.8) * 10).coerceIn(-6.0, 4.0) + trend
+                // La régularité (séries par semaine) ne pèse qu'un peu : ±3 points autour du maximum de l'année.
+                detrained + ((volume - 0.8) * 6).coerceIn(-3.0, 3.0) + trend
             }
             values[stat.code] = value.roundToInt().coerceIn(25, 99)
             if (touching.count { it.startTime >= now - 56 * DAY } < 3) provisional += stat.code
@@ -148,15 +162,16 @@ object AthleteStatsEngine {
             val parts = listOfNotNull(fams.average() to 0.80, values[Stat.REG.code]?.let { it.toDouble() to 0.12 }, values[Stat.CAR.code]?.let { it.toDouble() to 0.08 })
             (parts.sumOf { it.first * it.second } / parts.sumOf { it.second } * 10).roundToInt()
         }
-        val muscles = all.entries.associate { it.key.key to it.value.roundToInt().coerceIn(25, 99) }
+        val muscles = best.entries.associate { it.key.key to it.value.roundToInt().coerceIn(25, 99) }
         return AthleteStats(values = values, provisional = provisional, ovr10 = ovr10, muscles = muscles, computedAt = now, sex = if (input.sex == Sex.FEMALE) "F" else "M")
     }
 
     /**
      * Points de force par muscle, sur plusieurs exercices : chaque exercice reconnu donne ses meilleurs points
      * (e1RM rapporté aux standards) à ses muscles principaux avec un poids 1, et à ses secondaires avec un poids 0,35
-     * et 5 points de moins. Un muscle fait la moyenne pondérée de ses trois meilleurs exercices ; tant qu'il n'a pas
-     * l'équivalent de deux exercices principaux, il perd jusqu'à 8 points (un seul exercice : −4).
+     * et 5 points de moins ; un exercice de la charte de compatibilité ([Standards.Match.confidence]) pèse moins. Un muscle fait la moyenne pondérée de ses trois meilleurs exercices ; tant qu'il n'a pas
+     * l'équivalent d'un exercice principal et demi, il perd jusqu'à 4 points (un seul exercice : −1,25). Un pratiquant
+     * fort qui s'en tient à quelques gros mouvements ne doit pas passer sous un débutant qui en varie beaucoup.
      */
     private fun forcePoints(workouts: List<Workout>, input: Input, aged: Boolean = false): Map<MuscleGroup, Double> {
         val best = mutableMapOf<String, ExerciseBest>()
@@ -172,8 +187,10 @@ object AthleteStatsEngine {
                 val e1rm = Strength.e1rm(load, reps, set.rir, ex.upperBody, set.partialReps)
                 if (!e1rm.isFinite()) continue
                 val months = (input.now - w.startTime) / (30.0 * DAY)
-                val points = Standards.points(e1rm / match.coef / input.bodyweight, levels) - if (aged) (months - 3).coerceIn(0.0, 15.0) else 0.0
-                val b = best.getOrPut(ex.id) { ExerciseBest(0.0, 0) }
+                val points = Standards.points(e1rm / match.coef / input.bodyweight, levels) - if (aged) (0.5 * (months - 3)).coerceIn(0.0, 4.0) else 0.0 -
+                    // Charte de compatibilité : petite décote (≈ 1,5 point), sans plafond, pour qu'une charge vraiment lourde passe devant.
+                    3.0 * (1 - match.confidence)
+                val b = best.getOrPut(ex.id) { ExerciseBest(0.0, 0, match.confidence) }
                 if (points > b.points) b.points = points
                 b.last = maxOf(b.last, w.startTime)
             }
@@ -181,13 +198,14 @@ object AthleteStatsEngine {
         val contributions = mutableMapOf<MuscleGroup, MutableList<Pair<Double, Double>>>()
         for ((id, b) in best) {
             val ex = input.db.exercise(id) ?: continue
-            ex.muscleGroups.forEach { contributions.getOrPut(it) { mutableListOf() } += b.points to 1.0 }
-            ex.secondaryMuscleGroups.forEach { if (it !in ex.muscleGroups) contributions.getOrPut(it) { mutableListOf() } += (b.points - 5) to SECONDARY }
+            // Les exercices à repères comptent plein ; ceux de la charte de compatibilité, selon leur fiabilité.
+            ex.muscleGroups.forEach { contributions.getOrPut(it) { mutableListOf() } += b.points to b.confidence }
+            ex.secondaryMuscleGroups.forEach { if (it !in ex.muscleGroups) contributions.getOrPut(it) { mutableListOf() } += (b.points - 5) to SECONDARY * b.confidence }
         }
         return contributions.mapValues { (_, list) ->
             val top = list.sortedByDescending { it.first * it.second }.take(3)
             val weight = top.sumOf { it.second }
-            top.sumOf { it.first * it.second } / weight - 4.0 * (2.0 - weight).coerceIn(0.0, 2.0)
+            top.sumOf { it.first * it.second } / weight - 2.5 * (1.5 - weight).coerceIn(0.0, 1.5)
         }
     }
 
@@ -201,7 +219,7 @@ object AthleteStatsEngine {
 
     /**
      * Régularité : 60 % pour les semaines où l'objectif de séances est atteint, 40 % pour les jours où l'app a servi
-     * (repas, pesée, séance, activité), sur douze semaines, les plus récentes pesant davantage.
+     * (repas, pesée, séance, activité), sur six mois, les semaines récentes pesant davantage.
      */
     private fun regularity(past: List<Workout>, input: Input): Pair<Int, Boolean>? {
         val zone = input.zone
@@ -213,12 +231,12 @@ object AthleteStatsEngine {
         val current = monday(input.now)
         val target = input.weeklyTarget.coerceIn(1, 7).toDouble()
         var train = 0.0; var track = 0.0; var den = 0.0; var weeks = 0
-        for (k in 1..12) {
+        for (k in 1..26) {
             val start = current.minusWeeks(k.toLong())
             if (start.plusDays(6).toEpochDay() < firstDay) break
             val from = start.atStartOfDay(zone).toInstant().toEpochMilli()
             val to = start.plusWeeks(1).atStartOfDay(zone).toInstant().toEpochMilli()
-            val weight = 13.0 - k
+            val weight = 27.0 - k
             train += weight * (past.count { it.startTime in from until to } / target).coerceAtMost(1.0)
             // Cinq jours suivis sur sept suffisent pour le plein : personne ne pèse tout, tous les jours.
             track += weight * ((start.toEpochDay() until start.toEpochDay() + 7).count { it in tracked } / 5.0).coerceAtMost(1.0)
@@ -246,13 +264,14 @@ object AthleteStatsEngine {
         val now = input.now
         val acts = input.endurance?.filter { it.start <= now }
         val allRuns = input.runs.filter { it.start <= now }
-        val runs = allRuns.filter { it.start >= now - 56 * DAY }
+        val runs = allRuns.filter { it.start >= now - WINDOW * DAY }
         // Pas du jour, les jours récents comptant plus ; à défaut la moyenne sur 28 jours.
         val days = input.steps?.filter { it.first in now - 56 * DAY..now }?.takeIf { it.size >= 7 }
         val dailySteps = days?.let { d -> d.sumOf { it.second * recency(it.first, now) } / d.sumOf { recency(it.first, now) } } ?: input.dailySteps28
         // Volume hebdo équivalent : minutes pondérées, plus les pas au-delà de 3 000 par jour comptés comme de la marche
         // (2 000 pas ≈ 10 min, à 0,5) : 10 000 pas quotidiens valent environ deux heures par semaine.
-        val minutes = (acts?.let { weekly(it, now, 112, Endurance::start, Endurance::minutes) } ?: (input.cardioMinutes28 ?: 0.0) / 4) +
+        val origin = acts?.minOfOrNull { it.start }
+        val minutes = (acts?.let { weekly(it, now, WINDOW, Endurance::start, origin, Endurance::minutes) } ?: (input.cardioMinutes28 ?: 0.0) / 4) +
             ((dailySteps ?: 0.0) - 3000).coerceAtLeast(0.0) / 2000 * 10 * 7 * 0.5
         val active = acts != null || input.cardioMinutes28 != null || dailySteps != null
         val level = input.vo2max?.takeIf { it in 15.0..95.0 }?.let { Vo2Norms.points(it, input.sex, input.age) } ?: run {
@@ -261,16 +280,16 @@ object AthleteStatsEngine {
                 val vdot = rs.mapNotNull { r -> CardioNorms.vdot(listOf(r))?.let { it * (1 - (0.003 * ((now - r.start) / DAY - 10).coerceAtLeast(0)).coerceAtMost(0.20)) } }.maxOrNull()
                 return listOfNotNull(vdot?.let { Vo2Norms.points(it, input.sex, input.age) }, CardioNorms.best5k(rs, input.sex, input.age)).takeIf { it.isNotEmpty() }?.average()
             }
-            // Les records anciens comptent aussi : un tiers du poids à côté des courses des 8 dernières semaines.
-            val recentLevel = level(runs); val ever = level(allRuns.filter { it.start < now - 56 * DAY })
+            // Les records anciens comptent aussi : un tiers du poids à côté des courses des 6 derniers mois.
+            val recentLevel = level(runs); val ever = level(allRuns.filter { it.start < now - WINDOW * DAY })
             when { recentLevel != null && ever != null -> 0.65 * recentLevel + 0.35 * maxOf(ever, recentLevel - 10); else -> recentLevel ?: ever?.let { it * 0.9 } }
         } ?: (input.restingHr?.takeIf { it in 30.0..110.0 }?.let { CardioNorms.uth(input.age, it) }
             ?: input.heightCm?.takeIf { active && it in 120.0..230.0 }?.let { CardioNorms.jackson(input.age, input.sex, input.bodyweight / (it / 100).pow(2), minutes) })
             ?.let { Vo2Norms.points(it, input.sex, input.age) }
         val frequency = if (!active) null else listOfNotNull(
-            acts?.let { CardioNorms.sessions(weekly(it, now, 112, Endurance::start) { 1.0 }) }, 35 + 55 * (minutes / 150).coerceAtMost(1.2) / 1.2).average()
+            acts?.let { CardioNorms.sessions(weekly(it, now, WINDOW, Endurance::start, origin) { 1.0 }) }, 35 + 55 * (minutes / 150).coerceAtMost(1.2) / 1.2).average()
         val stepScore = dailySteps?.let(CardioNorms::steps)
-        val distance = acts?.let { CardioNorms.distance(weekly(it, now, 112, Endurance::start, Endurance::km)) }
+        val distance = acts?.let { CardioNorms.distance(weekly(it, now, WINDOW, Endurance::start, origin, Endurance::km)) }
         // Allure moyenne : les courses récentes comptent plus.
         val recent = runs.filter { it.distanceM >= 1000 && it.seconds > 0 }
         val speed = recent.takeIf { it.isNotEmpty() }?.let { rs ->
