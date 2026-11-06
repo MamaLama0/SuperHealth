@@ -50,6 +50,7 @@ fun SocialProfileScreen(nav: NavHostController) {
             TextButton({ nav.go("social/badges") }, Modifier.fillMaxWidth()) { Text(tr("Personnaliser mon profil")) }
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ProfileStat(app.superhealth.cards.CardStore.snapshot.collectAsState().value?.now?.ovr?.toString() ?: "—", tr("Note"), Modifier.weight(1f)) { nav.go("social") }
             ProfileStat(result?.summary?.level?.toString() ?: "—", tr("Niveau"), Modifier.weight(1f)) { nav.go("progress") }
             ProfileStat(state.friends.size.toString(), tr("Amis"), Modifier.weight(1f)) { nav.go("friends") }
             ProfileStat(state.earnedBadges.size.toString(), tr("Badges"), Modifier.weight(1f)) { nav.go("social/badges") }

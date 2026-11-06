@@ -114,7 +114,7 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                 FlowRow(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(tr(if (q.secondary) "Quête secondaire" else "Quête principale"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
-                    if (!q.claimed) Text(trf("+%1\$s XP", q.reward), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
+                    if (!q.claimed) Text(trf("+%1\$s éclats", weeklyEclats(q)), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(if (q.complete) Icons.Rounded.CheckCircle else Icons.Rounded.Flag, null, tint = if (q.complete) QuestGreen.onContainer() else Mf.colors.accent)
@@ -128,8 +128,8 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                 Text(tr(q.reason.text), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
                 LinearProgressIndicator(progress = { (q.progress.toFloat() / q.target).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), color = if (q.complete) QuestGreen else Mf.colors.accent)
                 when {
-                    q.claimed -> Text(trf("+%1\$s XP récupérés", q.reward), color = QuestGreen.onContainer(), style = MaterialTheme.typography.labelLarge)
-                    q.complete -> PillButton(trf("Récupérer +%1\$s XP", q.reward), Modifier.fillMaxWidth(), enabled = !busy) {
+                    q.claimed -> Text(trf("+%1\$s éclats récupérés", weeklyEclats(q)), color = QuestGreen.onContainer(), style = MaterialTheme.typography.labelLarge)
+                    q.complete -> PillButton(trf("Récupérer +%1\$s éclats", weeklyEclats(q)), Modifier.fillMaxWidth(), enabled = !busy) {
                         busy = true
                         error = false
                         scope.launch {
@@ -145,10 +145,13 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                 }
             }
         }
-        Text(tr("Une récompense par quête et par semaine. Les bonus ajoutent de l'XP, sans modifier votre score global."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 16.dp))
+        Text(tr("Une récompense par quête et par semaine, en éclats pour ouvrir des packs. Votre score global ne change pas."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 16.dp))
         SectionLabel(tr("Semaines précédentes"))
         val past = state.questWeeks.filter { it.start < Progression.week(today.toEpochDay()) }.sortedByDescending { it.start }.take(4)
         if (past.isEmpty()) Text(tr("Vos prochaines semaines viendront s'ajouter ici."), color = Mf.colors.textSecondary)
         past.forEach { w -> SettingRow(LocalDate.ofEpochDay(w.start).format(DateTimeFormatter.ofPattern("d MMM", app.superhealth.ui.Lang.locale)), subtitle = trf("%1\$s / %2\$s accomplies", w.quests.count { it.complete }, w.quests.size)) }
     }
 }
+
+/** Éclats d'une quête de la semaine (principale ou secondaire), comme sur le serveur. */
+internal fun weeklyEclats(q: WeeklyQuests.Quest) = if (q.secondary) app.superhealth.cards.CardStore.WEEKLY_SECONDARY else app.superhealth.cards.CardStore.WEEKLY_PRIMARY

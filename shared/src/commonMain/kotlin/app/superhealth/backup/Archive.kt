@@ -32,7 +32,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "profile.jpg")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "profile.jpg", "cards/state.json", "cards/cutout.png")
 
     fun fileName(date: app.superhealth.platform.LocalDate = app.superhealth.platform.LocalDate.now()) = "superhealth-$date.$EXT"
 
@@ -47,6 +47,8 @@ object Archive {
         return withContext(Dispatchers.IO) {
             Zip.write(listOf("nutrition.json" to nutrition.encodeToByteArray(), "musculation.json" to training.encodeToByteArray(),
                 "superhealth.json" to app.superhealth.SuperPrefs.exportSettings().encodeToByteArray(), "sante.json" to health.encodeToByteArray(),"group-recovery.json" to kotlinx.serialization.json.Json.encodeToString(app.superhealth.league.GroupRecovery.Profile.serializer(),app.superhealth.league.GroupRecovery.export(ctx)).encodeToByteArray()) +
+                // Compte des cartes sur le serveur : sans lui, une restauration repartirait d'une collection vide.
+                listOfNotNull(app.superhealth.cards.Economy.exportAccount(ctx)?.let { "cards-economy.json" to it.encodeToByteArray() }) +
                 PLUGIN_FILES.mapNotNull { name -> File(ctx.filesDir, name).takeIf { it.isFile }?.let { name.replace('/', '_') to it.readBytes() } })
         }
     }
@@ -76,6 +78,8 @@ object Archive {
         }
         app.superhealth.stretch.Stretch.load(ctx); app.superhealth.meditation.Meditation.load(ctx); app.superhealth.league.League.load(ctx); app.superhealth.ui.ProfilePhoto.load(ctx)
         files["group-recovery.json"]?.let { app.superhealth.league.GroupRecovery.restore(ctx,kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(),it),clearHistory=false) }
+        files["cards-economy.json"]?.let { app.superhealth.cards.Economy.importAccount(ctx, it) }
+        app.superhealth.cards.CardStore.reload(ctx)
         app.superhealth.league.SocialSpaces.reset();app.superhealth.league.FriendSocial.resetCache();app.superhealth.league.SocialInbox.load(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }

@@ -183,6 +183,8 @@ fun SuperRoot(vm: SuperViewModel) {
     var plus by remember { mutableStateOf(false) }
     var plusAction by remember { mutableStateOf<String?>(null) }
     var logSheet by remember { mutableStateOf(false) }
+    // Mise à jour Dopamine : une fois, droit vers les packs offerts.
+    if (sh.leagueEnabled) app.superhealth.ui.cards.DopamineIntro { nav.go("cards/packs") }
 
     // Fin de séance de musculation : écran « séance terminée ».
     val completed by vm.training.completed.collectAsState()
@@ -266,7 +268,17 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("social/reading") { app.superhealth.ui.league.SocialPreferencesScreen(nav) }
             composable("group/lifecycle") { app.superhealth.ui.league.SocialLifecycleScreen(nav) }
             composable("group/circles?circle={circle}&post={post}",arguments=listOf(androidx.navigation.navArgument("circle"){nullable=true;defaultValue=null},androidx.navigation.navArgument("post"){nullable=true;defaultValue=null})) { entry -> app.superhealth.ui.league.PrivateCirclesScreen(nav,entry.arguments?.getString("circle"),entry.arguments?.getString("post")) }
-            composable("social") { app.superhealth.ui.league.SocialProfileScreen(nav) }
+            composable("social") { app.superhealth.ui.cards.CardsHome(nav) }
+            composable("social/profile") { app.superhealth.ui.league.SocialProfileScreen(nav) }
+            composable("cards/packs") { app.superhealth.ui.cards.PackShopScreen(nav) }
+            composable("cards/album") { app.superhealth.ui.cards.AlbumScreen(nav) }
+            composable("cards/quests") { app.superhealth.ui.cards.CardQuestsScreen(nav) }
+            composable("cards/trades") { app.superhealth.ui.cards.TradesScreen(nav) }
+            composable("cards/rates") { app.superhealth.ui.cards.PackRatesScreen(nav) }
+            composable("cards/cutout") { app.superhealth.ui.cards.CutoutScreen(nav) }
+            composable("cards/duel?friend={friend}", listOf(androidx.navigation.navArgument("friend") { type = NavType.StringType; nullable = true; defaultValue = null })) {
+                app.superhealth.ui.cards.DuelScreen(nav, it.arguments?.getString("friend"))
+            }
             composable("social/badges") { app.superhealth.ui.league.ProfileBadgesScreen(nav) }
             composable("quests") { app.superhealth.ui.league.WeeklyQuestsScreen(nav) }
             composable("progress") { app.superhealth.ui.league.ProgressScreen(nav) }
@@ -277,7 +289,8 @@ fun SuperRoot(vm: SuperViewModel) {
                 app.superhealth.ui.stretch.StretchExerciseScreen(nav, it.arguments?.getString("id").orEmpty())
             }
             composable("meditation/play") { app.superhealth.ui.meditation.MeditationPlayScreen(nav) }
-            composable("league") { app.superhealth.ui.league.LeagueScreen(nav) }
+            composable("league") { app.superhealth.ui.cards.CardsHome(nav) }
+            composable("league/index") { app.superhealth.ui.league.LeagueScreen(nav) }
             composable("journal") { app.superhealth.ui.wellbeing.JournalScreen(vm, nav) }
             composable("form") { app.superhealth.ui.wellbeing.FormScreen(vm, nav) }
             composable("cycle") { app.superhealth.ui.wellbeing.CycleScreen(vm, nav) }

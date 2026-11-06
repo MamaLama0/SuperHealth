@@ -3,6 +3,7 @@ package app.superhealth.ui.settings
 import app.superhealth.platform.*
 
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.heightIn
@@ -221,13 +222,13 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
 
             // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
             Group(tr("Social")) {
-                SettingRow(tr("Profil et social"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social") }
+                SettingRow(tr("Profil et social"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social/profile") }
                 RowDivider(56.dp)
                 val friends by app.superhealth.league.League.state.collectAsState()
                 SettingRow(tr("Groupe d'amis"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Comparer mes progrès et ajouter un ami"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
                 RowDivider(56.dp)
                 IconSwitchRow(tr("Classement et progression"), tr("Niveaux, séries et comparaisons entre amis"), Icons.Rounded.Group, HealthHues.Fitness, sh.leagueEnabled,
-                    onClick = { nav.go("league") }) { on ->
+                    onClick = { nav.go("league/index") }) { on ->
                     SuperPrefs.update { it.copy(leagueEnabled = on) }; app.superhealth.league.LeagueWorker.schedule(photoCtx)
                 }
             }
@@ -259,6 +260,9 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 SettingRow(tr("Rappels"), subtitle = tr("Pesée, journal, moral, coucher"), icon = Icons.Rounded.NotificationsActive, hue = HealthHues.Sleep) {
                     nav.go("settings/reminders")
                 }
+                RowDivider(56.dp)
+                IconSwitchRow(tr("Retour haptique"), tr("Légères vibrations au toucher des graphiques, interrupteurs et validations"),
+                    Icons.Rounded.Vibration, HealthHues.Mind, sh.haptics) { on -> SuperPrefs.update { it.copy(haptics = on) } }
             }
 
             Group(tr("Général")) {

@@ -29,6 +29,7 @@ actual fun shareFile(name: String, mime: String, bytes: ByteArray) {
 }
 
 actual fun haptic(strong: Boolean) = Unit
+actual fun hapticEffect(kind: HapticKind, intensity: Float) = Unit
 
 actual fun deviceDescription(): String = "Aperçu ordinateur · " + java.lang.System.getProperty("os.name")
 

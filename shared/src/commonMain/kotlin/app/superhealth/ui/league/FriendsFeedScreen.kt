@@ -28,7 +28,9 @@ fun FriendsFeedScreen(nav:NavHostController,initialOwner:String?=null,initialPos
     val repository=remember { FriendSocial.repository(ctx) }
     val draftFile=remember { File(ctx.filesDir,"league/friend-draft.json") }
     val json=remember { Json { ignoreUnknownKeys=true;encodeDefaults=true } }
-    val saved=remember { runCatching { json.decodeFromString(TimelineDraft.serializer(),draftFile.readText()) }.getOrElse { TimelineDraft(UUID.randomUUID().toString().replace("-","")) } }
+    val saved=remember { (runCatching { json.decodeFromString(TimelineDraft.serializer(),draftFile.readText()) }.getOrElse { TimelineDraft(UUID.randomUUID().toString().replace("-","")) })
+        // Carte Athlète partagée depuis les cartes : le brouillon reprend son texte.
+        .let { d -> app.superhealth.cards.CardShare.draft.value?.let { text -> app.superhealth.cards.CardShare.draft.value=null; d.copy(text=text) } ?: d } }
     val sources by produceState<List<FriendPost>>(emptyList(),training.history){
         value=withContext(Dispatchers.Default){training.history.map { FriendPost(UUID.randomUUID().toString().replace("-",""),it.startTime,kind="WORKOUT",title=it.name,detail="${it.durationSec/60} min",workout=Json.encodeToJsonElement(SharedActivity.Strength.serializer(),SharedActivity.strength(it,WorkoutApp.db.value)).jsonObject) }+
             app.superhealth.bridge.Bridge.activities(0).filter { it.gymId==null }.map { FriendPost(UUID.randomUUID().toString().replace("-",""),it.start,kind=if(it.kind.name=="RUN")"RUN" else "WORKOUT",title=it.title,detail="${it.minutes} min",activity=Json.encodeToJsonElement(SharedActivity.Outdoor.serializer(),SharedActivity.Outdoor(it.kind.name,it.start,((it.end-it.start)/1000.0).coerceAtLeast(1.0),it.distanceM)).jsonObject) }+GroupRecords.recent().map { GroupRecords.draft(it) }}

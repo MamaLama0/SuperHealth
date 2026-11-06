@@ -147,7 +147,12 @@ object ProgressRepository {
         Progression.calculate(events, day, tracks, League.state.value.weeklyTargets + ("STRENGTH" to fullGoal), records, events.keys.minOrNull() ?: day,
             sessions, strengthGoals).let { raw ->
             val limited = raw.summary.streaks.map { s -> if (s.track in setOf("RUN", "STEPS", "SLEEP")) s.copy(capped = s.current > 0 && (if (s.weekly) s.current * 7 >= day - (healthSince ?: from) - 5 else s.current >= day - (healthSince ?: from))) else s.copy(capped = false, percent = percent.takeIf { s.track == "FOOD" }) }
-            raw.copy(summary = raw.summary.copy(totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
+            // Séries à la semaine : 4 jours sur 7, ou l'objectif de séances et de sorties (bonus d'éclats des cartes).
+            val weekly = Progression.weekStreaks(events, day, tracks) { t, w -> when (t) {
+                Progression.Track.STRENGTH -> strengthGoals[w] ?: fullGoal
+                Progression.Track.RUN -> League.state.value.weeklyTargets["RUN"] ?: 1
+                else -> 4 } }
+            raw.copy(summary = raw.summary.copy(weekly = weekly, questsDone = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.complete }.map { it.metric.name }, totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
                 "quests" to League.state.value.questsCompleted,
                 "sessions" to sessions.filterKeys { it <= day }.values.sum().toLong(),
                 "foodDays" to events.count { it.key <= day && Progression.Track.FOOD in it.value }.toLong(),
@@ -157,6 +162,8 @@ object ProgressRepository {
                 val earned = League.state.value.earnedBadges + Achievements.unlocked(result.summary)
                 if (earned != League.state.value.earnedBadges || observedHealth != League.state.value.observedHealthDays || healthSince != League.state.value.healthSince)
                     League.configure(ctx) { it.copy(earnedBadges = it.earnedBadges + earned, observedHealthDays = observedHealth, healthSince = healthSince) }
+                // Départ des cartes Athlète, dès que les badges déjà obtenus sont connus.
+                runCatching { app.superhealth.cards.CardStore.start(ctx, earned) }
             }
         }
     } }

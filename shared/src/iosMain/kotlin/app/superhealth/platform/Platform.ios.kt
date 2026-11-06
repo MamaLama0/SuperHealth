@@ -26,6 +26,9 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIDevice
 import platform.UIKit.UIImpactFeedbackGenerator
 import platform.UIKit.UIImpactFeedbackStyle
+import platform.UIKit.UINotificationFeedbackGenerator
+import platform.UIKit.UINotificationFeedbackType
+import platform.UIKit.UISelectionFeedbackGenerator
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import platform.UIKit.popoverPresentationController
@@ -79,6 +82,18 @@ actual fun shareFile(name: String, mime: String, bytes: ByteArray) {
 
 actual fun haptic(strong: Boolean) {
     UIImpactFeedbackGenerator(if (strong) UIImpactFeedbackStyle.UIImpactFeedbackStyleMedium else UIImpactFeedbackStyle.UIImpactFeedbackStyleLight).impactOccurred()
+}
+
+actual fun hapticEffect(kind: HapticKind, intensity: Float) {
+    val k = intensity.coerceIn(0f, 1f).toDouble()
+    when (kind) {
+        HapticKind.TICK -> UISelectionFeedbackGenerator().selectionChanged()
+        HapticKind.CLICK -> UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleRigid).impactOccurredWithIntensity(k)
+        HapticKind.THUD -> UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleHeavy).impactOccurredWithIntensity(k)
+        HapticKind.RISE -> UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleSoft).impactOccurredWithIntensity(k)
+        HapticKind.SUCCESS -> UINotificationFeedbackGenerator().notificationOccurred(UINotificationFeedbackType.UINotificationFeedbackTypeSuccess)
+        HapticKind.ERROR -> UINotificationFeedbackGenerator().notificationOccurred(UINotificationFeedbackType.UINotificationFeedbackTypeError)
+    }
 }
 
 actual fun deviceDescription(): String = UIDevice.currentDevice.model + " · iOS " + UIDevice.currentDevice.systemVersion

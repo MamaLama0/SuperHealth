@@ -48,6 +48,10 @@ expect fun shareFile(name: String, mime: String, bytes: ByteArray)
 /** Retour haptique léger (validation d'une série, minuteur). */
 expect fun haptic(strong: Boolean = false)
 
+/** Effets haptiques nommés (UIFeedbackGenerator sur iOS), [intensity] entre 0 et 1. */
+enum class HapticKind { TICK, CLICK, THUD, RISE, SUCCESS, ERROR }
+expect fun hapticEffect(kind: HapticKind, intensity: Float = 1f)
+
 /** Nom de l'appareil et version du système, pour l'écran « À propos ». */
 expect fun deviceDescription(): String
 

@@ -249,6 +249,8 @@ object DashCardList : kotlinx.serialization.KSerializer<List<DashCard>> {
 
 @Serializable
 data class SuperSettings(
+    /** Retours haptiques de l'app (Réglages › Général › Vibrations). */
+    val haptics: Boolean = true,
     /** Questionnaire d'accueil terminé. */
     val onboarded: Boolean = false,
     val coachEnabled: Boolean = true,
