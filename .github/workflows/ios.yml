@@ -129,8 +129,8 @@ jobs:
           # pré-version : la « dernière version » reste l'APK Android (lue par la mise à jour intégrée)
           prerelease: true
           make_latest: false
-          name: SuperHealth iOS 3.6.2 (expérimental)
-          body_path: docs/UPDATE-3.6.2-ios.md
+          name: SuperHealth iOS 3.6.3 (expérimental)
+          body_path: docs/UPDATE-3.6.3-ios.md
           files: |
             SuperHealth.ipa
             SideStore-HealthKit.ipa
