@@ -12,6 +12,8 @@ export const ECONOMY_VERSION = 3;
 export const PACK_PRICE = 100;
 /** Cadeau de la mise à jour Dopamine : dix packs (donc au moins un pack doré), une fois par compte. */
 export const LAUNCH_GIFT = { id: 'dopamine-3.6', packs: 10 };
+/** Cadeau de la 3.6.2 : cinq packs de plus pour qui a déjà ouvert ses packs de lancement, une fois par compte. */
+export const REGIFT = { id: 'regift-3.6.2', packs: 5 };
 
 // ---- Catalogue (doit rester aligné sur Catalog.kt) ------------------------------------------------------------
 // 4 biomes × 36 fonds (14 communes, 11 peu communes, 7 rares, 4 épiques), puis 6 duos par paire de biomes.
@@ -43,8 +45,8 @@ export const RATES = {
   effects: { COMMUNE: [0.3, 0.8, 3], PEU_COMMUNE: [0.5, 1.2, 5], RARE: [0.8, 2, 8], EPIQUE: [1.2, 3, 12] },
   slot1: [['COMMUNE', 82], ['PEU_COMMUNE', 18]],
   slot2: [['COMMUNE', 55], ['PEU_COMMUNE', 45]],
-  slot3: [['COMMUNE', 20], ['PEU_COMMUNE', 77.5], ['RARE', 2], ['EPIQUE', 0.5]],
-  slot4: [['PEU_COMMUNE', 92.5], ['RARE', 6], ['EPIQUE', 1.5]],
+  slot3: [['COMMUNE', 20], ['PEU_COMMUNE', 76.7], ['RARE', 2.6], ['EPIQUE', 0.7]],
+  slot4: [['PEU_COMMUNE', 90.5], ['RARE', 7.5], ['EPIQUE', 2]],
 };
 const random = () => randomInt(0, 2 ** 47) / 2 ** 47;
 const boosted = (table, gold) => gold ? table.map(([r, w]) => [r, RANK[r] >= 2 ? w * RATES.goldBoost : w]) : table;
@@ -134,11 +136,11 @@ export function validTrade(giveS, wantS) {
 
 // ---- Gains et quêtes ---------------------------------------------------------------------------------------------
 /**
- * Aucun plafond affiché ni appliqué : ce sont les sources de gains qui sont bornées. Les séances rapportent 90 éclats
+ * Aucun plafond affiché ni appliqué : ce sont les sources de gains qui sont bornées. Les séances rapportent 150 éclats
  * répartis sur l'objectif (plus deux séances bonus à moitié prix), les deux ou trois quêtes du jour quelques éclats
- * chacune, et la quête de la semaine (celle du Groupe, adaptée en local à tous les domaines suivis) 60 éclats, plus 35
- * pour sa quête secondaire. Un utilisateur qui tient son objectif ouvre ainsi 2 à 3 packs par semaine, un très assidu
- * un peu plus de 3, et quelqu'un qui s'entraîne peu nettement moins.
+ * chacune, et la quête de la semaine (celle du Groupe, adaptée en local à tous les domaines suivis) 90 éclats, plus 55
+ * pour sa quête secondaire. Un utilisateur qui tient son objectif ouvre ainsi 4 à 5 packs par semaine, un très assidu
+ * jusqu'à 6, et quelqu'un qui s'entraîne peu nettement moins.
  *
  * La difficulté des quêtes du jour s'adapte pour qu'elles restent faisables : chaque semaine, le palier monte un peu
  * quand presque toutes ont été faites et redescend nettement quand la plupart ont été manquées. La troisième quête du
@@ -146,10 +148,10 @@ export function validTrade(giveS, wantS) {
  * l'utilisateur (séries par séance, groupes musculaires).
  */
 export const REWARDS = {
-  sessionPool: 90, extraSessions: 2,
-  daily: { session: 6, other: 6 },
-  weekly: { base: 60, span: 40 },
-  league: { primary: 60, secondary: 35 },
+  sessionPool: 150, extraSessions: 2,
+  daily: { session: 10, other: 10 },
+  weekly: { base: 100, span: 60 },
+  league: { primary: 90, secondary: 55 },
 };
 /**
  * Badges : chaque palier atteint rapporte des éclats, une seule fois par compte, de plus en plus à mesure que les paliers
@@ -545,6 +547,9 @@ export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 500
         count++;
       }
       // Le cadeau de lancement arrive au premier contact après la mise à jour, une seule fois par compte.
+      // Le rattrapage de la 3.6.2 se décide au premier contact après la mise à jour : seuls les comptes qui avaient déjà
+      // ouvert des packs le reçoivent ; un nouveau compte, ou qui n'avait encore rien ouvert, n'y a plus droit ensuite.
+      if (!acc.gifts.includes(REGIFT.id)) { acc.gifts.push(REGIFT.id); if (acc.gifts.includes(LAUNCH_GIFT.id) && acc.opened > 0) acc.bonusPacks += REGIFT.packs; }
       if (!acc.gifts.includes(LAUNCH_GIFT.id)) { acc.gifts.push(LAUNCH_GIFT.id); acc.bonusPacks += LAUNCH_GIFT.packs; }
       const t = now(); const salt = id;
       // Amis (leurs identifiants d'échange) : seuls les amis réciproques peuvent partager un défi.

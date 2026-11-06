@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { CATALOG, draw, applyEvent, openPack, view, isGold, LAUNCH_GIFT, fuse, spare, levelOf } from './economy.mjs';
+import { CATALOG, draw, applyEvent, openPack, view, isGold, LAUNCH_GIFT, REGIFT, fuse, spare, levelOf } from './economy.mjs';
 import { createRelay } from './server.mjs';
 
 const DAY = 86_400_000;
@@ -36,8 +36,8 @@ test('taux bas sans garantie, pack doré tous les dix qui triple les chances', (
     return { rare: rare / n, epic: epic / n, duo: duo / n, chroma: chroma / n };
   };
   const normal = run(false), gold = run(true);
-  assert.ok(normal.rare > 0.037 && normal.rare < 0.05, 'rare ' + normal.rare);
-  assert.ok(normal.epic > 0.006 && normal.epic < 0.012, 'épique ' + normal.epic);
+  assert.ok(normal.rare > 0.05 && normal.rare < 0.063, 'rare ' + normal.rare);
+  assert.ok(normal.epic > 0.009 && normal.epic < 0.016, 'épique ' + normal.epic);
   assert.ok(normal.duo > 0.012 && normal.duo < 0.021, 'duo ' + normal.duo);
   assert.ok(normal.chroma > 0.008 && normal.chroma < 0.017, 'chromatique ' + normal.chroma);
   assert.ok(gold.chroma > 2.4 * normal.chroma, 'chromatique dorée ' + gold.chroma);
@@ -45,7 +45,7 @@ test('taux bas sans garantie, pack doré tous les dix qui triple les chances', (
   assert.deepEqual([...Array(20).keys()].filter(isGold), [9, 19]);
 });
 
-test('quêtes : 2 à 3 par jour du serveur, la quête de la semaine du Groupe ; 2 à 3 packs pour une semaine impliquée', () => {
+test('quêtes : 2 à 3 par jour du serveur, la quête de la semaine du Groupe ; 4 à 6 packs pour une semaine impliquée', () => {
   const now = Date.UTC(2026, 10, 6, 20); // jeudi soir
   const day = Math.floor(now / DAY);
   const engaged = fresh();
@@ -57,20 +57,20 @@ test('quêtes : 2 à 3 par jour du serveur, la quête de la semaine du Groupe ; 
   }
   for (const d of [day, day - 1]) for (const q of view(engaged, now, d, 'a').quests) applyEvent(engaged, { type: 'quest', id: q.id }, now, 'a');
   // Quête de la semaine du Groupe : principale puis secondaire, une seule fois chacune.
-  assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'a'), 60);
-  assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:FOOD:s` }, now, 'a'), 35);
+  assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'a'), 90);
+  assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:FOOD:s` }, now, 'a'), 55);
   assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:RUN` }, now, 'a'), 0);
-  assert.ok(engaged.eclats >= 200 && engaged.eclats <= 300, 'impliqué ' + engaged.eclats);
+  assert.ok(engaged.eclats >= 320 && engaged.eclats <= 450, 'impliqué ' + engaged.eclats);
   assert.throws(() => applyEvent(engaged, { type: 'session', id: 'w0', start: now, target: 3 }, now), e => e.status === 409);
   assert.throws(() => applyEvent(engaged, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'a'), e => e.status === 409);
   assert.throws(() => applyEvent(engaged, { type: 'quest', id: `d:${day}:inconnue` }, now, 'a'), e => e.status === 400);
   assert.throws(() => applyEvent(engaged, { type: 'session', id: 'vieux', start: now - 10 * DAY }, now), e => e.status === 400);
   const lazy = fresh();
   applyEvent(lazy, { type: 'session', id: 'x', start: now, target: 3 }, now, 'b'); applyEvent(lazy, { type: 'quest', id: `d:${day}:session` }, now, 'b');
-  assert.ok(lazy.eclats < 60, 'creux ' + lazy.eclats);
+  assert.ok(lazy.eclats < 100, 'creux ' + lazy.eclats);
   const grind = fresh();
   for (let s = 0; s < 30; s++) applyEvent(grind, { type: 'session', id: 'g' + s, start: now, target: 2 }, now, 'c');
-  assert.ok(grind.eclats <= 140, 'séances ' + grind.eclats);
+  assert.ok(grind.eclats <= 230, 'séances ' + grind.eclats);
 });
 
 test('la difficulté des quêtes du jour suit les semaines : monte quand elles sont faites, baisse sinon', () => {
@@ -118,6 +118,31 @@ test('route HTTP : compte créé au premier appel, cadeau de 10 packs une fois, 
   r = await call({ op: 'open', booster: 0 }); s = await r.json(); assert.equal(r.status, 200); assert.ok(s.pulls.length >= 3);
   r = await call({ op: 'state' }); s = await r.json(); assert.equal(s.bonusPacks, LAUNCH_GIFT.packs - 1, 'le cadeau ne revient pas');
   r = await call({ op: 'state' }, randomBytes(32).toString('hex')); assert.equal(r.status, 403);
+  server.close();
+});
+
+test('rattrapage 3.6.2 : cinq packs pour les comptes qui avaient déjà ouvert des packs, une seule fois', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'eco-'));
+  let server = await createRelay({ dataDir });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const url = () => `http://127.0.0.1:${server.address().port}/v2/economy/`;
+  const box = randomBytes(32).toString('hex'), idle = randomBytes(32).toString('hex'), token = randomBytes(32).toString('hex');
+  const call = (b, body) => fetch(url() + b, { method: 'POST', headers: { 'X-Write-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await call(box, { op: 'state' }); await call(box, { op: 'open', booster: 0 }); await call(idle, { op: 'state' });
+  server.close();
+  // Comptes d'avant la mise à jour : cadeau de lancement reçu, sans le rattrapage.
+  for (const f of await readdir(join(dataDir, 'economy'))) {
+    const p = join(dataDir, 'economy', f); const a = JSON.parse(await readFile(p, 'utf8'));
+    a.gifts = a.gifts.filter(g => g !== REGIFT.id); await writeFile(p, JSON.stringify(a));
+  }
+  server = await createRelay({ dataDir });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  let s = await (await call(box, { op: 'state' })).json();
+  assert.equal(s.bonusPacks, LAUNCH_GIFT.packs - 1 + REGIFT.packs);
+  s = await (await call(box, { op: 'state' })).json(); assert.equal(s.bonusPacks, LAUNCH_GIFT.packs - 1 + REGIFT.packs, 'une seule fois');
+  s = await (await call(idle, { op: 'state' })).json(); assert.equal(s.bonusPacks, LAUNCH_GIFT.packs, 'rien sans pack ouvert');
+  await call(idle, { op: 'open', booster: 0 });
+  s = await (await call(idle, { op: 'state' })).json(); assert.equal(s.bonusPacks, LAUNCH_GIFT.packs - 1, 'pas après coup');
   server.close();
 });
 
