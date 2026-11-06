@@ -102,18 +102,25 @@ fun PackShopScreen(nav: NavHostController) {
     val time by rememberCardTime()
     CardScaffold("Packs", { nav.popBackStack() }, booster.element.outer.c(), action = {
         IconButton({ nav.go("cards/rates") }) { Icon(Icons.Rounded.Info, tr("Taux"), tint = Color.White.copy(alpha = 0.7f)) }
-    }, backdrop = { BiomeBackdrop(booster, { time }) }) {
+    }, backdrop = {
+        // Le décor ne change qu'une fois le geste fini : un fondu plein écran au milieu du swipe le faisait saccader.
+        BiomeBackdrop(Entries[pager.settledPage], { time })
+        WarmPackShaders()
+    }) {
         Wallet(state)
         val float by rememberInfiniteTransition(label = "pf").animateFloat(-8f, 8f, infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "f")
         // Le carrousel coupe ce qui dépasse de ses bords : le halo des packs (glowReach) s'éteint avant.
+        val clocks = remember { PageClocks(Entries.size) }
         HorizontalPager(pager, Modifier.padding(top = 10.dp).fillMaxWidth().height(470.dp), contentPadding = PaddingValues(horizontal = 50.dp), pageSpacing = 0.dp) { page ->
-            val off = (pager.currentPage - page + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
+            // Lu au dessin seulement : glisser ne recompose pas les pochettes.
+            val off = { (pager.currentPage - page + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f) }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 PackVisual(Entries[page], Modifier.fillMaxHeight(0.95f).graphicsLayer {
-                    val s = 1f - 0.18f * off; scaleX = s; scaleY = s; alpha = 1f - 0.45f * off
-                    translationY = float * density * (1f - off); rotationY = tilt.x * 14f * (1f - off) + (page - pager.currentPage - pager.currentPageOffsetFraction) * -18f
-                    rotationX = -tilt.y * 10f * (1f - off); cameraDistance = 14f * density
-                }, { tilt }, { if (page == pager.currentPage) time else 0f }, glow = if (state.nextGold) Gold else Entries[page].element.mid.c(), glowBoost = 0.2f * (1f - off), gold = state.nextGold, glowReach = 0.46f)
+                    val o = off(); val s = 1f - 0.18f * o; scaleX = s; scaleY = s; alpha = 1f - 0.45f * o
+                    translationY = float * density * (1f - o); rotationY = tilt.x * 14f * (1f - o) + (page - pager.currentPage - pager.currentPageOffsetFraction) * -18f
+                    rotationX = -tilt.y * 10f * (1f - o); cameraDistance = 14f * density
+                }, { val o = off(); if (o >= 1f) Offset.Zero else tilt * (1f - o) }, { clocks.at(page, pager.currentPage) { time } },
+                    glow = if (state.nextGold) Gold else Entries[page].element.mid.c(), glowBoost = { 0.2f * (1f - off()) }, gold = state.nextGold, glowReach = 0.46f)
             }
         }
         val e = booster.element
@@ -221,14 +228,16 @@ internal fun EffectChart(highlightGold: Boolean = false) {
 
 /** Pochette du booster. [tear] de 0 à 1 arrache la bande du haut ; [cut] trace la ligne incandescente sous le doigt. */
 @Composable
-fun PackVisual(booster: Booster, modifier: Modifier, tilt: () -> Offset, time: () -> Float, glow: Color? = null, tear: Float = 0f, glowBoost: Float = 0f, cut: Float = 0f, gold: Boolean = false, glowReach: Float = 0.7f) {
+fun PackVisual(booster: Booster, modifier: Modifier, tilt: () -> Offset, time: () -> Float, glow: Color? = null, tear: Float = 0f, glowBoost: () -> Float = { 0f }, cut: Float = 0f, gold: Boolean = false, glowReach: Float = 0.7f) {
     val density = LocalDensity.current
     Box(modifier.aspectRatio(0.62f).drawBehind {
-        if (glow != null) drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = (0.3f + glowBoost * 0.5f + 0.08f * sin(time() * 3f)).coerceIn(0f, 1f)), Color.Transparent)),
-            radius = size.maxDimension * (glowReach + glowBoost * 0.3f))
+        val b = glowBoost()
+        if (glow != null) drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = (0.3f + b * 0.5f + 0.08f * sin(time() * 3f)).coerceIn(0f, 1f)), Color.Transparent)),
+            radius = size.maxDimension * (glowReach + b * 0.3f))
     }) {
-        Box(Modifier.fillMaxSize().drawWithContent { clipRect(top = size.height * TEAR_LINE) { this@drawWithContent.drawContent() } }) { PackFace(booster, tilt, time, gold) }
-        Box(Modifier.fillMaxSize().graphicsLayer {
+        // Pochette entière tant qu'elle n'est pas déchirée : la bande du haut n'existe qu'à l'ouverture, sinon la scène se calculait deux fois.
+        Box(Modifier.fillMaxSize().drawWithContent { if (tear > 0f) clipRect(top = size.height * TEAR_LINE) { this@drawWithContent.drawContent() } else drawContent() }) { PackFace(booster, tilt, time, gold) }
+        if (tear > 0f) Box(Modifier.fillMaxSize().graphicsLayer {
             transformOrigin = TransformOrigin(0f, TEAR_LINE)
             translationX = tear * size.width * 1.25f; translationY = -tear * size.height * 0.22f; rotationZ = tear * 32f; alpha = 1f - tear * 0.5f
         }.drawWithContent { clipRect(bottom = size.height * TEAR_LINE) { this@drawWithContent.drawContent() } }) { PackFace(booster, tilt, time, gold) }
@@ -244,6 +253,23 @@ fun PackVisual(booster: Booster, modifier: Modifier, tilt: () -> Offset, time: (
             }
         }
     }
+}
+
+/** Horloge propre à chaque pochette du carrousel : figée hors du centre, elle reprend où elle s'était arrêtée (sans saut de pluie ni d'éclair). */
+private class PageClocks(n: Int) {
+    private val frozen = FloatArray(n); private val shift = FloatArray(n); private var current = -1
+    fun at(page: Int, now: Int, time: () -> Float): Float {
+        if (now != current) { val t = time(); if (current >= 0) frozen[current] = t - shift[current]; shift[now] = t - frozen[now]; current = now }
+        return if (page == current) time() - shift[page] else frozen[page]
+    }
+}
+
+/** Dessine une fois chaque scène de pack en tout petit, sous le décor : le GPU compile leurs programmes à l'entrée de l'écran, pas au premier swipe. */
+@Composable
+private fun BoxScope.WarmPackShaders() {
+    var warm by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) { delay(1500); warm = false }
+    if (warm) Row(Modifier.align(Alignment.TopStart).zIndex(-1f)) { Entries.forEach { CardArt(it.art(), Finish.BRILLANTE, Modifier.size(4.dp), resolution = 1f) } }
 }
 
 /** Face de la pochette : la scène du biome en pleine page, sertie de bandes métalliques à sa couleur. */
@@ -363,7 +389,7 @@ private fun BoxScope.Tear(booster: Booster, best: Rarity, prism: Boolean, gold: 
             PackVisual(booster, Modifier.fillMaxWidth().graphicsLayer {
                 translationY = dropIn.value * size.height * 1.2f + exit.value * size.height * 1.3f
                 rotationZ = shake * shakeAmp
-            }, { Offset.Zero }, time, glow = if (announce) beam else if (gold) Gold else booster.element.mid.c(), tear = tear.value, glowBoost = if (announce) 0.6f else 0.1f, cut = progress.value, gold = gold)
+            }, { Offset.Zero }, time, glow = if (announce) beam else if (gold) Gold else booster.element.mid.c(), tear = tear.value, glowBoost = { if (announce) 0.6f else 0.1f }, cut = progress.value, gold = gold)
             if (slit.value > 0f) Canvas(Modifier.matchParentSize()) {
                 val y = size.height * TEAR_LINE + exit.value * size.height * 1.3f
                 val k = slit.value * (1 - exit.value)

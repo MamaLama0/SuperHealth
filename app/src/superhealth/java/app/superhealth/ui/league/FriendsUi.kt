@@ -48,12 +48,21 @@ internal fun Initial(name: String, size: Dp = 40.dp) {
     }
 }
 
+/**
+ * Photo d'une personne du Groupe. [key] (clé de groupe) sert pour quelqu'un qu'on n'a pas en ami : son visage public ;
+ * sans ami ni clé, c'est ma propre photo.
+ */
 @Composable
-internal fun FriendAvatar(friend: League.Friend?, name: String, size: Dp = 40.dp) {
+internal fun FriendAvatar(friend: League.Friend?, name: String, size: Dp = 40.dp, key: String? = null) {
     val ctx = LocalContext.current
     val own by ProfilePhoto.bitmap
-    val photo by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, friend?.id, friend?.avatar, friend?.remote) {
+    val stranger = friend == null && key != null && key != League.publicKey()
+    val photo by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, friend?.id, friend?.avatar, friend?.remote, key) {
         value = null
+        if (stranger || (friend != null && friend.avatar == null)) {
+            value = runCatching { app.superhealth.league.Faces.bitmap(ctx, key ?: friend!!.key)?.asImageBitmap() }.getOrNull()
+            return@produceState
+        }
         val avatar = friend?.avatar
         if (friend != null && avatar != null && app.superhealth.league.ProfileAvatars.valid(avatar)) {
             try {
@@ -69,7 +78,7 @@ internal fun FriendAvatar(friend: League.Friend?, name: String, size: Dp = 40.dp
             catch (_: Exception) { /* Initiale si le média est temporairement indisponible. */ }
         }
     }
-    val image = if (friend == null) own else photo
+    val image = if (friend == null && !stranger) own else photo
     if (image == null) Initial(name, size)
     else Image(image, name, Modifier.size(size).clip(CircleShape), contentScale = ContentScale.Crop)
 }
@@ -89,6 +98,7 @@ fun FriendsScreen(nav: NavHostController) {
             PillButton(tr("Ajouter un ami"), Modifier.fillMaxWidth(), icon = Icons.Rounded.PersonAdd) { nav.go("friends/add") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).navigationBarsPadding()) {
+            Column(Modifier.padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { FriendRequestsBanner() }
             GroupCard {
                 SettingRow(tr("Classement et progression"), subtitle = tr("Performances, records et régularité"), icon = Icons.Rounded.EmojiEvents) { nav.go("league") }
             }
@@ -144,6 +154,11 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                     Text(f.score.toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = LeagueHue.onContainer())
                     Text(tr("Indice"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                 }
+            }
+            if (f.athlete != null) {
+                var card by remember { mutableStateOf(false) }
+                PillButton(tr("Voir sa carte Athlète"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.EmojiEvents) { card = true }
+                if (card) app.superhealth.ui.cards.FriendCardViewer(app.superhealth.ui.cards.friendFace(f), tr("Ami"), { card = false }, onDuel = null)
             }
             Spacer(Modifier.height(12.dp))
             FriendProgressDetails(f)
@@ -232,4 +247,58 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
             finally { revoking = false }
         } }) { Text(tr(if (revoking) "Révocation…" else "Retirer et révoquer")) } },
         dismissButton = { TextButton(onClick = { removing = false }) { Text(tr("Annuler")) } })
+}
+
+/** Fiche d'une personne croisée en commentaire qu'on n'a pas en ami : sa photo, son nom et la demande d'ami. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun StrangerSheet(key: String, name: String, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val sent by app.superhealth.league.FriendRequests.sent.collectAsState()
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { app.superhealth.league.FriendRequests.load(ctx) }
+    val pending = remember(sent) { app.superhealth.league.FriendRequests.pending(key) }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            FriendAvatar(null, name, 96.dp, key = key)
+            Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tr("Vous n'êtes pas encore amis. Une demande lui envoie votre code ami ; il reste valable 24 h."),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            PillButton(tr(if (pending) "Demande envoyée" else "Demander en ami"), Modifier.fillMaxWidth(), enabled = !busy && !pending, icon = Icons.Rounded.PersonAdd) {
+                busy = true; error = null
+                scope.launch {
+                    try { app.superhealth.league.FriendRequests.send(ctx, key) }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Exception) { error = e.message ?: tr("Envoi impossible. Réessayez.") }
+                    finally { busy = false }
+                }
+            }
+            error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        }
+    }
+}
+
+/** Demandes d'ami reçues depuis un commentaire : accepter ouvre l'ajout habituel, ignorer la retire. */
+@Composable
+internal fun FriendRequestsBanner() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val requests by app.superhealth.league.FriendRequests.inbox.collectAsState()
+    LaunchedEffect(Unit) { runCatching { app.superhealth.league.FriendRequests.refresh(ctx) } }
+    requests.forEach { r ->
+        key(r.id) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Mf.colors.elevated).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                FriendAvatar(null, r.name, 44.dp, key = r.key)
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text(r.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tr("veut être votre ami"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                }
+                TextButton({ scope.launch { app.superhealth.league.FriendRequests.dismiss(ctx, r) } }) { Text(tr("Ignorer")) }
+                Button({ scope.launch { runCatching { app.superhealth.league.FriendRequests.accept(ctx, r) }.onFailure { League.incomingError.value = true } } }) { Text(tr("Accepter")) }
+            }
+        }
+    }
 }

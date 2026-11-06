@@ -133,6 +133,10 @@ private fun rivalsOf(friends: List<League.Friend>): List<Rival> {
 internal fun ArenaDuels(nav: NavHostController, friends: List<League.Friend>) {
     val rivals = rivalsOf(friends)
     val a = arenaPalette()
+    // Un appui sur la carte l'ouvre en grand ; le bouton « Défier » (ici ou dans la vue) lance le duel.
+    var viewing by remember { mutableStateOf<Rival?>(null) }
+    viewing?.let { r -> FriendCardViewer(r.friend?.let { friendFace(it) } ?: r.face, r.note, { viewing = null },
+        r.friend?.cardTrade?.let { { viewing = null; nav.go("cards/trades") } }) { viewing = null; nav.go("cards/duel?friend=${r.id}") } }
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Défis du jour"), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, modifier = Modifier.weight(1f), color = app.superhealth.ui.theme.Mf.colors.text)
@@ -142,13 +146,13 @@ internal fun ArenaDuels(nav: NavHostController, friends: List<League.Friend>) {
             color = app.superhealth.ui.theme.Mf.colors.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
         else Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             rivals.forEach { r ->
-                Column(Modifier.width(118.dp).clip(RoundedCornerShape(18.dp)).background(a.panel).border(1.dp, a.line, RoundedCornerShape(18.dp)).clickable { nav.go("cards/duel?friend=${r.id}") }.padding(8.dp),
+                Column(Modifier.width(118.dp).clip(RoundedCornerShape(18.dp)).background(a.panel).border(1.dp, a.line, RoundedCornerShape(18.dp)).clickable { viewing = r }.padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     AthleteCard(r.friend?.let { friendFace(it) } ?: r.face, Modifier.fillMaxWidth(), interactive = false, animate = false)
                     Text("@" + r.face.name, color = a.text, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
                     Text(r.note, color = a.muted, fontSize = 11.sp, maxLines = 1)
                     Row(Modifier.padding(top = 6.dp).clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Color(0xFFE53935), Color(0xFFFF8A1F))))
-                        .padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        .clickable { nav.go("cards/duel?friend=${r.id}") }.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("⚔ " + tr("Défier"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                 }

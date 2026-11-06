@@ -58,16 +58,18 @@ fun DuelScreen(nav: NavHostController, friendId: String? = null) {
         if (state.demo) add(Opponent("demo", "lohan", CardStore.Demo.rival, Pull.of("N043:BRILLANTE"), tr("Rival de démo"), 3))
     }
     var chosen by remember { mutableStateOf(opponents.firstOrNull { it.id == friendId }) }
+    var viewing by remember { mutableStateOf<Opponent?>(null) }
     val mine = snap?.now
     val c = chosen
     if (c != null && mine != null) { DuelScene(mine, c) { chosen = null }; return }
+    viewing?.let { o -> FriendCardViewer(o.friend?.let { friendFace(it) } ?: o.face, o.note, { viewing = null }) { viewing = null; chosen = o } }
     CardScaffold("Duel", { nav.popBackStack() }, Red) {
         Text(tr("Les stats s'affrontent une à une, bonus de fond compris. La meilleure carte achève l'autre avec le pouvoir de son biome."), color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
         if (mine?.ovr10 == null) Text(tr("Ta carte doit d'abord être évaluée (quelques séances)."), color = Gold, modifier = Modifier.padding(top = 16.dp))
         SectionTitle("Adversaires")
         if (opponents.isEmpty()) Text(tr("Ajoute un ami, ou reviens dans quelques semaines pour affronter ta carte passée."), color = Color.White.copy(alpha = 0.55f))
         opponents.forEach { o ->
-            Row(Modifier.padding(bottom = 10.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).clickable(enabled = mine?.ovr10 != null) { chosen = o }.padding(12.dp),
+            Row(Modifier.padding(bottom = 10.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).clickable { viewing = o }.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 AthleteCard(o.friend?.let { friendFace(it) } ?: o.face, Modifier.width(64.dp), interactive = false, animate = false)
                 Column(Modifier.padding(start = 14.dp).weight(1f)) {

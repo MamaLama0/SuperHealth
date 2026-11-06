@@ -105,8 +105,11 @@ float3 glacier(float2 q, float3 A, float3 B, float3 C, float4 F, float hz) {
   if (q.y < sp2 + 0.004) { float3 m = mix(C * 0.7 + B * 0.35, B * 0.9, smoothstep(sp2 - 0.2, sp2, q.y)) + A * 0.45 * smoothstep(0.006, 0.0, sp2 - q.y); col = mix(col, m, smoothstep(sp2 + 0.003, sp2 - 0.003, q.y)); }
   if (F.x > 0.5) {
     float2 c = q - float2(0.03 * sin(s), hz + 0.12); float d = abs(c.x) * 2.6 + abs(c.y) * 1.1;
-    if (d < 0.28) { float face = step(0.0, c.x) * 0.25 + step(0.0, c.y) * 0.2; col = mix(B, A, 0.35 + face + 0.3 * (1.0 - d / 0.28)); col += A * smoothstep(0.01, 0.0, abs(c.x)) * 0.5; }
-    col += A * exp(-d * 6.0) * 0.5 * (0.8 + 0.2 * sin(t * 2.0));
+    // Facettes nettes mais jamais blanches à plat : le cristal saturait en losange uni.
+    float face = smoothstep(-0.004, 0.004, c.x) * 0.22 + smoothstep(-0.004, 0.004, c.y) * 0.14;
+    float3 cr = mix(B * 0.7 + C * 0.15, A * 0.92, 0.12 + face + 0.32 * (1.0 - d / 0.28)) + A * 0.18 * smoothstep(0.008, 0.0, abs(c.x)) * step(0.0, c.y);
+    col = mix(col, cr, smoothstep(0.283, 0.277, d));
+    col += A * exp(-d * 7.0) * 0.22 * (0.8 + 0.2 * sin(t * 2.0));
   }
   // Bord de la banquise irrégulier et fondu dans la brume : une ligne droite coupait la scène net.
   float fg = hz - 0.19 + 0.03 * sin(q.x * 5.0 + s) + 0.035 * (fbm(float2(q.x * 7.0, s)) - 0.5);
@@ -137,13 +140,16 @@ float3 storm(float2 q, float3 A, float3 B, float3 C, float4 F, float hz) {
   if (F.x > 0.5) { float2 c = q - float2(0.05 * sin(s), hz + 0.45); float rr = length(c); float a = atan(c.y, c.x);
     float sp = sin(a * 3.0 + rr * 26.0 - t * 1.6 + s); col += B * smoothstep(0.6, 1.0, sp) * exp(-rr * 4.0) * 0.8; col = mix(col, C * 0.4 + A * 0.05, smoothstep(0.06, 0.0, rr)); }
   float g = hz + 0.03 * n2(float2(q.x * 3.0, s)) + 0.03 * (fbm(float2(q.x * 6.0, s + 1.0)) - 0.5);
+  float3 L = float3(0.0);
   for (int k = 0; k < 3; k++) { float fk = float(k);
     if (fk < 0.5 + F.y * 2.0) {
       float flick = step(0.72, fract(t * (0.45 + fk * 0.21) + fk * 0.37 + s * 0.1));
       float d = bolt(q, (fk - 1.0) * 0.18 + 0.05 * sin(s + fk), fk, t * (0.45 + fk * 0.21) + fk * 0.37);
-      float on = flick * smoothstep(g - 0.02, g + 0.04, q.y) * smoothstep(hz + 0.62, hz + 0.5, q.y);
-      col += (A * 0.008 / (d + 0.003) + B * 0.04 / (d + 0.04)) * on; flash = max(flash, flick);
+      float on = flick * smoothstep(g - 0.03, g + 0.14, q.y) * smoothstep(hz + 0.75, hz + 0.45, q.y);
+      L += (A * 0.006 / (d + 0.004) + B * 0.025 / (d + 0.06)) * on; flash = max(flash, flick);
     } }
+  // Plusieurs éclairs à la fois s'additionnaient jusqu'au blanc pur : leur lumière est compressée.
+  col += L / (1.0 + 0.7 * max(L.r, max(L.g, L.b)));
   col += B * 0.12 * flash * smoothstep(hz - 0.1, hz + 0.7, q.y);
   if (q.y < g + 0.01) {
     float3 fl;
@@ -443,7 +449,9 @@ fun rememberCardTime(running: Boolean = true): State<Float> {
         if (!running) return@LaunchedEffect
         CardPerf.init(ctx)
         // En mode léger, l'horloge n'avance qu'à 30 images par seconde : les fonds se redessinent deux fois moins.
-        val step = if (CardPerf.lite) 33_000_000L else 0L
+        // Sinon 60 images par seconde au plus : sur un écran 120 Hz, recalculer les fonds à chaque trame saturait le GPU
+        // (le carrousel, lui, reste à 120 Hz : déplacer une pochette ne relance pas son shader).
+        val step = if (CardPerf.lite) 33_000_000L else 15_000_000L
         val start = withFrameNanos { it } - (time.floatValue * 1e9f).toLong()
         var last = 0L
         while (true) withFrameNanos { if (it - last >= step) { last = it; time.floatValue = (it - start) / 1e9f } }

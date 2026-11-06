@@ -127,6 +127,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
             }
         }
         item(key = "group-tabs") { GroupTabs(tab) { tab = it } }
+        item(key = "friend-requests") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { FriendRequestsBanner() } }
         // Cartes : ta carte et tes packs, le combat, les quêtes, l'album et les échanges, puis les duels du jour.
         if (tab == GroupTab.ARENE) {
             item(key = "arena-hero") { ArenaHero(nav) }

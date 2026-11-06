@@ -22,5 +22,18 @@ object Strings29 {
         "%1\$s pas" to "%1\$s steps",
         "Heure la plus active : %1\$s h" to "Most active hour: %1\$s:00",
         "Pas encore de pas aujourd'hui" to "No steps yet today",
+        // Demandes d'ami depuis un commentaire, carte d'un ami en grand
+        "Demander en ami" to "Add friend",
+        "Demande envoyée" to "Request sent",
+        "Accepter" to "Accept",
+        "Toi" to "You",
+        "veut être votre ami" to "wants to be your friend",
+        "Voir sa carte Athlète" to "See their Athlete card",
+        "Touchez la carte pour la retourner" to "Tap the card to flip it",
+        "Hors bonus de fond, ajoutés pendant le duel." to "Background bonuses not included; they apply during the duel.",
+        "Envoi impossible. Réessayez." to "Couldn't send. Try again.",
+        "Vous n'êtes pas encore amis. Une demande lui envoie votre code ami ; il reste valable 24 h." to "You're not friends yet. A request sends them your friend code; it stays valid for 24 h.",
+        "Mettez à jour le serveur pour envoyer des demandes d'ami." to "Update the server to send friend requests.",
+        "Trop de demandes en attente pour cette personne." to "This person has too many pending requests.",
     )
 }

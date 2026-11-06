@@ -18,6 +18,9 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         return try {
             SocialPreferences.finishRevocations(applicationContext)
             Relay.sync(applicationContext)
+            // Visage public et demandes d'ami : facultatifs, un serveur pas encore à jour ne bloque pas la synchro.
+            runCatching { Faces.publishIfNeeded(applicationContext) }
+            runCatching { FriendRequests.refresh(applicationContext) }
             // Mettre à jour les cartes d'accueil après la réception des scores, sans attendre l'ouverture de l'app.
             app.superhealth.ui.widget.DayWidgets.refresh(applicationContext)
             if (League.state.value.syncError == null && League.state.value.pendingSocialRevocations.isEmpty()) Result.success() else Result.retry()

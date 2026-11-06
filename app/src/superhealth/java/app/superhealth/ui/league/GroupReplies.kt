@@ -50,6 +50,8 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String, highlighte
     var error by remember { mutableStateOf<String?>(null) }
     var visible by rememberSaveable(author, post.id, highlightedReply) { mutableIntStateOf(if (highlightedReply != null) Int.MAX_VALUE else 2) }
     var profile by remember { mutableStateOf<League.Friend?>(null) }
+    // Auteur d'un commentaire qu'on n'a pas en ami : sa fiche propose une demande d'ami.
+    var stranger by remember { mutableStateOf<GroupHistory.Event?>(null) }
     val replies = remember(history, controls, author, post.id, league.friends) { GroupHistory.replies(author, post.id).filterNot { spaces.legacyHidden(author,post.id,it.id) } }
     val rows = remember(replies) { GroupHistory.replyRows(replies) }
     val roots = rows.filter { it.depth == 0 }.takeLast(visible).map { it.event.key to it.event.id }.toSet()
@@ -101,13 +103,14 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String, highlighte
                 Row(Modifier.fillMaxWidth().bringIntoViewRequester(bringIntoView).then(if (event.id == highlightedReply) Modifier.background(Mf.colors.accent.copy(alpha = .12f), RoundedCornerShape(12.dp)) else Modifier).padding(start = (row.depth * 18).dp)
                     .then(if (row.depth > 0) Modifier.background(Mf.colors.elevated, RoundedCornerShape(12.dp)).padding(8.dp) else Modifier),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.padding(top = 2.dp).clickable(enabled = person != null) { profile = person }) {
-                        FriendAvatar(person, event.name, 28.dp)
+                    fun open() { if (person != null) profile = person else if (!own) stranger = event }
+                    Box(Modifier.padding(top = 2.dp).clickable(enabled = !own) { open() }) {
+                        FriendAvatar(person, event.name, 28.dp, key = event.key)
                     }
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(if (own) tr("Vous") else person?.shown ?: event.name,
-                                Modifier.weight(1f, fill = false).clickable(enabled = person != null) { profile = person },
+                                Modifier.weight(1f, fill = false).clickable(enabled = !own) { open() },
                                 style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Spacer(Modifier.width(8.dp))
                             Text(if (System.currentTimeMillis() - event.reply!!.created < 60000) tr("À l’instant") else android.text.format.DateUtils.getRelativeTimeSpanString(event.reply.created,
@@ -188,4 +191,5 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String, highlighte
         error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
     }
     profile?.let { FriendSheet(it) { profile = null } }
+    stranger?.let { StrangerSheet(it.key, it.name) { stranger = null } }
 }
