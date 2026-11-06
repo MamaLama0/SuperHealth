@@ -20,6 +20,7 @@ object WidgetCatalog {
         Entry("rings", "Santé", RingsWidgetReceiver::class.java, R.string.widget_rings_name, R.string.widget_rings_desc),
         Entry("ringsfree", "Santé", RingsFreeWidgetReceiver::class.java, R.string.widget_ringsfree_name, R.string.widget_ringsfree_desc),
         Entry("steps", "Santé", StepsWidgetReceiver::class.java, R.string.widget_steps_name, R.string.widget_steps_desc),
+        Entry("vo2", "Santé", Vo2WidgetReceiver::class.java, R.string.widget_vo2_name, R.string.widget_vo2_desc),
         Entry("sleep", "Santé", SleepWidgetReceiver::class.java, R.string.widget_sleep_name, R.string.widget_sleep_desc),
         Entry("vitals", "Santé", VitalsWidgetReceiver::class.java, R.string.widget_vitals_name, R.string.widget_vitals_desc),
         Entry("hydration", "Santé", HydrationWidgetReceiver::class.java, R.string.widget_hydration_name, R.string.widget_hydration_desc),

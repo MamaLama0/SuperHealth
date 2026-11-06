@@ -147,6 +147,10 @@ data class Program(
     val weightGoalEnabled: Boolean = true,
     /** Cibles manuelles lundi → dimanche ; vide = identiques chaque jour. */
     val manualDays: List<DayTarget> = emptyList(),
+    /** Mode jours ON / OFF : cible des jours OFF (null = mode éteint) ; les jours ON prennent les cibles manuelles. */
+    val manualOff: DayTarget? = null,
+    /** Jours ON (1 = lundi … 7 = dimanche) du mode ON / OFF. */
+    val manualOnDays: Set<Int> = emptySet(),
     /** Remplacements datés, prioritaires sur les check-ins, sans changer le programme. */
     val overrides: List<TargetOverride> = emptyList(),
 )

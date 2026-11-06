@@ -22,6 +22,26 @@ class ManualTargetsTest {
         )) assertTrue(runCatching(f).isFailure)
     }
 
+    @Test fun onOffWeekFollowsDaysAndBothTargets() {
+        val on = ManualTargets.fromMacros(160.0, 70.0, 300.0)
+        var p = ManualTargets.withSplit(Program(manualKcal = on.kcal, manualProtein = 160.0, manualFat = 70.0, manualCarbs = 300.0), ManualTargets.Split.ON_OFF)
+        assertEquals(ManualTargets.Split.ON_OFF, ManualTargets.split(p))
+        assertEquals(setOf(1, 3, 5), p.manualOnDays)
+        val off = p.manualOff!!
+        assertEquals(160.0, off.protein, 1e-9)
+        assertTrue(off.kcal < on.kcal)
+        assertEquals(listOf(on, off, on, off, on, off, off), p.manualDays)
+        p = ManualTargets.withOnDays(p, setOf(6, 7))
+        assertEquals(off, p.manualDays[0]); assertEquals(on, p.manualDays[6])
+        val on2 = ManualTargets.fromMacros(170.0, 70.0, 300.0)
+        p = ManualTargets.withBase(p, on2)
+        assertEquals(on2, p.manualDays[5]); assertEquals(off, p.manualDays[4])
+        val days = ManualTargets.withSplit(p, ManualTargets.Split.DAYS)
+        assertEquals(ManualTargets.Split.DAYS, ManualTargets.split(days))
+        assertEquals(p.manualDays, days.manualDays)
+        assertEquals(ManualTargets.Split.SAME, ManualTargets.split(ManualTargets.withSplit(p, ManualTargets.Split.SAME)))
+    }
+
     private val today = 20759L
     private val goal = Goal(startDay = today - 30, type = GoalType.CUT, startWeightKg = 80.0, targetWeightKg = 70.0)
     private fun analytics(p: Program, c: List<CheckIn> = emptyList(), goals: List<Goal> = listOf(goal)) =

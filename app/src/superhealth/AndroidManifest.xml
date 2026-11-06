@@ -273,6 +273,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_steps" />
         </receiver>
+        <receiver android:name="app.superhealth.ui.widget.Vo2WidgetReceiver" android:exported="true" android:label="@string/widget_vo2_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_vo2" />
+        </receiver>
         <receiver android:name="app.superhealth.ui.widget.MindWidgetReceiver" android:exported="true" android:label="@string/widget_mind_name">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_mind" />

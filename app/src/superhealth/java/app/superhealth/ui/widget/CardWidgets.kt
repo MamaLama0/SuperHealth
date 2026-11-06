@@ -76,7 +76,8 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
         }
         if (enabled && kind == Kind.QUESTS) {
             val quests = runCatching { CardStore.quests() }.getOrDefault(emptyList())
-            return provideContent { QuestBoard(context, quests) }
+            val ring = WK.ring(quests.takeIf { it.isNotEmpty() }?.let { it.count { q -> q.complete }.toFloat() / it.size } ?: 0f, QuestGold, WK.px(context, 96.dp), 0.1f)
+            return provideContent { QuestBoard(context, quests, ring) }
         }
         if (enabled && kind == Kind.CARD) {
             val art = runCatching { CardArt.render(context, st, 540, 756) }.getOrNull()
@@ -132,17 +133,29 @@ private val QuestGold = Color(0xFFFFC94A)
  * accomplie montre sa récompense à récupérer. Toucher ouvre les quêtes.
  */
 @androidx.compose.runtime.Composable
-private fun QuestBoard(context: Context, quests: List<CardStore.Quest>) {
+private fun QuestBoard(context: Context, quests: List<CardStore.Quest>, ring: android.graphics.Bitmap) {
     val size = WK.size(LocalSize.current)
     val ready = quests.count { it.complete && !it.claimed }
     val done = quests.count { it.claimed }
     val shown = quests.sortedWith(compareBy<CardStore.Quest> { it.claimed }.thenByDescending { it.complete && !it.claimed }.thenBy { it.weekly })
-    Box(GlanceModifier.fillMaxSize().cornerRadius(WK.RADIUS.dp).background(androidx.glance.ImageProvider(CardArt.questBackdrop()))
-        .clickable(WK.open(context, "cards/quests")).padding(if (size == WK.Size.SMALL) 6.dp else 12.dp)) {
+    Box(GlanceModifier.fillMaxSize().cornerRadius(WK.RADIUS.dp).background(androidx.glance.ImageProvider(CardArt.questBackdrop(square = size == WK.Size.SMALL || size == WK.Size.MEDIUM)))
+        .clickable(WK.open(context, "cards/quests")).padding(if (size == WK.Size.SMALL) 4.dp else 12.dp)) {
         when (size) {
-            WK.Size.SMALL -> Column(GlanceModifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
-                Text("⚑", style = TextStyle(color = WK.c(QuestGold), fontSize = 16.sp))
-                Text(if (ready > 0) "+$ready" else "$done/${quests.size}", style = TextStyle(color = WK.c(Color.White), fontSize = 15.sp, fontWeight = FontWeight.Bold))
+            // petit : anneau doré des quêtes faites, drapeau et compteur au centre ; une récompense à prendre passe en pastille
+            WK.Size.SMALL -> Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(GlanceModifier.size(50.dp), contentAlignment = Alignment.Center) {
+                    androidx.glance.Image(androidx.glance.ImageProvider(ring), null, GlanceModifier.size(50.dp))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        androidx.glance.Image(androidx.glance.ImageProvider(R.drawable.ic_w_flag), null, GlanceModifier.size(12.dp),
+                            colorFilter = androidx.glance.ColorFilter.tint(WK.c(QuestGold)))
+                        Text("${quests.count { it.complete }}/${quests.size}", style = TextStyle(color = WK.c(Color.White), fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    }
+                }
+                if (ready > 0) Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
+                    Box(GlanceModifier.size(16.dp).cornerRadius(8.dp).background(QuestGold), contentAlignment = Alignment.Center) {
+                        Text("$ready", style = TextStyle(color = WK.c(QuestInk), fontSize = 10.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    }
+                }
             }
             WK.Size.STRIP -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 Text("⚑", style = TextStyle(color = WK.c(QuestGold), fontSize = 22.sp))

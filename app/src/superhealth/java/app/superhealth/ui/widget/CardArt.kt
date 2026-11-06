@@ -134,8 +134,8 @@ internal object CardArt {
     }
 
     /** Fond des widgets de quêtes : nuit chaude, lueur dorée en coin. */
-    fun questBackdrop(): Bitmap {
-        val w = 480; val h = 240
+    fun questBackdrop(square: Boolean = false): Bitmap {
+        val w = if (square) 240 else 480; val h = 240
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val cv = Canvas(bmp)
         cv.drawRect(0f, 0f, w.toFloat(), h.toFloat(), Paint().apply { shader = LinearGradient(0f, 0f, w.toFloat(), h.toFloat(), intArrayOf(0xFF231A05.toInt(), 0xFF141724.toInt(), 0xFF0B0C14.toInt()), null, Shader.TileMode.CLAMP) })

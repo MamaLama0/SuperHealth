@@ -24,6 +24,8 @@
     <string name="widget_mind_desc">Meditation, stretching and leaderboard this week</string>
     <string name="widget_steps_name">Steps</string>
     <string name="widget_steps_desc">Steps today and over 7 days</string>
+    <string name="widget_vo2_name">VO₂ max</string>
+    <string name="widget_vo2_desc">VO₂ max, fitness level and 90-day trend</string>
     <string name="widget_chargeeffort_name">Charge &amp; effort</string>
     <string name="widget_chargeeffort_desc">Morning recovery and today\'s cardio load</string>
     <string name="widget_sleep_name">Sleep</string>

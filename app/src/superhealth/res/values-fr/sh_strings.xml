@@ -25,6 +25,8 @@
     <string name="widget_mind_desc">Méditation, étirements et classement de la semaine</string>
     <string name="widget_steps_name">Pas</string>
     <string name="widget_steps_desc">Pas du jour et des 7 derniers jours</string>
+    <string name="widget_vo2_name">VO₂ max</string>
+    <string name="widget_vo2_desc">VO₂ max, niveau de forme et évolution sur 90 jours</string>
     <string name="widget_chargeeffort_name">Charge et effort</string>
     <string name="widget_chargeeffort_desc">Récupération du matin et charge cardio du jour</string>
     <string name="widget_sleep_name">Sommeil</string>

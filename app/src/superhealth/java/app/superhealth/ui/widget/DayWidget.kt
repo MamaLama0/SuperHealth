@@ -209,6 +209,7 @@ object DayWidgets {
             RingsFreeWidgetReceiver::class.java to RingsFreeWidget(),
             HydrationWidgetReceiver::class.java to HydrationWidget(), InsightWidgetReceiver::class.java to InsightWidget(),
             VitalsWidgetReceiver::class.java to VitalsWidget(), StepsWidgetReceiver::class.java to StepsWidget(),
+            Vo2WidgetReceiver::class.java to Vo2Widget(),
             OverviewWidgetReceiver::class.java to OverviewWidget(), ChargeEffortWidgetReceiver::class.java to ChargeEffortWidget(),
             SleepWidgetReceiver::class.java to SleepWidget(), MindWidgetReceiver::class.java to MindWidget(),
             LeagueWidgetReceiver::class.java to LeagueWidget(),
