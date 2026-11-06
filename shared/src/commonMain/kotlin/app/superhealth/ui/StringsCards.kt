@@ -187,5 +187,10 @@ object StringsCards {
         "Photo ou vidéo" to "Photo or video",
         "Photo partagée" to "Shared photo",
         "Activez le serveur dans les préférences sociales." to "Enable the server in social preferences.",
+        // Carte d'un ami en grand avant le duel
+        "Toi" to "You",
+        "Défier" to "Challenge",
+        "Touchez la carte pour la retourner" to "Tap the card to flip it",
+        "Hors bonus de fond, ajoutés pendant le duel." to "Background bonuses not included; they apply during the duel.",
     )
 }

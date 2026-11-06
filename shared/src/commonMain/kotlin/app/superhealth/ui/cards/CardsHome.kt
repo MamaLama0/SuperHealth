@@ -84,6 +84,50 @@ fun friendFace(f: League.Friend): CardFace {
     return CardFace(f.shown.lowercase().replace(" ", ""), f.athlete, f.cardBg?.let(Pull::of), photo, photoMode = PhotoMode.PORTRAIT, level = f.cardLevel ?: 1)
 }
 
+/**
+ * Carte d'un ami en grand, avant tout combat : on la regarde (un appui la retourne), on compare stat par stat à la sienne,
+ * puis « Défier » lance le duel d'un clic de plus. [onTrade] apparaît quand l'ami accepte les échanges.
+ */
+@Composable
+internal fun FriendCardViewer(face: CardFace, note: String, onClose: () -> Unit, onTrade: (() -> Unit)? = null, onDuel: (() -> Unit)?) {
+    val mine = CardStore.snapshot.collectAsState().value?.now
+    androidx.compose.ui.window.Dialog(onClose, androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(Modifier.fillMaxSize().background(Ink.copy(alpha = 0.96f)).clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, null, onClick = onClose)) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("@" + face.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, maxLines = 1)
+                        Text(note, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, maxLines = 1)
+                    }
+                    IconButton(onClose) { Icon(Icons.Rounded.Close, tr("Fermer"), tint = Color.White) }
+                }
+                // La carte avale ses propres appuis (retournement) : seul le fond referme.
+                AthleteCard(face, Modifier.padding(top = 12.dp).fillMaxWidth(0.82f), interactive = true, animate = true)
+                Text(tr("Touchez la carte pour la retourner"), color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                val theirs = face.stats
+                if (theirs != null && mine != null) Column(Modifier.padding(top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row { Text(tr("Toi"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text("@" + face.name, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    Stat.entries.forEach { stat ->
+                        val a = mine[stat]; val b = theirs[stat]
+                        if (a != null || b != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(a?.toString() ?: "–", color = if ((a ?: 0) > (b ?: 0)) Color(0xFF6FD3A0) else Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, modifier = Modifier.width(36.dp))
+                            Text(stat.code + " · " + tr(stat.label), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                            Text(b?.toString() ?: "–", color = if ((b ?: 0) > (a ?: 0)) Color(0xFFFF8A80) else Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, textAlign = TextAlign.End, modifier = Modifier.width(36.dp))
+                        }
+                    }
+                    Text(tr("Hors bonus de fond, ajoutés pendant le duel."), color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+                if (onDuel != null) GlowButton("⚔ " + tr("Défier"), Modifier.fillMaxWidth().padding(top = 16.dp), listOf(Color(0xFFE53935), Color(0xFFFF8A1F)), enabled = mine?.ovr10 != null, onClick = onDuel)
+                if (onDuel != null && mine?.ovr10 == null) Text(tr("Ta carte doit d'abord être évaluée (quelques séances)."), color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                if (onTrade != null) TextButton(onTrade, Modifier.padding(top = 4.dp)) { Text(tr("Proposer un échange"), color = Color.White) }
+            }
+        }
+    }
+}
+
 internal fun handle(): String = (app.superhealth.ui.userName() ?: "moi").lowercase().replace(Regex("\\s+"), "")
 /** Le mode démo des cartes est réservé aux builds de test Android : l'IPA iOS est toujours une version normale. */
 internal val isTestBuild get() = false
@@ -199,11 +243,13 @@ fun CardsHome(nav: NavHostController) {
             Tile(Icons.Rounded.ContentCut, "Ma photo", tr(state.photo.label), Modifier.weight(1f), Color(0xFF6FD3A0)) { nav.go("cards/cutout") }
         }
         val friends = league.friends.filter { it.athlete != null }
+        var viewing by remember { mutableStateOf<League.Friend?>(null) }
+        viewing?.let { f -> FriendCardViewer(friendFace(f), tr("Ami"), { viewing = null }, f.cardTrade?.let { { viewing = null; nav.go("cards/trades") } }) { viewing = null; nav.go("cards/duel?friend=${f.id}") } }
         if (friends.isNotEmpty()) {
             SectionTitle("Cartes de mes amis")
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 friends.forEach { f ->
-                    AthleteCard(friendFace(f), Modifier.width(130.dp).clickable { nav.go("cards/duel?friend=${f.id}") },
+                    AthleteCard(friendFace(f), Modifier.width(130.dp).clickable { viewing = f },
                         interactive = false, animate = false)
                 }
             }
