@@ -20,8 +20,8 @@ object PackEngine {
 
     val slot1 = listOf(Rarity.COMMUNE to 82.0, Rarity.PEU_COMMUNE to 18.0)
     val slot2 = listOf(Rarity.COMMUNE to 55.0, Rarity.PEU_COMMUNE to 45.0)
-    val slot3 = listOf(Rarity.COMMUNE to 20.0, Rarity.PEU_COMMUNE to 77.5, Rarity.RARE to 2.0, Rarity.EPIQUE to 0.5)
-    val slot4 = listOf(Rarity.PEU_COMMUNE to 92.5, Rarity.RARE to 6.0, Rarity.EPIQUE to 1.5)
+    val slot3 = listOf(Rarity.COMMUNE to 20.0, Rarity.PEU_COMMUNE to 76.7, Rarity.RARE to 2.6, Rarity.EPIQUE to 0.7)
+    val slot4 = listOf(Rarity.PEU_COMMUNE to 90.5, Rarity.RARE to 7.5, Rarity.EPIQUE to 2.0)
 
     /** Effets par rareté, en % par carte (hors duo) : chromatique, animée, brillante (le reste est normal). */
     val EFFECTS: Map<Rarity, Triple<Double, Double, Double>> = mapOf(

@@ -34,7 +34,7 @@ class AthleteCardsTest {
         assertEquals(PackEngine.perPack(Rarity.RARE), rare, 0.002)
         assertEquals(PackEngine.perPack(Rarity.EPIQUE), epic, 0.001)
         assertEquals(PackEngine.duoPerPack(), duo, 0.002)
-        assertTrue(rare in 0.037..0.05); assertTrue(epic in 0.006..0.012)
+        assertTrue(rare in 0.05..0.063); assertTrue(epic in 0.009..0.016)
         // L'animée, au bonus plus faible, sort plus souvent que la chromatique, à toutes les raretés.
         assertTrue(Rarity.entries.all { PackEngine.effectOdds(it, Finish.ANIMEE) > PackEngine.effectOdds(it, Finish.CHROMATIQUE) })
         assertEquals(PackEngine.DUO_ODDS, PackEngine.cardOdds(Rarity.RARE, duo = true), 1e-12)
