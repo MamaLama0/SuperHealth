@@ -189,11 +189,14 @@ object ProgressRepository {
         Progression.calculate(events, day, tracks, League.state.value.weeklyTargets + ("STRENGTH" to fullGoal) + ("HIKE" to (League.state.value.weeklyTargets["HIKE"] ?: 1)), records, events.keys.minOrNull() ?: day,
             sessions, strengthGoals).let { raw ->
             val limited = raw.summary.streaks.map { s -> if (s.track in setOf("RUN", "STEPS", "SLEEP")) s.copy(capped = s.current > 0 && (if (s.weekly) s.current * 7 >= day - (healthSince ?: from) - 5 else s.current >= day - (healthSince ?: from))) else s.copy(capped = false, percent = percent.takeIf { s.track == "FOOD" }) }
-            // Séries à la semaine (sans la randonnée) : 4 jours sur 7, ou l'objectif de séances et de sorties.
+            // Séries à la semaine (sans la randonnée) : 3 jours sur 7, ou l'objectif de séances et de sorties, avec une
+            // séance de marge sur les semaines passées (comme les séries au jour près).
+            val thisWeek = Progression.week(day)
+            fun soft(goal: Int, w: Long) = if (w < thisWeek) (goal - 1).coerceAtLeast(1) else goal
             val weekly = Progression.weekStreaks(events, day, tracks.filter { it != Progression.Track.HIKE }) { t, w -> when (t) {
-                Progression.Track.STRENGTH -> strengthGoals[w] ?: fullGoal
-                Progression.Track.RUN -> League.state.value.weeklyTargets["RUN"] ?: 1
-                else -> 4 } }
+                Progression.Track.STRENGTH -> soft(strengthGoals[w] ?: fullGoal, w)
+                Progression.Track.RUN -> soft(League.state.value.weeklyTargets["RUN"] ?: 1, w)
+                else -> 3 } }
             raw.copy(summary = raw.summary.copy(weekly = weekly, questsDone = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.complete }.map { it.metric.name }, totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
                 "quests" to League.state.value.questsCompleted,
                 "sessions" to sessions.filterKeys { it <= day }.values.sum().toLong(),

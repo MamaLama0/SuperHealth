@@ -137,7 +137,7 @@ fun PackShopScreen(nav: NavHostController) {
         }
         // Un seul bouton : il ouvre d'abord un pack offert, sinon dépense des éclats.
         val gift = state.packsAvailable > 0
-        GlowButton(when { busy -> tr("Ouverture…"); gift -> tr("Ouvrir · pack offert"); else -> trf("Ouvrir · %1\$s éclats", CardStore.PACK_PRICE) }, Modifier.fillMaxWidth().padding(top = 14.dp),
+        GlowButton(when { busy -> tr("Ouverture…"); gift -> tr("Ouvrir · pack offert"); else -> trf("Ouvrir · %1\$s éclats", CardStore.state.value.price) }, Modifier.fillMaxWidth().padding(top = 14.dp),
             listOf(e.outer.c(), e.mid.c()), enabled = !busy && CardStore.canOpen(), badge = state.packsAvailable.takeIf { it > 0 }?.toString()) { open() }
         error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) }
         SectionTitle("Pack doré")

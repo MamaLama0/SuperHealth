@@ -48,12 +48,12 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
         if (!enabled) caption = tr("Fonctions sociales désactivées")
         else when (kind) {
             Kind.PACKS -> {
-                val packs = st.bonusPacks + st.eclats / CardStore.PACK_PRICE
+                val packs = st.bonusPacks + st.eclats / st.price.coerceAtLeast(1)
                 value = packs.toString(); unit = tr(if (packs > 1) "packs" else "pack")
                 if (st.nextGold) hue = gold
                 caption = if (st.nextGold) tr("Le prochain pack est doré !") else trf("Pack doré dans %1\$s", st.untilGold)
                 detail = trf("%1\$s éclats", st.eclats)
-                fraction = (st.eclats % CardStore.PACK_PRICE) / CardStore.PACK_PRICE.toFloat()
+                fraction = (st.eclats % st.price.coerceAtLeast(1)) / st.price.coerceAtLeast(1).toFloat()
             }
             Kind.QUESTS -> {
                 val quests = runCatching { CardStore.quests() }.getOrDefault(emptyList())
@@ -62,7 +62,7 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                 value = "${quests.count { it.complete }}/${quests.size}"
                 caption = when { claimable > 0 -> trf(if (claimable > 1) "%1\$s récompenses à récupérer" else "%1\$s récompense à récupérer", claimable)
                     next != null -> tr(next.title); else -> tr("Toutes les quêtes sont faites") }
-                detail = next?.let { "${it.progress}/${it.target} · +${it.reward} " + tr("éclats") } ?: ""
+                detail = next?.let { "${it.progress}/${it.target} · " + CardStore.prize(it) } ?: ""
                 fraction = quests.takeIf { it.isNotEmpty() }?.let { it.count { q -> q.complete }.toFloat() / it.size }
             }
             Kind.CARD -> {
@@ -199,7 +199,7 @@ private fun QuestLine(q: CardStore.Quest, compact: Boolean) {
             Spacer(GlanceModifier.width(5.dp))
             Text(tr(q.title), style = TextStyle(color = WK.c(if (q.claimed) Color(0x80FFFFFF) else Color.White), fontSize = if (compact) 10.sp else 11.sp, fontWeight = FontWeight.Medium),
                 maxLines = 1, modifier = GlanceModifier.defaultWeight())
-            if (!compact) Text(if (q.complete && !q.claimed) "+${q.reward} ✦" else "${q.progress}/${q.target}",
+            if (!compact) Text(if (q.complete && !q.claimed) CardStore.prize(q, short = true) else "${q.progress}/${q.target}",
                 style = TextStyle(color = WK.c(if (q.complete && !q.claimed) QuestGold else Color(0xB3FFFFFF)), fontSize = 11.sp, fontWeight = FontWeight.Bold))
         }
         Spacer(GlanceModifier.height(3.dp))

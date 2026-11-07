@@ -263,7 +263,11 @@ internal fun StrangerSheet(key: String, name: String, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Mf.colors.background, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            FriendAvatar(null, name, 96.dp, key = key)
+            // Sa carte Athlète avec sa photo détourée, visible même sans être amis ; sinon son visage.
+            val cutout = app.superhealth.ui.cards.cardCutout(key)
+            if (cutout != null) app.superhealth.ui.cards.AthleteCard(app.superhealth.ui.cards.CardFace(name.lowercase().replace(" ", ""), null, null, cutout),
+                Modifier.fillMaxWidth(0.5f), interactive = false, animate = true)
+            else FriendAvatar(null, name, 96.dp, key = key)
             Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(tr("Vous n'êtes pas encore amis. Une demande lui envoie votre code ami ; il reste valable 24 h."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)

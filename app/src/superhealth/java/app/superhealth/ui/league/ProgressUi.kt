@@ -1,5 +1,6 @@
 package app.superhealth.ui.league
 
+import kotlinx.coroutines.launch
 import app.superhealth.league.Achievements
 import androidx.compose.ui.graphics.graphicsLayer
 
@@ -169,7 +170,7 @@ fun ProgressScreen(nav: NavHostController) {
     val enabled by app.superhealth.SuperPrefs.settings.collectAsState()
     if (!enabled.leagueEnabled) {
         DetailScaffold(tr("Ma progression"), onBack = { nav.popBackStack() }, contentSpacing = 12.dp) {
-            PillButton(tr("Activer le classement"), Modifier.fillMaxWidth()) { app.superhealth.SuperPrefs.update { it.copy(leagueEnabled = true) } }
+            PillButton(tr("Installer le plugin Groupe"), Modifier.fillMaxWidth()) { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { app.superhealth.modules.Modules.setSocial(ctx.applicationContext, true) } }
         }
         return
     }

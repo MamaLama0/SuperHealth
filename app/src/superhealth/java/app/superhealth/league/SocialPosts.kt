@@ -49,7 +49,9 @@ object SocialPosts {
     internal class MissingMediaMailbox : IllegalStateException("La boîte de partage doit être créée avant le média.")
     val draft = MutableStateFlow<Draft?>(null)
     private val kinds = setOf("TEXT", "PHOTO", "VIDEO", "WORKOUT", "RUN", "STREAK", "PR")
-    private val mimes = setOf("image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/3gpp")
+    private val mimes = setOf("image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "video/3gpp")
+    /** GIF d'une réponse, gardé tel quel pour rester animé. */
+    private const val MAX_GIF = 8 * 1024 * 1024
     private val http = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES).writeTimeout(60, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).build()
     private val postJson = kotlinx.serialization.json.Json { encodeDefaults = true }
@@ -91,7 +93,7 @@ object SocialPosts {
     }
     private fun path(endpoint: String, id: String) = endpoint + "/media/" + id
     private fun cache(ctx: Context, media: Media): File = File(ctx.cacheDir, "social").apply { mkdirs() }
-        .let { File(it, media.hash + if (media.mime.startsWith("video/")) ".mp4" else ".jpg") }
+        .let { File(it, media.hash + if (media.mime.startsWith("video/")) ".mp4" else if (media.mime == "image/gif") ".gif" else ".jpg") }
     private fun trimCache(ctx: Context) {
         var total = 0L
         File(ctx.cacheDir, "social").listFiles().orEmpty().sortedByDescending { it.lastModified() }.forEach { f ->
@@ -268,13 +270,18 @@ object SocialPosts {
     }
 
     private data class Upload(val media: Media, val plain: File, val encrypted: File)
-    private suspend fun prepareUpload(ctx: Context, uri: Uri): Upload {
+    private suspend fun prepareUpload(ctx: Context, uri: Uri, keepGif: Boolean = false): Upload {
         val mime = ctx.contentResolver.getType(uri).orEmpty()
         require(mime.startsWith("image/") || mime in mimes) { "Format non pris en charge." }
         val plain = File.createTempFile("social-upload-", ".plain", ctx.cacheDir)
         val encrypted = File.createTempFile("social-upload-", ".enc", ctx.cacheDir)
         try {
-            val actualMime = if (mime.startsWith("image/")) {
+            val actualMime = if (keepGif && mime == "image/gif") {
+                ctx.contentResolver.openInputStream(uri)!!.use { input -> plain.outputStream().use { out ->
+                    val buffer = ByteArray(64 * 1024); var count = 0L
+                    while (true) { val n = input.read(buffer); if (n < 0) break; count += n; require(count <= MAX_GIF) { "Choisissez un GIF de moins de 8 Mo." }; out.write(buffer, 0, n) }
+                } }; mime
+            } else if (mime.startsWith("image/")) {
                 val image = read(ctx, uri); plain.writeBytes(image.first); image.second
             } else {
                 var count = 0L
@@ -304,6 +311,22 @@ object SocialPosts {
             }
             return Upload(Media(id, key, actualMime, digest.digest().joinToString("") { "%02x".format(it) }, encrypted.length().toInt()), plain, encrypted)
         } catch (e: Exception) { plain.delete(); encrypted.delete(); throw e }
+    }
+
+    /**
+     * Image ou GIF d'une réponse : chiffré comme un média de publication et envoyé tout de suite dans ma boîte ; la
+     * réponse porte ensuite sa référence ([ReplyMedia]). Un GIF reste animé, une photo est réduite en JPEG.
+     */
+    suspend fun uploadReplyMedia(ctx: Context, uri: Uri): Pair<Media, String> = withContext(Dispatchers.IO) {
+        check(!SocialLifecycle.pending(ctx)) { "Terminez la sécurisation du Groupe avant un nouveau partage." }
+        val endpoint = Relay.myEndpoint(ctx)?.takeIf(Relay::encryptedEndpoint) ?: error("Activez le serveur dans les préférences sociales.")
+        require(ctx.contentResolver.getType(uri)?.startsWith("image/") == true) { "Choisissez une image ou un GIF." }
+        val upload = prepareUpload(ctx, uri, keepGif = true)
+        try {
+            sendAttachment(ctx, endpoint, upload.media, upload.encrypted)
+            upload.plain.copyTo(cache(ctx, upload.media), overwrite = true); trimCache(ctx)
+            upload.media to endpoint
+        } finally { upload.plain.delete(); upload.encrypted.delete() }
     }
 
     internal fun uploadAvatar(ctx: Context, endpoint: String, bytes: ByteArray): Media {

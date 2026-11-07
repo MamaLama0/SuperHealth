@@ -39,9 +39,6 @@ import kotlin.math.roundToInt
  */
 object CardStore {
     const val PACK_PRICE = 100
-    /** Éclats de la quête de la semaine (principale, secondaire), alignés sur REWARDS.league du serveur. */
-    const val WEEKLY_PRIMARY = 60
-    const val WEEKLY_SECONDARY = 35
 
     /** Bonus de série déjà touché pour un suivi : semaine (lundi, jour epoch) et semaines d'affilée. */
     @Serializable data class StreakPaid(val week: Long, val n: Int)
@@ -92,6 +89,11 @@ object CardStore {
         val streakPaid: Map<String, StreakPaid> = emptyMap(),
         /** Mise à jour Dopamine : pop-up déjà montrée. */
         val dopamineSeen: Boolean = false,
+        /** Récompenses en vigueur, fixées par le serveur (packs des quêtes de la semaine, défis). */
+        val rewards: Economy.Rewards = Economy.Rewards(),
+        val price: Int = PACK_PRICE,
+        /** Cadeaux du serveur reçus mais pas encore montrés (packs offerts avec une mise à jour…). */
+        val gifts: List<Economy.Gift> = emptyList(),
     ) {
         fun owns(card: CardDef) = owned.keys.any { it.startsWith(card.id + ":") }
         /** Exemplaires reçus d'un fond, toutes finitions confondues. */
@@ -240,14 +242,14 @@ object CardStore {
     /** Le pack en attente a été vu jusqu'au bout. */
     fun seen(ctx: Context) { if (state.value.pending != null) update(ctx) { it.copy(pending = null) } }
 
-    fun canOpen() = state.value.bonusPacks > 0 || state.value.eclats >= PACK_PRICE
+    fun canOpen() = state.value.bonusPacks > 0 || state.value.eclats >= state.value.price
 
     /** Ouvre un pack : par le serveur, ou en local en mode démo. Un pack offert passe avant les éclats. */
     suspend fun open(ctx: Context, booster: Booster): Opening {
         if (!state.value.demo) return Economy.open(ctx, booster).also { o -> update(ctx) { it.copy(booster = booster, pending = o.saved) } }
         var opening: Opening? = null
         update(ctx) { s ->
-            val paid = when { s.bonusPacks > 0 -> s.copy(bonusPacks = s.bonusPacks - 1); s.eclats >= PACK_PRICE -> s.copy(eclats = s.eclats - PACK_PRICE); else -> return@update s }
+            val paid = when { s.bonusPacks > 0 -> s.copy(bonusPacks = s.bonusPacks - 1); s.eclats >= s.price -> s.copy(eclats = s.eclats - s.price); else -> return@update s }
             val result = PackEngine.open(PackEngine.seed(s.secret, s.packsOpened), PackEngine.isGold(s.packsOpened), booster)
             var st = paid
             for (p in result.pulls) st = st.copy(owned = st.owned + (p.key to ((st.owned[p.key] ?: 0) + 1)))
@@ -319,12 +321,15 @@ object CardStore {
     enum class Difficulty(val label: String, val color: Long) {
         FACILE("Facile", 0xFF39D98A), NORMAL("Normal", 0xFF4FA8FF), DIFFICILE("Difficile", 0xFFFFB238), HEROIQUE("Héroïque", 0xFFFF4F7B)
     }
-    /** [reward] : éclats fixés par le serveur pour cette quête. */
+    /** [reward] : éclats et [packs] : packs offerts, fixés par le serveur pour cette quête. */
     /** [league] : quête de la semaine du Groupe (récupérée par [League.claimQuest]). */
     data class Quest(val id: String, val title: String, val difficulty: Difficulty, val progress: Int, val target: Int, val claimed: Boolean, val reward: Int, val weekly: Boolean = false,
-                     val league: app.superhealth.league.WeeklyQuests.Metric? = null, val challenge: Economy.Challenge? = null, val note: String? = null) {
+                     val league: app.superhealth.league.WeeklyQuests.Metric? = null, val challenge: Economy.Challenge? = null, val note: String? = null, val packs: Int = 0,
+                     /** Mode d'une quête de la semaine : simple (la sienne), groupe (ensemble) ou rapidité (course). */
+                     val mode: Mode = Mode.SIMPLE) {
         val complete get() = progress >= target
     }
+    enum class Mode(val label: String) { SIMPLE("Simple"), GROUPE("Groupe"), RAPIDITE("Rapidité") }
 
     /** Quêtes du jour par défaut, sans serveur (mode démo, ou avant la première synchronisation). */
     private fun defaults(day: Long) = listOf(
@@ -375,7 +380,7 @@ object CardStore {
         val defs = state.value.quests.filter { it.id.startsWith("d:$d:") }.ifEmpty { defaults(d) }
         val weekly = runCatching { League.state.value.questWeeks.firstOrNull { it.start == app.superhealth.league.Progression.week(d) }?.quests.orEmpty() }.getOrDefault(emptyList())
             .map { q -> Quest("lq:" + q.metric.name, app.superhealth.ui.league.questGoal(q), if (q.secondary) Difficulty.FACILE else Difficulty.NORMAL,
-                q.progress.coerceAtMost(q.target), q.target, q.claimed, if (q.secondary) WEEKLY_SECONDARY else WEEKLY_PRIMARY, weekly = true, league = q.metric) }
+                q.progress.coerceAtMost(q.target), q.target, q.claimed, 0, weekly = true, league = q.metric, packs = state.value.rewards.weekly.packs) }
         val training = setOf("session", "sets", "rir", "focus")
         return defs.mapIndexedNotNull { i, q ->
             val tier = q.tier.coerceIn(0, 2)
@@ -422,11 +427,11 @@ object CardStore {
             val status = when {
                 c.race && c.winner == me -> "tu as gagné la course"
                 c.race && c.winner != null -> "déjà remportée, finis-la quand même"
-                c.race -> "le premier à la finir gagne +${c.reward} éclats"
-                else -> "${c.done.size}/${c.members.size} l'ont finie · +${c.reward} éclats chacun quand tous l'ont finie"
+                c.race -> "le premier à la finir gagne"
+                else -> "${c.done.size}/${c.members.size} l'ont finie · tout le monde gagne quand tous l'ont finie"
             }
             Quest("ch:" + c.id, title, Difficulty.DIFFICILE, progress.coerceAtMost(c.goal), c.goal, me in c.done, c.reward, weekly = true, challenge = c,
-                note = (if (c.race) "Course · " else "Ensemble · ") + who + " · " + status)
+                note = who + " · " + status, packs = c.packs, mode = if (c.race) Mode.RAPIDITE else Mode.GROUPE)
         })
     }
 
@@ -437,10 +442,10 @@ object CardStore {
         quest.challenge?.let { c ->
             if (!state.value.demo) return Economy.finishChallenge(ctx, c.id)
             // Démo : le rival n'a jamais fini avant toi.
-            return update(ctx) { s -> s.copy(eclats = s.eclats + c.reward, challenge = c.copy(done = c.done + (s.tradeId ?: "me"), winner = if (c.race) s.tradeId ?: "me" else null)) }
+            return update(ctx) { s -> s.copy(eclats = s.eclats + c.reward, bonusPacks = s.bonusPacks + c.packs, challenge = c.copy(done = c.done + (s.tradeId ?: "me"), winner = if (c.race) s.tradeId ?: "me" else null)) }
         }
         if (!state.value.demo) return Economy.sync(ctx, listOf(Economy.Quest(quest.id)))
-        update(ctx) { s -> s.copy(claimed = (s.claimed + quest.id).toList().takeLast(200).toSet(), eclats = s.eclats + quest.reward,
+        update(ctx) { s -> s.copy(claimed = (s.claimed + quest.id).toList().takeLast(200).toSet(), eclats = s.eclats + quest.reward, bonusPacks = s.bonusPacks + quest.packs,
             ledger = (s.ledger + Earn(System.currentTimeMillis(), quest.reward, quest.title)).takeLast(40)) }
     }
 
@@ -499,10 +504,20 @@ object CardStore {
             ledger = (s.ledger + Earn(System.currentTimeMillis(), gain, "Badges et séries")).takeLast(40)) }
     }
 
-    /** Quête de la semaine du Groupe accomplie : ses éclats, une principale et une secondaire par semaine (décidé par le serveur). */
-    fun earnLeague(ctx: Context, id: String, amount: Int) {
-        if (state.value.demo) return earn(ctx, amount, "Quête de la semaine")
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch { runCatching { Economy.sync(ctx, listOf(Economy.League(id))) } }
+    /** Quête de la semaine du Groupe accomplie : des packs offerts, autant de quêtes payées par semaine que le serveur le fixe. */
+    suspend fun earnLeague(ctx: Context, id: String) {
+        if (state.value.demo) return update(ctx) { it.copy(bonusPacks = it.bonusPacks + it.rewards.weekly.packs) }
+        Economy.sync(ctx, listOf(Economy.League(id)))
+    }
+
+    /** Cadeau du serveur montré : on le retire de la file. */
+    fun giftSeen(ctx: Context, id: String) = update(ctx) { s -> s.copy(gifts = s.gifts.filterNot { it.id == id }) }
+
+    /** Récompense d'une quête en clair : « +1 pack » ou « +20 éclats ». */
+    fun prize(q: Quest, short: Boolean = false): String = when {
+        q.packs > 0 -> "+${q.packs} " + app.superhealth.ui.tr(if (q.packs > 1) "packs" else "pack")
+        short -> "+${q.reward} ✦"
+        else -> "+${q.reward} " + app.superhealth.ui.tr("éclats")
     }
 
     // ---- Mode démo (builds de test) ------------------------------------------------------------------------

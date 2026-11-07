@@ -20,6 +20,9 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.SpeedRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
@@ -78,6 +81,8 @@ object HealthConnectHub {
         read(HeartRateRecord::class), read(RestingHeartRateRecord::class), read(SleepSessionRecord::class),
         read(HeartRateVariabilityRmssdRecord::class), read(OxygenSaturationRecord::class), read(ExerciseSessionRecord::class),
         read(RespiratoryRateRecord::class), read(DistanceRecord::class), read(ActiveCaloriesBurnedRecord::class), read(TotalCaloriesBurnedRecord::class), read(Vo2MaxRecord::class),
+        // détail des séances des autres apps (Fitbit, Garmin Connect…) : courbes de vitesse et de cadence, dénivelé
+        read(SpeedRecord::class), read(StepsCadenceRecord::class), read(ElevationGainedRecord::class),
         write(WeightRecord::class), write(BodyFatRecord::class), write(NutritionRecord::class),
         write(ExerciseSessionRecord::class), write(HydrationRecord::class),
         write(DistanceRecord::class), write(ActiveCaloriesBurnedRecord::class),

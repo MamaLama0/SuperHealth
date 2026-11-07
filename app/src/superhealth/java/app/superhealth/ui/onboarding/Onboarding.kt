@@ -327,7 +327,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var pluginIds by rememberSaveable { mutableStateOf(app.superhealth.modules.Modules.installed.value.filter { it.enabled && it.kind in app.superhealth.modules.Modules.engines }.map { it.id }) }
     LaunchedEffect(mode) { if (mode == OnboardingMode.FULL) app.superhealth.modules.Modules.refresh() }
     var feedEnabled by rememberSaveable { mutableStateOf(true) }
-    var socialEnabled by rememberSaveable { mutableStateOf(true) }
+    // Le Groupe est un plugin : rien de social tant qu'on ne l'a pas choisi.
+    var socialEnabled by rememberSaveable { mutableStateOf(false) }
     var shareDetails by rememberSaveable { mutableStateOf(true) }
     var shareSports by rememberSaveable { mutableStateOf(false) }
     var useServer by rememberSaveable { mutableStateOf(true) }
@@ -552,6 +553,9 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                 sharePillars = shareDetails, shareActivities = shareSports && (lifts || app.superhealth.ui.activities.ActivitySection.RUN in activities),
                 weeklyTargets = it.weeklyTargets + if (lifts) mapOf("STRENGTH" to liftDays) else emptyMap()) }
             app.superhealth.league.LeagueWorker.schedule(ctx)
+            // le Groupe est un plugin : choisi ici, il s'installe (copie livrée avec l'app), sinon il n'est pas là
+            val appCtx = ctx.applicationContext
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { if (socialEnabled) app.superhealth.modules.Modules.migrateSocial(appCtx) else app.superhealth.modules.Modules.setSocial(appCtx, false) }
         }
     }
 
@@ -776,7 +780,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     }
                     Step.SOCIAL -> Page(st, tr("Progresser avec mes amis"), tr("Vos activités choisies définissent vos séries et vos quêtes. Vous gardez le contrôle du partage.")) {
                         // interrupteur général : sans social, ni cartes, ni amis, ni fil ; réactivable dans Paramètres › Social
-                        app.superhealth.nutrition.ui.components.SwitchRow(tr("Fonctions sociales"), tr("Carte athlète, packs, duels, amis, séries et quêtes. Désactivable à tout moment dans les paramètres."), socialEnabled) { socialEnabled = it }
+                        app.superhealth.nutrition.ui.components.SwitchRow(tr("Installer le plugin Groupe"), tr("Carte athlète, packs, duels, amis et quêtes. Facultatif : il s'installe ou se retire à tout moment dans les plugins."), socialEnabled) { socialEnabled = it }
                         if (socialEnabled) {
                             app.superhealth.nutrition.ui.components.SwitchRow(tr("Fil des amis"), tr("À gauche du dashboard, accessible en glissant vers la droite"), feedEnabled) { feedEnabled = it }
                             Text(listOfNotNull(tr("Nutrition").takeIf { wantsNutrition }, tr("Musculation").takeIf { lifts },

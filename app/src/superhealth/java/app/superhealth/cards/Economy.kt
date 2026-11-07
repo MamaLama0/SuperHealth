@@ -13,6 +13,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
+import app.superhealth.cards.CardStore.PACK_PRICE
 
 /**
  * Client de l'économie tenue par le serveur SuperHealth (route /v2/economy, voir economy.mjs) : éclats, packs offerts,
@@ -42,13 +43,24 @@ object Economy {
      * course ([race]) le premier qui la finit gagne [reward] ; ensemble, chacun le reçoit quand tous l'ont finie.
      */
     @Serializable data class Challenge(val id: String, val type: String, val kind: String, val goal: Int, val stat: String? = null, val reward: Int = 0, val week: Long = 0,
-                                       val members: List<String> = emptyList(), val done: List<String> = emptyList(), val winner: String? = null) {
+                                       val members: List<String> = emptyList(), val done: List<String> = emptyList(), val winner: String? = null, val packs: Int = 0) {
         val race get() = type == "race"
     }
+    /**
+     * Récompenses en vigueur, envoyées par le serveur à chaque appel (réglables sans mise à jour de l'app, voir rewards.mjs) :
+     * quêtes de la semaine en packs offerts, défis entre amis, éclats des quêtes du jour.
+     */
+    @Serializable data class Prize(val packs: Int = 0, val eclats: Int = 0)
+    @Serializable data class Weekly(val count: Int = 3, val packs: Int = 1, val done: Int = 0)
+    @Serializable data class Challenges(val race: Prize = Prize(2), val together: Prize = Prize(1))
+    @Serializable data class Rewards(val weekly: Weekly = Weekly(), val challenge: Challenges = Challenges())
+    /** Cadeau du serveur (packs offerts avec une mise à jour, par exemple), versé une fois par compte. */
+    @Serializable data class Gift(val id: String = "", val packs: Int = 0, val eclats: Int = 0, val note: String = "")
     @Serializable data class View(val eclats: Int = 0, val bonusPacks: Int = 0, val opened: Long = 0, val untilGold: Int = PackEngine.GOLD_EVERY, val owned: Map<String, Int> = emptyMap(),
                                   val merged: Map<String, Int> = emptyMap(), val tradeId: String? = null, val trades: Trades = Trades(), val browse: Browse? = null, val traded: Boolean? = null, val challenge: Challenge? = null,
                                   val badges: List<String>? = null, val baseline: Boolean? = null, val streaks: Map<String, CardStore.StreakPaid>? = null,
-                                  val claimed: List<String> = emptyList(), val quests: List<QuestDef> = emptyList(), val pulls: List<Gain>? = null, val prism: Boolean = false, val gold: Boolean = false)
+                                  val claimed: List<String> = emptyList(), val quests: List<QuestDef> = emptyList(), val pulls: List<Gain>? = null, val prism: Boolean = false, val gold: Boolean = false,
+                                  val rewards: Rewards? = null, val received: List<Gift>? = null, val price: Int = PACK_PRICE)
     sealed interface Event { val json: JsonObject }
     data class Session(val id: String, val start: Long, val target: Int) : Event {
         override val json get() = buildJsonObject { put("type", "session"); put("id", id); put("start", start); put("target", target) }
@@ -109,7 +121,8 @@ object Economy {
     private fun apply(ctx: Context, v: View) = CardStore.update(ctx) { s ->
         s.copy(eclats = v.eclats, bonusPacks = v.bonusPacks, packsOpened = v.opened, owned = v.owned, quests = v.quests, merged = v.merged, challenge = v.challenge, tradeId = v.tradeId ?: s.tradeId, trades = v.trades,
             badgesPaid = v.badges?.toSet() ?: s.badgesPaid, started = s.started || v.baseline == true, streakPaid = v.streaks ?: s.streakPaid,
-            claimed = v.claimed.filter { it.startsWith("q:") }.map { it.removePrefix("q:") }.toSet(), synced = System.currentTimeMillis())
+            claimed = v.claimed.filter { it.startsWith("q:") }.map { it.removePrefix("q:") }.toSet(), synced = System.currentTimeMillis(),
+            rewards = v.rewards ?: s.rewards, price = v.price, gifts = (s.gifts + v.received.orEmpty().filter { g -> g.packs > 0 || g.eclats > 0 }).takeLast(5))
     }
 
     suspend fun sync(ctx: Context, events: List<Event> = emptyList()) {

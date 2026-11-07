@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import app.superhealth.ui.coach.askCoach
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -158,6 +159,18 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
     val kind = detail?.kind?.name?.let { Bridge.kindOf(it) } ?: Bridge.Kind.OTHER
     val hue = kind.hue()
     var confirmDelete by remember { mutableStateOf(false) }
+    // Tracé d'une séance d'une autre app (Fitbit, Garmin Connect…) : Health Connect le donne après accord, séance par séance.
+    val routeConsent by produceState(false, session?.id, attempt) {
+        value = session != null && app.superhealth.bridge.HcWorkouts.routeNeedsConsent(ctx, session)
+    }
+    val askRoute = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.health.connect.client.contracts.ExerciseRouteRequestContract()) { route ->
+        if (route != null && session != null) {
+            app.superhealth.bridge.HcWorkouts.keepRoute(session, route)
+            retryMissingRoutes()
+            attempt++
+        }
+    }
     DetailScaffold(tr(detail?.name ?: "Activité"), onBack = { nav.popBackStack() }, action = {
         if (detail != null && app.superhealth.league.League.available()) IconButton(onClick = {
             app.superhealth.league.SocialPosts.draft.value = app.superhealth.league.SocialPosts.Draft(detail.name,
@@ -218,6 +231,11 @@ fun WorkoutScreen(nav: NavHostController, id: Long) {
         val track = remember(detail) { detail.points.mapNotNull { p -> if (p.lat != null && p.lon != null) p.lat to p.lon else null } }
         if (track.size >= 2) {
             TrackMap(track, hue, Modifier.fillMaxWidth().height(230.dp)) { nav.navigate("h/workout/${detail.id}/map") }
+            Spacer(Modifier.height(12.dp))
+        } else if (routeConsent && session != null) {
+            Spacer(Modifier.height(8.dp))
+            app.superhealth.nutrition.ui.components.PillButton(tr("Afficher le tracé GPS"), Modifier.fillMaxWidth(), strong = false,
+                icon = Icons.Rounded.Map) { runCatching { askRoute.launch(session.id) } }
             Spacer(Modifier.height(12.dp))
         }
 

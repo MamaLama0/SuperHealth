@@ -15,7 +15,11 @@ class WeeklyQuestsTest {
         val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), all, evidence)
         assertEquals(WeeklyQuests.Metric.FOOD, w.quests.first().metric)
         assertEquals(WeeklyQuests.Reason.FOOD_GAP, w.quests.first().reason)
-        assertEquals(1, w.quests.size) // no artificial side quest when other habits are already consistent
+        // Trois quêtes, jamais deux du même genre ni (quand c'est possible) du même domaine.
+        assertEquals(WeeklyQuests.COUNT, w.quests.size)
+        assertEquals(w.quests.size, w.quests.map { it.metric }.distinct().size)
+        assertEquals(w.quests.size, w.quests.map { it.metric.focus }.distinct().size)
+        assertTrue(w.quests.drop(1).all { it.secondary })
         val onlyRun = WeeklyQuests.update(null, monday, tracks, emptyMap(), setOf(WeeklyQuests.Focus.RUN), evidence.copy(previous14 = emptyMap()))
         assertEquals(listOf(WeeklyQuests.Metric.RUN), onlyRun.quests.map { it.metric })
         assertEquals(1, onlyRun.quests.first().target)
@@ -30,7 +34,18 @@ class WeeklyQuestsTest {
         assertTrue(w.quests[1].secondary)
         assertNotEquals(w.quests[0].metric.focus, w.quests[1].metric.focus)
         assertEquals(80, w.quests[0].reward)
-        assertEquals(30, w.quests[1].reward)
+        assertEquals(15, w.quests[1].reward)
+        assertTrue(w.quests.sumOf { it.reward } <= WeeklyQuests.MAX_WEEKLY_BONUS)
+    }
+    @Test fun preferredQuestTypesComeBackAmongTheSecondaries() {
+        // Course toujours réussie, pas jamais : à faiblesse égale, la course revient plutôt que les pas.
+        val evidence = WeeklyQuests.Evidence(mapOf(WeeklyQuests.Metric.FOOD to 0, WeeklyQuests.Metric.RUN to 2, WeeklyQuests.Metric.STEPS to 7,
+            WeeklyQuests.Metric.STRENGTH to 6, WeeklyQuests.Metric.STRENGTH_REVIEW to 6, WeeklyQuests.Metric.MIND to 4), strengthGoal = 3, runGoal = 2)
+        val history = (1..6).map { k -> WeeklyQuests.Week(monday - 7L * k, listOf(
+            WeeklyQuests.Quest(WeeklyQuests.Metric.RUN, 2, progress = 2), WeeklyQuests.Quest(WeeklyQuests.Metric.STEPS, 3, progress = 0))) }
+        assertTrue(WeeklyQuests.preference(WeeklyQuests.Metric.RUN, history) > WeeklyQuests.preference(WeeklyQuests.Metric.STEPS, history))
+        val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), all, evidence, history)
+        assertTrue(w.quests.any { it.metric == WeeklyQuests.Metric.RUN })
     }
     @Test fun plateauEncouragesUsefulFeedbackInsteadOfAForcedPersonalRecord() {
         assertFalse(WeeklyQuests.plateau(listOf(100.0, 100.0)))

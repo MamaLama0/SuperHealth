@@ -14,7 +14,6 @@
     <application>
         <activity android:name="app.superhealth.debug.GroupTestActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <activity android:name="app.superhealth.debug.FlowPreviewActivity" android:exported="true" android:theme="@style/SuperHealth.Theme" />
-        <activity android:name="app.superhealth.debug.StreakPreviewActivity" android:exported="true" android:theme="@style/SuperHealth.Theme" />
         <activity android:name="app.superhealth.debug.RegressionProbeActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <!-- debug seulement : galerie des graphiques (adb shell am start -n app.superhealth/app.superhealth.debug.ChartGalleryActivity) -->
         <activity android:name="app.superhealth.debug.ChartGalleryActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />

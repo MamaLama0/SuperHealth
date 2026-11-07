@@ -202,7 +202,7 @@ internal fun WQuests(size: CardSize, icon: ImageVector, modifier: Modifier, refr
         SocialValue(progress, if (size == CardSize.S) tr("Aujourd'hui") else title, hue, size == CardSize.S)
         if (size != CardSize.S && quest != null) {
             SocialBar(quest.progress.toFloat() / quest.target.coerceAtLeast(1), hue)
-            Text(if (quest.complete && !quest.claimed) tr("Récompense à récupérer") else "${quest.progress} / ${quest.target} · +${quest.reward} " + tr("éclats"),
+            Text(if (quest.complete && !quest.claimed) tr("Récompense à récupérer") else "${quest.progress} / ${quest.target} · " + app.superhealth.cards.CardStore.prize(quest),
                 style = MaterialTheme.typography.labelSmall, color = hue.onContainer())
         }
     }

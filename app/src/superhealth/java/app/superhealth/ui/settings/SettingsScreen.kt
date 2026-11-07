@@ -230,16 +230,15 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 ModulesRow(nav)
             }
 
-            // le Groupe tient en une ligne : fil, classement, partage et confidentialité se règlent sur sa propre page
-            // le Groupe se coupe d'un geste (cartes, packs, duels, amis, fil, classement ; données et amis conservés) ;
-            // toucher la ligne ouvre sa page : fil, classement, partage et confidentialité
-            SettingsGroup(tr("Groupe et amis")) {
+            // Réglages du Groupe : seulement quand son plugin est installé et activé (il s'installe depuis Plugins).
+            // Toucher la ligne ouvre sa page (fil, classement, partage, confidentialité) ; la couper désinstalle le plugin.
+            val plugins by app.superhealth.modules.Modules.installed.collectAsState()
+            if (plugins.any { it.kind == app.superhealth.modules.Modules.LEAGUE && it.enabled }) SettingsGroup(tr("Groupe et amis")) {
                 val league by app.superhealth.league.League.state.collectAsState()
-                val social = sh.leagueEnabled || sh.socialFeedEnabled
                 val friends = league.friends.size.takeIf { it > 0 }?.let { trf(if (it > 1) "%1\$s amis" else "%1\$s ami", it) }
-                IconSwitchRow(tr("Groupe"), if (social) listOfNotNull(tr("Cartes, quêtes, échanges et fil"), friends).joinToString(" · ") else tr("Désactivé, données et amis conservés"),
-                    Icons.Rounded.Group, HealthHues.Fitness, social, onClick = { nav.go("league/settings") }) { on ->
-                    SuperPrefs.update { it.copy(leagueEnabled = on, socialFeedEnabled = on) }; app.superhealth.league.LeagueWorker.schedule(photoCtx)
+                IconSwitchRow(tr("Groupe"), listOfNotNull(tr("Plugin installé · cartes, quêtes et fil"), friends).joinToString(" · "),
+                    Icons.Rounded.Group, HealthHues.Fitness, true, onClick = { nav.go("league/settings") }) { on ->
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { app.superhealth.modules.Modules.setSocial(photoCtx.applicationContext, on) }
                 }
             }
 

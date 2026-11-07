@@ -25,5 +25,6 @@ object Strings30 {
         "Appliquer ce jour à toute la semaine" to "Apply this day to the whole week",
         "%1\$s j" to "%1\$s d",
         "Moyenne de la semaine : %1\$s %2\$s · P %3\$s g" to "Weekly average: %1\$s %2\$s · P %3\$s g",
+        "Afficher le tracé GPS" to "Show the GPS track",
     )
 }

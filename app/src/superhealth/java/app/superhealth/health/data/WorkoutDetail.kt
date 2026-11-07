@@ -73,7 +73,7 @@ object WorkoutDetails {
     private val LOG = LoggerFactory.getLogger(WorkoutDetails::class.java)
 
     suspend fun load(ctx: Context, id: Long): WorkoutDetail? = withContext(Dispatchers.IO) {
-        if (app.superhealth.bridge.HcWorkouts.isHc(id)) return@withContext app.superhealth.bridge.HcWorkouts.detail(id) // Garmin Connect, NOOP…
+        if (app.superhealth.bridge.HcWorkouts.isHc(id)) return@withContext app.superhealth.bridge.HcWorkouts.fullDetail(ctx, id) // Garmin Connect, Fitbit, NOOP…
         if (id < 0) return@withContext app.superhealth.bridge.RunImport.detail(id) // séance importée (GPX, TCX, FIT sans montre)
         val summary = GBApplication.acquireDbReadOnly().use { db ->
             db.daoSession.baseActivitySummaryDao.load(id)?.also { it.device } // appareil chargé tant que la session est ouverte
@@ -163,7 +163,7 @@ object WorkoutDetails {
             (d.getNumber(E.CALORIES_BURNT, null) ?: d.getNumber(E.CALORIES_TOTAL, null))?.toDouble()?.takeIf { it > 0 }
     }.getOrDefault(null to null)
 
-    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    internal fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val r = 6_371_000.0
         val dLat = (lat2 - lat1) * PI / 180
         val dLon = (lon2 - lon1) * PI / 180

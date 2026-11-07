@@ -267,17 +267,24 @@ internal fun ArenaQuests(nav: NavHostController) {
             Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(tr(q.title), color = a.text.copy(alpha = if (q.claimed) 0.4f else 1f), fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2)
-                    q.note?.let { Text("⚔ " + tr(it), color = if (a.dark) Color(0xFFFF8A80) else Color(0xFFD03B30), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 2) }
+                    if (q.weekly && !q.claimed) Row(Modifier.padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        app.superhealth.ui.cards.ModePill(q.mode)
+                        q.note?.let { Text(tr(it), color = a.muted, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                    }
                     Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(7.dp).clip(RoundedCornerShape(50)).background(a.track)) {
                         Box(Modifier.fillMaxWidth((q.progress / q.target.coerceAtLeast(1).toFloat()).coerceIn(0.03f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50))
                             .background(Brush.horizontalGradient(listOf(q.difficulty.color.c(), Gold))))
                     }
                 }
                 Spacer(Modifier.width(12.dp))
-                if (q.complete && !q.claimed) Text("+${q.reward} ✦", color = Ink, fontWeight = FontWeight.Black, fontSize = 13.sp,
+                if (q.complete && !q.claimed) Text(CardStore.prize(q, short = true), color = Ink, fontWeight = FontWeight.Black, fontSize = 13.sp,
                     modifier = Modifier.clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Gold, Color(0xFFFFF2B0)))).clickable {
                         scope.launch { runCatching { CardStore.claim(ctx, q) }.onSuccess { Rumble.reveal(ctx) } } }.padding(horizontal = 12.dp, vertical = 7.dp))
-                else Text(if (q.claimed) "✓" else "${q.progress}/${q.target}", color = if (q.claimed) a.green else a.muted, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                else if (q.claimed) Text("✓", color = a.green, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                else Column(horizontalAlignment = Alignment.End) {
+                    Text("${q.progress}/${q.target}", color = a.muted, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    if (q.packs > 0) Text(CardStore.prize(q), color = a.gold, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                }
             }
         }
     }

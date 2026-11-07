@@ -119,7 +119,7 @@ fun CutoutScreen(nav: NavHostController) {
     CardScaffold("Ma photo de carte", { nav.popBackStack() }, Color(0xFF1FA67A)) {
         when {
             !installed -> {
-                Text(tr("Le détourage se fait sur ton téléphone : la photo ne quitte jamais l'appareil. Il faut d'abord télécharger le modèle MobileSAM (45 Mo, une seule fois)."),
+                Text(tr("Le détourage se fait sur ton téléphone. Seule la photo détourée est partagée : tous les membres du Groupe la voient sur ta carte. Il faut d'abord télécharger le modèle MobileSAM et son moteur (75 Mo, une seule fois)."),
                     color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
                 downloading?.let { p ->
                     LinearProgressIndicator({ p }, Modifier.fillMaxWidth().padding(top = 20.dp), color = Color(0xFF6FD3A0), trackColor = Color.White.copy(alpha = 0.1f))
@@ -139,7 +139,7 @@ fun CutoutScreen(nav: NavHostController) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                     PhotoSource.entries.forEach { src ->
                         val enabled = src != PhotoSource.DETOUREE || state.cutout
-                        ModeChip(tr(src.label), state.photo == src, if (enabled) Color(0xFF6FD3A0) else Color.White.copy(alpha = 0.3f)) { if (enabled) CardStore.update(ctx) { it.copy(photo = src) } }
+                        ModeChip(tr(src.label), state.photo == src, if (enabled) Color(0xFF6FD3A0) else Color.White.copy(alpha = 0.3f)) { if (enabled) { CardStore.update(ctx) { it.copy(photo = src) }; CardPhoto.publish(ctx) } }
                     }
                 }
                 AthleteCard(myFace(snap?.now), Modifier.fillMaxWidth(0.5f).align(Alignment.CenterHorizontally).padding(vertical = 12.dp), interactive = false)
@@ -151,7 +151,7 @@ fun CutoutScreen(nav: NavHostController) {
                 }
                 if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(top = 24.dp), color = Color(0xFF6FD3A0))
                 if (state.cutout) Text(tr("Retirer ma photo de la carte"), color = Color(0xFFFF7A8A), fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 24.dp).clickable { CardStore.cutoutFile(ctx).delete(); CardStore.update(ctx) { it.copy(cutout = false, photo = PhotoSource.PROFIL) }; CardPhoto.load(ctx) })
+                    modifier = Modifier.padding(top = 24.dp).clickable { CardStore.cutoutFile(ctx).delete(); CardStore.update(ctx) { it.copy(cutout = false, photo = PhotoSource.PROFIL) }; CardPhoto.load(ctx); CardPhoto.publish(ctx) })
             }
             else -> Editor(session!!, points, keepMode, busy, preview, onMode = { keepMode = it }, onTap = { p ->
                     if (!busy) {
@@ -169,12 +169,12 @@ fun CutoutScreen(nav: NavHostController) {
                     val r = result ?: return@Editor
                     scope.launch {
                         withContext(Dispatchers.IO) { CardStore.cutoutFile(ctx).outputStream().use { r.compress(Bitmap.CompressFormat.PNG, 100, it) } }
-                        CardStore.update(ctx) { it.copy(cutout = true, photo = PhotoSource.DETOUREE) }; CardPhoto.load(ctx); Rumble.reveal(ctx); nav.popBackStack()
+                        CardStore.update(ctx) { it.copy(cutout = true, photo = PhotoSource.DETOUREE) }; CardPhoto.load(ctx); CardPhoto.publish(ctx); Rumble.reveal(ctx); nav.popBackStack()
                     }
                 })
         }
         error?.let { Text(tr("Erreur") + " : " + it, color = Color(0xFFFF7A8A), modifier = Modifier.padding(top = 16.dp)) }
-        Text(tr("Modèle : MobileSAM (Apache-2.0), même approche que ReFra."), color = Color.White.copy(alpha = 0.35f), fontSize = 11.sp, textAlign = TextAlign.Center,
+        Text(tr("Modèle : MobileSAM (Apache-2.0)."), color = Color.White.copy(alpha = 0.35f), fontSize = 11.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 24.dp))
     }
 }

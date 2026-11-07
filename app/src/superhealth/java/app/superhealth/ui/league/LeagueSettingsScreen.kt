@@ -36,10 +36,8 @@ fun LeagueSettingsScreen(nav: NavHostController) {
                 SuperPrefs.update { it.copy(socialFeedEnabled = on) }
             }
             RowDivider(56.dp)
-            IconSwitchRow(tr("Classement et progression"), if (sh.leagueEnabled) tr("Cartes, quêtes et comparaisons entre amis")
-                else tr("Les données et les amis restent conservés"), Icons.Rounded.EmojiEvents, HealthHues.Fitness, sh.leagueEnabled) { on ->
-                SuperPrefs.update { it.copy(leagueEnabled = on) }; LeagueWorker.schedule(ctx)
-            }
+            // le Groupe se retire comme les autres plugins : collection, amis et publications restent sur le téléphone
+            SettingRow(tr("Plugin Groupe"), subtitle = tr("Mettre à jour ou désinstaller"), icon = Icons.Rounded.EmojiEvents) { nav.go("modules") }
         }
         GroupHeader(tr("Profil"))
         GroupCard {

@@ -52,6 +52,12 @@ object CardPhoto {
         val f = CardStore.cutoutFile(ctx)
         bitmap.value = if (f.exists()) runCatching { BitmapFactory.decodeFile(f.absolutePath)?.asImageBitmap() }.getOrNull() else null
     }
+    /** Publie (ou retire) la photo détourée publique de la carte, en arrière-plan, quand le Groupe est actif. */
+    fun publish(ctx: Context) {
+        if (!app.superhealth.SuperPrefs.settings.value.leagueEnabled) return
+        val appCtx = ctx.applicationContext
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { runCatching { app.superhealth.league.Faces.publishCardIfNeeded(appCtx) } }
+    }
 }
 
 /** Ma carte telle qu'elle s'affiche : photo choisie dans « Ma photo » (profil par défaut, détourée, ou aucune). */
@@ -69,10 +75,14 @@ fun myFace(stats: AthleteStats?, background: Pull? = CardStore.background(), inF
     }
 }
 
-/** Carte d'un ami : ses stats, son fond, son niveau et sa photo de profil partagée (chiffrée), fondue en portrait. */
+/**
+ * Carte d'un ami : ses stats, son fond, son niveau et sa photo détourée publique quand il en a une ; sinon sa photo de
+ * profil partagée (chiffrée), fondue en portrait.
+ */
 @Composable
 fun friendFace(f: League.Friend): CardFace {
     val ctx = LocalContext.current
+    val cutout = cardCutout(f.key)
     val photo by produceState<ImageBitmap?>(null, f.id, f.avatar) {
         val avatar = f.avatar?.takeIf { app.superhealth.league.ProfileAvatars.valid(it) } ?: return@produceState
         try {
@@ -81,7 +91,20 @@ fun friendFace(f: League.Friend): CardFace {
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { /* silhouette si la photo est indisponible */ }
     }
-    return CardFace(f.shown.lowercase().replace(" ", ""), f.athlete, f.cardBg?.let(Pull::of), photo, photoMode = PhotoMode.PORTRAIT, level = f.cardLevel ?: 1)
+    val name = f.shown.lowercase().replace(" ", "")
+    return if (cutout != null) CardFace(name, f.athlete, f.cardBg?.let(Pull::of), cutout, photoMode = PhotoMode.DETOUREE, level = f.cardLevel ?: 1)
+        else CardFace(name, f.athlete, f.cardBg?.let(Pull::of), photo, photoMode = PhotoMode.PORTRAIT, level = f.cardLevel ?: 1)
+}
+
+/** Photo détourée publique de la carte de la personne de clé [key] (amie ou non), ou null. */
+@Composable
+fun cardCutout(key: String?): ImageBitmap? {
+    val ctx = LocalContext.current
+    val bitmap by produceState<ImageBitmap?>(null, key) {
+        if (key == null || !app.superhealth.SuperPrefs.settings.value.leagueEnabled) return@produceState
+        value = runCatching { app.superhealth.league.Faces.cardBitmap(ctx, key)?.asImageBitmap() }.getOrNull()
+    }
+    return bitmap
 }
 
 /**
@@ -312,7 +335,7 @@ fun CardQuestsScreen(nav: NavHostController) {
     LaunchedEffect(Unit) { runCatching { CardStore.refresh(ctx) } }
     CardScaffold("Quêtes", { nav.popBackStack() }, Gold) {
         Wallet(state)
-        Text(tr("Deux ou trois quêtes chaque jour, une grande quête chaque semaine : elles suivent ton rythme et rapportent des éclats pour tes packs."),
+        Text(tr("Chaque jour, des quêtes qui rapportent des éclats. Chaque semaine, trois quêtes de domaines différents qui offrent des packs : en simple, en groupe ou en rapidité contre tes amis."),
             color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
         error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
         for (group in listOf("Aujourd'hui" to false, "Cette semaine" to true)) {
@@ -323,11 +346,30 @@ fun CardQuestsScreen(nav: NavHostController) {
         }
         // La quête de la semaine se règle sur les domaines choisis (musculation, nutrition, course, quotidien…).
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).clickable { nav.go("quests") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr(if (quests.none { it.weekly }) "Choisir les domaines de ma quête de la semaine" else "Domaines de ma quête de la semaine"), color = Color.White, modifier = Modifier.weight(1f))
+            Text(tr("Détail de mes quêtes de la semaine"), color = Color.White, modifier = Modifier.weight(1f))
             Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.4f))
         }
         Spacer(Modifier.height(32.dp))
     }
+}
+
+/** Mode d'une quête de la semaine : simple (la sienne), groupe (finie par tous) ou rapidité (le premier gagne). */
+@Composable
+internal fun ModePill(mode: CardStore.Mode) {
+    val (icon, color) = when (mode) { CardStore.Mode.SIMPLE -> "◆" to Color(0xFF8AE0FF); CardStore.Mode.GROUPE -> "◎" to Color(0xFF6FD3A0); CardStore.Mode.RAPIDITE -> "⚡" to Color(0xFFFF8A65) }
+    Text("$icon " + tr(mode.label).uppercase(), color = color, fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 1.sp,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 3.dp))
+}
+
+/** Récompense d'une quête : un pack offert (pastille dorée, en forme de mini pack) ou des éclats. */
+@Composable
+internal fun RewardChip(q: CardStore.Quest, dim: Boolean = q.claimed) {
+    val alpha = if (dim) 0.4f else 1f
+    if (q.packs > 0) Row(Modifier.clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Gold.copy(alpha = 0.22f * alpha), Color(0xFFFF8A1F).copy(alpha = 0.18f * alpha))))
+        .border(1.dp, Gold.copy(alpha = 0.55f * alpha), RoundedCornerShape(50)).padding(start = 5.dp, end = 10.dp, top = 3.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(width = 11.dp, height = 15.dp).clip(RoundedCornerShape(3.dp)).background(Brush.verticalGradient(listOf(Gold, Color(0xFFFF8A1F)))).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(3.dp)))
+        Text(CardStore.prize(q), color = Gold.copy(alpha = alpha), fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+    } else Text(CardStore.prize(q), color = EclatColor.copy(alpha = alpha), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
 }
 
 @Composable
@@ -339,14 +381,15 @@ private fun QuestRow(q: CardStore.Quest, onClaim: () -> Unit) {
     val color = q.difficulty.color.c()
     Column(Modifier.padding(bottom = 10.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard)
         .border(1.dp, if (q.complete && !q.claimed) color.copy(alpha = 0.7f) else Color.Transparent, RoundedCornerShape(18.dp)).padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DifficultyPill(q.difficulty)
+            if (q.weekly) ModePill(q.mode)
             Spacer(Modifier.weight(1f))
-            Text("+${q.reward} " + tr("éclats"), color = EclatColor, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+            RewardChip(q)
         }
         Text(tr(q.title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 8.dp))
         // Défi entre amis : qui l'a reçue, et ce qu'il faut pour le bonus.
-        q.note?.let { Text("⚔ " + tr(it), color = Color(0xFFFF8A80), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)) }
+        q.note?.let { Text(tr(it), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
         Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
                 Box(Modifier.fillMaxWidth((q.progress.toFloat() / q.target).coerceIn(0.02f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(color))
@@ -380,7 +423,7 @@ private fun BackgroundBonus(bg: Pull, level: Int) {
 @Composable
 fun PackRatesScreen(nav: NavHostController) {
     CardScaffold("Taux des packs", { nav.popBackStack() }) {
-        Text(tr("Trois cartes par pack, et une quatrième une fois sur quatre. Chaque booster contient les 36 fonds de son biome et les duos qui le croisent. Une carte est soit un duo (1 chance sur 200, deux stats renforcées), soit normale, brillante, animée ou chromatique : rien ne se cumule. Pas de boutique : tout se gagne à l'entraînement ou s'échange entre amis."),
+        Text(tr("Trois cartes par pack, et une quatrième une fois sur quatre. Chaque booster contient les 36 fonds de son biome et les duos qui le croisent. Une carte peut être un duo (1 chance sur 200, deux stats renforcées) et, en plus, brillante, animée ou chromatique : une épique chromatique duo existe. Pas de boutique : tout se gagne à l'entraînement ou s'échange entre amis."),
             color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
         SectionTitle("Charte des cartes")
         EffectChart()

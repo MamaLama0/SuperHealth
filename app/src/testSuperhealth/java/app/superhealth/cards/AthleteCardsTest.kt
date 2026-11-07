@@ -12,14 +12,14 @@ class AthleteCardsTest {
     @Test fun packRatesMatchTheDisplayedTablesAndGoldPacksTripleThem() {
         fun run(gold: Boolean): Triple<Double, Double, Double> {
             val rng = SplittableRandom(if (gold) 7 else 42)
-            var epic = 0; var rare = 0; var duo = 0; var chroma = 0
+            var epic = 0; var rare = 0; var duo = 0; var chroma = 0; var shinyDuo = 0
             val n = 300_000
             repeat(n) { k ->
                 val booster = Booster.entries[k % Booster.entries.size]
                 val r = PackEngine.open(rng.nextLong(), gold, booster)
                 assertTrue(r.pulls.size in 3..4)
-                // Rien ne se cumule : un duo est toujours en finition normale.
-                assertTrue(r.pulls.none { it.card.duo && it.finish != Finish.NORMALE })
+                // Duo et effet se cumulent : un duo peut être brillant, animé ou chromatique.
+                shinyDuo += r.pulls.count { it.card.duo && it.finish != Finish.NORMALE }
                 // Un booster ne donne que des fonds de son biome (les duos le croisent).
                 assertTrue(r.pulls.all { booster.element in it.card.elements })
                 if (r.pulls.any { it.card.rarity >= Rarity.RARE }) rare++
@@ -28,6 +28,7 @@ class AthleteCardsTest {
                 if (r.pulls.any { it.finish == Finish.CHROMATIQUE }) chroma++
             }
             if (!gold) assertEquals(PackEngine.chromaPerPack(), chroma / n.toDouble(), 0.003)
+            assertTrue(shinyDuo > 0)
             return Triple(rare / n.toDouble(), epic / n.toDouble(), duo / n.toDouble())
         }
         val (rare, epic, duo) = run(false)

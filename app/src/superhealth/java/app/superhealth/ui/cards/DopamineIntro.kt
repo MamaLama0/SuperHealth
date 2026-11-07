@@ -97,3 +97,46 @@ private fun Perk(icon: String, title: String, detail: String) = Row(verticalAlig
         Text(detail, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
     }
 }
+
+/**
+ * Cadeau du serveur (packs offerts avec une mise à jour, ou donnés à la main) : un pack doré qui flotte entre deux packs,
+ * le nombre de packs et le mot du cadeau, une fois par cadeau. Passe après la pop-up Dopamine.
+ */
+@Composable
+fun GiftIntro(onOpenPacks: () -> Unit) {
+    val ctx = LocalContext.current
+    val st by CardStore.state.collectAsState()
+    val gift = st.gifts.firstOrNull()?.takeIf { st.dopamineSeen } ?: return
+    fun close(open: Boolean) { CardStore.giftSeen(ctx, gift.id); if (open) onOpenPacks() }
+    val time by rememberCardTime()
+    val enter = remember(gift.id) { Animatable(0f) }
+    LaunchedEffect(gift.id) { enter.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 200f)) }
+    Dialog({ close(false) }, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF07122A), Ink, Color(0xFF231A05)))).drawBehind {
+            drawCircle(Brush.radialGradient(listOf(Gold.copy(alpha = 0.35f), Color.Transparent), Offset(size.width * 0.5f, size.height * 0.32f), size.width * 0.8f),
+                size.width * 0.8f, Offset(size.width * 0.5f, size.height * 0.32f))
+        }.clickable(remember { MutableInteractionSource() }, null) {}.systemBarsPadding().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.graphicsLayer { alpha = enter.value; translationY = (1 - enter.value) * 100f }) {
+                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.BottomCenter) {
+                    listOf(Element.GLACE to -1, Element.FEU to 1).forEach { (e, k) ->
+                        CardBackside(Modifier.width(100.dp).graphicsLayer {
+                            rotationZ = k * 13f * enter.value; translationX = k * 60.dp.toPx() * enter.value
+                            translationY = 16.dp.toPx() + kotlin.math.sin(time * 1.5f + k) * 5f
+                        }, glow = Color(e.mid.toInt()), time = { time }, element = e)
+                    }
+                    CardBackside(Modifier.width(124.dp).graphicsLayer { translationY = -8.dp.toPx() + kotlin.math.sin(time * 2f) * 7f }, glow = Gold, time = { time }, gold = true)
+                }
+                Text(tr("CADEAU"), color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 6.sp, modifier = Modifier.padding(top = 22.dp))
+                val amount = listOfNotNull(gift.packs.takeIf { it > 0 }?.let { "$it " + tr(if (it > 1) "packs offerts" else "pack offert") },
+                    gift.eclats.takeIf { it > 0 }?.let { "$it " + tr("éclats") }).joinToString(" + ")
+                Text(amount, fontWeight = FontWeight.Black, fontSize = 34.sp, textAlign = TextAlign.Center,
+                    style = TextStyle(brush = Brush.linearGradient(listOf(Gold, Color(0xFFFFB238), Color(0xFFFFF2B0))), shadow = Shadow(Gold.copy(alpha = 0.6f), Offset.Zero, 24f)))
+                if (gift.note.isNotBlank()) Text(gift.note, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+                GlowButton(tr(if (gift.packs > 0) "Ouvrir mes packs" else "Super"), Modifier.fillMaxWidth().padding(top = 28.dp), listOf(Gold, Color(0xFFFF8A1F)),
+                    badge = st.packsAvailable.takeIf { it > 0 }?.toString()) { close(gift.packs > 0) }
+                Text(tr("Plus tard"), color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp).clip(RoundedCornerShape(50))
+                    .clickable { close(false) }.padding(horizontal = 18.dp, vertical = 8.dp))
+            }
+        }
+    }
+}

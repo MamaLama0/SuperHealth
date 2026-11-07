@@ -56,7 +56,10 @@ class SuperHealthApp : GBApplication() {
         app.superhealth.league.LeagueWorker.schedule(this)
         app.superhealth.backup.BackupWorker.schedule(this)
         app.superhealth.update.UpdateWorker.schedule(this)
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { app.superhealth.modules.Modules.upgradeBundled(this@SuperHealthApp) }
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            app.superhealth.modules.Modules.upgradeBundled(this@SuperHealthApp)
+            app.superhealth.modules.Modules.migrateSocial(this@SuperHealthApp)
+        }
         // icône du lanceur : exactement un alias actif (l'ancien code réactivait le rose à côté de la couleur choisie)
         runCatching { app.superhealth.ui.LauncherIcon.repair(this, NutriApp.repository.prefs.settings.value.accent) }
     }

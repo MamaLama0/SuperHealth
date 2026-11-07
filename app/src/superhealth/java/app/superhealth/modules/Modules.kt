@@ -41,7 +41,7 @@ object Modules {
     const val MEDITATION = "meditation"
     const val LEAGUE = "league"
     const val HIKING = "hiking"
-    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION, HIKING)
+    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION, HIKING, LEAGUE)
 
     @Serializable
     data class Module(
@@ -154,8 +154,30 @@ object Modules {
     fun active(kind: String): Installed? = _installed.value.firstOrNull { it.kind == kind && it.enabled }
     fun isActive(kind: String) = when (kind) {
         COACH -> SuperPrefs.settings.value.coachEnabled
-        LEAGUE -> SuperPrefs.settings.value.leagueEnabled
         else -> active(kind) != null
+    }
+
+    /**
+     * Plugin Groupe : cartes Athlète, packs, quêtes, amis, fil et cercles, séparés de l'app de base. Il s'installe comme les
+     * autres (une copie est livrée avec l'app, l'installation marche hors ligne) ; le retirer coupe tout le social, mais
+     * collection, amis et publications restent dans files/league : tout revient en le réinstallant.
+     */
+    fun socialInstalled() = active(LEAGUE) != null
+    suspend fun setSocial(ctx: Context, on: Boolean): Boolean =
+        if (on) ensure(ctx, LEAGUE) else { _installed.value.filter { it.kind == LEAGUE }.forEach { uninstall(ctx, it.id) }; true }
+
+    /**
+     * Passage à la 3.7 : qui avait le Groupe le retrouve installé en plugin, sans geste. Sans plugin, les réglages du Groupe
+     * suivent l'état du plugin (une installation interrompue ne laisse pas le social à moitié allumé).
+     */
+    suspend fun migrateSocial(ctx: Context) {
+        val s = SuperPrefs.settings.value
+        val plugin = _installed.value.firstOrNull { it.kind == LEAGUE }
+        when {
+            plugin == null && s.leagueEnabled -> if (ensure(ctx, LEAGUE)) SuperPrefs.update { it.copy(socialFeedEnabled = s.socialFeedEnabled) }
+            plugin == null || !plugin.enabled -> if (s.leagueEnabled || s.socialFeedEnabled) SuperPrefs.update { it.copy(leagueEnabled = false, socialFeedEnabled = false) }
+            !s.leagueEnabled -> SuperPrefs.update { it.copy(leagueEnabled = true) }
+        }
     }
 
     /** Dossier du module actif du type [kind] (contenu décompressé), ou null. */
@@ -350,7 +372,12 @@ object Modules {
             HIKING -> app.superhealth.hiking.Hiking.invalidate()
             STRETCH -> { app.superhealth.stretch.Stretch.invalidate(); if (on) addCard(app.superhealth.DashCard.STRETCH) }
             MEDITATION -> { app.superhealth.meditation.Meditation.invalidate(); if (on) addCard(app.superhealth.DashCard.MEDITATION) }
-            LEAGUE -> if (on) addCard(app.superhealth.DashCard.LEAGUE)
+            LEAGUE -> {
+                // le plugin porte l'interrupteur du Groupe : installé et activé, tout le social s'allume ; retiré, tout s'éteint
+                SuperPrefs.update { it.copy(leagueEnabled = on, socialFeedEnabled = on) }
+                app.superhealth.league.LeagueWorker.schedule(ctx)
+                if (on) addCard(app.superhealth.DashCard.LEAGUE)
+            }
         }
     }
 

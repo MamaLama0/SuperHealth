@@ -180,7 +180,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
         OutlinedTextField(query, { query = it }, label = { Text(tr("Rechercher un plugin")) }, singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Tous", "Installés", "Mises à jour", "Nutrition", "Bien-être", "Coaching").forEach { label ->
+            listOf("Tous", "Installés", "Mises à jour", "Nutrition", "Bien-être", "Coaching", "Social").forEach { label ->
                 FilterChip(filter == label, { filter = label }, label = { Text(tr(label)) })
             }
         }
@@ -192,9 +192,10 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                 "Nutrition" -> kind == Modules.MEALS
                 "Bien-être" -> kind in setOf(Modules.MEDS, Modules.MEDITATION, Modules.STRETCH, Modules.HIKING)
                 "Coaching" -> kind == Modules.COACH
+                "Social" -> kind == Modules.LEAGUE
                 else -> true
             }
-            kind !in setOf(Modules.LEAGUE, "friends", "health_index", "health-index", "healthIndex") && id !in setOf("friends", "health-index", "health_index", "healthIndex") && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
+            kind !in setOf("friends", "health_index", "health-index", "healthIndex") && id !in setOf("friends", "health-index", "health_index", "healthIndex") && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
                 .any { it.contains(query.trim(), ignoreCase = true) }
         }
         if (ids.isEmpty()) MfCard {
@@ -225,10 +226,6 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                     else Icon(Icons.Rounded.Add, tr("Détails"), tint = Mf.colors.textSecondary)
                 }
             }
-        }
-        Spacer(Modifier.height(8.dp))
-        GroupCard {
-            SettingRow(tr("Amis et indice de santé"), subtitle = tr("Inclus dans l'application"), icon = Icons.Rounded.EmojiEvents) { nav.go("league") }
         }
 
         if (options) {
@@ -382,7 +379,8 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
     if (confirmRemove) AlertDialog(
         onDismissRequest = { confirmRemove = false }, containerColor = Mf.colors.card,
         title = { Text(trf("Désinstaller %1\$s ?", name)) },
-        text = { Text(tr("Son contenu est supprimé du téléphone. Vos données (séances, journal…) ne sont pas touchées : tout revient en le réinstallant.")) },
+        text = { Text(tr(if (kind == Modules.LEAGUE) "Cartes, packs, quêtes, amis et fil disparaissent de l'app. Ta collection, tes amis et tes publications sont conservés : tout revient en le réinstallant."
+            else "Son contenu est supprimé du téléphone. Vos données (séances, journal…) ne sont pas touchées : tout revient en le réinstallant.")) },
         confirmButton = { TextButton(onClick = { confirmRemove = false; Modules.uninstall(ctx, id) }) { Text(tr("Désinstaller"), color = app.superhealth.ui.theme.Base.Red) } },
         dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text(tr("Annuler"), color = Mf.colors.text) } },
     )

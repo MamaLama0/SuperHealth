@@ -20,6 +20,7 @@ class LeagueWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             Relay.sync(applicationContext)
             // Visage public et demandes d'ami : facultatifs, un serveur pas encore à jour ne bloque pas la synchro.
             runCatching { Faces.publishIfNeeded(applicationContext) }
+            runCatching { Faces.publishCardIfNeeded(applicationContext) }
             runCatching { FriendRequests.refresh(applicationContext) }
             // Mettre à jour les cartes d'accueil après la réception des scores, sans attendre l'ouverture de l'app.
             app.superhealth.ui.widget.DayWidgets.refresh(applicationContext)

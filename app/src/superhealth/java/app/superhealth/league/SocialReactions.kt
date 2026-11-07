@@ -51,6 +51,20 @@ object SocialReactions {
             visible(list, now).firstOrNull { it.author == author && it.post == post }?.kind
         }.groupingBy { it }.eachCount()
 
+    /**
+     * Réaction à un commentaire : même événement signé qu'une réaction de publication, adressé au commentaire (son
+     * auteur et son identifiant). Les anciennes versions l'ignorent, faute de publication de ce numéro.
+     */
+    suspend fun reactToComment(ctx: Context, comment: GroupHistory.Event, kind: String): Boolean {
+        check(League.available() && comment.reply != null && !comment.deleted && validKind(kind))
+        val author = GroupHistory.author(comment.key)
+        val previous = GroupHistory.selectedReaction(author, comment.id)
+        GroupHistory.recordReaction(ctx, author, comment.id, if (previous == kind) null else kind)
+        return try { Relay.publishOnly(ctx); true }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { false }
+    }
+
     suspend fun react(ctx: Context, author: String, post: SocialPosts.Post, kind: String): Boolean {
         check(League.available())
         check(GroupHistory.posts(ctx).any { (p, friend) -> p.id == post.id && (friend?.id ?: League.myId()) == author } && SocialPosts.valid(post))

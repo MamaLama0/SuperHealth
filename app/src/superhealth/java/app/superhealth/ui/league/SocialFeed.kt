@@ -71,7 +71,8 @@ fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.com
             if (page == 0) SocialFeed(nav, active = pager.settledPage == 0) else DashboardScreen(vm, nav)
         }
     } else DashboardScreen(vm, nav)
-    if (!settings.socialFeedIntroSeen) AlertDialog(onDismissRequest = { SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } },
+    // Présentation du fil : seulement une fois le plugin Groupe installé, jamais dans l'expérience de base.
+    if (!settings.socialFeedIntroSeen && settings.socialFeedEnabled && settings.leagueEnabled) AlertDialog(onDismissRequest = { SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } },
         icon = { GameArt(GameArtKind.TROPHY, Modifier.size(64.dp)) },
         title = { Text(tr("Bienvenue dans le Groupe")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -364,7 +365,9 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
         if (post.record != null || sharedWorkout != null || sharedActivity != null) {
             SharedPostVisual(post.record, sharedWorkout, sharedActivity)
         } else if (sharedCard != null) {
-            app.superhealth.ui.cards.SharedCardVisual(sharedCard)
+            // « Ma carte Athlète » : la vraie carte de l'auteur, avec sa photo détourée ; sinon le fond partagé.
+            if (post.title.startsWith("Ma carte Athlète")) app.superhealth.ui.cards.SharedAthleteVisual(sharedCard, friend)
+            else app.superhealth.ui.cards.SharedCardVisual(sharedCard)
             app.superhealth.cards.CardShare.caption(post.detail).takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
             }

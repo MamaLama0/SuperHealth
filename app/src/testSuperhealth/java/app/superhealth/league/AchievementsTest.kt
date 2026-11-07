@@ -30,6 +30,19 @@ class AchievementsTest {
         val early = Progression.weekStreaks(events, monday + 2, listOf(Progression.Track.FOOD)) { _, _ -> 4 }.single()
         assertFalse("semaine pas encore tenue : la série continue sans elle", early.done); assertEquals(2, early.current)
     }
+    @Test fun oneMissedWeekDoesNotBreakTheStreakButTwoDo() {
+        val monday = java.time.LocalDate.of(2026, 11, 2).toEpochDay()
+        val events = mutableMapOf<Long, Set<Progression.Track>>()
+        fun days(week: Int, n: Int) = (0 until n).forEach { events[monday - 7L * week + it] = setOf(Progression.Track.FOOD) }
+        // tenue, tenue, manquée, tenue, puis la semaine en cours pas encore tenue
+        days(4, 3); days(3, 3); days(2, 1); days(1, 3); days(0, 1)
+        val s = Progression.weekStreaks(events, monday + 1, listOf(Progression.Track.FOOD)) { _, _ -> 3 }.single()
+        assertEquals("la semaine manquée ne compte pas mais ne casse rien", 3, s.current); assertEquals(3, s.best)
+        // deux semaines manquées de suite : la série repart de zéro (seule la semaine tenue depuis compte)
+        events.keys.filter { it in monday - 21 until monday - 7 }.forEach(events::remove)
+        val broken = Progression.weekStreaks(events, monday + 1, listOf(Progression.Track.FOOD)) { _, _ -> 3 }.single()
+        assertEquals(1, broken.current); assertEquals(1, broken.best)
+    }
     @Test fun oldProfilesStayValidWithoutBadgeHighlighting() {
         assertTrue(Achievements.validDecor("xp_1000", listOf("strength_50", "food_30")))
         assertFalse(Achievements.validDecor(null, listOf("food_30", "food_30")))

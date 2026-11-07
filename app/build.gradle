@@ -194,8 +194,8 @@ android {
             manifestPlaceholders += [shPebbleAuthority: shAppId == "app.superhealth" ? "com.getpebble.android.nopebble.superhealth.provider" : "${shAppId}.pebble.provider",
                 superhealthLabel: shAppId == "app.superhealth" ? "@string/app_name" : "SuperHealth Test"]
             // Même nom de version et même numéro de build que l'app iOS (MARKETING_VERSION / CURRENT_PROJECT_VERSION de iosApp/project.yml).
-            versionName providers.gradleProperty("superhealthTestVersion").getOrElse("3.6.5")
-            versionCode providers.gradleProperty("superhealthTestCode").map { it.toInteger() }.getOrElse(61)
+            versionName providers.gradleProperty("superhealthTestVersion").getOrElse("3.7")
+            versionCode providers.gradleProperty("superhealthTestCode").map { it.toInteger() }.getOrElse(62)
             // Navigation Compose, Room et Health Connect côté nutrition/musculation : Android 8.0 minimum (comme La Bouffe et La Salle)
             minSdk = 26
             // Interface en français et en anglais seulement : les ~70 langues de Gadgetbridge sont retirées (resources.arsc).
@@ -321,6 +321,8 @@ android {
         jniLibs.keepDebugSymbols.add("**/libimage_processing_util_jni.so")
         jniLibs.keepDebugSymbols.add("**/libsurface_util_jni.so")
         jniLibs.keepDebugSymbols.add("**/libandroidx.graphics.path.so")
+        // ONNX Runtime (31 Mo) : seul le détourage du Groupe s'en sert, ses bibliothèques sont téléchargées à la demande (Cutout)
+        jniLibs.excludes += ["**/libonnxruntime.so"]
     }
 }
 
@@ -445,8 +447,7 @@ dependencies {
     implementation libs.lottie.compose
 
     // SuperHealth modules (nutrition, training)
-    superhealthImplementation "app.rive:rive-android:11.16.0"
-    // Détourage MobileSAM des photos de carte (comme ReFra)
+    // Détourage MobileSAM des photos de carte (bibliothèques natives téléchargées à la demande)
     superhealthImplementation "com.microsoft.onnxruntime:onnxruntime-android:1.22.0"
     superhealthImplementation libs.androidx.navigation.compose
     superhealthImplementation libs.room.runtime

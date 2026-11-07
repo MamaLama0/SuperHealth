@@ -95,7 +95,7 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
                 detail = tr("Comparer nos progrès à notre rythme")
             }
             Kind.OVERVIEW -> {
-                value = app.superhealth.cards.CardStore.state.value.let { (it.bonusPacks + it.eclats / app.superhealth.cards.CardStore.PACK_PRICE).toString() }; unit = tr("packs")
+                value = app.superhealth.cards.CardStore.state.value.let { (it.bonusPacks + it.eclats / it.price.coerceAtLeast(1)).toString() }; unit = tr("packs")
                 val friends = trf(if (state.friends.size == 1) "%1\$s ami" else "%1\$s amis", state.friends.size)
                 val badges = trf(if (state.earnedBadges.size == 1) "%1\$s badge" else "%1\$s badges", state.earnedBadges.size)
                 caption = "$friends · $badges"
@@ -113,7 +113,7 @@ abstract class SocialWidget(private val kind: Kind) : GlanceAppWidget() {
                     caption = tr(q.metric.title)
                     compactCaption = tr(q.metric.focus.label)
                     fraction = q.progress.toFloat() / q.target.coerceAtLeast(1)
-                    detail = if (q.claimed) tr("Récompense récupérée") else if (q.complete) tr("Récompense à récupérer") else trf("+%1\$s éclats", app.superhealth.ui.league.weeklyEclats(q))
+                    detail = if (q.claimed) tr("Récompense récupérée") else if (q.complete) tr("Récompense à récupérer") else app.superhealth.ui.league.packLabel(app.superhealth.cards.CardStore.state.value.rewards.weekly.packs)
                 }
             }
         }

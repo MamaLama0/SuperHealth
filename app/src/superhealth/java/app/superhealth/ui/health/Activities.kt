@@ -350,6 +350,9 @@ private fun SmallActivityTile(a: Bridge.Activity, history: List<app.superhealth.
 
 private val routeCache = java.util.concurrent.ConcurrentHashMap<String, List<Pair<Double, Double>>>()
 
+/** Relit les tracés absents (après l'accord de Health Connect pour une séance d'une autre app). */
+internal fun retryMissingRoutes() { routeCache.values.removeAll { it.isEmpty() } }
+
 /** Tracé GPS d'une activité (latitude, longitude), allégé à 150 points et gardé en mémoire et sur le disque (lire une séance de montre est long) ; null sans tracé. */
 suspend fun routeOf(ctx: Context, a: Bridge.Activity): List<Pair<Double, Double>>? {
     routeCache[a.key]?.let { return it.takeIf { r -> r.isNotEmpty() } }
