@@ -18,3 +18,6 @@ expect fun cpuCores(): Int
  * reconnu ou si le détourage n'est pas disponible.
  */
 expect suspend fun cutoutPerson(photo: ByteArray): ByteArray?
+
+/** Photo détourée (PNG transparent) réduite à [maxHeight] px de haut et encodée en WebP [quality], transparence gardée. */
+expect fun encodeCardPhoto(png: ByteArray, maxHeight: Int, quality: Int): ByteArray?

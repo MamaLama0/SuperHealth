@@ -59,6 +59,8 @@ object SuperHealth {
         started = true
         SuperPrefs.init(appContext)
         app.superhealth.modules.Modules.init(appContext)
+        // 3.7 : le Groupe devient un plugin, installé d'office pour qui l'avait (copie livrée avec l'app)
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch { app.superhealth.modules.Modules.migrateSocial(appContext) }
         app.superhealth.coach.Coach.init(appContext)
         app.superhealth.bridge.RunImport.init(appContext)
         app.superhealth.meals.MealPlanner.init(appContext)

@@ -194,7 +194,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                 "Coaching" -> kind == Modules.COACH
                 else -> true
             }
-            kind != Modules.LEAGUE && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
+            matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
                 .any { it.contains(query.trim(), ignoreCase = true) }
         }
         if (ids.isEmpty()) MfCard {
@@ -225,10 +225,6 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                     else Icon(Icons.Rounded.Add, tr("Détails"), tint = Mf.colors.textSecondary)
                 }
             }
-        }
-        Spacer(Modifier.height(8.dp))
-        GroupCard {
-            SettingRow(tr("Amis et indice de santé"), subtitle = tr("Inclus dans l'application"), icon = Icons.Rounded.EmojiEvents) { nav.go("league") }
         }
 
         if (options) {

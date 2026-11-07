@@ -16,7 +16,10 @@ class WeeklyQuestsTest {
         val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), all, evidence)
         assertEquals(WeeklyQuests.Metric.FOOD, w.quests.first().metric)
         assertEquals(WeeklyQuests.Reason.FOOD_GAP, w.quests.first().reason)
-        assertEquals(1, w.quests.size) // no artificial side quest when other habits are already consistent
+        // Trois quêtes, jamais deux du même genre ni (quand c'est possible) du même domaine.
+        assertEquals(WeeklyQuests.COUNT, w.quests.size)
+        assertEquals(w.quests.size, w.quests.map { it.metric }.distinct().size)
+        assertEquals(w.quests.size, w.quests.map { it.metric.focus }.distinct().size)
         val onlyRun = WeeklyQuests.update(null, monday, tracks, emptyMap(), setOf(WeeklyQuests.Focus.RUN), evidence.copy(previous14 = emptyMap()))
         assertEquals(listOf(WeeklyQuests.Metric.RUN), onlyRun.quests.map { it.metric })
         assertEquals(1, onlyRun.quests.first().target)
@@ -31,7 +34,7 @@ class WeeklyQuestsTest {
         assertTrue(w.quests[1].secondary)
         assertNotEquals(w.quests[0].metric.focus, w.quests[1].metric.focus)
         assertEquals(80, w.quests[0].reward)
-        assertEquals(30, w.quests[1].reward)
+        assertEquals(15, w.quests[1].reward)
     }
     @Test fun plateauEncouragesUsefulFeedbackInsteadOfAForcedPersonalRecord() {
         assertFalse(WeeklyQuests.plateau(listOf(100.0, 100.0)))
@@ -70,7 +73,9 @@ class WeeklyQuestsTest {
     @Test fun missingHealthDataIsAStarterGoalRatherThanAnInventedFailure() {
         val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), setOf(WeeklyQuests.Focus.DAILY),
             WeeklyQuests.Evidence(mapOf(WeeklyQuests.Metric.FOOD to 10, WeeklyQuests.Metric.MIND to 4), healthData = false))
-        assertEquals(WeeklyQuests.Metric.STEPS, w.quests.single().metric)
-        assertEquals(WeeklyQuests.Reason.START, w.quests.single().reason)
+        // trois quêtes depuis la 3.7 : la principale reste un objectif de départ, sans échec inventé
+        assertEquals(WeeklyQuests.Metric.STEPS, w.quests.first().metric)
+        assertEquals(WeeklyQuests.Reason.START, w.quests.first().reason)
+        assertEquals(w.quests.size, w.quests.map { it.metric }.distinct().size)
     }
 }

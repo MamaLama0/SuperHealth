@@ -38,7 +38,7 @@ object Modules {
     const val STRETCH = "stretch"
     const val MEDITATION = "meditation"
     const val LEAGUE = "league"
-    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION)
+    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION, LEAGUE)
 
     @Serializable
     data class Module(
@@ -114,6 +114,10 @@ object Modules {
             runCatching { json.decodeFromString(Index.serializer(), ctx.assets.open("plugins/index.json").bufferedReader().use { it.readText() }) }
                 .getOrDefault(Index()).modules.filter { it.kind in engines }.map { Entry(it, OFFICIAL, true, URI(OFFICIAL).resolve(it.url).toString()) }
         }.filter { it.module.kind in engines && it.source in sources().map { source -> source.first } }
+        // catalogue livré avec l'app : le Groupe s'installe même hors ligne
+        val bundled = runCatching { json.decodeFromString(Index.serializer(), ctx.assets.open("plugins/index.json").bufferedReader().use { it.readText() }) }
+            .getOrDefault(Index()).modules.filter { it.kind == LEAGUE }.map { Entry(it, OFFICIAL, true, URI(OFFICIAL).resolve(it.url).toString()) }
+        catalog.value = catalog.value + bundled.filter { b -> catalog.value.none { it.module.id == b.module.id } }
         // module dont le moteur a quitté l'app (l'Aventure, retirée en 1.3) : effacé
         val (kept, gone) = saved.partition { it.kind in engines }
         gone.forEach { File(root, it.id).deleteRecursively() }
@@ -129,8 +133,27 @@ object Modules {
     fun active(kind: String): Installed? = _installed.value.firstOrNull { it.kind == kind && it.enabled }
     fun isActive(kind: String) = when (kind) {
         COACH -> SuperPrefs.settings.value.coachEnabled
-        LEAGUE -> SuperPrefs.settings.value.leagueEnabled
         else -> active(kind) != null
+    }
+
+    /**
+     * Plugin Groupe : cartes Athlète, packs, quêtes, amis et défis, séparés de l'app de base. Il s'installe comme les
+     * autres (une copie est livrée avec l'app, l'installation marche hors ligne) ; le retirer coupe tout le social, mais
+     * collection et amis restent sur le téléphone : tout revient en le réinstallant.
+     */
+    fun socialInstalled() = active(LEAGUE) != null
+    suspend fun setSocial(ctx: Context, on: Boolean): Boolean =
+        if (on) ensure(ctx, LEAGUE) else { _installed.value.filter { it.kind == LEAGUE }.forEach { uninstall(ctx, it.id) }; true }
+
+    /** Passage à la 3.7 : qui avait le Groupe le retrouve installé en plugin ; sinon l'interrupteur suit l'état du plugin. */
+    suspend fun migrateSocial(ctx: Context) {
+        val s = SuperPrefs.settings.value
+        val plugin = _installed.value.firstOrNull { it.kind == LEAGUE }
+        when {
+            plugin == null && s.leagueEnabled -> ensure(ctx, LEAGUE)
+            plugin == null || !plugin.enabled -> if (s.leagueEnabled) SuperPrefs.update { it.copy(leagueEnabled = false) }
+            !s.leagueEnabled -> SuperPrefs.update { it.copy(leagueEnabled = true) }
+        }
     }
 
     /** Dossier du module actif du type [kind] (contenu décompressé), ou null. */
@@ -200,7 +223,9 @@ object Modules {
         runCatching {
             if (!compatible(ctx, m)) error(tr("mettez d'abord SuperHealth à jour"))
             if (!acceptable(e.archive)) error(tr("adresse refusée (HTTPS requis)"))
-            val (code, archive) = httpCall(e.archive, timeoutMs = 120_000)
+            // copie livrée avec l'app (le Groupe) : pas de réseau
+            val bundled = if (e.verified && e.source == OFFICIAL) app.superhealth.platform.readAsset("plugins/${m.id}-${m.version}.zip") else null
+            val (code, archive) = bundled?.let { 200 to it } ?: httpCall(e.archive, timeoutMs = 120_000)
             if (code !in 200..299) error(trf("téléchargement refusé (%1\$s)", code))
             if (archive.size > MAX_ARCHIVE) error(tr("archive trop volumineuse"))
             setJob(m.id, Job.Downloading(1f))
@@ -283,7 +308,12 @@ object Modules {
             MEDS -> { app.superhealth.meds.Meds.invalidate(); app.superhealth.meds.Meds.schedule(ctx) }
             STRETCH -> { app.superhealth.stretch.Stretch.invalidate(); if (on) addCard(app.superhealth.DashCard.STRETCH) }
             MEDITATION -> { app.superhealth.meditation.Meditation.invalidate(); if (on) addCard(app.superhealth.DashCard.MEDITATION) }
-            LEAGUE -> if (on) addCard(app.superhealth.DashCard.LEAGUE)
+            LEAGUE -> {
+                // le plugin porte l'interrupteur du Groupe : installé et activé, le social s'allume ; retiré, il s'éteint
+                SuperPrefs.update { it.copy(leagueEnabled = on) }
+                app.superhealth.league.LeagueWorker.schedule(ctx)
+                if (on) addCard(app.superhealth.DashCard.LEAGUE)
+            }
         }
     }
 

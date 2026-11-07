@@ -34,11 +34,18 @@ object Progression {
             val held = generateSequence(first) { it + 7 }.takeWhile { it <= now }.associateWith { w ->
                 (w until w + 7).count { d -> d <= today && t in events[d].orEmpty() } }
             val ok = held.mapValues { (w, n) -> n >= need(t, w).coerceIn(1, 7) }
-            var best = 0; var run = 0
-            ok.entries.sortedBy { it.key }.forEach { if (it.value) { run++; best = maxOf(best, run) } else run = 0 }
+            // pas besoin d'être parfait : une semaine manquée seule ne casse rien, deux de suite remettent à zéro
+            var best = 0; var run = 0; var missed = 0
+            ok.entries.sortedBy { it.key }.filter { it.key < now || it.value }.forEach {
+                if (it.value) { run++; missed = 0; best = maxOf(best, run) } else if (++missed >= 2) run = 0
+            }
             val done = ok[now] == true
-            var current = 0; var w = if (done) now else now - 7
-            while (ok[w] == true) { current++; w -= 7 }
+            var current = 0; var w = if (done) now else now - 7; var gap = false
+            while (w >= first) {
+                // une semaine manquée seule est pardonnée si la précédente était tenue
+                if (ok[w] == true) { current++; gap = false } else if (!gap && ok[w - 7] == true) gap = true else break
+                w -= 7
+            }
             WeekStreak(t.name, current, best, done, held[now] ?: 0, need(t, now).coerceIn(1, 7))
         }
     }

@@ -86,3 +86,12 @@ actual suspend fun cutoutPerson(photo: ByteArray): ByteArray? = withContext(Disp
     val rendered = CIContext().createCGImage(output, fromRect = source.extent) ?: return@withContext null
     try { UIImagePNGRepresentation(UIImage(cGImage = rendered))?.toByteArray() } finally { CGImageRelease(rendered) }
 }
+
+actual fun encodeCardPhoto(png: ByteArray, maxHeight: Int, quality: Int): ByteArray? = runCatching {
+    val image = org.jetbrains.skia.Image.makeFromEncoded(png)
+    val scale = minOf(1f, maxHeight.toFloat() / image.height)
+    val w = (image.width * scale).toInt().coerceAtLeast(1); val h = (image.height * scale).toInt().coerceAtLeast(1)
+    val surface = org.jetbrains.skia.Surface.makeRasterN32Premul(w, h)
+    surface.canvas.drawImageRect(image, org.jetbrains.skia.Rect.makeWH(w.toFloat(), h.toFloat()))
+    surface.makeImageSnapshot().encodeToData(org.jetbrains.skia.EncodedImageFormat.WEBP, quality)?.bytes
+}.getOrNull()

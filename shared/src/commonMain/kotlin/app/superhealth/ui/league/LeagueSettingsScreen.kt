@@ -31,9 +31,8 @@ fun LeagueSettingsScreen(nav: NavHostController) {
     var confirmRotate by remember { mutableStateOf(false) }; var message by remember { mutableStateOf<String?>(null) }
     DetailScaffold(tr("Classement et progression"), onBack = { nav.popBackStack() }) {
         GroupCard {
-            SwitchRow(tr("Activer le classement et la progression"), tr("Les données et les amis restent conservés à la désactivation"), sh.leagueEnabled) { on ->
-                SuperPrefs.update { it.copy(leagueEnabled = on) }; LeagueWorker.schedule(ctx)
-            }
+            // le Groupe se retire comme les autres plugins : collection et amis restent sur le téléphone
+            SettingRow(tr("Plugin Groupe"), subtitle = tr("Mettre à jour ou désinstaller")) { nav.go("modules") }
         }
         SectionLabel(tr("Mes séries"))
         Text(tr("Chaque suivi a un objectif. La musculation suit les séances du programme ; les jours de repos restent libres."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)

@@ -604,8 +604,6 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     var staticTdee by remember { mutableStateOf(num(s.energyValue(program.staticTdee), 0)) }
     var initTdee by remember { mutableStateOf(program.initialTdeeOverride?.let { num(s.energyValue(it), 0) } ?: "") }
     var validTargets by remember { mutableStateOf(true) }
-    var individualDays by remember { mutableStateOf(program.manualDays.size == 7) }
-    var editDay by remember { mutableIntStateOf(1) }
     val goalType = a?.currentGoal?.type ?: GoalType.MAINTENANCE
 
     DetailScaffold(tr("Programme"), onBack) {
@@ -680,22 +678,13 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                     }
                     Text(tr("Les calories s'ajustent au check-in. Vous choisissez les proportions des macros à partir de ce modèle."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                     ChipChoice((1..7).toList(), p.checkInDay, { DAY_NAMES[it - 1] }) { p = p.copy(checkInDay = it) }
-                } else {
-                    app.superhealth.nutrition.ui.components.SwitchRow(tr("Cibles différentes selon le jour"), null, individualDays) { on ->
-                        individualDays = on
-                        p = p.copy(manualDays = if (on) List(7) { app.superhealth.nutrition.domain.ManualTargets.base(p) } else emptyList())
-                    }
-                    if (individualDays) ChipChoice((1..7).toList(), editDay, { DAY_NAMES[it - 1].take(3) }) { editDay = it }
-                }
-                androidx.compose.runtime.key(p.style, individualDays, editDay) {
-                    TargetEditor(if (individualDays && p.style == ProgramStyle.MANUAL) app.superhealth.nutrition.domain.ManualTargets.forDay(p, editDay) else app.superhealth.nutrition.domain.ManualTargets.base(p), s) { t ->
-                        validTargets = t != null
-                        if (t != null) {
-                            p = p.copy(manualKcal = t.kcal, manualProtein = t.protein, manualFat = t.fat, manualCarbs = t.carbs,
-                                manualDays = if (individualDays && p.style == ProgramStyle.MANUAL) p.manualDays.toMutableList().also { it[editDay - 1] = t } else p.manualDays)
+                    androidx.compose.runtime.key(p.style) {
+                        TargetEditor(app.superhealth.nutrition.domain.ManualTargets.base(p), s) { t ->
+                            validTargets = t != null
+                            if (t != null) p = app.superhealth.nutrition.domain.ManualTargets.withBase(p, t)
                         }
                     }
-                }
+                } else ManualWeekEditor(p, s, { validTargets = it }) { p = it }
             }
             app.superhealth.nutrition.ui.components.SwitchRow(tr("Objectif de poids"), tr("Désactivez pour suivre seulement vos calories et macros"), p.weightGoalEnabled) {
                 p = p.copy(weightGoalEnabled = it)

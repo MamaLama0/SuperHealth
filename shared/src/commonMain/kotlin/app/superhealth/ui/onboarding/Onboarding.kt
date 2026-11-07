@@ -269,9 +269,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var programStyle by rememberSaveable { mutableStateOf(program.style) }
     var weightGoal by rememberSaveable { mutableStateOf(program.weightGoalEnabled) }
     var manualTarget by remember { mutableStateOf<app.superhealth.nutrition.domain.DayTarget?>(app.superhealth.nutrition.domain.ManualTargets.base(program)) }
-    var individualDays by rememberSaveable { mutableStateOf(program.manualDays.size == 7) }
-    var manualDays by remember { mutableStateOf((1..7).map { app.superhealth.nutrition.domain.ManualTargets.forDay(program, it) }) }
-    var editDay by rememberSaveable { mutableIntStateOf(1) }
+    // semaine du programme manuel (jours ON / OFF ou jour par jour), réglée par ManualWeekEditor
+    var manualWeek by remember { mutableStateOf(program) }
     var manualValid by remember { mutableStateOf(true) }
     var tdeeMode by rememberSaveable { mutableStateOf(program.tdeeMode) }
     var staticTdee by rememberSaveable { mutableStateOf(num(settings.energyValue(program.staticTdee), 0)) }
@@ -425,7 +424,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         else -> null
     }
     fun draftProgram() = program.copy(style = programStyle, weightGoalEnabled = weightGoal,
-        manualDays = if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL && individualDays) manualDays else emptyList(),
+        manualDays = if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) manualWeek.manualDays else emptyList(),
+        manualOff = manualWeek.manualOff.takeIf { programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL }, manualOnDays = manualWeek.manualOnDays,
         tdeeMode = tdeeMode, staticTdee = staticTdee.replace(',', '.').toDoubleOrNull()?.let(settings::toKcal) ?: program.staticTdee,
         initialTdeeOverride = initialTdee.replace(',', '.').toDoubleOrNull()?.let(settings::toKcal),
         manualKcal = manualTarget?.kcal ?: program.manualKcal, manualProtein = manualTarget?.protein ?: program.manualProtein,
@@ -769,18 +769,15 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     }
                     Step.MANUAL_TARGETS -> Page(st, tr("Vos cibles personnelles"), tr("Choisissez une cible commune ou réglez les calories et les trois macros de chaque jour.")) {
                         if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
-                            app.superhealth.nutrition.ui.components.SwitchRow(tr("Cibles différentes selon le jour"), tr("Du lundi au dimanche"), individualDays) { on ->
-                                if (on && !individualDays) manualDays = List(7) { manualTarget ?: app.superhealth.nutrition.domain.ManualTargets.base(program) }
-                                individualDays = on
+                            app.superhealth.nutrition.ui.screens.ManualWeekEditor(manualWeek, settings.copy(weightUnit = unit), { manualValid = it }) { w ->
+                                manualWeek = w; manualTarget = app.superhealth.nutrition.domain.ManualTargets.base(w)
                             }
-                            if (individualDays) ChipChoice((1..7).toList(), editDay, { app.superhealth.nutrition.ui.screens.DAY_NAMES[it - 1].take(3) }) { editDay = it }
-                        } else Text(tr("Les calories seront ajustées au check-in ; les proportions choisies sont conservées."), color = Mf.colors.textSecondary)
-                        androidx.compose.runtime.key(individualDays, editDay) {
-                            app.superhealth.nutrition.ui.screens.TargetEditor(if (individualDays && programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) manualDays[editDay - 1] else manualTarget ?: app.superhealth.nutrition.domain.ManualTargets.base(program), settings.copy(weightUnit = unit)) { t ->
+                        } else {
+                            Text(tr("Les calories seront ajustées au check-in ; les proportions choisies sont conservées."), color = Mf.colors.textSecondary)
+                            app.superhealth.nutrition.ui.screens.TargetEditor(manualTarget ?: app.superhealth.nutrition.domain.ManualTargets.base(program), settings.copy(weightUnit = unit)) { t ->
                                 manualValid = t != null
-                                if (individualDays && programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
-                                    if (t != null) manualDays = manualDays.toMutableList().also { it[editDay - 1] = t }
-                                } else manualTarget = t
+                                manualTarget = t
+                                if (t != null) manualWeek = app.superhealth.nutrition.domain.ManualTargets.withBase(manualWeek, t)
                             }
                         }
                     }

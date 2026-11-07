@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -100,9 +101,10 @@ object League {
         val before = state.value.questXp
         val secondary = state.value.questWeeks.firstOrNull { it.start == Progression.week(today) }?.quests?.firstOrNull { it.metric == metric }?.secondary == true
         claimQuestXp(ctx, metric, today)
-        // La quête de la semaine rapporte aussi des éclats (principale, secondaire), fixés par le serveur.
-        if (state.value.questXp > before) app.superhealth.cards.CardStore.earnLeague(ctx, "lq:$today:${metric.name}" + if (secondary) ":s" else "",
-            if (secondary) app.superhealth.cards.CardStore.WEEKLY_SECONDARY else app.superhealth.cards.CardStore.WEEKLY_PRIMARY)
+        // Chaque quête de la semaine rapporte des packs offerts, fixés par le serveur. Identifiant stable sur la semaine.
+        if (state.value.questXp > before) kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            runCatching { app.superhealth.cards.CardStore.earnLeague(ctx, "lq:${Progression.week(today)}:${metric.name}" + if (secondary) ":s" else "") }
+        }
     }
     private fun claimQuestXp(ctx: Context, metric: WeeklyQuests.Metric, today: Long) = configure(ctx) { s ->
         val week = s.questWeeks.firstOrNull { it.start == Progression.week(today) } ?: return@configure s

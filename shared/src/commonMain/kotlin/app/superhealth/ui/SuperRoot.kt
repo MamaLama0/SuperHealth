@@ -185,6 +185,7 @@ fun SuperRoot(vm: SuperViewModel) {
     var logSheet by remember { mutableStateOf(false) }
     // Mise à jour Dopamine : une fois, droit vers les packs offerts.
     if (sh.leagueEnabled) app.superhealth.ui.cards.DopamineIntro { nav.go("cards/packs") }
+    if (sh.leagueEnabled) app.superhealth.ui.cards.GiftIntro { nav.go("cards/packs") }
 
     // Fin de séance de musculation : écran « séance terminée ».
     val completed by vm.training.completed.collectAsState()

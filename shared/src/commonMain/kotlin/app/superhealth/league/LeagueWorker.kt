@@ -23,7 +23,9 @@ object LeagueWorker {
         if (System.currentTimeMillis()-s.lastSync >= TimeUnit.HOURS.toMillis((24/s.syncsPerDay).toLong())) sync(ctx)
     }
     private suspend fun sync(ctx: Context) {
-        try { Relay.sync(ctx); if(League.state.value.pendingSocialRevocations.isNotEmpty())SocialPrivacy.finish(ctx); Widgets.publish() }
+        try { Relay.sync(ctx); if(League.state.value.pendingSocialRevocations.isNotEmpty())SocialPrivacy.finish(ctx); Widgets.publish()
+            // Photo détourée publique de la carte : facultative, un serveur pas encore à jour ne bloque pas la synchro.
+            runCatching { Faces.publishCardIfNeeded(ctx) } }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { League.configure(ctx) { it.copy(syncError="Synchronisation indisponible. Réessayez plus tard.") } }
     }

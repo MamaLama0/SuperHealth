@@ -5,8 +5,8 @@ import app.superhealth.platform.*
 
 /**
  * Tirage d'un pack, fonction pure. Trois cartes, et une quatrième une fois sur quatre. Chaque carte tire ensuite, à part,
- * ce qui la rend spéciale, sans cumul : duo (1 chance sur 200, à toute rareté, toujours en finition normale) ou bien un
- * effet, qui dépend de sa rareté ([EFFECTS]). L'animée, au bonus plus faible, sort plus souvent que la chromatique. Pas de
+ * ce qui la rend spéciale : duo (1 chance sur 200, à toute rareté) et, indépendamment, un effet qui dépend de sa rareté
+ * ([EFFECTS]) : une épique chromatique duo existe. L'animée, au bonus plus faible, sort plus souvent que la chromatique. Pas de
  * garantie : un pack sur dix est doré et triple les chances de rare, d'épique, de duo, d'animée, de chromatique et de
  * pack Prisme (trois rares et une épique). La charte affichée sous les packs est calculée ici, à partir des mêmes tables.
  */
@@ -42,7 +42,7 @@ object PackEngine {
     val slot3 = listOf(Rarity.COMMUNE to 20.0, Rarity.PEU_COMMUNE to 76.7, Rarity.RARE to 2.6, Rarity.EPIQUE to 0.7)
     val slot4 = listOf(Rarity.PEU_COMMUNE to 90.5, Rarity.RARE to 7.5, Rarity.EPIQUE to 2.0)
 
-    /** Effets par rareté, en % par carte (hors duo) : chromatique, animée, brillante (le reste est normal). */
+    /** Effets par rareté, en % par carte (duo compris) : chromatique, animée, brillante (le reste est normal). */
     val EFFECTS: Map<Rarity, Triple<Double, Double, Double>> = mapOf(
         Rarity.COMMUNE to Triple(0.3, 0.8, 3.0), Rarity.PEU_COMMUNE to Triple(0.5, 1.2, 5.0),
         Rarity.RARE to Triple(0.8, 2.0, 8.0), Rarity.EPIQUE to Triple(1.2, 3.0, 12.0))
@@ -88,9 +88,8 @@ object PackEngine {
     /** Probabilité qu'une carte de rareté [r] soit (ou non) un duo et porte un effet parmi [finishes]. */
     fun cardOdds(r: Rarity, duo: Boolean? = null, finishes: Set<Finish>? = null, gold: Boolean = false): Double {
         val d = duoOdds(gold)
-        val asDuo = if (duo == false) 0.0 else d * (if (finishes == null || Finish.NORMALE in finishes) 1.0 else 0.0)
-        val single = if (duo == true) 0.0 else (1 - d) * (finishes?.sumOf { effectOdds(r, it, gold) } ?: 1.0)
-        return asDuo + single
+        val effect = finishes?.sumOf { effectOdds(r, it, gold) } ?: 1.0
+        return effect * when (duo) { true -> d; false -> 1 - d; null -> 1.0 }
     }
 
     private fun expected(gold: Boolean): Double { val pr = prismOdds(gold); return (1 - pr) * (3 + BONUS_ODDS) + pr * PRISM.size }
@@ -102,8 +101,8 @@ object PackEngine {
         return ((1 - pr) * (w(slot1) + w(slot2) + w(slot3) + BONUS_ODDS * w(slot4)) + pr * PRISM.count { it == r }) / expected(gold)
     }
 
-    /** Probabilité qu'une carte tirée, toutes raretés confondues, porte l'effet [f] (les duos sont toujours normaux). */
-    fun effectShare(f: Finish, gold: Boolean = false) = Rarity.entries.sumOf { share(it, gold) * cardOdds(it, false, setOf(f), gold) }
+    /** Probabilité qu'une carte tirée, toutes raretés confondues, porte l'effet [f]. */
+    fun effectShare(f: Finish, gold: Boolean = false) = Rarity.entries.sumOf { share(it, gold) * cardOdds(it, null, setOf(f), gold) }
 
     /** Probabilité exacte, par pack, d'au moins une carte de rareté [r] ou mieux. */
     fun perPack(r: Rarity, gold: Boolean = false) = odds(Rarity.entries.filter { it >= r }.toSet(), gold = gold)
@@ -125,7 +124,7 @@ object PackEngine {
             val duo = rng.nextDouble() < duoOdds(gold)
             val pool = content.filter { it.rarity == r && it.duo == duo }
             val card = pool[rng.nextInt(pool.size)]
-            Pull(card, if (duo) Finish.NORMALE else finish(rng, r, gold))
+            Pull(card, finish(rng, r, gold))
         }
         return Result(pulls, isPrism, gold)
     }

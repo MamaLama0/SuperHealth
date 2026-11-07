@@ -64,18 +64,18 @@ fun CutoutScreen(nav: NavHostController) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                 PhotoSource.entries.forEach { src ->
                     val enabled = src != PhotoSource.DETOUREE || state.cutout
-                    ModeChip(tr(src.label), state.photo == src, if (enabled) Color(0xFF6FD3A0) else Color.White.copy(alpha = 0.3f)) { if (enabled) CardStore.update(ctx) { it.copy(photo = src) } }
+                    ModeChip(tr(src.label), state.photo == src, if (enabled) Color(0xFF6FD3A0) else Color.White.copy(alpha = 0.3f)) { if (enabled) { CardStore.update(ctx) { it.copy(photo = src) }; CardPhoto.publish(ctx) } }
                 }
             }
             AthleteCard(myFace(snap?.now), Modifier.fillMaxWidth(0.5f).align(Alignment.CenterHorizontally).padding(vertical = 12.dp), interactive = false)
             if (app.superhealth.ui.ProfilePhoto.bitmap.value == null && state.photo == PhotoSource.PROFIL)
                 Text(tr("Pas encore de photo de profil : ajoute-la dans ton profil, ou détoure une photo pour la carte."), color = Gold, fontSize = 13.sp)
-            Text(tr("Choisis une photo où tu es bien visible, de la tête au torse. Le détourage se fait sur ton téléphone : la photo ne quitte jamais l'appareil."),
+            Text(tr("Choisis une photo où tu es bien visible, de la tête au torse. Le détourage se fait sur ton téléphone. Seule la photo détourée est partagée : tous les membres du Groupe la voient sur ta carte."),
                 color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)
             GlowButton(tr(if (busy) "Analyse de la photo…" else "Choisir une photo"), Modifier.fillMaxWidth().padding(top = 20.dp), listOf(Color(0xFF1FA67A), Color(0xFF6FD3A0)), enabled = !busy) { picker() }
             if (busy) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally).padding(top = 24.dp), color = Color(0xFF6FD3A0))
             if (state.cutout) Text(tr("Retirer ma photo de la carte"), color = Color(0xFFFF7A8A), fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 24.dp).clickable { CardStore.cutoutFile(ctx).delete(); CardStore.update(ctx) { it.copy(cutout = false, photo = PhotoSource.PROFIL) }; CardPhoto.load(ctx) })
+                modifier = Modifier.padding(top = 24.dp).clickable { CardStore.cutoutFile(ctx).delete(); CardStore.update(ctx) { it.copy(cutout = false, photo = PhotoSource.PROFIL) }; CardPhoto.load(ctx); CardPhoto.publish(ctx) })
         } else {
             AthleteCard(myFace(snap?.now, cutoutOverride = shown), Modifier.fillMaxWidth(0.55f).align(Alignment.CenterHorizontally).padding(vertical = 12.dp), interactive = false)
             Row(Modifier.padding(vertical = 10.dp).align(Alignment.CenterHorizontally), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -85,7 +85,7 @@ fun CutoutScreen(nav: NavHostController) {
                 val png = result ?: return@GlowButton
                 scope.launch {
                     runCatching { CardStore.cutoutFile(ctx).writeBytes(png) }.onFailure { error = it.message; return@launch }
-                    CardStore.update(ctx) { it.copy(cutout = true, photo = PhotoSource.DETOUREE) }; CardPhoto.load(ctx); Rumble.reveal(ctx); nav.popBackStack()
+                    CardStore.update(ctx) { it.copy(cutout = true, photo = PhotoSource.DETOUREE) }; CardPhoto.load(ctx); CardPhoto.publish(ctx); Rumble.reveal(ctx); nav.popBackStack()
                 }
             }
         }

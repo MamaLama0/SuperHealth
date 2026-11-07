@@ -221,15 +221,18 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             }
 
             // bien-être à part : journal du moral et ressenti du matin réunis (le ressenti se règle dans le journal), cycle, rappels
-            Group(tr("Social")) {
+            // Réglages du Groupe : seulement quand son plugin est installé et activé (il s'installe depuis Plugins)
+            val plugins by app.superhealth.modules.Modules.installed.collectAsState()
+            if (plugins.any { it.kind == app.superhealth.modules.Modules.LEAGUE && it.enabled }) Group(tr("Social")) {
                 SettingRow(tr("Profil et social"), subtitle = tr("Amis, titres, badges et quêtes"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("social/profile") }
                 RowDivider(56.dp)
                 val friends by app.superhealth.league.League.state.collectAsState()
                 SettingRow(tr("Groupe d'amis"), friends.friends.size.takeIf { it > 0 }?.toString(), subtitle = tr("Comparer mes progrès et ajouter un ami"), icon = Icons.Rounded.Group, hue = HealthHues.Fitness) { nav.go("friends") }
                 RowDivider(56.dp)
-                IconSwitchRow(tr("Classement et progression"), tr("Niveaux, séries et comparaisons entre amis"), Icons.Rounded.Group, HealthHues.Fitness, sh.leagueEnabled,
+                // Activer le Groupe installe son plugin ; le couper le désinstalle (données et amis conservés).
+                IconSwitchRow(tr("Groupe"), tr("Plugin installé · cartes, quêtes et fil"), Icons.Rounded.Group, HealthHues.Fitness, true,
                     onClick = { nav.go("league/index") }) { on ->
-                    SuperPrefs.update { it.copy(leagueEnabled = on) }; app.superhealth.league.LeagueWorker.schedule(photoCtx)
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { app.superhealth.modules.Modules.setSocial(photoCtx, on) }
                 }
             }
 

@@ -462,3 +462,15 @@ fun SharedCardVisual(shared: CardShare.Shared, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** Carte Athlète partagée dans le Fil : la carte de l'auteur ([friend], ou la mienne), au fond et au niveau partagés. */
+@Composable
+fun SharedAthleteVisual(shared: CardShare.Shared, friend: app.superhealth.league.League.Friend?, modifier: Modifier = Modifier) {
+    val base = if (friend != null) friendFace(friend) else myFace(CardStore.snapshot.collectAsState().value?.now)
+    Column(modifier.fillMaxWidth().padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        AthleteCard(base.copy(background = shared.pull, level = shared.level), Modifier.fillMaxWidth(0.62f), interactive = true, animate = true)
+        shared.ovr?.let { ovr ->
+            Text(tr("Note") + " $ovr · " + tr(Tier.of(ovr).label), color = rarityColors(shared.pull.card.rarity)[1], fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+    }
+}

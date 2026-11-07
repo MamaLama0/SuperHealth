@@ -53,6 +53,8 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
     var focus by remember(state.questFocus) { mutableStateOf(state.questFocus.orEmpty()) }
     val today = LocalDate.now()
     val week = state.questWeeks.firstOrNull { it.start == Progression.week(today.toEpochDay()) }
+    val cards by app.superhealth.cards.CardStore.state.collectAsState()
+    val packs = cards.rewards.weekly.packs
     LaunchedEffect(Unit) { runCatching { ProgressRepository.compute(ctx) } }
     DetailScaffold(tr("Quêtes de la semaine"), { nav.popBackStack() }, contentSpacing = 12.dp, action = {
         IconButton({ focus = state.questFocus.orEmpty(); choosing = true }) { Icon(Icons.Rounded.Tune, tr("Choisir mes domaines")) }
@@ -113,8 +115,8 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
             MfCard {
                 FlowRow(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(tr(if (q.secondary) "Quête secondaire" else "Quête principale"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
-                    if (!q.claimed) Text(trf("+%1\$s éclats", weeklyEclats(q)), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
+                    Text(tr(if (q.secondary) "Quête bonus" else "Quête principale"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
+                    if (!q.claimed && packs > 0) Text(packLabel(packs), style = MaterialTheme.typography.labelLarge, color = Mf.colors.accent)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(if (q.complete) Icons.Rounded.CheckCircle else Icons.Rounded.Flag, null, tint = if (q.complete) QuestGreen.onContainer() else Mf.colors.accent)
@@ -128,8 +130,8 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                 Text(tr(q.reason.text), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
                 LinearProgressIndicator(progress = { (q.progress.toFloat() / q.target).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), color = if (q.complete) QuestGreen else Mf.colors.accent)
                 when {
-                    q.claimed -> Text(trf("+%1\$s éclats récupérés", weeklyEclats(q)), color = QuestGreen.onContainer(), style = MaterialTheme.typography.labelLarge)
-                    q.complete -> PillButton(trf("Récupérer +%1\$s éclats", weeklyEclats(q)), Modifier.fillMaxWidth(), enabled = !busy) {
+                    q.claimed -> Text(tr("Récompense récupérée"), color = QuestGreen.onContainer(), style = MaterialTheme.typography.labelLarge)
+                    q.complete -> PillButton(if (packs > 0) tr("Récupérer") + " · " + packLabel(packs) else tr("Valider la quête"), Modifier.fillMaxWidth(), enabled = !busy) {
                         busy = true
                         error = false
                         scope.launch {
@@ -145,7 +147,7 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
                 }
             }
         }
-        Text(tr("Une récompense par quête et par semaine, en éclats pour ouvrir des packs. Votre score global ne change pas."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 16.dp))
+        Text(tr("Trois quêtes par semaine, chacune d'un domaine différent. Chaque quête finie offre des packs de cartes. Votre score global ne change pas."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 16.dp))
         SectionLabel(tr("Semaines précédentes"))
         val past = state.questWeeks.filter { it.start < Progression.week(today.toEpochDay()) }.sortedByDescending { it.start }.take(4)
         if (past.isEmpty()) Text(tr("Vos prochaines semaines viendront s'ajouter ici."), color = Mf.colors.textSecondary)
@@ -153,5 +155,5 @@ fun WeeklyQuestsScreen(nav: NavHostController) {
     }
 }
 
-/** Éclats d'une quête de la semaine (principale ou secondaire), comme sur le serveur. */
-internal fun weeklyEclats(q: WeeklyQuests.Quest) = if (q.secondary) app.superhealth.cards.CardStore.WEEKLY_SECONDARY else app.superhealth.cards.CardStore.WEEKLY_PRIMARY
+/** « +1 pack offert » / « +2 packs offerts » : la récompense d'une quête de la semaine, fixée par le serveur. */
+internal fun packLabel(packs: Int) = "+$packs " + tr(if (packs > 1) "packs offerts" else "pack offert")

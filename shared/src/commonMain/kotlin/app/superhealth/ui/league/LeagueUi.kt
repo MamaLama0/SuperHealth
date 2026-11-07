@@ -107,7 +107,7 @@ fun LeagueScreen(nav: NavHostController) {
     if (!sh.leagueEnabled) {
         DetailScaffold(tr("Classement et progression"), onBack = { nav.popBackStack() }, contentSpacing = 12.dp) {
             Text(tr("Le classement est désactivé. Vos amis et vos données sont conservés."))
-            PillButton(tr("Activer le classement"), Modifier.fillMaxWidth()) { app.superhealth.SuperPrefs.update { it.copy(leagueEnabled = true) }; app.superhealth.league.LeagueWorker.schedule(ctx) }
+            PillButton(tr("Installer le plugin Groupe"), Modifier.fillMaxWidth()) { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { app.superhealth.modules.Modules.setSocial(ctx, true) } }
         }
         return
     }

@@ -12,9 +12,10 @@ class PackEngineTest {
         listOf(PackEngine.slot1, PackEngine.slot2, PackEngine.slot3, PackEngine.slot4).forEach { assertEquals(100.0, it.sumOf { p -> p.second }, 1e-9) }
     }
 
-    @Test fun rewardsMatchServer362() {
-        assertEquals(90, CardStore.WEEKLY_PRIMARY)
-        assertEquals(55, CardStore.WEEKLY_SECONDARY)
+    @Test fun rewardsDefaultsMatchServer37() {
+        // 3.7 : les quêtes de la semaine donnent des packs, réglés par le serveur (rewards.json)
+        assertEquals(3, Economy.Rewards().weekly.count)
+        assertEquals(1, Economy.Rewards().weekly.packs)
         assertEquals(100, CardStore.PACK_PRICE)
     }
 

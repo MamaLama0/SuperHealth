@@ -254,7 +254,8 @@ data class SuperSettings(
     /** Questionnaire d'accueil terminé. */
     val onboarded: Boolean = false,
     val coachEnabled: Boolean = true,
-    val leagueEnabled: Boolean = true,
+    /** Plugin Groupe (cartes, quêtes, amis) : installé quand le Groupe est activé, absent par défaut d'une nouvelle installation. */
+    val leagueEnabled: Boolean = false,
     val builtinsAdded: Boolean = false,
     /** 2.31 : verrouillage de l'app (empreinte ou code du téléphone), délai avant de redemander (s), écran masqué dans les Récents. */
     val appLock: Boolean = false,
