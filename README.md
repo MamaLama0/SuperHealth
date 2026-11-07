@@ -4,6 +4,8 @@ Les montants des quêtes, les paquets offerts par les quêtes de la semaine et l
 
 Un cadeau (`gifts`) est versé une seule fois par compte au premier contact : `{ "id": "noel-2026", "packs": 3, "note": "Joyeux Noël" }`, éventuellement limité à des comptes (`accounts` : identifiants d'échange de 64 caractères hexadécimaux) et à une période (`from`, `until`). Les applications affichent les montants envoyés par le serveur ; changer une récompense ne demande donc ni nouvelle version de l'app ni nouvelle image.
 
+Pour offrir des paquets à une personne précise : dans l'app, ouvrez sa carte Athlète et touchez « ID cadeau » sous la carte pour copier son identifiant, puis `node give.mjs <identifiant> --packs 2 --note "Bravo !"` (plusieurs identifiants possibles, `--eclats`, `--until`, `--file data/rewards.json` pour le fichier du NAS).
+
 `GET /v2/faces/<id>/card` sert la photo détourée de la carte Athlète (WebP ou PNG transparent, signée par l'auteur), visible par tous les membres comme le visage.
 
 ---

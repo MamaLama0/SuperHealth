@@ -5,6 +5,7 @@
   "weekly": { "count": 3, "packs": 1 },
   "challenge": { "race": { "packs": 2, "eclats": 0 }, "together": { "packs": 1, "eclats": 0 } },
   "gifts": [
-    { "id": "update-3.7", "packs": 5, "note": "Cinq paquets offerts avec la 3.7" }
+    { "id": "update-3.7", "packs": 5, "note": "Cinq paquets offerts avec la 3.7" },
+    { "id": "update-3.7.1", "packs": 1, "note": "Un paquet offert avec la 3.7.1" }
   ]
 }
