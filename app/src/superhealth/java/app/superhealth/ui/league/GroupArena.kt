@@ -136,7 +136,7 @@ internal fun ArenaDuels(nav: NavHostController, friends: List<League.Friend>) {
     // Un appui sur la carte l'ouvre en grand ; le bouton « Défier » (ici ou dans la vue) lance le duel.
     var viewing by remember { mutableStateOf<Rival?>(null) }
     viewing?.let { r -> FriendCardViewer(r.friend?.let { friendFace(it) } ?: r.face, r.note, { viewing = null },
-        r.friend?.cardTrade?.let { { viewing = null; nav.go("cards/trades") } }) { viewing = null; nav.go("cards/duel?friend=${r.id}") } }
+        r.friend?.cardTrade?.let { { viewing = null; nav.go("cards/trades") } }, account = r.friend?.cardTrade) { viewing = null; nav.go("cards/duel?friend=${r.id}") } }
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Défis du jour"), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, modifier = Modifier.weight(1f), color = app.superhealth.ui.theme.Mf.colors.text)

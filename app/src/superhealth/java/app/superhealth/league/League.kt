@@ -300,8 +300,9 @@ object League {
 
     private fun myPublic(): String = GroupIdentity.publicKey()
     fun publicKey(): String = myPublic()
-    fun signSocial(payload: String): String {
-        require(payload.toByteArray().size <= 12000); ensureKey()
+    /** [max] : 12 000 octets pour les messages ; la photo de carte publique (Faces) a droit à plus. */
+    fun signSocial(payload: String, max: Int = 12000): String {
+        require(payload.toByteArray().size <= max); ensureKey()
         val bytes = payload.toByteArray()
         val signature = Signature.getInstance("SHA256withECDSA").run {
             initSign(GroupIdentity.privateKey())
@@ -309,10 +310,10 @@ object League {
         }
         return "SHG1.${b64(bytes)}.${b64(signature)}"
     }
-    fun verifySocial(signed: String, expectedKey: String): String? = runCatching {
-        require(signed.length <= 20000)
+    fun verifySocial(signed: String, expectedKey: String, max: Int = 12000): String? = runCatching {
+        require(signed.length <= max * 4 / 3 + 4000)
         val parts = signed.split('.'); require(parts.size == 3 && parts[0] == "SHG1")
-        val bytes = unb64(parts[1]); require(bytes.size <= 12000)
+        val bytes = unb64(parts[1]); require(bytes.size <= max)
         val public = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(unb64(expectedKey)))
         require(Signature.getInstance("SHA256withECDSA").run {
             initVerify(public); update(("SuperHealth group v1:").toByteArray()); update(bytes); verify(unb64(parts[2]))

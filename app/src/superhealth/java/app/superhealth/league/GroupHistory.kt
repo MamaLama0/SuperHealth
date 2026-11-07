@@ -70,6 +70,12 @@ object GroupHistory {
         }
     internal fun forwardId(key: String, id: String) = java.security.MessageDigest.getInstance("SHA-256")
         .digest(("SuperHealth comment forward v1:" + key + ":" + id).toByteArray()).take(16).joinToString("") { "%02x".format(it) }
+    /** Mes propres réponses (sur mes publications ou relayées par un ami) ne me notifient jamais. */
+    internal fun mine(event: Event): Boolean {
+        val me = League.publicKey()
+        return event.key == me || event.key == GroupIdentity.root() || author(event.key) == author(me)
+    }
+
     /** Only a post owner may relay a comment; both the owner and the commenter sign it. No contact/health card is relayed. */
     internal fun forwarded(wrapper: Event, now: Long = System.currentTimeMillis()): Event? = runCatching {
         val forward = wrapper.forward ?: return null
@@ -312,7 +318,7 @@ object GroupHistory {
                 val received = comment?.reply
                 val repliesToMe = received?.author == League.myId() ||
                     (received?.to?.author == author(League.publicKey()) && comment != null && replyParent(comment, state.value.events)?.key == League.publicKey())
-                if (!older && state.value.notificationBaseline && key != League.publicKey() && received != null && repliesToMe &&
+                if (!older && state.value.notificationBaseline && key != League.publicKey() && received != null && repliesToMe && !mine(comment!!) &&
                     received.created >= System.currentTimeMillis() - 86400000 && state.value.events.none { it.key == key && it.id == event.id }) newReplies += comment
                 update(ctx) { store -> store.copy(events = merge(store.events, event),
                     proofs = if (key != League.publicKey() && event.forward == null && (event.reply != null || event.deleted))

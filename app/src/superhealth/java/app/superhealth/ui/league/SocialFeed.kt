@@ -113,7 +113,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().imePadding(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // En-tête au format des onglets (TabHeader + boutons ronds) ; l'avatar ouvre le profil social comme sur le dashboard.
+        // En-tête au format des onglets (TabHeader + boutons ronds) ; l'avatar ouvre les réglages de l'app, comme sur tous les onglets.
         item(key = "header") {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 14.dp, bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
@@ -123,7 +123,7 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     NotificationBell(nav)
                     CircleAction(Icons.Rounded.Add, tr("Publier")) { showCreate = true }
-                    SettingsAvatar { nav.go("social") }
+                    SettingsAvatar { nav.go("settings") }
                 }
             }
         }

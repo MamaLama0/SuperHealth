@@ -150,7 +150,9 @@ object Bridge {
             Metric.VO2MAX -> hc.vo2max[d]
             Metric.DISTANCE -> hc.distanceKm[d]
             Metric.CALORIES -> hc.activeKcal[d]
-            Metric.HYDRATION, Metric.GLUCOSE, Metric.BODY_TEMPERATURE, Metric.RECOVERY, Metric.SLEEP_DEBT, Metric.EFFORT,
+            Metric.TEMPERATURE -> hc.skinTemp[d]
+            Metric.BODY_TEMPERATURE -> HealthRepository.dayValue(ctx, metric, date) ?: hc.bodyTemp[d]
+            Metric.HYDRATION, Metric.GLUCOSE, Metric.RECOVERY, Metric.SLEEP_DEBT, Metric.EFFORT,
             Metric.FITNESS_AGE -> HealthRepository.dayValue(ctx, metric, date)
             else -> null
         }
@@ -240,6 +242,7 @@ object Bridge {
             Metric.VO2MAX -> hc.vo2max.isNotEmpty()
             Metric.DISTANCE -> hc.distanceKm.isNotEmpty()
             Metric.CALORIES -> hc.activeKcal.isNotEmpty()
+            Metric.TEMPERATURE -> hc.skinTemp.isNotEmpty()
             Metric.RECOVERY -> hc.hrv.isNotEmpty() || hc.restingHr.isNotEmpty()
             Metric.EFFORT -> hc.heartRate.isNotEmpty()
             Metric.FITNESS_AGE -> hc.restingHr.isNotEmpty() || (Watch.enabled && HealthRepository.isSupported(Metric.RESTING_HR))

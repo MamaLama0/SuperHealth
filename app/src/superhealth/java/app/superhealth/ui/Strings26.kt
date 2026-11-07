@@ -210,6 +210,8 @@ object Strings26 {
         "Pas encore dans ta collection. Tire-le dans un pack " to "Not in your collection yet. Find it in a pack ",
         ", ou demande-le à un ami en échange." to ", or ask a friend to trade it.",
         "Proposer un échange" to "Offer a trade",
+        "ID cadeau" to "Gift ID",
+        "Identifiant copié" to "ID copied",
         "Prochain pack doré" to "Next golden pack",
         "Doré dans" to "Golden in",
         "Ta carte s'évalue après quelques séances : deux familles de muscles suffisent pour une note." to "Your card is rated after a few workouts: two muscle groups are enough for a rating.",

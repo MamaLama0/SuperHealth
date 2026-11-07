@@ -90,8 +90,9 @@ object Faces {
         val image = source?.let(::cardImage) ?: ""
         val now = System.currentTimeMillis()
         val payload = JsonObject(mapOf("t" to JsonPrimitive("card"), "id" to JsonPrimitive(id), "at" to JsonPrimitive(now), "image" to JsonPrimitive(image))).toString()
-        val body = JsonObject(mapOf("key" to JsonPrimitive(key), "signed" to JsonPrimitive(League.signSocial(payload)))).toString()
+        val body = JsonObject(mapOf("key" to JsonPrimitive(key), "signed" to JsonPrimitive(League.signSocial(payload, CARD_SIGNED)))).toString()
         http.newCall(Request.Builder().url("$base/v2/faces/$id/card").put(body.toRequestBody("application/json".toMediaType())).build()).execute().use {
+            android.util.Log.i("Faces", "card ${if (image.isEmpty()) "removed" else "published"}: HTTP ${it.code}, image ${image.length} chars, body ${body.length} chars")
             if (!it.isSuccessful && it.code != 409) return@withContext
         }
         Secrets.put(ctx, "card_published", fingerprint); Secrets.put(ctx, "card_published_at", now.toString())
@@ -103,10 +104,10 @@ object Faces {
         val original = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return ""
         @Suppress("DEPRECATION")
         val format = if (android.os.Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.WEBP
-        for (height in intArrayOf(360, 300, 240)) {
+        for (height in intArrayOf(360, 300, 240, 200)) {
             val scale = minOf(1f, height.toFloat() / original.height)
             val small = if (scale < 1f) Bitmap.createScaledBitmap(original, (original.width * scale).toInt().coerceAtLeast(1), (original.height * scale).toInt().coerceAtLeast(1), true) else original
-            for (quality in intArrayOf(82, 68, 52)) {
+            for (quality in intArrayOf(82, 68, 52, 40)) {
                 val webp = ByteArrayOutputStream().use { out -> small.compress(format, quality, out); out.toByteArray() }
                 val text = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(webp)
                 if (text.length <= CARD_MAX) { if (small !== original) small.recycle(); original.recycle(); return text }
@@ -117,7 +118,11 @@ object Faces {
         return ""
     }
 
-    private const val CARD_MAX = 78_000
+    // L'image est ré-encodée en base64 dans la charge signée (×4/3) et le serveur refuse un corps de plus de 92 000 octets :
+    // au-delà de ~68 000 caractères, la publication échouait en 413 sans rien dire et les amis ne voyaient jamais la photo.
+    private const val CARD_MAX = 60_000
+    /** Charge signée de la photo de carte (image + champs) : bien au-delà des 12 000 octets des messages, sous la limite du serveur. */
+    private const val CARD_SIGNED = 64_000
     private val cardMisses = ConcurrentHashMap<String, Long>()
 
     /** Photo détourée de la carte de [key] (ami ou non), vérifiée contre sa clé ; null si elle n'en publie pas. */
@@ -143,7 +148,7 @@ object Faces {
         }
         val card = json.parseToJsonElement(raw).jsonObject
         check(card["key"]?.jsonPrimitive?.content == key)
-        val payload = json.parseToJsonElement(League.verifySocial(card["signed"]!!.jsonPrimitive.content, key) ?: error("Signature non valable.")).jsonObject
+        val payload = json.parseToJsonElement(League.verifySocial(card["signed"]!!.jsonPrimitive.content, key, CARD_SIGNED) ?: error("Signature non valable.")).jsonObject
         check(payload["t"]?.jsonPrimitive?.content == "card" && payload["id"]?.jsonPrimitive?.content == id && (payload["at"]?.jsonPrimitive?.long ?: 0) > 0)
         val image = payload["image"]?.jsonPrimitive?.content.orEmpty()
         if (image.isEmpty()) return null

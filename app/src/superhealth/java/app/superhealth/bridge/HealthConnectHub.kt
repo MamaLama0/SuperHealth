@@ -24,6 +24,8 @@ import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
@@ -83,6 +85,8 @@ object HealthConnectHub {
         read(RespiratoryRateRecord::class), read(DistanceRecord::class), read(ActiveCaloriesBurnedRecord::class), read(TotalCaloriesBurnedRecord::class), read(Vo2MaxRecord::class),
         // détail des séances des autres apps (Fitbit, Garmin Connect…) : courbes de vitesse et de cadence, dénivelé
         read(SpeedRecord::class), read(StepsCadenceRecord::class), read(ElevationGainedRecord::class),
+        // température de la peau la nuit (montres, bagues) et température corporelle (thermomètres) pour les constantes
+        read(SkinTemperatureRecord::class), read(BodyTemperatureRecord::class),
         write(WeightRecord::class), write(BodyFatRecord::class), write(NutritionRecord::class),
         write(ExerciseSessionRecord::class), write(HydrationRecord::class),
         write(DistanceRecord::class), write(ActiveCaloriesBurnedRecord::class),
@@ -331,6 +335,18 @@ object HealthConnectHub {
         // Respiration de la nuit : jour du réveil, comme le sommeil.
         val resp = others(RespiratoryRateRecord::class)?.noteOrigin(Metric.RESPIRATORY_RATE) { it.time }
             ?.filter { it.rate in 4.0..40.0 }?.avgBy({ it.time.day() }, { it.rate }) ?: prev.resp
+        // Température de la peau (nuit) : jour du réveil. Health Connect donne une référence et des écarts ; sans référence,
+        // l'écart est posé sur 34 °C (valeur type au poignet) : seuls les écarts à la normale sont lus dans les constantes.
+        val skin = runCatching {
+            others(SkinTemperatureRecord::class)?.filter { it.deltas.isNotEmpty() }?.noteOrigin(Metric.TEMPERATURE) { it.endTime }
+                ?.groupBy { it.endTime.day() }?.mapValues { (_, rs) ->
+                    rs.map { r -> (r.baseline?.inCelsius ?: 34.0) + r.deltas.map { it.delta.inCelsius }.average() }.average()
+                }?.filterValues { it in 25.0..42.0 }
+        }.getOrNull() ?: prev.skinTemp
+        val body = runCatching {
+            others(BodyTemperatureRecord::class)?.filter { it.temperature.inCelsius in 34.0..43.0 }
+                ?.avgBy({ it.time.day() }, { it.temperature.inCelsius })
+        }.getOrNull() ?: prev.bodyTemp
         val vo2 = others(Vo2MaxRecord::class)?.noteOrigin(Metric.VO2MAX) { it.time }
             ?.filter { it.vo2MillilitersPerMinuteKilogram in 10.0..95.0 }?.avgBy({ it.time.day() }, { it.vo2MillilitersPerMinuteKilogram }) ?: prev.vo2max
         // Distance et calories actives : agrégats par jour (Health Connect dédoublonne les sources).
@@ -406,7 +422,7 @@ object HealthConnectHub {
         val steps = if (read(StepsRecord::class) in granted) runCatching { stepsHourly(client, range, me) }.getOrDefault(prev.stepsHourly)
         else prev.stepsHourly
         return HcCache(hr, resting, sleep, hrv, spo2, sessions.sortedByDescending { it.start }, steps, origins, nights,
-            resp, distance, kcal, vo2, hrvOrigins)
+            resp, distance, kcal, vo2, hrvOrigins, skin, body)
     }
 
     /** Phases d'une session de sommeil ; sans phases (appli qui ne note que la durée), une seule phase « endormi ». */

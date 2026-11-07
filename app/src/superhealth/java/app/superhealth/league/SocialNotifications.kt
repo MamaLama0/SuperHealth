@@ -59,7 +59,9 @@ object SocialNotifications {
 
     fun groupRepliesReceived(ctx: Context, friend: League.Friend, event: GroupHistory.Event) {
         val reply = event.reply ?: return
+        if (GroupHistory.mine(event)) return
         val commenter = League.state.value.friends.firstOrNull { it.key == event.key }?.id ?: GroupHistory.author(event.key)
+        if (commenter == League.myId()) return
         if (SocialPreferences.quiet(friend.id) || SocialPreferences.quiet(commenter) || SocialPreferences.blocked(event.key) ||
             SocialPreferences.silent(reply.author, reply.post) || SocialPreferences.hidden(reply.author, reply.post)) return
         show(ctx, "group_replies", commenter + event.id, tr("Réponse à votre publication"),

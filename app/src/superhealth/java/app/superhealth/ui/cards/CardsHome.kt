@@ -56,7 +56,9 @@ object CardPhoto {
     fun publish(ctx: Context) {
         if (!app.superhealth.SuperPrefs.settings.value.leagueEnabled) return
         val appCtx = ctx.applicationContext
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { runCatching { app.superhealth.league.Faces.publishCardIfNeeded(appCtx) } }
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            runCatching { app.superhealth.league.Faces.publishCardIfNeeded(appCtx) }.onFailure { android.util.Log.w("Faces", "card publish failed", it) }
+        }
     }
 }
 
@@ -112,7 +114,7 @@ fun cardCutout(key: String?): ImageBitmap? {
  * puis « Défier » lance le duel d'un clic de plus. [onTrade] apparaît quand l'ami accepte les échanges.
  */
 @Composable
-internal fun FriendCardViewer(face: CardFace, note: String, onClose: () -> Unit, onTrade: (() -> Unit)? = null, onDuel: (() -> Unit)?) {
+internal fun FriendCardViewer(face: CardFace, note: String, onClose: () -> Unit, onTrade: (() -> Unit)? = null, account: String? = null, onDuel: (() -> Unit)?) {
     val mine = CardStore.snapshot.collectAsState().value?.now
     androidx.compose.ui.window.Dialog(onClose, androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Box(Modifier.fillMaxSize().background(Ink.copy(alpha = 0.96f)).clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, null, onClick = onClose)) {
@@ -146,6 +148,14 @@ internal fun FriendCardViewer(face: CardFace, note: String, onClose: () -> Unit,
                 if (onDuel != null) GlowButton("⚔ " + tr("Défier"), Modifier.fillMaxWidth().padding(top = 16.dp), listOf(Color(0xFFE53935), Color(0xFFFF8A1F)), enabled = mine?.ovr10 != null, onClick = onDuel)
                 if (onDuel != null && mine?.ovr10 == null) Text(tr("Ta carte doit d'abord être évaluée (quelques séances)."), color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 if (onTrade != null) TextButton(onTrade, Modifier.padding(top = 4.dp)) { Text(tr("Proposer un échange"), color = Color.White) }
+                // Identifiant de compte des cartes : sert à lui offrir des paquets depuis le serveur (rewards.json, « accounts »).
+                if (account != null) {
+                    val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+                    var copied by remember { mutableStateOf(false) }
+                    Text(if (copied) tr("Identifiant copié") else tr("ID cadeau") + " : " + account.take(6) + "…" + account.takeLast(4),
+                        color = Color.White.copy(alpha = 0.35f), fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 10.dp).clickable { clip.setText(androidx.compose.ui.text.AnnotatedString(account)); copied = true })
+                }
             }
         }
     }
@@ -266,7 +276,7 @@ fun CardsHome(nav: NavHostController) {
         }
         val friends = league.friends.filter { it.athlete != null }
         var viewing by remember { mutableStateOf<League.Friend?>(null) }
-        viewing?.let { f -> FriendCardViewer(friendFace(f), tr("Ami"), { viewing = null }, f.cardTrade?.let { { viewing = null; nav.go("cards/trades") } }) { viewing = null; nav.go("cards/duel?friend=${f.id}") } }
+        viewing?.let { f -> FriendCardViewer(friendFace(f), tr("Ami"), { viewing = null }, f.cardTrade?.let { { viewing = null; nav.go("cards/trades") } }, account = f.cardTrade) { viewing = null; nav.go("cards/duel?friend=${f.id}") } }
         if (friends.isNotEmpty()) {
             SectionTitle("Cartes de mes amis")
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -456,6 +456,9 @@ data class HcCache(
     val activeKcal: Map<Long, Double> = emptyMap(),
     val vo2max: Map<Long, Double> = emptyMap(),
     val hrvOrigins: Map<Long, app.superhealth.health.data.DataSource> = emptyMap(),
+    /** Température de la peau la nuit (°C, jour du réveil) et température corporelle (°C) lues dans Health Connect. */
+    val skinTemp: Map<Long, Double> = emptyMap(),
+    val bodyTemp: Map<Long, Double> = emptyMap(),
 )
 
 /** Phase de sommeil lue dans Health Connect : type (nom d'ActivityKind : DEEP_SLEEP, SLEEP_ANY…), début et fin en ms. */
