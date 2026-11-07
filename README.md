@@ -1,3 +1,13 @@
+## Récompenses des cartes réglables sans mise à jour (3.7)
+
+Les montants des quêtes, les paquets offerts par les quêtes de la semaine et les défis, le prix d'un pack et les cadeaux de paquets viennent de `rewards.mjs`. Le serveur lit, dans l'ordre : `rewards.json` dans le dossier de données (relu dès qu'il change), puis `REWARDS_URL` (par défaut `rewards.json` de cette branche sur GitHub, relu toutes les 10 minutes ; `REWARDS_URL=` le désactive), sinon les valeurs par défaut. Chaque valeur est bornée.
+
+Un cadeau (`gifts`) est versé une seule fois par compte au premier contact : `{ "id": "noel-2026", "packs": 3, "note": "Joyeux Noël" }`, éventuellement limité à des comptes (`accounts` : identifiants d'échange de 64 caractères hexadécimaux) et à une période (`from`, `until`). Les applications affichent les montants envoyés par le serveur ; changer une récompense ne demande donc ni nouvelle version de l'app ni nouvelle image.
+
+`GET /v2/faces/<id>/card` sert la photo détourée de la carte Athlète (WebP ou PNG transparent, signée par l'auteur), visible par tous les membres comme le visage.
+
+---
+
 ## Groupe 3.0.6 en test
 
 Essai isolé avec les sources locales : `docker compose -f compose.test.yaml up --build -d`.

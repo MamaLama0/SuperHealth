@@ -1,6 +1,6 @@
 FROM node:24-alpine
 WORKDIR /app
-COPY --chown=568:568 server.mjs media.mjs social.mjs feedback.mjs economy.mjs faces.mjs LICENSE ./
+COPY --chown=568:568 server.mjs media.mjs social.mjs feedback.mjs economy.mjs faces.mjs rewards.mjs LICENSE ./
 RUN mkdir /data && chown 568:568 /data
 USER 568:568
 ENV HOST=0.0.0.0 PORT=8787 DATA_DIR=/data

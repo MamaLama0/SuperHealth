@@ -1,6 +1,7 @@
 import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, unlink, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createRewards, giftFor, normalize } from './rewards.mjs';
 
 /**
  * Économie des cartes Athlète, tenue par le serveur pour qu'on ne puisse pas tricher : le portefeuille (éclats, packs
@@ -8,7 +9,7 @@ import { join } from 'node:path';
  * des événements (séance terminée, quête accomplie) ; le serveur fixe les montants, vérifie les fenêtres de temps et
  * refuse les doublons. Aucune donnée de santé n'est envoyée : seulement des identifiants opaques et des dates.
  */
-export const ECONOMY_VERSION = 3;
+export const ECONOMY_VERSION = 4;
 export const PACK_PRICE = 100;
 /** Cadeau de la mise à jour Dopamine : dix packs (donc au moins un pack doré), une fois par compte. */
 export const LAUNCH_GIFT = { id: 'dopamine-3.6', packs: 10 };
@@ -34,8 +35,8 @@ const byId = new Map(CATALOG.map(c => [c.id, c]));
 
 // ---- Tirage (aligné sur PackEngine.kt) ----------------------------------------------------------------------
 /**
- * Trois cartes, une quatrième une fois sur quatre. Chaque carte est soit un duo (1 sur 200, finition normale), soit
- * normale, brillante, animée ou chromatique : rien ne se cumule. Pas de garantie : un pack sur dix est doré et triple
+ * Trois cartes, une quatrième une fois sur quatre. Chaque carte peut être un duo (1 sur 200) et, indépendamment,
+ * normale, brillante, animée ou chromatique : une épique chromatique duo existe. Pas de garantie : un pack sur dix est doré et triple
  * les chances de rare, d'épique, de duo, d'animée, de chromatique et de Prisme (trois rares et une épique).
  */
 export const RATES = {
@@ -69,7 +70,7 @@ export function draw(booster, gold = false) {
   const pulls = rarities.map(r => {
     const duo = random() < RATES.duoOdds * k;
     const pool = content.filter(c => c.rarity === r && (c.elements.length === 2) === duo);
-    return `${pool[randomInt(0, pool.length)].id}:${duo ? 'NORMALE' : finish(r, gold)}`;
+    return `${pool[randomInt(0, pool.length)].id}:${finish(r, gold)}`;
   });
   return { pulls, prism, gold };
 }
@@ -148,11 +149,12 @@ export function validTrade(giveS, wantS) {
  * l'utilisateur (séries par séance, groupes musculaires).
  */
 export const REWARDS = {
-  sessionPool: 150, extraSessions: 2,
-  daily: { session: 10, other: 10 },
   weekly: { base: 100, span: 60 },
-  league: { primary: 90, secondary: 55 },
 };
+/** Réglage par défaut (voir rewards.mjs) : utilisé quand aucun réglage n'est passé, notamment par les tests. */
+const DEFAULTS = normalize(null);
+/** Éclats d'une quête du jour selon le réglage en vigueur (recalculés à l'affichage comme au paiement). */
+export const dailyReward = (q, cfg = DEFAULTS) => q.kind === 'session' ? cfg.daily.session : cfg.daily.other + cfg.daily.tierStep * (q.tier || 0);
 /**
  * Badges : chaque palier atteint rapporte des éclats, une seule fois par compte, de plus en plus à mesure que les paliers
  * montent (seuils de Achievements.kt, volontairement hauts). Séries : toutes hebdomadaires (une semaine compte dès 4 jours
@@ -217,11 +219,11 @@ function dailyQuests(account, day, salt) {
   const h = hash(salt, 'd' + day); const a = account.adapt;
   const extras = a.d >= 1 && (h >> 12) % 2 === 0 ? 2 : 1;
   const kinds = [0, 1, 2].map(k => DAILY_KINDS[(h + k) % DAILY_KINDS.length]).slice(0, extras);
-  return [{ id: `d:${day}:session`, kind: 'session', scope: 'd', tier: 0, reward: REWARDS.daily.session },
+  return [{ id: `d:${day}:session`, kind: 'session', scope: 'd', tier: 0, reward: DEFAULTS.daily.session },
     ...kinds.map((kind, k) => {
       // La deuxième quête variable est toujours un cran plus facile.
       const tier = tierOf(a.d, k === 1 || (h >> 8) % 3 === 0 ? -1 : 0);
-      const q = { id: `d:${day}:${kind}`, kind, scope: 'd', tier, reward: REWARDS.daily.other + tier };
+      const q = { id: `d:${day}:${kind}`, kind, scope: 'd', tier, reward: DEFAULTS.daily.other + DEFAULTS.daily.tierStep * tier };
       if (kind === 'focus') q.stat = STATS[(h >> 4) % STATS.length];
       return q;
     })];
@@ -275,7 +277,10 @@ function remember(account, key, now) {
 }
 
 /** Applique un événement déclaré par l'app ; renvoie les éclats gagnés, ou lève une erreur 400/409. */
-export function applyEvent(account, event, now, salt = '') {
+export const applyEvent = (account, event, now, salt = '', cfg = DEFAULTS) => applyEventDetailed(account, event, now, salt, cfg).gained;
+
+/** Comme [applyEvent], avec aussi les paquets offerts ({ gained, packs }). */
+export function applyEventDetailed(account, event, now, salt = '', cfg = DEFAULTS) {
   const bad = () => { const e = new Error('event'); e.status = 400; throw e; };
   const seen = () => { const e = new Error('seen'); e.status = 409; throw e; };
   if (!event || typeof event !== 'object') bad();
@@ -289,9 +294,9 @@ export function applyEvent(account, event, now, salt = '') {
     week.target = target;
     const d = epochDay(event.start); if (!week.active.includes(d)) { week.active.push(d); week.days++; }
     const n = week.sessions++;
-    const full = Math.round(REWARDS.sessionPool / target);
-    const amount = n < target ? full : n < target + REWARDS.extraSessions ? Math.round(full / 2) : 0;
-    return credit(account, amount, now);
+    const full = Math.round(cfg.sessions.pool / target);
+    const amount = n < target ? full : n < target + cfg.sessions.extra ? Math.round(full / 2) : 0;
+    return { gained: credit(account, amount, now) };
   }
   if (event.type === 'quest') {
     const m = typeof event.id === 'string' && /^(d|w):(\d{4,6}):([a-z]{2,10})$/.exec(event.id);
@@ -305,7 +310,7 @@ export function applyEvent(account, event, now, salt = '') {
     const key = 'q:' + event.id; if (account.claimed[key]) seen();
     remember(account, key, now);
     if (scope === 'w') week.wdone++; else week.ddone++;
-    return credit(account, quest.reward, now);
+    return { gained: credit(account, scope === 'd' ? dailyReward(quest, cfg) : quest.reward, now) };
   }
   // Départ de la mise à jour : les badges déjà obtenus avant comptent comme payés, sans éclats (une seule fois par compte).
   if (event.type === 'baseline') {
@@ -314,14 +319,14 @@ export function applyEvent(account, event, now, salt = '') {
     account.badges ??= [];
     for (const id of event.badges) if (badgeReward(id) != null && !account.badges.includes(id)) account.badges.push(id);
     account.baseline = true;
-    return 0;
+    return { gained: 0 };
   }
   if (event.type === 'badge') {
     const reward = badgeReward(event.id); if (reward == null) bad();
     account.badges ??= [];
     if (account.badges.includes(event.id)) seen();
     account.badges.push(event.id);
-    return credit(account, reward, now);
+    return { gained: credit(account, reward, now) };
   }
   if (event.type === 'streak') {
     if (!BADGES.tracks.includes(event.track)) bad();
@@ -334,27 +339,28 @@ export function applyEvent(account, event, now, salt = '') {
     const asked = Number.isInteger(event.weeks) ? event.weeks : 1;
     const n = Math.max(1, Math.min(asked, BADGES.streak.weeks, prev ? prev.n + (week - prev.week) / 7 : BADGES.streak.weeks));
     account.streakBonus[event.track] = { week, n };
-    return credit(account, streakBonus(n), now);
+    return { gained: credit(account, streakBonus(n), now) };
   }
   if (event.type === 'league') {
-    // Quête de la semaine : « lq:{jour}:{domaine} », suffixe « :s » pour la secondaire ; une de chaque par semaine.
+    // Quête de la semaine : « lq:{jour}:{domaine} » (suffixe « :s » des anciennes versions pour la secondaire). Chacune
+    // rapporte des paquets gratuits, dans la limite du nombre de quêtes de la semaine fixé par le réglage.
     if (typeof event.id !== 'string' || !/^[\w:-]{1,80}$/.test(event.id)) bad();
     const key = 'l:' + event.id; if (account.claimed[key]) seen();
     remember(account, key, now);
-    const secondary = event.id.endsWith(':s');
     week.leagueDone ??= [];
-    const slot = secondary ? 's' : 'p';
-    if (week.leagueDone.includes(slot)) return 0;
-    week.leagueDone.push(slot);
-    return credit(account, secondary ? REWARDS.league.secondary : REWARDS.league.primary, now);
+    // Les semaines de la version 3 comptaient « p » et « s » : chacune occupe une place.
+    if (week.leagueDone.length >= cfg.weekly.count) return { gained: 0, packs: 0 };
+    week.leagueDone.push(event.id);
+    account.bonusPacks = (account.bonusPacks || 0) + cfg.weekly.packs;
+    return { gained: 0, packs: cfg.weekly.packs };
   }
   bad();
 }
 
-export function openPack(account, booster) {
+export function openPack(account, booster, price = PACK_PRICE) {
   if (!Number.isSafeInteger(booster) || booster < 0 || booster >= ELEMENTS.length) fail(400, 'booster');
   if (account.bonusPacks > 0) account.bonusPacks--;
-  else if (account.eclats >= PACK_PRICE) account.eclats -= PACK_PRICE;
+  else if (account.eclats >= price) account.eclats -= price;
   else fail(402, 'funds');
   const result = draw(booster, isGold(account.opened));
   account.opened++;
@@ -369,14 +375,16 @@ export function openPack(account, booster) {
 }
 
 /** Vue envoyée à l'app : portefeuille, collection et quêtes du jour et de la semaine de l'utilisateur (jour local). */
-export function view(a, now, today, salt = '', challenge = null) {
-  rollWeek(a, now); pruneTrades(a, now);
+export function view(a, now, today, salt = '', challenge = null, cfg = DEFAULTS) {
+  const week = rollWeek(a, now); pruneTrades(a, now);
   const day = localDay(today, now);
   // Les quêtes de la semaine sont celles du Groupe (calculées dans l'app) : le serveur ne donne que celles du jour.
-  const quests = questsFor(a, `d:${day}`, salt);
+  const quests = questsFor(a, `d:${day}`, salt).map(q => ({ ...q, reward: dailyReward(q, cfg) }));
+  const notes = Object.fromEntries(cfg.gifts.filter(g => (a.gifts || []).includes(g.id)).map(g => [g.id, { packs: g.packs, eclats: g.eclats, note: g.note }]));
   return { v: ECONOMY_VERSION, eclats: a.eclats, bonusPacks: a.bonusPacks, opened: a.opened, untilGold: RATES.goldEvery - (a.opened % RATES.goldEvery),
-    owned: a.owned, merged: a.merged || {}, claimed: Object.keys(a.claimed), quests, price: PACK_PRICE, gifts: a.gifts, tradeId: salt,
-    trades: tradesOf(a), challenge: challengeView(challenge), badges: a.badges || [], baseline: !!a.baseline,
+    owned: a.owned, merged: a.merged || {}, claimed: Object.keys(a.claimed), quests, price: cfg.packPrice, gifts: a.gifts, giftNotes: notes, tradeId: salt,
+    rewards: { daily: cfg.daily, weekly: { ...cfg.weekly, done: (week.leagueDone || []).length }, challenge: cfg.challenge },
+    trades: tradesOf(a), challenge: challengeView(challenge, cfg), badges: a.badges || [], baseline: !!a.baseline,
     streaks: Object.fromEntries(Object.entries(a.streakBonus || {}).map(([k, v]) => [k, { week: v.week, n: v.n }])) };
 }
 
@@ -409,15 +417,34 @@ export function formChallenge(id, week, candidates, seed, friendsOf) {
     reward: type === 'race' ? CHALLENGES.race : CHALLENGES.together, members, done: {}, winner: null, paid: false };
 }
 
-const challengeView = c => c && { id: c.id, type: c.type, kind: c.kind, goal: c.goal, stat: c.stat, reward: c.reward, week: c.week,
+const challengeView = (c, cfg = DEFAULTS) => c && { id: c.id, type: c.type, kind: c.kind, goal: c.goal, stat: c.stat,
+  reward: cfg.challenge[c.type === 'race' ? 'race' : 'together'].eclats, packs: cfg.challenge[c.type === 'race' ? 'race' : 'together'].packs, week: c.week,
   members: c.members, done: Object.keys(c.done), winner: c.winner };
+/** Gain d'un défi : éclats et paquets du réglage en vigueur au moment du paiement. */
+const payChallenge = (acc, c, t, cfg) => {
+  const p = cfg.challenge[c.type === 'race' ? 'race' : 'together'];
+  acc.bonusPacks = (acc.bonusPacks || 0) + p.packs;
+  return { gained: credit(acc, p.eclats, t), packs: p.packs };
+};
+/** Cadeaux du réglage pas encore reçus par ce compte : versés une fois, au premier contact. */
+export function applyGifts(acc, id, t, cfg = DEFAULTS) {
+  acc.gifts ??= [];
+  const received = [];
+  for (const g of cfg.gifts) {
+    if (acc.gifts.includes(g.id) || !giftFor(g, id, t)) continue;
+    acc.gifts.push(g.id); acc.bonusPacks = (acc.bonusPacks || 0) + g.packs; acc.eclats = (acc.eclats || 0) + g.eclats;
+    received.push({ id: g.id, packs: g.packs, eclats: g.eclats, note: g.note });
+  }
+  return received;
+}
 
 // ---- Stockage et routes : /v2/economy/{compte}, jeton d'écriture dans X-Write-Token ----------------------------
 const HEX = /^[a-f0-9]{64}$/;
 const digest = v => createHash('sha256').update(v).digest('hex');
 const equal = (a, b) => Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
-export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 5000, maxNewPerHour = 12, opsPerMinute = 30, secret = null } = {}) {
+export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 5000, maxNewPerHour = 12, opsPerMinute = 30, secret = null, rewards = null } = {}) {
+  const settings = rewards || await createRewards(dataDir, { url: null, now });
   const dir = join(dataDir, 'economy'); await mkdir(dir, { recursive: true, mode: 0o700 });
   let count = (await readdir(dir)).filter(n => /^[a-f0-9]{64}\.json$/.test(n)).length;
   let queue = Promise.resolve();
@@ -461,19 +488,19 @@ export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 500
     if (c) { challenges.set(c.id, c); await saveChallenges(); }
   };
   /** Défi fini par [id] : course, le premier gagne ; ensemble, tout le monde est payé quand le dernier finit. */
-  const finishChallenge = async (acc, id, cid, t) => {
+  const finishChallenge = async (acc, id, cid, t, cfg) => {
     const c = challenges.get(cid);
     if (!c || !c.members.includes(id) || c.week !== monday(t)) fail(404);
     if (c.done[id]) fail(409);
     c.done[id] = t;
-    let gained = 0;
-    if (c.type === 'race' && !c.winner) { c.winner = id; gained = credit(acc, c.reward, t); }
+    let paid = { gained: 0, packs: 0 };
+    if (c.type === 'race' && !c.winner) { c.winner = id; paid = payChallenge(acc, c, t, cfg); }
     if (c.type === 'together' && !c.paid && c.members.every(m => c.done[m])) {
-      c.paid = true; gained = credit(acc, c.reward, t);
-      for (const m of c.members.filter(m => m !== id)) { const other = await load(m); if (other) { credit(other, c.reward, t); await save(m, other); } }
+      c.paid = true; paid = payChallenge(acc, c, t, cfg);
+      for (const m of c.members.filter(m => m !== id)) { const other = await load(m); if (other) { payChallenge(other, c, t, cfg); await save(m, other); } }
     }
     await saveChallenges();
-    return { challengeGained: gained };
+    return { challengeGained: paid.gained, challengePacks: paid.packs };
   };
 
   /** Opérations d'échange : elles lisent et écrivent aussi le compte de l'ami, dans la même file que le reste. */
@@ -551,24 +578,25 @@ export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 500
       // ouvert des packs le reçoivent ; un nouveau compte, ou qui n'avait encore rien ouvert, n'y a plus droit ensuite.
       if (!acc.gifts.includes(REGIFT.id)) { acc.gifts.push(REGIFT.id); if (acc.gifts.includes(LAUNCH_GIFT.id) && acc.opened > 0) acc.bonusPacks += REGIFT.packs; }
       if (!acc.gifts.includes(LAUNCH_GIFT.id)) { acc.gifts.push(LAUNCH_GIFT.id); acc.bonusPacks += LAUNCH_GIFT.packs; }
-      const t = now(); const salt = id;
+      const t = now(); const salt = id; const cfg = await settings.current();
+      const received = applyGifts(acc, id, t, cfg);
       // Amis (leurs identifiants d'échange) : seuls les amis réciproques peuvent partager un défi.
       if (Array.isArray(body.friends)) acc.friends = [...new Set(body.friends.filter(f => typeof f === 'string' && HEX.test(f) && f !== id))].slice(0, 200);
       let extra = {};
       try {
         if (body.op === 'state' || body.op === 'events') await rollChallenge(acc, id, t);
         if (body.op === 'state') {}
-        else if (body.op === 'challenge-done') extra = await finishChallenge(acc, id, body.id, t);
+        else if (body.op === 'challenge-done') extra = await finishChallenge(acc, id, body.id, t, cfg);
         else if (body.op === 'events') {
           if (!Array.isArray(body.events) || body.events.length > 40) return send(res, 400);
-          const results = body.events.map(ev => { try { return { gained: applyEvent(acc, ev, t, salt) }; } catch (e) { return { error: e.status || 400 }; } });
+          const results = body.events.map(ev => { try { return applyEventDetailed(acc, ev, t, salt, cfg); } catch (e) { return { error: e.status || 400 }; } });
           extra = { results };
-        } else if (body.op === 'open') extra = openPack(acc, body.booster);
+        } else if (body.op === 'open') extra = openPack(acc, body.booster, cfg.packPrice);
         else if (body.op === 'fuse') extra = fuse(acc, body.card);
         else if (body.op?.startsWith?.('trade-')) extra = await trade(acc, id, body, t);
         else return send(res, 400);
-      } catch (e) { await save(id, acc); return send(res, e.status || 400, view(acc, t, body.today, salt, challengeOf(id, monday(t)))); }
-      const out = { ...view(acc, t, body.today, salt, challengeOf(id, monday(t))), ...extra };
+      } catch (e) { await save(id, acc); return send(res, e.status || 400, view(acc, t, body.today, salt, challengeOf(id, monday(t)), cfg)); }
+      const out = { ...view(acc, t, body.today, salt, challengeOf(id, monday(t)), cfg), ...extra, ...(received.length ? { received } : {}) };
       await save(id, acc);
       send(res, 200, out);
     });

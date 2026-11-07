@@ -1,0 +1,10 @@
+{
+  "packPrice": 100,
+  "sessions": { "pool": 150, "extra": 2 },
+  "daily": { "session": 25, "other": 20, "tierStep": 5 },
+  "weekly": { "count": 3, "packs": 1 },
+  "challenge": { "race": { "packs": 2, "eclats": 0 }, "together": { "packs": 1, "eclats": 0 } },
+  "gifts": [
+    { "id": "update-3.7", "packs": 5, "note": "Cinq paquets offerts avec la 3.7" }
+  ]
+}

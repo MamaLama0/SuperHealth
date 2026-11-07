@@ -4,7 +4,7 @@ import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { CATALOG, draw, applyEvent, openPack, view, isGold, LAUNCH_GIFT, REGIFT, fuse, spare, levelOf } from './economy.mjs';
+import { CATALOG, draw, applyEvent, applyEventDetailed, applyGifts, openPack, view, isGold, LAUNCH_GIFT, REGIFT, fuse, spare, levelOf } from './economy.mjs';
 import { createRelay } from './server.mjs';
 
 const DAY = 86_400_000;
@@ -22,11 +22,13 @@ test('catalogue aligné sur l’app : 4 × 36 fonds puis 36 duos', () => {
 
 test('taux bas sans garantie, pack doré tous les dix qui triple les chances', () => {
   const n = 200000;
+  let shinyDuo = 0;
   const run = gold => { let rare = 0, epic = 0, duo = 0, chroma = 0;
     for (let i = 0; i < n; i++) {
       const r = draw(i % 4, gold);
       assert.ok(r.pulls.length >= 3 && r.pulls.length <= 4);
-      for (const k of r.pulls) if (rarity(k).elements.length === 2) assert.ok(k.endsWith(':NORMALE'), 'duo sans effet ' + k);
+      // duo et effet se cumulent (épique chromatique duo possible)
+      for (const k of r.pulls) if (rarity(k).elements.length === 2 && !k.endsWith(':NORMALE')) shinyDuo++;
       const cards = r.pulls.map(rarity);
       if (cards.some(c => c.rarity === 'RARE' || c.rarity === 'EPIQUE')) rare++;
       if (cards.some(c => c.rarity === 'EPIQUE')) epic++;
@@ -36,6 +38,7 @@ test('taux bas sans garantie, pack doré tous les dix qui triple les chances', (
     return { rare: rare / n, epic: epic / n, duo: duo / n, chroma: chroma / n };
   };
   const normal = run(false), gold = run(true);
+  assert.ok(shinyDuo > 0, 'duo avec effet');
   assert.ok(normal.rare > 0.05 && normal.rare < 0.063, 'rare ' + normal.rare);
   assert.ok(normal.epic > 0.009 && normal.epic < 0.016, 'épique ' + normal.epic);
   assert.ok(normal.duo > 0.012 && normal.duo < 0.021, 'duo ' + normal.duo);
@@ -56,11 +59,14 @@ test('quêtes : 2 à 3 par jour du serveur, la quête de la semaine du Groupe ; 
     assert.ok(quests.every(q => q.scope === 'd'));
   }
   for (const d of [day, day - 1]) for (const q of view(engaged, now, d, 'a').quests) applyEvent(engaged, { type: 'quest', id: q.id }, now, 'a');
-  // Quête de la semaine du Groupe : principale puis secondaire, une seule fois chacune.
-  assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'a'), 90);
-  assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:FOOD:s` }, now, 'a'), 55);
-  assert.equal(applyEvent(engaged, { type: 'league', id: `lq:${day}:RUN` }, now, 'a'), 0);
-  assert.ok(engaged.eclats >= 320 && engaged.eclats <= 450, 'impliqué ' + engaged.eclats);
+  // Quêtes de la semaine du Groupe : trois, chacune rapporte un paquet gratuit et aucun éclat ; la quatrième rien.
+  const packs = engaged.bonusPacks;
+  assert.deepEqual(applyEventDetailed(engaged, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'a'), { gained: 0, packs: 1 });
+  assert.deepEqual(applyEventDetailed(engaged, { type: 'league', id: `lq:${day}:FOOD:s` }, now, 'a'), { gained: 0, packs: 1 });
+  assert.deepEqual(applyEventDetailed(engaged, { type: 'league', id: `lq:${day}:STEPS` }, now, 'a'), { gained: 0, packs: 1 });
+  assert.deepEqual(applyEventDetailed(engaged, { type: 'league', id: `lq:${day}:RUN` }, now, 'a'), { gained: 0, packs: 0 });
+  assert.equal(engaged.bonusPacks, packs + 3);
+  assert.ok(engaged.eclats >= 250 && engaged.eclats <= 450, 'impliqué ' + engaged.eclats);
   assert.throws(() => applyEvent(engaged, { type: 'session', id: 'w0', start: now, target: 3 }, now), e => e.status === 409);
   assert.throws(() => applyEvent(engaged, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'a'), e => e.status === 409);
   assert.throws(() => applyEvent(engaged, { type: 'quest', id: `d:${day}:inconnue` }, now, 'a'), e => e.status === 400);
@@ -203,18 +209,20 @@ test('défis entre amis réciproques : course gagnée par le premier, ensemble p
   assert.deepEqual(new Set(a1.challenge.members), new Set([a0.tradeId, b0.tradeId]));
   const b1 = await bob({ op: 'state' });
   assert.equal(b1.challenge.id, a1.challenge.id, 'le même défi pour les deux');
-  const before = a1.eclats;
+  // Les défis rapportent des paquets gratuits (réglage par défaut : 2 pour la course, 1 chacun ensemble).
+  const before = a1.bonusPacks;
+  assert.equal(a1.challenge.packs, a1.challenge.type === 'race' ? 2 : 1);
   const done = await alice({ op: 'challenge-done', id: a1.challenge.id });
   if (a1.challenge.type === 'race') {
-    assert.equal(done.eclats, before + CHALLENGES.race);
+    assert.equal(done.bonusPacks, before + 2);
     const late = await bob({ op: 'challenge-done', id: a1.challenge.id });
-    assert.equal(late.eclats, b1.eclats, 'le second ne gagne rien');
+    assert.equal(late.bonusPacks, b1.bonusPacks, 'le second ne gagne rien');
     assert.equal(late.challenge.winner, a0.tradeId);
   } else {
-    assert.equal(done.eclats, before, 'ensemble : rien tant que tous n’ont pas fini');
+    assert.equal(done.bonusPacks, before, 'ensemble : rien tant que tous n’ont pas fini');
     const last = await bob({ op: 'challenge-done', id: a1.challenge.id });
-    assert.equal(last.eclats, b1.eclats + CHALLENGES.together);
-    assert.equal((await alice({ op: 'state' })).eclats, before + CHALLENGES.together);
+    assert.equal(last.bonusPacks, b1.bonusPacks + 1);
+    assert.equal((await alice({ op: 'state' })).bonusPacks, before + 1);
   }
   assert.equal((await alice({ op: 'challenge-done', id: a1.challenge.id })).status, 409);
   } finally { CHALLENGES.odds = odds; server.close(); }
@@ -246,4 +254,54 @@ test('départ de la mise à jour : badges déjà obtenus payés sans éclats, un
   assert.throws(() => applyEvent(a, { type: 'badge', id: 'food_30' }, now), e => e.status === 409);
   assert.throws(() => applyEvent(a, { type: 'baseline', badges: [] }, now), e => e.status === 409);
   assert.equal(applyEvent(a, { type: 'badge', id: 'food_100' }, now), 50);
+});
+
+test('réglage des récompenses : borné, cadeaux versés une fois, ciblés et datés', async () => {
+  const { normalize, createRewards } = await import('./rewards.mjs');
+  const cfg = normalize({ daily: { session: 9999, other: 'x' }, weekly: { count: 3, packs: 2 },
+    gifts: [{ id: 'update-3.7', packs: 5, note: 'Cinq paquets offerts' }, { id: 'perso', packs: 99, accounts: ['b'.repeat(64)] },
+      { id: 'vieux', packs: 1, until: '2020-01-01' }, { id: 'vide', packs: 0 }] });
+  assert.equal(cfg.daily.session, 200); assert.equal(cfg.daily.other, 20);
+  assert.deepEqual(cfg.gifts.map(g => g.id), ['update-3.7', 'perso', 'vieux']);
+  assert.equal(cfg.gifts[1].packs, 20);
+  const t = Date.UTC(2026, 10, 7);
+  const a = { eclats: 0, bonusPacks: 0, gifts: [] };
+  assert.deepEqual(applyGifts(a, 'a'.repeat(64), t, cfg).map(g => g.id), ['update-3.7']);
+  assert.deepEqual(applyGifts(a, 'a'.repeat(64), t, cfg), []);
+  assert.equal(a.bonusPacks, 5);
+  const b = { eclats: 0, bonusPacks: 0, gifts: [] };
+  applyGifts(b, 'b'.repeat(64), t, cfg); assert.equal(b.bonusPacks, 25);
+  // Fichier local : relu dès qu'il change, prioritaire sur le dépôt.
+  const dir = await mkdtemp(join(tmpdir(), 'sh-rewards-'));
+  let clock = t;
+  const remote = { weekly: { packs: 3 } };
+  const r = await createRewards(dir, { now: () => clock, fetchImpl: async () => ({ ok: true, text: async () => JSON.stringify(remote) }) });
+  assert.equal((await r.current()).weekly.packs, 3);
+  await writeFile(join(dir, 'rewards.json'), JSON.stringify({ weekly: { packs: 4 } }));
+  clock += 6000;
+  assert.equal((await r.current()).weekly.packs, 4);
+});
+
+test('serveur : cadeau de paquets et quêtes de la semaine payées en paquets, sans mise à jour de l\'app', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'sh-eco-gift-'));
+  await writeFile(join(dataDir, 'rewards.json'), JSON.stringify({ gifts: [{ id: 'update-3.7', packs: 5, note: 'Cinq paquets' }] }));
+  const server = await createRelay({ dataDir, publishKey: 'test-only-'.repeat(5) });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/v2/economy/${randomBytes(32).toString('hex')}`;
+  const headers = { 'X-Write-Token': randomBytes(32).toString('hex'), Authorization: 'Bearer ' + 'test-only-'.repeat(5) };
+  const post = body => fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json());
+  try {
+    const first = await post({ op: 'state' });
+    assert.equal(first.bonusPacks, LAUNCH_GIFT.packs + 5);
+    assert.deepEqual(first.received.map(g => g.id), ['update-3.7']);
+    assert.equal(first.giftNotes['update-3.7'].packs, 5);
+    assert.equal(first.rewards.weekly.count, 3);
+    const again = await post({ op: 'state' });
+    assert.equal(again.bonusPacks, first.bonusPacks); assert.equal(again.received, undefined);
+    const day = Math.floor(Date.now() / 86_400_000);
+    const done = await post({ op: 'events', events: [{ type: 'league', id: `lq:${day}:FOOD` }] });
+    assert.deepEqual(done.results, [{ gained: 0, packs: 1 }]);
+    assert.equal(done.bonusPacks, first.bonusPacks + 1);
+    assert.equal(done.rewards.weekly.done, 1);
+  } finally { await new Promise(resolve => server.close(resolve)); }
 });

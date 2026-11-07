@@ -81,3 +81,21 @@ test('demandes d\'ami : une par expéditeur, effacées par le destinataire seule
     assert.deepEqual(await (await fetch(inbox)).json(), { items: [] });
   } finally { await f.close(); }
 });
+
+test('photo de carte : WebP ou PNG publics, signés par l\'auteur seul, retirés par une image vide', async () => {
+  const f = await fixture(); const me = identity(); const other = identity();
+  const url = `${f.base}/v2/faces/${me.id}/card`;
+  const webp = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8L'), Buffer.alloc(20_000, 7)]).toString('base64url');
+  try {
+    assert.equal((await fetch(url)).status, 404);
+    assert.equal((await fetch(url, { method: 'PUT', body: me.body({ t: 'card', id: me.id, at: f.now, image: jpeg }) })).status, 400, 'JPEG refusé : pas de transparence');
+    assert.equal((await fetch(url, { method: 'PUT', body: other.body({ t: 'card', id: me.id, at: f.now, image: webp }) })).status, 400);
+    assert.equal((await fetch(url, { method: 'PUT', body: me.body({ t: 'card', id: me.id, at: f.now, image: webp }) })).status, 204);
+    const card = await (await fetch(url)).json(); assert.equal(card.key, me.key);
+    // Le visage reste distinct de la photo de carte.
+    assert.equal((await fetch(`${f.base}/v2/faces/${me.id}`)).status, 404);
+    f.advance(1000);
+    assert.equal((await fetch(url, { method: 'PUT', body: me.body({ t: 'card', id: me.id, at: f.now, image: '' }) })).status, 204);
+    assert.equal((await fetch(url)).status, 404);
+  } finally { await f.close(); }
+});
