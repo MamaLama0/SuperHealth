@@ -89,7 +89,7 @@ object League {
         val notifyFriends: Boolean = true, val notifyReplies: Boolean = true, val notifyPosts: Boolean = true, val notifyReactions: Boolean = true,
         val notifyProgress: Boolean = true, val progressNotificationBaseline: Boolean = false, val progressNotificationLevel: Int = 0,
         val shareProfilePhoto: Boolean = true, val profileAvatar: SocialPosts.Media? = null,
-        val lastSync: Long = 0, val lastSuccessfulSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val distanceDays: Map<Long, Int> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), val questXp: Long = 0, val questsCompleted: Long = 0, val posts: List<SocialPosts.Post> = emptyList(), val reactions: List<SocialReactions.Reaction> = emptyList(), val unifiedScore: Boolean = true,
+        val lastSync: Long = 0, val lastSuccessfulSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val distanceDays: Map<Long, Int> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), /** 3.8 : remise à zéro unique des quêtes de la semaine (identifiant de la remise appliquée). */ val questReset: String = "", val questXp: Long = 0, val questsCompleted: Long = 0, val posts: List<SocialPosts.Post> = emptyList(), val reactions: List<SocialReactions.Reaction> = emptyList(), val unifiedScore: Boolean = true,
         val shareIndex: Boolean = true, val hiddenSocialPosts: Set<String> = emptySet(), val mutedSocialFriends: Set<String> = emptySet(),
         val silentSocialThreads: Set<String> = emptySet(), val blockedSocialKeys: Set<String> = emptySet(),
         val pendingSocialRevocations: Set<String> = emptySet(), val quietSocialFriends: Set<String> = emptySet(), val blockedSocialAliases: Map<String, String> = emptyMap(), val silentCircles: Set<String> = emptySet())
@@ -110,7 +110,12 @@ object League {
     private fun file(ctx: Context) = File(File(ctx.filesDir, "league").apply { mkdirs() }, "state.json")
     fun load(ctx: Context) { state.value = runCatching { json.decodeFromString(State.serializer(), android.util.AtomicFile(file(ctx)).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(State()).let { if (it.relayUrl.isNotBlank() && !it.customRelay) it.copy(customRelay = true) else it }
         // Ancien choix « calcul classique » : on repasse les amis sur l'indice unifié.
-        .let { if (it.unifiedScore) it else it.copy(unifiedScore = true, friends = it.friends.map { f -> f.withIndex(HealthIndex.MODEL) }) } }
+        .let { if (it.unifiedScore) it else it.copy(unifiedScore = true, friends = it.friends.map { f -> f.withIndex(HealthIndex.MODEL) }) }
+        // 3.8 : les quêtes de la semaine en cours repartent de zéro (trois par personne), une seule fois ; le serveur
+        // remet à zéro de son côté les packs déjà touchés cette semaine (rewards.json, weekly.reset).
+        .let { if (it.questReset == QUEST_RESET) it else it.copy(questReset = QUEST_RESET,
+            questWeeks = it.questWeeks.filterNot { w -> w.start == Progression.week(LocalDate.now().toEpochDay()) }) } }
+    const val QUEST_RESET = "3.8"
     @Synchronized private fun save(ctx: Context, s: State) {
         val atomic = android.util.AtomicFile(file(ctx))
         val out = atomic.startWrite()

@@ -643,6 +643,7 @@ fun Invocation(pull: Pull, fresh: Boolean, tilt: () -> Offset, onDone: () -> Uni
 @Composable
 private fun Summary(o: CardStore.Opening, onDone: () -> Unit, onAgain: () -> Unit, onAlbum: () -> Unit, onShare: (CardStore.Gain) -> Unit) {
     val state by CardStore.state.collectAsState()
+    val ctx = LocalContext.current
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(if (o.result.prism) tr("PACK PRISME !") else if (o.result.gold) tr("PACK DORÉ") + " · " + tr(o.booster.label) else tr("Booster") + " " + tr(o.booster.label), color = if (o.result.prism || o.result.gold) Gold else Color.White, fontWeight = FontWeight.Black, fontSize = 26.sp, modifier = Modifier.padding(top = 12.dp))
         val fresh = o.gains.count { it.fresh }; val ready = o.gains.filter { it.fusable }.distinctBy { it.pull.card.id }.size
@@ -670,6 +671,13 @@ private fun Summary(o: CardStore.Opening, onDone: () -> Unit, onAgain: () -> Uni
                             .background(Brush.horizontalGradient(listOf(g.pull.card.element.outer.c(), g.pull.card.element.mid.c()))))
                     }
                     Text(Bonus.label(g.pull, g.level), color = g.pull.card.element.mid.c(), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+                    // 3.8 : équiper le fond tout de suite, sans repasser par l'album.
+                    val equipped = state.background == g.pull.key
+                    Text(tr(if (equipped) "Équipé" else "Équiper"), color = if (equipped) g.pull.card.element.mid.c() else Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        textAlign = TextAlign.Center, maxLines = 1,
+                        modifier = Modifier.padding(top = 6.dp).fillMaxWidth().clip(RoundedCornerShape(50))
+                            .background(if (equipped) Color.White.copy(alpha = 0.08f) else g.pull.card.element.outer.c().copy(alpha = 0.55f))
+                            .clickable(enabled = !equipped) { CardStore.setBackground(ctx, g.pull.key); Rumble.reveal(ctx) }.padding(vertical = 7.dp))
                 }
             }
         }

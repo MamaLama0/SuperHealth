@@ -421,6 +421,20 @@ data class SuperSettings(
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,
+    /**
+     * 3.8 : objectif d'eau calculé (poids, séances du jour, protéines) au lieu du chiffre fixe ; taux de sudation mesuré
+     * par pesée avant/après séance (L/h, null : valeurs moyennes de la littérature) ; sodium de la sueur (mg/L, Baker 2017 :
+     * ~950 mg/L en moyenne) ; tailles des contenants du bouton d'eau (ml).
+     */
+    val hydrationAuto: Boolean = true,
+    val sweatRateLh: Double? = null,
+    val sweatSodiumMgL: Double = 950.0,
+    val waterSizes: List<Int> = listOf(250, 500, 750),
+    /**
+     * 3.8 : le cycle dans la Forme du jour, comme le journal du moral. SIMPLE : la phase s'affiche comme explication, sans
+     * effet ; ADVANCED (défaut) : l'effet de chaque phase sur votre propre ressenti est appris et corrige le score.
+     */
+    val cycleForm: String = "ADVANCED",
 )
 
 /** Mesures que la carte Constantes peut afficher (montre ou Health Connect). */

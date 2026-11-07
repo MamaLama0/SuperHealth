@@ -74,7 +74,7 @@ fun NotificationSettingsScreen(nav: NavHostController) {
                 app.superhealth.training.ui.SessionNotification.update(ctx, app.superhealth.training.WorkoutApp.store.state.value)
             }
             RowDivider()
-            SwitchRow(tr("Alerte de fin de repos"), tr("Son et vibration à la fin du minuteur"), settings.notifyRest) { on -> SuperPrefs.update { it.copy(notifyRest = on) } }
+            SwitchRow(tr("Alerte de fin de repos"), tr("Vibration à la fin du minuteur (le bip se règle dans Musculation)"), settings.notifyRest) { on -> SuperPrefs.update { it.copy(notifyRest = on) } }
         }
         SectionLabel(tr("Application"))
         GroupCard {

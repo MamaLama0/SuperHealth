@@ -94,6 +94,8 @@ object CardStore {
         val price: Int = PACK_PRICE,
         /** Cadeaux du serveur reçus mais pas encore montrés (packs offerts avec une mise à jour…). */
         val gifts: List<Economy.Gift> = emptyList(),
+        /** 3.8 : vitrine, jusqu'à [SHOWCASE_MAX] fonds mis en avant sur « Ma carte » (clés de [Pull]). */
+        val showcase: List<String> = emptyList(),
     ) {
         fun owns(card: CardDef) = owned.keys.any { it.startsWith(card.id + ":") }
         /** Exemplaires reçus d'un fond, toutes finitions confondues. */
@@ -314,6 +316,14 @@ object CardStore {
     private fun pay(s: State, k: Economy.Stake) = if (k.card != null) s.copy(owned = s.owned + (k.card to (s.owned[k.card] ?: 0) + 1)) else s.copy(eclats = s.eclats + (k.eclats ?: 0))
 
     fun setBackground(ctx: Context, key: String?) = update(ctx) { it.copy(background = key) }
+
+    const val SHOWCASE_MAX = 3
+    /** Ajoute ou retire un fond de la vitrine ; plein, le plus ancien laisse sa place. */
+    fun toggleShowcase(ctx: Context, key: String) = update(ctx) { s ->
+        s.copy(showcase = if (key in s.showcase) s.showcase - key else (s.showcase + key).takeLast(SHOWCASE_MAX))
+    }
+    /** Fonds de la vitrine encore possédés (un échange a pu en retirer un). */
+    fun showcase(): List<Pull> = state.value.let { s -> s.showcase.filter { (s.owned[it] ?: 0) > 0 }.mapNotNull(Pull::of) }
     fun background(): Pull? = state.value.background?.let(Pull::of)
 
     // ---- Quêtes ------------------------------------------------------------------------------------------

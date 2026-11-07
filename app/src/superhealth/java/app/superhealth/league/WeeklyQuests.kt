@@ -99,6 +99,15 @@ object WeeklyQuests {
             val chosen = mutableListOf<Candidate>().apply { primary?.let(::add) }
             for (c in others) if (chosen.size < COUNT && chosen.none { it.metric.focus == c.metric.focus }) chosen += c
             for (c in others) if (chosen.size < COUNT && c !in chosen) chosen += c
+            // 3.8 : toujours trois quêtes par personne. Si peu de domaines sont suivis, on complète avec la régularité
+            // (n'importe quel jour suivi) puis le ressenti des séances et les pas, même déjà proposés comme principaux ailleurs.
+            // Seulement à partir d'une vraie quête, dans les domaines choisis et suivis (jamais la randonnée, ni pas ou course sans données).
+            if (chosen.isNotEmpty() && chosen.size < COUNT) {
+                val fill = listOf(Metric.ACTIVE, Metric.STRENGTH_REVIEW, Metric.STRENGTH, Metric.FOOD, Metric.STEPS)
+                    .filter { m -> chosen.none { it.metric == m } && m.focus in focuses && (m.track == null || m.track in tracked) &&
+                        (m != Metric.STEPS || evidence.healthData) && (m != Metric.STRENGTH_REVIEW || n(Metric.STRENGTH) > 0 || Metric.STRENGTH in chosen.map { it.metric }) }
+                for (m in fill) if (chosen.size < COUNT) chosen += Candidate(m, .3, Reason.VARIETY)
+            }
             chosen.mapIndexed { i, c ->
                 val baseline = n(c.metric) / 2
                 val goal = when (c.metric) {

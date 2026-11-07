@@ -255,7 +255,7 @@ internal fun GroupPostReplies(post: SocialPosts.Post, author: String, highlighte
             FriendAvatar(null, app.superhealth.ui.userName() ?: tr("Vous"), 28.dp)
             OutlinedTextField(field, enabled = !closed,
                 inputTransformation = { if (length > 1000) revertAllChanges() },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Send),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, imeAction = androidx.compose.ui.text.input.ImeAction.Send),
                 onKeyboardAction = { submit() },
                 placeholder = { Text(tr("Ajouter une réponse…"), style = MaterialTheme.typography.bodyMedium) },
                 // GIF et images du clavier (GIF de Gboard, autocollants…) : joints comme une image de la galerie.

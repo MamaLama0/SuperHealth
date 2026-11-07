@@ -136,6 +136,13 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
             PillButton(tr("Remplacer mes cibles"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("targets/override") }
             if (app.superhealth.nutrition.domain.ManualTargets.overrideAt(p, an.today) != null)
                 Text(tr("Remplacement actif"), color = Mf.colors.accent, modifier = Modifier.padding(6.dp))
+            // 3.8 : plan semaine par semaine, jour par jour, programmable à l'avance
+            Spacer(Modifier.height(8.dp))
+            val planned = p.plan.count { it.startDay + 7 > an.today }
+            PillButton(if (planned > 0) trf("Plan semaine par semaine · %1\$s", planned) else tr("Plan semaine par semaine"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("n/plan") }
+            app.superhealth.nutrition.domain.NutritionPlan.weekAt(p, an.today)?.let { w ->
+                Text(tr("Plan actif") + " · " + tr(w.phase.label), color = Mf.colors.accent, modifier = Modifier.padding(6.dp))
+            }
             SectionLabel(tr("Cibles de la semaine"))
             val monday = an.today - LocalDate.ofEpochDay(an.today).dayOfWeek.value + 1
             GroupCard {
@@ -595,7 +602,7 @@ private fun CompareRow(label: String, before: Double?, after: Double, color: Col
 }
 
 @Composable
-fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
+fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit, onPlan: (() -> Unit)? = null) {
     val program by vm.program.collectAsState()
     val profile by vm.profile.collectAsState()
     val s by vm.settings.collectAsState()
@@ -685,7 +692,20 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                             if (t != null) p = app.superhealth.nutrition.domain.ManualTargets.withBase(p, t)
                         }
                     }
-                } else ManualWeekEditor(p, s, { validTargets = it }) { p = it }
+                } else {
+                    // 3.8 : mode manuel réorganisé — résumé de la semaine, cibles, puis semaines à venir
+                    ManualWeekSummary(p, s)
+                    SectionTitleSmall(tr("Cibles de la semaine type"))
+                    ManualWeekEditor(p, s, { validTargets = it }) { p = it }
+                    SectionTitleSmall(tr("Semaines à venir"))
+                    Text(tr("Préparez des semaines différentes à l'avance (sèche, recharge, semaine de pic…), réglées jour par jour. Elles ne s'appliquent qu'à partir de leur lundi."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+                    val upcoming = p.plan.count { it.startDay + 7 > java.time.LocalDate.now().toEpochDay() }
+                    if (onPlan != null) PillButton(if (upcoming > 0) trf("Plan semaine par semaine · %1\$s", upcoming) else tr("Plan semaine par semaine"),
+                        Modifier.fillMaxWidth().padding(top = 4.dp), strong = false) {
+                        vm.repo.prefs.setProgram(p); onPlan()
+                    }
+                }
             }
             app.superhealth.nutrition.ui.components.SwitchRow(tr("Objectif de poids"), tr("Désactivez pour suivre seulement vos calories et macros"), p.weightGoalEnabled) {
                 p = p.copy(weightGoalEnabled = it)
@@ -778,3 +798,7 @@ internal fun minTargetText(age: Int, heightCm: Double, startKg: Double, weight: 
     return if (byFloor) trf("Visez au moins %1\$s (IMC %2\$s) : en dessous, le risque augmente.", weight(min), num(r.floorBmi, 1))
     else trf("À votre âge, perdez au plus %1\$s %% par objectif : visez au moins %2\$s, puis refaites le point.", ((r.maxLoss ?: 0.0) * 100).roundToInt(), weight(min))
 }
+
+@Composable
+private fun SectionTitleSmall(text: String) = Text(text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
+    modifier = Modifier.padding(start = 4.dp, top = 18.dp, bottom = 6.dp))

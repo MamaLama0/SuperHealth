@@ -19,18 +19,34 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo;
+
 public class BatteryStatusMessage extends GFDIMessage {
     protected static final Logger LOG = LoggerFactory.getLogger(BatteryStatusMessage.class);
 
+    /** Pourcentage lu dans le message (SuperHealth), -1 s'il n'est pas exploitable. */
+    private final int percent;
+    private final float voltage;
+
     public BatteryStatusMessage(GarminMessage garminMessage) {
+        this(garminMessage, -1, 0f);
+    }
+
+    public BatteryStatusMessage(GarminMessage garminMessage, int percent, float voltage) {
         this.garminMessage = garminMessage;
+        this.percent = percent;
+        this.voltage = voltage;
         this.statusMessage = this.getStatusMessage();
     }
 
     public static BatteryStatusMessage parseIncoming(MessageReader reader, GarminMessage originalGarminMessage) {
-        final int wireStatus = reader.readByte(); // 0
-        final float voltage = reader.readByte() / 100.0f; // 1
-        final int percent = reader.readByte(); // 2
+        final int wireStatus = reader.readByte() & 0xff; // 0
+        final float voltage = (reader.readByte() & 0xff) / 100.0f; // 1
+        final int percent = reader.readByte() & 0xff; // 2
         // 3-6 - unknown meaning
 
         final String status = switch (wireStatus & 0x70) {
@@ -43,10 +59,25 @@ public class BatteryStatusMessage extends GFDIMessage {
             default -> Integer.toBinaryString(wireStatus & 0x70);
         };
 
-        LOG.info("Received not-yet supported BATTERY_STATUS message with status={}, voltage={} and capacity={}",
+        LOG.info("Received BATTERY_STATUS message with status={}, voltage={} and capacity={}",
                 status, voltage, percent);
 
-        return new BatteryStatusMessage(originalGarminMessage);
+        // SuperHealth : niveau transmis à l'app (Forerunner 255 et autres montres qui l'envoient ici)
+        final boolean valid = (wireStatus & 0x70) != 0x70 && percent <= 100;
+        return new BatteryStatusMessage(originalGarminMessage, valid ? percent : -1, voltage);
+    }
+
+    @Override
+    public List<GBDeviceEvent> getGBDeviceEvent() {
+        if (percent < 0) {
+            return Collections.emptyList();
+        }
+        final GBDeviceEventBatteryInfo event = new GBDeviceEventBatteryInfo();
+        event.level = percent;
+        if (voltage > 0) {
+            event.voltage = voltage;
+        }
+        return Collections.singletonList(event);
     }
 
     @Override

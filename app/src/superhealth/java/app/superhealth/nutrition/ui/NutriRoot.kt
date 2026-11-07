@@ -108,7 +108,8 @@ fun NavGraphBuilder.nutritionGraph(vm: AppViewModel, nav: NavHostController) {
     composable("expenditure") { ExpenditureScreen(vm, onBack = { nav.popBackStack() }) }
     composable("nutrition") { NutritionScreen(vm, onBack = { nav.popBackStack() }) }
     composable("targets/override") { app.superhealth.nutrition.ui.screens.TargetOverrideScreen(vm) { nav.popBackStack() } }
-    composable("program") { ProgramEditScreen(vm, onBack = { nav.popBackStack() }) }
+    composable("program") { ProgramEditScreen(vm, onBack = { nav.popBackStack() }, onPlan = { nav.navigate("n/plan") }) }
+    composable("n/plan") { app.superhealth.nutrition.ui.screens.PlanScreen(vm) { nav.popBackStack() } }
     composable("profile") { ProfileScreen(vm, onBack = { nav.popBackStack() }) }
     composable("energy") { EnergyBalanceScreen(vm, onBack = { nav.popBackStack() }) }
     composable("goalprogress") { GoalProgressScreen(vm, onBack = { nav.popBackStack() }) }

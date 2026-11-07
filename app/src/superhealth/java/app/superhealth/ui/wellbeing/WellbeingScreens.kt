@@ -340,6 +340,29 @@ fun CycleScreen(vm: SuperViewModel, nav: NavHostController) {
                 PillButton(if (today in days) tr("Pas de règles aujourd'hui") else tr("Règles aujourd'hui"), strong = today !in days) { Cycle.toggle(today) }
             }
         }
+        // 3.8 : le cycle dans la Forme du jour, comme le journal du moral
+        val sh by app.superhealth.SuperPrefs.settings.collectAsState()
+        GroupHeader(tr("Forme du jour"))
+        GroupCard {
+            Column(Modifier.padding(16.dp)) {
+                app.superhealth.nutrition.ui.components.ChipChoice(listOf("SIMPLE", "ADVANCED"), sh.cycleForm,
+                    { tr(if (it == "SIMPLE") "Mode simple" else "Mode avancé") }) { m -> app.superhealth.SuperPrefs.update { it.copy(cycleForm = m) } }
+                Spacer(Modifier.height(8.dp))
+                Text(tr(if (sh.cycleForm == "SIMPLE") "La phase du cycle s'affiche dans la Forme du jour, sans changer le conseil."
+                    else "L'app apprend comment chaque phase joue sur votre ressenti du matin et en tient compte dans la Forme du jour. Sans écart net chez vous, rien ne change."),
+                    style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+                if (sh.cycleForm == "ADVANCED") {
+                    val effects = remember(days) { Cycle.Phase.entries.mapNotNull { Cycle.feelEffect(it) } }
+                    Spacer(Modifier.height(8.dp))
+                    if (effects.isEmpty()) Text(tr("Apprentissage : il faut au moins 3 cycles notés et 20 matins de ressenti."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                    else effects.forEach { e ->
+                        Text(tr(e.phase.label) + " : " + (if (e.delta >= 0) "+" else "") + String.format(app.superhealth.ui.Lang.locale, "%.1f", e.delta) + " · " +
+                            trf("%1\$s matins", e.mornings), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
         GroupHeader(tr("8 dernières semaines"))
         // calendrier : touchez un jour pour le cocher ou le décocher
         val first = LocalDate.ofEpochDay(today).minusDays(55).let { it.minusDays((it.dayOfWeek.value - 1).toLong()) }.toEpochDay()

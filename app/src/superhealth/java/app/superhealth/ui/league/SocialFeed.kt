@@ -431,7 +431,7 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
     if (showReactions) GroupReactionPicker(selected, onDismiss = { showReactions = false }, onSelect = ::react)
     if (showProfile && friend != null) FriendSheet(friend) { showProfile = false }
     if (editing) AlertDialog(onDismissRequest = { editing = false }, title = { Text(tr("Modifier le texte")) },
-        text = { OutlinedTextField(editedText, { editedText = it.take(500) }, label = { Text(tr("Votre message")) }) },
+        text = { OutlinedTextField(editedText, { editedText = it.take(500) }, label = { Text(tr("Votre message")) }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences)) },
         confirmButton = { TextButton(enabled = !busy, onClick = { scope.launch {
             busy = true
             try { SocialPosts.edit(ctx, post, editedText); editing = false }
@@ -535,7 +535,7 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
         finally { loadingActivities = false }
     }
     DetailScaffold(tr("Publier dans le Groupe"), { if (!busy) nav.popBackStack() }, contentSpacing = 12.dp) {
-        OutlinedTextField(text, { text = it.take(500) }, label = { Text(tr("Votre message")) },
+        OutlinedTextField(text, { text = it.take(500) }, label = { Text(tr("Votre message")) }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
             supportingText = { Text("${text.length}/500") }, minLines = 3, enabled = !busy && !published, modifier = Modifier.fillMaxWidth())
         if (!published) {
             PillButton(tr("Photo ou vidéo"), Modifier.fillMaxWidth(), strong = false, enabled = !busy, icon = Icons.Rounded.AddPhotoAlternate) {

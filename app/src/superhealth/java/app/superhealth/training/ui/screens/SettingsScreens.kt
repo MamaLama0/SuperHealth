@@ -188,7 +188,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 RowDivider()
                 SettingRow(tr("Entre gauche et droite"), restLabel(s.restBetweenSidesSec)) { vm.settings { it.copy(restBetweenSidesSec = next(it.restBetweenSidesSec, listOf(0, 15, 30, 45, 60))) } }
                 RowDivider()
-                SwitchRow(tr("Son de fin de repos"), null, s.restSound) { v -> vm.settings { it.copy(restSound = v) } }
+                SwitchRow(tr("Signal sonore de fin de récupération"), tr("Un bip quand le repos est fini, même écran éteint"), s.restSound) { v -> vm.settings { it.copy(restSound = v) } }
             }
 
             }

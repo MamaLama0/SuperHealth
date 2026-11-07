@@ -101,7 +101,8 @@ data class Analytics(
      * on reprend ce premier check-in plutôt qu'un calcul provisoire jour par jour — sinon le jour du premier
      * check-in ressort avec une cible différente des autres.
      */
-    private fun overrideTarget(day: Long): Targets.DailyTarget? = app.superhealth.nutrition.domain.ManualTargets.overrideAt(program, day)?.let {
+    private fun overrideTarget(day: Long): Targets.DailyTarget? = (app.superhealth.nutrition.domain.ManualTargets.overrideAt(program, day)
+        ?: app.superhealth.nutrition.domain.NutritionPlan.dayAt(program, day)?.target)?.let {
         Targets.DailyTarget(Macros(it.kcal, it.protein, it.fat, it.carbs), tdeeAt(day), false, null)
     }
 

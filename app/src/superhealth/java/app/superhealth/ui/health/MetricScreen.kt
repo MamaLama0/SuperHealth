@@ -216,6 +216,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             }
         }
 
+        if (metric == Metric.HYDRATION) HydrationPanel(vm)
         if (metric == Metric.SLEEP) UsualNight()
         if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
 

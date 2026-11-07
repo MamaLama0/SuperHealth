@@ -26,7 +26,11 @@ object RestTimer {
     fun schedule(ctx: Context, at: Long, sound: Boolean) {
         val am = ctx.getSystemService(AlarmManager::class.java)
         am.cancel(pending(ctx, sound))
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, sound))
+        // 3.8 : alarme exacte quand Android l'autorise ; l'alarme « inexacte » pouvait sonner plusieurs minutes trop tard en veille
+        val exact = android.os.Build.VERSION.SDK_INT < 31 || runCatching { am.canScheduleExactAlarms() }.getOrDefault(false)
+        if (exact) runCatching { am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, sound)) }
+            .onFailure { am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, sound)) }
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, sound))
     }
 
     fun cancel(ctx: Context) {
@@ -47,7 +51,8 @@ object RestTimer {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.cancel(ID)
         nm.deleteNotificationChannel(CHANNEL)
-        if (sound && app.superhealth.SuperPrefs.settings.value.notifyRest) beep(ctx)
+        // 3.8 : le signal sonore ne dépend que de son propre réglage (Musculation > Réglages > Signal sonore de fin de récupération)
+        if (sound) beep(ctx)
         // la notification de séance repasse du compte à rebours au chronomètre de séance
         SessionNotification.update(ctx, app.superhealth.training.WorkoutApp.store.state.value)
         if (app.superhealth.SuperPrefs.settings.value.notifyRest) runCatching { ctx.getSystemService(Vibrator::class.java).vibrate(VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250), -1)) }
@@ -57,7 +62,11 @@ object RestTimer {
         val pool = SoundPool.Builder().setAudioAttributes(
             AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
         ).setMaxStreams(1).build()
-        pool.setOnLoadCompleteListener { p, id, _ -> p.play(id, 1f, 1f, 1, 0, 1f) }
+        pool.setOnLoadCompleteListener { p, id, _ ->
+            p.play(id, 1f, 1f, 1, 0, 1f)
+            // libéré après le son (un SoundPool par bip restait ouvert)
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ runCatching { p.release() } }, 2500)
+        }
         pool.load(ctx, R.raw.beep, 1)
     }
 }

@@ -153,6 +153,8 @@ data class Program(
     val manualOnDays: Set<Int> = emptySet(),
     /** Remplacements datés, prioritaires sur les check-ins, sans changer le programme. */
     val overrides: List<TargetOverride> = emptyList(),
+    /** 3.8 : plan semaine par semaine, jour par jour, programmable à l'avance (voir [NutritionPlan]). */
+    val plan: List<PlanWeek> = emptyList(),
 )
 
 @Serializable

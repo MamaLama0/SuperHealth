@@ -125,4 +125,25 @@ object Cycle {
         }
         return Info(start, dayOfCycle, length, periodLength, next, ov, phase, cycles)
     }
+
+    /**
+     * Effet appris d'une phase sur le ressenti du matin (3.8, mode avancé) : écart moyen de (sommeil + énergie) / 2 les
+     * jours de cette phase par rapport à tous les jours notés, réduit vers 0 (n / (n + 8)) pour ne pas conclure sur
+     * quelques matins. Null tant qu'il y a moins de [MIN_CYCLES] cycles complets ou de 6 matins dans la phase. À l'échelle
+     * des groupes l'effet de la phase est trivial (McNulty 2020) : seule la réponse propre à la personne compte.
+     */
+    data class Effect(val phase: Phase, val delta: Double, val mornings: Int)
+
+    fun feelEffect(phase: Phase, feels: Map<Long, Checkin.Feel> = Checkin.days.value, d: Set<Long> = days.value): Effect? {
+        if (starts(d).size < MIN_CYCLES + 1 || feels.size < 20) return null
+        val today = LocalDate.now().toEpochDay()
+        val rows = feels.filterKeys { it in (today - 365)..today }.mapNotNull { (day, f) ->
+            info(day, d)?.phase?.let { it to (f.sleep + f.energy) / 2.0 }
+        }
+        if (rows.size < 20) return null
+        val mean = rows.sumOf { it.second } / rows.size
+        val inPhase = rows.filter { it.first == phase }.map { it.second - mean }
+        if (inPhase.size < 6) return null
+        return Effect(phase, inPhase.sum() / (inPhase.size + 8.0), inPhase.size)
+    }
 }

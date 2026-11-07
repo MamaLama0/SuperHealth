@@ -274,6 +274,15 @@ fun CardsHome(nav: NavHostController) {
             Tile(Icons.Rounded.Flag, "Quêtes", tr("Gagne des éclats"), Modifier.weight(1f), Gold, claimable) { nav.go("cards/quests") }
             Tile(Icons.Rounded.ContentCut, "Ma photo", tr(state.photo.label), Modifier.weight(1f), Color(0xFF6FD3A0)) { nav.go("cards/cutout") }
         }
+        // 3.8 : vitrine, les fonds préférés mis en avant
+        val shelf = remember(state.showcase, state.owned) { CardStore.showcase() }
+        if (shelf.isNotEmpty()) {
+            SectionTitle("Ma vitrine")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                shelf.forEach { p -> CollectibleCard(p.card, p.finish, Modifier.weight(1f).clickable { nav.go("cards/album") }, live = p.card.rarity >= Rarity.RARE, level = state.level(p.card)) }
+                repeat(CardStore.SHOWCASE_MAX - shelf.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
         val friends = league.friends.filter { it.athlete != null }
         var viewing by remember { mutableStateOf<League.Friend?>(null) }
         viewing?.let { f -> FriendCardViewer(friendFace(f), tr("Ami"), { viewing = null }, f.cardTrade?.let { { viewing = null; nav.go("cards/trades") } }, account = f.cardTrade) { viewing = null; nav.go("cards/duel?friend=${f.id}") } }

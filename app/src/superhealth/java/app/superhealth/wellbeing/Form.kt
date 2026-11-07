@@ -51,6 +51,8 @@ object Form {
         CHARGE("Charge"), SLEEP("Sommeil"), LOAD("Entraînement"), MOOD("Moral"),
         /** Facultatifs : n'apparaissent que s'ils ont quelque chose à dire. */
         TREND("VFC sur 3 semaines"), BODY("Signes de la nuit"), FEEL("Ressenti"),
+        /** 3.8 : phase du cycle (fonction Cycle activée), voir [cycleSignal]. */
+        CYCLE("Cycle"),
     }
 
     /** Un signal : sa valeur lisible et son sens (−1 fatigue, 0 neutre, +1 prêt). */
@@ -141,10 +143,13 @@ object Form {
         // une alerte des signes de la nuit impose le repos ; à surveiller, elle s'affiche sans compter
         if (body?.level == BodyAlert.Level.ALERT) signals += Signal(Kind.BODY, "!", -1)
 
+        val cycle = cycleSignal()
+        cycle?.first?.let { signals += it }
+
         val feel = Checkin.today()
         val x = Model.features(charge, acwr, mood, base?.first)
         val weights = if (journalOn) runCatching { Model.weights(ctx, today) }.getOrNull() ?: (Model.PRIOR to 0) else Model.PRIOR to 0
-        val score = Model.score(x, feel?.let { (it.sleep + it.energy) / 2.0 }, weights.first)
+        val score = (Model.score(x, feel?.let { (it.sleep + it.energy) / 2.0 }, weights.first) + (cycle?.second ?: 0)).coerceIn(0, 100)
         val v = verdict(score, signals, acwr, charge.hrv?.overreaching == true, body?.level == BodyAlert.Level.ALERT,
             allowPush = journalOn || feel != null)
         val why = when {
@@ -152,6 +157,26 @@ object Form {
             else -> cause(acwr, x)
         }
         Advice(v, signals, body, score, weights.second, why)
+    }
+
+    /**
+     * Cycle dans la Forme du jour (3.8), seulement si la fonction Cycle est activée. Mode simple : la phase et le jour du
+     * cycle s'affichent comme explication (sens neutre, aucun effet). Mode avancé (défaut) : si votre ressenti a un écart net
+     * et appris dans cette phase ([Cycle.feelEffect]), le signal prend ce sens et le score bouge d'au plus ±8 points ; sans
+     * écart appris, aucun effet — les études ne justifient pas de règle par phase pour tout le monde (McNulty 2020,
+     * Colenso-Semple 2023). Le ressenti du jour, s'il est noté, compte déjà dans le score : l'effet n'est appliqué que sans lui.
+     */
+    fun cycleSignal(): Pair<Signal, Int>? {
+        val sh = app.superhealth.SuperPrefs.settings.value
+        if (app.superhealth.Feature.CYCLE.name !in sh.features) return null
+        val info = Cycle.info() ?: return null
+        val phase = info.phase ?: if (info.dayOfCycle <= info.periodLength) Cycle.Phase.MENSTRUAL else return null
+        val value = app.superhealth.ui.trf("J%1\$s", info.dayOfCycle) + " · " + app.superhealth.ui.tr(phase.label)
+        if (sh.cycleForm != "ADVANCED") return Signal(Kind.CYCLE, value, 0) to 0
+        val e = Cycle.feelEffect(phase) ?: return Signal(Kind.CYCLE, value, 0) to 0
+        val level = if (e.delta <= -0.3) -1 else if (e.delta >= 0.3) 1 else 0
+        val points = if (Checkin.today() != null) 0 else (e.delta * 16).roundToInt().coerceIn(-8, 8)
+        return Signal(Kind.CYCLE, value, level) to points
     }
 
     /**

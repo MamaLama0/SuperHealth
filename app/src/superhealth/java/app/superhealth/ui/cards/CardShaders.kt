@@ -346,19 +346,42 @@ internal fun artSource(key: ArtKey): String = buildString {
 
 
 /** Reflet holographique, posé en mode « écran » sur les cartes brillantes et animées. */
+/**
+ * Reflet holographique (3.8) : le fond est lu en entrée (« art ») au lieu d'être recouvert en mode écran, pour que la
+ * lumière ne se pose que sur ce qui est déjà éclairé — les ombres restent profondes. Une bande irisée parcourt la
+ * diagonale et revient sans saut (période répétée), suivie d'un écho plus faible qui garde un peu d'arc-en-ciel sur la
+ * carte ; un halo blanc suit l'inclinaison ; à plat, le point de lumière dérive lentement pour que la carte vive.
+ */
 private const val HOLO = """
+uniform shader art;
 uniform float2 iRes; uniform float iTime; uniform float2 iTilt; uniform float iSpark;
 float h21(float2 p) { p = mod(p, 289.0); float3 p3 = fract(float3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
-half3 hue(float h) { return half3(clamp(abs(fract(h + float3(0.0, 0.333, 0.667)) * 6.0 - 3.0) - 1.0, 0.0, 1.0)); }
+float3 hue(float h) { return clamp(abs(fract(h + float3(0.0, 0.333, 0.667)) * 6.0 - 3.0) - 1.0, 0.0, 1.0); }
 half4 main(float2 fc) {
-  float2 uv = fc / iRes; float k = uv.x * 0.9 + uv.y * 0.55 + iTilt.x * 0.9 - iTilt.y * 0.6;
-  float band = pow(1.0 - abs(fract(k * 0.8) * 2.0 - 1.0), 3.0);
-  half3 c = hue(fract(k * 1.4 + iTime * 0.02)) * half(0.42 * band);
-  float2 g = floor(fc / 9.0); float h = h21(g); float tw = sin(iTime * 3.0 + h * 60.0 + iTilt.x * 8.0);
+  float2 uv = fc / iRes;
+  float3 base = float3(art.eval(fc).rgb);
+  float lum = dot(base, float3(0.2126, 0.7152, 0.0722));
+  float lit = smoothstep(0.05, 0.65, lum);
+  // à plat, la lumière se promène doucement ; dès qu'on incline, c'est le téléphone qui la guide
+  float still = 1.0 - clamp(length(iTilt) * 3.0, 0.0, 1.0);
+  float2 t = iTilt + still * 0.25 * float2(sin(iTime * 0.37), cos(iTime * 0.29));
+  const float P = 1.25;
+  float axis = uv.x * 0.62 + uv.y * 0.48;
+  float c0 = fract(iTime * 0.045) * P + t.x * 0.45 - t.y * 0.35;
+  float d = axis - c0; d -= P * floor(d / P + 0.5);
+  float band = exp(-d * d * 9.0);
+  float e = abs(d) - P * 0.5; float echo = exp(-e * e * 16.0);
+  float glow = band + 0.28 * echo;
+  float3 tint = hue(fract(axis * 1.2 - c0 / P + 0.15));
+  float2 sp = (uv - (0.5 + 0.45 * t)) * float2(1.0, iRes.y / iRes.x);
+  float spot = exp(-dot(sp, sp) * 6.0);
+  float3 col = mix(base, base * (0.55 + 0.9 * tint), clamp(glow * 0.45 * lit, 0.0, 1.0));
+  col += tint * glow * (0.04 + 0.2 * lit) + float3(spot * (0.02 + 0.12 * lit));
+  // paillettes (finitions animées) : quelques points scintillent, surtout là où la carte est claire
+  float2 g = floor(fc / 9.0); float h = h21(g); float tw = sin(iTime * 3.0 + h * 60.0 + t.x * 8.0);
   float dot0 = smoothstep(0.5, 0.0, length(fract(fc / 9.0) - 0.5));
-  c += half(iSpark * step(0.985, h) * smoothstep(0.6, 1.0, tw) * dot0 * dot0 * 1.2);
-  c += half(0.10 * smoothstep(0.25, 0.0, abs(uv.x + uv.y - 1.0 - iTilt.x * 1.2)));
-  return half4(c, 1.0);
+  col += float3(iSpark * step(0.985, h) * smoothstep(0.6, 1.0, tw) * dot0 * dot0 * (0.5 + 0.8 * lit));
+  return half4(half3(clamp(col, 0.0, 1.0)), 1.0);
 }
 """
 
@@ -419,14 +442,15 @@ fun CardArt(card: CardDef, finish: Finish, modifier: Modifier = Modifier, tilt: 
                 val p2 = card.palette2 ?: card.palette
                 art.color("dA", p2.a.toColor()); art.color("dB", p2.b.toColor()); art.color("dC", p2.c.toColor())
                 art.look("iF", "iCam", card.look); art.look("iF2", "iCam2", card.look2 ?: card.look)
-                drawRect(ShaderBrush(art))
                 if (holo) {
+                    // le reflet lit le fond en entrée et rend l'image finale : un seul passage
+                    glare.setInputShader("art", art)
                     glare.setFloatUniform("iRes", size.width, size.height)
                     glare.setFloatUniform("iTime", time())
                     glare.setFloatUniform("iTilt", tl.x, tl.y)
                     glare.setFloatUniform("iSpark", if (finish >= Finish.ANIMEE) 1f else 0.5f)
-                    drawRect(ShaderBrush(glare), blendMode = BlendMode.Screen)
-                }
+                    drawRect(ShaderBrush(glare))
+                } else drawRect(ShaderBrush(art))
             }
         })
         }

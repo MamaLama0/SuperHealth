@@ -1,5 +1,11 @@
 package app.superhealth.ui.cards
 
+import androidx.compose.ui.geometry.Offset
+
+import androidx.compose.ui.input.pointer.pointerInput
+
+import androidx.compose.foundation.gestures.detectDragGestures
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +47,10 @@ fun AlbumScreen(nav: NavHostController) {
     var biome by remember { mutableStateOf<Element?>(null) }
     var duos by remember { mutableStateOf(false) }
     var chroma by remember { mutableStateOf(false) }
+    var vitrine by remember { mutableStateOf(false) }
+    // 3.8 : organisation de l'album — tri et cartes possédées seulement, gardés d'une visite à l'autre
+    var sort by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(AlbumSort.NUMBER) }
+    var mineOnly by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     fun ownsChroma(c: CardDef) = (state.owned["${c.id}:${Finish.CHROMATIQUE.name}"] ?: 0) > 0
     var selected by remember { mutableStateOf<CardDef?>(null) }
     LaunchedEffect(Unit) { CardStore.load(ctx) }
@@ -68,10 +78,25 @@ fun AlbumScreen(nav: NavHostController) {
             Rarity.entries.forEach { r -> Chip(r.symbol + " " + tr(r.label), filter == r, r.color.c()) { filter = if (filter == r) null else r } }
             Chip("✺ " + tr("Chromatiques"), chroma, Color(0xFFFF8AD8)) { chroma = !chroma }
             Chip("◈ " + tr("Duos") + " ${Catalog.cards.count { it.duo && state.owns(it) }}/${Catalog.cards.count { it.duo }}", duos, Gold) { duos = !duos }
+            Chip("★ " + tr("Vitrine") + " ${state.showcase.size}/${CardStore.SHOWCASE_MAX}", vitrine, Gold) { vitrine = !vitrine }
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip(tr("Possédées"), mineOnly, Color(0xFF6FD3A0)) { mineOnly = !mineOnly }
+            AlbumSort.entries.forEach { o -> Chip("↕ " + tr(o.label), sort == o, Color(0xFF9AA8FF)) { sort = o } }
         }
         LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 40.dp)) {
-            items(Catalog.cards.filter { (filter == null || it.rarity == filter) && (biome == null || biome in it.elements) && (!duos || it.duo) }, key = { it.id }) { card ->
+            val shownCards = Catalog.cards.filter { (filter == null || it.rarity == filter) && (biome == null || biome in it.elements) && (!duos || it.duo) &&
+                (!vitrine || state.showcase.any { k -> k.startsWith(it.id + ":") }) && (!mineOnly || state.owns(it)) }.let { list ->
+                when (sort) {
+                    AlbumSort.NUMBER -> list
+                    AlbumSort.RARITY -> list.sortedWith(compareByDescending<CardDef> { it.rarity }.thenByDescending { state.owns(it) })
+                    AlbumSort.LEVEL -> list.sortedWith(compareByDescending<CardDef> { if (state.owns(it)) state.level(it) else 0 }.thenByDescending { it.rarity })
+                    AlbumSort.COPIES -> list.sortedWith(compareByDescending<CardDef> { state.copies(it) }.thenByDescending { it.rarity })
+                    AlbumSort.FUSE -> list.sortedWith(compareByDescending<CardDef> { state.canFuse(it) }.thenByDescending { state.spare(it) })
+                }
+            }
+            items(shownCards, key = { it.id }) { card ->
                 val finishes = Finish.entries.filter { (state.owned["${card.id}:${it.name}"] ?: 0) > 0 }
                 // Vue chromatique : la variante elle-même, possédée ou non.
                 val shown = if (chroma) listOf(Finish.CHROMATIQUE).filter { it in finishes } else finishes
@@ -82,6 +107,8 @@ fun AlbumScreen(nav: NavHostController) {
                     val copies = state.copies(card)
                     if (copies > 1) Text("×$copies", color = Ink, fontWeight = FontWeight.Black, fontSize = 13.sp,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(5.dp).clip(RoundedCornerShape(50)).background(Color.White).padding(horizontal = 7.dp, vertical = 1.dp))
+                    if (state.showcase.any { it.startsWith(card.id + ":") }) Text("★", color = Ink, fontWeight = FontWeight.Black, fontSize = 11.sp,
+                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp).clip(RoundedCornerShape(50)).background(Gold).padding(horizontal = 6.dp, vertical = 2.dp))
                     if (state.canFuse(card)) Text("▲", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp,
                         modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).clip(RoundedCornerShape(50)).background(Color(0xFF1FA67A)).padding(horizontal = 6.dp, vertical = 2.dp))
                 }
@@ -116,10 +143,17 @@ private fun CardDetail(card: CardDef, onShare: (Pull, Int) -> Unit, onTrade: () 
     LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.6f)) }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.92f)).clickable(remember { MutableInteractionSource() }, null, onClick = onClose).statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Box(Modifier.fillMaxWidth(0.72f).graphicsLayer { scaleX = appear.value; scaleY = appear.value; rotationY = tilt.x * 10f; rotationX = -tilt.y * 8f; cameraDistance = 14f * density }
+            // 3.8 : la carte tenue au doigt suit le doigt (inclinaison et reflet), puis rend la main au capteur.
+            var held by remember { mutableStateOf<Offset?>(null) }
+            val lean = held ?: tilt
+            Box(Modifier.fillMaxWidth(0.72f).graphicsLayer { scaleX = appear.value; scaleY = appear.value; rotationY = lean.x * 10f; rotationX = -lean.y * 8f; cameraDistance = 14f * density }
+                .pointerInput(Unit) {
+                    fun at(p: Offset) = Offset((p.x / size.width * 2f - 1f).coerceIn(-1f, 1f), (p.y / size.height * 2f - 1f).coerceIn(-1f, 1f))
+                    detectDragGestures(onDragStart = { held = at(it) }, onDragEnd = { held = null }, onDragCancel = { held = null }) { change, _ -> change.consume(); held = at(change.position) }
+                }
                 .clickable(remember { MutableInteractionSource() }, null) { if (finishes.isNotEmpty()) preview = !preview }) {
                 if (preview) AthleteCard(myFace(snap?.now, Pull(card, finish)), Modifier.fillMaxWidth(), interactive = false)
-                else CollectibleCard(card, finish, Modifier.fillMaxWidth(), owned = finishes.isNotEmpty(), live = true, tilt = { tilt }, level = state.level(card).takeIf { finishes.isNotEmpty() })
+                else CollectibleCard(card, finish, Modifier.fillMaxWidth(), owned = finishes.isNotEmpty(), live = true, tilt = { held ?: tilt }, level = state.level(card).takeIf { finishes.isNotEmpty() })
             }
             Text(card.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, modifier = Modifier.padding(top = 18.dp))
             Text(card.rarity.symbol + " " + card.rarityText() + " · " + card.code + " · " + card.elements.joinToString(" + ") { tr(it.label) }, color = card.rarity.color.c(), fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -136,6 +170,11 @@ private fun CardDetail(card: CardDef, onShare: (Pull, Int) -> Unit, onTrade: () 
                 GlowButton(tr(if (applied) "Fond actuel" else "Appliquer à ma carte"), Modifier.fillMaxWidth().padding(top = 16.dp), enabled = !applied) {
                     CardStore.setBackground(ctx, "${card.id}:${finish.name}"); Rumble.reveal(ctx); onClose()
                 }
+                // 3.8 : vitrine de « Ma carte » (trois fonds mis en avant)
+                val inShowcase = "${card.id}:${finish.name}" in state.showcase
+                Text(tr(if (inShowcase) "★ Retirer de la vitrine" else "☆ Mettre en vitrine"), color = Gold, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 10.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.08f))
+                        .clickable { CardStore.toggleShowcase(ctx, "${card.id}:${finish.name}"); haptics.toggle() }.padding(horizontal = 18.dp, vertical = 9.dp))
                 val scope = rememberCoroutineScope()
                 var error by remember { mutableStateOf<String?>(null) }
                 // Fusion : les doublons partent, le fond gagne un niveau et 10 % d'effet.
@@ -166,3 +205,6 @@ private fun CardDetail(card: CardDef, onShare: (Pull, Int) -> Unit, onTrade: () 
         }
     }
 }
+
+/** Tri de l'album (3.8). */
+private enum class AlbumSort(val label: String) { NUMBER("Numéro"), RARITY("Rareté"), LEVEL("Niveau"), COPIES("Doublons"), FUSE("Fusions prêtes") }

@@ -66,7 +66,7 @@ fun ManualWeekEditor(p: Program, settings: Settings, onValid: (Boolean) -> Unit,
                     t?.let { onChange(if (editOff) ManualTargets.withOff(p, it) else ManualTargets.withBase(p, it)) }
                 }
             }
-            WeekAverage(p, settings)
+
         }
         Split.DAYS -> {
             WeekStrip(selected = { it == day }, top = { kcal(ManualTargets.forDay(p, it)).toString() }) { day = it }
@@ -80,7 +80,7 @@ fun ManualWeekEditor(p: Program, settings: Settings, onValid: (Boolean) -> Unit,
                 val t = ManualTargets.forDay(p, day)
                 onChange(ManualTargets.withBase(p, t).copy(manualDays = List(7) { t }))
             }
-            WeekAverage(p, settings)
+
         }
     }
 }
@@ -123,4 +123,33 @@ private fun WeekAverage(p: Program, settings: Settings) {
     Text(trf("Moyenne de la semaine : %1\$s %2\$s · P %3\$s g", settings.energyValue(week.sumOf { it.kcal } / 7).roundToInt(),
         settings.energyUnit.label.tr(), (week.sumOf { it.protein } / 7).roundToInt()),
         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+}
+
+/**
+ * Résumé de la semaine type en mode manuel (3.8) : les sept jours d'un coup d'œil (énergie et macros), la moyenne en tête.
+ */
+@Composable
+fun ManualWeekSummary(p: Program, settings: Settings) {
+    val week = (1..7).map { ManualTargets.forDay(p, it) }
+    val unit = settings.energyUnit.label.tr()
+    val today = java.time.LocalDate.now().dayOfWeek.value
+    Column(Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(16.dp)).background(Mf.colors.chip).padding(12.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("${settings.energyValue(week.sumOf { it.kcal } / 7).roundToInt()}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(" $unit " + tr("/ jour en moyenne"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
+        }
+        Text("P ${(week.sumOf { it.protein } / 7).roundToInt()} g · L ${(week.sumOf { it.fat } / 7).roundToInt()} g · G ${(week.sumOf { it.carbs } / 7).roundToInt()} g",
+            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+        Spacer(Modifier.height(8.dp))
+        val max = week.maxOf { it.kcal }.coerceAtLeast(1.0)
+        Row(Modifier.fillMaxWidth().height(64.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
+            week.forEachIndexed { i, t ->
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.fillMaxWidth().height((44 * t.kcal / max).dp.coerceAtLeast(4.dp)).clip(RoundedCornerShape(6.dp))
+                        .background(if (i + 1 == today) Mf.colors.strong else Mf.colors.accent.copy(alpha = 0.45f)))
+                    Text(DAY_NAMES[i].take(1), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+        }
+    }
 }

@@ -430,11 +430,26 @@ public class ProtocolBufferHandler implements MessageHandler {
     private void processProtobufDeviceStatusResponse(GdiDeviceStatus.DeviceStatusService deviceStatusService) {
         if (deviceStatusService.hasRemoteDeviceBatteryStatusResponse()) {
             final GdiDeviceStatus.RemoteDeviceBatteryStatusResponse batteryStatusResponse = deviceStatusService.getRemoteDeviceBatteryStatusResponse();
+            LOG.info("Received remote battery status {}: hasLevel={} level={} batteryStatus={}", batteryStatusResponse.getStatus(),
+                    batteryStatusResponse.hasCurrentBatteryLevel(), batteryStatusResponse.getCurrentBatteryLevel(), batteryStatusResponse.getBatteryStatus());
+            // SuperHealth : certaines montres (Forerunner 255…) répondent sans niveau, ou avec un statut autre que OK ;
+            // getCurrentBatteryLevel() vaut alors 0 et l'app affichait « 0 % ». On ne garde qu'un niveau réellement présent.
+            final boolean ok = batteryStatusResponse.getStatus() == GdiDeviceStatus.RemoteDeviceBatteryStatusResponse.ResponseStatus.OK;
             final int batteryLevel = batteryStatusResponse.getCurrentBatteryLevel();
-            LOG.info("Received remote battery status {}: level={}", batteryStatusResponse.getStatus(), batteryLevel);
-            final GBDeviceEventBatteryInfo batteryEvent = new GBDeviceEventBatteryInfo();
-            batteryEvent.level = (short) batteryLevel;
-            deviceSupport.evaluateGBDeviceEvent(batteryEvent);
+            if (ok && batteryStatusResponse.hasCurrentBatteryLevel() && batteryLevel >= 0 && batteryLevel <= 100) {
+                final GBDeviceEventBatteryInfo batteryEvent = new GBDeviceEventBatteryInfo();
+                batteryEvent.level = (short) batteryLevel;
+                if (batteryStatusResponse.hasBatteryStatus()) {
+                    batteryEvent.state = batteryState(batteryStatusResponse.getBatteryStatus());
+                }
+                deviceSupport.evaluateGBDeviceEvent(batteryEvent);
+            }
+            return;
+        }
+        if (deviceStatusService.hasRemoteDeviceBatteryStatusChangedNotification()) {
+            // Changement d'état (charge, batterie faible…) : on redemande le niveau, la notification n'en porte pas.
+            LOG.info("Battery status changed: {}", deviceStatusService.getRemoteDeviceBatteryStatusChangedNotification().getStatus());
+            deviceSupport.requestBatteryUpdate();
             return;
         }
         if (deviceStatusService.hasActivityStatusResponse()) {
@@ -443,6 +458,16 @@ public class ProtocolBufferHandler implements MessageHandler {
             return;
         }
         LOG.warn("Unknown DeviceStatusService response: {}", deviceStatusService);
+    }
+
+    private static nodomain.freeyourgadget.gadgetbridge.model.BatteryState batteryState(final GdiDeviceStatus.RemoteDeviceBatteryStatusBatteryStatus status) {
+        return switch (status) {
+            case NORMAL -> nodomain.freeyourgadget.gadgetbridge.model.BatteryState.BATTERY_NORMAL;
+            case LOW, CRITICAL -> nodomain.freeyourgadget.gadgetbridge.model.BatteryState.BATTERY_LOW;
+            case CHARGING -> nodomain.freeyourgadget.gadgetbridge.model.BatteryState.BATTERY_CHARGING;
+            case FULLY_CHARGED -> nodomain.freeyourgadget.gadgetbridge.model.BatteryState.BATTERY_CHARGING_FULL;
+            default -> nodomain.freeyourgadget.gadgetbridge.model.BatteryState.UNKNOWN;
+        };
     }
 
     @Nullable

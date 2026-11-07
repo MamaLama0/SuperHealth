@@ -30,7 +30,8 @@ class WeeklyQuestsTest {
         val previous = WeeklyQuests.Week(monday - 7, listOf(WeeklyQuests.Quest(WeeklyQuests.Metric.FOOD, 2)))
         val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), focuses, evidence, listOf(previous))
         assertEquals(WeeklyQuests.Metric.STRENGTH, w.quests.first().metric)
-        assertEquals(2, w.quests.size)
+        // 3.8 : toujours trois quêtes, complétées dans les domaines suivis
+        assertEquals(WeeklyQuests.COUNT, w.quests.size)
         assertTrue(w.quests[1].secondary)
         assertNotEquals(w.quests[0].metric.focus, w.quests[1].metric.focus)
         assertEquals(80, w.quests[0].reward)
@@ -53,9 +54,10 @@ class WeeklyQuestsTest {
         assertFalse(WeeklyQuests.plateau(listOf(100.0, 105.0, 110.0)))
         val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), setOf(WeeklyQuests.Focus.STRENGTH),
             WeeklyQuests.Evidence(mapOf(WeeklyQuests.Metric.STRENGTH to 6), strengthGoal = 3, plateau = true))
-        assertEquals(WeeklyQuests.Metric.STRENGTH_REVIEW, w.quests.single().metric)
-        assertEquals(WeeklyQuests.Reason.PLATEAU, w.quests.single().reason)
-        assertEquals(2, w.quests.single().target)
+        assertEquals(WeeklyQuests.Metric.STRENGTH_REVIEW, w.quests.first().metric)
+        assertEquals(WeeklyQuests.Reason.PLATEAU, w.quests.first().reason)
+        assertEquals(2, w.quests.first().target)
+        assertTrue(w.quests.all { it.metric.focus == WeeklyQuests.Focus.STRENGTH })
     }
     @Test fun planIsFrozenAndSundayStartRemainsAchievable() {
         val w = WeeklyQuests.update(null, monday + 6, tracks, emptyMap(), all, WeeklyQuests.Evidence())
@@ -99,7 +101,7 @@ class WeeklyQuestsTest {
     @Test fun missingHealthDataIsAStarterGoalRatherThanAnInventedFailure() {
         val w = WeeklyQuests.update(null, monday, tracks, emptyMap(), setOf(WeeklyQuests.Focus.DAILY),
             WeeklyQuests.Evidence(mapOf(WeeklyQuests.Metric.FOOD to 10, WeeklyQuests.Metric.MIND to 4), healthData = false))
-        assertEquals(WeeklyQuests.Metric.MIND, w.quests.single().metric)
+        assertEquals(WeeklyQuests.Metric.MIND, w.quests.first().metric)
         assertTrue(w.quests.none { it.metric in setOf(WeeklyQuests.Metric.RUN, WeeklyQuests.Metric.STEPS) })
     }
 

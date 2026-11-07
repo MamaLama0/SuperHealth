@@ -1386,7 +1386,7 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         }
     }
 
-    private void requestBatteryUpdate() {
+    void requestBatteryUpdate() {
         sendProtobufRequest("enable battery updates", Smart.newBuilder()
                 .setDeviceStatusService(
                         GdiDeviceStatus.DeviceStatusService.newBuilder()

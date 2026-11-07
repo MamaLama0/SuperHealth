@@ -118,7 +118,7 @@ object HealthRepository {
             Goal(Metric.DISTANCE, u.distanceGoalMeters / 1000.0),
             Goal(Metric.ACTIVE_MINUTES, u.activeTimeGoalMinutes.toDouble()),
             Goal(Metric.SLEEP, u.sleepDurationGoal.toDouble()),
-            Goal(Metric.HYDRATION, u.hydrationGoalMl.toDouble()),
+            Goal(Metric.HYDRATION, Hydration.cachedGoal() ?: u.hydrationGoalMl.toDouble()),
             Goal(Metric.CARDIO_WEEK, cardioTarget().toDouble()),
         ).filter { it.target > 0 }
     }
