@@ -44,7 +44,8 @@ export function normalize(raw) {
     packPrice: int(r.packPrice, 20, 1000, d.packPrice),
     sessions: { pool: int(r.sessions?.pool, 0, 1000, d.sessions.pool), extra: int(r.sessions?.extra, 0, 7, d.sessions.extra) },
     daily: { session: int(r.daily?.session, 0, 200, d.daily.session), other: int(r.daily?.other, 0, 200, d.daily.other), tierStep: int(r.daily?.tierStep, 0, 50, d.daily.tierStep) },
-    weekly: { count: int(r.weekly?.count, 1, 5, d.weekly.count), packs: int(r.weekly?.packs, 0, 5, d.weekly.packs) },
+    weekly: { count: int(r.weekly?.count, 1, 5, d.weekly.count), packs: int(r.weekly?.packs, 0, 5, d.weekly.packs),
+      ...(typeof r.weekly?.reset === 'string' && /^[\w.-]{1,40}$/.test(r.weekly.reset) ? { reset: r.weekly.reset } : {}) },
     challenge: { race: prize(r.challenge?.race, d.challenge.race), together: prize(r.challenge?.together, d.challenge.together) },
     gifts,
   };

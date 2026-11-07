@@ -305,3 +305,16 @@ test('serveur : cadeau de paquets et quêtes de la semaine payées en paquets, s
     assert.equal(done.rewards.weekly.done, 1);
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
+
+test('weekly.reset rouvre une fois les quêtes de la semaine déjà touchées', () => {
+  const now = Date.UTC(2026, 10, 5, 12); const day = Math.floor(now / DAY);
+  const cfg = { daily: { session: 25, other: 20, tierStep: 5 }, weekly: { count: 3, packs: 1 }, challenge: { race: { packs: 2, eclats: 0 }, together: { packs: 1, eclats: 0 } }, gifts: [], packPrice: 100, sessions: { pool: 150, extra: 2 } };
+  const a = fresh();
+  for (const m of ['STRENGTH', 'FOOD', 'STEPS']) applyEventDetailed(a, { type: 'league', id: `lq:${day}:${m}` }, now, 'r', cfg);
+  assert.equal(a.bonusPacks, 3);
+  const reset = { ...cfg, weekly: { ...cfg.weekly, reset: '3.8' } };
+  assert.equal(view(a, now, day, 'r', null, reset).rewards.weekly.done, 0);
+  assert.deepEqual(applyEventDetailed(a, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'r', reset), { gained: 0, packs: 1 });
+  // une seule fois par identifiant de remise
+  assert.throws(() => applyEvent(a, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'r', reset), e => e.status === 409);
+});

@@ -194,6 +194,18 @@ const DAILY_KINDS = ['sets', 'rir', 'focus'];
 const hash = (salt, text) => createHash('sha256').update(salt + ':' + text).digest().readUInt32BE(0);
 
 /** Passage à une nouvelle semaine : bilan de la précédente, ajustement de la difficulté et de l'implication. */
+/**
+ * Remise à zéro des quêtes de la semaine (rewards.json, weekly.reset) : une fois par compte et par identifiant, les
+ * quêtes déjà touchées cette semaine peuvent rapporter de nouveau leurs paquets.
+ */
+function resetWeekly(account, week, cfg) {
+  const tag = cfg?.weekly?.reset;
+  if (!tag || account.weeklyReset === tag) return;
+  account.weeklyReset = tag;
+  week.leagueDone = [];
+  for (const k of Object.keys(account.claimed || {})) if (k.startsWith('l:')) delete account.claimed[k];
+}
+
 function rollWeek(account, now) {
   const week = monday(now);
   account.adapt ??= { d: 1, w: 1, engage: 0.8 };
@@ -345,6 +357,7 @@ export function applyEventDetailed(account, event, now, salt = '', cfg = DEFAULT
     // Quête de la semaine : « lq:{jour}:{domaine} » (suffixe « :s » des anciennes versions pour la secondaire). Chacune
     // rapporte des paquets gratuits, dans la limite du nombre de quêtes de la semaine fixé par le réglage.
     if (typeof event.id !== 'string' || !/^[\w:-]{1,80}$/.test(event.id)) bad();
+    resetWeekly(account, week, cfg);
     const key = 'l:' + event.id; if (account.claimed[key]) seen();
     remember(account, key, now);
     week.leagueDone ??= [];
@@ -376,7 +389,7 @@ export function openPack(account, booster, price = PACK_PRICE) {
 
 /** Vue envoyée à l'app : portefeuille, collection et quêtes du jour et de la semaine de l'utilisateur (jour local). */
 export function view(a, now, today, salt = '', challenge = null, cfg = DEFAULTS) {
-  const week = rollWeek(a, now); pruneTrades(a, now);
+  const week = rollWeek(a, now); pruneTrades(a, now); resetWeekly(a, week, cfg);
   const day = localDay(today, now);
   // Les quêtes de la semaine sont celles du Groupe (calculées dans l'app) : le serveur ne donne que celles du jour.
   const quests = questsFor(a, `d:${day}`, salt).map(q => ({ ...q, reward: dailyReward(q, cfg) }));
