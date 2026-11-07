@@ -126,10 +126,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/ios-v')
         uses: softprops/action-gh-release@v2
         with:
-          # pré-version : la « dernière version » reste l'APK Android (lue par la mise à jour intégrée)
-          prerelease: true
+          # version normale, mais jamais « Latest » : la dernière version reste l'APK Android (lue par la mise à jour intégrée)
+          prerelease: false
           make_latest: false
-          name: SuperHealth iOS 3.7 (expérimental)
+          name: SuperHealth iOS 3.7
           body_path: docs/UPDATE-3.7-ios.md
           files: |
             SuperHealth.ipa
