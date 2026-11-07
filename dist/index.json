@@ -74,16 +74,18 @@
     {
       "id": "league",
       "kind": "league",
-      "minApp": "2.5",
+      "minApp": "3.7",
       "color": "#4FA8E8",
-      "name": "Classement",
-      "nameEn": "Leaderboard",
-      "summary": "Un score de la semaine sur six parties, comparé entre amis par QR code ou message. Aucun serveur, cartes signées.",
-      "summaryEn": "A weekly score over six areas, compared with friends by QR code or message. No server, signed cards.",
-      "version": "1.0.1",
-      "size": 331,
-      "sha256": "732ac3c888d62fb1d946ac36c35e6b097979afa5e917390568106b5bb6b12cf6",
-      "url": "league-1.0.1.zip"
+      "name": "Groupe",
+      "nameEn": "Group",
+      "summary": "Le côté social de SuperHealth : carte Athlète, packs, quêtes, défis, amis, fil et cercles. Se retire à tout moment, ta collection et tes amis sont conservés.",
+      "summaryEn": "The social side of SuperHealth: Athlete card, packs, quests, challenges, friends, feed and circles. Remove it anytime, your collection and friends are kept.",
+      "changelog": "Le Groupe devient un plugin à part : installe-le ou retire-le quand tu veux.",
+      "changelogEn": "The Group is now a separate plugin: install or remove it whenever you like.",
+      "version": "2.0.0",
+      "size": 392089,
+      "sha256": "ee05a9e9a7071581620428c3fe8eb1984a4291637f0c111a0ce0afd24ccc2dfb",
+      "url": "league-2.0.0.zip"
     },
     {
       "id": "hiking",

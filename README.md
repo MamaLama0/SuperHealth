@@ -10,6 +10,7 @@ L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis l
 | `coach` — Coach IA | `coach` | `prompts.json` (consignes du coach, tons, point du jour, questions suggérées) |
 | `hiking` — Randonnée | `hiking` | `hiking.json` (parcours, relief et repères), photos, fonds vectoriels et crédits ; recherche régionale et suivi GPS dans le moteur Android |
 | `meals` — Repas | `meals` | `planner.json` (consignes du planificateur IA, créneaux de repas : nom, part des calories, heure) |
+| `league` — Groupe | `league` | `league.json` (règles du score de la semaine) ; l’app 3.7+ l’installe d’office pour qui avait le Groupe, il se retire comme les autres |
 
 ## Publier une version
 

@@ -4,8 +4,9 @@ import { readFileSync, writeFileSync, readdirSync, statSync, utimesSync, existsS
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL(".", import.meta.url).pathname;
+const root = fileURLToPath(new URL(".", import.meta.url));
 const catalog = JSON.parse(readFileSync(join(root, "catalog.json"), "utf8"));
 const fixed = new Date("2026-01-01T00:00:00Z");
 
