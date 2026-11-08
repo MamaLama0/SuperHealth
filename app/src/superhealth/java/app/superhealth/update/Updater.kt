@@ -223,7 +223,15 @@ object Updater {
             return@withContext out
         }
         dir.listFiles()?.forEach { it.delete() }
-        http.newCall(Request.Builder().url(rel.apk.browser_download_url).build()).execute().use { r ->
+        // Le lien public github.com/…/releases/download peut tomber (504) alors que l'API sert le même fichier :
+        // on bascule sur l'API en cas d'erreur serveur ou réseau.
+        fun open(): okhttp3.Response {
+            val direct = runCatching { http.newCall(Request.Builder().url(rel.apk.browser_download_url).build()).execute() }
+            direct.getOrNull()?.let { r -> if (r.isSuccessful || r.code < 500) return r; r.close() }
+            return runCatching { http.newCall(request(rel.apk.url, "application/octet-stream")).execute() }
+                .getOrElse { e -> direct.exceptionOrNull()?.let { throw it } ?: throw e }
+        }
+        open().use { r ->
             if (!r.isSuccessful) error(trf("téléchargement refusé (%1\$s)", r.code))
             val total = r.body.contentLength().takeIf { it > 0 } ?: rel.apk.size
             var done = 0L

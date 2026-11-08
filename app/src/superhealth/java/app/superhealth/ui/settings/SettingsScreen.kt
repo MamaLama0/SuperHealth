@@ -306,8 +306,8 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 RowDivider(56.dp)
                 SettingRow(tr("Simuler un programme"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) { nav.go("sim/training") }
                 RowDivider(56.dp)
-                SettingRow(tr("Refaire le questionnaire"), subtitle = tr("« Passer » annule"), icon = Icons.Rounded.Restore, hue = app.superhealth.ui.theme.Base.Grey) {
-                    SuperPrefs.update { it.copy(onboarded = false) }
+                SettingRow(tr("Refaire le questionnaire"), subtitle = tr("Aperçu, rien n'est modifié"), icon = Icons.Rounded.Restore, hue = app.superhealth.ui.theme.Base.Grey) {
+                    nav.go("replay/onboarding")
                 }
             }
 

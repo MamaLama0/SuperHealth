@@ -1,6 +1,9 @@
 package app.superhealth.nutrition.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,6 +115,9 @@ data class PlanBasis(val weightKg: Double, val leanKg: Double?, val tdee: Double
  * Programme sur plusieurs semaines, sans feuille autour : bloc qui évolue d'une semaine à l'autre (prise de masse,
  * maintien, sèche, reverse) ou préparation complète (sèche, pauses diète, semaine de pic, reverse), avec les repères
  * d'eau et de sodium de chaque semaine. [onPlan] reçoit les semaines calculées à chaque changement (vide si invalide).
+ *
+ * 3.9 : présenté en étapes numérotées, chacune avec une phrase d'explication ; chaque réglage en g/kg ou en % affiche
+ * son équivalent en grammes par jour, les jours de recharge sont des pastilles, l'eau et le sodium sont repliés.
  */
 @Composable
 fun PlanBuilderForm(b: PlanBasis, s: Settings, initialPrep: Boolean = false, onPlan: (List<PlanWeek>) -> Unit) {
@@ -150,73 +156,122 @@ fun PlanBuilderForm(b: PlanBasis, s: Settings, initialPrep: Boolean = false, onP
     var potassium by remember { mutableStateOf("") }
     var fiber by remember { mutableStateOf("") }
     var addTraining by remember { mutableStateOf(true) }
+    var hydration by remember { mutableStateOf(false) }
     val floorKcal = if (b.female) 1200.0 else 1500.0
+    val unit = s.energyUnit.label
+    val lean = b.leanKg ?: (b.weightKg * 0.85)
+    fun grams(v: String, perKg: Double) = v.toNum()?.let { (it * perKg).roundToInt() }
+    fun fatGrams(pct: String, kcal: String) = pct.toNum()?.let { p -> kcal.toNum()?.let { (s.toKcal(it) * p / 900).roundToInt() } }
 
-    ChipChoice(listOf(false, true), prep, { if (it) tr("Préparation") else tr("Bloc de semaines") }) { prep = it }
-    Text(tr(if (prep) "Sèche avec recharges et pauses diète, semaine de pic, puis reverse diet." else "Calories qui montent, baissent ou restent stables d'une semaine à l'autre."),
-        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
-    Spacer(Modifier.height(4.dp))
+    // 1. Type de programme
+    StepTitle(1, tr("Quel type de programme ?"))
+    ChoiceCard(tr("Un bloc de semaines"), tr("Prise de masse, maintien, sèche ou reverse : les calories changent d'un même pas chaque semaine."), !prep) { prep = false }
+    ChoiceCard(tr("Une préparation complète"), tr("Pour une compétition ou un shooting : sèche avec recharges et pauses diète, semaine de pic, puis retour au maintien."), prep) { prep = true }
+
+    // 2. Début
+    StepTitle(2, tr("Quand commencer ?"))
     ChipChoice(listOfNotNull(0, 1, if (lastStart != null) 2 else null), startAt, {
         when (it) { 0 -> tr("Cette semaine"); 1 -> tr("Lundi prochain"); else -> tr("Après la dernière semaine") }
     }) { startAt = it }
     val start = when (startAt) { 0 -> thisMonday; 2 -> (lastStart ?: thisMonday) + 7; else -> NutritionPlan.nextMonday(b.today) }
+    Hint(trf("Votre dépense estimée (maintien) : %1\$s %2\$s par jour. Les valeurs proposées en partent.", s.energyValue(b.tdee).roundToInt(), unit))
 
     if (!prep) {
-        Spacer(Modifier.height(6.dp))
+        // 3. Phase
+        StepTitle(3, tr("Quelle phase ?"))
         ChipChoice(listOf(PrepPhase.BULK, PrepPhase.MAINTENANCE, PrepPhase.CUT, PrepPhase.REVERSE), phase, { it.label }) { ph ->
             phase = ph
             val (k, d, st) = defaults(ph)
             startKcal = num(s.energyValue((k / 10).roundToInt() * 10.0), 0); dir = d; step = num(s.energyValue(st), 0)
             protein = if (ph == PrepPhase.CUT) "2.3" else "2.0"
         }
+        Hint(when (phase) {
+            PrepPhase.BULK -> tr("Léger surplus pour prendre du muscle en limitant le gras : environ 250 kcal au-dessus du maintien.")
+            PrepPhase.CUT -> tr("Déficit pour perdre du gras : environ 500 kcal sous le maintien, protéines plus hautes pour garder le muscle.")
+            PrepPhase.REVERSE -> tr("Après une sèche : les calories remontent pas à pas vers le maintien pour limiter la reprise de gras.")
+            else -> tr("Calories stables au niveau du maintien.")
+        })
+
+        // 4. Calories
+        StepTitle(4, tr("Calories"))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumberField(tr("Semaines"), weeks, { weeks = it }, Modifier.weight(1f), keyboard = KeyboardType.Number)
-            NumberField(tr("Départ"), startKcal, { startKcal = it }, Modifier.weight(1f), suffix = s.energyUnit.label, keyboard = KeyboardType.Number)
+            NumberField(tr("Durée"), weeks, { weeks = it }, Modifier.weight(1f), suffix = tr("sem."), keyboard = KeyboardType.Number)
+            NumberField(tr("1re semaine"), startKcal, { startKcal = it }, Modifier.weight(1f), suffix = trf("%1\$s/j", unit), keyboard = KeyboardType.Number)
         }
-        Text(tr("D'une semaine à l'autre"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
-        ChipChoice(listOf(-1, 0, 1), dir, { when (it) { -1 -> tr("Baisser"); 1 -> tr("Monter"); else -> tr("Identique") } }) { dir = it }
-        if (dir != 0) NumberField(tr("Par semaine"), step, { step = it }, suffix = s.energyUnit.label, keyboard = KeyboardType.Number)
+        SubLabel(tr("Puis, chaque semaine"))
+        ChipChoice(listOf(-1, 0, 1), dir, { when (it) { -1 -> tr("Baisser"); 1 -> tr("Monter"); else -> tr("Ne pas changer") } }) { dir = it }
+        if (dir != 0) NumberField(if (dir < 0) tr("Baisse par semaine") else tr("Hausse par semaine"), step, { step = it }, suffix = trf("%1\$s/j", unit), keyboard = KeyboardType.Number)
+
+        // 5. Macros
+        StepTitle(5, tr("Macros"))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumberField(tr("Protéines"), protein, { protein = it }, Modifier.weight(1f), suffix = "g/kg")
-            NumberField(tr("Lipides"), fatPct, { fatPct = it }, Modifier.weight(1f), suffix = "%")
+            NumberField(tr("Protéines"), protein, { protein = it }, Modifier.weight(1f), suffix = tr("g/kg"))
+            NumberField(tr("Lipides"), fatPct, { fatPct = it }, Modifier.weight(1f), suffix = tr("% kcal"))
         }
+        Hint(listOfNotNull(
+            grams(protein, b.weightKg)?.let { trf("Protéines : grammes par kg de poids (%1\$s kg), soit %2\$s g par jour.", num(b.weightKg, 1), it) },
+            fatGrams(fatPct, startKcal)?.let { trf("Lipides : part des calories, soit %1\$s g par jour la 1re semaine.", it) },
+            tr("Les glucides complètent le reste des calories."),
+        ).joinToString(" "))
         if (phase == PrepPhase.CUT) {
-            Text(tr("Jours de recharge (au maintien)"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-            ChipChoice((1..7).toList(), 0, { dd -> (if (dd in refeeds) "✓ " else "") + DAY_NAMES[dd - 1].take(3) }) { dd -> refeeds = if (dd in refeeds) refeeds - dd else refeeds + dd }
+            SubLabel(tr("Jours de recharge (facultatif)"))
+            DayToggles(refeeds) { dd -> refeeds = if (dd in refeeds) refeeds - dd else refeeds + dd }
+            Hint(tr("Ces jours-là, les calories remontent au maintien, surtout en glucides : meilleures séances et sèche plus facile à tenir."))
         }
     } else {
+        // 3. Sèche
+        StepTitle(3, tr("La sèche"))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumberField(tr("Semaines de sèche"), prepWeeks, { prepWeeks = it }, Modifier.weight(1f), keyboard = KeyboardType.Number)
-            NumberField(tr("Départ"), prepStart, { prepStart = it }, Modifier.weight(1f), suffix = s.energyUnit.label)
+            NumberField(tr("Durée"), prepWeeks, { prepWeeks = it }, Modifier.weight(1f), suffix = tr("sem."), keyboard = KeyboardType.Number)
+            NumberField(tr("1re semaine"), prepStart, { prepStart = it }, Modifier.weight(1f), suffix = trf("%1\$s/j", unit))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumberField(tr("Baisse par semaine"), prepStep, { prepStep = it }, Modifier.weight(1f), suffix = s.energyUnit.label)
-            NumberField(tr("Maintien"), maint, { maint = it }, Modifier.weight(1f), suffix = s.energyUnit.label)
+            NumberField(tr("Baisse par semaine"), prepStep, { prepStep = it }, Modifier.weight(1f), suffix = trf("%1\$s/j", unit))
+            NumberField(tr("Votre maintien"), maint, { maint = it }, Modifier.weight(1f), suffix = trf("%1\$s/j", unit))
         }
+        Hint(tr("La 1re semaine proposée vise environ −0,75 % du poids par semaine (repère : 0,5 à 1 %). Le maintien sert aux recharges, aux pauses diète et au reverse."))
+
+        // 4. Macros
+        StepTitle(4, tr("Macros"))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumberField(tr("Protéines"), prepProtein, { prepProtein = it }, Modifier.weight(1f), suffix = "g/kg MM")
-            NumberField(tr("Lipides"), prepFat, { prepFat = it }, Modifier.weight(1f), suffix = "%")
+            NumberField(tr("Protéines"), prepProtein, { prepProtein = it }, Modifier.weight(1f), suffix = tr("g/kg maigre"))
+            NumberField(tr("Lipides"), prepFat, { prepFat = it }, Modifier.weight(1f), suffix = tr("% kcal"))
         }
-        Text(tr("Jours de recharge"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-        ChipChoice((1..7).toList(), 0, { dd -> (if (dd in prepRefeeds) "✓ " else "") + DAY_NAMES[dd - 1].take(3) }) { dd -> prepRefeeds = if (dd in prepRefeeds) prepRefeeds - dd else prepRefeeds + dd }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumberField(tr("Pause diète toutes les"), breakEvery, { breakEvery = it }, Modifier.weight(1f), suffix = tr("sem."), keyboard = KeyboardType.Number)
-            NumberField(tr("Reverse diet"), reverse, { reverse = it }, Modifier.weight(1f), suffix = tr("sem."), keyboard = KeyboardType.Number)
-        }
-        SwitchRow(tr("Semaine de pic"), tr("Recharge en glucides les trois derniers jours"), peak) { peak = it }
+        Hint(listOfNotNull(
+            grams(prepProtein, lean)?.let { trf("Protéines : grammes par kg de masse maigre (poids sans le gras, ≈ %1\$s kg), soit %2\$s g par jour. Repère : 2,3 à 3,1.", num(lean, 1), it) },
+            fatGrams(prepFat, prepStart)?.let { trf("Lipides : %1\$s g par jour la 1re semaine (repère : 15 à 30 %%).", it) },
+            tr("Les glucides complètent le reste."),
+        ).joinToString(" "))
+
+        // 5. Recharges et pauses
+        StepTitle(5, tr("Recharges et pauses"))
+        SubLabel(tr("Jours de recharge"))
+        DayToggles(prepRefeeds) { dd -> prepRefeeds = if (dd in prepRefeeds) prepRefeeds - dd else prepRefeeds + dd }
+        Hint(tr("Ces jours-là, calories au maintien, surtout en glucides."))
+        NumberField(tr("Une semaine de pause au maintien toutes les"), breakEvery, { breakEvery = it }, suffix = tr("sem."), keyboard = KeyboardType.Number)
+        Hint(tr("0 = aucune pause. Une pause diète aide à récupérer et à tenir une longue sèche."))
+
+        // 6. Fin de préparation
+        StepTitle(6, tr("Après la sèche"))
+        SwitchRow(tr("Semaine de pic"), tr("Recharge en glucides les trois derniers jours, eau et sel inchangés"), peak) { peak = it }
+        NumberField(tr("Reverse diet : remonter au maintien en"), reverse, { reverse = it }, suffix = tr("sem."), keyboard = KeyboardType.Number)
+        Hint(tr("0 = retour direct au maintien."))
     }
 
-    Text(tr("Hydratation et micronutriments"), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        NumberField(tr("Eau"), water, { water = it }, Modifier.weight(1f), suffix = "ml", keyboard = KeyboardType.Number)
-        NumberField(tr("Sodium"), sodium, { sodium = it }, Modifier.weight(1f), suffix = "mg", keyboard = KeyboardType.Number)
+    // Eau et sodium, repliés : la plupart des gens gardent leurs objectifs de base.
+    SwitchRow(tr("Régler l'eau et le sodium de ces semaines"), tr("Sinon, vos objectifs de base s'appliquent"), hydration) { hydration = it }
+    if (hydration) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            NumberField(tr("Eau"), water, { water = it }, Modifier.weight(1f), suffix = "ml", keyboard = KeyboardType.Number)
+            NumberField(tr("Sodium"), sodium, { sodium = it }, Modifier.weight(1f), suffix = "mg", keyboard = KeyboardType.Number)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            NumberField(tr("Potassium"), potassium, { potassium = it }, Modifier.weight(1f), suffix = "mg", keyboard = KeyboardType.Number)
+            NumberField(tr("Fibres"), fiber, { fiber = it }, Modifier.weight(1f), suffix = "g", keyboard = KeyboardType.Number)
+        }
+        Hint(tr("Laissez une case vide pour garder l'objectif de base."))
+        SwitchRow(tr("Ajouter la sueur des séances"), tr("L'eau et le sodium montent les jours d'entraînement"), addTraining) { addTraining = it }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        NumberField(tr("Potassium"), potassium, { potassium = it }, Modifier.weight(1f), suffix = "mg", keyboard = KeyboardType.Number)
-        NumberField(tr("Fibres"), fiber, { fiber = it }, Modifier.weight(1f), suffix = "g", keyboard = KeyboardType.Number)
-    }
-    Text(tr("Vides : objectifs de base."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-    SwitchRow(tr("Ajouter la sueur des séances"), tr("L'eau et le sodium montent les jours d'entraînement"), addTraining) { addTraining = it }
 
     val plan = runCatching {
         val raw = if (!prep) NutritionPlan.block(NutritionPlan.Block(
@@ -231,21 +286,87 @@ fun PlanBuilderForm(b: PlanBasis, s: Settings, initialPrep: Boolean = false, onP
             dietBreakEvery = (breakEvery.toNum() ?: 0.0).toInt().coerceIn(0, 20), peakWeek = peak, reverseWeeks = (reverse.toNum() ?: 0.0).toInt().coerceIn(0, 16),
             floorKcal = floorKcal,
         ))
-        raw.map { it.copy(waterMl = water.toNum()?.takeIf { v -> v > 0 }, sodiumMg = sodium.toNum()?.takeIf { v -> v > 0 },
-            potassiumMg = potassium.toNum()?.takeIf { v -> v > 0 }, fiberG = fiber.toNum()?.takeIf { v -> v > 0 }, addTraining = addTraining) }
+        val h = hydration
+        raw.map { it.copy(waterMl = water.toNum()?.takeIf { v -> h && v > 0 }, sodiumMg = sodium.toNum()?.takeIf { v -> h && v > 0 },
+            potassiumMg = potassium.toNum()?.takeIf { v -> h && v > 0 }, fiberG = fiber.toNum()?.takeIf { v -> h && v > 0 }, addTraining = !h || addTraining) }
     }.getOrNull().orEmpty()
     val report by rememberUpdatedState(onPlan)
     LaunchedEffect(plan) { report(plan) }
 
-    if (plan.isNotEmpty()) {
-        Spacer(Modifier.height(10.dp))
+    StepTitle(null, tr("Aperçu"))
+    if (plan.isEmpty()) Hint(tr("Complétez les cases pour voir le programme."))
+    else {
         PlanPreview(plan, s)
+        PhaseLegend(plan.map { it.phase }.distinct())
         val overwritten = plan.count { nw -> b.existing.any { it.startDay == nw.startDay } }
         if (overwritten > 0) Text(trf("%1\$s semaine(s) déjà programmée(s) seront remplacées.", overwritten),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         val wk = (b.tdee - plan.map { NutritionPlan.average(it).kcal }.average()) * 7 / 7700
         if (abs(wk) > 0.05) Text(trf("≈ %1\$s kg par semaine en moyenne (estimation)", (if (wk > 0) "−" else "+") + num(abs(wk), 2)),
             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+    }
+}
+
+/** Titre d'étape numéroté du générateur (sans numéro : aperçu). */
+@Composable
+private fun StepTitle(n: Int?, title: String) {
+    Row(Modifier.padding(top = 18.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (n != null) {
+            Box(Modifier.size(22.dp).clip(CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
+                Text("$n", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun SubLabel(text: String) = Text(text, style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary,
+    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp))
+
+@Composable
+private fun Hint(text: String) = Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
+    modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp))
+
+/** Carte de choix (titre et explication), cochée par sa bordure. */
+@Composable
+private fun ChoiceCard(title: String, text: String, selected: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(shape).background(Mf.colors.card)
+        .border(2.dp, if (selected) Mf.colors.accent else Mf.colors.card, shape).clickable(onClick = onClick).padding(12.dp)) {
+        Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Text(text, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+    }
+}
+
+/** Les 7 jours en pastilles à cocher (1 = lundi). */
+@Composable
+private fun DayToggles(selected: Set<Int>, onTap: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        (1..7).forEach { d ->
+            val on = d in selected
+            Box(Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(12.dp)).background(if (on) Mf.colors.accent else Mf.colors.chip)
+                .clickable { onTap(d) }, contentAlignment = Alignment.Center) {
+                Text(DAY_NAMES[d - 1].take(3), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                    color = if (on) Color.White else Mf.colors.text, maxLines = 1)
+            }
+        }
+    }
+}
+
+/** Légende des couleurs de phase présentes dans l'aperçu. */
+@Composable
+private fun PhaseLegend(phases: List<PrepPhase>) {
+    if (phases.size < 2) return
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        phases.forEach { p ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(phaseColor(p)))
+                Spacer(Modifier.width(4.dp))
+                Text(tr(p.label), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1)
+            }
+        }
     }
 }
 

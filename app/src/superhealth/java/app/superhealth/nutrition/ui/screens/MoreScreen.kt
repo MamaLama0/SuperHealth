@@ -215,6 +215,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             // bases où sont cherchés les aliments et les codes-barres
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Bases d'aliments"), Modifier.padding(start = 0.dp))
             GroupCard {
+                SwitchRow(tr("Base SuperHealth"), tr("En ligne · NCC, MND et USDA, cherchée en premier"), s.serverFoodsEnabled) { v -> set { it.copy(serverFoodsEnabled = v) } }
+                RowDivider()
                 SwitchRow(tr("Open Food Facts"), tr("En ligne · recherche, code-barres, scores"), s.openFoodFactsEnabled) { v -> set { it.copy(openFoodFactsEnabled = v) } }
                 RowDivider()
                 SwitchRow(tr("Base suisse (OSAV)"), tr("Hors ligne · aliments génériques"), s.swissDbEnabled) { v -> set { it.copy(swissDbEnabled = v) } }

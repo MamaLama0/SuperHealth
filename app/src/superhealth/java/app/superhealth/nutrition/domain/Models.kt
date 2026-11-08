@@ -169,6 +169,8 @@ data class Settings(
     val energyUnit: EnergyUnit = EnergyUnit.KCAL,
     val trendAlpha: TrendAlpha = TrendAlpha.EMA9,
     val openFoodFactsEnabled: Boolean = true,
+    /** 3.9 : base du serveur SuperHealth (NCC, MND, USDA), en ligne, cherchée en premier. */
+    val serverFoodsEnabled: Boolean = true,
     /** Base suisse des valeurs nutritives (embarquée). */
     val swissDbEnabled: Boolean = true,
     /** USDA FoodData Central (embarquée, en anglais) ; null suit la langue de l'app. */

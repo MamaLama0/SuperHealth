@@ -38,8 +38,8 @@ fun ManualWeekEditor(p: Program, settings: Settings, onValid: (Boolean) -> Unit,
     }
     Text(when (split) {
         Split.SAME -> tr("La même cible tous les jours.")
-        Split.ON_OFF -> tr("Deux cibles : touchez les jours pour les passer en ON (entraînement) ou OFF (repos).")
-        Split.DAYS -> tr("Touchez un jour pour régler sa cible.")
+        Split.ON_OFF -> tr("Une cible pour les jours d'entraînement (ON), une pour le repos (OFF). Touchez un jour pour le basculer, puis une carte pour régler sa cible.")
+        Split.DAYS -> tr("Une cible différente par jour : touchez un jour pour la régler.")
     }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
 
     when (split) {

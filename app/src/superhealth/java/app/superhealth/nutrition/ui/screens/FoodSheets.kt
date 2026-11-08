@@ -275,7 +275,7 @@ fun FoodSheet(
         containerColor = Mf.colors.card, dragHandle = null) {
       Column(Modifier.navigationBarsPadding()) {
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            val subtitle = listOf(food.brand, when { food.source == "off" -> tr("Open Food Facts"); isRecipe -> trf("Recette · %1\$s portion(s)", (num(food.recipeServings ?: 1.0, 0))); else -> "" })
+            val subtitle = listOf(food.brand, when { food.source == "off" -> tr("Open Food Facts"); app.superhealth.nutrition.data.FoodServer.isServerSource(food.source) -> app.superhealth.nutrition.data.FoodServer.label(food.source).orEmpty(); isRecipe -> trf("Recette · %1\$s portion(s)", (num(food.recipeServings ?: 1.0, 0))); else -> "" })
             SheetHeader(food.name, subtitle.filter { it.isNotBlank() }.joinToString(" · "), onDismiss) {
                 if (onEdit != null) Box(Modifier.padding(end = 8.dp).size(36.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onEdit),
                     contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Edit, tr("Modifier"), Modifier.size(20.dp)) }

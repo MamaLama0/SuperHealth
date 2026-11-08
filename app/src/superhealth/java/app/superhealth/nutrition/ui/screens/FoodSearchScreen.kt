@@ -131,8 +131,14 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
         val code = result.contents ?: return@rememberLauncherForActivityResult
         scope.launch {
             val local = vm.repo.foods.byBarcode(code)
+            // base SuperHealth d'abord (NCC, MND, USDA), Open Food Facts ensuite
+            val server = if (local == null && s.serverFoodsEnabled) {
+                message = trf("Recherche du code %1\$s…", code)
+                app.superhealth.nutrition.data.FoodServer.byBarcode(code).also { message = null }
+            } else null
             when {
                 local != null -> selected = local
+                server != null -> selected = server
                 s.openFoodFactsEnabled -> {
                     message = trf("Recherche du code %1\$s sur Open Food Facts…", code)
                     val off = OpenFoodFacts.byBarcode(code)
@@ -361,6 +367,8 @@ private fun ListHeader(text: String) {
 private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: (FoodEntity) -> Unit) {
     var local by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     var remote by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
+    var server by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
+    var serverLoading by remember { mutableStateOf(false) }
     var swiss by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     var usda by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -377,13 +385,24 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         usda = if (q.length < 2 || !s.usdaOn) emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             app.superhealth.nutrition.data.GenericFoods.usda(ctx, q, 25)
         }
-        remote = emptyList(); searched = false
-        if (q.length >= 3 && s.openFoodFactsEnabled) {
-            delay(550)
-            loading = true
-            remote = OpenFoodFacts.search(q)
-            loading = false; searched = true
+        remote = emptyList(); server = emptyList(); searched = false
+        if (q.length < 2) return@LaunchedEffect
+        delay(350)
+        // base SuperHealth (rapide, prioritaire) puis Open Food Facts, en parallèle
+        kotlinx.coroutines.coroutineScope {
+            if (s.serverFoodsEnabled) launch {
+                serverLoading = true
+                server = app.superhealth.nutrition.data.FoodServer.search(q)
+                serverLoading = false
+            }
+            if (q.length >= 3 && s.openFoodFactsEnabled) launch {
+                delay(200)
+                loading = true
+                remote = OpenFoodFacts.search(q)
+                loading = false
+            }
         }
+        searched = true
     }
 
     LazyColumn(Modifier.fillMaxSize()) {
@@ -395,6 +414,9 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
                 Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         }
         // la base dans la langue de l'app d'abord, Open Food Facts ensuite, l'autre langue en dernier
+        if (server.isNotEmpty()) item(key = "h-server") { ListHeader(tr("Base SuperHealth")) }
+        items(server.size, key = { "s$it" }) { i -> FoodRow(server[i], s) { onPick(server[i]) } }
+        if (serverLoading && server.isEmpty()) item(key = "server-loading") { Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Mf.colors.accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp)) } }
         val frenchFirst = app.superhealth.nutrition.data.GenericFoods.frenchFirst()
         val first = if (frenchFirst) swiss else usda
         val last = if (frenchFirst) usda else swiss
@@ -407,7 +429,7 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         items(remote) { FoodRow(it, s) { onPick(it) } }
         if (last.isNotEmpty()) item(key = "h-last") { ListHeader(lastTitle) }
         items(last, key = { "b" + it.source + it.name }) { FoodRow(it, s) { onPick(it) } }
-        if (searched && remote.isEmpty() && local.isEmpty() && swiss.isEmpty() && usda.isEmpty()) item {
+        if (searched && remote.isEmpty() && server.isEmpty() && local.isEmpty() && swiss.isEmpty() && usda.isEmpty()) item {
             Text(tr("Aucun résultat (ou pas de réseau). Essayez « Créer » ou « Ajout rapide »."), Modifier.padding(16.dp), color = Mf.colors.textSecondary)
         }
         if (!s.openFoodFactsEnabled && query.isNotBlank()) item {

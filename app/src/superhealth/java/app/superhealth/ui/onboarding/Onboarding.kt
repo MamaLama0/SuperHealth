@@ -244,7 +244,11 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
 enum class OnboardingMode { FULL, NUTRITION_SIM, TRAINING_SIM, NUTRITION_SETUP, TRAINING_SETUP }
 
 @Composable
-fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.FULL, onClose: () -> Unit = {}) {
+/**
+ * [dryRun] : questionnaire complet relancé depuis les Réglages pour le revoir, sans rien enregistrer ni modifier
+ * (pas de Health Connect, de montre, de plugins ni d'IA ; « C'est parti » et « Passer » ferment simplement).
+ */
+fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.FULL, dryRun: Boolean = false, onClose: () -> Unit = {}) {
     val vm = svm.nutrition
     val ctx = LocalContext.current
     val sim = mode == OnboardingMode.NUTRITION_SIM || mode == OnboardingMode.TRAINING_SIM
@@ -254,6 +258,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     val settings by vm.settings.collectAsState()
     /** Questionnaire relancé depuis les Réglages : l'utilisateur a déjà des données. */
     val rerun = !sim && settings.onboarded
+    /** Aperçu : la couleur choisie reste locale. */
+    var demoAccent by rememberSaveable { mutableStateOf(settings.accent) }
 
     var unit by rememberSaveable { mutableStateOf(settings.weightUnit) }
     var sex by rememberSaveable { mutableStateOf(profile.sex) }
@@ -339,6 +345,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var useServer by rememberSaveable { mutableStateOf(true) }
     val healthAvailable = remember { HealthConnectHub.status(ctx) == HealthConnectHub.Status.AVAILABLE }
     val steps = Step.entries.filter {
+        if (dryRun && it in setOf(Step.HEALTH, Step.WATCH, Step.PLUGINS, Step.AI)) return@filter false
         if (mode == OnboardingMode.TRAINING_SETUP && it == Step.BODY) return@filter false
         // Une configuration manuelle sans objectif de poids ne demande aucune mesure corporelle.
         if (mode == OnboardingMode.NUTRITION_SETUP && programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL && !weightGoal &&
@@ -377,13 +384,14 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var forward by rememberSaveable { mutableStateOf(true) }
     fun next() { forward = true; if (index < steps.lastIndex) index++ }
     fun back() { forward = false; if (index > 0) { index--; if (steps[index] == Step.GENERATING && index > 0) index-- } }
-    BackHandler(step != Step.GENERATING && (index > 0 || mode != OnboardingMode.FULL)) { if (index > 0) back() else onClose() }
+    BackHandler(step != Step.GENERATING && (index > 0 || mode != OnboardingMode.FULL || dryRun)) { if (index > 0) back() else onClose() }
 
     /**
      * « Passer » : relancé depuis les Réglages, on garde tout tel quel ; premier lancement, l'app démarre avec des réglages
      * neutres (maintien du poids, pas de pesée inventée) à compléter plus tard.
      */
     fun skip() {
+        if (dryRun) { onClose(); return }
         if (rerun) { SuperPrefs.update { it.copy(onboarded = true) }; return }
         val t = svm.training
         val myGym = t.gymFromTemplate(GymTemplate.COMMERCIAL, tr("Ma salle"))
@@ -481,6 +489,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     }
 
     fun finish(program: Boolean) {
+        if (dryRun) { onClose(); return }
         if (mode == OnboardingMode.TRAINING_SETUP) {
             val t = svm.training
             val myGym = t.gymFromTemplate(gym, tr("Ma salle"))
@@ -583,13 +592,13 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     Column(Modifier.fillMaxSize().background(Mf.colors.background).safeDrawingPadding().imePadding()) {
         // Barre de progression (masquée sur l'accueil et la génération)
         val showBar = step != Step.WELCOME && step != Step.GENERATING
-        if (sim && !showBar) Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if ((sim || dryRun) && !showBar) Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, tr("Fermer")) }
-            Text(tr("Simulation · rien n'est enregistré"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+            Text(if (dryRun) tr("Aperçu · rien n'est modifié") else tr("Simulation · rien n'est enregistré"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
         }
         Row(Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showBar) {
-                androidx.compose.material3.IconButton(onClick = { if (index == 0 && mode != OnboardingMode.FULL) onClose() else back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+                androidx.compose.material3.IconButton(onClick = { if (index == 0 && (mode != OnboardingMode.FULL || dryRun)) onClose() else back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
                 if (mode == OnboardingMode.NUTRITION_SETUP || mode == OnboardingMode.TRAINING_SETUP) {
                     Column(Modifier.weight(1f).padding(end = 20.dp)) {
                         val fraction by animateFloatAsState((index + 1f) / steps.size, tween(350), label = "setup-progress")
@@ -622,7 +631,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             } else if (step == Step.WELCOME) {
                 androidx.compose.material3.TextButton(onClick = { skip() }) { Text(tr("Passer"), color = Mf.colors.textSecondary) }
                 Spacer(Modifier.weight(1f))
-                ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { if (it == Language.FR) "FR" else "EN" },
+                if (!dryRun) ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { if (it == Language.FR) "FR" else "EN" },
                     Modifier.width(112.dp)) { l ->
                     vm.repo.prefs.setSettings(settings.copy(language = l)); Lang.apply(l.name)
                 }
@@ -636,7 +645,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         }) { st ->
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
                 when (st) {
-                    Step.WELCOME -> Welcome(settings.accent)
+                    Step.WELCOME -> Welcome(settings.accent, recoverable = !dryRun)
                     Step.USES -> Page(st, tr("Que voulez-vous suivre ?"), tr("Le reste se masque. Tout se réactive dans Réglages > Fonctions.")) {
                         // le cycle se propose avec le sexe déclaré (page « Votre corps »)
                         app.superhealth.Feature.entries.filter { it != app.superhealth.Feature.CYCLE }.forEachIndexed { i, f ->
@@ -668,7 +677,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         // photo facultative, au même endroit que le prénom
                         val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
                         val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
-                            if (uri != null) app.superhealth.ui.ProfilePhoto.set(ctx, uri)
+                            if (uri != null && !dryRun) app.superhealth.ui.ProfilePhoto.set(ctx, uri)
                         }
                         Row(Modifier.padding(bottom = 12.dp).clip(RoundedCornerShape(16.dp)).clickable {
                             pick.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -695,9 +704,9 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             androidx.compose.foundation.layout.FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 app.superhealth.nutrition.domain.AccentColor.entries.forEach { c ->
-                                    val sel = c == settings.accent
+                                    val sel = c == (if (dryRun) demoAccent else settings.accent)
                                     Box(Modifier.size(38.dp).border(if (sel) 2.5.dp else 0.dp, if (sel) c.color() else Color.Transparent, CircleShape).padding(4.dp)
-                                        .clip(CircleShape).background(c.color()).clickable { vm.repo.prefs.setSettings(settings.copy(accent = c)) })
+                                        .clip(CircleShape).background(c.color()).clickable { if (dryRun) demoAccent = c else vm.repo.prefs.setSettings(settings.copy(accent = c)) })
                                 }
                             }
                         }
@@ -839,10 +848,10 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         Options(listOf(app.superhealth.nutrition.domain.ProgramStyle.COACHED, app.superhealth.nutrition.domain.ProgramStyle.COLLABORATIVE, app.superhealth.nutrition.domain.ProgramStyle.MANUAL), programStyle, { it.label.tr() }, { when (it) {
                             app.superhealth.nutrition.domain.ProgramStyle.COACHED -> tr("Ajustement automatique chaque semaine")
                             app.superhealth.nutrition.domain.ProgramStyle.COLLABORATIVE -> tr("Calories ajustées, répartition des macros choisie")
-                            app.superhealth.nutrition.domain.ProgramStyle.MANUAL -> tr("Pour les pratiquants avancés : calories et macros jour par jour, programme semaine par semaine, eau et sodium")
+                            app.superhealth.nutrition.domain.ProgramStyle.MANUAL -> tr("Préparations et pros : vous fixez calories et macros vous-même, jour par jour et semaine par semaine. Aucun ajustement automatique.")
                         } }) { programStyle = it }
                     }
-                    Step.MANUAL_TARGETS -> Page(st, tr("Vos cibles personnelles"), tr("Choisissez une cible commune ou réglez les calories et les trois macros de chaque jour.")) {
+                    Step.MANUAL_TARGETS -> Page(st, tr("Votre semaine type"), tr("Elle s'applique chaque semaine tant qu'aucun programme ne la remplace. Une cible = calories + protéines, lipides et glucides.")) {
                         if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
                             app.superhealth.nutrition.ui.screens.ManualWeekEditor(manualWeek, settings.copy(weightUnit = unit), { manualValid = it }) { w ->
                                 manualWeek = w; manualTarget = app.superhealth.nutrition.domain.ManualTargets.base(w)
@@ -856,21 +865,21 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             }
                         }
                     }
-                    Step.MANUAL_GOALS -> Page(st, tr("Eau, sodium et micronutriments"), tr("Vos objectifs de tous les jours. Chaque semaine du programme pourra les remplacer.")) {
+                    Step.MANUAL_GOALS -> Page(st, tr("Eau, sodium et micronutriments"), tr("Facultatif : laissez vide pour garder les repères officiels. Une semaine du programme pourra les remplacer.")) {
                         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.card)) {
                             app.superhealth.nutrition.ui.screens.BaseGoalsForm(baseGoals) { baseGoals = it }
                         }
-                        Text(tr("Repères : boissons 35 ml/kg et plus les jours d'entraînement (sueur 0,5 à 2 L/h) ; sodium < 2 000 mg/j hors pertes de sueur (OMS) ; potassium ≥ 3 500 mg/j ; fibres 25 à 38 g/j."),
+                        Text(tr("Repères :\n• Eau : environ 35 ml par kg, plus les jours d'entraînement (la sueur fait perdre 0,5 à 2 L par heure).\n• Sodium : moins de 2 000 mg par jour hors sueur (OMS).\n• Potassium : au moins 3 500 mg par jour.\n• Fibres : 25 à 38 g par jour."),
                             style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
                     }
-                    Step.MANUAL_PLAN -> Page(st, tr("Programme sur plusieurs semaines"), tr("Faites évoluer vos calories, macros, eau et sodium d'une semaine à l'autre. Tout reste modifiable jour par jour dans le plan.")) {
+                    Step.MANUAL_PLAN -> Page(st, tr("Programme sur plusieurs semaines"), tr("Facultatif : pour faire évoluer vos cibles d'une semaine à l'autre (sèche, prise de masse, préparation). Tout reste modifiable ensuite dans Nutrition > Plan.")) {
                         val existing = program.plan.count { it.startDay + 7 > today }
                         Options(listOf(0, 1), planChoice, { when (it) {
-                            0 -> if (existing > 0) trf("Garder mon plan actuel (%1\$s semaines)", existing) else tr("Répéter ma semaine type")
-                            else -> tr("Programmer des semaines")
+                            0 -> if (existing > 0) trf("Garder mon plan actuel (%1\$s semaines)", existing) else tr("Non, répéter ma semaine type")
+                            else -> tr("Oui, construire un programme")
                         } }, { when (it) {
-                            0 -> tr(if (existing > 0) "Les semaines déjà programmées restent telles quelles" else "Les cibles réglées à l'étape précédente, chaque semaine")
-                            else -> tr("Bloc qui évolue (prise de masse, sèche…) ou préparation complète")
+                            0 -> tr(if (existing > 0) "Les semaines déjà programmées restent telles quelles" else "La semaine réglée plus tôt revient chaque semaine")
+                            else -> tr("Calories et macros qui évoluent semaine après semaine, en quelques réglages")
                         } }) { planChoice = it }
                         if (planChoice == 1) {
                             Spacer(Modifier.height(10.dp))
@@ -1076,7 +1085,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         if (step != Step.GENERATING) {
             val label = when (step) {
                 Step.WELCOME -> tr("Commencer")
-                Step.RESULT -> if (sim) tr("Nouvelle simulation") else if (mode != OnboardingMode.FULL) tr("Appliquer ma configuration") else tr("C'est parti")
+                Step.RESULT -> if (sim) tr("Nouvelle simulation") else if (dryRun) tr("Fermer l'aperçu") else if (mode != OnboardingMode.FULL) tr("Appliquer ma configuration") else tr("C'est parti")
                 Step.HEALTH -> if (health) tr("Continuer") else tr("Plus tard")
                 Step.NAME -> if (name.isBlank()) tr("Passer") else tr("Continuer")
                 Step.WATCH -> if (watch == WatchChoice.PAIR && !paired) tr("Plus tard") else tr("Continuer")
@@ -1111,10 +1120,10 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
 
 /** Accueil : icône de l'app, titre, fonctions en liste à symboles colorés. */
 @Composable
-private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor) {
+private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor, recoverable: Boolean = true) {
     var recovery by remember { mutableStateOf(false) }
     if (recovery) app.superhealth.ui.league.GroupRecoveryDialog { recovery = false }
-    androidx.compose.material3.TextButton(onClick = { recovery = true }) { Text(tr("Retrouver mon Groupe")) }
+    if (recoverable) androidx.compose.material3.TextButton(onClick = { recovery = true }) { Text(tr("Retrouver mon Groupe")) }
     Spacer(Modifier.height(20.dp))
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AppIcon(88, accent) }
     Spacer(Modifier.height(18.dp))

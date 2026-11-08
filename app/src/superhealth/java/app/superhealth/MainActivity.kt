@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
             }
             SuperTheme(s.themeMode, s.accent, s.textSize) {
                 androidx.compose.foundation.layout.Box {
+                    app.superhealth.ui.KeyboardGuard()
                     SuperRoot(vm)
                     if (app.superhealth.security.AppLock.locked)
                         app.superhealth.ui.settings.LockScreen({ moveTaskToBack(true) }) {
