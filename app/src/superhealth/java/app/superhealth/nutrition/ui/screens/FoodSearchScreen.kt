@@ -375,6 +375,11 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
     var loading by remember { mutableStateOf(false) }
     var searched by remember { mutableStateOf(false) }
     val recent by remember { vm.repo.foods.recent(30) }.collectAsState(initial = emptyList())
+    LaunchedEffect(Unit) { if (s.serverFoodsEnabled) app.superhealth.nutrition.data.FoodServer.warmUp() }
+    // La section « Base SuperHealth » arrive après les bases embarquées, au-dessus d'elles : sans ça, la liste reste
+    // accrochée à la base suisse et les résultats du serveur restent hors de l'écran.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(server) { if (server.isNotEmpty()) listState.scrollToItem(0) }
 
     LaunchedEffect(query) {
         val q = query.trim()
@@ -385,9 +390,10 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         usda = if (q.length < 2 || !s.usdaOn) emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             app.superhealth.nutrition.data.GenericFoods.usda(ctx, q, 25)
         }
-        remote = emptyList(); server = emptyList(); searched = false
-        if (q.length < 2) return@LaunchedEffect
-        delay(350)
+        // résultats précédents de la base SuperHealth gardés pendant la frappe : pas de liste qui clignote
+        remote = emptyList(); searched = false
+        if (q.length < 2) { server = emptyList(); return@LaunchedEffect }
+        delay(220)
         // base SuperHealth (rapide, prioritaire) puis Open Food Facts, en parallèle
         kotlinx.coroutines.coroutineScope {
             if (s.serverFoodsEnabled) launch {
@@ -405,7 +411,7 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         searched = true
     }
 
-    LazyColumn(Modifier.fillMaxSize()) {
+    LazyColumn(Modifier.fillMaxSize(), state = listState) {
         val shown = if (query.isBlank()) recent else local
         if (shown.isNotEmpty()) item { ListHeader(if (query.isBlank()) tr("Récents et fréquents") else tr("Ma bibliothèque")) }
         items(shown, key = { "l${it.id}" }) { FoodRow(it, s) { onPick(it) } }

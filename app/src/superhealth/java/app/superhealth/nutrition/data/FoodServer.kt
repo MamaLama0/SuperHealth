@@ -33,7 +33,7 @@ object FoodServer {
     suspend fun search(query: String): List<FoodEntity> = withContext(Dispatchers.IO) {
         val b = base() ?: return@withContext emptyList()
         val q = query.trim().take(80).takeIf { it.length >= 2 } ?: return@withContext emptyList()
-        val json = get("$b/v2/foods/search?q=${URLEncoder.encode(q, "UTF-8")}&limit=30") ?: return@withContext emptyList()
+        val json = get("$b/v2/foods/search?q=${URLEncoder.encode(q, "UTF-8")}&limit=20") ?: return@withContext emptyList()
         (json["foods"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.let(::toFood) }.orEmpty()
     }
 
@@ -44,19 +44,26 @@ object FoodServer {
         (get("$b/v2/foods/barcode/$code", fast = true)?.get("food") as? JsonObject)?.let(::toFood)
     }
 
-    private fun get(url: String, fast: Boolean = false): JsonObject? {
+    /**
+     * Connexion gardée ouverte entre deux frappes (pas de disconnect : le flux lu jusqu'au bout et fermé rend la socket
+     * au pool, sans nouvelle poignée de main TLS) ; réponse compressée en gzip, décompressée par HttpURLConnection.
+     */
+    private fun get(url: String, fast: Boolean = false): JsonObject? = try {
         val conn = URL(url).openConnection() as HttpURLConnection
-        return try {
-            conn.instanceFollowRedirects = false
-            conn.connectTimeout = if (fast) 3_000 else 6_000
-            conn.readTimeout = if (fast) 4_000 else 8_000
-            if (conn.responseCode != 200) return null
-            AppJson.parseToJsonElement(conn.inputStream.use { Net.readCapped(it, 1024 * 1024) }) as? JsonObject
-        } catch (e: Exception) {
-            null
-        } finally {
-            conn.disconnect()
-        }
+        conn.instanceFollowRedirects = false
+        conn.connectTimeout = if (fast) 3_000 else 6_000
+        conn.readTimeout = if (fast) 4_000 else 8_000
+        if (conn.responseCode != 200) { conn.errorStream?.close(); null }
+        else AppJson.parseToJsonElement(conn.inputStream.use { Net.readCapped(it, 1024 * 1024) }) as? JsonObject
+    } catch (e: Exception) {
+        android.util.Log.w("FoodServer", "GET failed: ${e.javaClass.simpleName}: ${e.message}")
+        null
+    }
+
+    /** Ouvre la connexion au serveur dès l'écran de recherche, pour que la première recherche ne paie pas le TLS. */
+    suspend fun warmUp() = withContext(Dispatchers.IO) {
+        val b = base() ?: return@withContext
+        runCatching { (URL("$b/health").openConnection() as HttpURLConnection).apply { connectTimeout = 3_000; readTimeout = 3_000 }.inputStream.use { it.readBytes() } }
     }
 
     private fun JsonObject.str(key: String) = (this[key] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull

@@ -71,14 +71,31 @@ class FoodTable(private val asset: String) {
         }.getOrDefault(emptyList()).also { items = it }
     }
 
-    /** Recherche : tous les mots de la requête présents ; score = début du nom, mot entier, longueur courte. */
+    /** Nom en minuscules sans accents, ponctuation gardée (« Pomme, crue » reste distinct de « Pomme de terre »). */
+    private fun plain(s: String) = Normalizer.normalize(s.lowercase().replace("œ", "oe").replace("æ", "ae"), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")
+
+    /**
+     * Précision du nom pour la requête [q] (au singulier) : 0 l'aliment lui-même (« Pomme », « Pomme, crue »),
+     * 1 le mot suivi d'autres mots (« Pomme de terre… »), 2 début d'un mot plus long, 3 ailleurs. Comme le serveur (foods.mjs).
+     */
+    private fun precision(name: String, q: String): Int {
+        val forms = listOf(q, q + "s", q + "x")
+        return when {
+            forms.any { name == it || name.startsWith("$it,") || name.startsWith("$it (") } -> 0
+            forms.any { name.startsWith("$it ") } -> 1
+            name.startsWith(q) -> 2
+            else -> 3
+        }
+    }
+
+    /** Recherche : tous les mots de la requête présents ; score = précision du nom, mot entier, longueur courte. */
     fun search(context: Context, query: String, limit: Int = 40): List<SwissFoods.Item> {
         val words = norm(query).split(' ').filter { it.length >= 2 }
         if (words.isEmpty()) return emptyList()
-        val q = norm(query)
+        val q = plain(query).trim().replace(Regex("\\s+"), " ").let { if (it.length > 3 && it.endsWith("s") && !it.endsWith("ss")) it.dropLast(1) else it }
         return load(context).asSequence()
             .filter { item -> words.all { item.key.contains(it) } }
-            .sortedWith(compareBy<SwissFoods.Item>({ !norm(it.name).startsWith(q) }, { !words.all { w -> " ${it.key} ".contains(" $w ") } }, { it.name.length }))
+            .sortedWith(compareBy<SwissFoods.Item>({ precision(plain(it.name), q) }, { !words.all { w -> " ${it.key} ".contains(" $w ") } }, { it.name.length }))
             .take(limit).toList()
     }
 }
