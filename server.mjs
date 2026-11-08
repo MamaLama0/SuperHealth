@@ -4,6 +4,7 @@ import { createFeedbackHandler } from './feedback.mjs';
 import { createEconomy } from './economy.mjs';
 import { createFaces } from './faces.mjs';
 import { createRewards, DEFAULT_REWARDS_URL } from './rewards.mjs';
+import { createFoods } from './foods.mjs';
 import { createServer } from 'node:http';
 import { createHash, timingSafeEqual, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, unlink, readdir, stat } from 'node:fs/promises';
@@ -43,7 +44,7 @@ export function validateEnvelope(raw, now = Date.now()) {
 export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLimitPerMinute = 240,
   maxInFlight = 8, maxMediaFiles = MAX_MEDIA_FILES, mediaQuotaBytes = DEFAULT_MEDIA_QUOTA,
   socialRetentionDays = SOCIAL_RETENTION_DAYS, maxSocialEntries = 200000, maxMediaPerMailbox = 20000, maxNewMailboxesPerHour = 12,
-  now = Date.now, sweepIntervalMs = 3_600_000, rewardsUrl = null, feedback: feedbackOptions } = {}) {
+  now = Date.now, sweepIntervalMs = 3_600_000, rewardsUrl = null, foodsFile = null, feedback: feedbackOptions } = {}) {
   if (publishKey != null && publishKey !== '' && (typeof publishKey !== 'string' || publishKey.length < 32 || publishKey.length > 512 || /[\r\n]/.test(publishKey)))
     throw new Error('PUBLISH_KEY must have 32..512 characters');
   integer(maxCards, 1, 10_000, 'MAX_CARDS');
@@ -81,6 +82,8 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   const rewards = await createRewards(dataDir, { url: rewardsUrl, now });
   const economy = await createEconomy(dataDir, { now, secret, maxAccounts: maxCards * 10, maxNewPerHour: maxNewMailboxesPerHour, rewards });
   const faces = await createFaces(dataDir, { now, maxFaces: maxCards * 10, maxInboxes: maxCards * 10 });
+  // Base d'aliments facultative (data/foods.sqlite, voir foods.mjs) : lecture seule.
+  const foods = createFoods(dataDir, foodsFile ? { file: foodsFile } : {});
   const index = new Map();
   const rates = new Map();
   const creationRates = new Map();
@@ -143,8 +146,19 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
-    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, recoveryRevocation: 1, streamFreeze: 1, capabilityStatus: 1, feedback: feedback.enabled ? 1 : 0, economy: 4, faces: 2 }));
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, recoveryRevocation: 1, streamFreeze: 1, capabilityStatus: 1, feedback: feedback.enabled ? 1 : 0, economy: 4, faces: 2, foods: foods.enabled ? 1 : 0 }));
     if (req.url === '/v2/feedback') return feedback(req, res);
+    if ((req.url || '').startsWith('/v2/foods/')) {
+      let url; try { url = new URL(req.url, 'http://local'); } catch { req.resume(); return send(res, 400); }
+      const bucket = digest((req.socket.remoteAddress || '?') + ':foods');
+      const minute = Math.floor(now() / 60_000);
+      const previous = rates.get(bucket);
+      const requests = previous?.minute === minute ? previous.requests + 1 : 1;
+      if (!rates.has(bucket) && rates.size >= 1024) rates.clear();
+      rates.set(bucket, { minute, requests });
+      if (requests > rateLimitPerMinute) { req.resume(); return send(res, 429, '', { 'Retry-After': '60' }); }
+      try { return foods.handle(req, res, send, url); } catch { if (!res.headersSent) send(res, 500); else res.end(); return; }
+    }
     // Économie des cartes : portefeuille, tirage et quêtes décidés par le serveur (voir economy.mjs).
     const economyRoute = /^\/v2\/economy\/([a-f0-9]{64})$/.exec(req.url || '');
     if (economyRoute) {
@@ -351,7 +365,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const sweep = setInterval(() => { serialized(async () => { await prune(); await media.prune(); await social.prune(); await handoffs.prune(); }).catch(() => {}); }, sweepIntervalMs);
   sweep.unref();
-  server.on('close', () => clearInterval(sweep));
+  server.on('close', () => { clearInterval(sweep); foods.close?.(); });
   server.requestTimeout = 300_000;
   server.headersTimeout = 10_000;
   server.keepAliveTimeout = 5_000;

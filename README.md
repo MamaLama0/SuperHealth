@@ -195,3 +195,18 @@ Un nouvel essai de `PUT /media/<id64hex>` peut fournir `X-Content-SHA256`. Le re
 La rotation des liens personnels utilise les handoffs chiffrés existants. La découverte d’un retrait reste lisible après suppression de la carte principale. Le flux étendu est gelé avant d’attendre les confirmations distantes, puis supprimé. Les clients anciens ne sachant pas confirmer doivent être mis à jour ou révoquer leur ancien lien. Les données déjà copiées par un destinataire ne peuvent pas être effacées à distance.
 
 Validation locale `node --test server.test.mjs`. Aucun déploiement distant n’est requis par cette modification des sources.
+
+## Base d'aliments (facultative)
+
+Le serveur peut servir une base d'aliments en lecture seule (`GET /v2/foods/search?q=…`, `GET /v2/foods/barcode/<code>`),
+cherchée en premier par l'app (« Base SuperHealth »). Elle n'est ni dans le dépôt ni dans l'image : c'est un fichier
+`foods.sqlite` placé dans le volume de données.
+
+1. Construire le fichier depuis la base complète (NCC, MND, USDA base et marques ; ≈ 330 Mo, quelques minutes) :
+   `node scripts/build-foods.mjs /chemin/vers/foods.db data/foods.sqlite`
+2. Copier `data/foods.sqlite` dans le dossier monté sur `/data` (`DATA_PATH`), puis redémarrer le conteneur.
+   `/health` répond alors `"foods": 1`. Sans le fichier, la fonction reste désactivée.
+
+Classement : noms qui commencent par la requête d'abord, puis NCC, MND, USDA base et USDA marques. Les fiches
+incohérentes (énergie ≠ macros) sont écartées et les colonnes mal nommées de la base source sont corrigées
+(voir l'en-tête de `scripts/build-foods.mjs`). Les requêtes ne sont ni journalisées ni conservées.
