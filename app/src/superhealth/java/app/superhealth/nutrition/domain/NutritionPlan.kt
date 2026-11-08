@@ -35,6 +35,16 @@ import kotlin.math.roundToInt
     val phase: PrepPhase = PrepPhase.CUT,
     val days: List<PlanDay>,
     val note: String = "",
+    /**
+     * Repères d'hydratation et de micronutriments de toute la semaine (null : calculés par l'app) ; un jour peut les
+     * remplacer un par un.
+     */
+    val waterMl: Double? = null,
+    val sodiumMg: Double? = null,
+    val fiberG: Double? = null,
+    val potassiumMg: Double? = null,
+    /** La sueur des séances du jour s'ajoute à l'eau et au sodium prévus (sinon : valeurs fixes). */
+    val addTraining: Boolean = true,
 ) {
     fun includes(day: Long) = day in startDay until startDay + 7
     fun day(epochDay: Long): PlanDay? = days.getOrNull((epochDay - startDay).toInt())
@@ -54,6 +64,31 @@ object NutritionPlan {
 
     fun weekAt(p: Program, day: Long): PlanWeek? = p.plan.lastOrNull { it.includes(day) }
     fun dayAt(p: Program, day: Long): PlanDay? = weekAt(p, day)?.day(day)
+
+    /** Eau, sodium, fibres et potassium prévus ce jour-là : réglage du jour, sinon celui de la semaine. */
+    fun waterAt(p: Program, day: Long): Double? = weekAt(p, day)?.let { it.day(day)?.waterMl ?: it.waterMl }
+    fun sodiumAt(p: Program, day: Long): Double? = weekAt(p, day)?.let { it.day(day)?.sodiumMg ?: it.sodiumMg }
+    fun fiberAt(p: Program, day: Long): Double? = weekAt(p, day)?.let { it.day(day)?.fiberG ?: it.fiberG }
+    fun potassiumAt(p: Program, day: Long): Double? = weekAt(p, day)?.potassiumMg
+    /** La sueur des séances s'ajoute-t-elle aux repères prévus ce jour-là (oui hors plan) ? */
+    fun addsTraining(p: Program, day: Long): Boolean = weekAt(p, day)?.addTraining ?: true
+
+    /** Numéro (1, 2…) de la semaine dans le plan, en comptant depuis la première semaine programmée. */
+    fun weekNumber(p: Program, w: PlanWeek): Int = p.plan.minOfOrNull { it.startDay }?.let { ((w.startDay - it) / 7).toInt() + 1 } ?: 1
+
+    /** Les sept jours d'une semaine réglés sur la même cible (les étiquettes de recharge et notes des jours sont retirées). */
+    fun setAll(w: PlanWeek, t: DayTarget): PlanWeek = w.copy(days = w.days.map { PlanDay(t, it.fiberG, it.sodiumMg, it.waterMl) })
+
+    /**
+     * Copie [w] sur les [count] semaines qui suivent [after] (lundi de la dernière semaine existante), en ajoutant
+     * [deltaKcal] de plus à chaque nouvelle semaine (pris sur les glucides) : progression d'une sèche ou d'une prise.
+     */
+    fun extend(w: PlanWeek, after: Long, count: Int, deltaKcal: Double): List<PlanWeek> =
+        (1..count).map { k -> shift(w, deltaKcal * k).copy(startDay = after + 7L * k) }
+
+    /** Moyennes d'une semaine : énergie et macros par jour. */
+    fun average(w: PlanWeek): DayTarget = DayTarget(w.days.map { it.target.kcal }.average(), w.days.map { it.target.protein }.average(),
+        w.days.map { it.target.fat }.average(), w.days.map { it.target.carbs }.average())
 
     /** Ajoute ou remplace la semaine qui commence au même lundi. */
     fun put(p: Program, w: PlanWeek): Program = p.copy(plan = (p.plan.filterNot { it.startDay == w.startDay } + w).sortedBy { it.startDay })
@@ -97,6 +132,42 @@ object NutritionPlan {
     }
 
     private fun Double.round1() = (this * 10).roundToInt() / 10.0
+
+    /**
+     * Bloc de semaines quelconque (prise de masse, maintien, sèche, reverse…) : énergie de départ puis +[stepKcal] par
+     * semaine (négatif en sèche), protéines en g/kg de poids, lipides en % de l'énergie, recharges éventuelles, repères
+     * d'eau et de sodium de la semaine.
+     */
+    data class Block(
+        val start: Long,
+        val weeks: Int,
+        val phase: PrepPhase,
+        val startKcal: Double,
+        val stepKcal: Double,
+        val weightKg: Double,
+        val proteinPerKg: Double = 2.0,
+        val fatPct: Double = 25.0,
+        val refeedDays: Set<Int> = emptySet(),
+        val refeedKcal: Double? = null,
+        val waterMl: Double? = null,
+        val sodiumMg: Double? = null,
+        val fiberG: Double? = null,
+        val addTraining: Boolean = true,
+        val floorKcal: Double = 1200.0,
+        val ceilingKcal: Double = 6000.0,
+    )
+
+    fun block(b: Block): List<PlanWeek> {
+        val protein = b.weightKg * b.proteinPerKg
+        return (0 until b.weeks).map { k ->
+            val kcal = (b.startKcal + b.stepKcal * k).coerceIn(b.floorKcal, b.ceilingKcal)
+            val day = macros(kcal, protein, b.fatPct)
+            val refeed = b.refeedKcal?.takeIf { it > kcal }?.let { macros(it, protein, 15.0) }
+            PlanWeek(b.start + 7L * k, b.phase, (1..7).map { dow ->
+                if (refeed != null && dow in b.refeedDays) PlanDay(refeed, refeed = true) else PlanDay(day)
+            }, waterMl = b.waterMl, sodiumMg = b.sodiumMg, fiberG = b.fiberG, addTraining = b.addTraining)
+        }
+    }
 
     /** Prépare [Prep.weeks] semaines de sèche (avec pauses et recharges), puis la semaine de pic et le reverse demandés. */
     fun generate(g: Prep): List<PlanWeek> {

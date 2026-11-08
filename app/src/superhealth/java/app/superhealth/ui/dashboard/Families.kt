@@ -924,11 +924,18 @@ private fun usual(v: List<Double>): Pair<Double, Double>? {
 private fun liveBpm(h: HealthSnap): Pair<Double?, Long?> {
     val canLive = remember(h) { app.superhealth.bridge.LiveHeart.available() }
     var window by remember { mutableStateOf(emptyList<Pair<Long, Int>>()) }
-    if (canLive) androidx.compose.runtime.LaunchedEffect(Unit) {
-        app.superhealth.bridge.LiveHeart.samples.collect { s ->
-            val bpm = s.bpm ?: return@collect
-            window = (window + (s.timeMs to bpm)).filter { it.first >= s.timeMs - 10_000 }
+    // Écoute automatique bornée à 2 min par affichage : le mode direct fait émettre la montre chaque seconde et vide sa
+    // batterie si le tableau de bord reste ouvert longtemps. Ensuite, la dernière mesure enregistrée s'affiche.
+    // une seule fenêtre par affichage de la carte : un rafraîchissement des données (synchro, saisie) ne la relance pas
+    var listened by remember { mutableStateOf(false) }
+    if (canLive && !listened) androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.withTimeoutOrNull(120_000) {
+            app.superhealth.bridge.LiveHeart.samples.collect { s ->
+                val bpm = s.bpm ?: return@collect
+                window = (window + (s.timeMs to bpm)).filter { it.first >= s.timeMs - 10_000 }
+            }
         }
+        listened = true
     }
     val fresh = window.takeIf { it.isNotEmpty() && it.last().first >= System.currentTimeMillis() - 30_000 }
     if (fresh != null) return fresh.map { it.second }.sorted()[fresh.size / 2].toDouble() to null

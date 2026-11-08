@@ -1386,6 +1386,24 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         }
     }
 
+    /** SuperHealth : dernière demande de niveau déclenchée par une notification de la montre (anti-boucle). */
+    private long lastBatteryNotifyRequest = Long.MIN_VALUE / 2;
+
+    /**
+     * SuperHealth : la montre signale un changement d'état de batterie. On ne redemande le niveau qu'une fois toutes les
+     * 10 minutes : si la réponse provoque elle-même une notification, l'échange tournerait en boucle et garderait le
+     * Bluetooth de la montre actif en permanence (batterie vidée).
+     */
+    void onBatteryStatusChanged() {
+        final long now = android.os.SystemClock.elapsedRealtime();
+        if (now - lastBatteryNotifyRequest < 10 * 60_000L) {
+            LOG.debug("Battery status change ignored (asked {} s ago)", (now - lastBatteryNotifyRequest) / 1000);
+            return;
+        }
+        lastBatteryNotifyRequest = now;
+        requestBatteryUpdate();
+    }
+
     void requestBatteryUpdate() {
         sendProtobufRequest("enable battery updates", Smart.newBuilder()
                 .setDeviceStatusService(

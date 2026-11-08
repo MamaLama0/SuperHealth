@@ -215,6 +215,10 @@ private class Scrub {
     var xs = FloatArray(0)
     var tip = Rect.Zero
     var share: String? = null
+    /** Valeur (abscisse, ou indice de barre) de chaque position de [xs], pour [onTap]. */
+    var ids = DoubleArray(0)
+    /** Toucher bref : choisit tout de suite la valeur la plus proche (sans maintien) et la renvoie. */
+    var onTap: ((Double) -> Unit)? = null
     fun nearest(x: Float): Int? = if (xs.isEmpty()) null else xs.indices.minBy { abs(xs[it] - x) }
     fun clear() { sel = null; pinned = false }
 }
@@ -227,13 +231,24 @@ private fun rememberScrub(key: Any?): Scrub {
 }
 
 /** Attend le maintien ; vrai si le geste s'arrête avant (toucher bref, défilement, geste pris par un autre). */
-private suspend fun AwaitPointerEventScope.endsEarly(id: PointerId, start: Offset, s: Scrub, slop: Float, onShare: (String) -> Unit): Boolean {
+private suspend fun AwaitPointerEventScope.endsEarly(id: PointerId, start: Offset, s: Scrub, slop: Float, haptic: Haptics, onShare: (String) -> Unit): Boolean {
     while (true) {
         val c = awaitPointerEvent().changes.firstOrNull { it.id == id } ?: return true
         if (c.isConsumed) return true
         if (!c.pressed) {
             // valeur épinglée : la toucher la partage ; toucher ailleurs la retire
-            if (s.pinned && s.tip.contains(start)) { c.consume(); s.share?.let(onShare) }
+            if (s.pinned && s.tip.contains(start)) { c.consume(); s.share?.let(onShare); s.clear(); return true }
+            // graphique sélectionnable : un simple toucher choisit le jour (ou la valeur) le plus proche
+            val tap = s.onTap
+            val i = if (tap != null) s.nearest(start.x) else null
+            if (tap != null && i != null) {
+                c.consume()
+                s.sel = i; s.pinned = true
+                ChartTouch.endedAt = SystemClock.uptimeMillis()
+                haptic.tick()
+                s.ids.getOrNull(i)?.let(tap)
+                return true
+            }
             s.clear()
             return true
         }
@@ -245,7 +260,7 @@ private suspend fun AwaitPointerEventScope.endsEarly(id: PointerId, start: Offse
 private fun Modifier.scrubbing(s: Scrub, haptic: Haptics, onShare: (String) -> Unit) = pointerInput(s) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
-        if (withTimeoutOrNull(HOLD_MS) { endsEarly(down.id, down.position, s, viewConfiguration.touchSlop, onShare) } != null) return@awaitEachGesture
+        if (withTimeoutOrNull(HOLD_MS) { endsEarly(down.id, down.position, s, viewConfiguration.touchSlop, haptic, onShare) } != null) return@awaitEachGesture
         ChartTouch.active = true
         s.pinned = false
         s.sel = s.nearest(down.position.x)
@@ -386,6 +401,8 @@ fun LineChart(
     invertY: Boolean = false, xLabels: List<Pair<Number, String>> = emptyList(), timeAxis: Boolean = false,
     highlightEnd: Boolean = true, ringedEnd: Boolean = false, emptyText: String = "Pas encore assez de données",
     valueFormat: ((Double) -> String)? = null, xFormat: ((Double) -> String)? = null,
+    /** Toucher bref sur le graphique : abscisse de la valeur la plus proche (un jour, par exemple), aussitôt affichée. */
+    onPick: ((Double) -> Unit)? = null,
 ) {
     // bande d'une teinte chaude en sombre : gris neutre (une teinte chaude mêlée au fond sombre vire au brun)
     val darkTheme = Mf.colors.dark
@@ -401,6 +418,7 @@ fun LineChart(
     val t = axisText()
     val xRow = if (xLabels.isNotEmpty()) 18.dp else 0.dp
     val sc = rememberScrub(series)
+    sc.onTap = onPick
     val st = tipStyle()
     val tipValue = valueFormat ?: format ?: ::autoValue
     Canvas(modifier.fillMaxWidth().height(height + xRow).scrubbing(sc, st.haptic, st.onShare)) {
@@ -460,6 +478,7 @@ fun LineChart(
         val plotted = series.filter { it.points.isNotEmpty() }
         val cand = plotted.flatMap { p -> p.points.map { it.first.toDouble() } }.distinct().sorted()
         sc.xs = FloatArray(cand.size) { x(cand[it]) }
+        sc.ids = cand.toDoubleArray()
         sc.sel?.let(cand::getOrNull)?.let { cx ->
             val hits = plotted.mapNotNull { p -> p.points.firstOrNull { it.first.toDouble() == cx }?.let { p.color to it.second } }.take(3)
             drawPick(st, sc, x(cx), inset, inset + plotH, hits.map { tipValue(it.second) to it.first }, xFormat?.invoke(cx) ?: autoX(cx, x1 - x0),
@@ -479,6 +498,8 @@ fun BarChart(
     labels: List<String> = emptyList(), track: Color = Mf.colors.chip, showAxis: Boolean = height >= ChartStyle.detailed,
     format: ((Double) -> String)? = null, dimBelowGoal: Boolean = false,
     valueFormat: ((Double) -> String)? = null, pointLabel: ((Int) -> String)? = null,
+    /** Toucher bref : indice de la barre la plus proche, aussitôt affichée. */
+    onPick: ((Int) -> Unit)? = null,
 ) {
     val top = (values.filterNotNull() + target.filterNotNull()).maxOrNull()?.takeIf { it > 0 } ?: 1.0
     val scale = if (showAxis) Scales.nice(0.0, top, zero = true) else Scale(0.0, top, top)
@@ -488,6 +509,7 @@ fun BarChart(
     val t = axisText()
     val xRow = if (labels.any { it.isNotEmpty() }) 18.dp else 0.dp
     val sc = rememberScrub(values)
+    sc.onTap = onPick?.let { f -> { i: Double -> f(i.toInt()) } }
     val st = tipStyle()
     val tipValue = valueFormat ?: format ?: ::autoValue
     Canvas(modifier.fillMaxWidth().height(height + xRow).scrubbing(sc, st.haptic, st.onShare)) {
@@ -525,6 +547,7 @@ fun BarChart(
         // une valeur par barre renseignée
         val filled = values.indices.filter { values[it] != null }
         sc.xs = FloatArray(filled.size) { (filled[it] + 0.5f) * slot }
+        sc.ids = DoubleArray(filled.size) { filled[it].toDouble() }
         sc.sel?.let(filled::getOrNull)?.let { i ->
             val v = values[i]!!
             val goal = target.getOrNull(i)?.let { " / " + tipValue(it) }.orEmpty()
@@ -572,6 +595,7 @@ fun SignedBarChart(
         if (xRow > 0.dp) xAxis(t, labels.mapIndexed { i, s -> (i + 0.5f) * slot to s }, plotW, height.toPx() + 4.dp.toPx())
         val filled = values.indices.filter { values[it] != null && values[it] != 0.0 }
         sc.xs = FloatArray(filled.size) { (filled[it] + 0.5f) * slot }
+        sc.ids = DoubleArray(filled.size) { filled[it].toDouble() }
         sc.sel?.let(filled::getOrNull)?.let { i ->
             val v = values[i]!!
             val txt = (format?.invoke(abs(v)) ?: autoValue(abs(v))).let { if (v > 0) "+$it" else "−$it" }

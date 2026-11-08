@@ -91,7 +91,12 @@ fun HydrationPanel(vm: SuperViewModel) {
                 }
             }
         }
-        if (settings.hydrationAuto) {
+        if (p.plannedMl != null) {
+            Spacer(Modifier.height(14.dp))
+            Line(tr("Plan nutrition"), trf("%1\$s ml", formatNumber(p.plannedMl)), tr("Objectif de la semaine programmée"))
+            if (p.goalMl - p.plannedMl > 25 && p.trainingMl > 0) Line(tr("Entraînement"), "+ " + trf("%1\$s ml", formatNumber(p.trainingMl)),
+                trf("%1\$s L de sueur estimés, remplacés à 125 %%", l(p.sweatL)))
+        } else if (settings.hydrationAuto) {
             Spacer(Modifier.height(14.dp))
             Line(tr("Base"), trf("%1\$s ml", formatNumber(p.baseMl)),
                 p.weightKg?.let { trf("35 ml/kg × %1\$s kg", l(it)) } ?: tr("Repère EFSA (pas de poids connu)"))

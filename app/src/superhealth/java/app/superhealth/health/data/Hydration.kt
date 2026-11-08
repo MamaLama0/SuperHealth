@@ -72,6 +72,10 @@ object Hydration {
         val potassiumMg: Double?,
         val sodiumTargetMg: Double,
         val sweatSodiumMg: Double,
+        /** Eau fixée par le plan nutrition ce jour-là (avant la sueur des séances), sinon null. */
+        val plannedMl: Double? = null,
+        /** Potassium visé (plan nutrition ou réglage des nutriments), sinon null. */
+        val potassiumTargetMg: Double? = null,
     ) {
         /** Rapport molaire Na:K (Na 23 g/mol, K 39,1 g/mol). */
         val naK: Double? get() = if (sodiumMg != null && potassiumMg != null && potassiumMg > 0) (sodiumMg / 23.0) / (potassiumMg / 39.1) else null
@@ -83,7 +87,7 @@ object Hydration {
     val today: StateFlow<Plan?> = _today
 
     /** Objectif du jour calculé, ou null (mode fixe, ou pas encore calculé). */
-    fun cachedGoal(): Double? = _today.value?.takeIf { SuperPrefs.settings.value.hydrationAuto && it.date == LocalDate.now() }?.goalMl
+    fun cachedGoal(): Double? = _today.value?.takeIf { (SuperPrefs.settings.value.hydrationAuto || it.plannedMl != null) && it.date == LocalDate.now() }?.goalMl
 
     /** Objectif fixe : base EFSA de boissons selon le sexe, ou le réglage de la montre. */
     fun baseMl(weightKg: Double?, female: Boolean): Double {
@@ -115,15 +119,24 @@ object Hydration {
         val base = baseMl(weight, female)
         val training = sweat * 1000 * REPLACE
         val proteinMl = (extraProtein * ML_PER_EXTRA_PROTEIN_G).coerceAtMost(800.0)
-        // 3.8 : un jour du plan nutrition qui fixe l'eau ou le sodium l'emporte sur le calcul
-        val planned = repo?.prefs?.program?.value?.let { app.superhealth.nutrition.domain.NutritionPlan.dayAt(it, date.toEpochDay()) }
-        val goal = planned?.waterMl ?: (((base + training + proteinMl) / 50.0).roundToInt() * 50.0)
+        // Plan nutrition : l'eau et le sodium prévus pour ce jour (ou sa semaine) l'emportent sur le calcul ; la sueur des
+        // séances s'y ajoute sauf si la semaine l'exclut.
+        val NP = app.superhealth.nutrition.domain.NutritionPlan
+        val prog = repo?.prefs?.program?.value
+        val e = date.toEpochDay()
+        val plannedWater = prog?.let { NP.waterAt(it, e) }
+        val plannedNa = prog?.let { NP.sodiumAt(it, e) }
+        val addTraining = prog?.let { NP.addsTraining(it, e) } ?: true
+        val goal = ((plannedWater?.let { it + if (addTraining) training else 0.0 } ?: (base + training + proteinMl)) / 50.0).roundToInt() * 50.0
         val drunk = ManualLogStore.get(ctx).query(Metric.HYDRATION, from, to).sumOf { it.value }
         val sweatNa = sweat * s.sweatSodiumMgL
+        val micro = repo?.prefs?.settings?.value?.microTargets.orEmpty()
+        val naTarget = (plannedNa ?: micro["sodium"] ?: BASE_SODIUM_MG) + if (addTraining) sweatNa else 0.0
+        val kTarget = prog?.let { NP.potassiumAt(it, e) } ?: micro["potassium"]
 
         return Plan(date, weight, female, goal, base, training, proteinMl, sessions, sweat, rate, s.sweatRateLh != null, drunk,
             micros["water"] ?: 0.0, protein, micros["sodium"].takeIf { entries.isNotEmpty() }, micros["potassium"].takeIf { entries.isNotEmpty() },
-            planned?.sodiumMg ?: (BASE_SODIUM_MG + sweatNa), sweatNa,
+            naTarget, if (addTraining) sweatNa else 0.0, plannedWater, kTarget,
         ).also { if (date == LocalDate.now()) _today.value = it }
     }
 

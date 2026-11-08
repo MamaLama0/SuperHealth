@@ -53,6 +53,8 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
     /** Faux tant que l'historique n'a pas livré de pouls : le WHOOP 4 v25 n'en contient pas, seul le service standard le mesure. */
     private var historyHasHr = false
     private val liveSeconds = ArrayList<WhoopSecond>()
+    /** Notifications du pouls standard (1 par seconde) actuellement demandées au bracelet. */
+    private var standardHrOn = true
 
     private val store by lazy { WhoopRawStore(context.filesDir, device.address) }
 
@@ -69,7 +71,7 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
     override fun initializeDevice(builder: TransactionBuilder): TransactionBuilder {
         family = if (getCharacteristic(WhoopUuids.W4_CMD) != null) WhoopFamily.WHOOP4 else WhoopFamily.WHOOP5
         LOG.info("WHOOP family {}", family)
-        reassemblers.clear(); historyRunning = false; chunk.clear()
+        reassemblers.clear(); historyRunning = false; chunk.clear(); standardHrOn = true
         builder.setDeviceState(GBDevice.State.INITIALIZING)
         builder.requestMtu(517)
         val now = System.currentTimeMillis() / 1000
@@ -149,7 +151,10 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
                 }
             }
             WhoopPacket.HISTORICAL_DATA -> {
-                WhoopFrames.historical(family, f)?.let { if (it.hr != null) historyHasHr = true; chunk += it }
+                WhoopFrames.historical(family, f)?.let {
+                    if (it.hr != null && !historyHasHr) { historyHasHr = true; updateStandardHr() }
+                    chunk += it
+                }
                 armWatchdog()
             }
             WhoopPacket.METADATA, WhoopPacket.PUFFIN_METADATA -> WhoopFrames.meta(family, f)?.let { meta(it) }
@@ -261,6 +266,22 @@ class WhoopSupport : AbstractBTLESingleDeviceSupport(LOG) {
     override fun onEnableRealtimeHeartRateMeasurement(enable: Boolean) {
         realtime = enable
         send("whoop realtime", WhoopCommand.TOGGLE_REALTIME_HR, byteArrayOf(if (enable) 1 else 0))
+        updateStandardHr()
+    }
+
+    /**
+     * Batterie (SuperHealth) : le pouls standard arrive chaque seconde tant qu'on y est abonné. Il ne sert au suivi que si
+     * l'historique du bracelet n'a pas de pouls (WHOOP 4 v25) ; sinon il fait doublon, et on ne le garde que pendant
+     * l'affichage en direct.
+     */
+    private fun updateStandardHr() {
+        val want = realtime || !historyHasHr
+        if (want == standardHrOn || !device.isInitialized) return
+        standardHrOn = want
+        LOG.info("WHOOP standard HR notifications {}", if (want) "on" else "off")
+        val b = createTransactionBuilder("whoop standard hr $want")
+        b.notify(WhoopUuids.HR_MEASUREMENT, want)
+        b.queue()
     }
 
     override fun onEnableRealtimeSteps(enable: Boolean) {}

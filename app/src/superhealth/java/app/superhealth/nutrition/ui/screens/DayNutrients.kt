@@ -57,13 +57,18 @@ fun DayNutrients(entries: List<FoodEntryEntity>, s: NutritionSettings, modifier:
         Micros.sum(entries.map { it.microsJson }).toMutableMap().also { m -> m["fiber"] = entries.sumOf { it.fiber } }
     }
     val withData = remember(entries) { entries.count { !it.microsJson.isNullOrBlank() } }
-    // 3.8 : le plafond de sodium d'aujourd'hui monte avec la sueur des séances (voir Hydration)
-    val trainingNa = app.superhealth.health.data.Hydration.today.value
-        ?.takeIf { it.date.toEpochDay() == entries.first().epochDay && it.sweatSodiumMg > 0 }?.sodiumTargetMg
-    val planned = runCatching { app.superhealth.nutrition.NutriApp.repository.prefs.program.value }.getOrNull()
-        ?.let { app.superhealth.nutrition.domain.NutritionPlan.dayAt(it, entries.first().epochDay) }
-    fun target(d: Micros.Def) = (if (d.code == "fiber") planned?.fiberG else if (d.code == "sodium") planned?.sodiumMg else null)
-        ?: s.microTargets[d.code] ?: (if (d.code == "sodium") trainingNa else null) ?: Micros.reference(d)
+    // Repères du jour : plan nutrition (jour, sinon semaine), puis réglages ; le plafond de sodium monte avec la sueur
+    // des séances (voir Hydration, qui applique déjà le plan et le réglage).
+    val day = entries.first().epochDay
+    val prog = runCatching { app.superhealth.nutrition.NutriApp.repository.prefs.program.value }.getOrNull()
+    val hyd = app.superhealth.health.data.Hydration.today.value?.takeIf { it.date.toEpochDay() == day }
+    val NP = app.superhealth.nutrition.domain.NutritionPlan
+    fun target(d: Micros.Def) = when (d.code) {
+        "fiber" -> prog?.let { NP.fiberAt(it, day) }
+        "sodium" -> hyd?.sodiumTargetMg?.takeIf { hyd.sweatSodiumMg > 0 || prog?.let { p -> NP.sodiumAt(p, day) } != null } ?: prog?.let { NP.sodiumAt(it, day) }
+        "potassium" -> prog?.let { NP.potassiumAt(it, day) }
+        else -> null
+    } ?: s.microTargets[d.code] ?: Micros.reference(d)
     MfCard(modifier.animateContentSize(), onClick = { open = !open }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Nutriments"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))

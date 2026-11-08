@@ -449,7 +449,7 @@ public class ProtocolBufferHandler implements MessageHandler {
         if (deviceStatusService.hasRemoteDeviceBatteryStatusChangedNotification()) {
             // Changement d'état (charge, batterie faible…) : on redemande le niveau, la notification n'en porte pas.
             LOG.info("Battery status changed: {}", deviceStatusService.getRemoteDeviceBatteryStatusChangedNotification().getStatus());
-            deviceSupport.requestBatteryUpdate();
+            deviceSupport.onBatteryStatusChanged();
             return;
         }
         if (deviceStatusService.hasActivityStatusResponse()) {

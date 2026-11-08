@@ -613,6 +613,7 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit, onPlan: (() -> Unit)
     var initTdee by remember { mutableStateOf(program.initialTdeeOverride?.let { num(s.energyValue(it), 0) } ?: "") }
     var validTargets by remember { mutableStateOf(true) }
     val goalType = a?.currentGoal?.type ?: GoalType.MAINTENANCE
+    var baseGoals by remember { mutableStateOf(BaseGoalsDraft.current(s)) }
 
     DetailScaffold(tr("Programme"), onBack) {
         MfCard {
@@ -697,13 +698,27 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit, onPlan: (() -> Unit)
                     ManualWeekSummary(p, s)
                     SectionTitleSmall(tr("Cibles de la semaine type"))
                     ManualWeekEditor(p, s, { validTargets = it }) { p = it }
-                    SectionTitleSmall(tr("Semaines à venir"))
-                    Text(tr("Préparez des semaines différentes à l'avance (sèche, recharge, semaine de pic…), réglées jour par jour. Elles ne s'appliquent qu'à partir de leur lundi."),
+                    SectionTitleSmall(tr("Eau, sodium et micronutriments"))
+                    Text(tr("Vos objectifs de tous les jours. Chaque semaine du programme peut les remplacer."),
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
-                    val upcoming = p.plan.count { it.startDay + 7 > java.time.LocalDate.now().toEpochDay() }
-                    if (onPlan != null) PillButton(if (upcoming > 0) trf("Plan semaine par semaine · %1\$s", upcoming) else tr("Plan semaine par semaine"),
-                        Modifier.fillMaxWidth().padding(top = 4.dp), strong = false) {
-                        vm.repo.prefs.setProgram(p); onPlan()
+                    BaseGoalsForm(baseGoals) { baseGoals = it }
+                    SectionTitleSmall(tr("Programme sur plusieurs semaines"))
+                    Text(tr("Préparez des semaines différentes à l'avance (prise de masse, sèche, recharges, pauses diète, semaine de pic, reverse), avec leurs calories, macros, eau et sodium, réglées jour par jour. Elles ne s'appliquent qu'à partir de leur lundi."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+                    val todayE = java.time.LocalDate.now().toEpochDay()
+                    val upcoming = p.plan.filter { it.startDay + 7 > todayE }.sortedBy { it.startDay }
+                    if (upcoming.isNotEmpty()) {
+                        app.superhealth.nutrition.domain.NutritionPlan.weekAt(p, todayE)?.let { w ->
+                            Text(trf("Cette semaine : %1\$s", tr(w.phase.label)) + " · " + trf("%1\$s par jour en moyenne",
+                                "${s.energyValue(app.superhealth.nutrition.domain.NutritionPlan.average(w).kcal).roundToInt()} ${s.energyUnit.label}"),
+                                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(4.dp))
+                        }
+                        PlanPreview(upcoming, s, maxRows = 4)
+                    } else Text(tr("Aucune semaine programmée : la semaine type ci-dessus se répète."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(4.dp))
+                    if (onPlan != null) PillButton(if (upcoming.isNotEmpty()) trf("Plan semaine par semaine · %1\$s", upcoming.size) else tr("Plan semaine par semaine"),
+                        Modifier.fillMaxWidth().padding(top = 6.dp), strong = upcoming.isEmpty()) {
+                        vm.repo.prefs.setProgram(p); vm.repo.prefs.setSettings(baseGoals.applyTo(vm.repo.prefs.settings.value)); onPlan()
                     }
                 }
             }
@@ -727,6 +742,7 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit, onPlan: (() -> Unit)
             )
             vm.repo.prefs.setProgram(newP)
             vm.repo.prefs.setProfile(profile.copy(bmrEquation = bmr))
+            if (p.style == ProgramStyle.MANUAL) vm.repo.prefs.setSettings(baseGoals.applyTo(vm.repo.prefs.settings.value))
             vm.launch {
                 val fresh = analytics().first()
                 saveCheckIn(fresh.provisionalCheckIn(fresh.today))
