@@ -1,7 +1,6 @@
 package app.superhealth.nutrition.ui.screens
 
 import app.superhealth.nutrition.data.usdaOn
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -71,7 +70,6 @@ import app.superhealth.nutrition.ui.num
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import app.superhealth.nutrition.data.OpenFoodFacts
-import app.superhealth.nutrition.data.SwissFoods
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.domain.Settings
 import app.superhealth.nutrition.ui.AppViewModel

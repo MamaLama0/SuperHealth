@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -56,7 +55,7 @@ import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun EquipmentProfile(nav: NavHostController) {
+internal fun EquipmentProfile(nav: NavHostController, edit: Boolean = false) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val saved by EquipmentStore.state.collectAsState()
@@ -100,16 +99,17 @@ internal fun EquipmentProfile(nav: NavHostController) {
     }
 
     Column(Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding()) {
-        NavBar("Profil", { nav.popBackStack() }) {
+        NavBar(if (edit) "Équipement" else "Profil", { nav.popBackStack() }) {
             TextButton({ nav.go("cards/market") }, contentPadding = PaddingValues(horizontal = 5.dp)) { GoldBadge(wallet?.gold ?: saved.gold) }
         }
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Column(Modifier.widthIn(max = 790.dp).fillMaxWidth().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                ArenaEntry(stats?.ovr, saved.equipped.size, avatar, if (avatar == null) myFace(stats).photo else null) { nav.go("cards/duel") }
-                CharacterCard(stats, rarity, bonuses, savedStats.photo, cutout, avatar) { portraitPicker = true }
-                Surface(shape = RoundedCornerShape(18.dp), color = Mf.colors.card) {
+                if (!edit) ArenaEntry { nav.go("cards/duel") }
+                if (!edit) CharacterCard(stats, rarity, bonuses, savedStats.photo, cutout, avatar) { portraitPicker = true }
+
+                if (!edit) Surface(shape = RoundedCornerShape(18.dp), color = Mf.colors.card) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(tr("Chaque suivi compte"), style = MaterialTheme.typography.titleMedium)
                         Text(tr("Santé, sport, nutrition : tes suivis débloquent les paquets. Tes objectifs construisent tes stats."),
@@ -277,9 +277,12 @@ internal fun EquipmentProfile(nav: NavHostController) {
 internal fun EquipmentGridTile(card: EquipmentCard, piece: EquipmentPiece, equipped: Boolean,
     modifier: Modifier = Modifier, expandArt: Boolean = false, onClick: (() -> Unit)? = null) {
     val context = LocalContext.current
-    val art by produceState<ImageBitmap?>(null, card.id) {
+    val group = app.superhealth.modules.Modules.installed.collectAsState().value
+        .firstOrNull { it.kind == app.superhealth.modules.Modules.LEAGUE && it.enabled }
+    val art by produceState<ImageBitmap?>(null, card.id, group?.version) {
         value = withContext(Dispatchers.IO) {
-            runCatching { context.assets.open("arsenal-thumbs/${card.id}.webp").use(BitmapFactory::decodeStream)?.asImageBitmap() }
+            runCatching { (app.superhealth.modules.Modules.arsenalAsset("arsenal-thumbs/${card.id}.webp")?.inputStream()
+                ?: context.assets.open("arsenal-thumbs/${card.id}.webp")).use(BitmapFactory::decodeStream)?.asImageBitmap() }
                 .getOrNull()
         }
     }
@@ -310,44 +313,13 @@ internal fun EquipmentGridTile(card: EquipmentCard, piece: EquipmentPiece, equip
 }
 
 @Composable
-private fun ArenaEntry(level: Int?, equipped: Int, avatar: DungeonCreature?, portrait: ImageBitmap?, onClick: () -> Unit) {
-    val blue = Color(0xFF9FCBFF)
-    val coral = Color(0xFFFFB69E)
-    val shape = RoundedCornerShape(24.dp)
-    Column(Modifier.fillMaxWidth().clip(shape)
-        .background(Brush.linearGradient(listOf(Color(0xFF182B40), Color(0xFF101A28), Color(0xFF38262D))))
-        .border(1.dp, Color(0xFF53647A), shape).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(tr("L’ARÈNE"), color = blue, style = MaterialTheme.typography.labelSmall)
-                Text(tr("Duels entre amis"), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            }
-            Icon(Icons.Rounded.SportsMartialArts, null, Modifier.size(32.dp), tint = coral)
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                if (portrait != null) Image(portrait, tr("Photo du personnage"), Modifier.size(66.dp), contentScale = ContentScale.Fit)
-                else CreatureThumbnail(avatar ?: DungeonCreature.KNIGHT, Modifier.size(66.dp))
-                Column {
-                    Text(tr("Toi"), color = blue, style = MaterialTheme.typography.labelLarge)
-                    Text("FOR · DEX · CON", color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                    Text(tr("Caractéristiques"), color = Color(0xFFBBC9D7), style = MaterialTheme.typography.labelSmall)
-                }
-            }
-            Text("VS", color = coral, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Rounded.Groups, null, Modifier.size(36.dp), tint = coral)
-                Text(tr("Un ami"), color = Color.White, style = MaterialTheme.typography.titleMedium)
-                Text(tr("À toi de choisir"), color = Color(0xFFD7C2BD), style = MaterialTheme.typography.labelSmall)
-            }
-        }
-        Text("$equipped/4 " + tr("cartes équipées") + "   ·   " + tr("Tes stats entrent en jeu"),
-            color = Color(0xFFBBC9D7), style = MaterialTheme.typography.labelMedium)
-        Button(onClick, Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = blue, contentColor = Color(0xFF12253B))) {
-            Text(tr("Choisir un adversaire"), Modifier.weight(1f), fontWeight = FontWeight.Bold)
-            Icon(Icons.Rounded.ArrowForward, null, Modifier.size(20.dp))
-        }
+private fun ArenaEntry(onClick: () -> Unit) {
+    Button(onClick, Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF922D41), contentColor = Color.White)) {
+        Icon(Icons.Rounded.LocalFireDepartment, null, Modifier.size(22.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(tr("Combattre un ami"), Modifier.weight(1f), fontWeight = FontWeight.Bold)
+        Icon(Icons.Rounded.ArrowForward, null, Modifier.size(20.dp))
     }
 }
 
@@ -412,7 +384,29 @@ private fun CharacterCard(stats: AthleteStats?, rarity: Int?, bonuses: Map<Stat,
             val catalogue by EquipmentStore.cards.collectAsState()
             val character = baseStats.equipped(EquipmentStore.characterBonuses(equipment, catalogue))
             var rules by remember { mutableStateOf(false) }
-            CharacterAttributes(character)
+            var forceDetails by rememberSaveable { mutableStateOf(false) }
+            CharacterAttributes(character) { forceDetails = true }
+            if (forceDetails) AlertDialog(
+                onDismissRequest = { forceDetails = false },
+                title = { Text(tr("Force par groupe musculaire")) },
+                text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Stat.families.forEach { stat ->
+                        val score = stats?.get(stat)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(tr(stat.label))
+                            Text(score?.let { "$it / 100" } ?: tr("À mesurer"), fontWeight = FontWeight.SemiBold)
+                        }
+                        score?.let {
+                            LinearProgressIndicator(progress = { it.coerceIn(0, 100) / 100f }, modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                } },
+                confirmButton = { TextButton({ forceDetails = false }) { Text(tr("Fermer")) } },
+            )
+            Text("${character.days}/28 " + tr("jours suivis") + " · ${equipment.equipped.size}/4 " + tr("cartes équipées"),
+                color = Color(0xFFCBD4DF), style = MaterialTheme.typography.labelLarge)
+            if (!stats?.provisional.isNullOrEmpty() || stats?.training?.provisional == true || progress == null) Text(tr("Statistiques provisoires · elles se précisent avec vos suivis"),
+                color = tint, style = MaterialTheme.typography.bodySmall)
             TextButton({ rules = true }) { Text(tr("Comment progressent mes stats ?"), color = tint) }
             if (rules) CharacterRules(progress, app.superhealth.league.ProgressRepository.selectedTracks(settings), stats) { rules = false }
 

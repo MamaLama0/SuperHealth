@@ -1,6 +1,5 @@
 package app.superhealth.training.ui.screens
 
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Add
 import app.superhealth.training.ui.tr
@@ -59,10 +58,8 @@ import app.superhealth.training.domain.Exercise
 import app.superhealth.training.domain.ExerciseConfig
 import app.superhealth.training.domain.Generator
 import app.superhealth.training.domain.MuscleGroup
-import app.superhealth.training.domain.ProgramExercise
 import app.superhealth.training.domain.SetLog
 import app.superhealth.training.domain.SetType
-import app.superhealth.training.domain.TargetSet
 import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.Assets
 import app.superhealth.training.ui.AsyncAsset

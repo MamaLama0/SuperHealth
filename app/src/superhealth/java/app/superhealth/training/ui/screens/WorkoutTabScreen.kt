@@ -3,16 +3,13 @@ package app.superhealth.training.ui.screens
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.WorkoutBlue
 import androidx.compose.foundation.border
-import androidx.compose.ui.graphics.Brush
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,11 +28,11 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ShowChart
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.theme.container
@@ -58,26 +55,20 @@ import androidx.navigation.NavHostController
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.Add
 import app.superhealth.training.domain.ExerciseDb
 import app.superhealth.training.domain.Generator
 import app.superhealth.training.domain.Program
-import app.superhealth.training.domain.ProgramDay
 import app.superhealth.training.ui.AppViewModel
-import app.superhealth.training.ui.components.ExerciseThumb
 import app.superhealth.training.ui.components.GroupCard
 import app.superhealth.training.ui.components.MfCard
 import app.superhealth.training.ui.components.PillButton
 import app.superhealth.training.ui.components.RowDivider
-import app.superhealth.training.ui.components.ScreenTitle
 import app.superhealth.training.ui.components.SectionLabel
 import app.superhealth.training.ui.components.SettingRow
 import app.superhealth.training.ui.durationWords
 import app.superhealth.training.ui.longDate
-import app.superhealth.training.ui.shortDate
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.ProgramColors
-import app.superhealth.training.ui.volume
 
 /**
  * Onglet Activités, pensé dans l'ordre où on s'en sert : la semaine d'un coup d'œil ([week], toutes activités), la séance
@@ -128,7 +119,7 @@ fun WorkoutTabScreen(
                     }
                 }
                 Spacer(Modifier.height(10.dp))
-                // gestes rapides, toujours au même endroit : séance libre, coach, historique
+                // gestes rapides, toujours au même endroit : séance libre, coach, progression
                 val coach = app.superhealth.ui.coach.coachAvailable()
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (st.session == null) ActionTile(Icons.Rounded.Bolt, tr("Séance libre"), WorkoutBlue, Modifier.weight(1f)) { vm.startEmpty(); nav.navigate("session") }
@@ -136,7 +127,7 @@ fun WorkoutTabScreen(
                         nav.askCoach(if (active == null) tr("Construis-moi un programme de musculation adapté à mon niveau, mon matériel et mes objectifs. Pose-moi d'abord les questions utiles.")
                             else trf("Analyse mon programme « %1\$s » et mes dernières séances : que faudrait-il ajuster ?", active.name))
                     }
-                    ActionTile(Icons.Rounded.History, tr("Historique"), app.superhealth.ui.theme.HealthHues.Fitness, Modifier.weight(1f)) { nav.navigate(historyRoute) }
+                    ActionTile(Icons.Rounded.ShowChart, tr("Progression"), app.superhealth.ui.theme.HealthHues.Fitness, Modifier.weight(1f)) { nav.navigate("t/insights") }
                 }
                 if (create) CreateTrainingSheet(vm, nav) { create = false }
             }
@@ -242,7 +233,7 @@ internal fun ProgramPicker(p: Program, db: ExerciseDb?, sex: app.superhealth.tra
                            onStart: (Int) -> Unit, onEdit: (Int) -> Unit, oneLine: Boolean = false, below: @Composable (Int) -> Unit = {}) {
     val color = ProgramColors[p.color % ProgramColors.size]
     val train = p.days.withIndex().filter { !it.value.isRestAt(p.cycleIndex) }
-    var selected by androidx.compose.runtime.saveable.rememberSaveable(p.id) { androidx.compose.runtime.mutableStateOf(-1) }
+    var selected by androidx.compose.runtime.saveable.rememberSaveable(p.id, p.cycleIndex, p.dayIndex) { androidx.compose.runtime.mutableStateOf(p.dayIndex.takeIf { i -> p.days.getOrNull(i)?.let { !it.isRestAt(p.cycleIndex) && it.id !in p.doneDayIds } == true && (p.runIndefinitely || p.cycleIndex < p.numCycles) } ?: -1) }
     // toutes visibles, sans défilement : jusqu'à 4 sur une ligne, puis deux lignes égales (plus basses) ; carte à demi-largeur : les corps seuls
     val half = oneLine
     val perRow = when { oneLine || train.size <= 4 -> train.size.coerceAtLeast(1); train.size <= 8 -> (train.size + 1) / 2; else -> 4 }

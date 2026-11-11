@@ -72,7 +72,6 @@ import app.superhealth.wellbeing.Cycle
 import app.superhealth.wellbeing.Form
 import app.superhealth.wellbeing.Journal
 import java.time.LocalDate
-import kotlin.math.roundToInt
 
 /** Rose du cycle, distinct du rouge du cœur. */
 val CycleHue = Color(0xFFE0609A)

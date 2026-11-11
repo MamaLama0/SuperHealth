@@ -19,8 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -33,17 +31,12 @@ import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.ProgressBar
-import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.SwitchRow
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.go
-import app.superhealth.ui.localDate
-import app.superhealth.ui.relativeDay
 import app.superhealth.ui.theme.Mf
-import app.superhealth.ui.timeOf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import app.superhealth.update.Updater

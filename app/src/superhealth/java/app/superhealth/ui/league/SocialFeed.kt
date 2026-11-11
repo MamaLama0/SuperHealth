@@ -6,12 +6,6 @@ import android.widget.VideoView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
@@ -20,7 +14,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.semantics.Role
 import app.superhealth.ui.cards.EquipmentPacks
-import app.superhealth.ui.cards.DungeonTeaser
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -70,7 +63,6 @@ import app.superhealth.ui.trf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -86,16 +78,7 @@ internal fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: and
             else DashboardScreen(vm, nav)
         }
     } else DashboardScreen(vm, nav)
-    // Présentation du fil : seulement une fois le plugin Groupe installé, jamais dans l'expérience de base.
-    if (!settings.socialFeedIntroSeen && settings.socialFeedEnabled && settings.leagueEnabled) AlertDialog(onDismissRequest = { SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } },
-        icon = { GameArt(GameArtKind.TROPHY, Modifier.size(64.dp)) },
-        title = { Text(tr("Bienvenue dans le Groupe")) },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(tr("Depuis le tableau de bord, glissez vers la droite pour ouvrir le Groupe."))
-            Text(tr("Ouvrez votre paquet du jour, ou retrouvez les photos, messages et sorties de vos amis dans le Fil."))
-            Text(tr("Glissez vers la gauche pour revenir au tableau de bord."), style = MaterialTheme.typography.bodySmall)
-        } },
-        confirmButton = { TextButton({ SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } }) { Text(tr("Compris")) } })
+
 }
 
 internal enum class SocialPage(val title: String) { PACKS("Paquets"), FEED("Fil") }

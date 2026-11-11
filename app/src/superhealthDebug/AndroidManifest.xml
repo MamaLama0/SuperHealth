@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
     <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED" />
     <application>
+        <activity android:name="app.superhealth.debug.Test40ProbeActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <activity android:name="app.superhealth.debug.GroupTestActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />
         <activity android:name="app.superhealth.debug.FlowPreviewActivity" android:exported="true" android:theme="@style/SuperHealth.Theme" />
         <activity android:name="app.superhealth.debug.RegressionProbeActivity" android:exported="true" android:theme="@android:style/Theme.Material.NoActionBar" />

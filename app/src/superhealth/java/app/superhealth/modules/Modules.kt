@@ -137,9 +137,9 @@ object Modules {
         versions.reduce { a,b -> if ((b.verified && !a.verified) || (a.verified == b.verified && newer(b.module.version,a.module.version))) b else a }
     }
 
-    /** Content shipped with an app update also updates an already installed official hiking pack offline. */
+    /** Apply catalogued upgrades for already-installed official packs. */
     suspend fun upgradeBundled(ctx: Context) {
-        bundledCatalog.filter { it.module.kind == HIKING && compatible(ctx,it.module) }.forEach { entry ->
+        bundledCatalog.filter { (it.module.kind == HIKING || it.module.kind == LEAGUE) && compatible(ctx,it.module) }.forEach { entry ->
             val old = _installed.value.firstOrNull { it.id == entry.module.id && it.source == OFFICIAL } ?: return@forEach
             if (newer(entry.module.version,old.version)) install(ctx,entry)
         }
@@ -159,7 +159,7 @@ object Modules {
 
     /**
      * Plugin Groupe : cartes Athlète, packs, quêtes, amis, fil et cercles, séparés de l'app de base. Il s'installe comme les
-     * autres (une copie est livrée avec l'app, l'installation marche hors ligne) ; le retirer coupe tout le social, mais
+     * autres depuis le catalogue. Le retirer coupe le social, mais
      * collection, amis et publications restent dans files/league : tout revient en le réinstallant.
      */
     fun socialInstalled() = active(LEAGUE) != null
@@ -182,6 +182,12 @@ object Modules {
 
     /** Dossier du module actif du type [kind] (contenu décompressé), ou null. */
     fun dir(kind: String): File? = active(kind)?.let { File(root, it.id) }?.takeIf { it.isDirectory }
+
+    fun arsenalAsset(path: String): File? {
+        val group = active(LEAGUE)?.takeIf { it.verified && it.source == OFFICIAL } ?: return null
+        return File(File(root, group.id), path).takeIf(File::isFile)
+    }
+
 
     fun file(kind: String, name: String): File? = dir(kind)?.let { File(it, name) }?.takeIf { it.isFile }
 

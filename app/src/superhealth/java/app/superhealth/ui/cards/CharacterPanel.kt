@@ -3,13 +3,13 @@ package app.superhealth.ui.cards
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import app.superhealth.league.Progression
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import app.superhealth.ui.theme.Mf
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +24,7 @@ import app.superhealth.cards.*
 import app.superhealth.ui.tr
 
 @Composable
-internal fun CharacterAttributes(stats: CharacterStats, modifier: Modifier = Modifier) {
+internal fun CharacterAttributes(stats: CharacterStats, modifier: Modifier = Modifier, onForce: () -> Unit) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         CharacterAttribute.entries.forEach { attribute ->
             val tint = when (attribute) {
@@ -33,31 +33,17 @@ internal fun CharacterAttributes(stats: CharacterStats, modifier: Modifier = Mod
                 CharacterAttribute.CON -> Color(0xFFC6B8F2)
             }
             val value = stats[attribute]
-            val bonus = CharacterStats.modifier(value)
-            Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(tint.copy(alpha = .12f))
+            val action = if (attribute == CharacterAttribute.FOR) Modifier.clickable(onClick = onForce) else Modifier
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(tint.copy(alpha = .12f)).then(action)
                 .padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(attribute.name, color = tint, style = MaterialTheme.typography.labelLarge)
-                Text(value.toString(), color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+                Text(if (attribute == CharacterAttribute.FOR) "FOR ↗" else attribute.name,
+                    color = tint, style = MaterialTheme.typography.labelLarge)
+                Text("$value / 20", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
                 Text(tr(attribute.label), color = tint, style = MaterialTheme.typography.labelSmall)
+                LinearProgressIndicator(progress = { ((value - 8) / 12f).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = tint, trackColor = tint.copy(alpha = .12f))
                 if (stats.bonus(attribute) != 0) Text((if (stats.bonus(attribute) > 0) "+" else "") + java.text.NumberFormat.getNumberInstance().format(stats.bonus(attribute) / 100.0) + "%", color = tint, style = MaterialTheme.typography.labelSmall)
-                Text(tr("Mod.") + " " + (if (bonus >= 0) "+" else "") + bonus, color = Color(0xFFCBD4DF), style = MaterialTheme.typography.labelMedium)
             }
         }
-    }
-}
-
-@Composable
-internal fun StancePicker(stance: CombatStance, enabled: Boolean = true, onSelect: (CombatStance) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            CombatStance.entries.forEach { item ->
-                FilterChip(selected = stance == item, onClick = { onSelect(item) }, enabled = enabled,
-                    label = { Text(tr(item.title)) }, modifier = Modifier.weight(1f),
-                    colors = FilterChipDefaults.filterChipColors(labelColor = Color(0xFFCDD9E5), selectedLabelColor = Color(0xFF17232E),
-                        selectedContainerColor = Color(0xFFE8C584)))
-            }
-        }
-        Text(tr(stance.detail), color = Color(0xFFB6C5D4), style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -87,7 +73,7 @@ internal fun CharacterRules(progress: Progression.Result?, selected: Set<Progres
                         calculation.parts.forEach { part ->
                             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text(tr(part.label), style = MaterialTheme.typography.labelLarge)
-                                Text(if (part.ratio == null) tr("Indisponible ou désactivé · non compté") else
+                                Text(if (part.ratio == null) tr(if (part.required) "Donnée de musculation manquante · part réservée" else "Indisponible ou désactivé · non compté") else
                                     percent.format(part.ratio) + " × " + percent.format(part.weight / calculation.weight) +
                                         " = " + percent.format(part.ratio * part.weight / calculation.weight),
                                     color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodySmall)
@@ -96,20 +82,30 @@ internal fun CharacterRules(progress: Progression.Result?, selected: Set<Progres
                         HorizontalDivider()
                         Text("8 + 12 × " + number.format(calculation.ratio) + " = " + number.format(8 + 12 * calculation.ratio) +
                             " → ${calculation.value}", style = MaterialTheme.typography.bodyMedium)
-                        Text(tr("Mod.") + " " + CharacterStats.modifier(calculation.value), color = Mf.colors.accent)
                     }
                 }
             }
             Text(tr("D’où viennent les scores ?"), style = MaterialTheme.typography.titleLarge)
-            Text(tr("Force : moyenne des quatre familles musculaires disponibles (pectoraux, dos, bras-épaules, jambes), poids nominal 80 %. Objectif de musculation tenu sur 28 jours, poids 20 %."))
-            Text(tr("Performances musculaires : force estimée à partir des séries, rapportée aux barèmes et au poids du corps. Les trois meilleurs exercices de chaque muscle sont pondérés ; les muscles secondaires comptent moins. Le meilleur niveau de l’année, le volume sur six semaines et la progression récente participent au score. Une longue absence réduit progressivement la note."), color = Mf.colors.textSecondary)
+            Text(tr("Force : records de charge et 1RM estimés 85 %, pratique récente 15 %. Le meilleur mouvement de référence pèse 60 % du score PR ; la moyenne des trois meilleurs, 40 %. Les variantes d’un même mouvement ne comptent qu’une fois."))
+            Text(tr("Les PR de toutes les séances enregistrées sont conservés. Séries validées de 1 à 12 répétitions, hors échauffement ; RIR limité à 3 pour le calcul. Les repères tiennent compte du mouvement, du poids du corps et du profil. Une estimation de machine compte selon sa fiabilité."), color = Mf.colors.textSecondary)
             Text(tr("Dextérité : cardio 65 %, objectif de pas 20 %, esprit et mobilité 15 %. C’est une caractéristique de jeu, pas une mesure de coordination."))
             Text(tr("Cardio : niveau 30 %, fréquence et volume 20 %, pas 20 %, distance 15 %, allure 15 %. Le niveau utilise la VO₂max disponible, sinon les courses ou une estimation. Les activités récentes pèsent davantage : leur poids est divisé par deux après 21 jours."), color = Mf.colors.textSecondary)
-            Text(tr("Constitution : objectif de sommeil 45 %, nutrition 25 %, régularité 30 %."))
-            Text(tr("Régularité : jusqu’à 26 semaines terminées, les récentes comptent davantage. 60 % pour les séances rapportées à l’objectif, 40 % pour les jours suivis ; cinq jours suivis suffisent pour une semaine complète. Le résultat devient un score de 30 à 99."), color = Mf.colors.textSecondary)
+            Text(tr("Constitution : volume moyen 70 %, régularité en salle 15 %, sommeil 10 %, nutrition 5 %. Les semaines sans séance enregistrée comptent dans la moyenne."))
+            Text(tr("Volume sur les 365 derniers jours : 75 % pour le tonnage (charge externe × répétitions), 25 % pour les séries de travail validées. Repères de jeu : 200 × poids du corps en kg par semaine et 40 séries ; ce ne sont pas des objectifs d’entraînement. Chaque composante est plafonnée à 100 %."), color = Mf.colors.textSecondary)
+            Text(tr("Historique court : moyenne sur la période observée, avec un minimum de 28 jours, signalée provisoire. La régularité compare les jours de musculation à l’objectif hebdomadaire sur la même période. Sans données de salle, sommeil et nutrition ne remplacent pas les parts de musculation."), color = Mf.colors.textSecondary)
+            athlete?.training?.let { gym ->
+                Text(tr("Période observée") + " : ${gym.coveredDays}/365 " + tr("jours"), style = MaterialTheme.typography.labelLarge)
+                gym.evidence?.let { evidence ->
+                    Text(tr("Volume hebdomadaire moyen") + " : " + number.format(evidence.weeklyKg) + " kg · " + number.format(evidence.weeklySets) + " " + tr("séries"))
+                    Text(tr(if (evidence.bodyweightKnown) "Poids de corps utilisé" else "Poids de corps estimé · ajoutez une pesée") + " : " + number.format(evidence.bodyweightKg) + " kg", style = MaterialTheme.typography.bodySmall)
+                    evidence.records.forEach { record ->
+                        Text(record.name + " · " + number.format(record.loadKg) + " kg × ${record.reps} · " + tr("1RM estimé") + " " + number.format(record.estimatedMaxKg) + " kg", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             Text(tr("Suivis sur 28 jours : jours validés / 28 pour les suivis quotidiens ; jours avec séance validée / (4 × objectif hebdomadaire) pour la musculation. Chaque rapport est plafonné à 100 %. Un nouveau compte ne reçoit pas le maximum dès son premier jour."), color = Mf.colors.textSecondary)
-            Text(tr("Les données indisponibles et les suivis désactivés sont exclus ; les poids restants sont redistribués. Sans donnée : 8. Les valeurs provisoires restent signalées et peuvent évoluer avec de nouvelles séances."), color = Mf.colors.textSecondary)
-            if (!athlete?.provisional.isNullOrEmpty()) Text(tr("Certaines performances sont encore provisoires."), color = Mf.colors.accent)
+            Text(tr("Les suivis facultatifs désactivés sont exclus. Les parts réservées aux PR et au volume restent présentes même si leurs données manquent : cocher des suivis ne suffit pas à obtenir une force ou une constitution maximale. Sans donnée : 8."), color = Mf.colors.textSecondary)
+            if (!athlete?.provisional.isNullOrEmpty() || athlete?.training?.provisional == true) Text(tr("Certaines performances sont encore provisoires."), color = Mf.colors.accent)
             Text(tr("Modificateur : arrondi inférieur de (stat − 10) / 2. Les caractéristiques décrivent le personnage, pas un diagnostic de santé."), style = MaterialTheme.typography.bodySmall)
             Text(tr("Cartes : armes → Force ; bottes → Dextérité ; torses et protections → Constitution. Les malédictions retirent leur pourcentage à la caractéristique indiquée. Les types de dégâts restent indépendants."), style = MaterialTheme.typography.bodySmall)
             TextButton(onDismiss) { Text(tr("Compris")) }

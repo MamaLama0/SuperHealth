@@ -40,7 +40,7 @@ class ArsenalGameTest {
         val neutral = ArsenalGame.attack(start, day(21000, qualified), 0).first
         val elite = ArsenalGame.attack(start, day(21000, qualified), 0, mage).first
         assertTrue(neutral.hp > elite.hp)
-        assertEquals(41, elite.hp)
+        assertEquals(46, elite.hp)
         assertEquals(elite, ArsenalGame.attack(elite, day(21000, qualified), 0, mage).first)
         assertEquals(5, ArsenalGame.attack(elite, day(21001, qualified, mapOf(21000L to qualified)), 0, mage).first.floor)
     }
@@ -82,10 +82,10 @@ class ArsenalGameTest {
         assertEquals(setOf(21000L), quests.attackDays)
     }
 
-    @Test fun freezingPreventsTheTacticalCounterattack() {
+    @Test fun freezingPreventsTheCounterattack() {
         val quests = day(21000, qualified)
-        val normal = ArsenalGame.attack(ArsenalGame.Dungeon(floor=4), quests, 0, stance=CombatStance.GUARD).first
-        val frozen = ArsenalGame.attack(ArsenalGame.Dungeon(floor=4,frozenDay=21000), quests, 0, stance=CombatStance.GUARD).first
+        val normal = ArsenalGame.attack(ArsenalGame.Dungeon(floor=4), quests, 0).first
+        val frozen = ArsenalGame.attack(ArsenalGame.Dungeon(floor=4,frozenDay=21000), quests, 0).first
         assertTrue(normal.received>0); assertEquals(0,frozen.received); assertEquals(100,frozen.health)
         assertEquals(normal.dealt,frozen.dealt)
     }

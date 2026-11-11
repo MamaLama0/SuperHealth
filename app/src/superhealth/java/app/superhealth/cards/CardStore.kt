@@ -17,7 +17,6 @@ import app.superhealth.training.domain.Workout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
@@ -96,6 +95,7 @@ object CardStore {
         val gifts: List<Economy.Gift> = emptyList(),
         /** 3.8 : vitrine, jusqu'à [SHOWCASE_MAX] fonds mis en avant sur « Ma carte » (clés de [Pull]). */
         val showcase: List<String> = emptyList(),
+        val collectionVersion: Int = 0,
     ) {
         fun owns(card: CardDef) = owned.keys.any { it.startsWith(card.id + ":") }
         /** Exemplaires reçus d'un fond, toutes finitions confondues. */
@@ -136,6 +136,10 @@ object CardStore {
         state.value = runCatching { json.decodeFromString(State.serializer(), file(ctx).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(State())
         if (state.value.secret == 0L) state.value = state.value.copy(secret = SecureRandom().nextLong())
         loaded = true
+        if (state.value.collectionVersion < ArsenalGame.COLLECTION_VERSION) update(ctx) {
+            it.copy(collectionVersion = ArsenalGame.COLLECTION_VERSION, owned = emptyMap(), merged = emptyMap(),
+                background = null, showcase = emptyList(), trades = Economy.Trades(), pending = null, packsOpened = 0)
+        }
     }
 
     /** Relit l'état depuis le disque (après une restauration de sauvegarde). */
@@ -171,7 +175,7 @@ object CardStore {
             Economy.sync(ctx, sessions)
         }
         snapshot.value = if (state.value.demo) Demo.snapshot() else compute(ctx, history)
-        snapshot.value?.now?.takeIf { it.character != state.value.lastStats?.character || it.values != state.value.lastStats?.values || it.ovr10 != state.value.lastStats?.ovr10 }?.let { now ->
+        snapshot.value?.now?.takeIf { it.character != state.value.lastStats?.character || it.values != state.value.lastStats?.values || it.ovr10 != state.value.lastStats?.ovr10 || it.training != state.value.lastStats?.training }?.let { now ->
             update(ctx) { it.copy(lastOvr10 = now.ovr10 ?: it.lastOvr10, lastStats = now.copy(muscles = emptyMap())) }
         }
         runCatching { app.superhealth.ui.widget.CardWidgets.refresh(ctx) }
@@ -221,7 +225,7 @@ object CardStore {
             WorkoutApp.store.state.value.let { st -> st.programs.firstOrNull { it.id == st.settings.activeProgramId }?.leagueTarget() }
         }.getOrNull() ?: League.state.value.weeklyTargets["STRENGTH"] ?: 3
         fun at(t: Long) = AthleteStatsEngine.compute(AthleteStatsEngine.Input(history, db, bodyweight, sex, age, t, target, vo2, runs, cardioMinutes, trackedDays = tracked, dailySteps28 = steps,
-            endurance = endurance, steps = daySteps, restingHr = resting, heightCm = profile?.heightCm?.takeIf { analytics?.currentTrendKg != null }))
+            endurance = endurance, steps = daySteps, restingHr = resting, heightCm = profile?.heightCm?.takeIf { analytics?.currentTrendKg != null }, bodyweightKnown = analytics?.currentTrendKg != null))
         val current = at(now)
         val progress = app.superhealth.league.ProgressRepository.current.value
         val character = progress?.takeIf { it.summary.throughDay == LocalDate.now().toEpochDay() }?.let {

@@ -4,7 +4,6 @@ import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Length
-import app.superhealth.hiking.HikeGeometry
 import app.superhealth.hiking.Hiking
 import java.time.Instant
 import java.time.ZoneId

@@ -5,15 +5,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -22,7 +19,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import app.superhealth.cards.EnemyAffinity
-import app.superhealth.cards.EquipmentSchool
 import app.superhealth.cards.DamageType
 import app.superhealth.ui.tr
 import kotlinx.coroutines.Dispatchers
@@ -37,10 +33,13 @@ private val DungeonCreature.asset get() = "creature-" + (modelId ?: name.lowerca
 @Composable
 internal fun CreatureThumbnail(creature: DungeonCreature, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val bitmap by produceState(portraits[creature], creature) {
+    val group = app.superhealth.modules.Modules.installed.collectAsState().value
+        .firstOrNull { it.kind == app.superhealth.modules.Modules.LEAGUE && it.enabled }
+    val bitmap by produceState(portraits[creature], creature, group?.version) {
         value = withContext(Dispatchers.IO) {
             portraits[creature] ?: runCatching {
-                context.assets.open("arsenal/" + creature.asset + ".webp").use { input ->
+                (app.superhealth.modules.Modules.arsenalAsset("arsenal/" + creature.asset + ".webp")?.inputStream()
+                    ?: context.assets.open("arsenal/" + creature.asset + ".webp")).use { input ->
                     BitmapFactory.decodeStream(input)?.asImageBitmap()
                 }?.also { portraits[creature] = it }
             }.getOrNull()

@@ -122,7 +122,7 @@ function showOpening(data,direction=1,progress=0){
   clearTimeout(fallbackTimer);
   fallbackTimer=setTimeout(()=>{
     if(!discoveryReady){if(gl)enableFallback();else beginDiscovery();}
-  },!gl?mouthHold.ms+650:motion.ms+mouthHold.ms+1350);
+  },!gl?mouthHold.ms+650:motion.ms*1.28+mouthHold.ms+1350);
 }
 function beginDiscovery(){
   if(discoveryReady)return;
@@ -667,7 +667,7 @@ function run(){
     const detach=smooth(motion.release,.62-(.76-motion.detach)*.6,t);
     const rise=smooth(motion.rise*.85,mouthHold.at,t);
     const launch=smooth(mouthHold.at,.80,t);
-    const settle=smooth(.80,1,t);
+    const settle=smooth(.99,1.18,t);
     const drop=smooth(.76,.99,t);
     const mouth=openedAt===null?.33:.36+1.72*smooth(.17,mouthHold.at,t);
     const pitch=.68*rise;
@@ -686,7 +686,7 @@ function run(){
     gl.uniform1f(vars.editionFx,style.edition==='prisme'?2:style.edition==='maudit'?3:gold?1:0);
     gl.uniform1f(vars.wrapperFx,style.material==='prism'?(gold?2:1):0);
     gl.uniform1f(vars.packWidth,width);
-    const reading=smooth(.93,1.13,t);
+    const reading=smooth(1.08,1.28,t);
     const revealScale=Math.min(.94,w/h*1.63);
     const animationScale=Math.min(stageScale,.48)*(1-.13*rise*(1-drop));
     const sceneScale=openedAt===null?stageScale:animationScale+(revealScale-animationScale)*reading;
@@ -725,7 +725,7 @@ function run(){
       if(!allRevealed){
         for(let index=rewardArt.length-1;index>=cardIndex;index--){
           const depth=index-cardIndex;
-          const front=depth===0&&(faceUp||t>=1);
+          const front=depth===0&&faceUp;
           const tiltY=0;
           const entry=depth===0&&incoming&&!reduceMotion?-incoming.direction*.20*(1-smooth(0,175,now-incoming.at)):0;
           const follow=depth===0?cardOffset+entry:0;
@@ -755,7 +755,7 @@ function run(){
     const float=openedAt===null&&!reduceMotion&&!gesture&&cut<.001 ? Math.sin(now*.0021)*.025 : 0;
     gl.uniform3f(vars.scene,-.12*drop+recoil*.036,wrapperY+float,0);
     gl.uniform3f(vars.shift,0,0,0); gl.uniform3f(vars.turn,0,0,recoil*.048+drop*.09);
-    drawFilm(parts[0]);
+    if(openedAt===null || drop<1) drawFilm(parts[0]);
     gl.uniform2f(vars.tilt,0,yaw);
     gl.uniform1f(vars.lip,0);
     gl.uniform1f(vars.peel,openedAt===null?.79:1-.75*detach+.12*recoil);
@@ -768,7 +768,7 @@ function run(){
     gl.uniform1f(vars.clock,detach*2.6);
     gl.uniform3f(vars.shift,travel,.74+motion.lift*.68*Math.sin(Math.PI*detach*.83)-.38*detach*detach,.38*Math.sin(Math.PI*detach)+.22*detach);
     gl.uniform3f(vars.turn,motion.pitch*detach+recoil*.18+wobble*.75,motion.twist*detach+wobble*2.,-motion.roll*detach+wobble*.48);
-    drawFilm(parts[1]);
+    if(openedAt===null || detach<1) drawFilm(parts[1]);
     ctx.clearRect(0,0,w,h);
     const seamY=h*(.5-wrapperY*sceneScale/2);
     const seamWidth=h*sceneScale*width/2;
@@ -830,7 +830,7 @@ function run(){
       ctx.globalAlpha=1;
       ctx.globalCompositeOperation='source-over';
     }
-    if(t>=1&&!discoveryReady) beginDiscovery();
+    if(t>=1.28&&!discoveryReady) beginDiscovery();
     if(!reduceMotion&&faceUp&&!allRevealed&&revealAt!==null){
       const item=rewardArt[cardIndex],age=(now-revealAt)*.001;
       if(item&&age>=0&&age<1.08&&(item.effect!=='normal'||item.cursed||['Épique','Légendaire'].includes(item.rarity))){

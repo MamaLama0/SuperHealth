@@ -1,50 +1,30 @@
 package app.superhealth.nutrition.ui.screens
 
 import app.superhealth.nutrition.data.usdaOn
-import androidx.compose.material.icons.rounded.Add
 import app.superhealth.nutrition.ui.trf
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Backup
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteForever
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.TableChart
 import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,37 +35,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import app.superhealth.nutrition.data.AppJson
 import app.superhealth.nutrition.data.Backup
 import app.superhealth.nutrition.data.Csv
-import app.superhealth.nutrition.domain.AccentColor
-import app.superhealth.nutrition.domain.EnergyUnit
-import app.superhealth.nutrition.domain.ThemeMode
-import app.superhealth.nutrition.domain.TrendAlpha
-import app.superhealth.nutrition.domain.TrendVersion
-import app.superhealth.nutrition.domain.ExpenditureVersion
-import app.superhealth.nutrition.domain.WeightUnit
 import app.superhealth.nutrition.ui.AppViewModel
 import app.superhealth.nutrition.ui.tr
-import app.superhealth.nutrition.domain.Language
 import app.superhealth.nutrition.domain.Settings
-import androidx.health.connect.client.PermissionController
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
 import app.superhealth.nutrition.ui.components.ChipChoice
 import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.ui.components.GroupCard
-import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.nutrition.ui.components.ScreenTitle
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.SwitchRow
 import app.superhealth.ui.theme.Mf
@@ -266,19 +228,6 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             dismissButton = { TextButton(onClick = { confirmWipe = false }) { Text(tr("Annuler"), color = Mf.colors.text) } },
         )
     }
-}
-
-@Composable
-private fun Label(text: String) {
-    Text(tr(text), style = MaterialTheme.typography.labelMedium, color = Mf.colors.textSecondary)
-    Spacer(Modifier.height(6.dp))
-}
-
-/** Version affichée (versionName de l'APK). */
-@Composable
-private fun appVersion(): String {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    return remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "" }
 }
 
 /** Jour du check-in : le poids est analysé et les calories recalculées ce jour-là. */

@@ -135,7 +135,7 @@ object Performance {
         return best.takeIf { it.isFinite() && it >= 1.0 }
     }
 
-    private fun compute(entries: List<Entry>): Snapshot {
+    internal fun compute(entries: List<Entry>, now: Long = System.currentTimeMillis()): Snapshot {
         val runs = entries.filter { it.run }
         val records = RECORD_DISTANCES.mapNotNull { (_, label) ->
             runs.mapNotNull { e -> e.best[label]?.let { e to it } }.minByOrNull { it.second }?.let { (e, s) -> Record(label, s, e.id, e.start) }
@@ -148,16 +148,15 @@ object Performance {
             val inWeek = entries.filter { it.start in from until to }
             Week(start, inWeek.filter { it.run }.sumOf { it.distanceM } / 1000, inWeek.sumOf { it.activeSec } / 60, inWeek.size)
         }
-        val now = System.currentTimeMillis()
         fun load(e: Entry) = e.activeSec / 60 * ((e.aerobicTe ?: 2.0) + (e.anaerobicTe ?: 0.0) / 2)
-        val acute = entries.filter { now - it.start < 7 * 86_400_000L }.sumOf(::load)
-        val chronic = entries.filter { now - it.start < 28 * 86_400_000L }.sumOf(::load) / 4
+        val acute = entries.filter { now - it.start in 0 until 7 * 86_400_000L }.sumOf(::load)
+        val chronic = entries.filter { now - it.start in 0 until 28 * 86_400_000L }.sumOf(::load) / 4
         val latest = entries.firstOrNull()
         val recoveryLeft = entries.filter { it.recoverySec != null }.maxOfOrNull { e -> e.recoverySec!! / 3600 - (now - e.end) / 3_600_000.0 }
-            ?.takeIf { it > 0 }
+            ?.coerceAtLeast(0.0)
         return Snapshot(
             entries = entries, records = records, longestRun = runs.maxByOrNull { it.distanceM }, weeks = weeks,
-            acwr = if (chronic > 0) acute / chronic else null, latest = latest, recoveryLeftH = recoveryLeft,
+            acwr = if (chronic > 0 && entries.any { now - it.start >= 28 * 86_400_000L }) acute / chronic else null, latest = latest, recoveryLeftH = recoveryLeft,
             predictions = runs.firstOrNull { it.predictions.isNotEmpty() && now - it.end in 0..28L * 86_400_000 }?.predictions ?: emptyMap(),
         )
     }

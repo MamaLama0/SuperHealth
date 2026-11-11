@@ -34,7 +34,6 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -207,9 +206,12 @@ object CoachTools {
                 if (!Coach.shares(Coach.Share.FOOD)) return Outcome(HIDDEN)
                 val to = date(a.str("to"), today); val from = date(a.str("from"), to.minusDays(6)).let { if (it.isBefore(to.minusDays(30))) to.minusDays(30) else it }
                 val list = NutriApp.repository.entries.rangeFlow(from.toEpochDay(), to.toEpochDay()).first().groupBy { it.epochDay }
+                val flags = NutriApp.repository.dayFlags.allFlow().first().associateBy { it.epochDay }
                 Outcome(buildString {
+                    appendLine(FoodContext.RULES)
                     generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.forEach { d ->
-                        val items = list[d.toEpochDay()].orEmpty().sortedBy { it.minuteOfDay ?: 0 }
+                        val items = list[d.toEpochDay()].orEmpty().sortedBy { it.minuteOfDay }
+                        appendLine("Status: " + FoodContext.status(flags[d.toEpochDay()], items.isNotEmpty(), d == today))
                         appendLine("## $d" + if (items.isEmpty()) ": nothing logged" else ": ${n(items.sumOf { it.kcal })} kcal, P ${n(items.sumOf { it.protein })} g, F ${n(items.sumOf { it.fat })} g, C ${n(items.sumOf { it.carbs })} g, fiber ${n(items.sumOf { it.fiber }, 1)} g")
                         items.forEach { e -> appendLine("- ${e.minuteOfDay.takeIf { it >= 0 }?.let { "%02d:%02d ".format(it / 60, it % 60) } ?: ""}${e.name}" + (e.grams?.let { " ${n(it)} g" } ?: "") +
                             ": ${n(e.kcal)} kcal, P ${n(e.protein, 1)}, F ${n(e.fat, 1)}, C ${n(e.carbs, 1)}") }

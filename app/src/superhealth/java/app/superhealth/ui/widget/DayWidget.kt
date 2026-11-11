@@ -2,8 +2,6 @@ package app.superhealth.ui.widget
 
 import app.superhealth.nutrition.domain.stepGoalFor
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
@@ -19,17 +17,13 @@ import androidx.glance.layout.RowScope
 import android.graphics.Bitmap
 import nodomain.freeyourgadget.gadgetbridge.R
 import kotlin.math.roundToInt
-import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -44,7 +38,6 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import app.superhealth.MainActivity
 import app.superhealth.bridge.Bridge
 import app.superhealth.nutrition.NutriApp
 import app.superhealth.training.WorkoutApp

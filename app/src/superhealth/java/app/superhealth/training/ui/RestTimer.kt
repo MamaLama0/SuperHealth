@@ -1,7 +1,6 @@
 package app.superhealth.training.ui
 
 import android.app.AlarmManager
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -11,8 +10,6 @@ import android.media.AudioAttributes
 import android.media.SoundPool
 import android.os.VibrationEffect
 import android.os.Vibrator
-import androidx.core.app.NotificationCompat
-import app.superhealth.MainActivity
 import nodomain.freeyourgadget.gadgetbridge.R
 
 /**

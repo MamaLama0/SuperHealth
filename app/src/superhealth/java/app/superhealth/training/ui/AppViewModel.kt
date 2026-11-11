@@ -3,7 +3,6 @@ package app.superhealth.training.ui
 import app.superhealth.training.domain.TargetTuning
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import app.superhealth.training.WorkoutApp
 import app.superhealth.training.data.AppState
 import app.superhealth.training.domain.CustomWorkout
@@ -23,11 +22,8 @@ import app.superhealth.training.domain.SetType
 import app.superhealth.training.domain.Settings
 import app.superhealth.training.domain.Supersets
 import app.superhealth.training.domain.Workout
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /** Modèles de salle (GymTemplate observé : everything, commercial, warehouse, local, garage, home, blankSlate). */
@@ -164,7 +160,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val e = engine ?: return
         val day = p.days.getOrNull(dayIndex) ?: return
         val gym = gym(p.gymId) ?: activeGym()
-        update { it.copy(session = e.fromProgram(p, day, cycle, it.history, it.settings, gym)) }
+        update { if (it.session != null) it else it.copy(session = e.fromProgram(p, day, cycle, it.history, it.settings, gym)) }
     }
 
     /**
@@ -194,10 +190,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startCustom(w: CustomWorkout) {
         val e = engine ?: return
-        update { it.copy(session = e.fromCustom(w, it.history, it.settings, gym(w.gymId) ?: activeGym())) }
+        update { if (it.session != null) it else it.copy(session = e.fromCustom(w, it.history, it.settings, gym(w.gymId) ?: activeGym())) }
     }
 
-    fun startEmpty() { val e = engine ?: return; update { it.copy(session = e.empty(activeGym()).copy(name = tr("Entraînement libre"))) } }
+    fun startEmpty() { val e = engine ?: return; update { if (it.session != null) it else it.copy(session = e.empty(activeGym()).copy(name = tr("Entraînement libre"))) } }
 
     /**
      * Reprend la dernière séance de l'exercice [index] : charges et répétitions exactes, série par série, sur les séries de

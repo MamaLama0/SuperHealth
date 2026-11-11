@@ -74,7 +74,6 @@ import app.superhealth.modules.Modules
 import app.superhealth.nutrition.ui.components.CircleAction
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingsAvatar
 import app.superhealth.nutrition.ui.components.TabHeader
 import app.superhealth.training.ui.screens.WorkoutTabScreen
@@ -191,29 +190,26 @@ private var bubblesShown = false
  */
 @Composable
 private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, start: Boolean, modifier: Modifier, onSelect: (ActivitySection) -> Unit) {
-    if (list.size < 2 || current == null) return
+    if (current == null) return
     // fond surélevé et filet : les bulles se détachent de ce qui défile dessous
     val border = Mf.colors.edge
     val bg = if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card
     var open by remember { mutableStateOf(!bubblesShown) }
-    val dark = Mf.colors.dark
     LaunchedEffect(Unit) { bubblesShown = true }
     LaunchedEffect(open, current) { if (open) { delay(4000); open = false } }
-    // le libellé sort de la bulle (et y rentre) au lieu d'apparaître d'un coup
-    val labelFrom = if (start) Alignment.Start else Alignment.End
     @Composable
-    fun Bubble(a: ActivitySection, animateLabel: Boolean) {
-        val on = a == current
+    fun Bubble(activity: ActivitySection) {
+        val selected = activity == current
+        val select = {
+            if (selected) open = list.size > 1 && !open
+            else { onSelect(activity); open = false }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
-            AnimatedVisibility(visible = if (animateLabel) open else true,
-                enter = expandHorizontally(expandFrom = labelFrom, animationSpec = tween(200)) + fadeIn(tween(160)),
-                exit = shrinkHorizontally(shrinkTowards = labelFrom, animationSpec = tween(150)) + fadeOut(tween(120))) {
-                Text(tr(a.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
-                    modifier = Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
-                        .clickable { onSelect(a); open = false }.padding(horizontal = 12.dp, vertical = 7.dp))
-            }
-            if (!start) BubbleIcon(a, on, bg, border) { if (on) open = !open else { onSelect(a); open = false } }
+            if (start) BubbleIcon(activity, selected, bg, border, select)
+            Text(tr(activity.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
+                modifier = Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
+                    .clickable(onClick = select).padding(horizontal = 12.dp, vertical = 7.dp))
+            if (!start) BubbleIcon(activity, selected, bg, border, select)
         }
     }
     // chaque bulle monte du bouton + vers le haut, l'une après l'autre (les plus proches d'abord)
@@ -227,12 +223,12 @@ private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, star
                     slideInVertically(initialOffsetY = { it / 3 }, animationSpec = tween(280, delayMillis = step)),
                 exit = shrinkVertically(shrinkTowards = Alignment.Bottom, animationSpec = tween(160)) + fadeOut(tween(110))) {
                 Column(horizontalAlignment = if (start) Alignment.Start else Alignment.End) {
-                    Bubble(a, animateLabel = false)
+                    Bubble(a)
                     Spacer(Modifier.height(10.dp))
                 }
             }
         }
-        Bubble(current, animateLabel = true)
+        Bubble(current)
     }
 }
 
@@ -272,14 +268,12 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
     LaunchedEffect(sh.activityAsked) { if (!sh.activityAsked) ask = true }
     val current = list.firstOrNull { it.name == sh.activityCurrent } ?: list.firstOrNull()
     val strength = sh.has(Feature.TRAINING); val health = sh.has(Feature.HEALTH)
-    // sans section Course, les sorties de la montre restent visibles dans les activités récentes
-    val mixed = health && ActivitySection.RUN !in list
 
     Box(Modifier.fillMaxSize()) {
         when (current) {
             ActivitySection.STRENGTH -> WorkoutTabScreen(vm.training, nav, strength = strength, cardioFirst = false,
-                week = { ActivityWeek(vm, nav, strength, mixed) }, recent = { RecentActivities(vm, nav, strength, mixed) },
-                historyRoute = if (health) "h/activities" else "history", title = tr("Musculation"))
+                week = { ActivityWeek(vm, nav, strength, health, app.superhealth.bridge.Bridge.Kind.STRENGTH) }, recent = { RecentActivities(vm, nav, strength, health, app.superhealth.bridge.Bridge.Kind.STRENGTH) },
+                historyRoute = if (health) "h/activities?kind=STRENGTH" else "history", title = tr("Musculation"))
             ActivitySection.RUN -> Frame(tr("Course"), nav, "h/activities?kind=RUN") {
                 ActivityWeek(vm, nav, false, true, app.superhealth.bridge.Bridge.Kind.RUN)
                 Spacer(Modifier.height(4.dp))
@@ -306,7 +300,7 @@ fun ActivitiesTab(vm: SuperViewModel, nav: NavHostController) {
             .padding(start = 14.dp, end = 14.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 10.dp),
             onSelect = { a -> SuperPrefs.update { it.copy(activityCurrent = a.name) } })
     }
-    if (ask) ChooserSheet(list.toSet()) { ask = false }
+    if (ask && !sh.appTourPending) ChooserSheet(list.toSet()) { ask = false }
 }
 
 @Composable

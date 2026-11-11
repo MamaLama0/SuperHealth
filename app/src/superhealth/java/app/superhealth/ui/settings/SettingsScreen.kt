@@ -1,6 +1,5 @@
 package app.superhealth.ui.settings
 
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material.icons.rounded.DirectionsRun
@@ -9,12 +8,9 @@ import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material.icons.rounded.Group
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.heightIn
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -26,7 +22,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,21 +32,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.SentimentSatisfied
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Backup
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.FitnessCenter
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Sync
@@ -77,26 +68,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Map
-import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.theme.HealthHues
-import app.superhealth.ui.theme.container
-import app.superhealth.ui.theme.onContainer
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.navigation.NavHostController
@@ -105,7 +89,6 @@ import app.superhealth.has
 import app.superhealth.bridge.HealthConnectHub
 import app.superhealth.bridge.HcBackground
 import app.superhealth.bridge.SyncWorker
-import app.superhealth.nutrition.data.AppJson
 import app.superhealth.nutrition.data.Backup
 import app.superhealth.nutrition.domain.AccentColor
 import app.superhealth.nutrition.domain.EnergyUnit
@@ -122,10 +105,8 @@ import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.SwitchRow
 import app.superhealth.nutrition.ui.weight
-import app.superhealth.training.WorkoutApp
 import app.superhealth.ui.Lang
 import app.superhealth.ui.SuperViewModel
-import app.superhealth.ui.formatNumber
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.color
@@ -134,7 +115,6 @@ import app.superhealth.ui.trf
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
 
@@ -302,6 +282,10 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             SettingsNote(tr("Aucun compte, aucun traceur. Les sauvegardes ne quittent le téléphone que chiffrées."))
 
             SettingsGroup(tr("Outils")) {
+                SettingRow(tr("Faire le tour de l’application"), icon = Icons.Rounded.Restore, hue = app.superhealth.ui.theme.Base.Grey) {
+                    SuperPrefs.update { it.copy(appTourPending = true) }
+                }
+                RowDivider(56.dp)
                 SettingRow(tr("Simuler des cibles caloriques"), icon = Icons.Rounded.Calculate, hue = HealthHues.Mind) { nav.go("sim/nutrition") }
                 RowDivider(56.dp)
                 SettingRow(tr("Simuler un programme"), icon = Icons.Rounded.FitnessCenter, hue = HealthHues.Fitness) { nav.go("sim/training") }

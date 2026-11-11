@@ -35,7 +35,6 @@ import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.ui.components.ChipChoice
 import app.superhealth.nutrition.ui.components.GroupCard
-import app.superhealth.nutrition.ui.components.GroupHeader
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
 import app.superhealth.nutrition.ui.components.SwitchRow

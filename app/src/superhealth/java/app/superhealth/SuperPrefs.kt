@@ -99,7 +99,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
         val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
 
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
-        val defaults = listOf(QUESTS, RINGS, VITALS, LEAGUE, FRIENDS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
+        val defaults = listOf(RINGS, CALORIES, HYDRATION, NEXT_WORKOUT)
     }
 }
 
@@ -263,11 +263,13 @@ object DashCardList : kotlinx.serialization.KSerializer<List<DashCard>> {
 data class SuperSettings(
     /** Questionnaire d'accueil terminé. */
     val onboarded: Boolean = false,
+    /** Only new installations opt into the introductory tour. Old backups remain quiet. */
+    val appTourPending: Boolean = false,
     val coachEnabled: Boolean = true,
     /** Plugin Groupe (cartes, quêtes, amis, fil) : installé quand le Groupe est activé, absent par défaut d'une nouvelle installation. */
     val leagueEnabled: Boolean = false,
     val socialFeedEnabled: Boolean = false,
-    val socialFeedIntroSeen: Boolean = false,
+    val arsenal40NoticeSeen: Boolean = false,
     val arsenalAvatar: String? = null,
     val builtinsAdded: Boolean = false,
     /** 2.31 : verrouillage de l'app (empreinte ou code du téléphone), délai avant de redemander (s), écran masqué dans les Récents. */
@@ -610,7 +612,7 @@ object SuperPrefs {
         if (!_settings.value.streakHeroAdded || DashCard.STREAKS in _settings.value.dashboard) update { s ->
             s.copy(dashboard = withQuestHero(s.dashboard), streakHeroAdded = true)
         }
-        if (newProfile) update { it.copy(dashboard = listOf(DashCard.QUESTS, DashCard.RINGS, DashCard.VITALS) + it.dashboard.filter { c -> c !in setOf(DashCard.STREAKS, DashCard.QUESTS, DashCard.RINGS, DashCard.VITALS) }) }
+        if (newProfile) update { it.copy(dashboard = DashCard.defaults, appTourPending = true) }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }
 

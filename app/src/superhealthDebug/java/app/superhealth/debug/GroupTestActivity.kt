@@ -63,7 +63,7 @@ class GroupTestActivity : Activity() {
                         check(app.superhealth.modules.Modules.ensure(this@GroupTestActivity, app.superhealth.modules.Modules.HIKING))
                         check(app.superhealth.hiking.Hiking.catalog().size >= 8)
                         SuperPrefs.update { it.copy(onboarded = true, activityAsked = true, activitySections = listOf("HIKING"),
-                            activityCurrent = "HIKING", watchModule = false, socialFeedIntroSeen = true) }
+                            activityCurrent = "HIKING", watchModule = false) }
                     }
                     "hiking-reward" -> {
                         val original=app.superhealth.hiking.Hiking.catalog().first()
@@ -141,7 +141,7 @@ class GroupTestActivity : Activity() {
                         val name = intent.getStringExtra("name")?.take(24) ?: "Test Groupe"
                         nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().preferences.edit()
                             .putString(nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_NAME, name).commit()
-                        SuperPrefs.update { it.copy(onboarded = true, socialFeedIntroSeen = true, leagueEnabled = true,
+                        SuperPrefs.update { it.copy(onboarded = true, leagueEnabled = true,
                             socialFeedEnabled = true, watchModule = false, healthConnect = false, updateCheck = false,
                             features = setOf("NUTRITION", "TRAINING")) }
                         League.configure(this@GroupTestActivity) { it.copy(customRelay = true, relayUrl = "http://127.0.0.1:18787",

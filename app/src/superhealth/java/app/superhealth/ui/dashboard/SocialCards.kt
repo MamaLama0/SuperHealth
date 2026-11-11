@@ -35,7 +35,6 @@ import app.superhealth.ui.theme.dashCardBackground
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import java.time.LocalDate
 
 /** Une carte = un sujet et une destination. Les petits formats ne contiennent aucune action imbriquée. */
 @Composable
@@ -193,9 +192,12 @@ internal fun WQuests(size: CardSize, icon: ImageVector, modifier: Modifier, refr
     val quest = current?.let { app.superhealth.cards.ArsenalGame.quests(it, ProgressRepository.selectedTracks(settings)) }
     LaunchedEffect(refresh) { runCatching { ProgressRepository.compute(ctx) } }
     val hue = DashCard.QUESTS.hue()
+    val inventory by app.superhealth.cards.EquipmentStore.state.collectAsState()
+    val wallet by app.superhealth.cards.ArsenalGame.remote.collectAsState()
+    val rewardReady = quest?.gate?.canOpen(inventory.day) == true || inventory.freePacks > 0 || inventory.pending != null || inventory.rewardPending != null || (wallet?.packCredits ?: inventory.packCredits).isNotEmpty()
     val rank = quest?.rank ?: 0
-    val title = tr(listOf("Premier sceau", "Grand sceau", "Sceau héroïque", "Tous les sceaux du jour")[rank])
-    val progress = "$rank / 3"
+    val title = if (rewardReady) tr("Paquet à récupérer") else tr(listOf("Premier sceau", "Grand sceau", "Sceau héroïque", "Tous les sceaux du jour")[rank])
+    val progress = if (rewardReady) tr("Disponible") else "$rank / 3"
     if (size == CardSize.W) SocialStrip(modifier, icon, tr("Quêtes"), title, progress, hue, onClick)
     else SocialCard(size, modifier, icon, tr("Quêtes"), hue, onClick) {
         SocialValue(progress, if (size == CardSize.S) tr("Aujourd’hui") else title, hue, size == CardSize.S)

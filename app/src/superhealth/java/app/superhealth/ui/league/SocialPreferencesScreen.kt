@@ -16,7 +16,6 @@ import app.superhealth.league.League
 import app.superhealth.league.SocialPreferences
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.tr
-import app.superhealth.ui.trf
 
 /** Lecture sur ce téléphone : publications masquées, discussions silencieuses, identités bloquées et amis en sourdine. */
 @Composable

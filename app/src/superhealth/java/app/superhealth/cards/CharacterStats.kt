@@ -25,12 +25,12 @@ data class CharacterStats(val strength: Int = 8, val dexterity: Int = 8, val con
     val total get() = strength + dexterity + constitution
     companion object {
         fun modifier(value: Int) = Math.floorDiv(value - 10, 2)
-        data class Component(val label: String, val ratio: Double?, val weight: Double)
+        data class Component(val label: String, val ratio: Double?, val weight: Double, val required: Boolean = false)
         data class Calculation(val attribute: CharacterAttribute, val parts: List<Component>) {
             val available get() = parts.filter { it.ratio != null }
-            val weight get() = available.sumOf { it.weight }
+            val weight get() = parts.filter { it.ratio != null || it.required }.sumOf { it.weight }
             val ratio get() = if (weight == 0.0) 0.0 else available.sumOf { it.ratio!! * it.weight } / weight
-            val value get() = 8 + (12 * ratio).roundToInt()
+            val value get() = 8 + (12 * ratio.coerceIn(0.0, 1.0)).roundToInt()
         }
         fun breakdown(progress: Progression.Result?, selected: Set<Progression.Track>, athlete: AthleteStats?): List<Calculation> {
             val today = progress?.summary?.throughDay ?: 0L
@@ -41,16 +41,17 @@ data class CharacterStats(val strength: Int = 8, val dexterity: Int = 8, val con
                 val target = if (track.weekly) (progress.summary.streaks.firstOrNull { it.track == track.name }?.target ?: 3).coerceIn(1, 7) * 4 else 28
                 return (count.toDouble() / target).coerceIn(0.0, 1.0)
             }
-            val strength = Stat.families.mapNotNull { athlete?.get(it) }.takeIf { it.isNotEmpty() }?.average()?.div(100)?.coerceIn(0.0, 1.0)
+            val gym = athlete?.training
             return listOf(
-                Calculation(CharacterAttribute.FOR, listOf(Component("Performances musculaires", strength, .8),
-                    Component("Objectif de musculation", ratio(Progression.Track.STRENGTH), .2))),
+                Calculation(CharacterAttribute.FOR, listOf(Component("Records de force · PR et 1RM estimés", gym?.prScore, .85, required = true),
+                    Component("Objectif de musculation", ratio(Progression.Track.STRENGTH), .15))),
                 Calculation(CharacterAttribute.DEX, listOf(Component("Capacité cardio", athlete?.get(Stat.CAR)?.div(100.0)?.coerceIn(0.0, 1.0), .65),
                     Component("Objectif de pas", ratio(Progression.Track.STEPS), .2),
                     Component("Esprit et mobilité", ratio(Progression.Track.MIND), .15))),
-                Calculation(CharacterAttribute.CON, listOf(Component("Objectif de sommeil", ratio(Progression.Track.SLEEP), .45),
-                    Component("Objectif de nutrition", ratio(Progression.Track.FOOD), .25),
-                    Component("Régularité sportive", athlete?.get(Stat.REG)?.div(100.0)?.coerceIn(0.0, 1.0), .3))))
+                Calculation(CharacterAttribute.CON, listOf(Component("Volume hebdomadaire moyen · 12 mois", gym?.volumeScore, .70, required = true),
+                    Component("Régularité en salle · 12 mois", gym?.consistencyScore, .15, required = true),
+                    Component("Objectif de sommeil", ratio(Progression.Track.SLEEP), .10),
+                    Component("Objectif de nutrition", ratio(Progression.Track.FOOD), .05))))
         }
         fun from(progress: Progression.Result, selected: Set<Progression.Track>, athlete: AthleteStats? = null): CharacterStats {
             val parts = breakdown(progress, selected, athlete)

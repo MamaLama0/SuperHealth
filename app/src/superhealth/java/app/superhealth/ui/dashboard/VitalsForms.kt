@@ -165,21 +165,6 @@ private fun Dot(s: NightVitals.Status) {
     if (s != NightVitals.Status.UNKNOWN) Box(Modifier.size(6.dp).clip(CircleShape).background(s.color()))
 }
 
-/** Cellule du moyen : nom court, valeur et unité, barre de plage (ou rien sans plage). */
-@Composable
-private fun Cell(t: VitalTrend, modifier: Modifier) {
-    val m = t.metric
-    Column(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(m.icon, null, Modifier.size(12.dp), tint = m.color)
-            Spacer(Modifier.width(4.dp))
-            Text(m.shortName(), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        CardValue(formatValue(m, t.last!!.second), unitOf(m), 19.sp)
-        RangeBar(t.last!!.second, t.range?.first, t.range?.second, t.status.color(), Modifier.padding(top = 2.dp))
-    }
-}
-
 /** Ligne du grand : symbole, nom et statut, courbe (ou barre de plage), valeur. */
 @Composable
 private fun Line(t: VitalTrend, spark: Boolean, onMetric: ((Metric) -> Unit)?) {

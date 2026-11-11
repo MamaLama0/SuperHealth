@@ -3,7 +3,6 @@ package app.superhealth.nutrition.ui.screens
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.container
 import androidx.compose.runtime.LaunchedEffect
-import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.Lang
 import app.superhealth.ui.theme.CaloriesColor
 import androidx.compose.ui.draw.shadow
@@ -37,8 +36,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -49,10 +46,8 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.DropdownMenu
@@ -82,15 +77,10 @@ import app.superhealth.nutrition.data.FoodEntryEntity
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.AppViewModel
 import app.superhealth.nutrition.ui.SearchMode
-import app.superhealth.nutrition.ui.components.AssetImage
 import app.superhealth.nutrition.ui.components.FoodIcon
-import app.superhealth.nutrition.ui.components.MacroLine
-import app.superhealth.nutrition.ui.components.MacroSummary
 import app.superhealth.nutrition.ui.components.Ring
-import app.superhealth.nutrition.ui.dayLabel
 import app.superhealth.nutrition.ui.energy
 import app.superhealth.nutrition.ui.energyValue
-import app.superhealth.nutrition.ui.hourLabel
 import app.superhealth.nutrition.ui.macros
 import app.superhealth.nutrition.ui.minuteOf
 import app.superhealth.nutrition.ui.num
@@ -172,6 +162,18 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                         val v = if (d == day) total.kcal else intakeByDay[d]
                         if (t == null || v == null || t <= 0) 0f else (v / t).toFloat()
                     }
+                    val future = day > LocalDate.now().toEpochDay()
+                    val plugins by app.superhealth.modules.Modules.installed.collectAsState()
+                    val planner = plugins.any { it.kind == app.superhealth.modules.Modules.MEALS && it.enabled }
+                    if (future) androidx.compose.material3.FilledTonalButton({
+                        nav.go(if (planner) "meals/planning" else "modules")
+                    }, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(tr(if (planner) "Planifier les repas de ce jour" else "Installer le planificateur de repas"))
+                    } else if (planner) TextButton({ nav.go("meals/planning") }, Modifier.padding(horizontal = 16.dp)) {
+                        Text(tr("Planning des repas"))
+                    }
                     Spacer(Modifier.height(12.dp))
                     val box = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
                     Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(box).dashCardBackground(app.superhealth.ui.theme.CaloriesColor)
@@ -185,7 +187,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
             }
             // plugin Planificateur de repas : repas restants pour tomber sur les cibles
             item(key = "mealplan") {
-                app.superhealth.ui.meals.MealPlanCard(day, entries, target, { s.energy(it) }, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp))
+                app.superhealth.ui.meals.MealPlanCard(day, target, { s.energy(it) }, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp))
             }
             // 2.2 : vitamines, minéraux, caféine… du jour
             if (nutrients && entries.isNotEmpty()) item(key = "nutrients") {

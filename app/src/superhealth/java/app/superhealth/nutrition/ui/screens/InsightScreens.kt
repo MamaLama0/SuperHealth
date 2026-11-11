@@ -5,7 +5,6 @@ import app.superhealth.nutrition.ui.tr
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import app.superhealth.nutrition.domain.ExpenditureVersion
 import app.superhealth.nutrition.domain.GoalType
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.domain.PredictionStyle
@@ -33,7 +32,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.ExperimentalMaterial3Api

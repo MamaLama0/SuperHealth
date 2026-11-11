@@ -36,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -101,7 +100,6 @@ import app.superhealth.nutrition.ui.weight
 import app.superhealth.nutrition.ui.weightValue
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.first
@@ -139,7 +137,7 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
             // 3.8 : plan semaine par semaine, jour par jour, programmable à l'avance
             Spacer(Modifier.height(8.dp))
             val planned = p.plan.count { it.startDay + 7 > an.today }
-            PillButton(if (planned > 0) trf("Plan semaine par semaine · %1\$s", planned) else tr("Plan semaine par semaine"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("n/plan") }
+            PillButton(if (planned > 0) trf("Objectifs par semaine · %1\$s", planned) else tr("Objectifs par semaine"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("n/plan") }
             app.superhealth.nutrition.domain.NutritionPlan.weekAt(p, an.today)?.let { w ->
                 Text(tr("Plan actif") + " · " + tr(w.phase.label), color = Mf.colors.accent, modifier = Modifier.padding(6.dp))
             }
@@ -716,7 +714,7 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit, onPlan: (() -> Unit)
                         PlanPreview(upcoming, s, maxRows = 4)
                     } else Text(tr("Aucune semaine programmée : la semaine type ci-dessus se répète."),
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(4.dp))
-                    if (onPlan != null) PillButton(if (upcoming.isNotEmpty()) trf("Plan semaine par semaine · %1\$s", upcoming.size) else tr("Plan semaine par semaine"),
+                    if (onPlan != null) PillButton(if (upcoming.isNotEmpty()) trf("Objectifs par semaine · %1\$s", upcoming.size) else tr("Objectifs par semaine"),
                         Modifier.fillMaxWidth().padding(top = 6.dp), strong = upcoming.isEmpty()) {
                         vm.repo.prefs.setProgram(p); vm.repo.prefs.setSettings(baseGoals.applyTo(vm.repo.prefs.settings.value)); onPlan()
                     }

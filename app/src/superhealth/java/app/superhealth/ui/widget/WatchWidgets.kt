@@ -7,12 +7,7 @@ import android.graphics.RectF
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -23,7 +18,6 @@ import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -38,7 +32,6 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import app.superhealth.SuperPrefs
 import app.superhealth.bridge.Bridge
 import app.superhealth.health.data.Metric
 import app.superhealth.health.data.HealthRepository
@@ -49,7 +42,6 @@ import app.superhealth.ui.formatNumber
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import kotlin.math.roundToInt
 import java.time.LocalDate
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind

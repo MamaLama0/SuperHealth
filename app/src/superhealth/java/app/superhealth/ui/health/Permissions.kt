@@ -53,7 +53,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -63,7 +62,6 @@ import androidx.navigation.NavHostController
 import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.theme.HealthHues

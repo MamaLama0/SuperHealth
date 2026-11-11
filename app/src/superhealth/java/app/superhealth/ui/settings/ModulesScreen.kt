@@ -88,7 +88,6 @@ import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.SwitchRow
 import app.superhealth.nutrition.ui.screens.DetailScaffold

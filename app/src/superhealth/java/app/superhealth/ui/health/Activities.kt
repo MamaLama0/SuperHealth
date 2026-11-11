@@ -64,7 +64,6 @@ import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.formatDuration
-import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import app.superhealth.ui.localDate
 import app.superhealth.ui.relativeDay
@@ -76,11 +75,9 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.foundation.layout.height
-import app.superhealth.nutrition.ui.components.SettingRow
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.rounded.FileOpen
-import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember

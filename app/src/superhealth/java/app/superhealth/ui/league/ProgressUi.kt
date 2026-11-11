@@ -1,8 +1,6 @@
 package app.superhealth.ui.league
 
 import kotlinx.coroutines.launch
-import app.superhealth.league.Achievements
-import androidx.compose.ui.graphics.graphicsLayer
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -27,8 +25,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight

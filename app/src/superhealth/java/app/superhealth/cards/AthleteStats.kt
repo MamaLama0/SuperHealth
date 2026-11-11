@@ -58,6 +58,7 @@ data class AthleteStats(
     /** Sexe déclaré (« F » ou « M ») : les barèmes de force et de cardio en dépendent, la silhouette par défaut aussi. */
     val sex: String? = null,
     val character: CharacterStats? = null,
+    val training: CharacterTraining? = null,
 ) {
     val female get() = sex == "F"
     val ovr: Int? get() = ovr10?.let { (it + 5) / 10 }
@@ -107,6 +108,7 @@ object AthleteStatsEngine {
         /** Pas par jour (début du jour en ms → pas) sur 8 semaines, pour pondérer par la récence. */
         val steps: List<Pair<Long, Double>>? = null, val restingHr: Double? = null, val heightCm: Double? = null,
         val zone: ZoneId = ZoneId.systemDefault(),
+        val bodyweightKnown: Boolean = true,
     )
 
     private class ExerciseBest(var points: Double, var last: Long, val confidence: Double)
@@ -164,7 +166,7 @@ object AthleteStatsEngine {
             (parts.sumOf { it.first * it.second } / parts.sumOf { it.second } * 10).roundToInt()
         }
         val muscles = best.entries.associate { it.key.key to it.value.roundToInt().coerceIn(25, 99) }
-        return AthleteStats(values = values, provisional = provisional, ovr10 = ovr10, muscles = muscles, computedAt = now, sex = if (input.sex == Sex.FEMALE) "F" else "M")
+        return AthleteStats(values = values, provisional = provisional, ovr10 = ovr10, muscles = muscles, computedAt = now, sex = if (input.sex == Sex.FEMALE) "F" else "M", training = CharacterTrainingEngine.compute(input))
     }
 
     /**

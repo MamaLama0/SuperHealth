@@ -3,8 +3,8 @@ package app.superhealth.ui.cards
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.SportsMartialArts
-import androidx.compose.material.icons.rounded.PestControl
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Castle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,7 +39,7 @@ internal fun ArenaTeaser(nav: NavHostController, active: Boolean) {
             Surface(onClick = { nav.go(route) }, shape = RoundedCornerShape(18.dp), color = color.copy(alpha = .10f), modifier = Modifier.weight(1f)) {
                 Row(Modifier.heightIn(min = 64.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(if (index == 0) Icons.Rounded.SportsMartialArts else Icons.Rounded.PestControl, null, tint = color, modifier = Modifier.size(22.dp))
+                    Icon(if (index == 0) Icons.Rounded.LocalFireDepartment else Icons.Rounded.Castle, null, tint = color, modifier = Modifier.size(22.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(tr(title), style = MaterialTheme.typography.titleSmall)
                         Text(detail, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

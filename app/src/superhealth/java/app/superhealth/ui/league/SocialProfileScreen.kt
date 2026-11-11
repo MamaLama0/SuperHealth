@@ -23,7 +23,6 @@ import app.superhealth.ui.ProfilePhoto
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
-import app.superhealth.ui.trf
 
 /** Le profil partagé et ses décorations ont leur propre espace, séparé des données corporelles. */
 @Composable

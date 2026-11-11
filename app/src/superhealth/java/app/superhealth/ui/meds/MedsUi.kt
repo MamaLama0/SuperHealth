@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -62,7 +61,6 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
-import app.superhealth.ui.trf
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime

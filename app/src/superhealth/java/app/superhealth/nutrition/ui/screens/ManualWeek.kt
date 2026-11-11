@@ -117,14 +117,6 @@ private fun SlotCard(title: String, t: DayTarget, days: Int, active: Boolean, un
     }
 }
 
-@Composable
-private fun WeekAverage(p: Program, settings: Settings) {
-    val week = (1..7).map { ManualTargets.forDay(p, it) }
-    Text(trf("Moyenne de la semaine : %1\$s %2\$s · P %3\$s g", settings.energyValue(week.sumOf { it.kcal } / 7).roundToInt(),
-        settings.energyUnit.label.tr(), (week.sumOf { it.protein } / 7).roundToInt()),
-        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
-}
-
 /**
  * Résumé de la semaine type en mode manuel (3.8) : les sept jours d'un coup d'œil (énergie et macros), la moyenne en tête.
  */

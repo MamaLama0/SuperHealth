@@ -61,7 +61,6 @@ import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.Lang
 import app.superhealth.ui.SuperViewModel
-import app.superhealth.ui.go
 import app.superhealth.ui.dayLetter
 import app.superhealth.ui.formatValue
 import app.superhealth.ui.formatWithUnit
@@ -74,7 +73,6 @@ import app.superhealth.ui.trf
 import app.superhealth.ui.unitOf
 import java.time.DayOfWeek
 import java.time.LocalDate
-import kotlin.math.roundToInt
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters

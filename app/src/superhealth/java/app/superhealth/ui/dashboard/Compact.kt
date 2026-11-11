@@ -3,19 +3,12 @@ package app.superhealth.ui.dashboard
 import app.superhealth.ui.theme.dashCardBackground
 import app.superhealth.ui.theme.dashChipColors
 import app.superhealth.nutrition.domain.stepGoalFor
-import app.superhealth.ui.charts.ChartStyle
-import app.superhealth.ui.charts.smooth
-import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.automirrored.rounded.TrendingDown
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,14 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -56,7 +42,6 @@ import app.superhealth.nutrition.data.FoodEntryEntity
 import app.superhealth.nutrition.domain.Balance
 import app.superhealth.nutrition.domain.Habits
 import app.superhealth.nutrition.domain.Settings as NutritionSettings
-import app.superhealth.nutrition.ui.components.ProgressBar
 import app.superhealth.nutrition.ui.energyValue
 import app.superhealth.nutrition.ui.macros
 import app.superhealth.nutrition.ui.weightValue
@@ -106,7 +91,11 @@ internal fun compactOf(c: DashCard, vm: SuperViewModel, h: HealthSnap, an: Analy
         }
         DashCard.WEIGHT -> CompactData(an.currentTrendKg?.let { formatNumber(s.weightValue(it), 1) } ?: "—", tr(s.weightUnit.label), tr("Tendance"), null,
             (an.today - 27..an.today).map { d -> an.trendByDay[d]?.let(s::weightValue) }, bars = false) { nav.go("weight") }
-        DashCard.EXPENDITURE -> CompactData(s.energyValue(an.currentTdee).roundToInt().toString(), kcal, tr("Dépense"), null,
+        DashCard.EXPENDITURE -> CompactData(s.energyValue(an.currentTdee).roundToInt().toString(), kcal, tr(when (an.expenditure.lastOrNull()?.status) {
+                app.superhealth.nutrition.domain.Expenditure.Status.INITIAL, null -> "Estimation initiale"
+                app.superhealth.nutrition.domain.Expenditure.Status.HOLDING -> "Données insuffisantes"
+                else -> "Dépense"
+            }), null,
             an.expenditure.takeLast(28).map { s.energyValue(it.tdee) }, bars = false) { nav.go("expenditure") }
         DashCard.INTAKE -> {
             val byDay = an.days.associateBy { it.epochDay }

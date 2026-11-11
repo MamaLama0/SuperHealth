@@ -1,5 +1,7 @@
 package app.superhealth.nutrition.ui.components
 
+import app.superhealth.ui.onboarding.tourTarget
+
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import app.superhealth.nutrition.ui.trf
@@ -9,7 +11,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -29,14 +30,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.getValue
-import app.superhealth.ui.theme.Base
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -45,9 +42,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,8 +55,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -81,7 +74,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.FoodIcons
-import app.superhealth.nutrition.ui.num
 import app.superhealth.ui.drawPixelArt
 import app.superhealth.ui.theme.CaloriesColor
 import app.superhealth.ui.theme.CarbsColor
@@ -165,7 +157,7 @@ fun NavBar(title: String, onBack: (() -> Unit)?, modifier: Modifier = Modifier, 
 @Composable
 fun SettingsAvatar(onClick: () -> Unit) {
     val name = remember { app.superhealth.ui.userName() }
-    Box(Modifier.size(38.dp).clip(CircleShape).background(Mf.colors.card).clickable(onClickLabel = tr("Réglages"), onClick = onClick),
+    Box(Modifier.size(38.dp).tourTarget("settings", onClick).clip(CircleShape).background(Mf.colors.card).clickable(onClickLabel = tr("Réglages"), onClick = onClick),
         contentAlignment = Alignment.Center) {
         val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
         if (photo != null) androidx.compose.foundation.Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)

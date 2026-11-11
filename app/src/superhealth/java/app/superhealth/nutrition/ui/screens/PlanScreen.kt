@@ -38,12 +38,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.data.Analytics
 import app.superhealth.nutrition.domain.DayTarget
 import app.superhealth.nutrition.domain.NutritionPlan
@@ -72,7 +70,6 @@ import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val shortDate = DateTimeFormatter.ofPattern("d MMM")
@@ -106,11 +103,15 @@ fun PlanScreen(vm: AppViewModel, onBack: () -> Unit) {
     fun addWeek() {
         val last = weeks.lastOrNull()
         val start = if (last != null && last.startDay >= thisMonday) last.startDay + 7 else NutritionPlan.nextMonday(today)
-        val w = last?.takeIf { it.startDay >= thisMonday - 7 }?.copy(startDay = start) ?: NutritionPlan.weekFrom(start, current(start))
+        val w = last?.takeIf { it.startDay >= thisMonday - 7 }?.copy(startDay = start) ?: NutritionPlan.weekFrom(start, current(start), when (p.goalType) {
+            app.superhealth.nutrition.domain.GoalType.CUT -> PrepPhase.CUT
+            app.superhealth.nutrition.domain.GoalType.BULK -> PrepPhase.BULK
+            app.superhealth.nutrition.domain.GoalType.MAINTENANCE -> PrepPhase.MAINTENANCE
+        })
         save { NutritionPlan.put(it, w) }; picked = start
     }
 
-    DetailScaffold(tr("Plan semaine par semaine"), onBack = onBack) {
+    DetailScaffold(tr("Objectifs par semaine"), onBack = onBack) {
         Text(tr("Programmez votre alimentation sur plusieurs semaines : chaque semaine a sa phase, ses calories et macros jour par jour, et ses objectifs d'eau et de sodium. Une semaine programmée s'applique à partir de son lundi ; elle passe alors avant le coaching et les cibles manuelles."),
             style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(vertical = 8.dp))
 

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,7 +72,7 @@ fun RecoveryRing(hours: Double?, size: androidx.compose.ui.unit.Dp, stroke: andr
     val hue = HealthHues.Sleep
     Ring(((hours ?: 0.0) / 72).toFloat().coerceIn(0f, 1f), hue, size, stroke = stroke, track = Mf.colors.card.copy(alpha = 0.6f)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (hours == null) Text(tr("Prêt"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = HealthHues.Activity)
+            if (hours == null) Text("—", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = HealthHues.Activity)
             else {
                 Text("${hours.roundToInt()} h", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = hue.onContainer())
                 Text(tr("restantes"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
@@ -124,14 +123,16 @@ fun PerformanceScreen(vm: SuperViewModel, nav: NavHostController) {
                 Spacer(Modifier.height(10.dp))
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { RecoveryRing(s.recoveryLeftH, 104.dp, 10.dp) }
                 Spacer(Modifier.height(8.dp))
-                Text(if (s.recoveryLeftH == null) tr("Prêt pour une séance intense") else tr("Privilégiez une séance facile"),
+                Text(when { s.recoveryLeftH == null -> tr("Récupération non disponible")
+                    s.recoveryLeftH <= 0 -> tr("Délai de récupération écoulé")
+                    else -> tr("Privilégiez une séance facile") },
                     style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             }
             val (label, color) = s.acwr?.let(::loadStatus) ?: ("—" to Mf.colors.textSecondary)
             Tinted(color.takeIf { s.acwr != null } ?: HealthHues.Body, Modifier.weight(1f).fillMaxHeight()) {
                 Text(tr("Charge"), style = MaterialTheme.typography.titleSmall, color = color.onContainer())
                 Spacer(Modifier.height(10.dp))
-                if (s.acwr == null) Text(tr("Aucune séance ces 4 dernières semaines"), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
+                if (s.acwr == null) Text(tr("Historique insuffisant pour comparer la charge"), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                 else Text(tr(label), style = MaterialTheme.typography.headlineSmall, color = color.onContainer())
                 s.acwr?.let { Text(trf("Ratio 7 j / 28 j : %1\$s", formatNumber(it, 2)), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary) }
                 Spacer(Modifier.height(10.dp))

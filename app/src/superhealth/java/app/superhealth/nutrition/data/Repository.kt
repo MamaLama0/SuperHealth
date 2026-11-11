@@ -3,10 +3,8 @@ package app.superhealth.nutrition.data
 import androidx.room.withTransaction
 import app.superhealth.nutrition.domain.Bmr
 import app.superhealth.nutrition.domain.WeightTrendV2
-import app.superhealth.nutrition.domain.TrendVersion
 import app.superhealth.nutrition.domain.TdeeMode
 import app.superhealth.nutrition.domain.ProgramStyle
-import app.superhealth.nutrition.domain.ExpenditureVersion
 import app.superhealth.nutrition.domain.ExpenditureV3
 import app.superhealth.nutrition.domain.Goal
 import app.superhealth.nutrition.domain.GoalStatus
@@ -18,7 +16,6 @@ import app.superhealth.nutrition.domain.Profile
 import app.superhealth.nutrition.domain.Program
 import app.superhealth.nutrition.domain.Settings
 import app.superhealth.nutrition.domain.Targets
-import app.superhealth.nutrition.domain.WeightTrend
 import kotlinx.coroutines.Dispatchers
 import app.superhealth.Feature
 import app.superhealth.SuperPrefs
@@ -169,6 +166,7 @@ data class Backup(
 )
 
 class Repository(private val db: AppDatabase, val prefs: Prefs) {
+    internal suspend fun <T> foodTransaction(block: suspend () -> T): T = db.withTransaction(block)
     val foods = db.foods()
     val entries = db.entries()
     val weighIns = db.weighIns()

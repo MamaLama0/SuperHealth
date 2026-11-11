@@ -1,6 +1,9 @@
 package app.superhealth.meals
 
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import app.superhealth.nutrition.data.Micros
 import android.content.Context
 import app.superhealth.SuperPrefs
 import app.superhealth.backup.Secrets
@@ -10,7 +13,6 @@ import app.superhealth.nutrition.data.AiFood
 import app.superhealth.nutrition.data.FoodEntity
 import app.superhealth.nutrition.data.FoodEntryEntity
 import app.superhealth.nutrition.data.Net
-import app.superhealth.nutrition.data.SwissFoods
 import app.superhealth.nutrition.domain.DietPreference
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.ui.Lang
@@ -66,7 +68,7 @@ object MealPlanner {
 
     @Serializable data class Ingredient(
         val name: String, val grams: Double, val kcal: Double, val protein: Double, val fat: Double, val carbs: Double,
-        val fiber: Double = 0.0, val foodId: Long? = null,
+        val fiber: Double = 0.0, val foodId: Long? = null, val microsJson: String? = null,
     )
 
     @Serializable data class Meal(
@@ -80,6 +82,7 @@ object MealPlanner {
         val url: String? = null,
         val image: String? = null,
         val logged: Boolean = false,
+        val partiallyLogged: Boolean = false,
         /** Portion choisie avant l'ajout au journal (×1 : celle calculée pour la cible). */
         val portion: Double = 1.0,
         /** Lignes du journal créées par l'ajout (pour l'annuler). */
@@ -100,7 +103,9 @@ object MealPlanner {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private lateinit var dir: File
 
-    /** Plan par jour (les 7 derniers gardés). */
+    private val journalMutex = Mutex()
+
+    /** Plans retained until explicitly removed, including future dates. */
     val plans = MutableStateFlow<Map<Long, Plan>>(emptyMap())
 
     @Volatile private var content: Content? = null
@@ -114,15 +119,61 @@ object MealPlanner {
 
     fun init(ctx: Context) {
         dir = File(ctx.filesDir, "meals").apply { mkdirs() }
-        plans.value = runCatching { json.decodeFromString<Map<Long, Plan>>(File(dir, "plans.json").readText()) }.getOrDefault(emptyMap())
+        plans.value = runCatching { json.decodeFromString<Map<Long, Plan>>(android.util.AtomicFile(File(dir, "plans.json")).readFully().decodeToString()) }.getOrDefault(emptyMap())
     }
 
-    private fun save(map: Map<Long, Plan>) {
-        plans.value = map.entries.sortedByDescending { it.key }.take(7).associate { it.key to it.value }
-        runCatching { File(dir, "plans.json").writeText(json.encodeToString(plans.value)) }
+    @Synchronized private fun save(map: Map<Long, Plan>) {
+        val file = android.util.AtomicFile(File(dir, "plans.json"))
+        val stream = file.startWrite()
+        try { stream.write(json.encodeToString(map).toByteArray()); file.finishWrite(stream) }
+        catch (e: Exception) { file.failWrite(stream); throw e }
+        plans.value = map
+    }
+
+    fun reconciled(plan: Plan, entries: List<FoodEntryEntity>): Plan {
+        val ids = entries.filter { it.epochDay == plan.day }.map { it.id }.toSet()
+        return plan.copy(meals = plan.meals.map { meal ->
+            if (meal.entryIds.isEmpty()) meal.copy(logged = false, partiallyLogged = false)
+            else {
+                val present = meal.entryIds.count { it in ids }
+                meal.copy(logged = present > 0, partiallyLogged = present in 1 until meal.entryIds.size)
+            }
+        })
+    }
+
+    fun reconcile(day: Long, entries: List<FoodEntryEntity>) {
+        val plan = plans.value[day] ?: return
+        val next = reconciled(plan, entries)
+        if (next != plan) save(plans.value + (day to next))
+    }
+
+    /** Copy only into empty slots; consumed entries are never copied to the journal. */
+    @Synchronized
+    fun copyDay(from: Long, to: Long, slots: Set<Int>? = null): Int {
+        if (from == to) return 0
+        val source = plans.value[from] ?: return 0
+        val destination = plans.value[to]
+        val occupied = destination?.meals.orEmpty().map { it.slot }.toSet()
+        val copies = source.meals.filter { it.slot !in occupied && (slots == null || it.slot in slots) }.map { it.copy(logged = false, partiallyLogged = false, entryIds = emptyList()) }
+        if (copies.isNotEmpty()) save(plans.value + (to to Plan(to, source.provider, (destination?.meals.orEmpty() + copies).sortedBy { it.slot })))
+        return copies.size
     }
 
     fun clear(day: Long) = save(plans.value - day)
+
+    @Synchronized
+    fun planFoods(day: Long, slot: Int, foods: List<Pair<FoodEntity, Double>>) {
+        require(foods.isNotEmpty() && foods.all { (_, grams) -> grams.isFinite() && grams in 0.1..5000.0 })
+        val plan = plans.value[day] ?: Plan(day, "manual", emptyList())
+        require(plan.meals.none { it.slot == slot && it.logged })
+        val ingredients = foods.map { (food, grams) ->
+            val factor = grams / 100
+            Ingredient(food.name, grams, food.kcal100 * factor, food.protein100 * factor, food.fat100 * factor,
+                food.carbs100 * factor, food.fiber100 * factor, food.id.takeIf { it > 0 }, Micros.scale(food.microsJson, factor))
+        }
+        val meal = Meal(slot, ingredients.joinToString(", ") { it.name }, ingredients)
+        save(plans.value + (day to plan.copy(meals = (plan.meals.filterNot { it.slot == slot } + meal).sortedBy { it.slot })))
+    }
 
     fun hasSpoonacular(ctx: Context) = !Secrets.get(ctx, SPOONACULAR_KEY).isNullOrBlank()
 
@@ -146,7 +197,8 @@ object MealPlanner {
         // Spoonacular planifie une journée entière (petit-déjeuner, déjeuner, dîner) : calories de ces trois repas à ce rythme
         val mainShare = c.slots.take(3).sumOf { it.share }
         val meals = if (provider == "spoonacular") spoonacular(ctx, goals, left.kcal / shareSum * mainShare) else ai(ctx.applicationContext, c, goals, logged)
-        val plan = Plan(day, provider, meals.sortedBy { it.slot })
+        val kept = plans.value[day]?.let { reconciled(it, logged).meals.filter { m -> m.logged } }.orEmpty()
+        val plan = Plan(day, provider, (kept + meals.filter { m -> kept.none { it.slot == m.slot } }).sortedBy { it.slot })
         save(plans.value + (day to plan))
         return plan
     }
@@ -158,7 +210,7 @@ object MealPlanner {
     suspend fun regenerate(ctx: Context, day: Long, slot: Int, target: Macros, logged: List<FoodEntryEntity>): Meal {
         val c = planningContent(day) ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val p = plans.value[day] ?: throw PlanException(tr("Aucun repas prévu."))
-        val goal = slotGoal(target, logged, slot, c)?.takeIf { it.kcal >= 80 } ?: throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
+        val goal = slotGoal(target, logged, slot, c, p.meals)?.takeIf { it.kcal >= 80 } ?: throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
         val avoid = p.meals.map { it.title }
         val meal = (if (p.provider == "spoonacular" && hasSpoonacular(ctx)) {
             val mainShare = c.slots.take(3).sumOf { it.share }
@@ -209,11 +261,17 @@ object MealPlanner {
         return c.copy(slots = c.slots.mapIndexed { i, slot -> slot.copy(share = shares[i]) })
     }
 
-    fun slotGoal(target: Macros, logged: List<FoodEntryEntity>, slot: Int, config: Content? = content()): Macros? {
+    fun slotGoal(target: Macros, logged: List<FoodEntryEntity>, slot: Int, config: Content? = content(), planned: List<Meal> = emptyList()): Macros? {
         val c = config ?: return null
         val used = logged.map { it.meal }.toSet()
-        val open = (c.slots.indices.filter { it !in used } + slot).distinct()
-        return goals(c, left(target, logged), open)[slot]
+        val kept = planned.filter { it.slot != slot && !it.logged }
+        val occupied = kept.map { it.slot }.toSet()
+        val open = (c.slots.indices.filter { it !in used && it !in occupied } + slot).distinct()
+        val remaining = left(target, logged)
+        val reserved = kept.fold(Macros.ZERO) { a, meal -> a + meal.macros }
+        val budget = Macros((remaining.kcal - reserved.kcal).coerceAtLeast(0.0), (remaining.protein - reserved.protein).coerceAtLeast(0.0),
+            (remaining.fat - reserved.fat).coerceAtLeast(0.0), (remaining.carbs - reserved.carbs).coerceAtLeast(0.0))
+        return goals(c, budget, open)[slot]
     }
 
     /**
@@ -222,6 +280,9 @@ object MealPlanner {
      */
     suspend fun compose(day: Long, slot: Int, foods: List<FoodEntity>, goal: Macros): Pair<Meal, Portions.Result> {
         val repo = app.superhealth.nutrition.NutriApp.repository
+        plans.value[day]?.let { current ->
+            require(reconciled(current, repo.entries.rangeFlow(day, day).first()).meals.none { it.slot == slot && it.logged }) { tr("Annulez l’ajout au journal avant de remplacer ce repas.") }
+        }
         val usual = if (repo.prefs.settings.value.learnFoodPatterns) {
             val previous = repo.entries.rangeFlow(day - 56, day - 1).first().filter { it.meal == slot && it.grams != null }.groupBy { it.foodId }
             foods.mapIndexedNotNull { i, food ->
@@ -233,7 +294,7 @@ object MealPlanner {
             Portions.Goal(goal.kcal, goal.protein, goal.fat, goal.carbs), usual)
         val ings = foods.zip(r.grams).map { (f, g) ->
             val k = g / 100
-            Ingredient(f.name, g, f.kcal100 * k, f.protein100 * k, f.fat100 * k, f.carbs100 * k, f.fiber100 * k, f.id.takeIf { it != 0L })
+            Ingredient(f.name, g, f.kcal100 * k, f.protein100 * k, f.fat100 * k, f.carbs100 * k, f.fiber100 * k, f.id.takeIf { it != 0L }, Micros.encode(Micros.of(f.microsJson, f.name, f.sugars100, f.satFat100, f.sodiumMg100).mapValues { it.value * k }))
         }
         val title = foods.take(3).joinToString(", ") { it.name } + if (foods.size > 3) "…" else ""
         val meal = Meal(slot, title, ings)
@@ -292,14 +353,14 @@ object MealPlanner {
                     // aliment de la bibliothèque tel quel ; base suisse : ajouté une fois à la bibliothèque (dédupliqué par nom)
                     val food = if (f.id != 0L) f else saved.getOrPut(f.name + f.brand) { NutriApp.repository.saveFood(f) }
                     val k = it.grams / 100
-                    Ingredient(food.name, it.grams, food.kcal100 * k, food.protein100 * k, food.fat100 * k, food.carbs100 * k, food.fiber100 * k, food.id)
+                    Ingredient(food.name, it.grams, food.kcal100 * k, food.protein100 * k, food.fat100 * k, food.carbs100 * k, food.fiber100 * k, food.id, Micros.encode(Micros.of(food.microsJson, food.name, food.sugars100, food.satFat100, food.sodiumMg100).mapValues { it.value * k }))
                 } else Ingredient(it.name, it.grams, it.kcal, it.protein, it.fat, it.carbs, it.fiber)
             }
             val s = scale(base.sumOf { it.kcal }, goals.getValue(slot).kcal)
             Meal(slot, list.first().first.dish, base.map { i ->
                 val g = (i.grams * s / 5).roundToInt().coerceAtLeast(1) * 5.0
                 val k = g / i.grams
-                i.copy(grams = g, kcal = i.kcal * k, protein = i.protein * k, fat = i.fat * k, carbs = i.carbs * k, fiber = i.fiber * k)
+                i.copy(grams = g, kcal = i.kcal * k, protein = i.protein * k, fat = i.fat * k, carbs = i.carbs * k, fiber = i.fiber * k, microsJson = Micros.scale(i.microsJson, k))
             })
         }
     }
@@ -364,31 +425,52 @@ object MealPlanner {
 
     // ---- Journal -------------------------------------------------------------------------------------------
 
-    /** Ajoute le repas au journal du jour, à l'heure de son créneau (ou maintenant si l'heure est passée), à la portion choisie. */
-    suspend fun log(day: Long, meal: Meal, minute: Int) {
+    /** One stable entry ID per ingredient. Zero denotes a line which has not been confirmed. */
+    suspend fun log(day: Long, requested: Meal, minute: Int, ingredient: Int? = null) = journalMutex.withLock {
+        require(day <= java.time.LocalDate.now().toEpochDay()) { tr("Ce repas est prévu pour une date future.") }
+        val current = plans.value[day] ?: return@withLock
+        val meal = current.meals.firstOrNull { it.slot == requested.slot } ?: return@withLock
+        val recipe = meal.perServing != null
+        val count = if (recipe) 1 else meal.ingredients.size
+        if (ingredient != null && ingredient !in 0 until count) return@withLock
         val repo = NutriApp.repository
-        val c = content()
-        val at = c?.slots?.getOrNull(meal.slot)?.minute ?: minute
+        val at = content()?.slots?.getOrNull(meal.slot)?.minute ?: minute
         val k = meal.portion
-        val ids = if (meal.perServing != null) {
-            val m = meal.macros
-            listOf(repo.entries.insert(FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at,
-                name = meal.title + " (" + app.superhealth.ui.formatNumber((meal.servings ?: 1.0) * k, 2) + " " + tr("portion") + ")",
-                kcal = m.kcal, protein = m.protein, fat = m.fat, carbs = m.carbs)))
-        } else meal.ingredients.map { i ->
-            i.foodId?.let { repo.foods.markUsed(it) }
-            repo.entries.insert(FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at, foodId = i.foodId, name = i.name,
-                grams = (i.grams * k / 5).roundToInt().coerceAtLeast(1) * 5.0,
-                kcal = i.kcal * k, protein = i.protein * k, fat = i.fat * k, carbs = i.carbs * k, fiber = i.fiber * k))
+        val ids = MutableList(count) { meal.entryIds.getOrNull(it) ?: 0L }
+        val indices = if (ingredient == null) 0 until count else ingredient..ingredient
+        repo.foodTransaction {
+            val existing = repo.entries.rangeFlow(day, day).first().map { it.id }.toSet()
+            for (index in indices) {
+                if (ids[index] in existing) continue
+                val entry = if (recipe) {
+                    val m = meal.macros
+                    FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at,
+                        name = meal.title + " (" + app.superhealth.ui.formatNumber((meal.servings ?: 1.0) * k, 2) + " " + tr("portion") + ")",
+                        kcal = m.kcal, protein = m.protein, fat = m.fat, carbs = m.carbs)
+                } else {
+                    val food = meal.ingredients[index]
+                    food.foodId?.let { repo.foods.markUsed(it) }
+                    FoodEntryEntity(epochDay = day, meal = meal.slot, minuteOfDay = at, foodId = food.foodId, name = food.name,
+                        grams = food.grams * k, kcal = food.kcal * k, protein = food.protein * k, fat = food.fat * k,
+                        carbs = food.carbs * k, fiber = food.fiber * k, microsJson = Micros.scale(food.microsJson, k))
+                }
+                ids[index] = repo.entries.insert(entry)
+            }
+            plans.value[day]?.let { plan ->
+                save(plans.value + (day to plan.copy(meals = plan.meals.map {
+                    if (it.slot == meal.slot) it.copy(entryIds = ids) else it
+                })))
+            }
         }
-        plans.value[day]?.let { p -> save(plans.value + (day to p.copy(meals = p.meals.map { if (it.slot == meal.slot) it.copy(logged = true, entryIds = ids) else it }))) }
     }
 
     /** Annule l'ajout d'un repas : ses lignes quittent le journal, le repas redevient prévu. */
-    suspend fun unlog(day: Long, slot: Int) {
-        val p = plans.value[day] ?: return
-        val m = p.meals.firstOrNull { it.slot == slot && it.logged } ?: return
-        m.entryIds.forEach { NutriApp.repository.entries.delete(it) }
-        save(plans.value + (day to p.copy(meals = p.meals.map { if (it.slot == slot) it.copy(logged = false, entryIds = emptyList()) else it })))
+    suspend fun unlog(day: Long, slot: Int) = journalMutex.withLock {
+        val p = plans.value[day] ?: return@withLock
+        val m = p.meals.firstOrNull { it.slot == slot } ?: return@withLock
+        NutriApp.repository.foodTransaction {
+        m.entryIds.filter { it > 0 }.forEach { NutriApp.repository.entries.delete(it) }
+        save(plans.value + (day to p.copy(meals = p.meals.map { if (it.slot == slot) it.copy(logged = false, partiallyLogged = false, entryIds = emptyList()) else it })))
+        }
     }
 }

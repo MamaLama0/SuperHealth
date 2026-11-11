@@ -1,8 +1,6 @@
 package app.superhealth.league
 
 import android.content.Context
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import android.util.Base64
 import app.superhealth.Feature
 import app.superhealth.SuperPrefs
@@ -17,11 +15,8 @@ import app.superhealth.training.domain.Analytics
 import app.superhealth.nutrition.domain.stepGoalFor
 import java.io.File
 import java.security.KeyFactory
-import java.security.KeyPairGenerator
-import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.Signature
-import java.security.spec.ECGenParameterSpec
 import java.security.spec.X509EncodedKeySpec
 import java.time.LocalDate
 import java.time.ZoneId
@@ -296,8 +291,6 @@ object League {
     }
 
     // ---- Identité ---------------------------------------------------------------------------------------
-
-    private fun keyStore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
     private fun ensureKey() { GroupIdentity.current() }
 

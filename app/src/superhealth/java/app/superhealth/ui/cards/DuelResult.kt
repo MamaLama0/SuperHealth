@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.superhealth.cards.CharacterCombat
 import app.superhealth.cards.CharacterAttribute
-import app.superhealth.cards.Stat
 import app.superhealth.nutrition.ui.components.NavBar
 import app.superhealth.ui.tr
 import java.text.NumberFormat

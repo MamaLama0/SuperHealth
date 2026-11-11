@@ -56,13 +56,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import app.superhealth.nutrition.data.AiConfig
 import app.superhealth.nutrition.data.AiGift
 import app.superhealth.nutrition.data.AiFood
 import app.superhealth.nutrition.data.AiProvider
 import app.superhealth.nutrition.data.FoodEntryEntity
-import app.superhealth.nutrition.data.Micros
-import app.superhealth.nutrition.data.SwissFoods
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.AppViewModel
 import app.superhealth.nutrition.ui.components.AssetImage

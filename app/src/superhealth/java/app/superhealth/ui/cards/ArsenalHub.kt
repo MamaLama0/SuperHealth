@@ -1,6 +1,5 @@
 package app.superhealth.ui.cards
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -100,7 +99,7 @@ internal fun DungeonTeaser(nav: NavHostController, active: Boolean) {
                 },
                     style = MaterialTheme.typography.labelSmall, color = Color(0xFFCEC4DF))
             }
-            Icon(Icons.Rounded.ArrowForward, tr("Entrer dans le donjon"), tint = room.light, modifier = Modifier.size(20.dp))
+            Icon(Icons.Rounded.Castle, tr("Entrer dans le donjon"), tint = room.light, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -114,7 +113,6 @@ internal fun DungeonRoute(nav: NavHostController) {
     val remote by ArsenalGame.remote.collectAsState()
     var quests by remember { mutableStateOf<ArsenalGame.Quests?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var stance by rememberSaveable { mutableStateOf(CombatStance.ASSAULT) }
     var combatResult by remember { mutableStateOf<ArsenalGame.Dungeon?>(null) }
     var issue by remember { mutableStateOf<String?>(null) }
     val league by League.state.collectAsState()
@@ -153,6 +151,11 @@ internal fun DungeonRoute(nav: NavHostController) {
     val cards by EquipmentStore.cards.collectAsState()
     val mix = remember(saved.equipped, saved.owned, cards) { EquipmentStore.damageMix(saved, cards) }
     ArsenalPage("Donjon", nav, remote?.gold ?: saved.gold) {
+        FilledTonalButton({ nav.go("cards/equipment?edit=true") }, Modifier.fillMaxWidth()) {
+            Icon(Icons.Rounded.Shield, null, Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(tr("Changer mon équipement"))
+        }
         val room = DungeonRoom.floor(dungeon.floor)
         val creature = DungeonCreature.floor(dungeon.floor)
         val drops = ArsenalGame.drops(dungeon.floor)
@@ -183,22 +186,17 @@ internal fun DungeonRoute(nav: NavHostController) {
                     DungeonVital(tr("Toi"), dungeon.health, 100, Icons.Rounded.Favorite, Color(0xFFED9B9D), Modifier.weight(1f))
                 }
                 DungeonAffinities(EnemyAffinity.floor(dungeon.floor), mix)
-                val intent = CombatStance.entries[(dungeon.floor - 1) % 3]
-                Text(tr("Intention du monstre") + " · " + tr(intent.title), color = room.light,
-                    style = MaterialTheme.typography.titleSmall)
-                StancePicker(stance, !busy && (dungeon.lastAttack ?: Long.MIN_VALUE) < today) { stance = it }
-                val tactical = if (stance.beats(intent)) 120 else if (intent.beats(stance)) 85 else 100
                 val power = (EquipmentStore.bonuses(saved, cards).values.sum() / 100).coerceIn(0, 5)
                 val character = quests?.character ?: CharacterStats()
                 val attributePower = CharacterStats.modifier(character.strength) * 2 + CharacterStats.modifier(character.dexterity)
-                val damage = EnemyAffinity.floor(dungeon.floor).hit(48 + attributePower + ((quests?.rank ?: 0) - 1).coerceAtLeast(0) * 9 + power, mix) * tactical / 100
+                val damage = EnemyAffinity.floor(dungeon.floor).hit(48 + attributePower + ((quests?.rank ?: 0) - 1).coerceAtLeast(0) * 9 + power, mix)
                 Text(tr("Dégâts prévus") + " · $damage  /  " + tr("Riposte") + " · " +
-                    (if (damage >= dungeon.hp || frozen) 0 else ((if (dungeon.elite) 18 else 12) - CharacterStats.modifier(character.constitution)).coerceAtLeast(1) * (if (stance == CombatStance.GUARD) 50 else 100) / 100),
+                    (if (damage >= dungeon.hp || frozen) 0 else ((if (dungeon.elite) 18 else 12) - CharacterStats.modifier(character.constitution)).coerceAtLeast(1)),
                     color = Color(0xFFCBD4DF), style = MaterialTheme.typography.bodySmall)
                 Button(onClick = { task {
                     val progress = ArsenalGame.quests(ctx)
                     quests = progress
-                    ArsenalGame.advance(ctx, progress, attack = true, stance = stance)
+                    ArsenalGame.advance(ctx, progress, attack = true)
                     combatResult = EquipmentStore.state.value.dungeon
                 } }, enabled = canAttack, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
                     shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(
@@ -231,11 +229,6 @@ internal fun DungeonRoute(nav: NavHostController) {
                     Icon(Icons.Rounded.TaskAlt, null, tint = Mf.colors.accent, modifier = Modifier.size(22.dp))
                     Text(tr("Un suivi validé = une attaque dans la journée."), Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
-                }
-                OutlinedButton({ nav.go("cards/equipment") }, Modifier.fillMaxWidth()) {
-                    Icon(Icons.Rounded.Shield, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(tr("Changer mon équipement"))
                 }
                 FilledTonalButton(onClick = { task { ArsenalGame.freeze(ctx, ArsenalGame.quests(ctx)) } },
                     enabled = !busy && !frozen && ice > 0 && dungeon.health > 0, modifier = Modifier.fillMaxWidth()) {
@@ -466,22 +459,29 @@ internal fun ArsenalQuestContent(quests: ArsenalGame.Quests?) {
                     Text(tr(title), style = MaterialTheme.typography.titleSmall)
                     Text(tr(description), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
-                GoldBadge(prize)
+                Column(horizontalAlignment = Alignment.End) {
+                    GoldBadge(prize)
+                    val packs = ArsenalGame.sealPacks(i + 1) - ArsenalGame.sealPacks(i)
+                    if (packs > 0) Text("+$packs " + tr(if (packs == 1) "paquet" else "paquets"), style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }
-    Text(tr("Paliers de la semaine"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp, bottom = 5.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(2, 4, 6).forEach { threshold ->
-            AssistChip(onClick = {}, enabled = false, label = { Text((if (quests.weekCount >= threshold) "✓ " else "") + "$threshold " + tr("jours")) })
-        }
+    Text(tr("Quêtes de la semaine"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp, bottom = 5.dp))
+    ArsenalGame.weeklyGoals.forEach { threshold ->
+        val count = quests.weekCount.coerceAtMost(threshold)
+        ListItem(headlineContent = { Text(tr("Valider") + " $threshold " + tr("jours")) },
+            supportingContent = { Text("$count / $threshold") },
+            leadingContent = { Icon(if (count == threshold) Icons.Rounded.CheckCircle else Icons.Rounded.Stars, null) },
+            trailingContent = { Text("+1 " + tr("paquet")) },
+            colors = ListItemDefaults.colors(containerColor = Mf.colors.card))
     }
     Text(tr("Les jours validés peuvent être espacés."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ArsenalMarket(nav: NavHostController) {
+internal fun ArsenalMarket(nav: NavHostController, startTab: Int = 0) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val catalog by EquipmentStore.cards.collectAsState()
@@ -491,8 +491,14 @@ internal fun ArsenalMarket(nav: NavHostController) {
     val friends = league.friends.filter { it.cardTrade != null }
     var busy by remember { mutableStateOf(false) }
     var issue by remember { mutableStateOf<String?>(null) }
+    var purchase by rememberSaveable { mutableStateOf<String?>(null) }
+    var purchaseVisible by rememberSaveable { mutableStateOf(false) }
+    var filter by rememberSaveable { mutableStateOf("") }
+    var mine by rememberSaveable { mutableStateOf(false) }
+    val gold = remote?.gold ?: saved.gold
+    val packPrice = remote?.packPrice ?: ArsenalGame.PACK_PRICE
     var composer by rememberSaveable { mutableStateOf(false) }
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tab by rememberSaveable { mutableIntStateOf(startTab) }
     var bidFor by remember { mutableStateOf<ArsenalGame.Listing?>(null) }
     var accept by remember { mutableStateOf<ArsenalGame.Listing?>(null) }
     var amount by rememberSaveable { mutableStateOf("") }
@@ -511,13 +517,22 @@ internal fun ArsenalMarket(nav: NavHostController) {
         if (Economy.available()) task { ArsenalGame.sync(ctx, ArsenalGame.quests(ctx)) }
     }
     Column(Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding()) {
-        NavBar("Marché de l’Arsenal", { nav.popBackStack() }) { GoldBadge(remote?.gold ?: saved.gold, Modifier.padding(end = 8.dp)) }
+        NavBar("Marché de l’Arsenal", { nav.popBackStack() }) { GoldBadge(gold, Modifier.padding(end = 8.dp)) }
         TabRow(selectedTabIndex = tab) {
-            listOf("Enchères", "Échanges").forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(tr(label)) }) }
+            listOf("Boutique", "Échanges").forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(tr(label)) }) }
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth().navigationBarsPadding(), contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
+                if (tab == 0) FilledTonalButton({
+                    if (purchase == null) purchase = java.util.UUID.randomUUID().toString()
+                    purchaseVisible = true
+                }, Modifier.fillMaxWidth(), enabled = !busy && (!Economy.available() || remote != null)) {
+                    Icon(Icons.Rounded.Style, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("Acheter un paquet"), Modifier.weight(1f))
+                    GoldBadge(packPrice)
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton({ composer = true }, enabled = remote != null && !busy) { Text(tr(if (tab == 0) "Mettre en vente" else "Proposer à un ami")) }
                     IconButton({ task { ArsenalGame.sync(ctx, ArsenalGame.quests(ctx)) } }, enabled = !busy && Economy.available()) {
@@ -526,9 +541,16 @@ internal fun ArsenalMarket(nav: NavHostController) {
                 }
                 if (!Economy.available()) Text(tr("Configure le relais du Groupe pour rejoindre le marché."), color = Mf.colors.textSecondary)
                 issue?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (remote?.listings?.isNotEmpty() == true) {
+                    OutlinedTextField(filter, { filter = it }, Modifier.fillMaxWidth(), label = { Text(tr("Chercher une carte")) }, singleLine = true)
+                    FilterChip(mine, { mine = !mine }, label = { Text(tr(if (tab == 0) "Mes ventes et enchères" else "Mes propositions")) })
+                }
             }
-            val rows = remote?.listings.orEmpty().filter { if (tab == 0) it.recipient == null else it.recipient != null }
-            if (rows.isEmpty() && remote != null) item { Text(tr(if (tab == 0) "Aucune enchère en cours." else "Aucune proposition en cours.")) }
+            val rows = remote?.listings.orEmpty().filter { (it.recipient == null) == (tab == 0) }
+                .filter { !mine || it.mine || it.leading }
+                .filter { filter.isBlank() || (catalog[it.piece.id]?.title ?: it.piece.id).contains(filter.trim(), ignoreCase = true) }
+                .sortedWith(compareByDescending<ArsenalGame.Listing> { it.incoming }.thenBy { it.end })
+            if (rows.isEmpty() && remote != null) item { Text(tr(if (tab == 0) "Aucune vente trouvée." else "Aucune proposition en cours.")) }
             items(rows, key = { it.key }) { listing ->
                 val card = catalog[listing.piece.id]
                 val tier = card?.let { EquipmentRarity.entries[it.tier] }
@@ -540,13 +562,24 @@ internal fun ArsenalMarket(nav: NavHostController) {
                             if (listing.wanted == null) GoldBadge(maxOf(listing.price, listing.bid))
                         }
                         Text(listOfNotNull(tier?.title?.let(::tr), card?.let { it.type }, listing.piece.finish.title.takeIf { listing.piece.finish != EquipmentFinish.NORMAL }?.let(::tr),
-                            if (listing.leading) tr("En tête") else null).joinToString(" · "), color = Mf.colors.textSecondary, style = MaterialTheme.typography.labelMedium)
+                            when {
+                                listing.incoming -> friends.firstOrNull { it.cardTrade == listing.seller }?.shown ?: tr("Proposition reçue")
+                                listing.mine -> tr("Ta proposition")
+                                listing.leading -> tr("En tête")
+                                listing.fixed -> tr("Prix fixe")
+                                listing.recipient == null -> tr("Enchère")
+                                else -> null
+                            }).joinToString(" · "), color = Mf.colors.textSecondary, style = MaterialTheme.typography.labelMedium)
                         listing.wanted?.let { Text(tr("En échange de") + " " + (catalog[it]?.title ?: it), style = MaterialTheme.typography.bodySmall) }
                         val date = Instant.ofEpochMilli(listing.end).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd/MM · HH:mm"))
                         Text(tr("Fin") + " · " + date, style = MaterialTheme.typography.bodySmall)
                         if (listing.mine && listing.bid == 0) TextButton({ task { ArsenalGame.act(ctx, "cancel") { put("key", listing.key) } } }, enabled = !busy) { Text(tr("Annuler")) }
                         if (listing.incoming) TextButton({ accept = listing }, enabled = !busy) { Text(tr("Voir la proposition")) }
-                        if (!listing.mine && listing.recipient == null) TextButton({
+                        if (listing.incoming) TextButton({ task {
+                            ArsenalGame.act(ctx, "decline") { put("key", listing.key) }
+                        } }, enabled = !busy) { Text(tr("Refuser")) }
+                        if (!listing.mine && listing.fixed) TextButton({ accept = listing }, enabled = !busy) { Text(tr("Acheter")) }
+                        if (!listing.mine && !listing.fixed && listing.recipient == null) TextButton({
                             amount = maxOf(listing.price, listing.bid+1).toString(); bidFor = listing
                         }, enabled = !busy) { Text(tr("Enchérir")) }
                     }
@@ -554,6 +587,26 @@ internal fun ArsenalMarket(nav: NavHostController) {
             }
         }
     }
+    if (purchaseVisible) AlertDialog(
+        onDismissRequest = { if (!busy) purchaseVisible = false },
+        title = { Text(tr("Acheter un paquet")) },
+        text = { Column {
+            GoldBadge(packPrice)
+            Text(tr("Le paquet rejoint tes paquets disponibles."))
+            if (gold < packPrice) Text(tr("Il te manque de l’or."), color = MaterialTheme.colorScheme.error)
+            issue?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        } },
+        confirmButton = { TextButton({
+            val request = purchase ?: return@TextButton
+            task {
+                ArsenalGame.purchasePack(ctx, request)
+                purchase = null
+                purchaseVisible = false
+                nav.go("cards/packs")
+            }
+        }, enabled = !busy && gold >= packPrice) { Text(tr("Acheter")) } },
+        dismissButton = { TextButton({ purchaseVisible = false }, enabled = !busy) { Text(tr("Fermer")) } },
+    )
     bidFor?.let { listing -> AlertDialog(onDismissRequest = { bidFor = null }, title = { Text(tr("Ton enchère")) },
         text = {
             Column {
@@ -563,7 +616,7 @@ internal fun ArsenalMarket(nav: NavHostController) {
         }, confirmButton = {
             val n = amount.toIntOrNull()
             TextButton({ bidFor = null; task { ArsenalGame.act(ctx, "bid") { put("key", listing.key); put("amount", n!!) } } },
-                enabled = !busy && n != null && n in maxOf(listing.price, listing.bid+1)..10_000) { Text(tr("Confirmer")) }
+                enabled = !busy && n != null && n in maxOf(listing.price, listing.bid+1)..minOf(10_000, gold + if (listing.leading) listing.bid else 0)) { Text(tr("Confirmer")) }
         }, dismissButton = { TextButton({ bidFor = null }) { Text(tr("Annuler")) } }) }
     accept?.let { listing ->
         val choices = saved.owned.filter { it.serverKey != null && it.id == listing.wanted &&
@@ -571,7 +624,7 @@ internal fun ArsenalMarket(nav: NavHostController) {
         var copy by remember(listing.key) { mutableStateOf<EquipmentPiece?>(null) }
         AlertDialog(
             onDismissRequest = { accept = null },
-            title = { Text(tr("Confirmer l’échange")) },
+            title = { Text(tr(if (listing.fixed) "Confirmer l’achat" else "Confirmer l’échange")) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(catalog[listing.piece.id]?.title ?: listing.piece.id, style = MaterialTheme.typography.titleMedium)
                 if (listing.wanted == null) GoldBadge(listing.price)
@@ -590,7 +643,7 @@ internal fun ArsenalMarket(nav: NavHostController) {
                 val piece = copy
                 accept = null
                 task { ArsenalGame.act(ctx, "buy") { put("key", listing.key); piece?.serverKey?.let { put("give", it) } } }
-            }, enabled = !busy && (listing.wanted == null || copy != null)) { Text(tr("Confirmer")) } },
+            }, enabled = !busy && (if (listing.wanted == null) gold >= listing.price else copy != null)) { Text(tr("Confirmer")) } },
             dismissButton = { TextButton({ accept = null }) { Text(tr("Annuler")) } },
         )
     }
@@ -599,6 +652,8 @@ internal fun ArsenalMarket(nav: NavHostController) {
         var friend by remember { mutableStateOf<League.Friend?>(null) }
         var wanted by remember { mutableStateOf("") }
         var price by remember { mutableStateOf("25") }
+        var fixed by remember { mutableStateOf(true) }
+        var query by remember { mutableStateOf("") }
         val eligible = saved.owned.filter { it.serverKey != null && it.serial !in saved.equipped.values &&
             saved.pending?.pieces.orEmpty().none { pending -> pending.serial == it.serial } }
         val match = catalog.values.filter { wanted.length >= 2 && it.title.contains(wanted, ignoreCase = true) }.take(5)
@@ -607,11 +662,22 @@ internal fun ArsenalMarket(nav: NavHostController) {
             LazyColumn(Modifier.fillMaxWidth().navigationBarsPadding(), contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 item {
-                    Text(tr(if (tab == 0) "Nouvelle enchère" else "Nouvel échange"), style = MaterialTheme.typography.titleLarge)
+                    Text(tr(if (tab == 0) "Nouvelle vente" else "Nouvel échange"), style = MaterialTheme.typography.titleLarge)
                     if (eligible.isEmpty()) Text(tr("Ouvre un paquet avec le marché connecté pour obtenir une pièce échangeable."))
                 }
-                items(if (selected == null) eligible else listOfNotNull(selected), key = { it.serial }) { piece ->
-                    FilledTonalButton({ selected = if (selected == piece) null else piece }) { Text(catalog[piece.id]?.title ?: piece.id) }
+                if (selected == null && eligible.isNotEmpty()) item {
+                    OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text(tr("Chercher dans ma collection")) }, singleLine = true)
+                }
+                items(selected?.let(::listOf) ?: eligible.filter { (catalog[it.id]?.title ?: it.id).contains(query.trim(), ignoreCase = true) }, key = { it.serial }) { piece ->
+                    FilterChip(selected == piece, { selected = if (selected == piece) null else piece }, label = {
+                        Text((catalog[piece.id]?.title ?: piece.id) + " · " + tr(piece.finish.title) + " · " + tr("Niv.") + " ${piece.level}")
+                    })
+                }
+                if (tab == 0) item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(fixed, { fixed = true }, label = { Text(tr("Prix fixe")) })
+                        FilterChip(!fixed, { fixed = false }, label = { Text(tr("Enchère")) })
+                    }
                 }
                 if (tab == 1) {
                     item { Text(tr("Destinataire")) }
@@ -636,7 +702,7 @@ internal fun ArsenalMarket(nav: NavHostController) {
                         composer = false
                         task {
                             ArsenalGame.act(ctx, "list") {
-                                put("key", piece.serverKey!!); put("price", gold); put("mode", if (tab == 0) "auction" else "offer")
+                                put("key", piece.serverKey!!); put("price", gold); put("mode", if (tab != 0) "offer" else if (fixed) "fixed" else "auction")
                                 friend?.cardTrade?.let { put("to", it) }; wantedCard?.id?.let { put("wanted", it) }
                             }
                         }
@@ -656,16 +722,25 @@ internal fun ArsenalQuestRoute(nav: NavHostController) {
     val wallet by ArsenalGame.remote.collectAsState()
     var progress by remember { mutableStateOf<ArsenalGame.Quests?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
+    var retry by remember { mutableIntStateOf(0) }
+    var syncing by remember { mutableStateOf(false) }
+    LaunchedEffect(retry) {
+        syncing = true; error = null
         try {
             val current = ArsenalGame.quests(ctx)
             progress = current
             ArsenalGame.advance(ctx, current)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { error = e.message }
+        finally { syncing = false }
     }
     ArsenalPage("Quêtes de l’Arsenal", nav, wallet?.gold ?: saved.gold) {
         ArsenalQuestContent(progress)
+        val ready = progress?.gate?.canOpen(saved.day) == true || saved.freePacks > 0 || saved.pending != null ||
+            saved.rewardPending != null || (wallet?.packCredits ?: saved.packCredits).isNotEmpty()
+        if (ready) Button({ nav.go("cards/packs") }, Modifier.fillMaxWidth()) { Text(tr("Ouvrir mes paquets disponibles")) }
+        Text(tr("Les pièces des sceaux sont créditées à la synchronisation. Les paquets se récupèrent dans Paquets."), style = MaterialTheme.typography.bodySmall)
+        if (error != null) TextButton({ retry++ }, enabled = !syncing) { Text(tr("Réessayer la synchronisation")) }
         progress?.gate?.let { gate ->
             gate.targets.forEach { track ->
                 ListItem(headlineContent = { Text(tr(track.label)) },

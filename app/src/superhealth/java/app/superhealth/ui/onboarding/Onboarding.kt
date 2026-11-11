@@ -7,16 +7,12 @@ import androidx.compose.ui.draw.shadow
 import app.superhealth.ui.theme.WorkoutBlue
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Base
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.SentimentSatisfied
-import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.Straighten
-import androidx.compose.material.icons.rounded.Cake
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedContent
@@ -24,13 +20,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,7 +34,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,7 +70,6 @@ import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.PhotoCamera
-import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,12 +89,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -136,10 +122,7 @@ import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.HeartBroken
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -1177,18 +1160,6 @@ private fun Page(step: Step, title: String, subtitle: String?, content: @Composa
     Spacer(Modifier.height(22.dp))
     Column(content = content)
     Spacer(Modifier.height(12.dp))
-}
-
-/** Illustration qui flotte doucement. */
-@Composable
-private fun Floating(path: String, sizeDp: Int) {
-    val t = rememberInfiniteTransition(label = "float")
-    val y by t.animateFloat(-6f, 6f, infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "y")
-    val appear = remember { Animatable(0.85f) }
-    LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)) }
-    val d = LocalDensity.current
-    AssetImage(path, Modifier.size(sizeDp.dp).graphicsLayer { translationY = with(d) { y.dp.toPx() }; scaleX = appear.value; scaleY = appear.value }
-        .clip(RoundedCornerShape((sizeDp / 5).dp)))
 }
 
 /** Apparition décalée (fondu + montée) des éléments d'une liste. */

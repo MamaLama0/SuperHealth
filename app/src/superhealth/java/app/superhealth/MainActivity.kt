@@ -44,6 +44,12 @@ class MainActivity : ComponentActivity() {
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
             }
             val sh by SuperPrefs.settings.collectAsState()
+            LaunchedEffect(sh.onboarded, sh.appTourPending) {
+                if (sh.onboarded && !sh.appTourPending) {
+                    kotlinx.coroutines.delay(400)
+                    askNotificationsOnce()
+                }
+            }
             // écran masqué dans les Récents et sans capture
             LaunchedEffect(sh.secureScreen) {
                 if (sh.secureScreen) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
@@ -66,7 +72,7 @@ class MainActivity : ComponentActivity() {
     private fun askNotificationsOnce() {
         val perm = android.Manifest.permission.POST_NOTIFICATIONS
         val prefs = getSharedPreferences("superhealth_perms", MODE_PRIVATE)
-        if (android.os.Build.VERSION.SDK_INT < 33 || !SuperPrefs.settings.value.onboarded || checkSelfPermission(perm) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+        if (android.os.Build.VERSION.SDK_INT < 33 || !SuperPrefs.settings.value.onboarded || SuperPrefs.settings.value.appTourPending || checkSelfPermission(perm) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
             prefs.getBoolean("asked_$perm", false)) return
         prefs.edit().putBoolean("asked_$perm", true).apply()
         requestPermissions(arrayOf(perm), 4202)

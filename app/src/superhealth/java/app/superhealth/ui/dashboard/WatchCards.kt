@@ -486,7 +486,7 @@ internal fun DayTimelineCard(c: DashCard, h: HealthSnap, w: WatchSnap, modifier:
     val start = HealthRepository.startMs(LocalDate.now())
     Tile(c, tr("Ma journée"), modifier, onClick = { nav.go("h/metric/STEPS") }) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Value(formatNumber(steps.sumOf { it ?: 0.0 }), tr("pas"), color = hue.onContainer())
+            Value(steps.filterNotNull().takeIf { it.isNotEmpty() }?.sum()?.let { formatNumber(it) } ?: "—", tr("pas"), color = hue.onContainer())
             Spacer(Modifier.weight(1f))
             h.heartToday.map { it.value }.takeIf { it.isNotEmpty() }?.let { Sub(trf("%1\$s–%2\$s bpm", it.min().roundToInt(), it.max().roundToInt())) }
         }

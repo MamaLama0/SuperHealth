@@ -13,11 +13,9 @@ import androidx.navigation.NavHostController
 import app.superhealth.hiking.Hiking
 import app.superhealth.league.*
 import app.superhealth.nutrition.ui.components.MfCard
-import app.superhealth.ui.go
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import kotlinx.coroutines.launch
 
 @Composable
 internal fun HikingSocial(nav:NavHostController) {

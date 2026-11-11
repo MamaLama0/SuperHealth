@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import app.superhealth.league.HealthIndex
 import app.superhealth.league.League
 import app.superhealth.nutrition.ui.components.*
 import app.superhealth.ui.ProfilePhoto

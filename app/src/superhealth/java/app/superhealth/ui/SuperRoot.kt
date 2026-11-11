@@ -1,21 +1,18 @@
 package app.superhealth.ui
 
+import app.superhealth.ui.onboarding.tourTarget
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.offset
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -24,7 +21,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -105,7 +101,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import app.superhealth.bridge.Watch
 import app.superhealth.health.data.Metric
 import app.superhealth.nutrition.ui.SearchMode
 import app.superhealth.nutrition.ui.nutritionGraph
@@ -113,15 +108,11 @@ import app.superhealth.nutrition.ui.screens.FoodLogScreen
 import app.superhealth.training.ui.ActiveSessionBar
 import app.superhealth.training.ui.Picker
 import app.superhealth.training.ui.handleTrainingRoute
-import app.superhealth.training.ui.screens.WorkoutTabScreen
 import app.superhealth.training.ui.trainingGraph
 import app.superhealth.ui.dashboard.DashboardEditScreen
-import app.superhealth.ui.dashboard.DashboardScreen
 import app.superhealth.ui.league.SocialPage
 import app.superhealth.ui.league.GroupDock
 import kotlinx.coroutines.launch
-import app.superhealth.ui.health.ActivityWeek
-import app.superhealth.ui.health.RecentActivities
 import app.superhealth.ui.health.ActivitiesHistoryScreen
 import app.superhealth.ui.health.DevicesScreen
 import app.superhealth.ui.health.LogSheet
@@ -274,6 +265,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("social/share/pr") { app.superhealth.ui.league.SocialComposer(nav, "PR") }
             composable("social/share/activity") { app.superhealth.ui.league.SocialComposer(nav, "ACTIVITY") }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
+            composable("meals/planning") { app.superhealth.ui.meals.MealPlanningScreen(vm.nutrition, nav) }
             composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
             composable("widgets") { app.superhealth.ui.settings.HomeWidgetsScreen(nav) }
             composable("settings/find") { app.superhealth.ui.settings.FindSettingScreen(nav) }
@@ -300,11 +292,11 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
             composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
             composable("social") { app.superhealth.ui.cards.EquipmentProfile(nav) }
-            composable("cards/equipment") { app.superhealth.ui.cards.EquipmentProfile(nav) }
+            composable("cards/equipment?edit={edit}", listOf(navArgument("edit") { type = NavType.BoolType; defaultValue = false })) { entry -> app.superhealth.ui.cards.EquipmentProfile(nav, entry.arguments?.getBoolean("edit") == true) }
             composable("cards/packs") { app.superhealth.ui.cards.DailyPackRoute(nav) }
             composable("cards/album") { app.superhealth.ui.cards.AlbumScreen(nav) }
             composable("cards/quests") { app.superhealth.ui.cards.ArsenalQuestRoute(nav) }
-            composable("cards/trades") { app.superhealth.ui.cards.ArsenalMarket(nav) }
+            composable("cards/trades") { app.superhealth.ui.cards.ArsenalMarket(nav, startTab = 1) }
             composable("cards/market") { app.superhealth.ui.cards.ArsenalMarket(nav) }
             composable("cards/dungeon") { app.superhealth.ui.cards.DungeonRoute(nav) }
             composable("cards/rates") { app.superhealth.ui.cards.EquipmentRatesRoute(nav) }
@@ -415,6 +407,10 @@ fun SuperRoot(vm: SuperViewModel) {
     }
     if (logSheet) LogSheet(vm, onDismiss = { logSheet = false })
     if (app.superhealth.ui.wellbeing.moodSheet) app.superhealth.ui.wellbeing.MoodSheet(nav)
+    if (sh.appTourPending && current != null) app.superhealth.ui.onboarding.AppTour(sh, onPage = { if (isTabRoute(it)) nav.openTab(it) else nav.go(it) }) {
+        app.superhealth.SuperPrefs.update { it.copy(appTourPending = false) }
+        nav.openTab("home")
+    }
     app.superhealth.ui.league.LeagueIncomingDialog()
 }
 
@@ -505,7 +501,7 @@ private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: ()
     val accent = Mf.colors.accent
     val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
     Column(
-        modifier.fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onClick() }),
+        modifier.fillMaxHeight().tourTarget("tab:${tab.route}", onClick).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onClick() }),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent), contentAlignment = Alignment.Center) {

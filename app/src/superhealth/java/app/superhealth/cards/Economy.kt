@@ -115,6 +115,7 @@ object Economy {
                 arsenalRequest && r.code == 402 -> throw Unavailable("Il te manque des pièces d’or.")
                 arsenalRequest && r.code == 409 -> throw Unavailable("Action indisponible. Vérifie le suivi, la carte ou le groupe.")
                 arsenalRequest && !r.isSuccessful -> throw Unavailable("L’Arsenal est indisponible (${r.code}).")
+                r.code == 402 && body["op"]?.jsonPrimitive?.content?.startsWith("arsenal-") == true -> throw Unavailable("Pas assez d’or pour cet achat ou cette enchère.")
                 r.code == 402 -> throw Unavailable(if (body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true) "Il manque la carte ou les éclats pour cet échange." else "Pas assez d'éclats pour ça.")
                 r.code == 404 && body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true -> throw Unavailable("Cet échange n'existe plus, ou ton ami n'a pas encore ouvert de pack.")
                 r.code == 404 || r.code == 405 -> throw Unavailable("Le serveur SuperHealth doit être mis à jour pour les packs.")

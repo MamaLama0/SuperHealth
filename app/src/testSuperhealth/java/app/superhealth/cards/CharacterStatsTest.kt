@@ -19,10 +19,10 @@ class CharacterStatsTest {
     @Test fun enabledTracksRenormalizeAndAreCappedAtTheirGoals() {
         val all = (today - 27..today).associateWith { Track.entries.toSet() }
         val full = CharacterStats.from(progress(all), Track.entries.toSet())
-        assertEquals(CharacterStats(20,20,20,28), full)
+        assertEquals(CharacterStats(10,20,10,28), full)
         val sleep = CharacterStats.from(progress(all), setOf(Track.SLEEP))
-        assertEquals(CharacterStats(8,8,20,28), sleep)
-        assertEquals(CharacterStats(8,8,14,14), CharacterStats.from(progress((today-13..today).associateWith { setOf(Track.SLEEP) }), setOf(Track.SLEEP)))
+        assertEquals(CharacterStats(8,8,9,28), sleep)
+        assertEquals(CharacterStats(8,8,9,14), CharacterStats.from(progress((today-13..today).associateWith { setOf(Track.SLEEP) }), setOf(Track.SLEEP)))
     }
     @Test fun futureAndOldDaysDoNotCountAndFirstDayDoesNotMaxStats() {
         val history = mapOf(today-28 to Track.entries.toSet(), today+1 to Track.entries.toSet(), today to Track.entries.toSet())
@@ -44,7 +44,7 @@ class CharacterStatsTest {
         assertEquals(2570, battle.myHealth); assertEquals(1831, battle.theirHealth)
     }
     @Test fun actualPerformancesAndTrackingContributeWithDisplayedWeights() {
-        val athlete = AthleteStats(values = mapOf("PEC" to 50,"DOS" to 60,"BRA" to 70,"JAM" to 80,"CAR" to 80,"RÉG" to 90))
+        val athlete = AthleteStats(values = mapOf("PEC" to 50,"DOS" to 60,"BRA" to 70,"JAM" to 80,"CAR" to 80,"RÉG" to 90), training = CharacterTraining(.65, .70, .90, 365, false))
         val history = (0..27).associate { i -> today-i to buildSet {
             if (i < 6) add(Track.STRENGTH)
             if (i < 14) { add(Track.STEPS); add(Track.SLEEP) }
@@ -52,11 +52,11 @@ class CharacterStatsTest {
             if (i < 7) add(Track.MIND)
         } }
         val result = CharacterStats.from(progress(history), Track.entries.toSet(), athlete)
-        assertEquals(15,result.strength); assertEquals(16,result.dexterity); assertEquals(16,result.constitution)
+        assertEquals(16,result.strength); assertEquals(16,result.dexterity); assertEquals(17,result.constitution)
         val calculation = CharacterStats.breakdown(progress(history), Track.entries.toSet(), athlete)
-        assertEquals(.62,calculation[0].ratio,.000001)
+        assertEquals(.6275,calculation[0].ratio,.000001)
         assertEquals(.6575,calculation[1].ratio,.000001)
-        assertEquals(.6825,calculation[2].ratio,.000001)
+        assertEquals(.7125,calculation[2].ratio,.000001)
     }
     @Test fun equipmentMapsBonusesAndCursesToThreeAttributesWithoutChangingDamageTypes() {
         val weapon=EquipmentCard("a","Sword","Sword","Steel",0,25,45,EquipmentSlot.WEAPON,

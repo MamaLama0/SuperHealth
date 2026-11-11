@@ -19,10 +19,14 @@ class DungeonBestiaryTest {
             assertEquals("Weakness at floor $floor", source.getString("weak"), affinity.weak.name)
             assertEquals("Resistance at floor $floor", source.getString("resist"), affinity.resist.name)
             assertEquals("Ward at floor $floor", source.getBoolean("ward"), affinity.ward)
-            assertTrue(File(assets, "bestiary/$id.glb").length() > 0)
-            assertTrue(File(assets, "creature-$id.webp").length() > 0)
+            assertFalse(File(assets, "bestiary/$id.glb").exists())
+            assertFalse(File(assets, "creature-$id.webp").exists())
             reached += id
         }
         assertEquals(catalogue.keys().asSequence().toSet(), reached)
+        val plugins = JSONObject(File(assets.parentFile, "plugins/index.json").readText()).getJSONArray("modules")
+        val group = (0 until plugins.length()).map(plugins::getJSONObject).single { it.getString("id") == "league" }
+        assertTrue(group.getLong("size") in 1L..(24L * 1024 * 1024))
+        assertTrue(group.getString("sha256").matches(Regex("[0-9a-f]{64}")))
     }
 }

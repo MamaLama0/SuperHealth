@@ -1,5 +1,7 @@
 package app.superhealth.ui.dashboard
 
+import app.superhealth.ui.onboarding.tourTarget
+
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -14,7 +16,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Sync
 import app.superhealth.feature
 import app.superhealth.has
 
@@ -44,7 +45,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
@@ -111,16 +111,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
 import app.superhealth.sizeOf
@@ -157,8 +153,6 @@ import app.superhealth.training.ui.volume
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.dayLetter
 import app.superhealth.ui.formatNumber
-import app.superhealth.ui.formatValue
-import app.superhealth.ui.formatWithUnit
 import app.superhealth.ui.go
 import app.superhealth.ui.openTab
 import app.superhealth.ui.health.ActivityRow
@@ -448,7 +442,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                     // module Coach : son étincelle en tête, à portée de pouce
                     if (modules.any { it.kind == app.superhealth.modules.Modules.COACH && it.enabled })
                         app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.AutoAwesome, tr("Coach"), tint = app.superhealth.ui.coach.CoachHue) { nav.go("coach") }
-                    app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Tune, tr("Personnaliser")) { arranging = true }
+                    app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Tune, tr("Personnaliser"), Modifier.tourTarget("customize") { nav.go("dash/edit") }) { arranging = true }
                     if (sh.leagueEnabled && sh.socialFeedEnabled) app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.Group, tr("Groupe")) { nav.go("feed") }
                     app.superhealth.nutrition.ui.components.SettingsAvatar { nav.go("settings") }
                 }

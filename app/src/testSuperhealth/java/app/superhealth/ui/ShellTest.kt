@@ -36,7 +36,7 @@ class ShellTest {
         assertEquals(listOf(DashCard.RINGS, DashCard.CALORIES), withRings(listOf(DashCard.CALORIES)))
         val l = listOf(DashCard.VITALS, DashCard.RINGS)
         assertEquals(l, withRings(l))
-        assertTrue(DashCard.defaults.indexOf(DashCard.RINGS) == DashCard.defaults.indexOf(DashCard.VITALS) - 1)
+        assertEquals(DashCard.RINGS, DashCard.defaults.first())
     }
 
     @Test fun socialCardsPreserveTheChosenOrderAndDoNotRestoreRemovedLeagueCard() {
@@ -58,7 +58,7 @@ class ShellTest {
         assertEquals(next, withQuestHero(next))
         val old = withQuestHero(listOf(DashCard.STREAKS, DashCard.RINGS, DashCard.QUESTS))
         assertEquals(listOf(DashCard.QUESTS, DashCard.RINGS), old)
-        assertEquals(DashCard.QUESTS, DashCard.defaults.first())
+        assertFalse(DashCard.QUESTS in DashCard.defaults)
         assertFalse(DashCard.STREAKS in DashCard.defaults)
     }
 

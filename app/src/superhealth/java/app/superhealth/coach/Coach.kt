@@ -13,7 +13,6 @@ import app.superhealth.insights.text
 import app.superhealth.nutrition.NutriApp
 import app.superhealth.nutrition.data.AiConfig
 import app.superhealth.nutrition.data.Anon
-import app.superhealth.nutrition.data.AiFood
 import app.superhealth.nutrition.data.Net
 import app.superhealth.nutrition.domain.Sex
 import app.superhealth.training.WorkoutApp
@@ -45,14 +44,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 
 /**
  * Coach IA intégré. Comme WHOOP Coach, Oura Advisor ou le coach Gemini de Google Health, il répond à partir de vos propres
@@ -240,6 +237,7 @@ object Coach {
             val fromMs = from.atStartOfDay(zone).toInstant().toEpochMilli()
             val eaten = repo.entries.rangeFlow(from.toEpochDay(), today.toEpochDay()).first().groupBy { it.epochDay }
             val byDay = an.days.associateBy { it.epochDay }
+            val foodFlags = if (shares(Share.FOOD)) repo.dayFlags.allFlow().first().associateBy { it.epochDay } else emptyMap()
             val health = listOf(Metric.STEPS, Metric.SLEEP, Metric.RESTING_HR, Metric.HRV, Metric.RECOVERY, Metric.EFFORT).filter { Bridge.hasSource(it) }
             val values = health.associateWith { m ->
                 generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.toList()
@@ -252,6 +250,7 @@ object Coach {
             val sh = SuperPrefs.settings.value
 
             buildString {
+                appendLine("Snapshot date: $today; timezone: $zone. Dates before today are historical, never calories to catch up on.")
                 if (shares(Share.PROFILE) || shares(Share.WEIGHT)) appendLine("## Profile")
                 if (shares(Share.PROFILE)) {
                     val age = today.year - p.birthYear
@@ -279,6 +278,7 @@ object Coach {
                     }
                 }
                 if (shares(Share.FOOD)) {
+                    appendLine(FoodContext.RULES)
                     val t = an.targetFor(today.toEpochDay()).macros
                     appendLine("Nutrition program: ${an.program.style.name.lowercase()}. Expenditure mode: ${an.program.tdeeMode.name.lowercase()}. Keep user-set targets and accepted check-ins authoritative.")
                     appendLine("App-computed expenditure (TDEE): ${n(an.currentTdee)} kcal/day")
@@ -292,12 +292,18 @@ object Coach {
                     if (todayFood.isNotEmpty()) appendLine("Eaten so far today: ${n(todayFood.sumOf { it.kcal })} kcal, protein ${n(todayFood.sumOf { it.protein })} g, " +
                         "fat ${n(todayFood.sumOf { it.fat })} g, carbs ${n(todayFood.sumOf { it.carbs })} g (${todayFood.size} items)")
                     else appendLine("Nothing logged yet today.")
+                    appendLine("## Planned meals (not consumed; do not include in eaten totals)")
+                    app.superhealth.meals.MealPlanner.plans.value.values.filter { it.day in today.toEpochDay()..today.toEpochDay() + 6 }
+                        .sortedBy { it.day }.forEach { plan ->
+                            plan.meals.filter { !it.logged }.forEach { meal -> appendLine("${LocalDate.ofEpochDay(plan.day)} | ${meal.title} | ${n(meal.macros.kcal)} kcal planned") }
+                        }
                 }
 
                 // colonnes des catégories partagées seulement
                 val cols = buildList<Pair<String, (LocalDate) -> String>> {
                     fun v(m: Metric, d: LocalDate, f: (Double) -> String) = values[m]?.get(d)?.let(f) ?: "-"
                     if (shares(Share.FOOD)) {
+                        add("food log status" to { d -> FoodContext.status(foodFlags[d.toEpochDay()], eaten[d.toEpochDay()].orEmpty().isNotEmpty(), d == today) })
                         add("kcal eaten/target" to { d -> val food = eaten[d.toEpochDay()].orEmpty(); val tg = an.targetFor(d.toEpochDay()).macros
                             if (food.isEmpty()) "- / ${n(tg.kcal)}" else "${n(food.sumOf { it.kcal })} / ${n(tg.kcal)}" })
                         add("protein g" to { d -> eaten[d.toEpochDay()].orEmpty().takeIf { it.isNotEmpty() }?.let { f -> n(f.sumOf { it.protein }) } ?: "-" })
@@ -420,7 +426,7 @@ object Coach {
             .replace("{language}", if (Lang.english) "English" else "French")
             .replace("{date}", LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Locale.ENGLISH)))
             .replace("{name}", if (Lang.english) "the user" else "l'utilisateur") +
-            "\n\n# Data snapshot\n" + context
+            "\n\n" + FoodContext.RULES + "\n\n# Data snapshot\n" + context
     }
 
     /** Fournisseur sans appel de fonctions (refus de « tools ») : on ne les renvoie plus pendant cette session. */

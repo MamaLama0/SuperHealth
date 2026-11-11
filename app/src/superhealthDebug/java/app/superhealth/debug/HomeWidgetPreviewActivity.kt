@@ -25,7 +25,7 @@ class HomeWidgetPreviewActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (packageName != "app.superhealth.qa") { finish(); return }
+        if (packageName !in setOf("app.superhealth.qa", "app.superhealth.test40")) { finish(); return }
         widgetId = savedInstanceState?.getInt("widgetId") ?: AppWidgetManager.INVALID_APPWIDGET_ID
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) host.deleteHost()
         loadWidget()

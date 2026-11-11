@@ -73,7 +73,7 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     val opened = (inventory.day ?: Long.MIN_VALUE) >= day
     val unlimited = EquipmentStore.unlimitedPacks
     val canOpen = cards.isNotEmpty() && (unlimited || gate.canOpen(inventory.day) || inventory.freePacks > 0 ||
-        inventory.rewardPending != null || inventory.remotePendingDay == day || wallet?.packCredits.orEmpty().isNotEmpty())
+        inventory.rewardPending != null || inventory.remotePendingDay == day || (wallet?.packCredits ?: inventory.packCredits).isNotEmpty())
     var index by rememberSaveable { mutableIntStateOf(0) }
     val slot = EquipmentBoosters.slots[index.mod(EquipmentBoosters.slots.size)]
     val variantDay = day + if (unlimited) inventory.opened else 0
@@ -85,6 +85,7 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     val renderKey = "${slot.key}|$skin|${displayedEdition.key}"
     var rendered by remember { mutableStateOf<String?>(null) }
     val allowed = canOpen && sample == null
+    var notice by rememberSaveable { mutableStateOf(false) }
     var quests by rememberSaveable { mutableStateOf(false) }
     var rates by rememberSaveable { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
@@ -150,13 +151,22 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
             TextButton({ nav.go("cards/duel") }, Modifier.align(Alignment.CenterStart), contentPadding = PaddingValues(0.dp)) {
-                Icon(Icons.Rounded.SportsMartialArts, null, Modifier.size(18.dp))
+                Icon(Icons.Rounded.LocalFireDepartment, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(5.dp)); Text(tr("L’arène"))
             }
             TextButton({ nav.go("cards/market") }, Modifier.align(Alignment.CenterEnd), contentPadding = PaddingValues(0.dp)) {
+                Icon(Icons.Rounded.Storefront, tr("Boutique"), Modifier.size(18.dp))
+                Spacer(Modifier.width(5.dp))
                 GoldBadge(wallet?.gold ?: inventory.gold)
             }
             Text(tr("ARSENAL"), Modifier.align(Alignment.Center).padding(top = 3.dp), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+        }
+        if (inventory.releaseGiftGranted && !settings.arsenal40NoticeSeen && !unlimited) {
+            TextButton({ notice = true }) {
+                Icon(Icons.Rounded.CardGiftcard, null, Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(tr("4.0 · 15 paquets offerts"))
+            }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             EquipmentWeb("index.html", script, Modifier.fillMaxSize(), active || rendered != renderKey, ownsGestures = true) { kind, value ->
@@ -225,6 +235,15 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
             opening = null
         }
     }
+    if (notice) AlertDialog(
+        onDismissRequest = { notice = false },
+        title = { Text("Vasi c bon j'en ai marre enjoy") },
+        text = { Text(tr("Toutes les collections de cartes ont été remises à zéro. Pour me faire pardonner, voici 15 paquets offerts.")) },
+        confirmButton = { TextButton({
+            SuperPrefs.update { it.copy(arsenal40NoticeSeen = true) }
+            notice = false
+        }) { Text(tr("Compris")) } },
+    )
     if (quests) ModalBottomSheet(onDismissRequest = { quests = false }, containerColor = Mf.colors.background) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).navigationBarsPadding().padding(bottom = 18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {

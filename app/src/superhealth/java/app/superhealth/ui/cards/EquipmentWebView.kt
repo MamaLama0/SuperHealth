@@ -9,6 +9,9 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.key
+import app.superhealth.modules.Modules
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -60,7 +63,8 @@ internal fun EquipmentWeb(
     action: ((String, String) -> Unit)? = null,
 ) {
     val callback = rememberUpdatedState(action)
-    AndroidView(
+    val group = Modules.installed.collectAsState().value.firstOrNull { it.kind == Modules.LEAGUE && it.enabled }
+    key(group?.version) { AndroidView(
         modifier = modifier,
         factory = { context ->
             EquipmentWebView(context, ownsGestures = ownsGestures).apply {
@@ -95,8 +99,12 @@ internal fun EquipmentWeb(
                                 else -> null
                             }
                             if (mime != null) try {
-                                return WebResourceResponse(mime, "UTF-8", 200, "OK",
-                                    mapOf("Cache-Control" to "no-cache"), context.assets.open("arsenal/$path"))
+                                val art = when (mime) {
+                                    "image/webp", "model/gltf-binary", "application/octet-stream" -> Modules.arsenalAsset("arsenal/$path")
+                                    else -> null
+                                }
+                                val input = art?.inputStream() ?: context.assets.open("arsenal/$path")
+                                return WebResourceResponse(mime, "UTF-8", 200, "OK", mapOf("Cache-Control" to "no-cache"), input)
                             } catch (_: java.io.IOException) {
                                 // Other requests are blocked below.
                             }
@@ -122,5 +130,5 @@ internal fun EquipmentWeb(
             view.stopLoading()
             view.destroy()
         },
-    )
+    ) }
 }

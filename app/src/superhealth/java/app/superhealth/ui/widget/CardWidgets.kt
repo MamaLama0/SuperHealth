@@ -7,9 +7,6 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.cornerRadius
-import androidx.glance.background
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.LinearProgressIndicator
@@ -26,7 +23,6 @@ import app.superhealth.cards.EquipmentStore
 import app.superhealth.cards.PackProgress
 import app.superhealth.league.ProgressRepository
 import java.time.LocalDate
-import app.superhealth.cards.Tier
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import nodomain.freeyourgadget.gadgetbridge.R
@@ -42,14 +38,14 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
         CardStore.load(context)
         val st = CardStore.state.value
         val enabled = SuperPrefs.settings.value.leagueEnabled
-        val equipment = if (enabled && kind != Kind.QUESTS) {
+        val equipment = if (enabled) {
             runCatching { EquipmentStore.load(context) }
             EquipmentStore.state.value
         } else null
         val gold = Color(0xFFE0A82E)
         var hue = when (kind) { Kind.PACKS -> Color(0xFF638CE7); Kind.QUESTS -> gold; Kind.CARD -> Color(0xFF7C5CFF) }
         val icon = when (kind) { Kind.PACKS -> R.drawable.ic_w_cards; Kind.QUESTS -> R.drawable.ic_w_flag; Kind.CARD -> R.drawable.ic_w_lift }
-        val route = when (kind) { Kind.PACKS -> "cards/packs"; Kind.QUESTS -> "cards/quests"; Kind.CARD -> "social" }
+        var route = when (kind) { Kind.PACKS -> "cards/packs"; Kind.QUESTS -> "cards/quests"; Kind.CARD -> "social" }
         val title = tr(when (kind) { Kind.PACKS -> "Packs"; Kind.QUESTS -> "Quêtes des cartes"; Kind.CARD -> "Mon personnage" })
         var value = "—"; var unit: String? = null; var caption = tr("Ouvrir SuperHealth"); var detail = ""; var fraction: Float? = null
         if (!enabled) caption = tr("Fonctions sociales désactivées")
@@ -60,11 +56,13 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                 val gate = PackProgress.from(day, ProgressRepository.selectedTracks(SuperPrefs.settings.value), progress?.validatedToday.orEmpty())
                 val claimed = equipment?.day?.let { it >= day } == true
                 val ready = !claimed && gate.ready
-                value = if (ready || equipment?.pending != null) "1" else if (claimed || progress != null) "0" else "—"
+                val bonus = (equipment?.freePacks ?: 0) + (equipment?.packCredits?.size ?: 0)
+                value = if (ready || bonus > 0 || equipment?.pending != null || equipment?.rewardPending != null) (bonus + if (ready || equipment?.pending != null) 1 else 0).coerceAtLeast(1).toString() else if (claimed || progress != null) "0" else "—"
                 unit = tr("pack")
                 if (equipment?.goldNext == true) hue = gold
                 caption = tr(when {
                     equipment?.pending != null -> "Reprendre le tirage"
+                    bonus > 0 || equipment?.rewardPending != null -> "Paquets à récupérer"
                     claimed -> "Pack du jour ouvert"
                     ready -> "Pack du jour prêt"
                     else -> "Vérifier les suivis du jour"
@@ -77,8 +75,11 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                     ArsenalGame.quests(it, ProgressRepository.selectedTracks(SuperPrefs.settings.value))
                 }
                 val rank = quest?.rank ?: 0
-                value = "$rank/3"
-                caption = tr(listOf("Premier sceau", "Grand sceau", "Sceau héroïque", "Tous les sceaux du jour")[rank])
+                val ready = quest?.gate?.canOpen(equipment?.day) == true || (equipment?.freePacks ?: 0) > 0 ||
+                    equipment?.packCredits.orEmpty().isNotEmpty() || equipment?.rewardPending != null
+                if (ready) route = "cards/packs"
+                value = if (ready) tr("À ouvrir") else if (quest == null) "—" else "$rank/3"
+                caption = if (ready) tr("Paquet à récupérer") else if (quest == null) tr("Actualiser les suivis dans l’app") else tr(listOf("Premier sceau", "Grand sceau", "Sceau héroïque", "Tous les sceaux du jour")[rank])
                 fraction = rank / 3f
                 detail = quest?.let { "${it.weekCount}/6 " + tr("jours cette semaine") }.orEmpty()
             }

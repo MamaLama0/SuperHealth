@@ -2,7 +2,6 @@ package app.superhealth.ui.league
 
 import android.graphics.Bitmap
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
@@ -10,8 +9,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.rememberCoroutineScope
@@ -25,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.PersonAdd
@@ -48,9 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,14 +54,12 @@ import androidx.navigation.NavHostController
 import app.superhealth.league.League
 import app.superhealth.league.HealthIndex
 import app.superhealth.nutrition.ui.components.GroupCard
-import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
 import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.Segmented
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.screens.DetailScaffold
-import app.superhealth.ui.ProfilePhoto
 import app.superhealth.ui.coach.askCoach
 import app.superhealth.ui.coach.coachAvailable
 import app.superhealth.ui.theme.Mf

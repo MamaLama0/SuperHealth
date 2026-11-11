@@ -2,8 +2,6 @@ package app.superhealth.cards
 
 import android.content.Context
 import android.util.AtomicFile
-import app.superhealth.SuperPrefs
-import app.superhealth.league.ProgressRepository
 import app.superhealth.league.Progression
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -169,6 +167,11 @@ internal object EquipmentStore {
 
     @Serializable
     data class State(
+        val collectionVersion: Int = 0,
+        val releaseGiftGranted: Boolean = false,
+        val packPurchases: List<String> = emptyList(),
+        val sealPacks: Map<Long, Int> = emptyMap(),
+        val weeklyPacks: Map<Long, Int> = emptyMap(),
         val day: Long? = null,
         val opened: Int = 0,
         val nextSerial: Long = 1,
@@ -179,6 +182,7 @@ internal object EquipmentStore {
         val remotePendingDay: Long? = null,
         val rewardPending: String? = null,
         val freePacks: Int = 0,
+        val packCredits: List<String> = emptyList(),
         val ice: Int = 0,
         val revision: Long = 0,
         val gold: Int = 0,
@@ -208,7 +212,12 @@ internal object EquipmentStore {
         val save = file(ctx)
         val saved = try { json.decodeFromString<State>(save.readFully().decodeToString()) }
             catch (_: java.io.FileNotFoundException) { State() }
-        if (saved.pending == null) changes.value = saved else persist(ctx, saved.copy(pending = null))
+        val migrated = if (saved.collectionVersion < ArsenalGame.COLLECTION_VERSION) saved.copy(
+            collectionVersion = ArsenalGame.COLLECTION_VERSION, owned = emptyList(), equipped = emptyMap(),
+            day = null, opened = 0, serverOpened = null, remotePendingDay = null, rewardPending = null,
+        ) else saved
+        val ready = migrated.copy(pending = null)
+        if (ready == saved) changes.value = ready else persist(ctx, ready)
         loaded = true
     }
 
@@ -245,7 +254,7 @@ internal object EquipmentStore {
             val day = quests.today
             if (day != LocalDate.now().toEpochDay()) return@withLock null
             val daily = quests.gate.canOpen(old.day)
-            val reward = old.rewardPending ?: if (!daily && old.freePacks == 0) ArsenalGame.remote.value?.packCredits?.firstOrNull() else null
+            val reward = old.rewardPending ?: if (!daily && old.freePacks == 0) (ArsenalGame.remote.value?.packCredits ?: old.packCredits).firstOrNull() else null
             val retryDaily = old.remotePendingDay == day
             if (!daily && !retryDaily && reward == null && old.freePacks == 0) return@withLock null
             if (reward != null || retryDaily || daily && Economy.available() && ArsenalGame.canOpenOnline(ctx)) {
@@ -286,27 +295,45 @@ internal object EquipmentStore {
 
     private fun mergeRemote(old: State, remote: ArsenalGame.View): State {
         if (remote.revision < old.revision) return old
+        if (remote.collectionVersion < ArsenalGame.COLLECTION_VERSION) throw ArsenalGame.Upgrade()
         val existing = old.owned.mapNotNull { piece -> piece.serverKey?.let { it to piece.serial } }.toMap()
         var serial = old.nextSerial
         val owned = old.owned.filter { it.serverKey == null } + remote.owned.map { it.local(existing[it.key] ?: serial++) }
         val ownedIds = owned.map { it.serial }.toSet()
-        return old.copy(owned = owned, nextSerial = serial, equipped = old.equipped.filterValues { it in ownedIds },
-            serverOpened = remote.opened, revision = remote.revision, dungeon = remote.dungeon ?: old.dungeon)
+        return old.copy(owned = owned, nextSerial = serial, releaseGiftGranted = true, equipped = old.equipped.filterValues { it in ownedIds },
+            serverOpened = remote.opened, revision = remote.revision, gold = remote.gold, ice = remote.ice, packCredits = remote.packCredits, dungeon = remote.dungeon ?: old.dungeon)
     }
 
     suspend fun syncRemote(ctx: Context, remote: ArsenalGame.View) = change(ctx) { mergeRemote(it, remote) }
 
-    suspend fun dungeon(ctx: Context, quests: ArsenalGame.Quests, attack: Boolean = false, stance: CombatStance = CombatStance.ASSAULT) = change(ctx) { old ->
+    suspend fun dungeon(ctx: Context, quests: ArsenalGame.Quests, attack: Boolean = false) = change(ctx) { old ->
         val state = ArsenalGame.settle(old.dungeon, quests)
-        val (next, gold) = if (attack) ArsenalGame.attack(state, quests, bonuses(old, catalog.value).values.sum(), damageMix(old, catalog.value), stance) else state to 0
+        val (next, gold) = if (attack) ArsenalGame.attack(state, quests, bonuses(old, catalog.value).values.sum(), damageMix(old, catalog.value)) else state to 0
         val recent = old.goldRanks.filterKeys { it >= quests.today - 35 }.toMutableMap()
         val rewards = intArrayOf(0, 25, 45, 75)
         val previousRank = recent[quests.today] ?: 0
         val rank = maxOf(previousRank, quests.rank)
         if (rank > previousRank) recent[quests.today] = rank
         val drops = if (next.floor > state.floor) ArsenalGame.drops(state.floor) else ArsenalGame.Drops(0, 0)
-        old.copy(dungeon = next, gold = old.gold + gold + rewards[rank] - rewards[previousRank], goldRanks = recent,
-            freePacks = old.freePacks + drops.packs, ice = old.ice + drops.ice)
+        val day = quests.today
+        val week = Progression.week(day)
+        val dailyPacks = maxOf(old.sealPacks[day] ?: 0, ArsenalGame.sealPacks(rank))
+        val weeklyPacks = maxOf(old.weeklyPacks[week] ?: 0, ArsenalGame.weeklyGoals.count { quests.weekCount >= it })
+        val newPacks = dailyPacks - (old.sealPacks[day] ?: 0) + weeklyPacks - (old.weeklyPacks[week] ?: 0)
+        val gift = if (old.releaseGiftGranted || unlimitedPacks || Economy.available()) 0 else 15
+        old.copy(dungeon = next, releaseGiftGranted = old.releaseGiftGranted || gift > 0,
+            sealPacks = old.sealPacks.filterKeys { it >= day - 42 } + (day to dailyPacks),
+            weeklyPacks = old.weeklyPacks.filterKeys { it >= week - 42 } + (week to weeklyPacks), gold = old.gold + gold + rewards[rank] - rewards[previousRank], goldRanks = recent,
+            freePacks = old.freePacks + drops.packs + newPacks + gift, ice = old.ice + drops.ice)
+    }
+
+    suspend fun purchasePack(ctx: Context, request: String) = change(ctx) { state ->
+        if (request in state.packPurchases) state
+        else {
+            if (state.gold < ArsenalGame.PACK_PRICE) throw Economy.Unavailable("Pas assez d’or pour ce paquet.")
+            state.copy(gold = state.gold - ArsenalGame.PACK_PRICE, freePacks = state.freePacks + 1,
+                packPurchases = (state.packPurchases + request).takeLast(100))
+        }
     }
 
     suspend fun freeze(ctx: Context, quests: ArsenalGame.Quests) = change(ctx) { old ->
@@ -391,6 +418,7 @@ internal object EquipmentStore {
             val next = transform(old)
             if (next != old) persist(ctx, next)
         }
+        runCatching { app.superhealth.ui.widget.CardWidgets.refresh(ctx) }
     }
 
     internal fun draw(pool: List<EquipmentCard>, next: Long, gold: Boolean, random: Random = Random.Default,

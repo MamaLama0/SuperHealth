@@ -5,7 +5,6 @@ import app.superhealth.bridge.Bridge
 import app.superhealth.bridge.RunImport
 import app.superhealth.health.data.WorkoutDetail
 import app.superhealth.health.data.WorkoutDetails
-import app.superhealth.training.WorkoutApp
 import app.superhealth.training.domain.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

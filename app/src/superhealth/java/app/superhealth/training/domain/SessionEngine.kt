@@ -1,7 +1,6 @@
 package app.superhealth.training.domain
 
 import java.util.UUID
-import kotlin.math.max
 import kotlin.math.round
 
 /** Construction et déroulement d'une séance (WorkoutSession) : pré-remplissage, échauffements, progression en séance. */

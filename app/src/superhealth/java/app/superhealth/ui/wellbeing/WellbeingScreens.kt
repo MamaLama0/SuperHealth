@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +71,6 @@ import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
-import app.superhealth.ui.go
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import app.superhealth.wellbeing.Bedtime
@@ -83,7 +81,6 @@ import app.superhealth.wellbeing.Reminders
 import androidx.compose.runtime.withFrameMillis
 import java.time.LocalDate
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin

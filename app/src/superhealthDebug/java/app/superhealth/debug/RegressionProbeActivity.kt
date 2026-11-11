@@ -65,7 +65,7 @@ class RegressionProbeActivity : Activity() {
                     }
                     "social-304-prepare" -> {
                         seed()
-                        SuperPrefs.update { it.copy(leagueEnabled = true, socialFeedEnabled = true, socialFeedIntroSeen = true) }
+                        SuperPrefs.update { it.copy(leagueEnabled = true, socialFeedEnabled = true) }
                         League.configure(this@RegressionProbeActivity) { League.State(customRelay = true,
                             relayUrl = intent.getStringExtra("server").orEmpty(), syncsPerDay = 0, shareActivities = true) }
                         val image = android.graphics.Bitmap.createBitmap(192, 192, android.graphics.Bitmap.Config.ARGB_8888)
@@ -107,7 +107,7 @@ class RegressionProbeActivity : Activity() {
                         SuperPrefs.update { settings }
                         dir.deleteRecursively()
                     }
-                    "feed-intro" -> SuperPrefs.update { it.copy(socialFeedIntroSeen = false, socialFeedEnabled = true) }
+                    "feed-intro" -> SuperPrefs.update { it.copy(appTourPending = true, socialFeedEnabled = true) }
                     "feed-fixture" -> {
                         val now = System.currentTimeMillis()
                         League.configure(this@RegressionProbeActivity) { it.copy(posts = listOf(
