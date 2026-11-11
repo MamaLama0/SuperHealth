@@ -177,6 +177,7 @@ internal object EquipmentStore {
         val pending: Opening? = null,
         val serverOpened: Int? = null,
         val rewardPending: String? = null,
+        val paidOpeningPending: Boolean = false,
         val freePacks: Int = 0,
         val packCredits: List<String> = emptyList(),
         val ice: Int = 0,
@@ -210,7 +211,7 @@ internal object EquipmentStore {
             catch (_: java.io.FileNotFoundException) { State() }
         val migrated = if (saved.collectionVersion < ArsenalGame.COLLECTION_VERSION) saved.copy(
             collectionVersion = ArsenalGame.COLLECTION_VERSION, owned = emptyList(), equipped = emptyMap(),
-            opened = 0, serverOpened = null, rewardPending = null,
+            opened = 0, serverOpened = null, rewardPending = null, paidOpeningPending = false,
         ) else saved
         val ready = migrated.copy(pending = null)
         if (ready == saved) changes.value = ready else persist(ctx, ready)
@@ -247,16 +248,30 @@ internal object EquipmentStore {
             loadLocked(ctx)
             val old = changes.value
             val day = LocalDate.now().toEpochDay()
-            val reward = old.rewardPending ?: (ArsenalGame.remote.value?.packCredits ?: old.packCredits).firstOrNull()
+            val online = Economy.available()
+            val wallet = ArsenalGame.remote.value.takeIf { online }
+            val reward = old.rewardPending ?: (wallet?.packCredits ?: old.packCredits).firstOrNull()
             if (old.rewardPending == null && old.freePacks > 0) {
                 return@withLock openLocal(ctx, old.copy(freePacks = old.freePacks - 1, opened = old.opened + 1),
                     slot, day + old.opened, old.opened % 10 == 9)
             }
-            if (reward == null) return@withLock null
-            val requestState = old.copy(rewardPending = reward)
+            if (reward == null && (wallet?.gold ?: old.gold) < ArsenalGame.PACK_PRICE) return@withLock null
+            if (reward == null && !online) {
+                return@withLock openLocal(ctx, old.copy(gold = old.gold - ArsenalGame.PACK_PRICE, opened = old.opened + 1),
+                    slot, day + old.opened, old.opened % 10 == 9)
+            }
+            val key = reward ?: java.util.UUID.randomUUID().toString()
+            val paid = reward == null || old.paidOpeningPending
+            val requestState = old.copy(rewardPending = key, paidOpeningPending = paid)
             if (requestState != old) persist(ctx, requestState)
-            val remote = ArsenalGame.claimPack(ctx, slot, reward, day)
-            val merged = mergeRemote(requestState, remote).copy(rewardPending = null)
+            val remote = try { ArsenalGame.claimPack(ctx, slot, key, day, paid) }
+            catch (error: Exception) {
+                if (paid && (error is Economy.InsufficientArsenalGold || error is ArsenalGame.Upgrade)) {
+                    persist(ctx, requestState.copy(rewardPending = null, paidOpeningPending = false))
+                }
+                throw error
+            }
+            val merged = mergeRemote(requestState, remote).copy(rewardPending = null, paidOpeningPending = false)
             val pack = remote.opening
             if (pack == null) {
                 persist(ctx, merged)

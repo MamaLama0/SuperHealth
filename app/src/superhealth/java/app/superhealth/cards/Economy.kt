@@ -23,6 +23,7 @@ import app.superhealth.cards.CardStore.PACK_PRICE
 object Economy {
     open class Unavailable(message: String) : Exception(message)
     internal class Offline : Unavailable("Relais injoignable. Réessaie pour récupérer le même tirage.")
+    internal class InsufficientArsenalGold : Unavailable("Il te manque des pièces d’or.")
 
     /**
      * Quête fixée par le serveur : son genre, son palier de difficulté (0 à 2, adapté à l'utilisateur) et ses éclats.
@@ -112,7 +113,7 @@ object Economy {
             val arsenalRequest = body["op"]?.jsonPrimitive?.content?.startsWith("arsenal-") == true
             when {
                 arsenalRequest && r.code == 400 -> throw ArsenalGame.Unsupported()
-                arsenalRequest && r.code == 402 -> throw Unavailable("Il te manque des pièces d’or.")
+                arsenalRequest && r.code == 402 -> throw InsufficientArsenalGold()
                 arsenalRequest && r.code == 409 -> throw Unavailable("Action indisponible. Vérifie le suivi, la carte ou le groupe.")
                 arsenalRequest && !r.isSuccessful -> throw Unavailable("L’Arsenal est indisponible (${r.code}).")
                 r.code == 402 && body["op"]?.jsonPrimitive?.content?.startsWith("arsenal-") == true -> throw Unavailable("Pas assez d’or pour cet achat ou cette enchère.")

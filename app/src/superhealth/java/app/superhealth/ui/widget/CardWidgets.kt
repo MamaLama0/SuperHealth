@@ -54,7 +54,7 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                 value = count.coerceAtLeast(if (equipment?.rewardPending != null) 1 else 0).toString()
                 unit = tr("pack")
                 if (equipment?.goldNext == true) hue = gold
-                caption = tr(if (count > 0 || equipment?.rewardPending != null) "Paquets à récupérer" else "Acheter un paquet")
+                caption = tr(if (count > 0 || equipment?.rewardPending != null) "Paquets à récupérer" else "Ouvrir le paquet")
             }
             Kind.QUESTS -> {
                 val date = LocalDate.now()

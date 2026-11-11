@@ -46,16 +46,17 @@ import java.time.LocalDate
 import java.util.Locale
 
 @Composable
-internal fun DailyPackRoute(nav: NavHostController) {
+internal fun DailyPackRoute(nav: NavHostController, onOpeningComplete: () -> Unit) {
     Column(Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding().navigationBarsPadding()) {
         NavBar("Paquets", { nav.popBackStack() })
-        EquipmentPacks(nav, true, Modifier.weight(1f).fillMaxWidth())
+        EquipmentPacks(nav, true, onOpeningComplete, Modifier.weight(1f).fillMaxWidth())
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: Modifier = Modifier, onDashboard: (() -> Unit)? = null) {
+internal fun EquipmentPacks(nav: NavHostController, active: Boolean, onOpeningComplete: () -> Unit,
+    modifier: Modifier = Modifier, onDashboard: (() -> Unit)? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings by SuperPrefs.settings.collectAsState()
@@ -74,7 +75,9 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     var tearProgress by remember { mutableFloatStateOf(0f) }
     val unlimited = EquipmentStore.unlimitedPacks
     val packCount = inventory.freePacks + (wallet?.packCredits ?: inventory.packCredits).size
-    val canOpen = cards.isNotEmpty() && (unlimited || packCount > 0 || inventory.rewardPending != null)
+    val goldBalance = wallet?.gold ?: inventory.gold
+    val hasPack = packCount > 0 || inventory.rewardPending != null
+    val canOpen = cards.isNotEmpty() && (unlimited || hasPack || goldBalance >= ArsenalGame.PACK_PRICE)
     var index by rememberSaveable { mutableIntStateOf(0) }
     val slot = EquipmentBoosters.slots[index.mod(EquipmentBoosters.slots.size)]
     val variantDay = day + if (inventory.freePacks > 0 || unlimited) inventory.opened else inventory.serverOpened ?: inventory.opened
@@ -202,15 +205,16 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
                         IconButton({ step(1) }, Modifier.size(36.dp)) { Icon(Icons.Rounded.ExpandMore, tr("Paquet suivant"), tint = Mf.colors.text) }
                     }
                     if (sample != null) TextButton({ sample = null }) { Text(tr("Quitter l’aperçu")) }
-                    else if (!unlimited && allowed) TextButton({ openCurrent() }, enabled = !committing,
+                    else if (!unlimited) TextButton({ openCurrent() }, enabled = allowed && !committing,
                         contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        Text(if (committing) tr("Préparation du tirage…") else tr("Ouvrir le paquet") + " ($packCount)", style = MaterialTheme.typography.labelMedium)
-                    }
-                    else if (!unlimited && packCount == 0 && inventory.rewardPending == null && webError == null) {
-                        TextButton({ nav.go("cards/market") }, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                            Text(tr("Acheter un paquet"), style = MaterialTheme.typography.labelMedium)
-                        }
-                    } else Text(webError ?: issue ?: tr(if (unlimited) "Ouvertures illimitées" else "Préparation du tirage…"),
+                        Text(when {
+                            committing -> tr("Préparation du tirage…")
+                            webError != null -> webError.orEmpty()
+                            inventory.rewardPending != null -> tr("Reprendre l’ouverture")
+                            packCount > 0 -> tr("Ouvrir le paquet") + " ($packCount)"
+                            else -> tr("Ouvrir le paquet") + " · ${ArsenalGame.PACK_PRICE} " + tr("or")
+                        }, style = MaterialTheme.typography.labelMedium)
+                    } else Text(webError ?: issue ?: tr("Ouvertures illimitées"),
                         color = Mf.colors.textSecondary, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
                 }
                 PackAction(tr("Profil"), Icons.Rounded.Person) { nav.go("cards/equipment") }
@@ -222,12 +226,15 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     opening?.let { draw ->
         FocusOpening(draw, cards, inventory.owned, direction, tearProgress) {
             opening = null
+            onOpeningComplete()
         }
     }
-    if (quests) ModalBottomSheet(onDismissRequest = { quests = false }, containerColor = Mf.colors.background) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).navigationBarsPadding().padding(bottom = 18.dp)) {
+    if (quests) ModalBottomSheet(onDismissRequest = { quests = false }, containerColor = Mf.colors.background,
+        modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)),
+        contentWindowInsets = { WindowInsets.safeDrawing }) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(tr("Quêtes de l’Arsenal"), style = MaterialTheme.typography.headlineSmall)
+                Text(tr("Quêtes de l’Arsenal"), Modifier.weight(1f).padding(end = 10.dp), style = MaterialTheme.typography.headlineSmall)
                 GoldBadge(wallet?.gold ?: inventory.gold)
             }
             val targets = dayQuests

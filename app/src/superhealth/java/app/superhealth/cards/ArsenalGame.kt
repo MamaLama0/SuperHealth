@@ -72,7 +72,7 @@ internal object ArsenalGame {
     }
 
     const val COLLECTION_VERSION = 1
-    const val PACK_PRICE = 75
+    const val PACK_PRICE = 100
     const val WEEKLY_GOLD = 25
     val weeklyGoals = listOf(2, 4, 6)
 
@@ -113,14 +113,18 @@ internal object ArsenalGame {
         put("days", buildJsonArray { quests.days.forEach { day -> add(buildJsonObject { put("day", day.day); put("rank", day.rank) }) } })
     }
 
-    suspend fun claimPack(ctx: Context, slot: EquipmentSlot, key: String, day: Long): View =
-        request(ctx, "v3-open") {
+    suspend fun claimPack(ctx: Context, slot: EquipmentSlot, key: String, day: Long, paid: Boolean): View = try {
+        request(ctx, if (paid) "open-paid" else "v3-open") {
             put("slot", slot.name)
             put("booster", if (slot == EquipmentSlot.WEAPON) "WEAPON" else "ARMOR")
             put("rewardKey", key)
             put("today", day)
             put("days", JsonArray(emptyList()))
         }
+    } catch (e: Unsupported) {
+        if (paid) throw Upgrade()
+        throw e
+    }
 
     suspend fun purchasePack(ctx: Context, request: String) {
         if (Economy.available() && !EquipmentStore.unlimitedPacks) {

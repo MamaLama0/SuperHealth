@@ -345,6 +345,7 @@ internal object StringsArsenal {
         "Impossible d’enregistrer la fin du tirage." to "Couldn’t save the completed draw.",
         "Préparation du tirage…" to "Preparing your draw…",
         "Ouvrir le paquet" to "Open the pack",
+        "Reprendre l’ouverture" to "Resume opening",
         "Ouvertures illimitées" to "Unlimited openings",
         "Revenir au tableau de bord" to "Back to dashboard",
         "Portrait du personnage" to "Character portrait",
