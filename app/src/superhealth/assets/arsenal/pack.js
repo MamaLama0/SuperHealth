@@ -13,9 +13,9 @@ const native=(action,value='')=>window.ArsenalHost?.action(action,String(value))
 const mouthHold={at:.57,ms:450};
 const haptic=kind=>native("haptic",kind);
 const motions=[
-  {ms:1800,release:.23,detach:.70,fall:.52,rise:.34,rebound:.08,lift:.73,twist:.65,roll:1.10,pitch:2.8,frequency:36,path:0,rag:.55},
-  {ms:2150,release:.29,detach:.76,fall:.55,rise:.41,rebound:.14,lift:.99,twist:4.25,roll:1.72,pitch:2.4,frequency:31,path:1,rag:1.35},
-  {ms:2260,release:.35,detach:.76,fall:.54,rise:.43,rebound:.19,lift:.56,twist:1.55,roll:2.68,pitch:4.3,frequency:51,path:2,rag:1},
+  {ms:1800,release:.23,rise:.34,rebound:.08,frequency:36,path:0,rag:.55},
+  {ms:2150,release:.29,rise:.41,rebound:.14,frequency:31,path:1,rag:1.35},
+  {ms:2260,release:.35,rise:.43,rebound:.19,frequency:51,path:2,rag:1},
 ];
 let selected=false,reportedRender='';
 const reportRendered=()=>{
@@ -234,7 +234,7 @@ function run(){
   const vertex=`#version 300 es
   in vec3 point, normal; in vec2 uv; out vec2 tex; out vec3 pos, surfaceNormal; out float across;
   uniform vec3 turn,shift,scene; uniform vec2 tilt,ratio;
-  uniform float scale, peel, lip, shake, tension, frontier, packWidth, filmPart, flutter, tearKind, fray, clock, tearSide, cardScale;
+  uniform float scale, peel, lip, shake, tension, frontier, packWidth, tearKind, fray, tearSide, cardScale;
   vec3 rotate(vec3 p,vec3 a){
     p.yz=mat2(cos(a.x),sin(a.x),-sin(a.x),cos(a.x))*p.yz;
     p.xz=mat2(cos(a.y),sin(a.y),-sin(a.y),cos(a.y))*p.xz;
@@ -261,13 +261,6 @@ function run(){
     float coarse=tearKind<.5?sin(visibleX*31.)*.34:tearKind<1.5?sin(visibleX*49.)*.66+sin(visibleX*105.)*.35:sin(visibleX*27.)*.7+step(.56,visibleX)*.5;
     float fibres=sin(visibleX*136.)*.26+sin(visibleX*218.)*.12;
     p.y+=(coarse+fibres)*fray*released*edgeBand*.035;
-    if(filmPart>.5){
-      float tip=pow(abs(visibleX-.5)*2.,1.25);
-      float folds=sin(visibleX*15.-clock*16.)*.064+sin(visibleX*27.+clock*22.)*.027;
-      p.y+=flutter*tip*folds;
-      p.z+=flutter*(tip*folds*1.7+sin(visibleX*19.+clock*12.)*.035);
-      p.z+=sign(p.z)*flutter*edgeBand*(.013+tip*.019);
-    }
     float seam=exp(-abs(p.y)*12.);
     float pinch=exp(-pow((visibleX-frontier)*7.5,2.));
     float ripple=sin(33.*localX-10.*p.y)*sin(16.*p.y+5.*localX);
@@ -296,7 +289,7 @@ function run(){
   uniform sampler2D art, objectArt;
   uniform vec3 color, originalWrap, wrapTint;
   uniform int mode;
-  uniform float cut, flash, glint, filmPart, flutter, cardFloor, editionFx, finishFx, fxTime, curseFx, splitArt, rarityFx, wrapperFx;
+  uniform float cut, flash, glint, filmPart, cardFloor, editionFx, finishFx, fxTime, curseFx, splitArt, rarityFx, wrapperFx, filmOpacity;
   ${RelicShaders.glsl}
   float fxHash(vec2 p){return fract(sin(dot(p,vec2(41.73,87.22)))*43758.55);}
   float particles(vec2 uv,float time,float density,float speed,float seed){
@@ -470,9 +463,8 @@ function run(){
       float serration=.55+.45*sin(across*204.+sin(across*43.));
       float exposed=exp(-pow((tex.y-.87)*142.,2.))*smoothstep(0.,.075,cut-across);
       foil=mix(foil,vec3(.82,.87,.92),exposed*(.23+.35*serration));
-      foil+=grazing*flutter*.15;
     }
-    outputColor=vec4(foil,1.);
+    outputColor=vec4(foil*filmOpacity,filmOpacity);
 
   }`;
   function shader(type,source){
@@ -487,7 +479,7 @@ function run(){
   gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
   gl.useProgram(program);
-  const vars=Object.fromEntries(['objectArt','turn','shift','scene','tilt','ratio','scale','mode','cut','color','originalWrap','wrapTint','art','peel','lip','shake','flash','glint','tension','frontier','packWidth','filmPart','flutter','tearKind','fray','clock','cardFloor','cardScale','tearSide','editionFx','finishFx','fxTime','curseFx','splitArt','rarityFx','wrapperFx'].map(n=>[n,gl.getUniformLocation(program,n)]));
+  const vars=Object.fromEntries(['objectArt','turn','shift','scene','tilt','ratio','scale','mode','cut','color','originalWrap','wrapTint','art','peel','lip','shake','flash','glint','tension','frontier','packWidth','filmPart','tearKind','fray','cardFloor','cardScale','tearSide','editionFx','finishFx','fxTime','curseFx','splitArt','rarityFx','wrapperFx','filmOpacity'].map(n=>[n,gl.getUniformLocation(program,n)]));
   const point=gl.getAttribLocation(program,'point');
   const uv=gl.getAttribLocation(program,'uv');
   const normal=gl.getAttribLocation(program,'normal');
@@ -604,6 +596,7 @@ function run(){
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.enable(gl.CULL_FACE);
+  gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
   const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
   let currentTextures;
   const draw=(mesh,mode,slot,texture)=>{
@@ -650,7 +643,7 @@ function run(){
     if(canvas.width!==w||canvas.height!==h){
       canvas.width=fx.width=w; canvas.height=fx.height=h; gl.viewport(0,0,w,h);
     }
-    stageScale=Math.min(1.02,w/h*1.23,820*dpr/h);
+    stageScale=Math.min(.74,w/h*1.23,820*dpr/h);
     const k=1-Math.exp(-dt*.022);
     yaw+=(targetYaw-yaw)*(gesture?.tear&&eligible?Math.max(.42,k):k);
     renderedCut+=(cut-renderedCut)*k;
@@ -665,8 +658,8 @@ function run(){
     const sweep=motion.path===2?.53*smooth(0,.38,phase)+.47*smooth(.64,1,phase):
       motion.path===1?.29*smooth(0,.29,phase)+.38*smooth(.23,.72,phase)+.33*smooth(.69,1,phase):smooth(0,1,phase);
     const frontier=openedAt===null?renderedCut:tornAtOpening+(1-tornAtOpening)*sweep;
-    const detach=smooth(motion.release,.62-(.76-motion.detach)*.6,t);
-    const rise=smooth(motion.rise*.85,mouthHold.at,t);
+    const detach=smooth(motion.release,.55,t);
+    const rise=smooth(motion.rise*.85,mouthHold.at,t)*smooth(.52,1,detach);
     const launch=smooth(mouthHold.at,.80,t);
     const settle=smooth(.99,1.18,t);
     const drop=smooth(.76,.99,t);
@@ -694,8 +687,8 @@ function run(){
     gl.uniform2f(vars.ratio,h/w,1); gl.uniform1f(vars.scale,sceneScale);
     gl.uniform1f(vars.glint,.62);
     gl.uniform1f(vars.fxTime,reduceMotion?0:now*.001);
-    gl.uniform1f(vars.filmPart,0);gl.uniform1f(vars.flutter,0);
-    gl.uniform1f(vars.tearKind,motion.path);gl.uniform1f(vars.tearSide,tearDirection||1);gl.uniform1f(vars.fray,0);gl.uniform1f(vars.clock,0);
+    gl.uniform1f(vars.filmPart,0);gl.uniform1f(vars.filmOpacity,1);
+    gl.uniform1f(vars.tearKind,motion.path);gl.uniform1f(vars.tearSide,tearDirection||1);gl.uniform1f(vars.fray,0);
     // The wrapper and the stack share the mouth's origin until the last card
     // clears the rim. Only then does the wrapper fall away on its own.
     const mouthY=.74-.49*rise-.29*launch-recoil*.04-(openedAt===null?0:.12*(1-drop));
@@ -754,26 +747,27 @@ function run(){
     gl.uniform1f(vars.tension,openedAt===null?frontier*.66:(1-drop)*frontier*(.32+.53*flare));
     gl.uniform1f(vars.shake,recoil*.018);
     const float=openedAt===null&&!reduceMotion&&!gesture&&cut<.001 ? Math.sin(now*.0021)*.025 : 0;
-    gl.uniform3f(vars.scene,-.12*drop+recoil*.036,wrapperY+float,0);
-    gl.uniform3f(vars.shift,0,0,0); gl.uniform3f(vars.turn,0,0,recoil*.048+drop*.09);
+    const wrapperX=-.12*drop+recoil*.036;
+    const wrapperRoll=recoil*.048+drop*.09;
+    gl.uniform3f(vars.scene,wrapperX,wrapperY+float,0);
+    gl.uniform3f(vars.shift,0,0,0); gl.uniform3f(vars.turn,0,0,wrapperRoll);
     if(openedAt===null || drop<1) drawFilm(parts[0]);
-    gl.uniform2f(vars.tilt,0,yaw);
-    gl.uniform1f(vars.lip,0);
-    gl.uniform1f(vars.peel,openedAt===null?.79:1-.75*detach+.12*recoil);
-    gl.uniform3f(vars.scene,0,float,0);
-    const sail=reduceMotion?0:detach*(1-detach);
-    const flutter=reduceMotion?0:Math.sin(Math.PI*detach)**.68;
-    const travel=(tearDirection||1)*(motion.path===1?1.95:motion.path===2?2.32:2.52)*detach**1.68;
-    const wobble=sail*Math.sin(detach*18.);
-    gl.uniform1f(vars.filmPart,1);gl.uniform1f(vars.flutter,flutter);
-    gl.uniform1f(vars.clock,detach*2.6);
-    // Keep the tear aligned with the wrapper at first, then send the strip sideways and down.
-    const stripY=openedAt===null
-      ? .74-.21*smooth(.04,.60,frontier)
-      : mouthY+motion.lift*.22*Math.sin(Math.PI*detach)-.60*detach*detach;
-    gl.uniform3f(vars.shift,travel,stripY,.27*Math.sin(Math.PI*detach)+.18*detach);
-    gl.uniform3f(vars.turn,motion.pitch*detach+recoil*.18+wobble*.75,motion.twist*detach+wobble*2.,-motion.roll*detach+wobble*.48);
-    if(openedAt===null || detach<1) drawFilm(parts[1]);
+    if(openedAt===null || detach<1){
+      // Share the wrapper's transform at the seam. Lift clear before moving sideways.
+      const side=tearDirection||1;
+      const drift=smooth(.25,1,detach);
+      const sideRoom=Math.max(0,.87*w/(h*sceneScale)-width/2);
+      const lift=.52*smooth(0,.70,detach);
+      const opacity=1-smooth(.65,1,detach);
+      gl.uniform3f(vars.scene,wrapperX+side*Math.min(.70,sideRoom)*drift,wrapperY+float+lift,0);
+      gl.uniform3f(vars.turn,0,0,wrapperRoll-side*.12*drift);
+      gl.uniform1f(vars.peel,.36*(1-detach));
+      gl.uniform1f(vars.filmPart,1);
+      gl.uniform1f(vars.filmOpacity,opacity);
+      if(opacity<1)gl.enable(gl.BLEND);
+      drawFilm(parts[1]);
+      if(opacity<1)gl.disable(gl.BLEND);
+    }
     ctx.clearRect(0,0,w,h);
     const seamY=h*(.5-wrapperY*sceneScale/2);
     const seamWidth=h*sceneScale*width/2;
