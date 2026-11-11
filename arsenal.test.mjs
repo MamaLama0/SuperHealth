@@ -69,21 +69,32 @@ test('private offer exchanges both pieces and hides listing from other players',
   assert.ok((await run(first,'state',day)).owned.some(p=>p.key===bPiece.key));
 });
 
-test('weekly boss needs both damage and the weekly target for half of members',async t=>{
+test('weekly boss requires full tracking for damage and a strict majority for one group payout',async t=>{
   const {run}=await fixture(t);
   const a=await run(first,'raid-create',day);
   const joined=await run(second,'raid-join',day,{code:a.raid.code});
   assert.equal(joined.raid.max,230);
-  for(let delta=0;delta<3;delta++){
-    for(const player of [first,second]) await run(player,'raid-hit',day+delta,{days:[rank(day+delta,1)]});
+  assert.equal(joined.raid.required,2);
+  await assert.rejects(run(first,'v2-raid-hit',day,{days:[rank(day,1)],raidFullDays:[]}),{status:409});
+  const max={strength:20,dexterity:20,constitution:20,days:10,model:1,forceScore:100,dexScore:100,conScore:100};
+  const weakness=((day+3)/7)%2===0?'ARCANIST':'RANGED';
+  for (const player of [first,second]) {
+    await run(player,'v2-raid-hit',day,{days:[rank(day,3)],raidFullDays:[day],character:max,damageMix:{[weakness]:1}});
   }
   const zero=await run(first,'state',day+2);
   assert.equal(zero.raid.hp,0);
   assert.equal(zero.raid.won,false);
-  const cleared=await run(first,'raid-hit',day+2,{days:[rank(day),rank(day+1),rank(day+2)]});
-  assert.equal(cleared.raid.qualifiers,1);
+  const completed={days:[rank(day),rank(day+1),rank(day+2)],raidFullDays:[day,day+1,day+2]};
+  const one=await run(first,'v2-sync',day+2,completed);
+  assert.equal(one.raid.qualifiers,1);
+  assert.equal(one.raid.won,false);
+  const cleared=await run(second,'v2-sync',day+2,completed);
+  assert.equal(cleared.raid.qualifiers,2);
   assert.equal(cleared.raid.won,true);
-  assert.equal(cleared.gold,255);
+  assert.equal(cleared.gold,465);
+  assert.equal(cleared.ice,2);
+  assert.deepEqual(cleared.packCredits,[]);
+  assert.equal((await run(second,'v2-sync',day+2,completed)).gold,465);
   assert.equal((await run(first,'state',day+6)).raid.code,a.raid.code);
   assert.equal((await run(first,'state',day+7)).raid,null);
 });
@@ -167,7 +178,7 @@ test('invite acceptance, gifts, and purchased pack receipts respect membership a
   const winner=await run(first,'state',day+2);
   assert.ok(winner.raid.won);
   assert.equal(winner.packCredits.length,0);
-  assert.equal(winner.ice,1);
+  assert.equal(winner.ice,2);
   await run(first,'purchase-pack',day+2,{request:randomUUID()});
   for (const [i,kind] of ['GOLD','ICE','PACK'].entries()) {
     const request='a0000000-0000-4000-8000-00000000000'+i;

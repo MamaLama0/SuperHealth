@@ -146,7 +146,7 @@ export async function createRelay({ dataDir, publishKey, maxCards = 500, rateLim
   });
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
     // Never log requests, credentials, plaintext contents, IP addresses or capability URLs.
-    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, recoveryRevocation: 1, streamFreeze: 1, capabilityStatus: 1, feedback: feedback.enabled ? 1 : 0, economy: 4, arsenal: 3, boosters: 2, combat: 2, arena: 1, faces: 2, foods: foods.enabled ? 1 : 0 }));
+    if (req.url === '/health' && req.method === 'GET') return send(res, 200, JSON.stringify({ status: 'ok', protocol: 2, media: 1, social: 1, socialRetentionDays, recovery: 1, recoveryRevocation: 1, streamFreeze: 1, capabilityStatus: 1, feedback: feedback.enabled ? 1 : 0, economy: 4, arsenal: 3, boosters: 2, combat: 3, arena: 1, raidRules: 2, faces: 2, foods: foods.enabled ? 1 : 0 }));
     if (req.url === '/v2/feedback') return feedback(req, res);
     if ((req.url || '').startsWith('/v2/foods/')) {
       let url; try { url = new URL(req.url, 'http://local'); } catch { req.resume(); return send(res, 400); }

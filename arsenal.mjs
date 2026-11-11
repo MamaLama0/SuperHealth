@@ -1,4 +1,4 @@
-import { stances, beats, validCharacter, battle, modifier } from './combat.mjs';
+import { stances, beats, validCharacter, battle, modifier, displayScore } from './combat.mjs';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { readFile, writeFile, rename, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -13,6 +13,8 @@ const GOLD = 25;
 const PACK_PRICE = 75;
 const COLLECTION_VERSION = 1;
 const WEEKLY_GOALS = [2, 4, 6];
+const RAID_GOLD = 300;
+const RAID_ICE = 2;
 const rarity = [.515, .30, .145, .035, .005];
 const finishes = [['SHINY',108,.008],['ANIMATED',114,.0022],['CHROMA',125,.0011],['BLESSED',134,.0006],['BUG',100,.0001]];
 const fail = status => { const error = new Error('arsenal'); error.status = status; throw error; };
@@ -186,7 +188,7 @@ function settleDungeon(player,today) {
   return dungeon;
 }
 
-function solo(player,today,attack,power=0,mix=null,stance=null,character=null,setDamage=0){
+function solo(player,today,attack,power=0,mix=null,stance=null,character=null,setDamage=0,precision=false){
   const dungeon=settleDungeon(player,today);
   if (!attack || !(player.days[today] || player.attackDays?.[today]) || (dungeon.lastAttack??-1)>=today) return;
   const elite=dungeon.floor%4===0;
@@ -195,7 +197,12 @@ function solo(player,today,attack,power=0,mix=null,stance=null,character=null,se
   if (!dungeon.health) {
     dungeon.health=100; dungeon.dealt=0; dungeon.received=0; dungeon.defeatedFloor=null; dungeon.log='Tu as récupéré tes points de vie.'; return;
   }
-  const attributePower=character?modifier(character.strength)*2+modifier(character.dexterity):0;
+  const attributePower = !character ? 0 : precision
+    ? Math.floor((16 * displayScore(character,'strength') + 8 * displayScore(character,'dexterity')) / 100) - 3
+    : modifier(character.strength) * 2 + modifier(character.dexterity);
+  const defense = !character ? 0 : precision
+    ? Math.floor(6 * displayScore(character,'constitution') / 100) - 1
+    : modifier(character.constitution);
   const base=48+attributePower+Math.max(0,(player.days[today]??0)-1)*9+power;
   const matchup=elite?['ARCANIST','MELEE']:floorAffinities[(dungeon.floor-1)%5];
   const intent=stances[(dungeon.floor-1)%3];
@@ -211,7 +218,7 @@ function solo(player,today,attack,power=0,mix=null,stance=null,character=null,se
     player.gold+=gold; dungeon.defeatedFloor=dungeon.floor; dungeon.floor++;
     dungeon.log='Monstre vaincu · +'+gold+' or'+(ice?' · +1 glaçon':'');
   } else {
-    dungeon.received=character===null||dungeon.frozenDay===today?0:Math.floor(Math.max(1,(elite?18:12)-(character?modifier(character.constitution):0))*(stance==='GUARD'?.5:1));
+    dungeon.received=character===null||dungeon.frozenDay===today?0:Math.floor(Math.max(1,(elite?18:12)-defense)*(stance==='GUARD'?.5:1));
     dungeon.health=Math.max(0,dungeon.health-dungeon.received);
     dungeon.log='Attaque réussie · −'+hit+' PV';
   }
@@ -222,9 +229,29 @@ function raidView(raid, id, today) {
   const week = raid.week;
   const qualifiers = Object.values(raid.hard).filter(days => days.filter(day => monday(day) === week).length >= 3).length;
   return { code:raid.code, week:raid.week, members:raid.members.length, hp:raid.hp, max:raid.max, won:raid.won, qualifiers,
-    required:Math.ceil(raid.members.length/2), mine:(raid.hard[id] ?? []).filter(day=>monday(day)===week).length,
+    required:Math.floor(raid.members.length/2)+1,goldReward:RAID_GOLD,iceReward:RAID_ICE, mine:(raid.hard[id] ?? []).filter(day=>monday(day)===week).length,
     hit:raid.attacks[id]===today, canInvite:raid.owner===id&&!raid.won&&!Object.keys(raid.attacks).length,
     invited:raid.owner===id?Object.keys(raid.invites??{}):[] };
+}
+
+function recordRaidProgress(raid, id, player, body, today) {
+  const explicit = Array.isArray(body.raidFullDays) && body.raidFullDays.length <= 35;
+  const days = explicit ? body.raidFullDays : Object.keys(player.days).map(Number).filter(day => player.days[day]>=2);
+  const complete = days.filter(day => int(day, raid.week, Math.min(today, raid.week+6)) && player.days[day]);
+  raid.hard[id] = [...new Set([...(raid.hard[id]??[]), ...complete])];
+  return explicit ? complete.includes(today) : (player.days[today]??0)>=2;
+}
+
+function finishRaid(state, raid, id, today) {
+  if (raid.won || raid.hp > 0 || raid.members.length < 2) return;
+  const view = raidView(raid, id, today);
+  if (view.qualifiers < view.required) return;
+  raid.won = true;
+  for (const member of raid.members) {
+    const winner = account(state, member);
+    winner.gold += RAID_GOLD;
+    winner.ice = (winner.ice ?? 0) + RAID_ICE;
+  }
 }
 
 export async function createArsenal(dataDir) {
@@ -282,10 +309,14 @@ export async function createArsenal(dataDir) {
         claimDays(player,body.days,today);
         if (typed) { protectDays(player,body.sportDays,today); recordAttackDays(player,body.attackDays,today); }
         if (body.combatVersion === 1 && !stances.includes(body.stance)) fail(400);
-        const character = [1, 2].includes(body.combatVersion) ? body.character : null;
-        if ([1, 2].includes(body.combatVersion) && !validCharacter(character)) fail(400);
+        const character = [1, 2, 3].includes(body.combatVersion) ? body.character : null;
+        if ([1, 2, 3].includes(body.combatVersion) && !validCharacter(character)) fail(400);
         solo(player, today, op === 'arsenal-solo', int(body.power,0,5) ? body.power : 0,
-          typed ? combatMix(body) : null, body.combatVersion === 1 ? body.stance : null, character, completeSet(player, body.loadout) ? 1 : 0);
+          typed ? combatMix(body) : null, body.combatVersion === 1 ? body.stance : null, character, completeSet(player, body.loadout) ? 1 : 0, body.combatVersion === 3);
+        if (raid && !raid.won) {
+          recordRaidProgress(raid, id, player, body, today);
+          finishRaid(next, raid, id, today);
+        }
       }
     } else if (op === 'arsenal-open') {
       if (!families.has(body.slot)) fail(400);
@@ -418,24 +449,23 @@ export async function createArsenal(dataDir) {
       raid.members.push(id);
       raid.hp = raid.max = 115 * raid.members.length;
     } else if (op === 'arsenal-raid-hit') {
-      if (!raid || raid.won || raid.members.length < 2) fail(409);
-      claimDays(player,body.days,today);
-      if (typed) recordAttackDays(player,body.attackDays,today);
-      if (!(player.days[today] || player.attackDays?.[today])) fail(409);
-      raid.hard[id] = Object.keys(player.days).map(Number).filter(day => player.days[day] >= 2 && day <= today && day >= week);
-      if ((raid.attacks[id] ?? -1) < today) {
-        raid.attacks[id] = today;
-        const base = player.days[today] === 3 ? 58 : player.days[today] === 2 ? 49 : 40;
-        const matchup = ((week + 3) / 7) % 2 === 0 ? ['ARCANIST','RANGED'] : ['DIVINE','ARCANIST'];
-        raid.hp = Math.max(0,raid.hp-(typed?damage(base,combatMix(body),matchup,true):base));
-      }
-      const view = raidView(raid,id,today);
-      if (!raid.hp && view.qualifiers >= view.required) {
-        raid.won = true;
-        for (const member of raid.members) {
-          const winner=account(next,member);
-          winner.gold+=120; winner.ice=(winner.ice??0)+1;
+      if (!raid || raid.members.length < 2) fail(409);
+      if (!raid.won) {
+        claimDays(player,body.days,today);
+        const full = recordRaidProgress(raid, id, player, body, today);
+        if (!full && raid.hp > 0) fail(409);
+        if (body.character != null && !validCharacter(body.character)) fail(400);
+        if (raid.hp > 0 && (raid.attacks[id] ?? -1) < today) {
+          raid.attacks[id] = today;
+          const stats = body.character;
+          const power = stats ? Math.floor((15 * displayScore(stats,'strength') + 9 * displayScore(stats,'dexterity') +
+            6 * displayScore(stats,'constitution')) / 100) : 0;
+          const base = (player.days[today] === 3 ? 58 : player.days[today] === 2 ? 49 : 40) + power;
+          const matchup = ((week + 3) / 7) % 2 === 0 ? ['ARCANIST','RANGED'] : ['RANGED','MELEE'];
+          const hit = (typed ? damage(base, combatMix(body), matchup, true) : base) + (completeSet(player, body.loadout) ? 1 : 0);
+          raid.hp = Math.max(0,raid.hp-hit);
         }
+        finishRaid(next, raid, id, today);
       }
     } else if (body.op === 'arsenal-fuse') {
       const keep = cleanText(body.key) && player.owned[body.key];
@@ -500,6 +530,6 @@ export async function createArsenal(dataDir) {
       return {id:d.id,opponent:incoming?d.from:d.to,incoming,status:d.status,expires:d.expires,
         mine:incoming?(d.b??null):d.a,theirs:complete?(incoming?d.a:d.b):null};
     });
-    return {arsenal:{rules:3,boosters:2,combat:2,arena:1,collectionVersion:COLLECTION_VERSION,packPrice:PACK_PRICE,duels, packCredits:player.packCredits??[], ice:player.ice??0, raidInvites,revision:next.revision,gold:player.gold,opened:player.opened,owned:Object.values(player.owned).filter(piece=>canRead(piece.id)),opening:opening?.pieces.every(piece=>canRead(piece.id))?opening:null,listings,dungeon:player.dungeon??null,raid:raidView(raid,id,today)}};
+    return {arsenal:{rules:3,boosters:2,combat:3,arena:1,raidRules:2,collectionVersion:COLLECTION_VERSION,packPrice:PACK_PRICE,duels, packCredits:player.packCredits??[], ice:player.ice??0, raidInvites,revision:next.revision,gold:player.gold,opened:player.opened,owned:Object.values(player.owned).filter(piece=>canRead(piece.id)),opening:opening?.pieces.every(piece=>canRead(piece.id))?opening:null,listings,dungeon:player.dungeon??null,raid:raidView(raid,id,today)}};
   };
 }

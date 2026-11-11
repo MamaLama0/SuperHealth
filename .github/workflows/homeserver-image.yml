@@ -52,7 +52,7 @@ jobs:
             try {
               const r = await fetch('http://127.0.0.1:18787/health');
               const body = await r.json();
-              if (r.ok && body.status === 'ok' && body.protocol === 2 && body.arsenal === 3 && body.combat === 2) process.exit(0);
+              if (r.ok && body.status === 'ok' && body.protocol === 2 && body.arsenal === 3 && body.combat === 3 && body.raidRules === 2) process.exit(0);
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 250));
           }

@@ -16,3 +16,10 @@ test('base gear bonuses matter without making same-character battles asymmetric'
   assert.equal(battle(gear,gear,'GUARD','GUARD').winner,0);
   assert.equal(battle(gear,a,'GUARD','GUARD').winner,1);
 });
+
+test('precise scores affect damage even with the same legacy strength', () => {
+  const a={strength:16,dexterity:8,constitution:8,forceScore:68};
+  const b={...a,forceScore:74};
+  const first=battle(a,b).exchanges[0];
+  assert.ok(first.theirDamage>first.myDamage);
+});
