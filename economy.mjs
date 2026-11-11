@@ -1,6 +1,7 @@
 import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, unlink, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createArsenal } from './arsenal.mjs';
 import { createRewards, giftFor, normalize } from './rewards.mjs';
 
 /**
@@ -457,6 +458,7 @@ const digest = v => createHash('sha256').update(v).digest('hex');
 const equal = (a, b) => Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 5000, maxNewPerHour = 12, opsPerMinute = 30, secret = null, rewards = null } = {}) {
+  const arsenal = await createArsenal(dataDir);
   const settings = rewards || await createRewards(dataDir, { url: null, now });
   const dir = join(dataDir, 'economy'); await mkdir(dir, { recursive: true, mode: 0o700 });
   let count = (await readdir(dir)).filter(n => /^[a-f0-9]{64}\.json$/.test(n)).length;
@@ -464,7 +466,20 @@ export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 500
   const serialized = task => { const r = queue.then(task); queue = r.catch(() => {}); return r; };
   const ops = new Map(); const creations = new Map();
   const file = id => join(dir, id + '.json');
-  const load = async id => { try { return JSON.parse(await readFile(file(id), 'utf8')); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } };
+  const load = async id => {
+    let account;
+    try { account = JSON.parse(await readFile(file(id), 'utf8')); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+    if (account.collectionVersion !== 1) {
+      for (const offer of account.trades?.out ?? []) account.eclats += offer.give?.eclats ?? 0;
+      account.owned = {};
+      account.merged = {};
+      account.opened = 0;
+      account.trades = {out: [], in: []};
+      account.collectionVersion = 1;
+    }
+    return account;
+  };
   const save = async (id, account) => {
     const tmp = file(id) + '.' + randomUUID() + '.tmp';
     try { await writeFile(tmp, JSON.stringify(account), { mode: 0o600, flag: 'wx' }); await rename(tmp, file(id)); }
@@ -583,7 +598,8 @@ export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 500
         const c = creations.get(ip); if (c && c.hour === hour && c.n >= maxNewPerHour) return send(res, 429);
         if (!creations.has(ip) && creations.size >= 1024) creations.clear();
         creations.set(ip, { hour, n: c?.hour === hour ? c.n + 1 : 1 });
-        acc = { writeHash: digest(token), eclats: 0, bonusPacks: 0, opened: 0, owned: {}, claimed: {}, gifts: [], createdAt: now() };
+        acc = { collectionVersion: 1, writeHash: digest(token), eclats: 0, bonusPacks: 0, opened: 0, owned: {}, claimed: {}, gifts: [], createdAt: now() };
+        await save(id, acc);
         count++;
       }
       // Le cadeau de lancement arrive au premier contact après la mise à jour, une seule fois par compte.
@@ -606,6 +622,16 @@ export async function createEconomy(dataDir, { now = Date.now, maxAccounts = 500
           extra = { results };
         } else if (body.op === 'open') extra = openPack(acc, body.booster, cfg.packPrice);
         else if (body.op === 'fuse') extra = fuse(acc, body.card);
+        else if (body.op?.startsWith?.('arsenal-')) {
+          const friends=acc.friends??[];
+          const reciprocal=[];
+          if (['arsenal-v3-gift','arsenal-v3-raid-invite','arsenal-v3-duel-invite','arsenal-v3-duel-accept'].includes(body.op)) {
+            // Accept has a duel ID, not an arbitrary caller-supplied opponent. Check the stored friend graph.
+            const candidates=body.op==='arsenal-v3-duel-accept'?friends:friends.filter(friend=>friend===body.to);
+            for (const friend of candidates) if ((await load(friend))?.friends?.includes(id)) reciprocal.push(friend);
+          }
+          extra = await arsenal(id, body, t, friends, reciprocal);
+        }
         else if (body.op?.startsWith?.('trade-')) extra = await trade(acc, id, body, t);
         else return send(res, 400);
       } catch (e) { await save(id, acc); return send(res, e.status || 400, view(acc, t, body.today, salt, challengeOf(id, monday(t)), cfg)); }

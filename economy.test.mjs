@@ -318,3 +318,52 @@ test('weekly.reset rouvre une fois les quêtes de la semaine déjà touchées', 
   // une seule fois par identifiant de remise
   assert.throws(() => applyEvent(a, { type: 'league', id: `lq:${day}:STRENGTH` }, now, 'r', reset), e => e.status === 409);
 });
+
+test('HTTP Arsenal : inviter et offrir nécessitent un lien d’amitié réciproque', async t => {
+  const server = await createRelay({ dataDir: await mkdtemp(join(tmpdir(), 'arsenal-friends-')) });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const url = `http://127.0.0.1:${server.address().port}/v2/economy/`;
+  const a = randomBytes(32).toString('hex'), b = randomBytes(32).toString('hex');
+  const token = randomBytes(32).toString('hex');
+  const call = (id, body) => fetch(url + id, { method: 'POST',
+    headers: {'X-Write-Token':token, 'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  const today = Math.floor(Date.now()/DAY);
+  const aId = (await (await call(a,{op:'state'})).json()).tradeId;
+  const bId = (await (await call(b,{op:'state',friends:[]})).json()).tradeId;
+  assert.equal((await call(a,{op:'arsenal-v2-sync',days:[{day:today,rank:1}],today,friends:[bId]})).status,200);
+  const team = (await (await call(a,{op:'arsenal-raid-create'})).json()).arsenal.raid;
+  const gift = {op:'arsenal-v3-gift',to:bId,kind:'GOLD',request:'10000000-0000-4000-8000-000000000000'};
+  assert.equal((await call(a,gift)).status,403);
+  const invite = {op:'arsenal-v3-raid-invite',to:bId};
+  assert.equal((await call(a,invite)).status,409);
+  assert.equal((await call(b,{op:'state',friends:[aId]})).status,200);
+  assert.equal((await call(a,invite)).status,200);
+  assert.equal((await call(a,gift)).status,200);
+  const received = (await (await call(b,{op:'arsenal-state'})).json()).arsenal;
+  assert.equal(received.gold,25);
+  assert.deepEqual(received.raidInvites,[{from:aId,code:team.code}]);
+});
+
+test('HTTP duels enforce reciprocal friendship at invitation AND acceptance',async t=>{
+  const server=await createRelay({dataDir:await mkdtemp(join(tmpdir(),'duel-http-'))});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>server.close());
+  const url=`http://127.0.0.1:${server.address().port}/v2/economy/`;
+  const a=randomBytes(32).toString('hex'),b=randomBytes(32).toString('hex'),token=randomBytes(32).toString('hex');
+  const call=(id,body)=>fetch(url+id,{method:'POST',headers:{'X-Write-Token':token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const aid=(await(await call(a,{op:'state'})).json()).tradeId;
+  const bid=(await(await call(b,{op:'state'})).json()).tradeId;
+  const character={strength:12,dexterity:15,constitution:11,days:14,model:1};
+  const invite={op:'arsenal-v3-duel-invite',to:bid,request:'10000000-0000-4000-8000-000000000003',character,stance:'FEINT'};
+  await call(a,{op:'state',friends:[bid]});
+  assert.equal((await call(a,invite)).status,403);
+  await call(b,{op:'state',friends:[aid]});
+  const sent=await call(a,invite);assert.equal(sent.status,200);
+  const duel=(await sent.json()).arsenal.duels[0].id;
+  const accept={op:'arsenal-v3-duel-accept',duel,character,stance:'GUARD'};
+  await call(a,{op:'state',friends:[]});
+  assert.equal((await call(b,accept)).status,403);
+  await call(a,{op:'state',friends:[bid]});
+  const received=await call(b,accept);assert.equal(received.status,200);
+  assert.equal((await received.json()).arsenal.duels[0].status,'complete');
+});

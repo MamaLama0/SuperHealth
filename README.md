@@ -210,3 +210,23 @@ cherchée en premier par l'app (« Base SuperHealth »). Elle n'est ni dans le d
 Classement : noms qui commencent par la requête d'abord, puis NCC, MND, USDA base et USDA marques. Les fiches
 incohérentes (énergie ≠ macros) sont écartées et les colonnes mal nommées de la base source sont corrigées
 (voir l'en-tête de `scripts/build-foods.mjs`). Les requêtes ne sont ni journalisées ni conservées.
+
+
+## Arsenal — deux boosters et caractéristiques de personnage
+
+Le relais annonce `boosters: 2`, `combat: 1`, `arena: 1` dans `/health` et dans l’état Arsenal. L’image doit contenir `combat.mjs` et le catalogue actualisé, en plus de `arsenal.mjs`. Les comptes et inventaires existants sont conservés.
+
+- Les ouvertures v2/v3 acceptent `booster: WEAPON | ARMOR`. Le champ historique `slot` reste `WEAPON` ou `CHEST`. ARMOR tire parmi CHEST, GUARD et LEGS. Sans `booster`, les anciens clients conservent leur sélection par emplacement. Un réessai restitue le reçu initial, même si la sélection a changé.
+- Les objets gardent leurs IDs, jets, finitions, niveaux et types de dégâts. `attribute` et `penaltyAttribute` ajoutent FOR/DEX/CON au catalogue ; les anciennes clés de malédiction restent lisibles. Les doubles affinités restent inchangées.
+- `arsenal-v3-duel-invite` : `to`, UUID `request`, `character`, `loadout` facultatif (quatre clés d’objets au plus). `arsenal-v3-duel-accept`, `-decline`, `-cancel` : `duel`; accepter fournit aussi `character` et `loadout`. Invitation et acceptation vérifient l’amitié réciproque. Le duel est une comparaison déterministe de trois caractéristiques, sans posture ni hasard. Aucun or ni objet n’est misé ou distribué.
+- Les trois caractéristiques 8..20 sont calculées sur le téléphone et déclarées ; le relais borne ces déclarations mais ne certifie pas les performances physiques. Les bonus/malus d’équipement sont recalculés à partir des objets réellement possédés, avec finitions et fusion, puis figés avec les stats pour le résultat. Les journaux de santé ne sont pas transmis.
+- L’état `duels` n’expose que les défis du compte. Les défis expirent après trois jours, les résultats après sept. Huit invitations en attente au maximum par émetteur et 3 000 duels au total. Acceptation et réessais ne rejouent jamais les récompenses. Les données sont dans le fichier Arsenal existant.
+- Le donjon v2 accepte `combatVersion: 1`, `character` et `stance: ASSAULT | FEINT | GUARD`. L’intention suit l’étage ; avantage +20 %, désavantage −15 %. Un monstre survivant riposte, la garde réduit les dégâts et le gel les annule. Les champs `dealt`, `received`, `defeatedFloor` décrivent le dernier résultat. Une seule action par jour, y compris pour reprendre ses forces. Les anciens appels conservent leurs règles.
+
+Validation : `node --test arsenal.test.mjs combat.test.mjs economy.test.mjs server.test.mjs`. La mise à jour des sources ne déploie pas le relais distant ; reconstruire l’image avec le volume conservé pour activer ces capacités.
+
+### SuperHealth 4.0
+
+Au premier démarrage du serveur 4.0, les cartes de l’Arsenal, leurs ouvertures enregistrées et les annonces sont remises à zéro. Les mises d’enchères sont remboursées. Les cartes Athlète héritées sont remises à zéro au prochain accès au compte. Au premier contact depuis la 4.0, chaque compte reçoit 15 paquets Arsenal, une seule fois. Garder le volume de données pour conserver les comptes et l’historique de migration.
+
+Les sceaux et paliers de la semaine récompensent les suivis avec des paquets. Le marché accepte les ventes à prix fixe, les enchères et les offres privées. Un paquet coûte 75 pièces d’or. Les combats de donjon v2 utilisent les caractéristiques et affinités sans position.
