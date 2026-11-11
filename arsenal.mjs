@@ -10,7 +10,7 @@ const DAY = 86_400_000;
 const HEX = /^[a-f0-9]{64}$/;
 const ID = /^[a-f0-9-]{36}$/;
 const GOLD = 25;
-const PACK_PRICE = 75;
+const PACK_PRICE = 100;
 const COLLECTION_VERSION = 1;
 const WEEKLY_GOALS = [2, 4, 6];
 const RAID_GOLD = 300;
@@ -318,22 +318,27 @@ export async function createArsenal(dataDir) {
           finishRaid(next, raid, id, today);
         }
       }
-    } else if (op === 'arsenal-open') {
+    } else if (op === 'arsenal-open' || op === 'arsenal-open-paid') {
       if (!families.has(body.slot)) fail(400);
       if (body.booster != null && (!['WEAPON','ARMOR'].includes(body.booster) || body.slot !== (body.booster==='WEAPON'?'WEAPON':'CHEST'))) fail(400);
       claimDays(player,body.days,today);
-      if (body.op === 'arsenal-v3-open') {
+      const direct=op==='arsenal-open-paid';
+      if (direct || body.op === 'arsenal-v3-open') {
+        if (direct && body.collectionVersion !== COLLECTION_VERSION) fail(409);
         if (!cleanText(body.rewardKey)) fail(400);
         const key=body.rewardKey;
         player.rewardReceipts ??= {};
         opening=player.rewardReceipts[key]??null;
-        if (!opening && player.packCredits?.includes(key)) {
+        const credit=direct ? player.packCredits?.[0] : player.packCredits?.includes(key) ? key : null;
+        if (!opening && (direct || credit)) {
+          if (!credit && player.gold < PACK_PRICE) fail(402);
           if (Object.keys(player.owned).length > 2000) fail(507);
           const affinities=packSchools(today+player.opened,body.slot);
           const gold = (player.opened + 1) % 10 === 0;
           const pieces=loot(body.slot,gold,affinities,currentCatalog,body.catalogueVersion??0,body.booster);
           for (const piece of pieces) player.owned[piece.key]=piece;
-          player.packCredits=player.packCredits.filter(credit=>credit!==key);
+          if (credit) player.packCredits=player.packCredits.filter(token=>token!==credit);
+          else player.gold-=PACK_PRICE;
           player.opened++;
           opening=player.rewardReceipts[key]={day:today,utc,slot:body.slot,gold,pieces,schools:affinities};
           for (const [receipt,draw] of Object.entries(player.rewardReceipts)) if (draw.utc<utc-35) delete player.rewardReceipts[receipt];

@@ -404,7 +404,7 @@ test('quests grant gold and ten purchased packs can open on the same day', async
   assert.equal(weekly.gold,125);
   assert.deepEqual(weekly.packCredits,[]);
   assert.equal((await run(first,'v2-sync',start+1,{...version,days:[]})).gold,125);
-  await run(first,'v2-sync',start+1,{...version,days:Array.from({length:10},(_,i)=>rank(start-i-1,3))});
+  await run(first,'v2-sync',start+1,{...version,days:Array.from({length:14},(_,i)=>rank(start-i-1,3))});
   for (let i=0;i<10;i++) {
     const purchase={...version,request:randomUUID()};
     const paid=await run(first,'purchase-pack',start+1,purchase);
@@ -421,10 +421,37 @@ test('quests grant gold and ten purchased packs can open on the same day', async
   }
 });
 
+test('direct pack opening consumes a credit first or charges exactly 100 gold once', async t => {
+  const {run,restart}=await fixture(t);
+  const version={collectionVersion:1,catalogueVersion:6,rules:2};
+  const direct={...version,slot:'WEAPON',rewardKey:randomUUID(),days:[]};
+  const earned=await run(first,'v2-sync',day,{...version,days:[rank(day,3),rank(day-1,1)]});
+  assert.equal(earned.gold,100);
+  const paid=await run(first,'open-paid',day,direct);
+  assert.equal(paid.gold,0);
+  assert.equal(paid.opened,1);
+  assert.ok(paid.opening.pieces.length>=4);
+  assert.deepEqual(paid.packCredits,[]);
+  await restart();
+  const retry=await run(first,'open-paid',day,direct);
+  assert.equal(retry.gold,0);
+  assert.deepEqual(retry.opening,paid.opening);
+  await assert.rejects(run(first,'open-paid',day,{...direct,rewardKey:randomUUID()}),{status:402});
+  assert.equal((await run(first,'state',day,version)).opened,1);
+
+  await run(second,'v2-sync',day,{...version,days:[rank(day,3),rank(day-1,1)]});
+  const stocked=await run(second,'purchase-pack',day,{...version,request:randomUUID()});
+  assert.equal(stocked.packCredits.length,1);
+  const redeemed=await run(second,'open-paid',day,direct);
+  assert.equal(redeemed.gold,0);
+  assert.equal(redeemed.opened,1);
+  assert.deepEqual(redeemed.packCredits,[]);
+});
+
 test('fixed price sales move gold and cards once, and declining a private offer releases the card', async t => {
   const {run}=await fixture(t);
   const version={collectionVersion:1,catalogueVersion:6,rules:2};
-  await run(first,'v2-sync',day,{...version,days:[rank(day,3)]});
+  await run(first,'v2-sync',day,{...version,days:[rank(day,3),rank(day-1,1)]});
   const stock=await run(first,'purchase-pack',day,{...version,request:randomUUID()});
   const seller=await run(first,'v3-open',day,{...version,slot:'WEAPON',days:[],rewardKey:stock.packCredits[0]});
   await run(second,'v2-sync',day,{...version,days:[rank(day,1)]});
