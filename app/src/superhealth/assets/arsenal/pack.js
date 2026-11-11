@@ -452,6 +452,13 @@ function run(){
         foil=jewel(foil,vec2(.80,.70),vec3(.25,.92,.58),reflected,2.1);
         foil=jewel(foil,vec2(.50,.21),vec3(.65,.36,1.),reflected,4.6);
       }
+      if(mode==0&&filmPart<.5&&wrapperFx>1.5){
+        // Same bezels as the vector print, including its non-WebGL fallback.
+        // Tex.y is bottom-up: the lower illustration corners and footer.
+        foil=jewel(foil,vec2(.160156,.306295),vec3(.94,.16,.29),reflected,.25);
+        foil=jewel(foil,vec2(.839844,.306295),vec3(.16,.89,.56),reflected,2.1);
+        foil=jewel(foil,vec2(.50,.112591),vec3(.65,.36,1.),reflected,4.6);
+      }
     }else if(editionFx>1.5&&editionFx<2.5){
       vec3 rainbow=.5+.5*cos(6.283*(tex.x*.50+tex.y*.33+reflected.x*.35+vec3(0.,.333,.667)));
       foil+=rainbow*(varnish*.32+grazing*.14);

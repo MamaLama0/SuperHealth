@@ -40,6 +40,20 @@ def emblem(weapon, gold):
     </g>'''
 
 
+def gemstones():
+    """Printed faceted stones, aligned with the live shader's gold-only bezels."""
+    gems=[]
+    for x,y,dark,mid,light in [(82,573,'#790e35','#e84068','#ffc4d0'),(430,573,'#075f47','#30d19a','#c5ffdd'),(256,733,'#452773','#a770e9','#f1d9ff')]:
+        gems.append(f'''<g transform="translate({x} {y})" stroke-linejoin="round">
+          <path d="M0-30 28 0 0 30-28 0Z" fill="#8e5c1d" stroke="#fff1b6" stroke-width="2"/>
+          <path d="M0-24 21 0 0 24-21 0Z" fill="{mid}" stroke="#ffe298" stroke-width="2"/>
+          <path d="M0-24 0 0-21 0Z" fill="{light}"/><path d="M21 0 0 24 0 0Z" fill="{dark}"/>
+          <path d="M0-13 12 0 0 13-12 0Z" fill="{mid}" stroke="{light}" stroke-width="1.2"/>
+          <path d="M-13-8-6-16M-16-3-11-8" stroke="#fff" stroke-width="2"/>
+        </g>''')
+    return ''.join(gems)
+
+
 def wrapper(kind, gold, back, english=False):
     weapon = kind == 'weapon'
     accent = '#ef776f' if weapon else '#58d9ca'
@@ -79,7 +93,7 @@ def wrapper(kind, gold, back, english=False):
       <path d="M0 108H512" stroke="{ink}" stroke-opacity=".30" stroke-dasharray="4 6"/>
       <g font-family="DejaVu Sans, sans-serif">{title}{art}</g>
       <path d="M44 731H112M400 731H468" stroke="{ink}" stroke-width="2"/>
-      <path d="M248 723H264V739H248Z" fill="{accent}" transform="rotate(45 256 731)"/>
+      {gemstones() if gold else f'<path d="M248 723H264V739H248Z" fill="{accent}" transform="rotate(45 256 731)"/>'}
     </svg>'''
 
 
