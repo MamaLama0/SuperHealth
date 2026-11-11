@@ -27,7 +27,7 @@ import app.superhealth.ui.trf
 import nodomain.freeyourgadget.gadgetbridge.R
 
 /**
- * Widgets des cartes : paquet du jour, quêtes et personnage. Ils lisent l’état local sans lancer de synchronisation.
+ * Widgets des cartes : paquets, quêtes et personnage. Ils lisent l’état local sans lancer de synchronisation.
  */
 abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
     enum class Kind { PACKS, QUESTS, CARD }
@@ -50,23 +50,11 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
         if (!enabled) caption = tr("Fonctions sociales désactivées")
         else when (kind) {
             Kind.PACKS -> {
-                val day = LocalDate.now().toEpochDay()
-                val progress = ProgressRepository.current.value?.takeIf { it.summary.throughDay == day }
-                val quest = progress?.let { ArsenalGame.quests(it, ProgressRepository.selectedTracks(SuperPrefs.settings.value)) }
-                val claimed = equipment?.day?.let { it >= day } == true
-                val ready = quest?.canOpenDaily(equipment?.day) == true
-                val bonus = (equipment?.freePacks ?: 0) + (equipment?.packCredits?.size ?: 0)
-                value = if (ready || bonus > 0 || equipment?.pending != null || equipment?.rewardPending != null) (bonus + if (ready || equipment?.pending != null) 1 else 0).coerceAtLeast(1).toString() else if (claimed || progress != null) "0" else "—"
+                val count = (equipment?.freePacks ?: 0) + (equipment?.packCredits?.size ?: 0)
+                value = count.coerceAtLeast(if (equipment?.rewardPending != null) 1 else 0).toString()
                 unit = tr("pack")
                 if (equipment?.goldNext == true) hue = gold
-                caption = tr(when {
-                    equipment?.pending != null -> "Reprendre le tirage"
-                    bonus > 0 || equipment?.rewardPending != null -> "Paquets à récupérer"
-                    claimed -> "Pack du jour ouvert"
-                    ready -> "Pack du jour prêt"
-                    else -> "Vérifier les suivis du jour"
-                })
-                fraction = quest?.rank?.div(3f)
+                caption = tr(if (count > 0 || equipment?.rewardPending != null) "Paquets à récupérer" else "Acheter un paquet")
             }
             Kind.QUESTS -> {
                 val day = LocalDate.now().toEpochDay()
@@ -74,7 +62,7 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                     ArsenalGame.quests(it, ProgressRepository.selectedTracks(SuperPrefs.settings.value))
                 }
                 val rank = quest?.rank ?: 0
-                val ready = quest?.canOpenDaily(equipment?.day) == true || (equipment?.freePacks ?: 0) > 0 ||
+                val ready = (equipment?.freePacks ?: 0) > 0 ||
                     equipment?.packCredits.orEmpty().isNotEmpty() || equipment?.rewardPending != null
                 if (ready) route = "cards/packs"
                 value = if (ready) tr("À ouvrir") else if (quest == null) "—" else "$rank/3"

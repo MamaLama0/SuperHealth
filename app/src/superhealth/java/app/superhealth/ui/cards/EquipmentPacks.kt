@@ -72,13 +72,12 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     var opening by remember { mutableStateOf<EquipmentStore.Opening?>(null) }
     var direction by remember { mutableIntStateOf(1) }
     var tearProgress by remember { mutableFloatStateOf(0f) }
-    val opened = (inventory.day ?: Long.MIN_VALUE) >= day
     val unlimited = EquipmentStore.unlimitedPacks
-    val canOpen = cards.isNotEmpty() && (unlimited || dayQuests?.canOpenDaily(inventory.day) == true || inventory.freePacks > 0 ||
-        inventory.rewardPending != null || inventory.remotePendingDay == day || (wallet?.packCredits ?: inventory.packCredits).isNotEmpty())
+    val packCount = inventory.freePacks + (wallet?.packCredits ?: inventory.packCredits).size
+    val canOpen = cards.isNotEmpty() && (unlimited || packCount > 0 || inventory.rewardPending != null)
     var index by rememberSaveable { mutableIntStateOf(0) }
     val slot = EquipmentBoosters.slots[index.mod(EquipmentBoosters.slots.size)]
-    val variantDay = day + if (unlimited) inventory.opened else 0
+    val variantDay = day + if (inventory.freePacks > 0 || unlimited) inventory.opened else inventory.serverOpened ?: inventory.opened
     val gold = if (unlimited) inventory.opened % 10 == 9 else inventory.goldNext
     val skin = packSkin(variantDay, slot)
     val edition = PackEdition.forDraw(gold)
@@ -132,7 +131,7 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
             try {
                 val draw = EquipmentStore.open(ctx, slot)
                 if (draw == null) {
-                    webError = tr("Pack indisponible. Vérifie tes suivis du jour.")
+                    webError = tr("Aucun paquet à ouvrir.")
                     retry++
                 } else {
                     opening = draw
@@ -205,18 +204,14 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
                     if (sample != null) TextButton({ sample = null }) { Text(tr("Quitter l’aperçu")) }
                     else if (!unlimited && allowed) TextButton({ openCurrent() }, enabled = !committing,
                         contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        Text(tr(if (committing) "Préparation du tirage…" else "Ouvrir le paquet"), style = MaterialTheme.typography.labelMedium)
+                        Text(if (committing) tr("Préparation du tirage…") else tr("Ouvrir le paquet") + " ($packCount)", style = MaterialTheme.typography.labelMedium)
                     }
-                    else Text(webError ?: issue ?: when {
-                        unlimited -> tr("Ouvertures illimitées")
-                        inventory.freePacks + wallet?.packCredits.orEmpty().size > 0 ->
-                            (inventory.freePacks + wallet?.packCredits.orEmpty().size).toString() + " " + tr("Paquets bonus").lowercase()
-                        opened -> tr("Pack du jour ouvert")
-                        todayProgress == null -> tr("Lecture des suivis…")
-                        dayQuests?.heroic == true -> tr("Pack du jour prêt")
-                        gate.required == 0 -> tr("Choisis tes suivis")
-                        else -> tr("Paquet du jour · sceau héroïque requis")
-                    }, color = Mf.colors.textSecondary, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+                    else if (!unlimited && packCount == 0 && inventory.rewardPending == null && webError == null) {
+                        TextButton({ nav.go("cards/market") }, contentPadding = PaddingValues(horizontal = 4.dp)) {
+                            Text(tr("Acheter un paquet"), style = MaterialTheme.typography.labelMedium)
+                        }
+                    } else Text(webError ?: issue ?: tr(if (unlimited) "Ouvertures illimitées" else "Préparation du tirage…"),
+                        color = Mf.colors.textSecondary, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
                 }
                 PackAction(tr("Profil"), Icons.Rounded.Person) { nav.go("cards/equipment") }
             }

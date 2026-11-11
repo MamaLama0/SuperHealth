@@ -427,7 +427,7 @@ fun SuperRoot(vm: SuperViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(tr("Bon. J’ai refait le journal et les quêtes. Je vais m’asseoir."))
                     Text(tr("Planifie tes repas avec le + des jours futurs et glisse-les entre les horaires. Les stats passent sur 100."))
-                    Text(tr("Le sceau héroïque donne un paquet par jour. Les 15 paquets offerts pour la remise à zéro de la 4.0 t’attendent dans l’Arsenal si tu ne les as pas encore récupérés."))
+                    Text(tr("Les paquets s’achètent avec l’or des quêtes et des combats. Ouvre-en autant que tu veux à la suite."))
                 }
             },
             confirmButton = { androidx.compose.material3.TextButton(dismiss) { Text(tr("Compris")) } },

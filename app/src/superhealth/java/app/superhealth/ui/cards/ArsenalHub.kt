@@ -158,7 +158,7 @@ internal fun DungeonRoute(nav: NavHostController) {
         }
         val room = DungeonRoom.floor(dungeon.floor)
         val creature = DungeonCreature.floor(dungeon.floor)
-        val drops = ArsenalGame.drops(dungeon.floor)
+        val iceDrop = ArsenalGame.iceDrop(dungeon.floor)
         val canAttack = !busy && quests?.canAttack == true && (dungeon.lastAttack ?: Long.MIN_VALUE) < today
         val shape = RoundedCornerShape(26.dp)
         Column(Modifier.fillMaxWidth().clip(shape).background(Color(0xFF161D22))
@@ -217,8 +217,7 @@ internal fun DungeonRoute(nav: NavHostController) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Butin"), style = MaterialTheme.typography.labelMedium, color = Color(0xFFBFC8CA))
                     DungeonReward(Icons.Rounded.Toll, (if (dungeon.elite) 35 else 15).toString(), tr("or"))
-                    if (drops.packs > 0) DungeonReward(Icons.Rounded.Style, "+1", tr("Paquet bonus"))
-                    if (drops.ice > 0) DungeonReward(Icons.Rounded.AcUnit, "+1", tr("Glaçon"))
+                    if (iceDrop > 0) DungeonReward(Icons.Rounded.AcUnit, "+1", tr("Glaçon"))
                 }
             }
         }
@@ -241,7 +240,7 @@ internal fun DungeonRoute(nav: NavHostController) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            AssistChip(onClick = { nav.go("cards/packs") }, label = { Text("$packs " + tr("Paquets bonus")) })
+            AssistChip(onClick = { nav.go("cards/packs") }, label = { Text("$packs " + tr("Paquets disponibles")) })
             if (online) TextButton({ giftDialog = true }) { Text(tr("Offrir")) }
         }
         if (raidWeek != null) {
@@ -313,7 +312,7 @@ internal fun DungeonRoute(nav: NavHostController) {
             item {
                 Text(tr("Offrir une récompense"), style = MaterialTheme.typography.titleLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    for ((key, label) in listOf("GOLD" to "25 or", "PACK" to "Paquet bonus", "ICE" to "Glaçon")) {
+                    for ((key, label) in listOf("GOLD" to "25 or", "PACK" to "Paquet", "ICE" to "Glaçon")) {
                         FilterChip(giftKind == key, {
                             giftKind = key
                             giftId = java.util.UUID.randomUUID().toString()
@@ -356,10 +355,9 @@ internal fun DungeonRoute(nav: NavHostController) {
                 Text(tr("Dégâts infligés") + " · ${result.dealt}", style = MaterialTheme.typography.headlineSmall)
                 Text(tr("Riposte") + " · ${result.received}   /   " + tr("Vie restante") + " · ${result.health}")
                 result.defeatedFloor?.let { floor ->
-                    val drops = ArsenalGame.drops(floor)
+                    val iceDrop = ArsenalGame.iceDrop(floor)
                     Text("+${if (floor % 4 == 0) 35 else 15} " + tr("or") +
-                        (if (drops.packs > 0) " · +1 " + tr("Paquet bonus") else "") +
-                        (if (drops.ice > 0) " · +1 " + tr("Glaçon") else ""))
+                        (if (iceDrop > 0) " · +1 " + tr("Glaçon") else ""))
                     Text(tr("Prochain étage") + " · ${result.floor}")
                 }
             } }, confirmButton = { TextButton({ combatResult = null }) { Text(tr("Continuer")) } })
@@ -468,11 +466,7 @@ internal fun ArsenalQuestContent(quests: ArsenalGame.Quests?) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     GoldBadge(prize)
-                    if (i == tiers.lastIndex) Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(Icons.Rounded.Style, null, Modifier.size(15.dp), tint = Mf.colors.accent)
-                        Text("+1 " + tr("paquet"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent)
-                    }
+
                 }
             }
         }
@@ -483,7 +477,7 @@ internal fun ArsenalQuestContent(quests: ArsenalGame.Quests?) {
         ListItem(headlineContent = { Text(tr("Valider") + " $threshold " + tr("jours")) },
             supportingContent = { Text("$count / $threshold") },
             leadingContent = { Icon(if (count == threshold) Icons.Rounded.CheckCircle else Icons.Rounded.Stars, null) },
-            trailingContent = { Text("+1 " + tr("paquet")) },
+            trailingContent = { GoldBadge(ArsenalGame.WEEKLY_GOLD) },
             colors = ListItemDefaults.colors(containerColor = Mf.colors.card))
     }
     Text(tr("Les jours validés peuvent être espacés."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
@@ -746,10 +740,10 @@ internal fun ArsenalQuestRoute(nav: NavHostController) {
     }
     ArsenalPage("Quêtes de l’Arsenal", nav, wallet?.gold ?: saved.gold) {
         ArsenalQuestContent(progress)
-        val ready = progress?.canOpenDaily(saved.day) == true || saved.freePacks > 0 || saved.pending != null ||
+        val ready = saved.freePacks > 0 || saved.pending != null ||
             saved.rewardPending != null || (wallet?.packCredits ?: saved.packCredits).isNotEmpty()
         if (ready) Button({ nav.go("cards/packs") }, Modifier.fillMaxWidth()) { Text(tr("Ouvrir mes paquets disponibles")) }
-        Text(tr("Les pièces des sceaux sont créditées à la synchronisation. Les paquets se récupèrent dans Paquets."), style = MaterialTheme.typography.bodySmall)
+        Text(tr("L’or des quêtes est crédité à la synchronisation. Les paquets s’achètent en boutique."), style = MaterialTheme.typography.bodySmall)
         if (error != null) TextButton({ retry++ }, enabled = !syncing) { Text(tr("Réessayer la synchronisation")) }
         progress?.gate?.let { gate ->
             gate.targets.forEach { track ->

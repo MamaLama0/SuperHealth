@@ -168,17 +168,14 @@ internal object EquipmentStore {
     @Serializable
     data class State(
         val collectionVersion: Int = 0,
-        val releaseGiftGranted: Boolean = false,
         val packPurchases: List<String> = emptyList(),
-        val weeklyPacks: Map<Long, Int> = emptyMap(),
-        val day: Long? = null,
+        @kotlinx.serialization.SerialName("weeklyPacks") val weeklyMilestones: Map<Long, Int> = emptyMap(),
         val opened: Int = 0,
         val nextSerial: Long = 1,
         val owned: List<EquipmentPiece> = emptyList(),
         val equipped: Map<EquipmentSlot, Long> = emptyMap(),
         val pending: Opening? = null,
         val serverOpened: Int? = null,
-        val remotePendingDay: Long? = null,
         val rewardPending: String? = null,
         val freePacks: Int = 0,
         val packCredits: List<String> = emptyList(),
@@ -188,7 +185,7 @@ internal object EquipmentStore {
         val goldRanks: Map<Long, Int> = emptyMap(),
         val dungeon: ArsenalGame.Dungeon = ArsenalGame.Dungeon(),
     ) {
-        val goldNext get() = (serverOpened ?: opened) % 10 == 9
+        val goldNext get() = (if (freePacks > 0 && rewardPending == null) opened else serverOpened ?: opened) % 10 == 9
         fun equipped(slot: EquipmentSlot) = owned.firstOrNull { it.serial == equipped[slot] }
     }
 
@@ -213,7 +210,7 @@ internal object EquipmentStore {
             catch (_: java.io.FileNotFoundException) { State() }
         val migrated = if (saved.collectionVersion < ArsenalGame.COLLECTION_VERSION) saved.copy(
             collectionVersion = ArsenalGame.COLLECTION_VERSION, owned = emptyList(), equipped = emptyMap(),
-            day = null, opened = 0, serverOpened = null, remotePendingDay = null, rewardPending = null,
+            opened = 0, serverOpened = null, rewardPending = null,
         ) else saved
         val ready = migrated.copy(pending = null)
         if (ready == saved) changes.value = ready else persist(ctx, ready)
@@ -246,41 +243,32 @@ internal object EquipmentStore {
             val day = LocalDate.now().toEpochDay() + old.opened
             openLocal(ctx, old.copy(opened = old.opened + 1), slot, day, old.opened % 10 == 9)
         }
-        val quests = ArsenalGame.quests(ctx)
         lock.withLock {
             loadLocked(ctx)
             val old = changes.value
-            val day = quests.today
-            if (day != LocalDate.now().toEpochDay()) return@withLock null
-            val daily = quests.canOpenDaily(old.day)
-            val reward = old.rewardPending ?: if (!daily && old.freePacks == 0) (ArsenalGame.remote.value?.packCredits ?: old.packCredits).firstOrNull() else null
-            val retryDaily = old.remotePendingDay == day
-            if (!daily && !retryDaily && reward == null && old.freePacks == 0) return@withLock null
-            if (reward != null || retryDaily || daily && Economy.available() && ArsenalGame.canOpenOnline(ctx)) {
-                val requestState = if (reward != null) old.copy(rewardPending = reward) else old.copy(remotePendingDay = day)
-                if (requestState != old) persist(ctx, requestState)
-                val remote = if (reward == null) ArsenalGame.open(ctx, slot, quests) else ArsenalGame.claimPack(ctx, slot, reward, quests)
-                val pack = remote.opening
-                if (pack == null) {
-                    if (reward != null) persist(ctx, mergeRemote(requestState, remote).copy(rewardPending = null))
-                    return@withLock null
-                }
-                val merged = mergeRemote(requestState, remote)
-                var serial = merged.nextSerial
-                val pieces = pack.pieces.map { piece ->
-                    merged.owned.firstOrNull { it.serverKey == piece.key } ?: piece.local(serial++)
-                }.sortedBy { catalog.value.getValue(it.id).tier }
-                val pair = pack.schools.takeIf { it.size == 2 }?.let { AffinityPair(it[0], it[1]) }
-                val variant = day + if (reward != null) serial else 0
-                persist(ctx, merged.copy(day = if (reward == null) day else merged.day,
-                    remotePendingDay = if (reward == null) null else merged.remotePendingDay,
-                    rewardPending = if (reward != null) null else merged.rewardPending, nextSerial = serial))
-                Opening(pack.slot, pieces, pack.gold, packSkin(variant, pack.slot), PackEdition.forDraw(pack.gold), pair)
-            } else if (daily) {
-                openLocal(ctx, old.copy(day = day, opened = old.opened + 1), slot, day, old.goldNext)
-            } else {
-                openLocal(ctx, old.copy(freePacks = old.freePacks - 1), slot, day + old.nextSerial, false)
+            val day = LocalDate.now().toEpochDay()
+            val reward = old.rewardPending ?: (ArsenalGame.remote.value?.packCredits ?: old.packCredits).firstOrNull()
+            if (old.rewardPending == null && old.freePacks > 0) {
+                return@withLock openLocal(ctx, old.copy(freePacks = old.freePacks - 1, opened = old.opened + 1),
+                    slot, day + old.opened, old.opened % 10 == 9)
             }
+            if (reward == null) return@withLock null
+            val requestState = old.copy(rewardPending = reward)
+            if (requestState != old) persist(ctx, requestState)
+            val remote = ArsenalGame.claimPack(ctx, slot, reward, day)
+            val merged = mergeRemote(requestState, remote).copy(rewardPending = null)
+            val pack = remote.opening
+            if (pack == null) {
+                persist(ctx, merged)
+                return@withLock null
+            }
+            var serial = merged.nextSerial
+            val pieces = pack.pieces.map { piece ->
+                merged.owned.firstOrNull { it.serverKey == piece.key } ?: piece.local(serial++)
+            }.sortedBy { catalog.value.getValue(it.id).tier }
+            persist(ctx, merged.copy(nextSerial = serial))
+            val pair = pack.schools.takeIf { it.size == 2 }?.let { AffinityPair(it[0], it[1]) }
+            Opening(pack.slot, pieces, pack.gold, packSkin(day + merged.nextSerial, pack.slot), PackEdition.forDraw(pack.gold), pair)
         }
     }
 
@@ -299,7 +287,7 @@ internal object EquipmentStore {
         var serial = old.nextSerial
         val owned = old.owned.filter { it.serverKey == null } + remote.owned.map { it.local(existing[it.key] ?: serial++) }
         val ownedIds = owned.map { it.serial }.toSet()
-        return old.copy(owned = owned, nextSerial = serial, releaseGiftGranted = true, equipped = old.equipped.filterValues { it in ownedIds },
+        return old.copy(owned = owned, nextSerial = serial, equipped = old.equipped.filterValues { it in ownedIds },
             serverOpened = remote.opened, revision = remote.revision, gold = remote.gold, ice = remote.ice, packCredits = remote.packCredits, dungeon = remote.dungeon ?: old.dungeon)
     }
 
@@ -313,15 +301,13 @@ internal object EquipmentStore {
         val previousRank = recent[quests.today] ?: 0
         val rank = maxOf(previousRank, quests.rank)
         if (rank > previousRank) recent[quests.today] = rank
-        val drops = if (next.floor > state.floor) ArsenalGame.drops(state.floor) else ArsenalGame.Drops(0, 0)
-        val day = quests.today
-        val week = Progression.week(day)
-        val weeklyPacks = maxOf(old.weeklyPacks[week] ?: 0, ArsenalGame.weeklyGoals.count { quests.weekCount >= it })
-        val newPacks = weeklyPacks - (old.weeklyPacks[week] ?: 0)
-        val gift = if (old.releaseGiftGranted || unlimitedPacks || Economy.available()) 0 else 15
-        old.copy(dungeon = next, releaseGiftGranted = old.releaseGiftGranted || gift > 0,
-            weeklyPacks = old.weeklyPacks.filterKeys { it >= week - 42 } + (week to weeklyPacks), gold = old.gold + gold + rewards[rank] - rewards[previousRank], goldRanks = recent,
-            freePacks = old.freePacks + drops.packs + newPacks + gift, ice = old.ice + drops.ice)
+        val ice = if (next.floor > state.floor) ArsenalGame.iceDrop(state.floor) else 0
+        val week = Progression.week(quests.today)
+        val paid = old.weeklyMilestones[week] ?: 0
+        val milestones = maxOf(paid, ArsenalGame.weeklyGoals.count { quests.weekCount >= it })
+        old.copy(dungeon = next, weeklyMilestones = old.weeklyMilestones.filterKeys { it >= week - 42 } + (week to milestones),
+            gold = old.gold + gold + rewards[rank] - rewards[previousRank] + (milestones - paid) * ArsenalGame.WEEKLY_GOLD,
+            goldRanks = recent, ice = old.ice + ice)
     }
 
     suspend fun purchasePack(ctx: Context, request: String) = change(ctx) { state ->

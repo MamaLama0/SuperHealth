@@ -194,7 +194,7 @@ internal fun WQuests(size: CardSize, icon: ImageVector, modifier: Modifier, refr
     val hue = DashCard.QUESTS.hue()
     val inventory by app.superhealth.cards.EquipmentStore.state.collectAsState()
     val wallet by app.superhealth.cards.ArsenalGame.remote.collectAsState()
-    val rewardReady = quest?.canOpenDaily(inventory.day) == true || inventory.freePacks > 0 || inventory.pending != null || inventory.rewardPending != null || (wallet?.packCredits ?: inventory.packCredits).isNotEmpty()
+    val rewardReady = inventory.freePacks > 0 || inventory.pending != null || inventory.rewardPending != null || (wallet?.packCredits ?: inventory.packCredits).isNotEmpty()
     val rank = quest?.rank ?: 0
     val title = if (rewardReady) tr("Paquet à récupérer") else tr(listOf("Premier sceau", "Grand sceau", "Sceau héroïque", "Tous les sceaux du jour")[rank])
     val progress = if (rewardReady) tr("Disponible") else "$rank / 3"

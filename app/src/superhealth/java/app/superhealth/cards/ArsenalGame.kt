@@ -71,12 +71,11 @@ internal object ArsenalGame {
         val rank get() = days.firstOrNull { it.day == today }?.rank ?: 0
         val weekCount get() = days.count { it.day >= Progression.week(today) }
         val activity get() = gate.done.any { it in activities }
-        val heroic get() = rank == 3
-        fun canOpenDaily(opened: Long?) = heroic && (opened == null || opened < today)
     }
 
     const val COLLECTION_VERSION = 1
     const val PACK_PRICE = 75
+    const val WEEKLY_GOLD = 25
     val weeklyGoals = listOf(2, 4, 6)
 
     private val activities = setOf(Progression.Track.STRENGTH, Progression.Track.RUN, Progression.Track.HIKE, Progression.Track.MIND)
@@ -111,19 +110,14 @@ internal object ArsenalGame {
         put("days", buildJsonArray { quests.days.forEach { day -> add(buildJsonObject { put("day", day.day); put("rank", day.rank) }) } })
     }
 
-    suspend fun canOpenOnline(ctx: Context): Boolean = try {
-        Economy.arsenal(ctx, buildJsonObject { put("op", "arsenal-state"); put("rules", 2) }, probe = true).also { if (it.boosters < 2) throw Upgrade() }.rules >= 2
-    } catch (_: Economy.Offline) {
-        false
-    } catch (_: Unsupported) {
-        false
-    }
-
-    suspend fun open(ctx: Context, slot: EquipmentSlot, quests: Quests): View =
-        request(ctx, "v2-open") { put("slot", slot.name); put("booster", if (slot == EquipmentSlot.WEAPON) "WEAPON" else "ARMOR"); addDays(quests) }
-
-    suspend fun claimPack(ctx: Context, slot: EquipmentSlot, key: String, quests: Quests): View =
-        request(ctx, "v3-open") { put("slot", slot.name); put("booster", if (slot == EquipmentSlot.WEAPON) "WEAPON" else "ARMOR"); put("rewardKey", key); addDays(quests) }
+    suspend fun claimPack(ctx: Context, slot: EquipmentSlot, key: String, day: Long): View =
+        request(ctx, "v3-open") {
+            put("slot", slot.name)
+            put("booster", if (slot == EquipmentSlot.WEAPON) "WEAPON" else "ARMOR")
+            put("rewardKey", key)
+            put("today", day)
+            put("days", JsonArray(emptyList()))
+        }
 
     suspend fun purchasePack(ctx: Context, request: String) {
         if (Economy.available() && !EquipmentStore.unlimitedPacks) {
@@ -190,8 +184,7 @@ internal object ArsenalGame {
         val elite get() = floor % 4 == 0
     }
 
-    data class Drops(val packs: Int, val ice: Int)
-    fun drops(floor: Int) = Drops(if (floor % 4 == 0) 1 else 0, if (floor % 3 == 0) 1 else 0)
+    fun iceDrop(floor: Int) = if (floor % 3 == 0) 1 else 0
 
     fun settle(dungeon: Dungeon, quests: Quests): Dungeon {
         val today = quests.today
@@ -214,13 +207,12 @@ internal object ArsenalGame {
             if (completeSet) 1 else 0
         val remaining = (current.hp - damage).coerceAtLeast(0)
         val won = remaining == 0
-        val loot = if (won) drops(current.floor) else Drops(0, 0)
         val received = if (won || current.frozenDay == today) 0 else ((if (current.elite) 18 else 12) - CharacterStats.modifier(quests.character.constitution)).coerceAtLeast(1)
         return current.copy(floor = current.floor + if (won) 1 else 0, monster = remaining,
             health = (current.health - received).coerceAtLeast(0), dealt = damage.coerceAtMost(current.hp), received = received,
             defeatedFloor = current.floor.takeIf { won },
             lastAttack = today, log = if (won) "Monstre vaincu · +${if (current.elite) 35 else 15} or" +
-                (if (loot.packs > 0) " · +1 paquet" else "") + (if (loot.ice > 0) " · +1 glaçon" else "")
+                (if (iceDrop(current.floor) > 0) " · +1 glaçon" else "")
                 else "Attaque réussie · −$damage PV") to
             if (won) (if (current.elite) 35 else 15) else 0
     }

@@ -2,6 +2,10 @@ package app.superhealth.ui
 
 internal object StringsArsenal {
     val map = mapOf(
+        "Les paquets s’achètent avec l’or des quêtes et des combats. Ouvre-en autant que tu veux à la suite." to "Use gold from quests and battles to buy packs. Open as many as you like in a row.",
+        "L’or des quêtes est crédité à la synchronisation. Les paquets s’achètent en boutique." to "Quest gold is awarded when syncing. Buy packs in the shop.",
+        "Paquets disponibles" to "Available packs",
+        "Aucun paquet à ouvrir." to "No packs to open.",
         "+0,5 % aux trois stats en duel · +1 dégât en donjon" to "+0.5% to all three duel stats · +1 dungeon damage",
         "Set complet" to "Complete set",
         "Impossible d’enregistrer le repas." to "Could not save the meal.",
