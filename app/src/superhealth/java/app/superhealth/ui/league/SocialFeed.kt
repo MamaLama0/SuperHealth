@@ -70,11 +70,11 @@ import java.time.format.DateTimeFormatter
 /** Le geste vers la droite depuis le tableau de bord ouvre le Groupe. */
 @Composable
 internal fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.compose.foundation.pager.PagerState,
-    socialPage: SocialPage, onDashboard: () -> Unit, onOpeningComplete: () -> Unit) {
+    socialPage: SocialPage, onDashboard: () -> Unit) {
     val settings by SuperPrefs.settings.collectAsState()
     if (settings.socialFeedEnabled && settings.leagueEnabled) {
         androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1, key = { it }) { page ->
-            if (page == 0) SocialFeed(nav, active = pager.settledPage == 0, socialPage, onDashboard, onOpeningComplete)
+            if (page == 0) SocialFeed(nav, active = pager.settledPage == 0, socialPage, onDashboard)
             else DashboardScreen(vm, nav)
         }
     } else DashboardScreen(vm, nav)
@@ -84,14 +84,13 @@ internal fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: and
 internal enum class SocialPage(val title: String) { PACKS("Paquets"), FEED("Fil") }
 
 @Composable
-internal fun SocialFeed(nav: NavHostController, active: Boolean, page: SocialPage,
-    onDashboard: () -> Unit, onOpeningComplete: () -> Unit) {
+internal fun SocialFeed(nav: NavHostController, active: Boolean, page: SocialPage, onDashboard: () -> Unit) {
     val accent = Mf.colors.accent
     val saveable = rememberSaveableStateHolder()
     Column(Modifier.fillMaxSize().tabBackground(accent).statusBarsPadding().padding(bottom = LocalTabBarInset.current)) {
         // Keep the GPU scene alive when switching tabs; the dashboard pager also warms it offscreen.
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            EquipmentPacks(nav, active && page == SocialPage.PACKS, onOpeningComplete,
+            EquipmentPacks(nav, active && page == SocialPage.PACKS,
                 Modifier.fillMaxSize().graphicsLayer { alpha = if (page == SocialPage.PACKS) 1f else 0f }
                     .then(if (page == SocialPage.PACKS) Modifier else Modifier.clearAndSetSemantics {}), onDashboard)
             if (page == SocialPage.FEED) saveable.SaveableStateProvider(SocialPage.FEED.name) {

@@ -46,17 +46,17 @@ import java.time.LocalDate
 import java.util.Locale
 
 @Composable
-internal fun DailyPackRoute(nav: NavHostController, onOpeningComplete: () -> Unit) {
+internal fun DailyPackRoute(nav: NavHostController) {
     Column(Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding().navigationBarsPadding()) {
         NavBar("Paquets", { nav.popBackStack() })
-        EquipmentPacks(nav, true, onOpeningComplete, Modifier.weight(1f).fillMaxWidth())
+        EquipmentPacks(nav, true, Modifier.weight(1f).fillMaxWidth())
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun EquipmentPacks(nav: NavHostController, active: Boolean, onOpeningComplete: () -> Unit,
-    modifier: Modifier = Modifier, onDashboard: (() -> Unit)? = null) {
+internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: Modifier = Modifier,
+    onDashboard: (() -> Unit)? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings by SuperPrefs.settings.collectAsState()
@@ -226,7 +226,6 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, onOpeningCo
     opening?.let { draw ->
         FocusOpening(draw, cards, inventory.owned, direction, tearProgress) {
             opening = null
-            onOpeningComplete()
         }
     }
     if (quests) ModalBottomSheet(onDismissRequest = { quests = false }, containerColor = Mf.colors.background,

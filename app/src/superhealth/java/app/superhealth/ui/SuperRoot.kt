@@ -186,7 +186,6 @@ fun SuperRoot(vm: SuperViewModel) {
     val groupVisible = sh.socialFeedEnabled && sh.leagueEnabled && homePager.settledPage == 0
     val groupContext = current == "feed" || (current == "home" && groupVisible)
     var socialPage by rememberSaveable { mutableStateOf(SocialPage.FEED) }
-    val showSocialFeed: () -> Unit = { socialPage = SocialPage.FEED }
     val scope = rememberCoroutineScope()
     val dashboard: () -> Unit = {
         if (current == "feed") {
@@ -248,8 +247,8 @@ fun SuperRoot(vm: SuperViewModel) {
             popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
             popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
-            composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav, homePager, socialPage, dashboard, showSocialFeed) }
-            composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true, socialPage, dashboard, showSocialFeed) }
+            composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav, homePager, socialPage, dashboard) }
+            composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true, socialPage, dashboard) }
             composable("social/compose") { app.superhealth.ui.league.SocialComposer(nav) }
             composable("social/share/workout") { app.superhealth.ui.league.SocialComposer(nav, "WORKOUT") }
             composable("group/post/{author}/{post}?reply={reply}", listOf(navArgument("author") { type = NavType.StringType }, navArgument("post") { type = NavType.StringType }, navArgument("reply") { type = NavType.StringType; nullable = true; defaultValue = null })) { entry ->
@@ -296,12 +295,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
             composable("social") { app.superhealth.ui.cards.EquipmentProfile(nav) }
             composable("cards/equipment?edit={edit}", listOf(navArgument("edit") { type = NavType.BoolType; defaultValue = false })) { entry -> app.superhealth.ui.cards.EquipmentProfile(nav, entry.arguments?.getBoolean("edit") == true) }
-            composable("cards/packs") {
-                app.superhealth.ui.cards.DailyPackRoute(nav) {
-                    showSocialFeed()
-                    nav.openTab("feed", fresh = true)
-                }
-            }
+            composable("cards/packs") { app.superhealth.ui.cards.DailyPackRoute(nav) }
             composable("cards/album") { app.superhealth.ui.cards.AlbumScreen(nav) }
             composable("cards/quests") { app.superhealth.ui.cards.ArsenalQuestRoute(nav) }
             composable("cards/trades") { app.superhealth.ui.cards.ArsenalMarket(nav, startTab = 1) }
