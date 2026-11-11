@@ -231,4 +231,4 @@ Au premier démarrage du serveur 4.0, les cartes de l’Arsenal, leurs ouverture
 
 Les sceaux et paliers de la semaine récompensent les suivis avec des paquets. Le marché accepte les ventes à prix fixe, les enchères et les offres privées. Un paquet coûte 75 pièces d’or. Les combats de donjon v2 utilisent les caractéristiques et affinités sans position.
 
-Depuis la 4.0.1, seul le sceau héroïque débloque le paquet du jour. Les paliers hebdomadaires gardent leurs paquets et les invitations de duel acceptent les notes sur 100 des nouveaux clients.
+Depuis la 4.0.1, l’Arsenal distribue de l’or pour les quêtes. Les paquets coûtent 75 pièces et peuvent être ouverts à la suite. Les crédits existants restent utilisables. Les duels acceptent les notes sur 100 et un set complet donne un léger bonus.

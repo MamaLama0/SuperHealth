@@ -151,7 +151,7 @@ test('a single daily tracker allows an attack, and one ice cube protects exactly
   assert.equal((await run(first,'v2-sync',day+5,{days:[],attackDays:[]})).dungeon.health,68);
 });
 
-test('invite acceptance, gifts, and bonus pack receipts respect membership and balances', async t=>{
+test('invite acceptance, gifts, and purchased pack receipts respect membership and balances', async t=>{
   const {run}=await fixture(t);
   const created=await run(first,'raid-create',day);
   await assert.rejects(run(first,'v3-raid-invite',day,{to:second}),{status:409});
@@ -166,8 +166,9 @@ test('invite acceptance, gifts, and bonus pack receipts respect membership and b
   }
   const winner=await run(first,'state',day+2);
   assert.ok(winner.raid.won);
-  assert.equal(winner.packCredits.length,1);
+  assert.equal(winner.packCredits.length,0);
   assert.equal(winner.ice,1);
+  await run(first,'purchase-pack',day+2,{request:randomUUID()});
   for (const [i,kind] of ['GOLD','ICE','PACK'].entries()) {
     const request='a0000000-0000-4000-8000-00000000000'+i;
     await assert.rejects(run(first,'v3-gift',day+2,{to:third,kind,request}),{status:403});
@@ -182,7 +183,7 @@ test('invite acceptance, gifts, and bonus pack receipts respect membership and b
   const rewardKey=recipient.packCredits[0];
   const opened=await run(third,'v3-open',day+2,{rewardKey,slot:'LEGS',days:[]});
   assert.ok(opened.opening.pieces.length>=4);
-  assert.equal(opened.opened,0);
+  assert.equal(opened.opened,1);
   assert.equal(opened.packCredits.length,0);
   assert.deepEqual((await run(third,'v3-open',day+2,{rewardKey,slot:'WEAPON',days:[]})).opening,opened.opening);
 });
@@ -351,61 +352,69 @@ test('a frozen monster cannot counter a tactical attack', async t=>{
   assert.equal(result.dungeon.health,100);
 });
 
-test('4.0 wipes collections and refunds escrow once, then grants fifteen launch packs once', async t => {
+test('the collection migration refunds escrow and preserves existing credits without new gifts', async t => {
   const {dir,run,restart}=await fixture(t);
   const opened=await run(first,'v2-open',day,{slot:'WEAPON',days:[rank(day)]});
   await run(second,'sync',day,{days:[rank(day)]});
-  const sale=await run(first,'list',day,{key:opened.owned[0].key,mode:'auction',price:10});
-  await run(second,'bid',day,{key:sale.listings[0].key,amount:10});
+  const sale=await run(first,'list',day,{key:opened.owned[0].key,mode:'auction',price:10,rules:2});
+  await run(second,'bid',day,{key:sale.listings[0].key,amount:10,rules:2});
   const file=join(dir,'arsenal-v1.json');
   const old=JSON.parse(await readFile(file,'utf8'));
   delete old.collectionVersion;
+  old.players[first].packCredits=[randomUUID()];
   await writeFile(file,JSON.stringify(old));
   await restart();
 
   const version={collectionVersion:1,catalogueVersion:6,rules:2};
   const buyer=await run(second,'state',day+1,version);
   assert.equal(buyer.gold,45);
-  assert.equal(buyer.packCredits.length,15);
+  assert.equal(buyer.packCredits.length,0);
   const seller=await run(first,'state',day+1,version);
   assert.deepEqual(seller.owned,[]);
   assert.deepEqual(seller.listings,[]);
   assert.equal(seller.opened,0);
   const draw=await run(first,'v3-open',day+1,{...version,rewardKey:seller.packCredits[0],slot:'WEAPON',days:[]});
-  assert.equal(draw.packCredits.length,14);
+  assert.equal(draw.packCredits.length,0);
   await restart();
   const after=await run(first,'state',day+1,version);
   assert.deepEqual(after.owned,draw.owned);
-  assert.equal(after.packCredits.length,14);
+  assert.equal(after.packCredits.length,0);
 });
 
-test('only the heroic seal grants one daily draw; weekly goals and purchases still grant credits', async t => {
+test('quests grant gold and ten purchased packs can open on the same day', async t => {
   const {run}=await fixture(t);
   const version={collectionVersion:1,catalogueVersion:6,rules:2};
   const start=day-((day+3)%7);
-  const grand=await run(first,'v2-sync',start,{...version,days:[rank(start,2)]});
-  assert.equal(grand.packCredits.length,15);
-  const open = {...version,slot:'WEAPON'};
-  await assert.rejects(run(first,'v2-open',start,{...open,days:[rank(start,2)]}),{status:409});
-  const hero=await run(first,'v2-open',start,{...open,days:[rank(start,3)]});
-  assert.equal(hero.packCredits.length,15);
-  assert.equal(hero.opened,1);
-  assert.deepEqual((await run(first,'v2-open',start,{...open,days:[]})).opening,hero.opening);
+  const hero=await run(first,'v2-sync',start,{...version,days:[rank(start,3)]});
+  assert.equal(hero.gold,75);
+  assert.deepEqual(hero.packCredits,[]);
+  await assert.rejects(run(first,'v2-open',start,{...version,slot:'WEAPON',days:[rank(start,3)]}),{status:409});
   const weekly=await run(first,'v2-sync',start+1,{...version,days:[rank(start+1,1)]});
-  assert.equal(weekly.packCredits.length,16);
-  const purchase={...version,request:randomUUID()};
-  const paid=await run(first,'purchase-pack',start+1,purchase);
-  assert.equal(paid.gold,weekly.gold-75);
-  assert.equal(paid.packCredits.length,17);
-  const retry=await run(first,'purchase-pack',start+1,purchase);
-  assert.equal(retry.gold,paid.gold);
-  assert.deepEqual(retry.packCredits,paid.packCredits);
+  assert.equal(weekly.gold,125);
+  assert.deepEqual(weekly.packCredits,[]);
+  assert.equal((await run(first,'v2-sync',start+1,{...version,days:[]})).gold,125);
+  await run(first,'v2-sync',start+1,{...version,days:Array.from({length:10},(_,i)=>rank(start-i-1,3))});
+  for (let i=0;i<10;i++) {
+    const purchase={...version,request:randomUUID()};
+    const paid=await run(first,'purchase-pack',start+1,purchase);
+    assert.equal(paid.packCredits.length,1);
+    const retry=await run(first,'purchase-pack',start+1,purchase);
+    assert.equal(retry.gold,paid.gold);
+    assert.deepEqual(retry.packCredits,paid.packCredits);
+    const draw={...version,slot:'WEAPON',days:[],rewardKey:paid.packCredits[0]};
+    const result=await run(first,'v3-open',start+1,draw);
+    assert.equal(result.opened,i+1);
+    assert.equal(result.opening.gold,i===9);
+    assert.deepEqual(result.packCredits,[]);
+    assert.deepEqual((await run(first,'v3-open',start+1,draw)).opening,result.opening);
+  }
 });
 
 test('fixed price sales move gold and cards once, and declining a private offer releases the card', async t => {
   const {run}=await fixture(t);
   const version={collectionVersion:1,catalogueVersion:6,rules:2};
-  const stock=await run(first,'v2-sync',day,{...version,days:[rank(day,1)]});
+  await run(first,'v2-sync',day,{...version,days:[rank(day,3)]});
+  const stock=await run(first,'purchase-pack',day,{...version,request:randomUUID()});
   const seller=await run(first,'v3-open',day,{...version,slot:'WEAPON',days:[],rewardKey:stock.packCredits[0]});
   await run(second,'v2-sync',day,{...version,days:[rank(day,1)]});
   const [sold,offered]=seller.owned;
@@ -417,7 +426,7 @@ test('fixed price sales move gold and cards once, and declining a private offer 
   assert.ok(bought.owned.some(piece=>piece.key===sold.key));
   await assert.rejects(run(second,'buy',day,{...version,key}),{status:404});
   const sent=await run(first,'list',day,{...version,key:offered.key,mode:'offer',to:second,price:5},[second]);
-  assert.equal(sent.gold,40);
+  assert.equal(sent.gold,15);
   await run(second,'decline',day,{...version,key:sent.listings[0].key});
   const after=await run(first,'state',day,version);
   assert.ok(after.owned.some(piece=>piece.key===offered.key));

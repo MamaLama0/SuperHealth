@@ -161,14 +161,14 @@ function grantPack(player) {
 }
 
 function rewardQuests(player, today) {
-  player.weeklyPacks ??= {};
+  player.weeklyGold ??= {...player.weeklyPacks};
   const week = monday(today);
   const count = Object.keys(player.days).filter(day => +day >= week && +day <= today).length;
   const milestones = WEEKLY_GOALS.filter(goal => count >= goal).length;
-  const paid = player.weeklyPacks[week] ?? 0;
-  for (let i = paid; i < milestones; i++) grantPack(player);
-  if (milestones > paid) player.weeklyPacks[week] = milestones;
-  for (const start of Object.keys(player.weeklyPacks)) if (+start < week - 42) delete player.weeklyPacks[start];
+  const paid = player.weeklyGold[week] ?? 0;
+  player.gold += Math.max(0, milestones - paid) * 25;
+  if (milestones > paid) player.weeklyGold[week] = milestones;
+  for (const start of Object.keys(player.weeklyGold)) if (+start < week - 42) delete player.weeklyGold[start];
 }
 
 function settleDungeon(player,today) {
@@ -207,10 +207,9 @@ function solo(player,today,attack,power=0,mix=null,stance=null,character=null,se
   if (!dungeon.monster) {
     const gold=elite?35:15;
     const ice=dungeon.floor%3===0;
-    if (elite) grantPack(player);
     if (ice) player.ice=(player.ice??0)+1;
     player.gold+=gold; dungeon.defeatedFloor=dungeon.floor; dungeon.floor++;
-    dungeon.log='Monstre vaincu · +'+gold+' or'+(elite?' · +1 paquet':'')+(ice?' · +1 glaçon':'');
+    dungeon.log='Monstre vaincu · +'+gold+' or'+(ice?' · +1 glaçon':'');
   } else {
     dungeon.received=character===null||dungeon.frozenDay===today?0:Math.floor(Math.max(1,(elite?18:12)-(character?modifier(character.constitution):0))*(stance==='GUARD'?.5:1));
     dungeon.health=Math.max(0,dungeon.health-dungeon.received);
@@ -264,10 +263,6 @@ export async function createArsenal(dataDir) {
     next.duels ??= {};
     for (const [key,duel] of Object.entries(next.duels)) if (duel.expires <= now) delete next.duels[key];
     const player = account(next,id);
-    if (body.collectionVersion === COLLECTION_VERSION && !player.release40Gift) {
-      for (let i = 0; i < 15; i++) grantPack(player);
-      player.release40Gift = true;
-    }
     const utc = Math.floor(now/DAY), today = int(body.today,utc-1,utc+1) ? body.today : utc;
     const week = monday(utc);
     const typed = /^arsenal-v[23]-/.test(body.op);
@@ -304,18 +299,21 @@ export async function createArsenal(dataDir) {
         if (!opening && player.packCredits?.includes(key)) {
           if (Object.keys(player.owned).length > 2000) fail(507);
           const affinities=packSchools(today+player.opened,body.slot);
-          const pieces=loot(body.slot,false,affinities,currentCatalog,body.catalogueVersion??0,body.booster);
+          const gold = (player.opened + 1) % 10 === 0;
+          const pieces=loot(body.slot,gold,affinities,currentCatalog,body.catalogueVersion??0,body.booster);
           for (const piece of pieces) player.owned[piece.key]=piece;
           player.packCredits=player.packCredits.filter(credit=>credit!==key);
-          opening=player.rewardReceipts[key]={day:today,utc,slot:body.slot,gold:false,pieces,schools:affinities};
+          player.opened++;
+          opening=player.rewardReceipts[key]={day:today,utc,slot:body.slot,gold,pieces,schools:affinities};
           for (const [receipt,draw] of Object.entries(player.rewardReceipts)) if (draw.utc<utc-35) delete player.rewardReceipts[receipt];
         }
+      } else if (body.collectionVersion === COLLECTION_VERSION) {
+        fail(409);
       } else if (player.last?.day === today) {
         if (!modern && player.last.pieces.some(piece=>!legacyCard(piece.id))) fail(409);
         opening = player.last;
       } else {
-        const requiredRank = body.collectionVersion === COLLECTION_VERSION ? 3 : 1;
-        if ((player.days[today] ?? 0) < requiredRank || player.last?.day > today) fail(409);
+        if (!player.days[today] || player.last?.day > today) fail(409);
         if (Object.keys(player.owned).length > 2000) fail(507);
         const gold = (player.opened+1)%10===0;
         const affinities = typed ? packSchools(today,body.slot) : null;
@@ -436,7 +434,7 @@ export async function createArsenal(dataDir) {
         raid.won = true;
         for (const member of raid.members) {
           const winner=account(next,member);
-          winner.gold+=120; winner.ice=(winner.ice??0)+1; grantPack(winner);
+          winner.gold+=120; winner.ice=(winner.ice??0)+1;
         }
       }
     } else if (body.op === 'arsenal-fuse') {
