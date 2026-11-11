@@ -230,3 +230,5 @@ Validation : `node --test arsenal.test.mjs combat.test.mjs economy.test.mjs serv
 Au premier démarrage du serveur 4.0, les cartes de l’Arsenal, leurs ouvertures enregistrées et les annonces sont remises à zéro. Les mises d’enchères sont remboursées. Les cartes Athlète héritées sont remises à zéro au prochain accès au compte. Au premier contact depuis la 4.0, chaque compte reçoit 15 paquets Arsenal, une seule fois. Garder le volume de données pour conserver les comptes et l’historique de migration.
 
 Les sceaux et paliers de la semaine récompensent les suivis avec des paquets. Le marché accepte les ventes à prix fixe, les enchères et les offres privées. Un paquet coûte 75 pièces d’or. Les combats de donjon v2 utilisent les caractéristiques et affinités sans position.
+
+Depuis la 4.0.1, seul le sceau héroïque débloque le paquet du jour. Les paliers hebdomadaires gardent leurs paquets et les invitations de duel acceptent les notes sur 100 des nouveaux clients.

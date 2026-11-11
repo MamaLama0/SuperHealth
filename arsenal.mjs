@@ -12,7 +12,6 @@ const ID = /^[a-f0-9-]{36}$/;
 const GOLD = 25;
 const PACK_PRICE = 75;
 const COLLECTION_VERSION = 1;
-const SEAL_PACKS = [0, 0, 1, 3];
 const WEEKLY_GOALS = [2, 4, 6];
 const rarity = [.515, .30, .145, .035, .005];
 const finishes = [['SHINY',108,.008],['ANIMATED',114,.0022],['CHROMA',125,.0011],['BLESSED',134,.0006],['BUG',100,.0001]];
@@ -78,10 +77,21 @@ function loot(slot, gold, affinities, currentCatalog = false, catalogueVersion =
   }).sort((a,b) => catalog.get(a.id).tier-catalog.get(b.id).tier);
 }
 
+function completeSet(player, loadout) {
+  if (!Array.isArray(loadout) || loadout.length !== slots.length) return false;
+  const equipped = loadout.map(key => cleanText(key) ? catalog.get(player.owned[key]?.id) : null);
+  const set = equipped[0]?.setId;
+  return Boolean(set && equipped.every(card => card?.setId === set) &&
+    new Set(equipped.map(card => card.slot)).size === slots.length);
+}
+
 function characterSnapshot(player, body) {
   if (!validCharacter(body.character) || !Array.isArray(body.loadout??[]) || (body.loadout??[]).length>4) fail(400);
-  const {strength,dexterity,constitution,days,model}=body.character;
+  const {strength,dexterity,constitution,days,model,forceScore,dexScore,conScore}=body.character;
   const result={strength,dexterity,constitution,days,model,forceBonus:0,dexBonus:0,conBonus:0};
+  if (int(forceScore,0,100) && 8+Math.floor(forceScore*12/100)===strength) result.forceScore=forceScore;
+  if (int(dexScore,0,100) && 8+Math.floor(dexScore*12/100)===dexterity) result.dexScore=dexScore;
+  if (int(conScore,0,100) && 8+Math.floor(conScore*12/100)===constitution) result.conScore=conScore;
   const seen=new Set();
   for (const key of body.loadout??[]) {
     const piece=cleanText(key)&&player.owned[key],card=piece&&catalog.get(piece.id);
@@ -98,6 +108,11 @@ function characterSnapshot(player, body) {
     result[field[card.attribute]??(card.slot==='WEAPON'?'forceBonus':card.slot==='LEGS'?'dexBonus':'conBonus')]+=bonus;
     if (card.penalty) result[field[card.penaltyAttribute]??({BRA:'forceBonus',JAM:'dexBonus',CAR:'dexBonus'}[card.penalty]??'conBonus')]-=card.penaltyPoints;
 
+  }
+  if (completeSet(player, body.loadout)) {
+    result.forceBonus += 50;
+    result.dexBonus += 50;
+    result.conBonus += 50;
   }
   return result;
 }
@@ -146,14 +161,6 @@ function grantPack(player) {
 }
 
 function rewardQuests(player, today) {
-  player.sealPacks ??= {};
-  const rank = player.days[today] ?? 0;
-  const packs = SEAL_PACKS[rank];
-  const previous = player.sealPacks[today] ?? 0;
-  for (let i = previous; i < packs; i++) grantPack(player);
-  if (packs > previous) player.sealPacks[today] = packs;
-  for (const day of Object.keys(player.sealPacks)) if (+day < today - 42) delete player.sealPacks[day];
-
   player.weeklyPacks ??= {};
   const week = monday(today);
   const count = Object.keys(player.days).filter(day => +day >= week && +day <= today).length;
@@ -179,7 +186,7 @@ function settleDungeon(player,today) {
   return dungeon;
 }
 
-function solo(player,today,attack,power=0,mix=null,stance=null,character=null){
+function solo(player,today,attack,power=0,mix=null,stance=null,character=null,setDamage=0){
   const dungeon=settleDungeon(player,today);
   if (!attack || !(player.days[today] || player.attackDays?.[today]) || (dungeon.lastAttack??-1)>=today) return;
   const elite=dungeon.floor%4===0;
@@ -193,7 +200,7 @@ function solo(player,today,attack,power=0,mix=null,stance=null,character=null){
   const matchup=elite?['ARCANIST','MELEE']:floorAffinities[(dungeon.floor-1)%5];
   const intent=stances[(dungeon.floor-1)%3];
   const scale=stance===null?100:beats(stance,intent)?120:beats(intent,stance)?85:100;
-  const hit=Math.floor((mix===null?base:damage(base,mix,matchup,elite))*scale/100);
+  const hit=Math.floor((mix===null?base:damage(base,mix,matchup,elite))*scale/100) + setDamage;
   dungeon.dealt=Math.min(dungeon.monster||maximum,hit);
   dungeon.received=0; dungeon.defeatedFloor=null;
   dungeon.monster=Math.max(0,(dungeon.monster||maximum)-hit);
@@ -283,7 +290,7 @@ export async function createArsenal(dataDir) {
         const character = [1, 2].includes(body.combatVersion) ? body.character : null;
         if ([1, 2].includes(body.combatVersion) && !validCharacter(character)) fail(400);
         solo(player, today, op === 'arsenal-solo', int(body.power,0,5) ? body.power : 0,
-          typed ? combatMix(body) : null, body.combatVersion === 1 ? body.stance : null, character);
+          typed ? combatMix(body) : null, body.combatVersion === 1 ? body.stance : null, character, completeSet(player, body.loadout) ? 1 : 0);
       }
     } else if (op === 'arsenal-open') {
       if (!families.has(body.slot)) fail(400);
@@ -307,7 +314,8 @@ export async function createArsenal(dataDir) {
         if (!modern && player.last.pieces.some(piece=>!legacyCard(piece.id))) fail(409);
         opening = player.last;
       } else {
-        if (!player.days[today] || player.last?.day > today) fail(409);
+        const requiredRank = body.collectionVersion === COLLECTION_VERSION ? 3 : 1;
+        if ((player.days[today] ?? 0) < requiredRank || player.last?.day > today) fail(409);
         if (Object.keys(player.owned).length > 2000) fail(507);
         const gold = (player.opened+1)%10===0;
         const affinities = typed ? packSchools(today,body.slot) : null;
@@ -319,7 +327,9 @@ export async function createArsenal(dataDir) {
     } else if (op === 'arsenal-duel-invite') {
       if (!cleanText(body.request) || !HEX.test(body.to??'') || body.to===id || !reciprocal.includes(body.to)) fail(403);
       if (!validCharacter(body.character)) fail(400);
-      const signature=JSON.stringify([body.to,...['strength','dexterity','constitution','days','model'].map(k=>body.character[k]),body.loadout??[]]);
+      const scoreKeys = ['forceScore','dexScore','conScore'];
+      const scores = scoreKeys.some(key => body.character[key] != null) ? scoreKeys.map(key => body.character[key]) : [];
+      const signature=JSON.stringify([body.to,...['strength','dexterity','constitution','days','model'].map(k=>body.character[k]),body.loadout??[],...scores]);
       const existing=Object.values(next.duels).find(d=>d.from===id&&d.request===body.request);
       if (existing && (existing.signature!==signature)) fail(409);
       if (!existing) {

@@ -379,20 +379,24 @@ test('4.0 wipes collections and refunds escrow once, then grants fifteen launch 
   assert.equal(after.packCredits.length,14);
 });
 
-test('4.0 pays seal and weekly quests once and sells packs for gold with an idempotent receipt', async t => {
+test('only the heroic seal grants one daily draw; weekly goals and purchases still grant credits', async t => {
   const {run}=await fixture(t);
   const version={collectionVersion:1,catalogueVersion:6,rules:2};
   const start=day-((day+3)%7);
   const grand=await run(first,'v2-sync',start,{...version,days:[rank(start,2)]});
-  assert.equal(grand.packCredits.length,16);
-  const hero=await run(first,'v2-sync',start,{...version,days:[rank(start,3)]});
-  assert.equal(hero.packCredits.length,18);
+  assert.equal(grand.packCredits.length,15);
+  const open = {...version,slot:'WEAPON'};
+  await assert.rejects(run(first,'v2-open',start,{...open,days:[rank(start,2)]}),{status:409});
+  const hero=await run(first,'v2-open',start,{...open,days:[rank(start,3)]});
+  assert.equal(hero.packCredits.length,15);
+  assert.equal(hero.opened,1);
+  assert.deepEqual((await run(first,'v2-open',start,{...open,days:[]})).opening,hero.opening);
   const weekly=await run(first,'v2-sync',start+1,{...version,days:[rank(start+1,1)]});
-  assert.equal(weekly.packCredits.length,19);
+  assert.equal(weekly.packCredits.length,16);
   const purchase={...version,request:randomUUID()};
   const paid=await run(first,'purchase-pack',start+1,purchase);
   assert.equal(paid.gold,weekly.gold-75);
-  assert.equal(paid.packCredits.length,20);
+  assert.equal(paid.packCredits.length,17);
   const retry=await run(first,'purchase-pack',start+1,purchase);
   assert.equal(retry.gold,paid.gold);
   assert.deepEqual(retry.packCredits,paid.packCredits);
@@ -401,7 +405,8 @@ test('4.0 pays seal and weekly quests once and sells packs for gold with an idem
 test('fixed price sales move gold and cards once, and declining a private offer releases the card', async t => {
   const {run}=await fixture(t);
   const version={collectionVersion:1,catalogueVersion:6,rules:2};
-  const seller=await run(first,'v2-open',day,{...version,slot:'WEAPON',days:[rank(day,1)]});
+  const stock=await run(first,'v2-sync',day,{...version,days:[rank(day,1)]});
+  const seller=await run(first,'v3-open',day,{...version,slot:'WEAPON',days:[],rewardKey:stock.packCredits[0]});
   await run(second,'v2-sync',day,{...version,days:[rank(day,1)]});
   const [sold,offered]=seller.owned;
   const listed=await run(first,'list',day,{...version,key:sold.key,mode:'fixed',price:15});
@@ -416,4 +421,38 @@ test('fixed price sales move gold and cards once, and declining a private offer 
   await run(second,'decline',day,{...version,key:sent.listings[0].key});
   const after=await run(first,'state',day,version);
   assert.ok(after.owned.some(piece=>piece.key===offered.key));
+});
+
+test('matching gear gains a small bonus in server duel snapshots and optional scores retain precision', async t => {
+  const {dir,run,restart}=await fixture(t);
+  await run(first,'state',day);
+  const file=join(dir,'arsenal-v1.json');
+  const data=JSON.parse(await readFile(file,'utf8'));
+  const cards=JSON.parse(await readFile(new URL('./arsenal-catalogue.json', import.meta.url)));
+  const set=cards.filter(card=>card.setId==='set-1-signature');
+  assert.equal(set.length,4);
+  const alternate=cards.find(card=>card.slot===set[0].slot && card.setId!==set[0].setId);
+  const pieces=[...set,alternate].map(card=>({key:randomUUID(),id:card.id,base:card.min,finish:'NORMAL',multiplier:100,level:1,balanceVersion:2}));
+  data.players[first].owned=Object.fromEntries(pieces.map(piece=>[piece.key,piece]));
+  await writeFile(file,JSON.stringify(data));
+  await restart();
+  const loadout=pieces.slice(0,4).map(piece=>piece.key);
+  const snapshot={...character,forceScore:71};
+  const duel=await run(first,'v3-duel-invite',day,{to:second,request:randomUUID(),loadout,character:snapshot},[second]);
+  const actual=duel.duels[0].mine;
+  assert.equal(actual.forceScore,71);
+  const expected={forceBonus:50,dexBonus:50,conBonus:50};
+  const field={FOR:'forceBonus',DEX:'dexBonus',CON:'conBonus'};
+  for (const card of set) {
+    expected[field[card.attribute]]+=Math.round(card.min*(card.penalty?1.4:1));
+    if (card.penalty) expected[field[card.penaltyAttribute]]-=card.penaltyPoints;
+  }
+  for (const [key,value] of Object.entries(expected)) assert.equal(actual[key],value);
+  const mixed=await run(first,'v3-duel-invite',day,{to:third,request:randomUUID(),
+    loadout:[pieces[4].key,...loadout.slice(1)],character:snapshot},[third]);
+  const rival=mixed.duels.find(value=>value.opponent===third).mine;
+  const affected=field[set[0].attribute];
+  for (const key of Object.keys(expected)) {
+    if (key!==affected && !set[0].penalty && !alternate.penalty) assert.equal(rival[key],expected[key]-50);
+  }
 });
