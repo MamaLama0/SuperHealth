@@ -118,6 +118,15 @@ internal fun EquipmentProfile(nav: NavHostController, edit: Boolean = false) {
                     }
                 }
                 Text(tr("Équipement"), style = MaterialTheme.typography.titleLarge)
+                EquipmentStore.completeSet(saved, cards)?.let { set ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Rounded.Verified, null, tint = Mf.colors.accent, modifier = Modifier.size(20.dp))
+                        Text(listOfNotNull(tr("Set complet"), set.setName).joinToString(" · "),
+                            color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
+                    }
+                    Text(tr("+0,5 % aux trois stats en duel · +1 dégât en donjon"),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+                }
                 if (schools.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     schools.keys.forEach { DamageChip(it) }
                 }
@@ -358,12 +367,6 @@ private fun CharacterCard(stats: AthleteStats?, rarity: Int?, bonuses: Map<Stat,
                     else -> Icon(Icons.Rounded.Person, tr("Profil"), Modifier.size(110.dp), tint = tint)
                 }
             }
-            Column(Modifier.align(Alignment.TopStart).padding(20.dp)) {
-                Text(tr("PERSONNAGE"), color = Color(0xFFB6C3D2), style = MaterialTheme.typography.labelSmall)
-                Text("D20", style = MaterialTheme.typography.displayLarge,
-                    color = tint, fontWeight = FontWeight.Black)
-                Text(tr("Tes suivis, ton aventure"), style = MaterialTheme.typography.titleSmall, color = Color.White)
-            }
             FilledTonalIconButton(edit, Modifier.align(Alignment.TopEnd).padding(8.dp),
                 colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = Color(0xFF2B3544), contentColor = Color.White)) {
                 Icon(Icons.Rounded.Edit, tr("Portrait du personnage"), Modifier.size(18.dp))
@@ -374,8 +377,9 @@ private fun CharacterCard(stats: AthleteStats?, rarity: Int?, bonuses: Map<Stat,
             Column {
                 Text(userName() ?: tr("Mon personnage"), color = Color.White, style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(rarity?.let { tr(EquipmentRarity.entries[it].title) } ?: avatar?.let { tr(it.nameFr) } ?: tr("PERSONNAGE"),
-                    style = MaterialTheme.typography.labelMedium, color = tint)
+                (rarity?.let { tr(EquipmentRarity.entries[it].title) } ?: avatar?.let { tr(it.nameFr) })?.let {
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = tint)
+                }
             }
             val progress by app.superhealth.league.ProgressRepository.current.collectAsState()
             val settings by app.superhealth.SuperPrefs.settings.collectAsState()

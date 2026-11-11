@@ -12,17 +12,18 @@ class CharacterStatsTest {
         validatedToday = history[today].orEmpty(), recentValidated = history)
 
     @Test fun missingTrackingDoesNotInventStats() {
-        assertEquals(CharacterStats(), CharacterStats.from(progress(emptyMap()), Track.entries.toSet()))
+        assertEquals("0 · 0 · 0", CharacterStats.from(progress(emptyMap()), Track.entries.toSet()).scoreLine)
         assertEquals(-1, CharacterStats.modifier(9))
         assertEquals(5, CharacterStats.modifier(20))
     }
     @Test fun enabledTracksRenormalizeAndAreCappedAtTheirGoals() {
         val all = (today - 27..today).associateWith { Track.entries.toSet() }
         val full = CharacterStats.from(progress(all), Track.entries.toSet())
-        assertEquals(CharacterStats(10,20,10,28), full)
+        assertEquals("15 · 35 · 40", full.scoreLine)
+        assertEquals(28, full.days)
         val sleep = CharacterStats.from(progress(all), setOf(Track.SLEEP))
-        assertEquals(CharacterStats(8,8,9,28), sleep)
-        assertEquals(CharacterStats(8,8,9,14), CharacterStats.from(progress((today-13..today).associateWith { setOf(Track.SLEEP) }), setOf(Track.SLEEP)))
+        assertEquals("0 · 0 · 29", sleep.scoreLine)
+        assertEquals("0 · 0 · 14", CharacterStats.from(progress((today-13..today).associateWith { setOf(Track.SLEEP) }), setOf(Track.SLEEP)).scoreLine)
     }
     @Test fun futureAndOldDaysDoNotCountAndFirstDayDoesNotMaxStats() {
         val history = mapOf(today-28 to Track.entries.toSet(), today+1 to Track.entries.toSet(), today to Track.entries.toSet())
@@ -52,12 +53,25 @@ class CharacterStatsTest {
             if (i < 7) add(Track.MIND)
         } }
         val result = CharacterStats.from(progress(history), Track.entries.toSet(), athlete)
-        assertEquals(16,result.strength); assertEquals(16,result.dexterity); assertEquals(17,result.constitution)
+        assertEquals("62 · 63 · 68", result.scoreLine)
         val calculation = CharacterStats.breakdown(progress(history), Track.entries.toSet(), athlete)
         assertEquals(.6275,calculation[0].ratio,.000001)
-        assertEquals(.6575,calculation[1].ratio,.000001)
-        assertEquals(.7125,calculation[2].ratio,.000001)
+        assertEquals(.65 * Math.pow(80.0 / 99, 1.25) + .1375, calculation[1].ratio, .000001)
+        assertEquals(.6875,calculation[2].ratio,.000001)
     }
+    @Test fun aMatchingFourPieceSetAddsHalfAPercentToEachAttribute() {
+        val cards = EquipmentSlot.entries.associate { slot ->
+            slot.key to EquipmentCard(slot.key, slot.title, slot.title, "Steel", 0, 25, 45, slot, setId = "steel")
+        }
+        val pieces = EquipmentSlot.entries.mapIndexed { index, slot -> EquipmentPiece(index.toLong() + 1, slot.key, EquipmentFinish.NORMAL, 35, 100) }
+        val state = EquipmentStore.State(owned = pieces, equipped = EquipmentSlot.entries.zip(pieces.map { it.serial }).toMap())
+        val matched = EquipmentStore.characterBonuses(state, cards)
+        val mixed = EquipmentStore.characterBonuses(state, cards + ("weapon" to cards.getValue("weapon").copy(setId = "other")))
+        assertNotNull(EquipmentStore.completeSet(state, cards))
+        assertNull(EquipmentStore.completeSet(state.copy(equipped = state.equipped - EquipmentSlot.LEGS), cards))
+        CharacterAttribute.entries.forEach { stat -> assertEquals(50, matched.getValue(stat) - mixed.getValue(stat)) }
+    }
+
     @Test fun equipmentMapsBonusesAndCursesToThreeAttributesWithoutChangingDamageTypes() {
         val weapon=EquipmentCard("a","Sword","Sword","Steel",0,25,45,EquipmentSlot.WEAPON,
             penalty=Stat.DOS,penaltyPoints=45,damageTypes=listOf(DamageType.MELEE,DamageType.ARCANIST))

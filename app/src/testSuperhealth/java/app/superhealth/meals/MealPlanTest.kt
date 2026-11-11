@@ -30,6 +30,20 @@ class MealPlanTest {
         assertEquals(1300.0, goal.kcal, .001)
         assertEquals(65.0, goal.protein, .001)
     }
+    @Test fun movingAPlanSwapsOccupiedWindowsAndPreservesItsContents() {
+        val first = meal.copy(slot = 0, logged = false, entryIds = emptyList(), manual = true)
+        val second = first.copy(slot = 3, title = "Snack")
+        assertEquals(listOf(second.copy(slot = 0), first.copy(slot = 3)), MealPlanner.moved(listOf(first, second), 0, 3))
+        assertEquals(listOf(first, meal), MealPlanner.moved(listOf(first, meal), 0, 1))
+    }
+
+    @Test fun manualConfirmationUsesTheConfiguredWindowEvenWithoutSuggestions() {
+        val ends = listOf(720, 745, 840)
+        assertEquals(744, MealPlanner.scheduledMinute(1, ends))
+        assertEquals(839, MealPlanner.scheduledMinute(3, ends))
+        assertEquals(1170, MealPlanner.scheduledMinute(2, ends))
+    }
+
     @Test fun legacyPlansDecodeAndMicronutrientsSurviveSerialization() {
         val legacy = Json.decodeFromString<MealPlanner.Plan>("""{"day":100,"provider":"foods","meals":[{"slot":1,"title":"Lunch"}]}""")
         assertNull(legacy.meals.single().ingredients.firstOrNull()?.microsJson)

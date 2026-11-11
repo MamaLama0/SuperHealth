@@ -22,8 +22,10 @@ data class GymEvidence(val records: List<GymRecord>, val weeklyKg: Double, val w
 /** Game calibration, not training recommendations. Annual averages include weeks without logged sessions. */
 internal object CharacterTrainingEngine {
     private const val DAY = 86_400_000L
-    const val VOLUME_PER_BODYWEIGHT = 200.0
-    const val SETS_PER_WEEK = 40.0
+    const val VOLUME_PER_BODYWEIGHT = 250.0
+    const val SETS_PER_WEEK = 50.0
+
+    private const val RECORD_STANDARD = 1.20
 
     fun compute(input: AthleteStatsEngine.Input): CharacterTraining {
         val bodyweight = input.bodyweight.takeIf { it.isFinite() && it > 0 } ?: return CharacterTraining()
@@ -48,7 +50,7 @@ internal object CharacterTrainingEngine {
                     // Bounded RIR prevents a generous effort estimate from outweighing the lifted load.
                     val maximum = Strength.e1rm(load, reps, set.rir?.coerceIn(0, 3), exercise.upperBody, set.partialReps.coerceAtLeast(0))
                     if (!maximum.isFinite()) continue
-                    val points = (Standards.points(maximum / match.coef / bodyweight,
+                    val points = (Standards.points(maximum / match.coef / bodyweight / RECORD_STANDARD,
                         Standards.thresholds(match.lift, input.sex, bodyweight)) * match.confidence).coerceIn(0.0, 100.0)
                     if (points > (records[match.lift]?.score ?: -1.0)) records[match.lift] = GymRecord(exercise.name, external, reps, maximum, points)
                 }
@@ -56,7 +58,7 @@ internal object CharacterTrainingEngine {
             if (count > 0) validWorkouts += workout.startTime to (tonnage to count)
         }
         val top = records.values.sortedByDescending { it.score }.take(3)
-        val pr = top.firstOrNull()?.let { (.6 * it.score + .4 * top.map { r -> r.score }.average()) / 100.0 }
+        val pr = top.firstOrNull()?.let { (.4 * it.score + .6 * top.sumOf { record -> record.score } / 3.0) / 99.0 }
         val first = validWorkouts.minOfOrNull { it.first }
         val covered = first?.let { ((input.now - it) / DAY + 1).toInt().coerceIn(28, 365) } ?: 0
         val year = validWorkouts.filter { it.first >= input.now - 365 * DAY }

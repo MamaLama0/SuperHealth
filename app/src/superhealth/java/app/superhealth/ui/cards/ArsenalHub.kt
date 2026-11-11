@@ -189,7 +189,8 @@ internal fun DungeonRoute(nav: NavHostController) {
                 val power = (EquipmentStore.bonuses(saved, cards).values.sum() / 100).coerceIn(0, 5)
                 val character = quests?.character ?: CharacterStats()
                 val attributePower = CharacterStats.modifier(character.strength) * 2 + CharacterStats.modifier(character.dexterity)
-                val damage = EnemyAffinity.floor(dungeon.floor).hit(48 + attributePower + ((quests?.rank ?: 0) - 1).coerceAtLeast(0) * 9 + power, mix)
+                val setDamage = if (EquipmentStore.completeSet(saved, cards, serverOnly = online) != null) 1 else 0
+                val damage = EnemyAffinity.floor(dungeon.floor).hit(48 + attributePower + ((quests?.rank ?: 0) - 1).coerceAtLeast(0) * 9 + power, mix) + setDamage
                 Text(tr("Dégâts prévus") + " · $damage  /  " + tr("Riposte") + " · " +
                     (if (damage >= dungeon.hp || frozen) 0 else ((if (dungeon.elite) 18 else 12) - CharacterStats.modifier(character.constitution)).coerceAtLeast(1)),
                     color = Color(0xFFCBD4DF), style = MaterialTheme.typography.bodySmall)
@@ -445,8 +446,14 @@ internal fun ArsenalQuestContent(quests: ArsenalGame.Quests?) {
         Text(tr("Lecture des suivis…"))
         return
     }
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("Quêtes du jour"), style = MaterialTheme.typography.titleMedium)
+        Text("${quests.rank}/3", color = Mf.colors.accent, style = MaterialTheme.typography.labelLarge)
+    }
+    LinearProgressIndicator(progress = { quests.rank / 3f }, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp))
     val tiers = listOf(
-        Triple("Premier sceau", "Valide la majorité de tes suivis. Débloque ton paquet et ton attaque.", 25),
+        Triple("Premier sceau", "Valide la majorité de tes suivis.", 25),
         Triple("Grand sceau", "Valide tous les suivis visés et au moins deux domaines distincts.", 45),
         Triple("Sceau héroïque", "Valide tous les suivis visés et trois domaines, dont une activité.", 75),
     )
@@ -456,18 +463,21 @@ internal fun ArsenalQuestContent(quests: ArsenalGame.Quests?) {
             Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (done) Icons.Rounded.CheckCircle else Icons.Rounded.Stars, null, tint = if (done) Mf.colors.accent else Mf.colors.textSecondary)
                 Column(Modifier.weight(1f)) {
-                    Text(tr(title), style = MaterialTheme.typography.titleSmall)
+                    Text(tr(title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Text(tr(description), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     GoldBadge(prize)
-                    val packs = ArsenalGame.sealPacks(i + 1) - ArsenalGame.sealPacks(i)
-                    if (packs > 0) Text("+$packs " + tr(if (packs == 1) "paquet" else "paquets"), style = MaterialTheme.typography.labelSmall)
+                    if (i == tiers.lastIndex) Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Rounded.Style, null, Modifier.size(15.dp), tint = Mf.colors.accent)
+                        Text("+1 " + tr("paquet"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.accent)
+                    }
                 }
             }
         }
     }
-    Text(tr("Quêtes de la semaine"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp, bottom = 5.dp))
+    Text(tr("Quêtes de la semaine"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp, bottom = 5.dp))
     ArsenalGame.weeklyGoals.forEach { threshold ->
         val count = quests.weekCount.coerceAtMost(threshold)
         ListItem(headlineContent = { Text(tr("Valider") + " $threshold " + tr("jours")) },
@@ -736,7 +746,7 @@ internal fun ArsenalQuestRoute(nav: NavHostController) {
     }
     ArsenalPage("Quêtes de l’Arsenal", nav, wallet?.gold ?: saved.gold) {
         ArsenalQuestContent(progress)
-        val ready = progress?.gate?.canOpen(saved.day) == true || saved.freePacks > 0 || saved.pending != null ||
+        val ready = progress?.canOpenDaily(saved.day) == true || saved.freePacks > 0 || saved.pending != null ||
             saved.rewardPending != null || (wallet?.packCredits ?: saved.packCredits).isNotEmpty()
         if (ready) Button({ nav.go("cards/packs") }, Modifier.fillMaxWidth()) { Text(tr("Ouvrir mes paquets disponibles")) }
         Text(tr("Les pièces des sceaux sont créditées à la synchronisation. Les paquets se récupèrent dans Paquets."), style = MaterialTheme.typography.bodySmall)

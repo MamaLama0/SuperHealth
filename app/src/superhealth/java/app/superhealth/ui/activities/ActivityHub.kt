@@ -190,7 +190,7 @@ private var bubblesShown = false
  */
 @Composable
 private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, start: Boolean, modifier: Modifier, onSelect: (ActivitySection) -> Unit) {
-    if (current == null) return
+    if (current == null || list.size < 2) return
     // fond surélevé et filet : les bulles se détachent de ce qui défile dessous
     val border = Mf.colors.edge
     val bg = if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card
@@ -206,9 +206,12 @@ private fun Bubbles(list: List<ActivitySection>, current: ActivitySection?, star
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (start) BubbleIcon(activity, selected, bg, border, select)
-            Text(tr(activity.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
-                modifier = Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
-                    .clickable(onClick = select).padding(horizontal = 12.dp, vertical = 7.dp))
+            AnimatedVisibility(!selected || open,
+                enter = expandHorizontally() + fadeIn(), exit = shrinkHorizontally() + fadeOut()) {
+                Text(tr(activity.label), style = MaterialTheme.typography.labelLarge, maxLines = 1, color = Mf.colors.text,
+                    modifier = Modifier.clip(CircleShape).background(bg).border(1.dp, border, CircleShape)
+                        .clickable(onClick = select).padding(horizontal = 12.dp, vertical = 7.dp))
+            }
             if (!start) BubbleIcon(activity, selected, bg, border, select)
         }
     }

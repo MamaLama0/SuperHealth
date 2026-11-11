@@ -37,7 +37,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 
 /**
- * Plugin Planificateur de repas : propose les repas qui restent à manger aujourd'hui pour tomber sur les cibles du jour.
+ * Repas prévus dans le journal et suggestions facultatives de Meal Suggestion.
  *
  * Deux fournisseurs :
  * - Spoonacular (service gratuit avec clé personnelle, offre « Free ») : son générateur de menus (/mealplanner/generate)
@@ -87,6 +87,7 @@ object MealPlanner {
         val portion: Double = 1.0,
         /** Lignes du journal créées par l'ajout (pour l'annuler). */
         val entryIds: List<Long> = emptyList(),
+        val manual: Boolean = false,
     ) {
         val macros: Macros get() = (perServing?.let { val k = servings ?: 1.0; Macros(it[0] * k, it[1] * k, it[2] * k, it[3] * k) }
             ?: ingredients.fold(Macros.ZERO) { a, i -> a + Macros(i.kcal, i.protein, i.fat, i.carbs) }).let {
@@ -119,7 +120,9 @@ object MealPlanner {
 
     fun init(ctx: Context) {
         dir = File(ctx.filesDir, "meals").apply { mkdirs() }
-        plans.value = runCatching { json.decodeFromString<Map<Long, Plan>>(android.util.AtomicFile(File(dir, "plans.json")).readFully().decodeToString()) }.getOrDefault(emptyMap())
+        plans.value = runCatching { json.decodeFromString<Map<Long, Plan>>(android.util.AtomicFile(File(dir, "plans.json")).readFully().decodeToString()) }.getOrDefault(emptyMap()).mapValues { (_, plan) ->
+            if (plan.provider == "manual") plan.copy(meals = plan.meals.map { it.copy(manual = true) }) else plan
+        }
     }
 
     @Synchronized private fun save(map: Map<Long, Plan>) {
@@ -141,6 +144,7 @@ object MealPlanner {
         })
     }
 
+    @Synchronized
     fun reconcile(day: Long, entries: List<FoodEntryEntity>) {
         val plan = plans.value[day] ?: return
         val next = reconciled(plan, entries)
@@ -159,10 +163,59 @@ object MealPlanner {
         return copies.size
     }
 
+    // Journal order differs from the plugin's historical slot indices.
+    internal val slotOrder = listOf(0, 1, 3, 2)
+    private val usualMinutes = listOf(480, 750, 1170, 990)
+
+    internal fun window(slot: Int, ends: List<Int>): IntRange {
+        val index = slotOrder.indexOf(slot)
+        require(index >= 0)
+        return (ends.getOrNull(index - 1) ?: 0) until (ends.getOrNull(index) ?: 1440)
+    }
+
+    internal fun scheduledMinute(slot: Int, ends: List<Int>): Int =
+        usualMinutes[slot].coerceIn(window(slot, ends))
+
+    internal fun moved(meals: List<Meal>, from: Int, to: Int): List<Meal> {
+        if (from == to || from !in slotOrder || to !in slotOrder) return meals
+        val moving = meals.firstOrNull { it.slot == from } ?: return meals
+        if (moving.logged || meals.any { it.slot == to && it.logged }) return meals
+        return meals.map {
+            when (it.slot) {
+                from -> it.copy(slot = to)
+                to -> it.copy(slot = from)
+                else -> it
+            }
+        }.sortedBy { slotOrder.indexOf(it.slot) }
+    }
+
+    @Synchronized
+    fun move(day: Long, from: Int, to: Int) {
+        val plan = plans.value[day] ?: return
+        val meals = moved(plan.meals, from, to)
+        if (meals != plan.meals) save(plans.value + (day to plan.copy(meals = meals)))
+    }
+
+    @Synchronized
+    fun remove(day: Long, slot: Int) {
+        val plan = plans.value[day] ?: return
+        val kept = plan.meals.filter { it.slot != slot || it.logged }
+        if (kept != plan.meals) save(if (kept.isEmpty()) plans.value - day else plans.value + (day to plan.copy(meals = kept)))
+    }
+
+    @Synchronized
     fun clear(day: Long) = save(plans.value - day)
 
     @Synchronized
+    fun clearSuggestions(day: Long) {
+        val plan = plans.value[day] ?: return
+        val kept = plan.meals.filter { it.manual || it.logged }
+        save(if (kept.isEmpty()) plans.value - day else plans.value + (day to plan.copy(meals = kept)))
+    }
+
+    @Synchronized
     fun planFoods(day: Long, slot: Int, foods: List<Pair<FoodEntity, Double>>) {
+        require(slot in slotOrder)
         require(foods.isNotEmpty() && foods.all { (_, grams) -> grams.isFinite() && grams in 0.1..5000.0 })
         val plan = plans.value[day] ?: Plan(day, "manual", emptyList())
         require(plan.meals.none { it.slot == slot && it.logged })
@@ -171,7 +224,7 @@ object MealPlanner {
             Ingredient(food.name, grams, food.kcal100 * factor, food.protein100 * factor, food.fat100 * factor,
                 food.carbs100 * factor, food.fiber100 * factor, food.id.takeIf { it > 0 }, Micros.scale(food.microsJson, factor))
         }
-        val meal = Meal(slot, ingredients.joinToString(", ") { it.name }, ingredients)
+        val meal = Meal(slot, ingredients.joinToString(", ") { it.name }, ingredients, manual = true)
         save(plans.value + (day to plan.copy(meals = (plan.meals.filterNot { it.slot == slot } + meal).sortedBy { it.slot })))
     }
 
@@ -187,9 +240,12 @@ object MealPlanner {
         val c = planningContent(day) ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val left = left(target, logged)
         if (left.kcal < 80) throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
-        val usedSlots = logged.map { it.meal }.toSet()
+        val usedSlots = logged.map { it.meal }.toSet() + plans.value[day]?.meals.orEmpty().filter { it.manual }.map { it.slot }
         var open = c.slots.indices.filter { it !in usedSlots }
-        if (open.isEmpty()) open = listOf(c.slots.lastIndex)
+        if (open.isEmpty()) {
+            open = listOf(c.slots.lastIndex).filter { slot -> plans.value[day]?.meals.orEmpty().none { it.slot == slot && it.manual } }
+            if (open.isEmpty()) throw PlanException(tr("Aucun créneau libre."))
+        }
         val shareSum = open.sumOf { c.slots[it].share }
         val goals = goals(c, left, open)
 
@@ -197,7 +253,7 @@ object MealPlanner {
         // Spoonacular planifie une journée entière (petit-déjeuner, déjeuner, dîner) : calories de ces trois repas à ce rythme
         val mainShare = c.slots.take(3).sumOf { it.share }
         val meals = if (provider == "spoonacular") spoonacular(ctx, goals, left.kcal / shareSum * mainShare) else ai(ctx.applicationContext, c, goals, logged)
-        val kept = plans.value[day]?.let { reconciled(it, logged).meals.filter { m -> m.logged } }.orEmpty()
+        val kept = plans.value[day]?.let { reconciled(it, logged).meals.filter { m -> m.logged || m.manual } }.orEmpty()
         val plan = Plan(day, provider, (kept + meals.filter { m -> kept.none { it.slot == m.slot } }).sortedBy { it.slot })
         save(plans.value + (day to plan))
         return plan
@@ -210,6 +266,7 @@ object MealPlanner {
     suspend fun regenerate(ctx: Context, day: Long, slot: Int, target: Macros, logged: List<FoodEntryEntity>): Meal {
         val c = planningContent(day) ?: throw PlanException(tr("Contenu du plugin introuvable : réinstallez-le dans Réglages > Plugins."))
         val p = plans.value[day] ?: throw PlanException(tr("Aucun repas prévu."))
+        require(p.meals.none { it.slot == slot && it.manual })
         val goal = slotGoal(target, logged, slot, c, p.meals)?.takeIf { it.kcal >= 80 } ?: throw PlanException(tr("Vos cibles du jour sont déjà atteintes."))
         val avoid = p.meals.map { it.title }
         val meal = (if (p.provider == "spoonacular" && hasSpoonacular(ctx)) {
@@ -434,7 +491,7 @@ object MealPlanner {
         val count = if (recipe) 1 else meal.ingredients.size
         if (ingredient != null && ingredient !in 0 until count) return@withLock
         val repo = NutriApp.repository
-        val at = content()?.slots?.getOrNull(meal.slot)?.minute ?: minute
+        val at = if (meal.slot in slotOrder) scheduledMinute(meal.slot, SuperPrefs.settings.value.mealEnds) else minute
         val k = meal.portion
         val ids = MutableList(count) { meal.entryIds.getOrNull(it) ?: 0L }
         val indices = if (ingredient == null) 0 until count else ingredient..ingredient

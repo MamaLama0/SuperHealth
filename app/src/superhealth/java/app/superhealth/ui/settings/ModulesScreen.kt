@@ -194,7 +194,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                 "Social" -> kind == Modules.LEAGUE
                 else -> true
             }
-            kind !in setOf("friends", "health_index", "health-index", "healthIndex") && id !in setOf("friends", "health-index", "health_index", "healthIndex") && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
+            kind !in setOf("friends", "health_index", "health-index", "healthIndex") && id !in setOf("friends", "health-index", "health_index", "healthIndex") && matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name, Modules.MEAL_SUGGESTION.takeIf { id == Modules.MEALS })
                 .any { it.contains(query.trim(), ignoreCase = true) }
         }
         if (ids.isEmpty()) MfCard {
@@ -204,7 +204,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
         ids.forEach { id ->
             val entry = catalog.firstOrNull { it.module.id == id }; val inst = installed.firstOrNull { it.id == id }
             val m = entry?.module; val kind = m?.kind ?: inst?.kind.orEmpty()
-            val name = (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
+            val name = if (id == Modules.MEALS) Modules.MEAL_SUGGESTION else (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
             val summary = (if (Lang.english) m?.summaryEn else null) ?: m?.summary.orEmpty()
             Spacer(Modifier.height(8.dp))
             GroupCard {
@@ -303,7 +303,7 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
     val m = entry?.module
     val kind = m?.kind ?: inst?.kind ?: ""
     val hue = moduleHue(kind, m?.color)
-    val name = (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
+    val name = if (id == Modules.MEALS) Modules.MEAL_SUGGESTION else (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
     val summary = (if (Lang.english) m?.summaryEn else null) ?: m?.summary ?: ""
     val update = inst?.let { Modules.update(it) }
     val compatible = m == null || Modules.compatible(ctx, m)

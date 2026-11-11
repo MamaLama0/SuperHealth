@@ -93,7 +93,7 @@ internal fun DuelLobby(mine: AthleteStats?, character: CharacterStats, opponents
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text(tr("Toi"), color = Color(0xFFAED4EF), style = MaterialTheme.typography.labelLarge)
-                        Text("${comparedMine.strength} · ${comparedMine.dexterity} · ${comparedMine.constitution}", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                        Text(comparedMine.scoreLine, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
                     }
                     Text("VS", color = lobbyGold, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
@@ -113,7 +113,7 @@ internal fun DuelLobby(mine: AthleteStats?, character: CharacterStats, opponents
                     CharacterAttribute.entries.forEach { stat ->
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(tr(stat.label), color = lobbyGold, style = MaterialTheme.typography.labelSmall)
-                            Text("${comparedMine[stat]} / ${rival[stat]}", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                            Text("${comparedMine.score(stat)} / ${rival.score(stat)}", color = Color.White, style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }

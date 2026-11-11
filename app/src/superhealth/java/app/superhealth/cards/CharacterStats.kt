@@ -3,23 +3,34 @@ package app.superhealth.cards
 import app.superhealth.league.Progression
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
+import kotlin.math.floor
+import kotlin.math.pow
 
 /** Game attributes only. No health measurements or raw tracking leave the device. */
 @Serializable
 data class CharacterStats(val strength: Int = 8, val dexterity: Int = 8, val constitution: Int = 8,
     val days: Int = 0, val model: Int = 1,
-    val forceBonus: Int = 0, val dexBonus: Int = 0, val conBonus: Int = 0) {
+    val forceBonus: Int = 0, val dexBonus: Int = 0, val conBonus: Int = 0,
+    val forceScore: Int? = null, val dexScore: Int? = null, val conScore: Int? = null) {
     operator fun get(attribute: CharacterAttribute) = when (attribute) {
         CharacterAttribute.FOR -> strength
         CharacterAttribute.DEX -> dexterity
         CharacterAttribute.CON -> constitution
     }
+    fun score(attribute: CharacterAttribute): Int = (when (attribute) {
+        CharacterAttribute.FOR -> forceScore
+        CharacterAttribute.DEX -> dexScore
+        CharacterAttribute.CON -> conScore
+    } ?: ((this[attribute] - 8) * 100.0 / 12).roundToInt()).coerceIn(0, 100)
+
+    val scoreLine get() = CharacterAttribute.entries.joinToString(" · ") { score(it).toString() }
+
     fun bonus(attribute: CharacterAttribute) = when (attribute) {
         CharacterAttribute.FOR -> forceBonus
         CharacterAttribute.DEX -> dexBonus
         CharacterAttribute.CON -> conBonus
     }
-    fun valid() = forceBonus in -240..1000 && dexBonus in -240..1000 && conBonus in -240..2000 && model == 1 && days in 0..28 && listOf(strength, dexterity, constitution).all { it in 8..20 }
+    fun valid() = forceBonus in -240..1050 && dexBonus in -240..1050 && conBonus in -240..2050 && model == 1 && days in 0..28 && listOf(strength, dexterity, constitution).all { it in 8..20 }
     fun equipped(bonuses: Map<CharacterAttribute, Int>) = copy(forceBonus = bonuses[CharacterAttribute.FOR] ?: 0,
         dexBonus = bonuses[CharacterAttribute.DEX] ?: 0, conBonus = bonuses[CharacterAttribute.CON] ?: 0)
     val total get() = strength + dexterity + constitution
@@ -30,7 +41,8 @@ data class CharacterStats(val strength: Int = 8, val dexterity: Int = 8, val con
             val available get() = parts.filter { it.ratio != null }
             val weight get() = parts.filter { it.ratio != null || it.required }.sumOf { it.weight }
             val ratio get() = if (weight == 0.0) 0.0 else available.sumOf { it.ratio!! * it.weight } / weight
-            val value get() = 8 + (12 * ratio.coerceIn(0.0, 1.0)).roundToInt()
+            val score get() = floor(100 * ratio.coerceIn(0.0, 1.0) + 1e-9).toInt()
+            val value get() = 8 + score * 12 / 100
         }
         fun breakdown(progress: Progression.Result?, selected: Set<Progression.Track>, athlete: AthleteStats?): List<Calculation> {
             val today = progress?.summary?.throughDay ?: 0L
@@ -45,20 +57,21 @@ data class CharacterStats(val strength: Int = 8, val dexterity: Int = 8, val con
             return listOf(
                 Calculation(CharacterAttribute.FOR, listOf(Component("Records de force · PR et 1RM estimés", gym?.prScore, .85, required = true),
                     Component("Objectif de musculation", ratio(Progression.Track.STRENGTH), .15))),
-                Calculation(CharacterAttribute.DEX, listOf(Component("Capacité cardio", athlete?.get(Stat.CAR)?.div(100.0)?.coerceIn(0.0, 1.0), .65),
+                Calculation(CharacterAttribute.DEX, listOf(Component("Capacité cardio", athlete?.get(Stat.CAR)?.div(99.0)?.coerceIn(0.0, 1.0)?.pow(1.25), .65, required = true),
                     Component("Objectif de pas", ratio(Progression.Track.STEPS), .2),
                     Component("Esprit et mobilité", ratio(Progression.Track.MIND), .15))),
-                Calculation(CharacterAttribute.CON, listOf(Component("Volume hebdomadaire moyen · 12 mois", gym?.volumeScore, .70, required = true),
+                Calculation(CharacterAttribute.CON, listOf(Component("Volume hebdomadaire moyen · 12 mois", gym?.volumeScore, .45, required = true),
                     Component("Régularité en salle · 12 mois", gym?.consistencyScore, .15, required = true),
-                    Component("Objectif de sommeil", ratio(Progression.Track.SLEEP), .10),
-                    Component("Objectif de nutrition", ratio(Progression.Track.FOOD), .05))))
+                    Component("Objectif de sommeil", ratio(Progression.Track.SLEEP), .25),
+                    Component("Objectif de nutrition", ratio(Progression.Track.FOOD), .15))))
         }
         fun from(progress: Progression.Result, selected: Set<Progression.Track>, athlete: AthleteStats? = null): CharacterStats {
             val parts = breakdown(progress, selected, athlete)
             val today = progress.summary.throughDay
             val history = (progress.recentValidated + (today to progress.validatedToday)).filterKeys { it in today - 27..today }
             return CharacterStats(parts[0].value, parts[1].value, parts[2].value,
-                history.values.count { it.intersect(selected).isNotEmpty() })
+                history.values.count { it.intersect(selected).isNotEmpty() },
+                forceScore = parts[0].score, dexScore = parts[1].score, conScore = parts[2].score)
         }
         /** Explicitly labelled training preview for contacts on an older version. */
         fun legacy(stats: AthleteStats): CharacterStats {

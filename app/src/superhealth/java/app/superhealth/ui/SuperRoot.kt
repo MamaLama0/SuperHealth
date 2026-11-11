@@ -265,7 +265,9 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("social/share/pr") { app.superhealth.ui.league.SocialComposer(nav, "PR") }
             composable("social/share/activity") { app.superhealth.ui.league.SocialComposer(nav, "ACTIVITY") }
             composable("log") { FoodLogScreen(vm.nutrition, nav) }
-            composable("meals/planning") { app.superhealth.ui.meals.MealPlanningScreen(vm.nutrition, nav) }
+            composable("meals/planning?add={add}", listOf(navArgument("add") { type = NavType.BoolType; defaultValue = false })) { entry ->
+                app.superhealth.ui.meals.MealPlanningScreen(vm.nutrition, nav, entry.arguments?.getBoolean("add") == true)
+            }
             composable("activities") { app.superhealth.ui.activities.ActivitiesTab(vm, nav) }
             composable("widgets") { app.superhealth.ui.settings.HomeWidgetsScreen(nav) }
             composable("settings/find") { app.superhealth.ui.settings.FindSettingScreen(nav) }
@@ -383,6 +385,10 @@ fun SuperRoot(vm: SuperViewModel) {
     } }
 
     fun runAction(action: String) {
+        if (current == "log" && action.startsWith("search/") && vm.nutrition.selectedDay.value > java.time.LocalDate.now().toEpochDay()) {
+            nav.go("meals/planning?add=true")
+            return
+        }
         when (action) {
             "water" -> {
                 vm.log(Metric.HYDRATION, 250.0)
@@ -410,6 +416,22 @@ fun SuperRoot(vm: SuperViewModel) {
     if (sh.appTourPending && current != null) app.superhealth.ui.onboarding.AppTour(sh, onPage = { if (isTabRoute(it)) nav.openTab(it) else nav.go(it) }) {
         app.superhealth.SuperPrefs.update { it.copy(appTourPending = false) }
         nav.openTab("home")
+    }
+    if (current != null && !sh.appTourPending && !sh.update401Seen &&
+        nodomain.freeyourgadget.gadgetbridge.BuildConfig.VERSION_NAME == "4.0.1") {
+        val dismiss = { app.superhealth.SuperPrefs.update { it.copy(update401Seen = true) }; Unit }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = dismiss,
+            title = { Text("Vasi c bon j'en ai marre") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(tr("Bon. J’ai refait le journal et les quêtes. Je vais m’asseoir."))
+                    Text(tr("Planifie tes repas avec le + des jours futurs et glisse-les entre les horaires. Les stats passent sur 100."))
+                    Text(tr("Le sceau héroïque donne un paquet par jour. Les 15 paquets offerts pour la remise à zéro de la 4.0 t’attendent dans l’Arsenal si tu ne les as pas encore récupérés."))
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton(dismiss) { Text(tr("Compris")) } },
+        )
     }
     app.superhealth.ui.league.LeagueIncomingDialog()
 }

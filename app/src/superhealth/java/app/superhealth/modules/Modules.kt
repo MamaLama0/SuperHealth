@@ -36,6 +36,7 @@ object Modules {
     /** Moteurs présents dans cette version de l'app (un module d'un autre type demande une mise à jour). */
     const val COACH = "coach"
     const val MEALS = "meals"
+    const val MEAL_SUGGESTION = "Meal Suggestion"
     const val MEDS = "meds"
     const val STRETCH = "stretch"
     const val MEDITATION = "meditation"

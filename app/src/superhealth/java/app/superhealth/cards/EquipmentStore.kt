@@ -170,7 +170,6 @@ internal object EquipmentStore {
         val collectionVersion: Int = 0,
         val releaseGiftGranted: Boolean = false,
         val packPurchases: List<String> = emptyList(),
-        val sealPacks: Map<Long, Int> = emptyMap(),
         val weeklyPacks: Map<Long, Int> = emptyMap(),
         val day: Long? = null,
         val opened: Int = 0,
@@ -253,7 +252,7 @@ internal object EquipmentStore {
             val old = changes.value
             val day = quests.today
             if (day != LocalDate.now().toEpochDay()) return@withLock null
-            val daily = quests.gate.canOpen(old.day)
+            val daily = quests.canOpenDaily(old.day)
             val reward = old.rewardPending ?: if (!daily && old.freePacks == 0) (ArsenalGame.remote.value?.packCredits ?: old.packCredits).firstOrNull() else null
             val retryDaily = old.remotePendingDay == day
             if (!daily && !retryDaily && reward == null && old.freePacks == 0) return@withLock null
@@ -308,7 +307,7 @@ internal object EquipmentStore {
 
     suspend fun dungeon(ctx: Context, quests: ArsenalGame.Quests, attack: Boolean = false) = change(ctx) { old ->
         val state = ArsenalGame.settle(old.dungeon, quests)
-        val (next, gold) = if (attack) ArsenalGame.attack(state, quests, bonuses(old, catalog.value).values.sum(), damageMix(old, catalog.value)) else state to 0
+        val (next, gold) = if (attack) ArsenalGame.attack(state, quests, bonuses(old, catalog.value).values.sum(), damageMix(old, catalog.value), completeSet(old, catalog.value) != null) else state to 0
         val recent = old.goldRanks.filterKeys { it >= quests.today - 35 }.toMutableMap()
         val rewards = intArrayOf(0, 25, 45, 75)
         val previousRank = recent[quests.today] ?: 0
@@ -317,12 +316,10 @@ internal object EquipmentStore {
         val drops = if (next.floor > state.floor) ArsenalGame.drops(state.floor) else ArsenalGame.Drops(0, 0)
         val day = quests.today
         val week = Progression.week(day)
-        val dailyPacks = maxOf(old.sealPacks[day] ?: 0, ArsenalGame.sealPacks(rank))
         val weeklyPacks = maxOf(old.weeklyPacks[week] ?: 0, ArsenalGame.weeklyGoals.count { quests.weekCount >= it })
-        val newPacks = dailyPacks - (old.sealPacks[day] ?: 0) + weeklyPacks - (old.weeklyPacks[week] ?: 0)
+        val newPacks = weeklyPacks - (old.weeklyPacks[week] ?: 0)
         val gift = if (old.releaseGiftGranted || unlimitedPacks || Economy.available()) 0 else 15
         old.copy(dungeon = next, releaseGiftGranted = old.releaseGiftGranted || gift > 0,
-            sealPacks = old.sealPacks.filterKeys { it >= day - 42 } + (day to dailyPacks),
             weeklyPacks = old.weeklyPacks.filterKeys { it >= week - 42 } + (week to weeklyPacks), gold = old.gold + gold + rewards[rank] - rewards[previousRank], goldRanks = recent,
             freePacks = old.freePacks + drops.packs + newPacks + gift, ice = old.ice + drops.ice)
     }
@@ -394,7 +391,21 @@ internal object EquipmentStore {
         }
     }
 
+    const val COMPLETE_SET_BONUS = 50
+
+    fun completeSet(state: State, cards: Map<String, EquipmentCard>, serverOnly: Boolean = false): EquipmentCard? {
+        val equipped = EquipmentSlot.entries.map { slot ->
+            val piece = state.equipped(slot)?.takeIf { !serverOnly || it.serverKey != null } ?: return null
+            cards[piece.id]?.takeIf { it.slot == slot } ?: return null
+        }
+        val setId = equipped.first().setId ?: return null
+        return equipped.first().takeIf { equipped.all { card -> card.setId == setId } }
+    }
+
     fun characterBonuses(state: State, cards: Map<String, EquipmentCard>): Map<CharacterAttribute, Int> = buildMap {
+        if (completeSet(state, cards) != null) {
+            CharacterAttribute.entries.forEach { put(it, COMPLETE_SET_BONUS) }
+        }
         EquipmentSlot.entries.forEach { slot ->
             val piece = state.equipped(slot) ?: return@forEach
             val card = cards[piece.id]?.takeIf { it.slot == slot } ?: return@forEach

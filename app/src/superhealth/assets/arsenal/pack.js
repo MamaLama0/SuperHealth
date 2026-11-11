@@ -34,6 +34,7 @@ const initialHelp=()=>say('Glisse sur le tiers supérieur pour déchirer le sach
 const ordinal=()=>cardIndex+1+'/'+rewardArt.length;
 const canSwipeCard=()=>discoveryReady&&!allRevealed&&cardIndex<rewardArt.length;
 const swipeDuration=reduceMotion?60:205;
+const cardReadingScale=(width,height)=>Math.min(.88,width/height*1.63);
 
 const showNotch=()=>{targetYaw=Math.round(yaw/(2*Math.PI))*2*Math.PI};
 const snapFace=angle=>{targetYaw=Math.round(angle/Math.PI)*Math.PI};
@@ -687,8 +688,8 @@ function run(){
     gl.uniform1f(vars.wrapperFx,style.material==='prism'?(gold?2:1):0);
     gl.uniform1f(vars.packWidth,width);
     const reading=smooth(1.08,1.28,t);
-    const revealScale=Math.min(.94,w/h*1.63);
-    const animationScale=Math.min(stageScale,.48)*(1-.13*rise*(1-drop));
+    const revealScale=cardReadingScale(w,h);
+    const animationScale=Math.min(stageScale,.41)*(1-.13*rise*(1-drop));
     const sceneScale=openedAt===null?stageScale:animationScale+(revealScale-animationScale)*reading;
     gl.uniform2f(vars.ratio,h/w,1); gl.uniform1f(vars.scale,sceneScale);
     gl.uniform1f(vars.glint,.62);
@@ -697,7 +698,7 @@ function run(){
     gl.uniform1f(vars.tearKind,motion.path);gl.uniform1f(vars.tearSide,tearDirection||1);gl.uniform1f(vars.fray,0);gl.uniform1f(vars.clock,0);
     // The wrapper and the stack share the mouth's origin until the last card
     // clears the rim. Only then does the wrapper fall away on its own.
-    const mouthY=.74-.49*rise-.29*launch-recoil*.04;
+    const mouthY=.74-.49*rise-.29*launch-recoil*.04-(openedAt===null?0:.12*(1-drop));
     const wrapperY=mouthY-2.18*drop;
     if(t>motion.rise*.85){
       gl.uniform1f(vars.cardFloor,wrapperY-.23-.68*launch);
@@ -730,14 +731,14 @@ function run(){
           const entry=depth===0&&incoming&&!reduceMotion?-incoming.direction*.20*(1-smooth(0,175,now-incoming.at)):0;
           const follow=depth===0?cardOffset+entry:0;
           const fan=.3+.7*launch;
-          const y=-.88+.93*rise+.77*launch-.65*settle+rebound-depth*.023*fan;
+          const y=-.88+.93*rise+.69*launch-.68*settle+rebound-depth*.023*fan;
           place(index,-depth*.038*fan+follow,y,.025+.28*launch-.22*settle-depth*.021,tiltY,depth*.05*fan-follow*.10,front);
         }
         if(leavingCard){
           const exit=smooth(0,swipeDuration,now-leavingCard.at);
           if(exit<1){
             const x=leavingCard.from+(leavingCard.direction*1.75-leavingCard.from)*exit;
-            place(leavingCard.index,x,.16+.075*exit,.11,0,-x*.16,leavingCard.front);
+            place(leavingCard.index,x,.06+.075*exit,.11,0,-x*.16,leavingCard.front);
           }
           else leavingCard=null;
         }
@@ -902,7 +903,7 @@ function run(){
   canvas.onpointermove=e=>{
     if(cardDrag?.id===e.pointerId){
       if(!reduceMotion){
-        const readingScale=Math.min(.94,canvas.clientWidth/canvas.clientHeight*1.63);
+        const readingScale=cardReadingScale(canvas.clientWidth,canvas.clientHeight);
         const unit=canvas.clientHeight*readingScale/2;
         cardOffset=Math.max(-1.24,Math.min(1.24,(e.clientX-cardDrag.x)/unit));
       }

@@ -801,7 +801,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     Step.PLUGINS -> Page(st, tr("Personnaliser avec des plugins"), tr("Tout est facultatif. Vous pourrez installer, désactiver et régler chaque plugin dans les paramètres.")) {
                         pluginCatalog.filter { it.verified && it.module.kind in app.superhealth.modules.Modules.engines && app.superhealth.modules.Modules.compatible(ctx, it.module) }.forEach { entry ->
                             val m = entry.module
-                            val title = (if (Lang.english) m.nameEn else null) ?: m.name
+                            val title = if (m.id == app.superhealth.modules.Modules.MEALS) app.superhealth.modules.Modules.MEAL_SUGGESTION else (if (Lang.english) m.nameEn else null) ?: m.name
                             val subtitle = tr(when (m.kind) {
                                 app.superhealth.modules.Modules.COACH -> "Bilans et questions sur vos données ; fournisseur IA dans les paramètres"
                                 app.superhealth.modules.Modules.MEALS -> "Suggestions de repas pour vos cibles alimentaires"

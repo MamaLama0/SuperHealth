@@ -269,7 +269,7 @@ data class SuperSettings(
     /** Plugin Groupe (cartes, quêtes, amis, fil) : installé quand le Groupe est activé, absent par défaut d'une nouvelle installation. */
     val leagueEnabled: Boolean = false,
     val socialFeedEnabled: Boolean = false,
-    val arsenal40NoticeSeen: Boolean = false,
+    val update401Seen: Boolean = false,
     val arsenalAvatar: String? = null,
     val builtinsAdded: Boolean = false,
     /** 2.31 : verrouillage de l'app (empreinte ou code du téléphone), délai avant de redemander (s), écran masqué dans les Récents. */

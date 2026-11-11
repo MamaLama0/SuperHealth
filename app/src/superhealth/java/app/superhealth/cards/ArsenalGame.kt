@@ -46,6 +46,9 @@ internal object ArsenalGame {
         put("character", buildJsonObject {
             put("strength", stats.strength); put("dexterity", stats.dexterity)
             put("constitution", stats.constitution); put("days", stats.days); put("model", stats.model)
+            stats.forceScore?.let { put("forceScore", it) }
+            stats.dexScore?.let { put("dexScore", it) }
+            stats.conScore?.let { put("conScore", it) }
         })
         val state = EquipmentStore.state.value
         put("loadout", buildJsonArray { EquipmentSlot.entries.forEach { slot -> state.equipped(slot)?.serverKey?.let { add(JsonPrimitive(it)) } } })
@@ -68,12 +71,13 @@ internal object ArsenalGame {
         val rank get() = days.firstOrNull { it.day == today }?.rank ?: 0
         val weekCount get() = days.count { it.day >= Progression.week(today) }
         val activity get() = gate.done.any { it in activities }
+        val heroic get() = rank == 3
+        fun canOpenDaily(opened: Long?) = heroic && (opened == null || opened < today)
     }
 
     const val COLLECTION_VERSION = 1
     const val PACK_PRICE = 75
     val weeklyGoals = listOf(2, 4, 6)
-    fun sealPacks(rank: Int) = when (rank) { 2 -> 1; 3 -> 3; else -> 0 }
 
     private val activities = setOf(Progression.Track.STRENGTH, Progression.Track.RUN, Progression.Track.HIKE, Progression.Track.MIND)
     private val data = MutableStateFlow<View?>(null)
@@ -200,13 +204,14 @@ internal object ArsenalGame {
             log = if (missed > 0 && remaining != dungeon.health) "Le monstre t’a attaqué pendant ton absence." else dungeon.log)
     }
 
-    fun attack(dungeon: Dungeon, quests: Quests, bonuses: Int, schools: Map<DamageType, Double> = emptyMap()): Pair<Dungeon, Int> {
+    fun attack(dungeon: Dungeon, quests: Quests, bonuses: Int, schools: Map<DamageType, Double> = emptyMap(), completeSet: Boolean = false): Pair<Dungeon, Int> {
         val current = settle(dungeon, quests)
         val today = quests.today
         if (!quests.canAttack || (current.lastAttack ?: Long.MIN_VALUE) >= today) return current to 0
         if (current.health == 0) return current.copy(health = 100, lastAttack = today, dealt = 0, received = 0, defeatedFloor = null, log = "Tu as récupéré tes points de vie.") to 0
         val attributePower = CharacterStats.modifier(quests.character.strength) * 2 + CharacterStats.modifier(quests.character.dexterity)
-        val damage = EnemyAffinity.floor(current.floor).hit(48 + attributePower + (quests.rank-1).coerceAtLeast(0) * 9 + (bonuses / 100).coerceIn(0, 5), schools)
+        val damage = EnemyAffinity.floor(current.floor).hit(48 + attributePower + (quests.rank-1).coerceAtLeast(0) * 9 + (bonuses / 100).coerceIn(0, 5), schools) +
+            if (completeSet) 1 else 0
         val remaining = (current.hp - damage).coerceAtLeast(0)
         val won = remaining == 0
         val loot = if (won) drops(current.floor) else Drops(0, 0)

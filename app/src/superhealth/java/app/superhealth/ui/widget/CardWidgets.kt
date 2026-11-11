@@ -20,7 +20,6 @@ import app.superhealth.SuperPrefs
 import app.superhealth.cards.CardStore
 import app.superhealth.cards.ArsenalGame
 import app.superhealth.cards.EquipmentStore
-import app.superhealth.cards.PackProgress
 import app.superhealth.league.ProgressRepository
 import java.time.LocalDate
 import app.superhealth.ui.tr
@@ -53,9 +52,9 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
             Kind.PACKS -> {
                 val day = LocalDate.now().toEpochDay()
                 val progress = ProgressRepository.current.value?.takeIf { it.summary.throughDay == day }
-                val gate = PackProgress.from(day, ProgressRepository.selectedTracks(SuperPrefs.settings.value), progress?.validatedToday.orEmpty())
+                val quest = progress?.let { ArsenalGame.quests(it, ProgressRepository.selectedTracks(SuperPrefs.settings.value)) }
                 val claimed = equipment?.day?.let { it >= day } == true
-                val ready = !claimed && gate.ready
+                val ready = quest?.canOpenDaily(equipment?.day) == true
                 val bonus = (equipment?.freePacks ?: 0) + (equipment?.packCredits?.size ?: 0)
                 value = if (ready || bonus > 0 || equipment?.pending != null || equipment?.rewardPending != null) (bonus + if (ready || equipment?.pending != null) 1 else 0).coerceAtLeast(1).toString() else if (claimed || progress != null) "0" else "—"
                 unit = tr("pack")
@@ -67,7 +66,7 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                     ready -> "Pack du jour prêt"
                     else -> "Vérifier les suivis du jour"
                 })
-                fraction = if (gate.required > 0 && progress != null) gate.completed.toFloat() / gate.required else null
+                fraction = quest?.rank?.div(3f)
             }
             Kind.QUESTS -> {
                 val day = LocalDate.now().toEpochDay()
@@ -75,7 +74,7 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                     ArsenalGame.quests(it, ProgressRepository.selectedTracks(SuperPrefs.settings.value))
                 }
                 val rank = quest?.rank ?: 0
-                val ready = quest?.gate?.canOpen(equipment?.day) == true || (equipment?.freePacks ?: 0) > 0 ||
+                val ready = quest?.canOpenDaily(equipment?.day) == true || (equipment?.freePacks ?: 0) > 0 ||
                     equipment?.packCredits.orEmpty().isNotEmpty() || equipment?.rewardPending != null
                 if (ready) route = "cards/packs"
                 value = if (ready) tr("À ouvrir") else if (quest == null) "—" else "$rank/3"
@@ -87,7 +86,7 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                 val stats = CardStore.snapshot.value?.now ?: st.lastStats
                 val character = ProgressRepository.current.value?.let { app.superhealth.cards.CharacterStats.from(it,
                     ProgressRepository.selectedTracks(SuperPrefs.settings.value), stats) } ?: stats?.character
-                value = character?.let { "${it.strength} · ${it.dexterity} · ${it.constitution}" } ?: "—"
+                value = character?.scoreLine ?: "—"
                 unit = "FOR · DEX · CON"
                 caption = trf("%1\$s / 4 pièces équipées", equipment?.equipped?.size ?: 0)
             }

@@ -101,18 +101,20 @@ private val photos = HashMap<String, Bitmap>()
 @Composable
 fun MealPlanCard(day: Long, target: Macros?, energy: (Double) -> String, modifier: Modifier = Modifier) {
     val installed by app.superhealth.modules.Modules.installed.collectAsState()
-    if (installed.none { it.kind == app.superhealth.modules.Modules.MEALS && it.enabled }) return
+    val suggestions = installed.any { it.kind == app.superhealth.modules.Modules.MEALS && it.enabled }
+    val plans by MealPlanner.plans.collectAsState()
+    if (!suggestions && plans[day]?.meals.isNullOrEmpty()) return
     // A different date must never reconcile against the previous date or an empty loading value.
     androidx.compose.runtime.key(day) {
         val loaded by remember(day) { app.superhealth.nutrition.NutriApp.repository.entriesForDay(day) }
             .collectAsState(initial = null as List<FoodEntryEntity>?)
         if (loaded == null) Text(tr("Chargement…"), modifier.padding(14.dp))
-        else MealPlanContent(day, loaded!!, target, energy, modifier)
+        else MealPlanContent(day, loaded!!, target, energy, modifier, suggestions)
     }
 }
 
 @Composable
-private fun MealPlanContent(day: Long, entries: List<FoodEntryEntity>, target: Macros?, energy: (Double) -> String, modifier: Modifier) {
+private fun MealPlanContent(day: Long, entries: List<FoodEntryEntity>, target: Macros?, energy: (Double) -> String, modifier: Modifier, suggestions: Boolean) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val plans by MealPlanner.plans.collectAsState()
@@ -142,9 +144,9 @@ private fun MealPlanContent(day: Long, entries: List<FoodEntryEntity>, target: M
             Text(tr("Repas prévus"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             when {
                 busy -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MealsHue)
-                plan != null -> {
+                plan != null && suggestions -> {
                     IconButton(enabled = swapping == null, onClick = { propose() }) { Icon(Icons.Rounded.Refresh, tr("Autres repas"), tint = Mf.colors.textSecondary) }
-                    IconButton(enabled = swapping == null, onClick = { runCatching { MealPlanner.clear(day) }.onFailure { error = it.message } }) { Icon(Icons.Rounded.Close, tr("Retirer"), tint = Mf.colors.textSecondary) }
+                    IconButton(enabled = swapping == null, onClick = { runCatching { MealPlanner.clearSuggestions(day) }.onFailure { error = it.message } }) { Icon(Icons.Rounded.Close, tr("Retirer"), tint = Mf.colors.textSecondary) }
                 }
             }
         }
@@ -166,9 +168,9 @@ private fun MealPlanContent(day: Long, entries: List<FoodEntryEntity>, target: M
             }
             val now = { LocalTime.now().let { it.hour * 60 + it.minute } }
             val journalIds = entries.map { it.id }.toSet()
-            plan.meals.forEachIndexed { i, m ->
+            plan.meals.sortedBy { MealPlanner.slotOrder.indexOf(it.slot) }.forEachIndexed { i, m ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Mf.colors.divider))
-                MealRow(m, open == i, energy, journalIds, swapping = busy || swapping != null, canLog = day <= java.time.LocalDate.now().toEpochDay(), onToggle = { open = if (open == i) null else i },
+                MealRow(m, open == m.slot, energy, journalIds, swapping = busy || swapping != null, canLog = day <= java.time.LocalDate.now().toEpochDay(), onToggle = { open = if (open == m.slot) null else m.slot },
                     onIngredient = { index ->
                         busy = true
                         scope.launch {
@@ -178,7 +180,7 @@ private fun MealPlanContent(day: Long, entries: List<FoodEntryEntity>, target: M
                         }
                     },
                     onPortion = { f -> if (!busy && swapping == null) MealPlanner.setPortion(day, m.slot, f) },
-                    onSwap = if (target != null && !busy && !m.logged && swapping == null) ({
+                    onSwap = if (suggestions && !m.manual && target != null && !busy && !m.logged && swapping == null) ({
                         swapping = m.slot; error = null
                         scope.launch {
                             runCatching { MealPlanner.regenerate(ctx, day, m.slot, target, entries) }.onFailure { error = it.message ?: it.javaClass.simpleName }
@@ -201,7 +203,7 @@ private fun MealPlanContent(day: Long, entries: List<FoodEntryEntity>, target: M
                 busy = true
                 scope.launch { try { todo.forEach { MealPlanner.log(day, it, now()) }; error = null } catch (e: Exception) { error = e.message } finally { busy = false } }
             }
-            Text(tr("Composer avec mes aliments"), style = MaterialTheme.typography.labelLarge, color = MealsHue.onContainer(),
+            if (suggestions) Text(tr("Composer avec mes aliments"), style = MaterialTheme.typography.labelLarge, color = MealsHue.onContainer(),
                 modifier = Modifier.padding(top = 6.dp).clip(CircleShape).clickable(enabled = !busy && swapping == null) { compose = true }.padding(vertical = 6.dp))
             if (plan.provider == "spoonacular") Text(tr("Recettes : spoonacular"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary,
                 modifier = Modifier.padding(top = 6.dp).clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://spoonacular.com/food-api"))) })
@@ -216,7 +218,7 @@ private fun MealPlanContent(day: Long, entries: List<FoodEntryEntity>, target: M
         scope.launch {
             try {
             val (meal, r) = MealPlanner.compose(day, slot, foods, goal)
-            open = MealPlanner.plans.value[day]?.meals?.indexOf(meal)?.takeIf { it >= 0 }
+            open = meal.slot
             note = if (r.reachable) null else tr("Ces aliments ne suffisent pas pour la cible : portions au plus près.")
             error = null
             compose = false
@@ -242,16 +244,17 @@ internal fun defaultSlot(day: Long, slots: List<MealPlanner.Slot>, entries: List
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun ComposeSheet(day: Long, entries: List<FoodEntryEntity>, target: Macros?, energy: (Double) -> String, onDismiss: () -> Unit,
-                         onManual: (Int, List<Pair<FoodEntity, Double>>) -> Unit, onDone: (Int, List<FoodEntity>, Macros) -> Unit) {
+internal fun ComposeSheet(day: Long, entries: List<FoodEntryEntity>, target: Macros?, energy: (Double) -> String, onDismiss: () -> Unit,
+                         onManual: (Int, List<Pair<FoodEntity, Double>>) -> Unit,
+                         initialSlot: Int? = null, onDone: ((Int, List<FoodEntity>, Macros) -> Unit)? = null) {
     val ctx = LocalContext.current
-    val slots = MealPlanner.content()?.slots.orEmpty()
-    if (slots.isEmpty()) { onDismiss(); return }
-    var slot by remember(day) { mutableStateOf(defaultSlot(day, slots, entries)) }
+    val slots = if (onDone == null) emptyList() else MealPlanner.content()?.slots.orEmpty()
+    if (initialSlot == null && slots.isEmpty()) return
+    var slot by remember(day, initialSlot) { mutableStateOf(initialSlot ?: defaultSlot(day, slots, entries)) }
     var query by remember { mutableStateOf("") }
     val chosen = remember { androidx.compose.runtime.mutableStateListOf<FoodEntity>() }
     val grams = remember { androidx.compose.runtime.mutableStateMapOf<String, String>() }
-    var manual by rememberSaveable { mutableStateOf(target == null) }
+    var manual by rememberSaveable { mutableStateOf(onDone == null || target == null) }
     val recent by app.superhealth.nutrition.NutriApp.repository.foods.recent(30).collectAsState(emptyList())
     val foodSettings = app.superhealth.nutrition.NutriApp.repository.prefs.settings.collectAsState().value
     val found by produceState<List<FoodEntity>?>(null, query) {
@@ -263,7 +266,7 @@ private fun ComposeSheet(day: Long, entries: List<FoodEntryEntity>, target: Macr
                 app.superhealth.nutrition.data.GenericFoods.search(ctx, foodSettings, q, 15)
         }
     }
-    val config by produceState<MealPlanner.Content?>(null, day) { value = MealPlanner.planningContent(day) }
+    val config by produceState<MealPlanner.Content?>(null, day, onDone != null) { if (onDone != null) value = MealPlanner.planningContent(day) }
     val planned by MealPlanner.plans.collectAsState()
     val meals = planned[day]?.let { MealPlanner.reconciled(it, entries).meals }.orEmpty()
     val occupied = meals.any { it.slot == slot && it.logged }
@@ -274,8 +277,10 @@ private fun ComposeSheet(day: Long, entries: List<FoodEntryEntity>, target: Macr
         Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp).padding(bottom = 18.dp)) {
             Text(tr("Composer un repas"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
-            app.superhealth.nutrition.ui.components.ChipChoice(slots.indices.toList(), slot, { slots[it].name.text }) { slot = it }
-            if (target != null) FilterChip(manual, { manual = !manual }, label = { Text(tr("Saisir les quantités en grammes")) })
+            if (initialSlot != null) Text(tr(app.superhealth.nutrition.ui.screens.MealSlot.entries[MealPlanner.slotOrder.indexOf(initialSlot)].label),
+                color = Mf.colors.textSecondary, style = MaterialTheme.typography.labelLarge)
+            else app.superhealth.nutrition.ui.components.ChipChoice(slots.indices.toList(), slot, { slots[it].name.text }) { slot = it }
+            if (onDone != null && target != null) FilterChip(manual, { manual = !manual }, label = { Text(tr("Saisir les quantités en grammes")) })
             if (occupied) Text(tr("Ce repas est déjà dans le journal."), color = Mf.colors.textSecondary)
             if (!manual) goal?.let { g ->
                 Text(trf("Cible : %1\$s", energy(g.kcal)) + " · " + trf("P %1\$s · L %2\$s · G %3\$s", formatNumber(g.protein), formatNumber(g.fat), formatNumber(g.carbs)),
@@ -332,7 +337,7 @@ private fun ComposeSheet(day: Long, entries: List<FoodEntryEntity>, target: Macr
                 onManual(slot, chosen.zip(amounts.map { it!! }))
             }
             else PillButton(tr("Calculer les portions"), Modifier.fillMaxWidth(), enabled = !occupied && chosen.isNotEmpty() && goal != null && goal.kcal > 0) {
-                onDone(slot, chosen.toList(), goal!!)
+                onDone?.invoke(slot, chosen.toList(), goal!!)
             }
         }
     }

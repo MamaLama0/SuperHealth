@@ -1341,7 +1341,7 @@ private fun WPersonnage(sz: CardSize, icon: ImageVector, m: Modifier, refresh: I
     val settings by app.superhealth.SuperPrefs.settings.collectAsState()
     val character = progress?.let { app.superhealth.cards.CharacterStats.from(it,
         app.superhealth.league.ProgressRepository.selectedTracks(settings), stats) }
-    val ovr = character?.let { "${it.strength} · ${it.dexterity} · ${it.constitution}" } ?: "—"
+    val ovr = character?.scoreLine ?: "—"
     val detail = when {
         equipment.equipped.isNotEmpty() -> trf("%1\$s / 4 pièces équipées", equipment.equipped.size)
         stats?.ovr10 == null -> tr("Carte en préparation")

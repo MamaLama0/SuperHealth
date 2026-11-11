@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -66,13 +67,14 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     var day by remember { mutableLongStateOf(LocalDate.now().toEpochDay()) }
     val selected = remember(settings, league.tracked) { ProgressRepository.selectedTracks(settings) }
     val todayProgress = progress?.takeIf { it.summary.throughDay == day }
-    val gate = PackProgress.from(day, selected, todayProgress?.validatedToday.orEmpty())
+    val dayQuests = todayProgress?.let { ArsenalGame.quests(it, selected) }
+    val gate = dayQuests?.gate ?: PackProgress.from(day, selected, emptySet())
     var opening by remember { mutableStateOf<EquipmentStore.Opening?>(null) }
     var direction by remember { mutableIntStateOf(1) }
     var tearProgress by remember { mutableFloatStateOf(0f) }
     val opened = (inventory.day ?: Long.MIN_VALUE) >= day
     val unlimited = EquipmentStore.unlimitedPacks
-    val canOpen = cards.isNotEmpty() && (unlimited || gate.canOpen(inventory.day) || inventory.freePacks > 0 ||
+    val canOpen = cards.isNotEmpty() && (unlimited || dayQuests?.canOpenDaily(inventory.day) == true || inventory.freePacks > 0 ||
         inventory.rewardPending != null || inventory.remotePendingDay == day || (wallet?.packCredits ?: inventory.packCredits).isNotEmpty())
     var index by rememberSaveable { mutableIntStateOf(0) }
     val slot = EquipmentBoosters.slots[index.mod(EquipmentBoosters.slots.size)]
@@ -85,7 +87,6 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
     val renderKey = "${slot.key}|$skin|${displayedEdition.key}"
     var rendered by remember { mutableStateOf<String?>(null) }
     val allowed = canOpen && sample == null
-    var notice by rememberSaveable { mutableStateOf(false) }
     var quests by rememberSaveable { mutableStateOf(false) }
     var rates by rememberSaveable { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
@@ -161,13 +162,6 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
             }
             Text(tr("ARSENAL"), Modifier.align(Alignment.Center).padding(top = 3.dp), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
         }
-        if (inventory.releaseGiftGranted && !settings.arsenal40NoticeSeen && !unlimited) {
-            TextButton({ notice = true }) {
-                Icon(Icons.Rounded.CardGiftcard, null, Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(tr("4.0 · 15 paquets offerts"))
-            }
-        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             EquipmentWeb("index.html", script, Modifier.fillMaxSize(), active || rendered != renderKey, ownsGestures = true) { kind, value ->
                 if (kind == "rendered") {
@@ -219,9 +213,9 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
                             (inventory.freePacks + wallet?.packCredits.orEmpty().size).toString() + " " + tr("Paquets bonus").lowercase()
                         opened -> tr("Pack du jour ouvert")
                         todayProgress == null -> tr("Lecture des suivis…")
-                        gate.ready -> tr("Pack du jour prêt")
+                        dayQuests?.heroic == true -> tr("Pack du jour prêt")
                         gate.required == 0 -> tr("Choisis tes suivis")
-                        else -> tr("Pack du jour") + " · " + gate.completed + "/" + gate.required
+                        else -> tr("Paquet du jour · sceau héroïque requis")
                     }, color = Mf.colors.textSecondary, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
                 }
                 PackAction(tr("Profil"), Icons.Rounded.Person) { nav.go("cards/equipment") }
@@ -235,22 +229,13 @@ internal fun EquipmentPacks(nav: NavHostController, active: Boolean, modifier: M
             opening = null
         }
     }
-    if (notice) AlertDialog(
-        onDismissRequest = { notice = false },
-        title = { Text("Vasi c bon j'en ai marre enjoy") },
-        text = { Text(tr("Toutes les collections de cartes ont été remises à zéro. Pour me faire pardonner, voici 15 paquets offerts.")) },
-        confirmButton = { TextButton({
-            SuperPrefs.update { it.copy(arsenal40NoticeSeen = true) }
-            notice = false
-        }) { Text(tr("Compris")) } },
-    )
     if (quests) ModalBottomSheet(onDismissRequest = { quests = false }, containerColor = Mf.colors.background) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).navigationBarsPadding().padding(bottom = 18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(tr("Quêtes de l’Arsenal"), style = MaterialTheme.typography.headlineSmall)
                 GoldBadge(wallet?.gold ?: inventory.gold)
             }
-            val targets = todayProgress?.let { ArsenalGame.quests(it, selected) }
+            val targets = dayQuests
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 ArsenalQuestContent(targets)
                 gate.targets.sortedBy { it.ordinal }.forEach { track ->
@@ -348,7 +333,7 @@ private fun FocusOpening(draw: EquipmentStore.Opening, cards: Map<String, Equipm
                     Text(tr("Terminer"), style = MaterialTheme.typography.titleMedium)
                 }
             } else {
-                EquipmentWeb("index.html", script, Modifier.weight(1f).fillMaxWidth(), ownsGestures = true) { kind, value ->
+                EquipmentWeb("index.html", script, Modifier.weight(1f).fillMaxWidth().clipToBounds(), ownsGestures = true) { kind, value ->
                     when (kind) {
                         "summary" -> summary = true
                         "haptic" -> packHaptic(haptics, value)

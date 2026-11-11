@@ -22,6 +22,10 @@ class CharacterTrainingTest {
         assertEquals(150.0, heavy.evidence!!.records.single().loadKg, 0.0)
         assertEquals(compute(workout(400, 150.0, 1, 1)).prScore!!, heavy.prScore!!, .000001)
     }
+    @Test fun aSingleMaximalLiftCannotFillAllThreeRecordSlots() {
+        val result = compute(workout(1, 500.0, 1, 1))
+        assertEquals(.60, result.prScore!!, .000001)
+    }
     @Test fun annualVolumeIncludesIdleWeeksAndExcludesOldAndFutureWorkouts() {
         val result = compute(workout(364, 100.0, 10, 10), workout(1, 100.0, 10, 10), workout(400, 900.0), workout(-1, 900.0))
         assertEquals(365, result.coveredDays)
