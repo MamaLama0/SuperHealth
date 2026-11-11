@@ -138,7 +138,7 @@ internal enum class DungeonCreature(val nameFr: String, val light: Long, val mod
     SKELETONMAGE("Mage squelette", 0xFFCB9CF2),
     SKELETONROGUE("Voleur squelette", 0xFFB6CCED),
     SKELETONGOLEM("Golem d’ossements", 0xFFFFCA88),
-    NECROMANCER("Nécromancien", 0xFFE0A9FF),
+    NECROMANCER("Liche", 0xFFE0A9FF),
     KNIGHT("Chevalier", 0xFFF4CC8B),
     MAGE("Mage", 0xFF9BC7FF),
     RANGER("Rôdeur", 0xFFC1DC94),
@@ -160,11 +160,18 @@ internal enum class DungeonCreature(val nameFr: String, val light: Long, val mod
         // Same five affinity pairs as EnemyAffinity.floor and the server.
         private val goblins = listOf(GOBELIN_OCCULTISTE, GOBELIN_MARAUDEUR, GOBELIN_REMPART, GOBELIN_ECLAIREUR, GOBELIN_BERSERKER)
         private val slimes = listOf(SLIME_MAUDIT, SLIME_MOUSSE, SLIME_AMBRE, SLIME_AZUR, SLIME_CARMIN)
+        private val skeletons = listOf(SKELETONMINION, SKELETONWARRIOR, SKELETONMAGE, SKELETONROGUE)
+        private val bosses = listOf(TROLL_BRISEFER, SKELETONGOLEM, NECROMANCER)
         val adventurers = listOf(KNIGHT, MAGE, RANGER, BARBARIAN, ROGUE)
-        fun floor(n: Int) = if (n % 4 == 0) {
-            // Both guardians now share ARCANIST / MELEE; keep their alternating silhouettes.
-            if (n % 8 == 0) SKELETONGOLEM else TROLL_BRISEFER
-        } else (if (((n - 1) / 5) % 2 == 0) slimes else goblins)[(n - 1).mod(5)]
-        fun weekly(week: Long) = if (((week + 3) / 7) % 2 == 0L) SKELETONGOLEM else TROLL_BRISEFER
+        fun floor(n: Int): DungeonCreature {
+            if (n % 4 == 0) return bosses[(n / 4 - 1).mod(bosses.size)]
+            val index = n - 1
+            return when ((index / 5).mod(3)) {
+                0 -> slimes[index.mod(5)]
+                1 -> goblins[index.mod(5)]
+                else -> skeletons[(index - index / 4).mod(skeletons.size)]
+            }
+        }
+        fun weekly(week: Long) = bosses[((week + 3) / 7).mod(bosses.size)]
     }
 }

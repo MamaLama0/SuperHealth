@@ -7,10 +7,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DungeonBestiaryTest {
-    @Test fun bossesRotateBetweenTheTwoLargeCreatures() {
-        val bosses = setOf(DungeonCreature.SKELETONGOLEM, DungeonCreature.TROLL_BRISEFER)
+    @Test fun largeMonstersAreReservedForSoloAndTeamBosses() {
+        val bosses = setOf(DungeonCreature.SKELETONGOLEM, DungeonCreature.TROLL_BRISEFER, DungeonCreature.NECROMANCER)
         assertEquals(bosses, (4..32 step 4).map(DungeonCreature::floor).toSet())
         assertEquals(bosses, (0L..28L step 7L).map(DungeonCreature::weekly).toSet())
+        val ordinary = (1..120).filter { it % 4 != 0 }.map(DungeonCreature::floor).toSet()
+        assertEquals(emptySet<DungeonCreature>(), ordinary.intersect(bosses))
+        assertEquals(14, ordinary.size)
+        assertTrue(ordinary.all { creature ->
+            listOf("GOBELIN_", "SKELETON", "SLIME_").any { creature.name.startsWith(it) }
+        })
     }
 
     @Test fun importedCreaturesAreReachableAndMatchTheCombatRules() {

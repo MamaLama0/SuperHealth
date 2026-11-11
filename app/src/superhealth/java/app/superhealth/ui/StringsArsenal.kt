@@ -461,7 +461,7 @@ internal object StringsArsenal {
         "Sbire squelette" to "Skeleton minion",
         "Voleur squelette" to "Skeleton rogue",
         "Golem d’ossements" to "Bone golem",
-        "Nécromancien" to "Necromancer",
+        "Liche" to "Lich",
         "Chevalier" to "Knight",
         "Barbare" to "Barbarian",
         "Voleur" to "Rogue",
