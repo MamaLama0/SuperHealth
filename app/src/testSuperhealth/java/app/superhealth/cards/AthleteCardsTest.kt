@@ -184,8 +184,8 @@ class AthleteCardsTest {
         val history = (1..40 step 3).flatMap { listOf(w(it, bench, 85.0), w(it, squat, 115.0)) }
         val stats = AthleteStatsEngine.compute(AthleteStatsEngine.Input(history, db, 80.0, Sex.MALE, 30, now, weeklyTarget = 2))
         val pec = stats[Stat.PEC]!!; val jam = stats[Stat.JAM]!!
-        // 85 kg × 5 à RIR 2 ≈ 1,3× le poids de corps au couché : entre intermédiaire et avancé.
-        assertTrue("PEC $pec", pec in 72..84)
+        // Le 1RM estimé est proche du seuil intermédiaire avec le barème de la fiche (+10 %).
+        assertTrue("PEC $pec", pec in 68..79)
         assertTrue("JAM $jam", jam in 60..80)
         assertNull("aucune donnée de dos : pas de zéro", stats[Stat.DOS])
         assertNull("pas de cardio mesuré", stats[Stat.CAR])
