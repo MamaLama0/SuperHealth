@@ -196,6 +196,10 @@ object Standards {
         return (if (female) lift.female else lift.male).map { it * scale }.toDoubleArray()
     }
 
+    /** Shared by the muscle scores and the reference table in the profile. */
+    fun athleteThresholds(lift: Lift, sex: Sex, bodyweight: Double): DoubleArray =
+        thresholds(lift, sex, bodyweight).apply { indices.forEach { i -> this[i] *= 1.10 } }
+
     /** Points de carte (25..99) d'un rapport 1RM / poids de corps. Au-delà de l'élite : +6 points par écart avancé → élite. */
     fun points(ratio: Double, levels: DoubleArray): Double {
         if (!ratio.isFinite() || ratio <= 0) return 25.0

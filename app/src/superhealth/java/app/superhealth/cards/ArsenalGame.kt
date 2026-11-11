@@ -15,10 +15,7 @@ internal object ArsenalGame {
     class Upgrade : Exception("Mets à jour le serveur pour les nouveaux boosters et combats.")
     class Unsupported : Exception("Le relais doit être mis à jour pour le marché et le boss de groupe.")
 
-    // The relay identifies raids by their Monday in UTC.
-    fun monthlyRaidWeek(today: Long): Long? = Progression.week(today).takeIf {
-        LocalDate.ofEpochDay(it).dayOfMonth <= 7
-    }
+    fun raidWeek(today: Long): Long = Progression.week(today)
 
     @Serializable data class Piece(val key: String, val id: String, val finish: EquipmentFinish, val base: Int, val multiplier: Int, val level: Int = 1, val balanceVersion: Int = 1) {
         fun local(serial: Long) = EquipmentPiece(serial, id, finish, base, multiplier, level, key, balanceVersion)
@@ -28,11 +25,11 @@ internal object ArsenalGame {
         val recipient: String? = null, val seller: String? = null, val fixed: Boolean = false, val wanted: String? = null, val mine: Boolean = false, val leading: Boolean = false, val incoming: Boolean = false)
     @Serializable data class Raid(val code: String, val members: Int, val hp: Int, val max: Int, val won: Boolean,
         val qualifiers: Int, val required: Int, val mine: Int, val hit: Boolean, val week: Long? = null,
-        val canInvite: Boolean = false, val invited: List<String> = emptyList())
+        val canInvite: Boolean = false, val invited: List<String> = emptyList(), val goldReward: Int = 300, val iceReward: Int = 2)
     @Serializable data class RaidInvite(val code: String, val from: String)
     @Serializable data class View(val revision: Long = 0, val rules: Int = 1, val gold: Int, val opened: Int, val owned: List<Piece>, val opening: Opening? = null,
         val listings: List<Listing> = emptyList(), val raid: Raid? = null, val dungeon: Dungeon? = null,
-        val packCredits: List<String> = emptyList(), val ice: Int = 0, val raidInvites: List<RaidInvite> = emptyList(), val duels: List<Duel> = emptyList(), val boosters: Int = 0, val combat: Int = 0, val arena: Int = 0, val collectionVersion: Int = 0, val packPrice: Int = PACK_PRICE)
+        val packCredits: List<String> = emptyList(), val ice: Int = 0, val raidInvites: List<RaidInvite> = emptyList(), val duels: List<Duel> = emptyList(), val boosters: Int = 0, val combat: Int = 0, val arena: Int = 0, val raidRules: Int = 0, val collectionVersion: Int = 0, val packPrice: Int = PACK_PRICE)
     @Serializable data class Duel(val id: String, val opponent: String, val incoming: Boolean, val status: String,
         val expires: Long, val mine: CharacterStats? = null, val theirs: CharacterStats? = null,
         val stance: CombatStance? = null, val otherStance: CombatStance? = null)
@@ -66,8 +63,9 @@ internal object ArsenalGame {
 
     data class Day(val day: Long, val rank: Int)
     data class Quests(val today: Long, val gate: PackProgress, val days: List<Day>, val sportDays: Set<Long> = emptySet(),
-        val attackDays: Set<Long> = days.map { it.day }.toSet(), val character: CharacterStats = CharacterStats()) {
+        val attackDays: Set<Long> = days.map { it.day }.toSet(), val character: CharacterStats = CharacterStats(), val fullDays: Set<Long> = emptySet()) {
         val canAttack get() = today in attackDays
+        val fullToday get() = today in fullDays
         val rank get() = days.firstOrNull { it.day == today }?.rank ?: 0
         val weekCount get() = days.count { it.day >= Progression.week(today) }
         val activity get() = gate.done.any { it in activities }
@@ -85,9 +83,11 @@ internal object ArsenalGame {
     internal fun quests(progress: Progression.Result, selected: Set<Progression.Track>): Quests {
         val today = progress.summary.throughDay
         val history = progress.recentValidated + (today to progress.validatedToday)
+        val fullDays = mutableSetOf<Long>()
         val days = history.entries.sortedBy { it.key }.mapNotNull { (day, done) ->
             val gate = PackProgress.from(day, selected, done)
             val full = gate.targets.isNotEmpty() && gate.completed == gate.targets.size
+            if (full) fullDays += day
             val rank = when {
                 !gate.ready -> 0
                 full && done.size >= 3 && done.any { it in activities } -> 3
@@ -97,15 +97,18 @@ internal object ArsenalGame {
             Day(day, rank).takeIf { rank > 0 }
         }
         val attackDays = history.filterValues { done -> done.any { it in selected } }.keys
-        return Quests(today, PackProgress.from(today, selected, progress.validatedToday), days, progress.sportDays, attackDays, CharacterStats.from(progress, selected, CardStore.snapshot.value?.now ?: CardStore.state.value.lastStats))
+        return Quests(today, PackProgress.from(today, selected, progress.validatedToday), days, progress.sportDays, attackDays, CharacterStats.from(progress, selected, CardStore.snapshot.value?.now ?: CardStore.state.value.lastStats), fullDays)
     }
 
-    suspend fun quests(ctx: Context): Quests = quests(
-        ProgressRepository.compute(ctx), ProgressRepository.selectedTracks(SuperPrefs.settings.value))
+    suspend fun quests(ctx: Context): Quests {
+        CardStore.load(ctx)
+        return quests(ProgressRepository.compute(ctx), ProgressRepository.selectedTracks(SuperPrefs.settings.value))
+    }
 
     private fun JsonObjectBuilder.addDays(quests: Quests) {
         put("today", quests.today)
         put("attackDays", JsonArray(quests.attackDays.sorted().map(::JsonPrimitive)))
+        put("raidFullDays", JsonArray(quests.fullDays.sorted().map(::JsonPrimitive)))
         put("sportDays", JsonArray(quests.sportDays.sorted().map(::JsonPrimitive)))
         put("days", buildJsonArray { quests.days.forEach { day -> add(buildJsonObject { put("day", day.day); put("rank", day.rank) }) } })
     }
@@ -138,9 +141,10 @@ internal object ArsenalGame {
     suspend fun advance(ctx: Context, quests: Quests, attack: Boolean = false) {
         if (!EquipmentStore.unlimitedPacks && Economy.available()) try {
             if (!attack) sync(ctx, quests) else {
-                if ((data.value ?: sync(ctx, quests)).combat < 2) throw Upgrade()
+                val combat = (data.value ?: sync(ctx, quests)).combat
+                if (combat < 2) throw Upgrade()
                 val power = (EquipmentStore.bonuses(EquipmentStore.state.value, EquipmentStore.cards.value).values.sum() / 100).coerceIn(0, 5)
-                act(ctx, "v2-solo") { addDays(quests); put("power", power); put("combatVersion", 2); addCharacter(quests.character); addDamageMix() }
+                act(ctx, "v2-solo") { addDays(quests); put("power", power); put("combatVersion", minOf(combat, 3)); addCharacter(quests.character); addDamageMix() }
             }
             return
         } catch (_: Unsupported) {
@@ -156,8 +160,10 @@ internal object ArsenalGame {
         put("schools", buildJsonObject { primary.forEach { (school, count) -> put(school.name, count) } })
     }
 
-    suspend fun hit(ctx: Context, quests: Quests): View =
-        act(ctx, "v2-raid-hit") { addDays(quests); addDamageMix() }
+    suspend fun hit(ctx: Context, quests: Quests): View {
+        if ((data.value ?: sync(ctx, quests)).raidRules < 2) throw Upgrade()
+        return act(ctx, "v2-raid-hit") { addDays(quests); addDamageMix(); addCharacter(quests.character) }
+    }
 
     suspend fun act(ctx: Context, op: String, fields: JsonObjectBuilder.() -> Unit = {}): View =
         request(ctx, op, fields).also { EquipmentStore.syncRemote(ctx, it) }
@@ -202,12 +208,12 @@ internal object ArsenalGame {
         val today = quests.today
         if (!quests.canAttack || (current.lastAttack ?: Long.MIN_VALUE) >= today) return current to 0
         if (current.health == 0) return current.copy(health = 100, lastAttack = today, dealt = 0, received = 0, defeatedFloor = null, log = "Tu as récupéré tes points de vie.") to 0
-        val attributePower = CharacterStats.modifier(quests.character.strength) * 2 + CharacterStats.modifier(quests.character.dexterity)
+        val attributePower = quests.character.dungeonAttack
         val damage = EnemyAffinity.floor(current.floor).hit(48 + attributePower + (quests.rank-1).coerceAtLeast(0) * 9 + (bonuses / 100).coerceIn(0, 5), schools) +
             if (completeSet) 1 else 0
         val remaining = (current.hp - damage).coerceAtLeast(0)
         val won = remaining == 0
-        val received = if (won || current.frozenDay == today) 0 else ((if (current.elite) 18 else 12) - CharacterStats.modifier(quests.character.constitution)).coerceAtLeast(1)
+        val received = if (won || current.frozenDay == today) 0 else ((if (current.elite) 18 else 12) - quests.character.dungeonDefense).coerceAtLeast(1)
         return current.copy(floor = current.floor + if (won) 1 else 0, monster = remaining,
             health = (current.health - received).coerceAtLeast(0), dealt = damage.coerceAtMost(current.hp), received = received,
             defeatedFloor = current.floor.takeIf { won },

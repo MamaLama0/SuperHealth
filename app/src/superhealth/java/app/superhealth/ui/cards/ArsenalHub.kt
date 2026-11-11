@@ -72,10 +72,10 @@ internal fun DungeonTeaser(nav: NavHostController, active: Boolean) {
         catch (_: Exception) {}
     }
     val dungeon = inventory.dungeon
-    val raidWeek = ArsenalGame.monthlyRaidWeek(LocalDate.now(ZoneOffset.UTC).toEpochDay())
-    val raid = remote?.raid?.takeIf { raidWeek != null && it.week == raidWeek }
+    val raidWeek = ArsenalGame.raidWeek(LocalDate.now(ZoneOffset.UTC).toEpochDay())
+    val raid = remote?.raid?.takeIf { it.week == raidWeek }
     val status = when {
-        raidWeek != null && remote?.raidInvites.orEmpty().isNotEmpty() -> tr("Invitation au boss")
+        remote?.raidInvites.orEmpty().isNotEmpty() -> tr("Invitation au boss")
         dungeon.health == 0 -> tr("Récupération")
         quests?.canAttack == true && dungeon.lastAttack != quests?.today -> tr("Attaque prête")
         else -> tr(DungeonCreature.floor(dungeon.floor).nameFr)
@@ -94,8 +94,7 @@ internal fun DungeonTeaser(nav: NavHostController, active: Boolean) {
                 Text(status, style = MaterialTheme.typography.bodySmall, color = Color(0xFFE4DDD1))
                 Text(when {
                     raid?.won == true -> tr("Boss vaincu")
-                    raidWeek != null -> tr("Donjon solo · Boss entre amis")
-                    else -> tr("Donjon solo")
+                    else -> tr("Donjon solo · Boss entre amis")
                 },
                     style = MaterialTheme.typography.labelSmall, color = Color(0xFFCEC4DF))
             }
@@ -141,8 +140,8 @@ internal fun DungeonRoute(nav: NavHostController) {
         }
     }
     val dungeon = saved.dungeon
-    val raidWeek = ArsenalGame.monthlyRaidWeek(LocalDate.now(ZoneOffset.UTC).toEpochDay())
-    val raid = remote?.raid?.takeIf { raidWeek != null && it.week == raidWeek }
+    val raidWeek = ArsenalGame.raidWeek(LocalDate.now(ZoneOffset.UTC).toEpochDay())
+    val raid = remote?.raid?.takeIf { it.week == raidWeek }
     val online = !EquipmentStore.unlimitedPacks && Economy.available() && (remote?.rules ?: 0) >= 3
     val ice = if (online) remote?.ice ?: 0 else saved.ice
     val packs = saved.freePacks + (if (online) remote?.packCredits.orEmpty().size else 0)
@@ -188,11 +187,11 @@ internal fun DungeonRoute(nav: NavHostController) {
                 DungeonAffinities(EnemyAffinity.floor(dungeon.floor), mix)
                 val power = (EquipmentStore.bonuses(saved, cards).values.sum() / 100).coerceIn(0, 5)
                 val character = quests?.character ?: CharacterStats()
-                val attributePower = CharacterStats.modifier(character.strength) * 2 + CharacterStats.modifier(character.dexterity)
+                val attributePower = character.dungeonAttack
                 val setDamage = if (EquipmentStore.completeSet(saved, cards, serverOnly = online) != null) 1 else 0
                 val damage = EnemyAffinity.floor(dungeon.floor).hit(48 + attributePower + ((quests?.rank ?: 0) - 1).coerceAtLeast(0) * 9 + power, mix) + setDamage
                 Text(tr("Dégâts prévus") + " · $damage  /  " + tr("Riposte") + " · " +
-                    (if (damage >= dungeon.hp || frozen) 0 else ((if (dungeon.elite) 18 else 12) - CharacterStats.modifier(character.constitution)).coerceAtLeast(1)),
+                    (if (damage >= dungeon.hp || frozen) 0 else ((if (dungeon.elite) 18 else 12) - character.dungeonDefense).coerceAtLeast(1)),
                     color = Color(0xFFCBD4DF), style = MaterialTheme.typography.bodySmall)
                 Button(onClick = { task {
                     val progress = ArsenalGame.quests(ctx)
@@ -243,7 +242,7 @@ internal fun DungeonRoute(nav: NavHostController) {
             AssistChip(onClick = { nav.go("cards/packs") }, label = { Text("$packs " + tr("Paquets disponibles")) })
             if (online) TextButton({ giftDialog = true }) { Text(tr("Offrir")) }
         }
-        if (raidWeek != null) {
+        run {
             val week = raidWeek
             val boss = DungeonCreature.weekly(week)
             val bossShape = RoundedCornerShape(20.dp)
@@ -253,7 +252,7 @@ internal fun DungeonRoute(nav: NavHostController) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CreatureStage(boss, raid?.hp?.toLong(), Modifier.width(156.dp).height(167.dp), dungeon = true)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(tr("BOSS DU MOIS"), style = MaterialTheme.typography.labelSmall, color = Color(boss.light))
+                    Text(tr("Boss de la semaine"), style = MaterialTheme.typography.labelSmall, color = Color(boss.light))
                     Text(tr(boss.nameFr), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
@@ -281,14 +280,32 @@ internal fun DungeonRoute(nav: NavHostController) {
                 }
                 ArsenalMeter(tr("Boss"), raid.hp, raid.max, dungeonViolet)
                 ArsenalMeter(tr("Membres ayant réussi le défi"), raid.qualifiers, raid.required, mintedGold)
-                Text(tr("Le boss tombe si ses PV sont à zéro et si au moins la moitié de l’équipe a fait trois jours Grand sceau cette semaine."),
+                Text(tr("Frappe après une journée de suivis complète. Pour vaincre le boss, ramène ses PV à zéro et aide la majorité de l’équipe à valider trois journées cette semaine."),
                     color = Mf.colors.textSecondary, style = MaterialTheme.typography.bodySmall)
-                Text(tr("Tes jours Grand sceau") + " · ${raid.mine}/3")
-                FilledTonalButton({ task { ArsenalGame.hit(ctx, ArsenalGame.quests(ctx)) } },
-                    enabled = !busy && !raid.won && raid.members >= 2 && quests?.canAttack == true) {
-                    Text(tr(if (raid.won) "Boss vaincu" else if (raid.hit) "Actualiser ma contribution" else "Frapper le boss"))
+                Text(tr("Tes journées complètes") + " · ${raid.mine.coerceAtMost(3)}/3")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Butin par membre"), style = MaterialTheme.typography.labelLarge)
+                    GoldBadge(raid.goldReward)
+                    DungeonReward(Icons.Rounded.AcUnit, "+${raid.iceReward}", tr("Glaçons"))
                 }
-                TextButton({ task { ArsenalGame.sync(ctx, ArsenalGame.quests(ctx)) } }, enabled = !busy) { Text(tr("Actualiser l’équipe")) }
+                FilledTonalButton({ task {
+                    val progress = ArsenalGame.quests(ctx)
+                    quests = progress
+                    ArsenalGame.hit(ctx, progress)
+                } }, enabled = !busy && !raid.won && !raid.hit && raid.hp > 0 && raid.members >= 2 && quests?.fullToday == true) {
+                    Text(tr(when {
+                        raid.won -> "Boss vaincu"
+                        raid.hp == 0 -> "Défi de groupe en cours"
+                        raid.hit -> "Attaque effectuée aujourd’hui"
+                        quests?.fullToday != true -> "Termine tes suivis pour frapper"
+                        else -> "Frapper le boss"
+                    }))
+                }
+                TextButton({ task {
+                    val progress = ArsenalGame.quests(ctx)
+                    quests = progress
+                    ArsenalGame.sync(ctx, progress)
+                } }, enabled = !busy) { Text(tr("Actualiser l’équipe")) }
             }
         }
         issue?.let { Text(it, color = MaterialTheme.colorScheme.error) }

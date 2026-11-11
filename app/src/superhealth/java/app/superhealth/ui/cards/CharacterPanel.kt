@@ -87,8 +87,8 @@ internal fun CharacterRules(progress: Progression.Result?, selected: Set<Progres
                 }
             }
             Text(tr("D’où viennent les scores ?"), style = MaterialTheme.typography.titleLarge)
-            Text(tr("Force : records 85 %, pratique récente 15 %. Les barèmes de charge montent de 20 %. Le meilleur mouvement pèse 40 % des records et les trois meilleurs, 60 %. Un mouvement manquant laisse sa part à zéro."))
-            Text(tr("Les PR de toutes les séances enregistrées sont conservés. Séries validées de 1 à 12 répétitions, hors échauffement ; RIR limité à 3 pour le calcul. Les repères tiennent compte du mouvement, du poids du corps et du profil. Une estimation de machine compte selon sa fiabilité."), color = Mf.colors.textSecondary)
+            Text(tr("Force : moyenne des pectoraux, du dos, des bras et épaules, et des jambes. Chaque groupe pèse 25 %. Un groupe non évalué contribue zéro."))
+            Text(tr("La charte rattache chaque exercice à un mouvement de référence. Les charges de référence montent de 10 %. Les muscles secondaires et les exercices dont la correspondance est incertaine pèsent moins."), color = Mf.colors.textSecondary)
             Text(tr("Dextérité : cardio 65 %, pas 20 %, esprit et mobilité 15 %. Les valeurs cardio intermédiaires progressent plus graduellement."))
             Text(tr("Cardio : niveau 30 %, fréquence et volume 20 %, pas 20 %, distance 15 %, allure 15 %. Le niveau utilise la VO₂max disponible, sinon les courses ou une estimation. Les activités récentes pèsent davantage : leur poids est divisé par deux après 21 jours."), color = Mf.colors.textSecondary)
             Text(tr("Constitution : volume moyen 45 %, régularité en salle 15 %, sommeil 25 %, nutrition 15 %. Les semaines sans séance comptent dans la moyenne."))
@@ -99,13 +99,11 @@ internal fun CharacterRules(progress: Progression.Result?, selected: Set<Progres
                 gym.evidence?.let { evidence ->
                     Text(tr("Volume hebdomadaire moyen") + " : " + number.format(evidence.weeklyKg) + " kg · " + number.format(evidence.weeklySets) + " " + tr("séries"))
                     Text(tr(if (evidence.bodyweightKnown) "Poids de corps utilisé" else "Poids de corps estimé · ajoutez une pesée") + " : " + number.format(evidence.bodyweightKg) + " kg", style = MaterialTheme.typography.bodySmall)
-                    evidence.records.forEach { record ->
-                        Text(record.name + " · " + number.format(record.loadKg) + " kg × ${record.reps} · " + tr("1RM estimé") + " " + number.format(record.estimatedMaxKg) + " kg", style = MaterialTheme.typography.bodySmall)
-                    }
+
                 }
             }
             Text(tr("Suivis sur 28 jours : jours validés / 28 pour les suivis quotidiens ; jours avec séance validée / (4 × objectif hebdomadaire) pour la musculation. Chaque rapport est plafonné à 100 %. Un nouveau compte ne reçoit pas le maximum dès son premier jour."), color = Mf.colors.textSecondary)
-            Text(tr("Les suivis facultatifs désactivés sont exclus. Les parts réservées aux records, au cardio et à la musculation restent à zéro si leurs données manquent."), color = Mf.colors.textSecondary)
+            Text(tr("Les suivis facultatifs désactivés sont exclus. Les parts réservées aux groupes musculaires, au cardio et à la musculation restent à zéro si leurs données manquent."), color = Mf.colors.textSecondary)
             if (!athlete?.provisional.isNullOrEmpty() || athlete?.training?.provisional == true) Text(tr("Certaines performances sont encore provisoires."), color = Mf.colors.accent)
             Text(tr("Cartes : armes → Force ; bottes → Dextérité ; torses et protections → Constitution. Les malédictions retirent leur pourcentage à la caractéristique indiquée. Les types de dégâts restent indépendants."), style = MaterialTheme.typography.bodySmall)
             TextButton(onDismiss) { Text(tr("Compris")) }

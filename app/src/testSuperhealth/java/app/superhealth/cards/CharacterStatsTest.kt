@@ -19,7 +19,7 @@ class CharacterStatsTest {
     @Test fun enabledTracksRenormalizeAndAreCappedAtTheirGoals() {
         val all = (today - 27..today).associateWith { Track.entries.toSet() }
         val full = CharacterStats.from(progress(all), Track.entries.toSet())
-        assertEquals("15 · 35 · 40", full.scoreLine)
+        assertEquals("0 · 35 · 40", full.scoreLine)
         assertEquals(28, full.days)
         val sleep = CharacterStats.from(progress(all), setOf(Track.SLEEP))
         assertEquals("0 · 0 · 29", sleep.scoreLine)
@@ -39,13 +39,20 @@ class CharacterStatsTest {
         assertEquals(0, CharacterCombat.battle(a,a).winner)
         assertTrue(ab.exchanges.all { it.myHealth in 0..10000 && it.theirHealth in 0..10000 })
     }
+    @Test fun differentScoresInTheSameOldTierAffectDuelDamage() {
+        val first = CharacterStats(strength = 16, forceScore = 68)
+        val second = CharacterStats(strength = 16, forceScore = 74)
+        val exchange = CharacterCombat.battle(first, second).exchanges.first()
+        assertTrue(exchange.theirDamage > exchange.myDamage)
+    }
+
     @Test fun crossPlatformBattleVector() {
         val battle = CharacterCombat.battle(CharacterStats(16,12,18,20), CharacterStats(10,20,13,15))
         assertEquals(listOf(3200,1950,3019), battle.exchanges.map { it.myDamage })
         assertEquals(2570, battle.myHealth); assertEquals(1831, battle.theirHealth)
     }
     @Test fun actualPerformancesAndTrackingContributeWithDisplayedWeights() {
-        val athlete = AthleteStats(values = mapOf("PEC" to 50,"DOS" to 60,"BRA" to 70,"JAM" to 80,"CAR" to 80,"RÉG" to 90), training = CharacterTraining(.65, .70, .90, 365, false))
+        val athlete = AthleteStats(values = mapOf("PEC" to 50,"DOS" to 60,"BRA" to 70,"JAM" to 80,"CAR" to 80,"RÉG" to 90), training = CharacterTraining(.70, .90, 365, false))
         val history = (0..27).associate { i -> today-i to buildSet {
             if (i < 6) add(Track.STRENGTH)
             if (i < 14) { add(Track.STEPS); add(Track.SLEEP) }
@@ -53,12 +60,21 @@ class CharacterStatsTest {
             if (i < 7) add(Track.MIND)
         } }
         val result = CharacterStats.from(progress(history), Track.entries.toSet(), athlete)
-        assertEquals("62 · 63 · 68", result.scoreLine)
+        assertEquals("65 · 63 · 68", result.scoreLine)
         val calculation = CharacterStats.breakdown(progress(history), Track.entries.toSet(), athlete)
-        assertEquals(.6275,calculation[0].ratio,.000001)
+        assertEquals(.65,calculation[0].ratio,.000001)
         assertEquals(.65 * Math.pow(80.0 / 99, 1.25) + .1375, calculation[1].ratio, .000001)
         assertEquals(.6875,calculation[2].ratio,.000001)
     }
+    @Test fun forceIsTheAverageOfTheSameFourMuscleScoresShownInTheProfile() {
+        val stats = AthleteStats(values = mapOf("PEC" to 84, "DOS" to 82, "BRA" to 78, "JAM" to 80))
+        val force = CharacterStats.breakdown(null, emptySet(), stats).first()
+        assertEquals(81, force.score)
+        assertTrue(force.score <= stats.values.values.max())
+        val partial = CharacterStats.breakdown(null, emptySet(), stats.copy(values = mapOf("PEC" to 84))).first()
+        assertEquals(21, partial.score)
+    }
+
     @Test fun aMatchingFourPieceSetAddsHalfAPercentToEachAttribute() {
         val cards = EquipmentSlot.entries.associate { slot ->
             slot.key to EquipmentCard(slot.key, slot.title, slot.title, "Steel", 0, 25, 45, slot, setId = "steel")

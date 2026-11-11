@@ -767,7 +767,11 @@ function run(){
     const wobble=sail*Math.sin(detach*18.);
     gl.uniform1f(vars.filmPart,1);gl.uniform1f(vars.flutter,flutter);
     gl.uniform1f(vars.clock,detach*2.6);
-    gl.uniform3f(vars.shift,travel,.74+motion.lift*.68*Math.sin(Math.PI*detach*.83)-.38*detach*detach,.38*Math.sin(Math.PI*detach)+.22*detach);
+    // Keep the tear aligned with the wrapper at first, then send the strip sideways and down.
+    const stripY=openedAt===null
+      ? .74-.21*smooth(.04,.60,frontier)
+      : mouthY+motion.lift*.22*Math.sin(Math.PI*detach)-.60*detach*detach;
+    gl.uniform3f(vars.shift,travel,stripY,.27*Math.sin(Math.PI*detach)+.18*detach);
     gl.uniform3f(vars.turn,motion.pitch*detach+recoil*.18+wobble*.75,motion.twist*detach+wobble*2.,-motion.roll*detach+wobble*.48);
     if(openedAt===null || detach<1) drawFilm(parts[1]);
     ctx.clearRect(0,0,w,h);

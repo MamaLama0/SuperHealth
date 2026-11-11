@@ -183,21 +183,34 @@ internal fun dashboardScoreEntries(score: League.Score?, friends: List<League.Fr
         DashboardScoreEntry(meLabel, score.total, true)).sortedWith(compareByDescending<DashboardScoreEntry> { it.score }.thenBy { !it.me }.thenBy { it.name.lowercase() })
 }
 
-/** Une quête à reprendre ou une récompense à récupérer, sans répéter tout l'écran des quêtes. */
 @Composable
 internal fun WQuests(size: CardSize, icon: ImageVector, modifier: Modifier, refresh: Int, onClick: () -> Unit) {
     val ctx = LocalContext.current
     val current by ProgressRepository.current.collectAsState()
     val settings by app.superhealth.SuperPrefs.settings.collectAsState()
-    val quest = current?.let { app.superhealth.cards.ArsenalGame.quests(it, ProgressRepository.selectedTracks(settings)) }
-    LaunchedEffect(refresh) { runCatching { ProgressRepository.compute(ctx) } }
+    val league by League.state.collectAsState()
+    val date by androidx.compose.runtime.produceState(java.time.LocalDate.now()) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000)
+            value = java.time.LocalDate.now()
+        }
+    }
+    val tracked = ProgressRepository.selectedTracks(settings)
+    LaunchedEffect(refresh, date, tracked, league.weeklyTargets) {
+        try { ProgressRepository.compute(ctx, date) }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { /* Keep the latest usable progress. */ }
+    }
+    val quest = current?.takeIf { it.summary.throughDay == date.toEpochDay() }
+        ?.let { app.superhealth.cards.ArsenalGame.quests(it, tracked) }
     val hue = DashCard.QUESTS.hue()
-    val inventory by app.superhealth.cards.EquipmentStore.state.collectAsState()
-    val wallet by app.superhealth.cards.ArsenalGame.remote.collectAsState()
-    val rewardReady = inventory.freePacks > 0 || inventory.pending != null || inventory.rewardPending != null || (wallet?.packCredits ?: inventory.packCredits).isNotEmpty()
+    val title = when {
+        tracked.isEmpty() -> tr("Choisir mes suivis")
+        quest == null -> tr("Lecture des suivis…")
+        else -> trf("%1\$s / %2\$s suivis validés", quest.gate.completed, quest.gate.targets.size)
+    }
     val rank = quest?.rank ?: 0
-    val title = if (rewardReady) tr("Paquet à récupérer") else tr(listOf("Premier sceau", "Grand sceau", "Sceau héroïque", "Tous les sceaux du jour")[rank])
-    val progress = if (rewardReady) tr("Disponible") else "$rank / 3"
+    val progress = quest?.let { "$rank / 3" } ?: "—"
     if (size == CardSize.W) SocialStrip(modifier, icon, tr("Quêtes"), title, progress, hue, onClick)
     else SocialCard(size, modifier, icon, tr("Quêtes"), hue, onClick) {
         SocialValue(progress, if (size == CardSize.S) tr("Aujourd’hui") else title, hue, size == CardSize.S)

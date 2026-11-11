@@ -15,17 +15,6 @@ class CharacterTrainingTest {
         listOf(SessionExercise("e", bench.id, List(sets) { SetLog("s$it", weight = kg, reps = reps, rir = 0, done = true) })))
     private fun compute(vararg w: Workout) = CharacterTrainingEngine.compute(AthleteStatsEngine.Input(w.toList(), db, 80.0, Sex.MALE, 30, now))
 
-    @Test fun heavierPrMattersMoreThanRepeatingLightSetsAndOldPrSurvives() {
-        val heavy = compute(workout(400, 150.0, 1, 1), workout(1, 40.0))
-        val light = compute(workout(1, 40.0, 40))
-        assertTrue(heavy.prScore!! > light.prScore!!)
-        assertEquals(150.0, heavy.evidence!!.records.single().loadKg, 0.0)
-        assertEquals(compute(workout(400, 150.0, 1, 1)).prScore!!, heavy.prScore!!, .000001)
-    }
-    @Test fun aSingleMaximalLiftCannotFillAllThreeRecordSlots() {
-        val result = compute(workout(1, 500.0, 1, 1))
-        assertEquals(.60, result.prScore!!, .000001)
-    }
     @Test fun annualVolumeIncludesIdleWeeksAndExcludesOldAndFutureWorkouts() {
         val result = compute(workout(364, 100.0, 10, 10), workout(1, 100.0, 10, 10), workout(400, 900.0), workout(-1, 900.0))
         assertEquals(365, result.coveredDays)
@@ -33,12 +22,12 @@ class CharacterTrainingTest {
         assertEquals(20.0 / (365.0 / 7), result.evidence!!.weeklySets, .001)
         assertTrue(result.consistencyScore!! < .02)
     }
-    @Test fun warmupsUndoneAndInvalidSetsNeverCreatePrOrVolume() {
+    @Test fun warmupsUndoneAndInvalidSetsNeverCreateVolume() {
         val w = workout(1)
         val excluded = listOf(SetLog("warm", type = SetType.WARMUP, weight = 900.0, reps = 2, done = true),
             SetLog("undone", weight = 900.0, reps = 2, done = false), SetLog("bad", weight = Double.NaN, reps = 8, done = true))
         val result = compute(w.copy(exercises = listOf(w.exercises.single().copy(sets = excluded))))
-        assertNull(result.prScore); assertNull(result.volumeScore)
+        assertNull(result.volumeScore)
     }
     @Test fun shortHistoryIsExplicitAndOneWorkoutCannotFillAnnualStats() {
         val result = compute(workout(1))
@@ -52,6 +41,6 @@ class CharacterTrainingTest {
         val raw = json.encodeToString(CharacterTraining.serializer(), result)
         assertFalse(raw.contains("Barbell")); assertFalse(raw.contains("weeklyKg")); assertFalse(raw.contains("estimatedMaxKg"))
         val restored = json.decodeFromString(CharacterTraining.serializer(), raw)
-        assertEquals(result.prScore, restored.prScore); assertEquals(result.volumeScore, restored.volumeScore); assertNull(restored.evidence)
+        assertEquals(result.volumeScore, restored.volumeScore); assertNull(restored.evidence)
     }
 }

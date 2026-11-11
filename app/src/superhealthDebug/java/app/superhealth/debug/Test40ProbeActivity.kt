@@ -114,7 +114,7 @@ class Test40ProbeActivity : Activity() {
                 app.superhealth.league.ProgressRepository.compute(this@Test40ProbeActivity)
                 app.superhealth.cards.CardStore.refresh(this@Test40ProbeActivity)
                 val athlete = app.superhealth.cards.CardStore.snapshot.value!!.now
-                check(athlete.training?.prScore != null && athlete.training?.volumeScore != null)
+                check(athlete.values.keys.any { key -> app.superhealth.cards.Stat.families.any { it.code == key } } && athlete.training?.volumeScore != null)
                 check(athlete.training!!.evidence!!.weeklyKg > 0)
                 val character = app.superhealth.cards.CharacterStats.from(app.superhealth.league.ProgressRepository.current.value!!,
                     app.superhealth.league.ProgressRepository.selectedTracks(SuperPrefs.settings.value), athlete)

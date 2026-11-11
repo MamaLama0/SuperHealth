@@ -389,6 +389,7 @@ private fun CharacterCard(stats: AthleteStats?, rarity: Int?, bonuses: Map<Stat,
             val character = baseStats.equipped(EquipmentStore.characterBonuses(equipment, catalogue))
             var rules by remember { mutableStateOf(false) }
             var forceDetails by rememberSaveable { mutableStateOf(false) }
+            var standards by rememberSaveable { mutableStateOf(false) }
             CharacterAttributes(character) { forceDetails = true }
             if (forceDetails) AlertDialog(
                 onDismissRequest = { forceDetails = false },
@@ -405,8 +406,10 @@ private fun CharacterCard(stats: AthleteStats?, rarity: Int?, bonuses: Map<Stat,
                         }
                     }
                 } },
-                confirmButton = { TextButton({ forceDetails = false }) { Text(tr("Fermer")) } },
+                confirmButton = { TextButton({ forceDetails = false; standards = true }) { Text(tr("Voir les barèmes")) } },
+                dismissButton = { TextButton({ forceDetails = false }) { Text(tr("Fermer")) } },
             )
+            if (standards) StrengthStandards(stats) { standards = false }
             Text("${character.days}/28 " + tr("jours suivis") + " · ${equipment.equipped.size}/4 " + tr("cartes équipées"),
                 color = Color(0xFFCBD4DF), style = MaterialTheme.typography.labelLarge)
             if (!stats?.provisional.isNullOrEmpty() || stats?.training?.provisional == true || progress == null) Text(tr("Statistiques provisoires · elles se précisent avec vos suivis"),

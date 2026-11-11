@@ -21,14 +21,13 @@ class ArsenalGameTest {
         assertEquals(2, day(21003, full - Track.STRENGTH).rank)
     }
 
-    @Test fun raidIsVisibleForSevenDaysFromTheFirstMondayOfEachMonth() {
-        fun active(date: String) = ArsenalGame.monthlyRaidWeek(LocalDate.parse(date).toEpochDay())
-        assertNull(active("2026-11-01"))
-        assertEquals(active("2026-11-02"), active("2026-11-08"))
-        assertNotNull(active("2026-11-02"))
-        assertNull(active("2026-11-09"))
-        assertNull(active("2026-12-06"))
-        assertNotNull(active("2026-12-07"))
+    @Test fun raidIsAvailableEveryWeekAndRotatesOnMonday() {
+        fun week(date: String) = ArsenalGame.raidWeek(LocalDate.parse(date).toEpochDay())
+        assertEquals(week("2026-11-02"), week("2026-11-08"))
+        assertNotEquals(week("2026-11-08"), week("2026-11-09"))
+        assertEquals(week("2026-11-09"), week("2026-11-15"))
+        assertTrue(day(21003, full).fullToday)
+        assertFalse(day(21003, qualified).fullToday)
     }
 
     @Test fun normalMonstersFallInOneHitAndElitesCarryHealthToTheNextDay() {

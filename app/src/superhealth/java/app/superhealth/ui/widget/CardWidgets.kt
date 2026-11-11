@@ -44,7 +44,7 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
         val gold = Color(0xFFE0A82E)
         var hue = when (kind) { Kind.PACKS -> Color(0xFF638CE7); Kind.QUESTS -> gold; Kind.CARD -> Color(0xFF7C5CFF) }
         val icon = when (kind) { Kind.PACKS -> R.drawable.ic_w_cards; Kind.QUESTS -> R.drawable.ic_w_flag; Kind.CARD -> R.drawable.ic_w_lift }
-        var route = when (kind) { Kind.PACKS -> "cards/packs"; Kind.QUESTS -> "cards/quests"; Kind.CARD -> "social" }
+        val route = when (kind) { Kind.PACKS -> "cards/packs"; Kind.QUESTS -> "cards/quests"; Kind.CARD -> "social" }
         val title = tr(when (kind) { Kind.PACKS -> "Packs"; Kind.QUESTS -> "Quêtes des cartes"; Kind.CARD -> "Mon personnage" })
         var value = "—"; var unit: String? = null; var caption = tr("Ouvrir SuperHealth"); var detail = ""; var fraction: Float? = null
         if (!enabled) caption = tr("Fonctions sociales désactivées")
@@ -57,17 +57,23 @@ abstract class CardWidget(private val kind: Kind) : GlanceAppWidget() {
                 caption = tr(if (count > 0 || equipment?.rewardPending != null) "Paquets à récupérer" else "Acheter un paquet")
             }
             Kind.QUESTS -> {
-                val day = LocalDate.now().toEpochDay()
-                val quest = ProgressRepository.current.value?.takeIf { it.summary.throughDay == day }?.let {
-                    ArsenalGame.quests(it, ProgressRepository.selectedTracks(SuperPrefs.settings.value))
-                }
+                val date = LocalDate.now()
+                val selected = ProgressRepository.selectedTracks(SuperPrefs.settings.value)
+                val computed = try {
+                    kotlinx.coroutines.withTimeoutOrNull(8_000) { ProgressRepository.compute(context, date) }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) { null }
+                val progress = computed ?: ProgressRepository.current.value?.takeIf { it.summary.throughDay == date.toEpochDay() }
+                val quest = progress?.let { ArsenalGame.quests(it, selected) }
                 val rank = quest?.rank ?: 0
-                val ready = (equipment?.freePacks ?: 0) > 0 ||
-                    equipment?.packCredits.orEmpty().isNotEmpty() || equipment?.rewardPending != null
-                if (ready) route = "cards/packs"
-                value = if (ready) tr("À ouvrir") else if (quest == null) "—" else "$rank/3"
-                caption = if (ready) tr("Paquet à récupérer") else if (quest == null) tr("Actualiser les suivis dans l’app") else tr(listOf("Premier sceau", "Grand sceau", "Sceau héroïque", "Tous les sceaux du jour")[rank])
-                fraction = rank / 3f
+                value = quest?.let { "$rank / 3" } ?: "—"
+                caption = when {
+                    selected.isEmpty() -> tr("Choisir mes suivis")
+                    quest == null -> tr("Actualiser les suivis dans l’app")
+                    else -> trf("%1\$s / %2\$s suivis validés", quest.gate.completed, quest.gate.targets.size)
+                }
+                fraction = quest?.rank?.div(3f)
                 detail = quest?.let { "${it.weekCount}/6 " + tr("jours cette semaine") }.orEmpty()
             }
             Kind.CARD -> {

@@ -418,20 +418,8 @@ fun SuperRoot(vm: SuperViewModel) {
         nav.openTab("home")
     }
     if (current != null && !sh.appTourPending && !sh.update401Seen &&
-        nodomain.freeyourgadget.gadgetbridge.BuildConfig.VERSION_NAME == "4.0.1") {
-        val dismiss = { app.superhealth.SuperPrefs.update { it.copy(update401Seen = true) }; Unit }
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = dismiss,
-            title = { Text("Vasi c bon j'en ai marre") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(tr("Bon. J’ai refait le journal et les quêtes. Je vais m’asseoir."))
-                    Text(tr("Planifie tes repas avec le + des jours futurs et glisse-les entre les horaires. Les stats passent sur 100."))
-                    Text(tr("Les paquets s’achètent avec l’or des quêtes et des combats. Ouvre-en autant que tu veux à la suite."))
-                }
-            },
-            confirmButton = { androidx.compose.material3.TextButton(dismiss) { Text(tr("Compris")) } },
-        )
+        nodomain.freeyourgadget.gadgetbridge.BuildConfig.VERSION_NAME.substringBefore('+') == "4.0.1") {
+        Update401Dialog { app.superhealth.SuperPrefs.update { it.copy(update401Seen = true) } }
     }
     app.superhealth.ui.league.LeagueIncomingDialog()
 }

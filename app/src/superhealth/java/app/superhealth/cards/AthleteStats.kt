@@ -181,13 +181,13 @@ object AthleteStatsEngine {
         for (w in workouts) for (entry in w.exercises) {
             val ex = input.db.exercise(entry.exerciseId) ?: continue
             val match = Standards.match(ex) ?: continue
-            val levels = Standards.thresholds(match.lift, input.sex, input.bodyweight)
+            val levels = Standards.athleteThresholds(match.lift, input.sex, input.bodyweight)
             for (set in Analytics.workingSets(entry)) {
                 val reps = set.reps ?: continue
                 if (reps !in 1..12) continue
                 val load = if (match.lift.bodyweightLoad) input.bodyweight * (ex.bodyweight ?: 1.0) + (set.weight ?: 0.0)
                     else set.weight?.takeIf { it.isFinite() && it > 0 } ?: continue
-                val e1rm = Strength.e1rm(load, reps, set.rir, ex.upperBody, set.partialReps)
+                val e1rm = Strength.e1rm(load, reps, set.rir?.coerceIn(0, 3), ex.upperBody, set.partialReps.coerceIn(0, reps))
                 if (!e1rm.isFinite()) continue
                 val months = (input.now - w.startTime) / (30.0 * DAY)
                 val points = Standards.points(e1rm / match.coef / input.bodyweight, levels) - if (aged) (0.5 * (months - 3)).coerceIn(0.0, 4.0) else 0.0 -

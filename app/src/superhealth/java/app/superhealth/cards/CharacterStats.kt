@@ -17,11 +17,20 @@ data class CharacterStats(val strength: Int = 8, val dexterity: Int = 8, val con
         CharacterAttribute.DEX -> dexterity
         CharacterAttribute.CON -> constitution
     }
-    fun score(attribute: CharacterAttribute): Int = (when (attribute) {
+    private fun preciseScore(attribute: CharacterAttribute): Int? = (when (attribute) {
         CharacterAttribute.FOR -> forceScore
         CharacterAttribute.DEX -> dexScore
         CharacterAttribute.CON -> conScore
-    } ?: ((this[attribute] - 8) * 100.0 / 12).roundToInt()).coerceIn(0, 100)
+    })?.takeIf { it in 0..100 && 8 + it * 12 / 100 == this[attribute] }
+
+    fun score(attribute: CharacterAttribute): Int =
+        preciseScore(attribute) ?: ((this[attribute] - 8) * 100.0 / 12).roundToInt().coerceIn(0, 100)
+
+    fun combatPower(attribute: CharacterAttribute): Long =
+        preciseScore(attribute)?.let { 800L + 12L * it } ?: this[attribute] * 100L
+
+    val dungeonAttack get() = (16 * score(CharacterAttribute.FOR) + 8 * score(CharacterAttribute.DEX)) / 100 - 3
+    val dungeonDefense get() = 6 * score(CharacterAttribute.CON) / 100 - 1
 
     val scoreLine get() = CharacterAttribute.entries.joinToString(" · ") { score(it).toString() }
 
@@ -55,8 +64,9 @@ data class CharacterStats(val strength: Int = 8, val dexterity: Int = 8, val con
             }
             val gym = athlete?.training
             return listOf(
-                Calculation(CharacterAttribute.FOR, listOf(Component("Records de force · PR et 1RM estimés", gym?.prScore, .85, required = true),
-                    Component("Objectif de musculation", ratio(Progression.Track.STRENGTH), .15))),
+                Calculation(CharacterAttribute.FOR, Stat.families.map { group ->
+                    Component(group.label, athlete?.get(group)?.coerceIn(0, 100)?.div(100.0), 1.0, required = true)
+                }),
                 Calculation(CharacterAttribute.DEX, listOf(Component("Capacité cardio", athlete?.get(Stat.CAR)?.div(99.0)?.coerceIn(0.0, 1.0)?.pow(1.25), .65, required = true),
                     Component("Objectif de pas", ratio(Progression.Track.STEPS), .2),
                     Component("Esprit et mobilité", ratio(Progression.Track.MIND), .15))),
@@ -106,8 +116,8 @@ internal object CharacterCombat {
         val rounds = buildList {
             for (stat in CharacterAttribute.entries) {
                 if (a == 0 || b == 0) break
-                val myPower = mine[stat].toLong() * (10_000 + mine.bonus(stat))
-                val theirPower = theirs[stat].toLong() * (10_000 + theirs.bonus(stat))
+                val myPower = mine.combatPower(stat) * (10_000 + mine.bonus(stat))
+                val theirPower = theirs.combatPower(stat) * (10_000 + theirs.bonus(stat))
                 val total = myPower + theirPower
                 val outgoing = (5200L * myPower / total).toInt().coerceAtMost(b)
                 val incoming = (5200L * theirPower / total).toInt().coerceAtMost(a)
