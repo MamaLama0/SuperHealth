@@ -268,6 +268,7 @@ data class SuperSettings(
     val leagueEnabled: Boolean = false,
     val socialFeedEnabled: Boolean = false,
     val socialFeedIntroSeen: Boolean = false,
+    val arsenalAvatar: String? = null,
     val builtinsAdded: Boolean = false,
     /** 2.31 : verrouillage de l'app (empreinte ou code du téléphone), délai avant de redemander (s), écran masqué dans les Récents. */
     val appLock: Boolean = false,

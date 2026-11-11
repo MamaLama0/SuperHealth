@@ -1,0 +1,21 @@
+{
+  "version": "3.9.9",
+  "versionCode": 68,
+  "geometry": "Shared boundaries; 0.006-unit welded side seam; no outer-edge gaps",
+  "gesture": "Original tear gesture and idle behavior preserved",
+  "checks": [
+    "all four variants in WebGL and fallback",
+    "left and right 90-degree views",
+    "reverse face",
+    "opening and four-card summary"
+  ],
+  "webglErrors": 0,
+  "unitTests": {
+    "tests": 49,
+    "failures": 0
+  },
+  "languages": [
+    "fr",
+    "en"
+  ]
+}

@@ -1,0 +1,32 @@
+'use strict';
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+(async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/opt/helium/chrome',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
+try{
+ const page=await browser.newPage({viewport:{width:1300,height:950},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const url='file://'+path.resolve(__dirname,'../review/arsenal-rework/index.html');await page.goto(url);
+ assert.equal(await page.locator('#count').innerText(),'550 objets');assert.equal(await page.locator('.tile').count(),12);
+ await page.locator('[data-score="4"]').click();await page.locator('[data-decision="rework"]').click();
+ const note='Belle forme, métal plus sombre. <script>window.injected=true</script>';await page.locator('#comment').fill(note);
+ await page.locator('#next').click();await page.locator('[data-score="4"]').click();await page.locator('[data-decision="rework"]').click();await page.locator('#comment').fill(note);
+ const name=await page.locator('#name').innerText();await page.reload();assert.equal(await page.locator('#name').innerText(),name);assert.equal(await page.locator('#comment').inputValue(),note);assert.equal(await page.locator('[data-score="4"]').getAttribute('aria-pressed'),'true');assert.equal(await page.evaluate(()=>window.injected),undefined);
+ const download=page.waitForEvent('download');await page.locator('#export').click();const d=await download;const payload=JSON.parse(fs.readFileSync(await d.path()));assert.equal(payload.reviews.length,2);assert.equal(payload.reviews[0].decision,'rework');assert.equal(payload.reviews[0].comment,note);
+ await page.locator('#tier').selectOption('');assert.equal(await page.locator('#count').innerText(),'550 objets');await page.locator('#damage').selectOption('Divine');assert(await page.locator('#count').innerText()!=='0 objets');await page.locator('#damage').selectOption('');await page.locator('#new').selectOption('new');assert.equal(await page.locator('#count').innerText(),'30 objets');
+ await page.locator('#new').selectOption('expansion');assert.equal(await page.locator('#count').innerText(),'150 objets');
+ await page.locator('#search').fill('introuvable');assert.equal(await page.locator('#workspace').isVisible(),false);await page.locator('#search').fill('');
+ await page.locator('#finish').selectOption('blessed');assert(await page.locator('#art').innerHTML().then(s=>s.includes('>Bénédiction</text>')));
+ await page.locator('#new').selectOption('');
+ assert.equal(await page.locator('#set option').count(),67);
+ await page.locator('#tier').selectOption('0');await page.locator('#damage').selectOption('Arcaniste');await page.locator('#slot').selectOption('weapon');
+ await page.locator('#set').selectOption('set-0-signature');assert.equal(await page.locator('#count').innerText(),'4 objets');assert.equal(await page.locator('.tile').count(),4);
+ assert.equal(await page.locator('#tier').inputValue(),'');assert.equal(await page.locator('#damage').inputValue(),'');assert.equal(await page.locator('#slot').inputValue(),'');
+ assert.deepEqual(await page.evaluate(()=>Array.from(document.querySelectorAll('.tile')).map(n=>ArsenalCatalog.byId[n.dataset.id].slot).sort()),['chest','guard','legs','weapon']);
+ await page.screenshot({path:'review/arsenal-rework/review-set.png',fullPage:true});await page.locator('#set').selectOption('');
+ for(const type of ['Mêlée','À distance','Arcaniste','Divine']){await page.locator('#damage').selectOption(type);const n=await page.evaluate(t=>ArsenalCatalog.catalog.filter(c=>c.damageTypes.some(d=>RelicCuration.types[d].label===t)).length,type);assert.equal(await page.locator('#count').innerText(),n+' objets');}
+ await page.locator('#damage').selectOption('');await page.locator('#tier').selectOption('high');await page.locator('#finish').selectOption('normal');
+ await page.locator('#import-file').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from('{"schema":1,"reviews":[{"id":"'+payload.reviews[0].id+'","score":99}]}')});await page.waitForFunction(()=>document.querySelector('#notice').textContent.startsWith('Import refusé'));assert((await page.locator('#notice').innerText()).startsWith('Import refusé'));
+ await page.locator('#import-file').setInputFiles({name:'good.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(payload))});await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('2 avis importés'));assert((await page.locator('#notice').innerText()).includes('2 avis importés'));
+ await page.locator('#comment').fill('Belle silhouette. Je voudrais un métal plus sombre et davantage de contraste.');
+ await page.screenshot({path:'review/arsenal-rework/review-desktop.png'});
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'review/arsenal-rework/review-mobile.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Mobile overflow');
+ assert.deepEqual(errors,[]);console.log('Review: 550 items, 182 epic/legendary items, 66 full sets, rating/decision/note, reload, export/import, invalid data and mobile layout OK');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

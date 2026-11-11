@@ -1,0 +1,25 @@
+{
+  "applicationId": "app.superhealth.arsenalqa",
+  "version": "3.9.1",
+  "versionCode": 67,
+  "head": "feb0ea2da64e402703d3608121c456c1de81279a",
+  "includesLocalUncommittedChanges": true,
+  "apkSha256": "ad982ecef0cf3d032c4c1f341d0ac2f0bf486e31c66d9cef0a46e747aca2fac5",
+  "assetsVerified": [
+    "pack.js",
+    "pack.css",
+    "directions.js",
+    "prism-weapon-0.webp",
+    "prism-weapon-1.webp",
+    "prism-weapon-gold-0.webp",
+    "prism-weapon-gold-1.webp",
+    "prism-chest-0.webp",
+    "prism-chest-1.webp",
+    "prism-chest-gold-0.webp",
+    "prism-chest-gold-1.webp"
+  ],
+  "installed": true,
+  "launchRequested": "cards/packs",
+  "running": true,
+  "launchErrors": 0
+}

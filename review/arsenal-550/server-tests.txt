@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: one receipt per day, persistent rolls and repeatable rank claims
+ok 1 - one receipt per day, persistent rolls and repeatable rank claims
+  ---
+  duration_ms: 8.216176
+  type: 'test'
+  ...
+# Subtest: auction escrow refunds displaced bids and transfers once after expiry
+ok 2 - auction escrow refunds displaced bids and transfers once after expiry
+  ---
+  duration_ms: 4.081046
+  type: 'test'
+  ...
+# Subtest: private offer exchanges both pieces and hides listing from other players
+ok 3 - private offer exchanges both pieces and hides listing from other players
+  ---
+  duration_ms: 2.181962
+  type: 'test'
+  ...
+# Subtest: weekly boss needs both damage and the weekly target for half of members
+ok 4 - weekly boss needs both damage and the weekly target for half of members
+  ---
+  duration_ms: 2.612787
+  type: 'test'
+  ...
+# Subtest: solo misses consume health and a valid day recovers instead of attacking
+ok 5 - solo misses consume health and a valid day recovers instead of attacking
+  ---
+  duration_ms: 1.200048
+  type: 'test'
+  ...
+# Subtest: v2 body packs cover exactly two rotating damage types with an idempotent receipt
+ok 6 - v2 body packs cover exactly two rotating damage types with an idempotent receipt
+  ---
+  duration_ms: 11.335096
+  type: 'test'
+  ...
+# Subtest: sport days protect the hero without granting a pack and the right affinity cracks an elite ward
+ok 7 - sport days protect the hero without granting a pack and the right affinity cracks an elite ward
+  ---
+  duration_ms: 3.042475
+  type: 'test'
+  ...
+# Subtest: a single daily tracker allows an attack, and one ice cube protects exactly its chosen day
+ok 8 - a single daily tracker allows an attack, and one ice cube protects exactly its chosen day
+  ---
+  duration_ms: 1.696445
+  type: 'test'
+  ...
+# Subtest: invite acceptance, gifts, and bonus pack receipts respect membership and balances
+ok 9 - invite acceptance, gifts, and bonus pack receipts respect membership and balances
+  ---
+  duration_ms: 4.125854
+  type: 'test'
+  ...
+# Subtest: dual affinities share one equipment weight and legacy payloads stay compatible
+ok 10 - dual affinities share one equipment weight and legacy payloads stay compatible
+  ---
+  duration_ms: 1.170616
+  type: 'test'
+  ...
+# Subtest: each drawn base roll varies inside its rarity and survives a restart unchanged
+ok 11 - each drawn base roll varies inside its rarity and survives a restart unchanged
+  ---
+  duration_ms: 10.555241
+  type: 'test'
+  ...
+# Subtest: the 400 vector pieces return to draws while experimental owned items and rolls survive
+ok 12 - the 400 vector pieces return to draws while experimental owned items and rolls survive
+  ---
+  duration_ms: 2.48471
+  type: 'test'
+  ...
+# Subtest: 550 catalogue is gated by version and every new owned piece survives downgrades with its saved roll
+ok 13 - 550 catalogue is gated by version and every new owned piece survives downgrades with its saved roll
+  ---
+  duration_ms: 28.65053
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 104.540035

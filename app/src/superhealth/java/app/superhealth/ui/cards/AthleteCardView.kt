@@ -85,8 +85,9 @@ data class CardFace(
     val photoMode: PhotoMode = PhotoMode.DETOUREE,
     /** Niveau du fond (doublons), qui fixe son bonus. */
     val level: Int = 1,
+    val bonusOverride: Map<Stat, Double>? = null,
 ) {
-    val bonus get() = Bonus.points(stats, background?.card, level, background?.finish ?: Finish.NORMALE)
+    val bonus get() = bonusOverride ?: Bonus.points(stats, background?.card, level, background?.finish ?: Finish.NORMALE)
 }
 
 /**

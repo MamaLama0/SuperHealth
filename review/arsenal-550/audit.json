@@ -1,0 +1,1063 @@
+{
+  "active": 550,
+  "archived": 84,
+  "additions": 150,
+  "sets": 66,
+  "epic": 106,
+  "legendary": 76,
+  "originalDefinitionsPreserved": 484,
+  "sourceSha256": "63bbe65193502e68ab1539bfd56f40ba8eb22d2fa865938ee3f5f1321d05a7c9",
+  "inspection": "All 150 additions visually inspected on 14 contact sheets; corrected instrument strings, harp anchoring, flail ornaments, cage bars, boar tusks and serpent crest. All 550 SVGs rasterized and checked for clipping.",
+  "items": [
+    {
+      "id": "exp-bastion-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 1,
+      "form": "partisan",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-bouleau-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 2,
+      "form": "huntingcrossbow",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-copiste-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 3,
+      "form": "wand",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-hospitalier-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 4,
+      "form": "bell",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-ronde-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 5,
+      "form": "maul",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-chantre-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 6,
+      "form": "lyre",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-argile-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 7,
+      "form": "glaive",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-bruyere-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 8,
+      "form": "longbow",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-astres-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 9,
+      "form": "lanternstaff",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-ambre-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 10,
+      "form": "sunmace",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-sanglier-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 11,
+      "form": "doubleaxe",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-saltimbanque-weapon",
+      "sheet": "new/weapon-0.png",
+      "cell": 12,
+      "form": "viol",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-chene-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 1,
+      "form": "partisan",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-corail-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 2,
+      "form": "harpoon",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-cendre-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 3,
+      "form": "lanternstaff",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-ivoire-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 4,
+      "form": "horn",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-faucon-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 5,
+      "form": "huntingcrossbow",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-voute-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 6,
+      "form": "maul",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-cristal-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 7,
+      "form": "harp",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-vignes-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 8,
+      "form": "scepter",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-phoenix-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 9,
+      "form": "sunblade",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-cerf-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 10,
+      "form": "antlerbow",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-maree-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 11,
+      "form": "lanternstaff",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-hiver-weapon",
+      "sheet": "new/weapon-1.png",
+      "cell": 12,
+      "form": "doubleaxe",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-cantique-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 1,
+      "form": "harp",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-corbeau-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 2,
+      "form": "glaive",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-lion-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 3,
+      "form": "maul",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-miroirs-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 4,
+      "form": "viol",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-ronces-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 5,
+      "form": "huntingcrossbow",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-veille-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 6,
+      "form": "censer",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-dragon-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 7,
+      "form": "dragonlance",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-aurore-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 8,
+      "form": "horn",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-foret-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 9,
+      "form": "falconbow",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-astral-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 10,
+      "form": "harp",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-abysses-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 11,
+      "form": "trident",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-citadelle-weapon",
+      "sheet": "new/weapon-2.png",
+      "cell": 12,
+      "form": "greatsword",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-requiem-weapon",
+      "sheet": "new/weapon-3.png",
+      "cell": 1,
+      "form": "viol",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-aiguillon-weapon",
+      "sheet": "new/weapon-3.png",
+      "cell": 2,
+      "form": "rapier",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-oraison-weapon",
+      "sheet": "new/weapon-3.png",
+      "cell": 3,
+      "form": "lute",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-comete-weapon",
+      "sheet": "new/weapon-3.png",
+      "cell": 4,
+      "form": "flail",
+      "review": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure."
+    },
+    {
+      "id": "exp-bastion-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 1,
+      "form": "gambeson",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-bouleau-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 2,
+      "form": "leathercoat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-copiste-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 3,
+      "form": "tunic",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-hospitalier-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 4,
+      "form": "alb",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-ronde-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 5,
+      "form": "brigandine",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-chantre-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 6,
+      "form": "coat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-argile-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 7,
+      "form": "splintcoat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-bruyere-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 8,
+      "form": "forestcloak",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-astres-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 9,
+      "form": "starrobe",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-ambre-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 10,
+      "form": "chasuble",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-sanglier-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 11,
+      "form": "mail",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-saltimbanque-chest",
+      "sheet": "new/chest-0.png",
+      "cell": 12,
+      "form": "leathercoat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-chene-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 1,
+      "form": "scalehauberk",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-corail-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 2,
+      "form": "leathercoat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-cendre-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 3,
+      "form": "hood",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-ivoire-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 4,
+      "form": "ceremonialcape",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-faucon-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 5,
+      "form": "scoutvest",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-voute-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 6,
+      "form": "splintcoat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-cristal-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 7,
+      "form": "starrobe",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-vignes-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 8,
+      "form": "regalia",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-phoenix-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 9,
+      "form": "regalia",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-cerf-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 10,
+      "form": "ceremonialcape",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-maree-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 11,
+      "form": "astralcloak",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-hiver-chest",
+      "sheet": "new/chest-1.png",
+      "cell": 12,
+      "form": "splintcoat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-cantique-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 1,
+      "form": "seraphrobe",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-corbeau-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 2,
+      "form": "scalehauberk",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-lion-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 3,
+      "form": "royallamellar",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-miroirs-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 4,
+      "form": "starrobe",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-ronces-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 5,
+      "form": "drakecloak",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-veille-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 6,
+      "form": "ceremonialcape",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-dragon-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 7,
+      "form": "regalia",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-aurore-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 8,
+      "form": "seraphrobe",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-foret-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 9,
+      "form": "ceremonialcape",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-astral-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 10,
+      "form": "regalia",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-abysses-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 11,
+      "form": "scalehauberk",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-citadelle-chest",
+      "sheet": "new/chest-2.png",
+      "cell": 12,
+      "form": "splintcoat",
+      "review": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles."
+    },
+    {
+      "id": "exp-bastion-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 1,
+      "form": "scutum",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-bouleau-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 2,
+      "form": "targe",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-copiste-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 3,
+      "form": "scrollward",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-hospitalier-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 4,
+      "form": "rosary",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-ronde-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 5,
+      "form": "heater",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-chantre-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 6,
+      "form": "amulet",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-argile-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 7,
+      "form": "pavise",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-bruyere-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 8,
+      "form": "bracers",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-astres-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 9,
+      "form": "spellcage",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-ambre-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 10,
+      "form": "sunshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-sanglier-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 11,
+      "form": "hornshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-saltimbanque-guard",
+      "sheet": "new/guard-0.png",
+      "cell": 12,
+      "form": "book",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-chene-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 1,
+      "form": "leafshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-corail-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 2,
+      "form": "shell",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-cendre-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 3,
+      "form": "scrollward",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-ivoire-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 4,
+      "form": "reliquary",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-faucon-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 5,
+      "form": "kite",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-voute-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 6,
+      "form": "targe",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-cristal-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 7,
+      "form": "prism",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-vignes-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 8,
+      "form": "rosary",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-phoenix-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 9,
+      "form": "phoenixshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-cerf-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 10,
+      "form": "hornshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-maree-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 11,
+      "form": "astrolabe",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-hiver-guard",
+      "sheet": "new/guard-1.png",
+      "cell": 12,
+      "form": "kingshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-cantique-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 1,
+      "form": "triptych",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-corbeau-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 2,
+      "form": "moonscutum",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-lion-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 3,
+      "form": "lionshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-miroirs-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 4,
+      "form": "eyemirror",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-ronces-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 5,
+      "form": "beetleshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-veille-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 6,
+      "form": "scrollward",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-dragon-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 7,
+      "form": "dragonshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-aurore-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 8,
+      "form": "phoenixshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-foret-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 9,
+      "form": "hornshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-astral-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 10,
+      "form": "spellcage",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-abysses-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 11,
+      "form": "dragonshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-citadelle-guard",
+      "sheet": "new/guard-2.png",
+      "cell": 12,
+      "form": "kingshield",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-pacte-guard",
+      "sheet": "new/guard-3.png",
+      "cell": 1,
+      "form": "spellcage",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-hiver-miroir-guard",
+      "sheet": "new/guard-3.png",
+      "cell": 2,
+      "form": "mirror",
+      "review": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle."
+    },
+    {
+      "id": "exp-bastion-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 1,
+      "form": "tallcavalry",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-bouleau-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 2,
+      "form": "foldedboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-copiste-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 3,
+      "form": "slippers",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-hospitalier-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 4,
+      "form": "pilgrimshoes",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-ronde-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 5,
+      "form": "greaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-chantre-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 6,
+      "form": "laceboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-argile-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 7,
+      "form": "tallcavalry",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-bruyere-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 8,
+      "form": "foldedboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-astres-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 9,
+      "form": "runecuffs",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-ambre-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 10,
+      "form": "pilgrimboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-sanglier-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 11,
+      "form": "scalegreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-saltimbanque-legs",
+      "sheet": "new/legs-0.png",
+      "cell": 12,
+      "form": "slippers",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-chene-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 1,
+      "form": "drakegreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-corail-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 2,
+      "form": "tideboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-cendre-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 3,
+      "form": "runecuffs",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-ivoire-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 4,
+      "form": "pilgrimshoes",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-faucon-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 5,
+      "form": "ridinggreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-voute-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 6,
+      "form": "royalgreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-cristal-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 7,
+      "form": "orbitalboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-vignes-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 8,
+      "form": "sandals",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-phoenix-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 9,
+      "form": "sungreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-cerf-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 10,
+      "form": "thornboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-maree-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 11,
+      "form": "tideboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-hiver-legs",
+      "sheet": "new/legs-1.png",
+      "cell": 12,
+      "form": "furboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-cantique-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 1,
+      "form": "pilgrimshoes",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-corbeau-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 2,
+      "form": "palegreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-lion-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 3,
+      "form": "royalgreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-miroirs-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 4,
+      "form": "portalboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-ronces-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 5,
+      "form": "lynxboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-veille-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 6,
+      "form": "runegreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-dragon-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 7,
+      "form": "drakegreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-aurore-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 8,
+      "form": "angelgreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-foret-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 9,
+      "form": "thornboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-astral-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 10,
+      "form": "orbitalboots",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-abysses-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 11,
+      "form": "tidegreaves",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    },
+    {
+      "id": "exp-citadelle-legs",
+      "sheet": "new/legs-2.png",
+      "cell": 12,
+      "form": "tallcavalry",
+      "review": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "collection": "atelier-v4",
+  "items": 84,
+  "completeSets": 21,
+  "archivedItemsPreserved": 400,
+  "imageGenerationUsedInAssets": false,
+  "editableBlenderModels": 84,
+  "transparentDistinctRenders": 84,
+  "epic": 20,
+  "legendary": 16,
+  "dualAffinityItems": 7,
+  "typeRaritySlotCombinations": 80,
+  "finishCombinations": 504,
+  "androidTests": {
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "serverTests": 12,
+  "legacyClientCompatibility": true,
+  "reviewPersistenceAndImportExport": true,
+  "webglAndFallback": true,
+  "verifiedAPKAssets": 624,
+  "apkSha256": "2896ac5d4af44f204a82c37f6a7286a149534b29ceb7be3d39a28528aacdc225",
+  "phone": {
+    "newCollectionLoaded": true,
+    "newDraws": 4,
+    "previousInventoryPreserved": true,
+    "sixFinishesRendered": true,
+    "fixedRollsAfterRestart": true
+  },
+  "serverDeployed": false
+}

@@ -52,7 +52,9 @@ object Progression {
         }
     }
     /** [daily] : XP de chaque jour calculé (hors quêtes), pour le bilan d'une semaine passée ; jamais partagé. */
-    data class Result(val summary: Summary, val since: Long, val daily: Map<Long, Int> = emptyMap()) {
+    data class Result(val summary: Summary, val since: Long, val daily: Map<Long, Int> = emptyMap(),
+        val validatedToday: Set<Track> = emptySet(), val recentValidated: Map<Long, Set<Track>> = emptyMap(),
+        val sportDays: Set<Long> = emptySet()) {
         val intoLevel get() = summary.totalXp - threshold(summary.level)
         val nextLevel get() = threshold(summary.level + 1) - threshold(summary.level)
     }

@@ -1,0 +1,462 @@
+[
+  {
+    "id": "relic-warrior-weapon-v2",
+    "school": "WARRIOR",
+    "slot": "weapon",
+    "tier": 4,
+    "rarity": 4,
+    "name": [
+      "Le Jugement du griffon"
+    ],
+    "type": "Hallebarde",
+    "material": "Griffon d’or, acier damassé et grenat",
+    "design": "griffin",
+    "special": "griffin",
+    "art": "art/relic-warrior-weapon-v2.png",
+    "variant": 0,
+    "form": 0,
+    "pose": [
+      125,
+      146,
+      0,
+      1.2
+    ],
+    "number": 95,
+    "stat": "Bras",
+    "colors": [
+      "#a7a4ad",
+      "#f4dfb4",
+      "#51475b"
+    ],
+    "color": "#a7a4ad",
+    "background": "atelier",
+    "roll": 240,
+    "relicTheme": "crown",
+    "damageTypes": [
+      "MELEE",
+      "DIVINE"
+    ],
+    "set": {
+      "id": "set-0-signature",
+      "name": "Griffon royal"
+    },
+    "signature": true,
+    "affinityReason": "Construction martiale et enchantement actif.",
+    "rationale": "Le griffon devient la structure de la tête : aile tranchante, bec de garde et grenat serti. Le damas et la sculpture justifient la rareté.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "id": "relic-warrior-chest-v2",
+    "school": "WARRIOR",
+    "slot": "chest",
+    "tier": 3,
+    "rarity": 3,
+    "name": [
+      "La Cuirasse des cent rois"
+    ],
+    "type": "Cuirasse lamellaire",
+    "material": "Acier noir, cuir et or pâle",
+    "design": "sovereign",
+    "special": "sovereign",
+    "art": "art/relic-warrior-chest-v2.png",
+    "variant": 1,
+    "form": 1,
+    "pose": [
+      125,
+      146,
+      0,
+      1.2
+    ],
+    "number": 95,
+    "stat": "Pectoraux",
+    "colors": [
+      "#a7a4ad",
+      "#f4dfb4",
+      "#51475b"
+    ],
+    "color": "#a7a4ad",
+    "background": "atelier",
+    "roll": 157,
+    "note": "Le dernier serment du maître de forge est gravé dans le métal.",
+    "relicTheme": "crown",
+    "damageTypes": [
+      "MELEE"
+    ],
+    "set": {
+      "id": "set-0-signature",
+      "name": "Griffon royal"
+    },
+    "signature": true,
+    "affinityReason": "Équipement de combat rapproché.",
+    "rationale": "Des lamelles articulées, des rivets et des sangles donnent une vraie construction à la cuirasse. Le motif de plume relie les quatre pièces.",
+    "artWidth": 1086,
+    "artHeight": 1448
+  },
+  {
+    "id": "relic-warrior-guard-v2",
+    "school": "WARRIOR",
+    "slot": "guard",
+    "tier": 4,
+    "rarity": 4,
+    "name": [
+      "Le Lion de la porte rouge"
+    ],
+    "type": "Pavois héraldique",
+    "material": "Or repoussé et émail rouge",
+    "design": "lion",
+    "special": "lion",
+    "art": "art/relic-warrior-guard-v2.png",
+    "variant": 2,
+    "form": 2,
+    "pose": [
+      125,
+      146,
+      0,
+      1.2
+    ],
+    "number": 95,
+    "stat": "Dos",
+    "colors": [
+      "#a7a4ad",
+      "#f4dfb4",
+      "#51475b"
+    ],
+    "color": "#a7a4ad",
+    "background": "atelier",
+    "roll": 254,
+    "curse": {
+      "key": "JAM",
+      "stat": "Jambes",
+      "value": 60
+    },
+    "relicTheme": "crown",
+    "damageTypes": [
+      "MELEE",
+      "DIVINE"
+    ],
+    "set": {
+      "id": "set-0-signature",
+      "name": "Griffon royal"
+    },
+    "signature": true,
+    "affinityReason": "Construction martiale et enchantement actif.",
+    "rationale": "Un lion en repoussé émerge de l’émail rouge. Le relief, le volume et le contour couronné donnent une présence de relique. La malédiction reste un badge distinct.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "id": "relic-warrior-legs-v2",
+    "school": "WARRIOR",
+    "slot": "legs",
+    "tier": 3,
+    "rarity": 3,
+    "name": [
+      "La Marche des cataphractes"
+    ],
+    "type": "Grèves de cavalerie",
+    "material": "Acier riveté et velours",
+    "design": "cavalry",
+    "special": "cavalry",
+    "art": "art/relic-warrior-legs-v2.png",
+    "variant": 3,
+    "form": 3,
+    "pose": [
+      125,
+      146,
+      0,
+      1.2
+    ],
+    "number": 95,
+    "stat": "Jambes",
+    "colors": [
+      "#a7a4ad",
+      "#f4dfb4",
+      "#51475b"
+    ],
+    "color": "#a7a4ad",
+    "background": "atelier",
+    "roll": 171,
+    "note": "Le dernier serment du maître de forge est gravé dans le métal.",
+    "relicTheme": "crown",
+    "damageTypes": [
+      "MELEE"
+    ],
+    "set": {
+      "id": "set-0-signature",
+      "name": "Griffon royal"
+    },
+    "signature": true,
+    "affinityReason": "Équipement de combat rapproché.",
+    "rationale": "Une paire complète, avec articulations aux chevilles et genouillères en bec. Le velours rouge et les nervures prolongent la cuirasse.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "name": [
+      "Hachette du guet"
+    ],
+    "type": "Hachette",
+    "material": "Fer forgé et frêne",
+    "roll": 27,
+    "art": "art/4-weapon-0.png",
+    "pose": [
+      126,
+      146,
+      39,
+      1.24
+    ],
+    "colors": [
+      "#a7a4ad",
+      "#f4dfb4",
+      "#51475b"
+    ],
+    "background": "sun",
+    "note": "Une ancienne arme de cuisine. Elle laisse une odeur de beurre brûlé.",
+    "special": "fantasy-hatchet",
+    "school": "WARRIOR",
+    "id": "4-weapon-0",
+    "slot": "weapon",
+    "stat": "Bras",
+    "number": 5,
+    "rarity": 0,
+    "tier": 0,
+    "form": 2,
+    "variant": 4,
+    "color": "#ef8da9",
+    "relicTheme": "engine",
+    "fantasyForm": "hatchet",
+    "design": null,
+    "reviewRevision": 3,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "set": null,
+    "signature": false,
+    "affinityReason": "Équipement de combat rapproché.",
+    "rationale": "La commune reste désirable par ses proportions et ses matières : fer forgé, fil affûté et frêne. Aucun ornement artificiellement précieux.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "name": [
+      "Sandales du chemin des ermites"
+    ],
+    "type": "Sandales",
+    "material": "Cuir tressé",
+    "roll": 61,
+    "art": "art/3-legs-1.png",
+    "pose": [
+      125,
+      146,
+      -9,
+      1.24
+    ],
+    "colors": [
+      "#c39d58",
+      "#fff2b5",
+      "#77553f"
+    ],
+    "background": "sun",
+    "note": "Le moine les a nouées en courant. Les attaches tiennent encore.",
+    "special": "sandals",
+    "school": "PRIEST",
+    "id": "3-legs-1",
+    "slot": "legs",
+    "stat": "Jambes",
+    "number": 26,
+    "rarity": 1,
+    "tier": 1,
+    "form": 6,
+    "variant": 3,
+    "color": "#e6b38f",
+    "relicTheme": "dawn",
+    "reviewRevision": 3,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "set": null,
+    "signature": false,
+    "affinityReason": "Relique ou équipement consacré.",
+    "rationale": "Le cuir tressé, les coutures et les semelles épaisses évoquent un objet fiable. Le motif solaire rappelle son affinité Divine, sans lui attribuer une Bénédiction.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "name": [
+      "Arbalète du sonneur"
+    ],
+    "type": "Arbalète",
+    "material": "If et acier bleui",
+    "roll": 111,
+    "art": "art/5-weapon-2.png",
+    "pose": [
+      125,
+      146,
+      38,
+      1.13
+    ],
+    "colors": [
+      "#b67977",
+      "#ffe0c8",
+      "#593345"
+    ],
+    "background": "curse",
+    "note": "Sa détente fait un petit bruit de cloche.",
+    "special": "crossbow",
+    "school": "RANGER",
+    "id": "5-weapon-2",
+    "slot": "weapon",
+    "stat": "Bras",
+    "number": 46,
+    "rarity": 2,
+    "tier": 2,
+    "form": 9,
+    "variant": 5,
+    "color": "#ef8da9",
+    "relicTheme": "thorns",
+    "damageTypes": [
+      "RANGED"
+    ],
+    "set": null,
+    "signature": false,
+    "affinityReason": "Équipement de tir ou de traque.",
+    "rationale": "L’if poli et l’acier bleui mettent en valeur la mécanique. Le motif de cloche individualise la pièce sans masquer sa fonction à distance.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "name": [
+      "Luth du dernier",
+      "souffle"
+    ],
+    "type": "Luth",
+    "material": "Acier damassé et or pâle",
+    "roll": 193,
+    "art": "art/9-weapon-3.png",
+    "pose": [
+      133,
+      147,
+      32,
+      1.45
+    ],
+    "colors": [
+      "#b579a2",
+      "#ffdbed",
+      "#442745"
+    ],
+    "background": "orbit",
+    "note": "Le dernier serment du maître de forge est gravé dans le métal.",
+    "special": "lute",
+    "school": "MAGE",
+    "id": "9-weapon-3",
+    "slot": "weapon",
+    "stat": "Bras",
+    "number": 64,
+    "rarity": 3,
+    "tier": 3,
+    "form": 3,
+    "variant": 9,
+    "color": "#ef8da9",
+    "relicTheme": "orrery",
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "set": null,
+    "signature": false,
+    "affinityReason": "Focaliseur, runes ou enchantement arcanique.",
+    "rationale": "Le matériau existant — acier damassé et or pâle — devient une caisse de résonance métallique ajourée. La magie est contenue dans la rosace. Arcaniste, sans malédiction.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "name": [
+      "Arc",
+      "de la Rose éternelle"
+    ],
+    "type": "Arc",
+    "material": "If pétrifié et argent",
+    "roll": 152,
+    "art": "art/3-weapon-3.png",
+    "pose": [
+      103,
+      150,
+      -25,
+      1.17
+    ],
+    "colors": [
+      "#8d9dad",
+      "#dae6d3",
+      "#4f5869"
+    ],
+    "background": "moon",
+    "note": "Le bois garde la mémoire des sentiers disparus.",
+    "school": "MAGE",
+    "id": "3-weapon-3",
+    "slot": "weapon",
+    "stat": "Bras",
+    "number": 58,
+    "rarity": 3,
+    "tier": 3,
+    "form": 5,
+    "variant": 3,
+    "color": "#ef8da9",
+    "relicTheme": "orrery",
+    "damageTypes": [
+      "RANGED",
+      "ARCANIST"
+    ],
+    "set": null,
+    "signature": false,
+    "affinityReason": "Construction martiale et enchantement actif.",
+    "rationale": "La courbe de l’arc reste immédiatement lisible. Les veines de l’if pétrifié et la rose d’argent portent sa double affinité À distance / Arcaniste.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  },
+  {
+    "id": "relic-priest-weapon-v2",
+    "school": "PRIEST",
+    "slot": "weapon",
+    "tier": 4,
+    "rarity": 4,
+    "name": [
+      "Le Chant du premier soleil"
+    ],
+    "type": "Encensoir de procession",
+    "material": "Vermeil, perles et opale",
+    "design": "censer",
+    "special": "censer",
+    "art": "art/relic-priest-weapon-v2.png",
+    "variant": 8,
+    "form": 0,
+    "pose": [
+      125,
+      146,
+      0,
+      1.2
+    ],
+    "number": 97,
+    "stat": "Bras",
+    "colors": [
+      "#c39d58",
+      "#fff2b5",
+      "#77553f"
+    ],
+    "color": "#c39d58",
+    "background": "sun",
+    "roll": 296,
+    "relicTheme": "dawn",
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "set": {
+      "id": "set-2-signature",
+      "name": "Première aurore"
+    },
+    "signature": true,
+    "affinityReason": "Relique ou équipement consacré.",
+    "rationale": "Une architecture de vermeil ajouré, d’opale et de perles. La magie reste à l’intérieur de l’objet ; la fumée est légère. Divine ne lui ajoute pas de Bénédiction.",
+    "artWidth": 1024,
+    "artHeight": 1536
+  }
+]

@@ -1,0 +1,57 @@
+[
+  {
+    "id": "gobelin-berserker",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "gobelin-eclaireur",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "gobelin-maraudeur",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "gobelin-occultiste",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "gobelin-rempart",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "slime-ambre",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "slime-azur",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "slime-carmin",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "slime-maudit",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "slime-mousse",
+    "unique": 4,
+    "error": 0
+  },
+  {
+    "id": "troll-brisefer",
+    "unique": 4,
+    "error": 0
+  }
+]

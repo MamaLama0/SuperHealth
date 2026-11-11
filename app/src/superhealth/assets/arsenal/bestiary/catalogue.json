@@ -1,0 +1,184 @@
+{
+  "gobelin-berserker": {
+    "name": "Gobelin berserker",
+    "family": "gobelin",
+    "color": "#BD6254",
+    "weak": "ARCANIST",
+    "resist": "MELEE",
+    "ward": false,
+    "height": 2.328,
+    "animations": [
+      "Idle",
+      "Walk",
+      "Run",
+      "Hit",
+      "Death",
+      "Attack"
+    ]
+  },
+  "gobelin-eclaireur": {
+    "name": "Gobelin éclaireur",
+    "family": "gobelin",
+    "color": "#638FAD",
+    "weak": "MELEE",
+    "resist": "RANGED",
+    "ward": false,
+    "height": 2.097,
+    "animations": [
+      "Idle",
+      "Walk",
+      "Run",
+      "Hit",
+      "Death",
+      "Attack"
+    ]
+  },
+  "gobelin-maraudeur": {
+    "name": "Gobelin maraudeur",
+    "family": "gobelin",
+    "color": "#79A54B",
+    "weak": "RANGED",
+    "resist": "MELEE",
+    "ward": false,
+    "height": 2.211,
+    "animations": [
+      "Idle",
+      "Walk",
+      "Run",
+      "Hit",
+      "Death",
+      "Attack"
+    ]
+  },
+  "gobelin-occultiste": {
+    "name": "Gobelin occultiste",
+    "family": "gobelin",
+    "color": "#9970AD",
+    "weak": "DIVINE",
+    "resist": "ARCANIST",
+    "ward": false,
+    "height": 2.28,
+    "animations": [
+      "Idle",
+      "Walk",
+      "Run",
+      "Hit",
+      "Death",
+      "Attack"
+    ]
+  },
+  "gobelin-rempart": {
+    "name": "Gobelin rempart",
+    "family": "gobelin",
+    "color": "#BA8C55",
+    "weak": "ARCANIST",
+    "resist": "RANGED",
+    "ward": false,
+    "height": 2.178,
+    "animations": [
+      "Idle",
+      "Walk",
+      "Run",
+      "Hit",
+      "Death",
+      "Attack"
+    ]
+  },
+  "slime-ambre": {
+    "name": "Slime ambre",
+    "family": "slime",
+    "color": "#BA8C55",
+    "weak": "ARCANIST",
+    "resist": "RANGED",
+    "ward": false,
+    "height": 1.189,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Hit",
+      "Death"
+    ]
+  },
+  "slime-azur": {
+    "name": "Slime azur",
+    "family": "slime",
+    "color": "#638FAD",
+    "weak": "MELEE",
+    "resist": "RANGED",
+    "ward": false,
+    "height": 1.098,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Hit",
+      "Death"
+    ]
+  },
+  "slime-carmin": {
+    "name": "Slime carmin",
+    "family": "slime",
+    "color": "#BD6254",
+    "weak": "ARCANIST",
+    "resist": "MELEE",
+    "ward": false,
+    "height": 1.267,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Hit",
+      "Death"
+    ]
+  },
+  "slime-maudit": {
+    "name": "Slime maudit",
+    "family": "slime",
+    "color": "#9970AD",
+    "weak": "DIVINE",
+    "resist": "ARCANIST",
+    "ward": false,
+    "height": 1.316,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Hit",
+      "Death"
+    ]
+  },
+  "slime-mousse": {
+    "name": "Slime mousse",
+    "family": "slime",
+    "color": "#79A54B",
+    "weak": "RANGED",
+    "resist": "MELEE",
+    "ward": false,
+    "height": 1.325,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Hit",
+      "Death"
+    ]
+  },
+  "troll-brisefer": {
+    "name": "Brisefer, le troll gardien",
+    "family": "troll",
+    "color": "#82977A",
+    "weak": "ARCANIST",
+    "resist": "MELEE",
+    "ward": true,
+    "height": 3.851,
+    "animations": [
+      "Idle",
+      "Walk",
+      "Run",
+      "Hit",
+      "Death",
+      "Attack"
+    ]
+  }
+}

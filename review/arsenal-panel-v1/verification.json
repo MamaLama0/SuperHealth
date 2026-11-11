@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "cards": 10,
+  "highRarity": 7,
+  "rarities": 5,
+  "setPieces": 4,
+  "checks": [
+    "10 before/after captures",
+    "catalogue damage icons and preview bonuses",
+    "text bounds",
+    "blessing + curse coexistence",
+    "blessed arcanist without curse",
+    "separate review storage",
+    "reload/export/import",
+    "invalid imports rejected atomically",
+    "comment injection remains text",
+    "storage unavailable: warning and export",
+    "390px and 320px responsive layouts",
+    "no JavaScript errors"
+  ],
+  "note": "Browser preview only; no Android build or deployment."
+}

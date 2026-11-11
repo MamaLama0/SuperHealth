@@ -1,0 +1,1 @@
+Normal common/epic/legendary cards, intrinsic effects in WebGL/fallback, mobile and reduced motion: OK

@@ -1,0 +1,254 @@
+{
+  "android": {
+    "tests": 38,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "serverTests": 11,
+  "cards": 400,
+  "originalIDsPreserved": 376,
+  "newCards": 24,
+  "epics": 64,
+  "legendaries": 48,
+  "damageTypes": [
+    "MELEE",
+    "RANGED",
+    "ARCANIST",
+    "DIVINE"
+  ],
+  "finishCombinations": 2400,
+  "balanceVersion": 2,
+  "baseRanges": [
+    [
+      25,
+      45
+    ],
+    [
+      50,
+      80
+    ],
+    [
+      90,
+      130
+    ],
+    [
+      150,
+      210
+    ],
+    [
+      240,
+      330
+    ]
+  ],
+  "legacyPercentileMigrationTested": true,
+  "dropProbabilitiesUnchanged": true,
+  "reviewPersistenceExportImportTested": true,
+  "allThumbnailsAndScriptsVerifiedInAPK": true,
+  "apkSha256": "c50a09f24c1b49af607c6eef33c72c4604cd199cf166932ba5865e523dbfadcc",
+  "webgl": {
+    "models": [
+      {
+        "id": "gobelin-berserker",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 0.8333333134651184,
+          "Attack": 1.3333333730697632,
+          "Hit": 0.5333333611488342,
+          "Death": 0.6333333253860474
+        }
+      },
+      {
+        "id": "gobelin-eclaireur",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 0.8333333134651184,
+          "Attack": 1.3333333730697632,
+          "Hit": 0.5333333611488342,
+          "Death": 0.6333333253860474
+        }
+      },
+      {
+        "id": "gobelin-maraudeur",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 0.8333333134651184,
+          "Attack": 1.3333333730697632,
+          "Hit": 0.5333333611488342,
+          "Death": 0.6333333253860474
+        }
+      },
+      {
+        "id": "gobelin-occultiste",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 0.8333333134651184,
+          "Attack": 1.3333333730697632,
+          "Hit": 0.5333333611488342,
+          "Death": 0.6333333253860474
+        }
+      },
+      {
+        "id": "gobelin-rempart",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 0.8333333134651184,
+          "Attack": 1.3333333730697632,
+          "Hit": 0.5333333611488342,
+          "Death": 0.6333333253860474
+        }
+      },
+      {
+        "id": "slime-ambre",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 1.0333333015441895,
+          "Attack": 1.2000000476837158,
+          "Hit": 0.7333333492279053,
+          "Death": 1.3333333730697632
+        }
+      },
+      {
+        "id": "slime-azur",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 1.0333333015441895,
+          "Attack": 1.2000000476837158,
+          "Hit": 0.7333333492279053,
+          "Death": 1.3333333730697632
+        }
+      },
+      {
+        "id": "slime-carmin",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 1.0333333015441895,
+          "Attack": 1.2000000476837158,
+          "Hit": 0.7333333492279053,
+          "Death": 1.3333333730697632
+        }
+      },
+      {
+        "id": "slime-maudit",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 1.0333333015441895,
+          "Attack": 1.2000000476837158,
+          "Hit": 0.7333333492279053,
+          "Death": 1.3333333730697632
+        }
+      },
+      {
+        "id": "slime-mousse",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 1.0333333015441895,
+          "Attack": 1.2000000476837158,
+          "Hit": 0.7333333492279053,
+          "Death": 1.3333333730697632
+        }
+      },
+      {
+        "id": "troll-brisefer",
+        "unique": 4,
+        "error": 0,
+        "durations": {
+          "Idle": 1.5666667222976685,
+          "Attack": 1.3333333730697632,
+          "Hit": 0.5333333611488342,
+          "Death": 1.3333333730697632
+        }
+      }
+    ],
+    "contextLossFallback": true,
+    "noWebGLFallback": true
+  },
+  "physicalAndroidDeviceTested": true,
+  "phone": {
+    "isolatedTestBuild": true,
+    "touchTear": true,
+    "cardSwipe": true,
+    "newDrawsInNewRanges": 4,
+    "finishesRendered": 6,
+    "models": [
+      {
+        "id": "gobelin-berserker",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "gobelin-eclaireur",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "gobelin-maraudeur",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "gobelin-occultiste",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "gobelin-rempart",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "slime-ambre",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "slime-azur",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "slime-carmin",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "slime-maudit",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "slime-mousse",
+        "unique": 4,
+        "error": 0
+      },
+      {
+        "id": "troll-brisefer",
+        "unique": 4,
+        "error": 0
+      }
+    ],
+    "latestRevisionInstalled": true,
+    "fixedRollAfterRestart": true,
+    "damageIconsRendered": true,
+    "dualAffinitiesRendered": true,
+    "nativeEquipmentIconsVerified": true
+  },
+  "serverDeployed": false,
+  "dualAffinityCards": 38,
+  "completeSets": 30,
+  "typeRaritySlotCombinations": 80,
+  "nativeAndSvgIconParity": true,
+  "perDrawRandomWithinRangesTested": true,
+  "fixedRollAfterReloadTested": true,
+  "apkVerifiedAssets": 537
+}

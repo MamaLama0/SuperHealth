@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="826" viewBox="0 0 512 826">
+      <defs>
+        <linearGradient id="foil" x1="0" y1="0" x2="1" y2=".65"><stop offset="0.0" stop-color="#f4f7ff"/><stop offset="0.3333333333333333" stop-color="#d3dcee"/><stop offset="0.6666666666666666" stop-color="#93a7c2"/><stop offset="1.0" stop-color="#f6fbff"/></linearGradient>
+        <linearGradient id="metal" x1="0" y1=".2" x2="1" y2=".7"><stop offset="0.0" stop-color="#fcffff"/><stop offset="0.3333333333333333" stop-color="#8aa3be"/><stop offset="0.6666666666666666" stop-color="#faffff"/><stop offset="1.0" stop-color="#4b688c"/></linearGradient>
+        <linearGradient id="gem"><stop stop-color="#ef776f"/><stop offset=".45" stop-color="#ffd7c2"/><stop offset=".5" stop-color="#ef776f"/><stop offset="1" stop-color="#172338"/></linearGradient>
+        <linearGradient id="spectrum" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#62e8f4"/><stop offset=".25" stop-color="#ca9bfc"/><stop offset=".49" stop-color="#ffc6d8"/><stop offset=".7" stop-color="#f5efb2"/><stop offset="1" stop-color="#75e4c5"/></linearGradient>
+      </defs>
+      <path fill="url(#foil)" d="M0 0H512V826H0Z"/>
+      <path fill="url(#spectrum)" opacity=".38" d="M0 0H512V826H0Z"/>
+      <path d="M24 66H488V760H24Z" fill="none" stroke="#fff" stroke-width="2"/>
+      <path d="M0 62H512M0 766H512" stroke="#172338" stroke-opacity=".24" stroke-width="5"/>
+      <g stroke="#172338" stroke-opacity=".24" stroke-width="2"><path d="M10 13V52m0 722v39"/><path d="M18 13V52m0 722v39"/><path d="M26 13V52m0 722v39"/><path d="M34 13V52m0 722v39"/><path d="M42 13V52m0 722v39"/><path d="M50 13V52m0 722v39"/><path d="M58 13V52m0 722v39"/><path d="M66 13V52m0 722v39"/><path d="M74 13V52m0 722v39"/><path d="M82 13V52m0 722v39"/><path d="M90 13V52m0 722v39"/><path d="M98 13V52m0 722v39"/><path d="M106 13V52m0 722v39"/><path d="M114 13V52m0 722v39"/><path d="M122 13V52m0 722v39"/><path d="M130 13V52m0 722v39"/><path d="M138 13V52m0 722v39"/><path d="M146 13V52m0 722v39"/><path d="M154 13V52m0 722v39"/><path d="M162 13V52m0 722v39"/><path d="M170 13V52m0 722v39"/><path d="M178 13V52m0 722v39"/><path d="M186 13V52m0 722v39"/><path d="M194 13V52m0 722v39"/><path d="M202 13V52m0 722v39"/><path d="M210 13V52m0 722v39"/><path d="M218 13V52m0 722v39"/><path d="M226 13V52m0 722v39"/><path d="M234 13V52m0 722v39"/><path d="M242 13V52m0 722v39"/><path d="M250 13V52m0 722v39"/><path d="M258 13V52m0 722v39"/><path d="M266 13V52m0 722v39"/><path d="M274 13V52m0 722v39"/><path d="M282 13V52m0 722v39"/><path d="M290 13V52m0 722v39"/><path d="M298 13V52m0 722v39"/><path d="M306 13V52m0 722v39"/><path d="M314 13V52m0 722v39"/><path d="M322 13V52m0 722v39"/><path d="M330 13V52m0 722v39"/><path d="M338 13V52m0 722v39"/><path d="M346 13V52m0 722v39"/><path d="M354 13V52m0 722v39"/><path d="M362 13V52m0 722v39"/><path d="M370 13V52m0 722v39"/><path d="M378 13V52m0 722v39"/><path d="M386 13V52m0 722v39"/><path d="M394 13V52m0 722v39"/><path d="M402 13V52m0 722v39"/><path d="M410 13V52m0 722v39"/><path d="M418 13V52m0 722v39"/><path d="M426 13V52m0 722v39"/><path d="M434 13V52m0 722v39"/><path d="M442 13V52m0 722v39"/><path d="M450 13V52m0 722v39"/><path d="M458 13V52m0 722v39"/><path d="M466 13V52m0 722v39"/><path d="M474 13V52m0 722v39"/><path d="M482 13V52m0 722v39"/><path d="M490 13V52m0 722v39"/><path d="M498 13V52m0 722v39"/><path d="M506 13V52m0 722v39"/></g>
+      <path d="M0 108H512" stroke="#172338" stroke-opacity=".30" stroke-dasharray="4 6"/>
+      <g font-family="DejaVu Sans, sans-serif"><text x="256" y="151" text-anchor="middle" fill="#172338" font-size="14" font-weight="700" letter-spacing="5">SUPERHEALTH</text>
+      <text x="256" y="218" text-anchor="middle" fill="#172338" font-size="67" font-weight="900" letter-spacing="-3">ARSENAL</text>
+      <path d="M48 239H464" stroke="#172338" stroke-width="3"/><path d="M41 296 471 249 471 579 41 627Z" fill="#ef776f" opacity=".72"/>
+      <path d="M41 296 210 277 41 498Z" fill="#ffd7c2" opacity=".70"/>
+      <path d="M471 249 254 603 471 579Z" fill="#172338" opacity=".12"/>
+      <path d="M41 627 471 249M41 498 471 579M210 277 254 603" fill="none" stroke="#fff" stroke-width="1.6" opacity=".7"/>
+      <g transform="translate(256 432) scale(.89)"><g transform="rotate(24)">
+          <path d="M0-174 31-130 22 70 68 88 57 110 19 97 16 153 26 170 0 188-26 170-16 153-19 97-57 110-68 88-22 70-31-130Z" fill="#101e32" stroke="#14233b" stroke-width="13" stroke-linejoin="round"/>
+          <path d="M0-174 31-130 22 70 0 93-22 70-31-130Z" fill="url(#metal)" stroke="#f7ffff" stroke-width="3"/>
+          <path d="M0-174V93L22 70 31-130Z" fill="#384d6b" opacity=".74"/>
+          <path d="M0-174 3-124 0 74-6 55-7-124Z" fill="#f7ffff"/>
+          <path d="M-67 87-23 65 0 78 23 65 67 87 57 107 20 94 0 110-20 94-57 107Z" fill="url(#metal)" stroke="#f7ffff" stroke-width="3"/>
+          <path d="M-15 109H15L12 155H-12Z" fill="#273247" stroke="#f7ffff" stroke-width="2"/>
+          <path d="M-13 119 13 125m-26 7 26 6m-25 7 24 6" stroke="#91a1ba" stroke-width="4"/>
+          <path d="M0 151 24 170 0 188-24 170Z" fill="url(#metal)" stroke="#f7ffff" stroke-width="3"/>
+          <path d="M0 79 14 90 0 104-14 90Z" fill="url(#gem)" stroke="#f7ffff" stroke-width="2"/>
+        </g></g>
+      <path d="M41 651 471 607V708H41Z" fill="#172338"/>
+      <path d="M41 651 471 607" stroke="#ef776f" stroke-width="7"/>
+      <text x="256" y="685" text-anchor="middle" fill="#fff" font-size="45" font-weight="900" letter-spacing="1">WEAPONS</text></g>
+      <path d="M44 731H112M400 731H468" stroke="#172338" stroke-width="2"/>
+      <path d="M248 723H264V739H248Z" fill="#ef776f" transform="rotate(45 256 731)"/>
+    </svg>

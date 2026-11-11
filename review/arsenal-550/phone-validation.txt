@@ -1,0 +1,38 @@
+{ catalog: 550 }
+{
+  index: 0,
+  id: 'exp-chantre-weapon',
+  samples: 145,
+  meanFrameMs: 8.335416666666674,
+  bufferRatio: 2,
+  gl: true,
+  error: 0
+}
+{
+  index: 1,
+  id: 'exp-hiver-legs',
+  samples: 145,
+  meanFrameMs: 8.334027777777768,
+  bufferRatio: 2,
+  gl: true,
+  error: 0
+}
+{
+  index: 2,
+  id: 'exp-astral-weapon',
+  samples: 143,
+  meanFrameMs: 8.450704225352112,
+  bufferRatio: 2,
+  gl: true,
+  error: 0
+}
+{
+  index: 3,
+  id: 'exp-dragon-guard',
+  samples: 145,
+  meanFrameMs: 8.334027777777768,
+  bufferRatio: 2,
+  gl: true,
+  error: 0
+}
+{ allRevealed: true, cards: 4 }

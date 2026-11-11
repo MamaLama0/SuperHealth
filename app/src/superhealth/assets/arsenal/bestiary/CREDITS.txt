@@ -1,0 +1,5 @@
+SuperHealth bestiary — 5 goblins, 5 slimes and Brisefer.
+Adapted from KayKit Adventurers 2.0 and Skeletons 1.1 by Kay Lousberg (CC0).
+Bodies, equipment, rigs and humanoid locomotion reused under CC0.
+Original heads, slime geometry, materials and attacks: SuperHealth bestiary.
+Sources and detailed per-model attribution: project 3D/catalogue.json.

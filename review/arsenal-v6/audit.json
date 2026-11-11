@@ -1,0 +1,31 @@
+{
+  "catalogueVersion": 5,
+  "active": 400,
+  "epic": 64,
+  "legendary": 48,
+  "completeSets": 30,
+  "reviewStorage": "superhealth.arsenal.review.v2",
+  "screenshots": 36,
+  "visualInspection": {
+    "guard": "100/100",
+    "legs": "100/100",
+    "weapon": "all epic/legendary, sheets 4–8",
+    "chest": "all epic/legendary, sheets 4–8"
+  },
+  "checks": {
+    "svgRasterization": 400,
+    "finishCombinations": 2400,
+    "reviewPersistenceAndImportExport": true,
+    "mobileWidth": 390,
+    "webglAndFallback": true,
+    "reducedMotion": true,
+    "androidQaBuild": true,
+    "ownedAndEquippedPreserved": true
+  },
+  "sha256": {
+    "refined-art.js": "82922376ab12dc9d722ef730224cdad497b44873a4ecf431f28f2ae1fe77226e",
+    "relic-art.js": "1f480c179b0f999cfb5c079210844f2ca480b655523b5e9a4b41fde7e7dacda9",
+    "pack.js": "29ea15370705a216af272d208c7110119aaadd4c2a6af82c99259ab12b1cdd6c",
+    "cartes.css": "f35b9abae3ec7601ef4c2d554b8c9e99bde8a902d4515904f6a957225bfea155"
+  }
+}

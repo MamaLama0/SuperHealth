@@ -120,13 +120,18 @@ object ProgressRepository {
         savedHealth.forEach { (track, days) ->
             Progression.Track.entries.firstOrNull { it.name == track }?.let { t -> days.filter { it < from }.forEach { add(it, t) } }
         }
+        val sportDays = events.filterValues { it.any { track -> track in setOf(Progression.Track.STRENGTH, Progression.Track.HIKE) } }
+            .keys.filter { it >= day - 34 }.toMutableSet()
+        sportDays += Stretch.log.value.filter { it.minutes > 0 && it.day in day - 34..day }.map { it.day }
         var hasRecentHealthData = false
         // Distance parcourue chaque jour (mètres) : celle du téléphone ou de la montre, sinon les pas × la foulée.
         val distance = League.state.value.distanceDays.toMutableMap()
         val stride = (nutrition.profile.heightCm.takeIf { it in 120.0..230.0 } ?: 170.0) * 0.415 / 100
         if (sh.has(Feature.HEALTH)) {
-            Bridge.activityFacts(LocalDate.ofEpochDay(from).atStartOfDay(zone).toInstant().toEpochMilli()).filter { it.kind == Bridge.Kind.RUN && it.minutes > 0 }.forEach {
-                add(java.time.Instant.ofEpochMilli(it.start).atZone(zone).toLocalDate().toEpochDay(), Progression.Track.RUN)
+            Bridge.activityFacts(LocalDate.ofEpochDay(from).atStartOfDay(zone).toInstant().toEpochMilli()).filter { it.minutes > 0 }.forEach {
+                val date = java.time.Instant.ofEpochMilli(it.start).atZone(zone).toLocalDate().toEpochDay()
+                if (date in day - 34..day) sportDays += date
+                if (it.kind == Bridge.Kind.RUN) add(date, Progression.Track.RUN)
             }
             // Limité à 90 jours pour la première reprise montre ; le « + » signale une série qui atteint cette borne.
             for (d in from..day) {
@@ -197,7 +202,8 @@ object ProgressRepository {
                 Progression.Track.STRENGTH -> soft(strengthGoals[w] ?: fullGoal, w)
                 Progression.Track.RUN -> soft(League.state.value.weeklyTargets["RUN"] ?: 1, w)
                 else -> 3 } }
-            raw.copy(summary = raw.summary.copy(weekly = weekly, questsDone = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.complete }.map { it.metric.name }, totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
+            raw.copy(validatedToday = events[day].orEmpty().intersect(tracks), sportDays = sportDays,
+                recentValidated = events.filterKeys { it in day - 34..day }.mapValues { (_, values) -> values.intersect(tracks) }, summary = raw.summary.copy(weekly = weekly, questsDone = weeks.firstOrNull { it.start == weekStart }?.quests.orEmpty().filter { it.complete }.map { it.metric.name }, totalXp = raw.summary.totalXp + bonus, level = Progression.level(raw.summary.totalXp + bonus), weekXp = raw.summary.weekXp + weekBonus, streaks = limited, totals = mapOf(
                 "quests" to League.state.value.questsCompleted,
                 "sessions" to sessions.filterKeys { it <= day }.values.sum().toLong(),
                 "foodDays" to events.count { it.key <= day && Progression.Track.FOOD in it.value }.toLong(),

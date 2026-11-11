@@ -142,7 +142,7 @@ fun CutoutScreen(nav: NavHostController) {
                         ModeChip(tr(src.label), state.photo == src, if (enabled) Color(0xFF6FD3A0) else Color.White.copy(alpha = 0.3f)) { if (enabled) { CardStore.update(ctx) { it.copy(photo = src) }; CardPhoto.publish(ctx) } }
                     }
                 }
-                AthleteCard(myFace(snap?.now), Modifier.fillMaxWidth(0.5f).align(Alignment.CenterHorizontally).padding(vertical = 12.dp), interactive = false)
+                AthleteCard(myFace(snap?.now, background = null), Modifier.fillMaxWidth(0.5f).align(Alignment.CenterHorizontally).padding(vertical = 12.dp), interactive = false)
                 if (app.superhealth.ui.ProfilePhoto.bitmap.value == null && state.photo == PhotoSource.PROFIL)
                     Text(tr("Pas encore de photo de profil : ajoute-la dans ton profil, ou détoure une photo pour la carte."), color = Gold, fontSize = 13.sp)
                 Text(tr("Choisis une photo où tu es bien visible, de la tête au torse. Un personnage dessiné marche aussi."), color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)

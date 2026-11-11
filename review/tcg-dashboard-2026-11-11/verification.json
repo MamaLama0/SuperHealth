@@ -1,0 +1,47 @@
+{
+  "variants": [
+    {
+      "name": "armes",
+      "renderer": "webgl",
+      "ready": true
+    },
+    {
+      "name": "armures",
+      "renderer": "webgl",
+      "ready": true
+    },
+    {
+      "name": "armes-gold",
+      "renderer": "webgl",
+      "ready": true
+    },
+    {
+      "name": "armures-gold",
+      "renderer": "webgl",
+      "ready": true
+    },
+    {
+      "name": "armes",
+      "renderer": "fallback",
+      "ready": true
+    },
+    {
+      "name": "armures",
+      "renderer": "fallback",
+      "ready": true
+    },
+    {
+      "name": "armes-gold",
+      "renderer": "fallback",
+      "ready": true
+    },
+    {
+      "name": "armures-gold",
+      "renderer": "fallback",
+      "ready": true
+    }
+  ],
+  "errors": [],
+  "base": "feb0ea2da64e402703d3608121c456c1de81279a",
+  "opening": "4 cards revealed and summary reached in WebGL and fallback"
+}

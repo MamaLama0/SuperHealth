@@ -57,6 +57,7 @@ data class AthleteStats(
     val computedAt: Long = 0,
     /** Sexe déclaré (« F » ou « M ») : les barèmes de force et de cardio en dépendent, la silhouette par défaut aussi. */
     val sex: String? = null,
+    val character: CharacterStats? = null,
 ) {
     val female get() = sex == "F"
     val ovr: Int? get() = ovr10?.let { (it + 5) / 10 }

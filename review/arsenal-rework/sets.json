@@ -1,0 +1,1153 @@
+[
+  {
+    "id": "set-0-0",
+    "name": "Guet de fer",
+    "pieces": [
+      {
+        "id": "class-0-weapon-0",
+        "name": "Gantelet de la garde de fer",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-chest-0",
+        "name": "Cotte de la recrue",
+        "slot": "CHEST",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-guard-0",
+        "name": "Boucle de la garde basse",
+        "slot": "GUARD",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-legs-0",
+        "name": "Solerets des faubourgs",
+        "slot": "LEGS",
+        "damageTypes": [
+          "MELEE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-0-1",
+    "name": "Arène rouge",
+    "pieces": [
+      {
+        "id": "class-0-weapon-1",
+        "name": "Rapière de l’écuyère",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-chest-1",
+        "name": "Gambison des cent reprises",
+        "slot": "CHEST",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-guard-1",
+        "name": "Pavois du pont-levis",
+        "slot": "GUARD",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-legs-1",
+        "name": "Cuissards de l’arène",
+        "slot": "LEGS",
+        "damageTypes": [
+          "MELEE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-0-2",
+    "name": "Bélier gris",
+    "pieces": [
+      {
+        "id": "class-0-weapon-2",
+        "name": "Marteau du bastion",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-chest-2",
+        "name": "Plastron du bélier",
+        "slot": "CHEST",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-guard-2",
+        "name": "Égide du cercle d’armes",
+        "slot": "GUARD",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-legs-2",
+        "name": "Jambières du mur gris",
+        "slot": "LEGS",
+        "damageTypes": [
+          "MELEE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-0-3",
+    "name": "Dernier rempart",
+    "pieces": [
+      {
+        "id": "class-0-weapon-3",
+        "name": "Lame de la première garde",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-chest-3",
+        "name": "Surcot des deux armées",
+        "slot": "CHEST",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-guard-3",
+        "name": "Bastion de la passe étroite",
+        "slot": "GUARD",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "class-0-legs-3",
+        "name": "Grèves du dernier rempart",
+        "slot": "LEGS",
+        "damageTypes": [
+          "MELEE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-1-0",
+    "name": "Premier cercle",
+    "pieces": [
+      {
+        "id": "class-1-weapon-0",
+        "name": "Baguette du premier sort",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-chest-0",
+        "name": "Robe de l’apprenti",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-guard-0",
+        "name": "Sceau du cercle de garde",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-legs-0",
+        "name": "Chausses du copiste astral",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-1-1",
+    "name": "Veille astrale",
+    "pieces": [
+      {
+        "id": "class-1-weapon-1",
+        "name": "Gants des étincelles sages",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-chest-1",
+        "name": "Veste du ciel de poche",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-guard-1",
+        "name": "Prisme du second reflet",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-legs-1",
+        "name": "Babouches du pas flottant",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-1-2",
+    "name": "Comète pâle",
+    "pieces": [
+      {
+        "id": "class-1-weapon-2",
+        "name": "Orbe du poids perdu",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-chest-2",
+        "name": "Manteau de la comète pâle",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-guard-2",
+        "name": "Astrolabe pare-étincelle",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-legs-2",
+        "name": "Bottes du pas suspendu",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-1-3",
+    "name": "Cartographe du ciel",
+    "pieces": [
+      {
+        "id": "class-1-weapon-3",
+        "name": "Le Bâton des neuf mondes",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-chest-3",
+        "name": "L’Atlas des nuits futures",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-guard-3",
+        "name": "La Mémoire de l’océan",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-1-legs-3",
+        "name": "Les Pas de l’horizon",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-2-0",
+    "name": "Gardiens du cloître",
+    "pieces": [
+      {
+        "id": "class-2-weapon-0",
+        "name": "Croix du veilleur",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-chest-0",
+        "name": "Aube du petit matin",
+        "slot": "CHEST",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-guard-0",
+        "name": "Médaille du détour",
+        "slot": "GUARD",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-legs-0",
+        "name": "Sandales du cloître",
+        "slot": "LEGS",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-2-1",
+    "name": "Chemin des pèlerins",
+    "pieces": [
+      {
+        "id": "class-2-weapon-1",
+        "name": "Encensoir de la nuit claire",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-chest-1",
+        "name": "Étole de la porte haute",
+        "slot": "CHEST",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-guard-1",
+        "name": "Chapelet des pas retrouvés",
+        "slot": "GUARD",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-legs-1",
+        "name": "Bottes du prieur",
+        "slot": "LEGS",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-2-2",
+    "name": "Sanctuaire blanc",
+    "pieces": [
+      {
+        "id": "class-2-weapon-2",
+        "name": "Cloche de la neuvième aube",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-chest-2",
+        "name": "Chasuble du dernier pèlerin",
+        "slot": "CHEST",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-guard-2",
+        "name": "Vitrail du refuge",
+        "slot": "GUARD",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-legs-2",
+        "name": "Bandes du chemin blanc",
+        "slot": "LEGS",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-2-3",
+    "name": "Sept cloches",
+    "pieces": [
+      {
+        "id": "class-2-weapon-3",
+        "name": "Croix du jour sans fin",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-chest-3",
+        "name": "Mantelet des sept cloches",
+        "slot": "CHEST",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-guard-3",
+        "name": "Reliquaire du soleil levé",
+        "slot": "GUARD",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "class-2-legs-3",
+        "name": "Bottes des pèlerins invisibles",
+        "slot": "LEGS",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-3-0",
+    "name": "Guetteurs des haies",
+    "pieces": [
+      {
+        "id": "class-3-weapon-0",
+        "name": "Arc court du guetteur",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-chest-0",
+        "name": "Veste du chasseur de haies",
+        "slot": "CHEST",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-guard-0",
+        "name": "Targe des guetteurs",
+        "slot": "GUARD",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-legs-0",
+        "name": "Guêtres des sentinelles",
+        "slot": "LEGS",
+        "damageTypes": [
+          "RANGED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-3-1",
+    "name": "Sentier des ronces",
+    "pieces": [
+      {
+        "id": "class-3-weapon-1",
+        "name": "Sarbacane des pluies fines",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-chest-1",
+        "name": "Cape du feu sans fumée",
+        "slot": "CHEST",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-guard-1",
+        "name": "Filet des trois gués",
+        "slot": "GUARD",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-legs-1",
+        "name": "Crampons du sentier tordu",
+        "slot": "LEGS",
+        "damageTypes": [
+          "RANGED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-3-2",
+    "name": "Premier guetteur",
+    "pieces": [
+      {
+        "id": "class-3-weapon-2",
+        "name": "Arc à deux serments",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-chest-2",
+        "name": "Gilet aux dix fioles",
+        "slot": "CHEST",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-guard-2",
+        "name": "Ailes du premier guetteur",
+        "slot": "GUARD",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "class-3-legs-2",
+        "name": "Pattes du renard de brume",
+        "slot": "LEGS",
+        "damageTypes": [
+          "RANGED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-3-3",
+    "name": "Roi des bois",
+    "pieces": [
+      {
+        "id": "class-3-weapon-3",
+        "name": "Le Faucon du dernier bois",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "RANGED",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-3-chest-3",
+        "name": "Le Manteau du roi des bois",
+        "slot": "CHEST",
+        "damageTypes": [
+          "RANGED",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-3-guard-3",
+        "name": "La Carapace du premier jardin",
+        "slot": "GUARD",
+        "damageTypes": [
+          "RANGED",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-3-legs-3",
+        "name": "La Marche du dernier hiver",
+        "slot": "LEGS",
+        "damageTypes": [
+          "RANGED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-4-0",
+    "name": "Veilleurs sans ombre",
+    "pieces": [
+      {
+        "id": "class-4-weapon-0",
+        "name": "Grimoire des pages muettes",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-chest-0",
+        "name": "Robe du clerc sans ombre",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-guard-0",
+        "name": "Masque du témoin absent",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-legs-0",
+        "name": "Chaussures du pas sans bruit",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-4-1",
+    "name": "Murmure voilé",
+    "pieces": [
+      {
+        "id": "class-4-weapon-1",
+        "name": "Gants du murmure",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-chest-1",
+        "name": "Capuche aux yeux de verre",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-guard-1",
+        "name": "Miroir qui ne pardonne pas",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-legs-1",
+        "name": "Grèves du cercle fermé",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-4-2",
+    "name": "Lune enterrée",
+    "pieces": [
+      {
+        "id": "class-4-weapon-2",
+        "name": "Dague de la lune enterrée",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-chest-2",
+        "name": "Manteau de la treizième porte",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-guard-2",
+        "name": "Scellé des deux ombres",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-legs-2",
+        "name": "Bottes de la tombe ouverte",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-4-3",
+    "name": "Pacte silencieux",
+    "pieces": [
+      {
+        "id": "class-4-weapon-3",
+        "name": "Codex du témoin aveugle",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-chest-3",
+        "name": "Cage du pacte silencieux",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-guard-3",
+        "name": "Œil du puits sans fond",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-4-legs-3",
+        "name": "Sabots du spectre de craie",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-5-0",
+    "name": "Forge des runes",
+    "pieces": [
+      {
+        "id": "class-5-weapon-0",
+        "name": "Sceptre de fulguration",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-chest-0",
+        "name": "Cuirasse de l’enchanteur",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-guard-0",
+        "name": "Cadran du feu de poche",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-legs-0",
+        "name": "Crampons du sol aimanté",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-5-1",
+    "name": "Sceau de cuivre",
+    "pieces": [
+      {
+        "id": "class-5-weapon-1",
+        "name": "Lame du sceau de cuivre",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-chest-1",
+        "name": "Gilet aux fioles de mana",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-guard-1",
+        "name": "Égide de fulguration",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-legs-1",
+        "name": "Grèves des runes de cuivre",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-5-2",
+    "name": "Fulguration",
+    "pieces": [
+      {
+        "id": "class-5-weapon-2",
+        "name": "Gantelet du coup de tonnerre",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-chest-2",
+        "name": "Harnais du courant inversé",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-guard-2",
+        "name": "Disque de la machine muette",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-legs-2",
+        "name": "Bottes du pas fulgurant",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-5-3",
+    "name": "Navigateur céleste",
+    "pieces": [
+      {
+        "id": "class-5-weapon-3",
+        "name": "La Fourche du ciel captif",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "MELEE",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-chest-3",
+        "name": "Le Laboratoire du ciel",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-guard-3",
+        "name": "Le Vitrail du tonnerre",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "class-5-legs-3",
+        "name": "Les Bottes du navigateur céleste",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-0-signature",
+    "name": "Griffon royal",
+    "pieces": [
+      {
+        "id": "relic-warrior-weapon-v2",
+        "name": "Le Jugement du griffon",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "MELEE",
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "relic-warrior-chest-v2",
+        "name": "La Cuirasse des cent rois",
+        "slot": "CHEST",
+        "damageTypes": [
+          "MELEE"
+        ]
+      },
+      {
+        "id": "relic-warrior-guard-v2",
+        "name": "Le Lion de la porte rouge",
+        "slot": "GUARD",
+        "damageTypes": [
+          "MELEE",
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "relic-warrior-legs-v2",
+        "name": "La Marche des cataphractes",
+        "slot": "LEGS",
+        "damageTypes": [
+          "MELEE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-1-signature",
+    "name": "Neuf mondes",
+    "pieces": [
+      {
+        "id": "relic-mage-weapon-v2",
+        "name": "L’Atlas du ciel brisé",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-mage-chest-v2",
+        "name": "La Nuit aux mille yeux",
+        "slot": "CHEST",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-mage-guard-v2",
+        "name": "L’Iris des neuf mondes",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-mage-legs-v2",
+        "name": "Les Anneaux de l’apesanteur",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-2-signature",
+    "name": "Première aurore",
+    "pieces": [
+      {
+        "id": "relic-priest-weapon-v2",
+        "name": "Le Chant du premier soleil",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "relic-priest-chest-v2",
+        "name": "Les Plumes du sanctuaire",
+        "slot": "CHEST",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "relic-priest-guard-v2",
+        "name": "Le Triptyque de l’aurore",
+        "slot": "GUARD",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      },
+      {
+        "id": "relic-priest-legs-v2",
+        "name": "Les Pas du jardin blanc",
+        "slot": "LEGS",
+        "damageTypes": [
+          "DIVINE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-3-signature",
+    "name": "Forêt ancienne",
+    "pieces": [
+      {
+        "id": "relic-ranger-weapon-v2",
+        "name": "Le Croc du grand cerf",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "relic-ranger-chest-v2",
+        "name": "La Peau de la forêt ancienne",
+        "slot": "CHEST",
+        "damageTypes": [
+          "RANGED",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-ranger-guard-v2",
+        "name": "Le Scarabée du bois dormant",
+        "slot": "GUARD",
+        "damageTypes": [
+          "RANGED"
+        ]
+      },
+      {
+        "id": "relic-ranger-legs-v2",
+        "name": "La Course du lynx royal",
+        "slot": "LEGS",
+        "damageTypes": [
+          "RANGED"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-4-signature",
+    "name": "Noms perdus",
+    "pieces": [
+      {
+        "id": "relic-occultist-weapon-v2",
+        "name": "La Lanterne des noms perdus",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-occultist-chest-v2",
+        "name": "La Colonne du roi oublié",
+        "slot": "CHEST",
+        "damageTypes": [
+          "MELEE",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-occultist-guard-v2",
+        "name": "Le Reflet du dernier témoin",
+        "slot": "GUARD",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-occultist-legs-v2",
+        "name": "Les Chausses du voile déchiré",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "set-5-signature",
+    "name": "Arpenteurs d’airain",
+    "pieces": [
+      {
+        "id": "relic-artificer-weapon-v2",
+        "name": "Le Marteau des heures",
+        "slot": "WEAPON",
+        "damageTypes": [
+          "MELEE",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-artificer-chest-v2",
+        "name": "Le Cœur du grand automate",
+        "slot": "CHEST",
+        "damageTypes": [
+          "MELEE",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-artificer-guard-v2",
+        "name": "Le Rempart à six volets",
+        "slot": "GUARD",
+        "damageTypes": [
+          "MELEE",
+          "ARCANIST"
+        ]
+      },
+      {
+        "id": "relic-artificer-legs-v2",
+        "name": "Les Pas du ciel profond",
+        "slot": "LEGS",
+        "damageTypes": [
+          "ARCANIST"
+        ]
+      }
+    ]
+  }
+]

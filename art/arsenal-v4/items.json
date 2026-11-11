@@ -1,0 +1,1704 @@
+[
+  {
+    "id": "atelier-guet-weapon",
+    "setId": "atelier-guet",
+    "setName": "Guet de pierre",
+    "tier": 0,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "weapon",
+    "title": "Hachette du guet",
+    "type": "Hachette",
+    "form": "axe",
+    "material": "Fer forgé, frêne et cuir",
+    "metal": "iron",
+    "cloth": "#536074",
+    "leather": "#69442e",
+    "motif": "rivet",
+    "variant": 0
+  },
+  {
+    "id": "atelier-guet-chest",
+    "setId": "atelier-guet",
+    "setName": "Guet de pierre",
+    "tier": 0,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "chest",
+    "title": "Gambison du rempart",
+    "type": "Gambison",
+    "form": "gambeson",
+    "material": "Lin matelassé et cuir",
+    "metal": "iron",
+    "cloth": "#536074",
+    "leather": "#69442e",
+    "motif": "rivet",
+    "variant": 0
+  },
+  {
+    "id": "atelier-guet-guard",
+    "setId": "atelier-guet",
+    "setName": "Guet de pierre",
+    "tier": 0,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "guard",
+    "title": "Rondache des portes",
+    "type": "Rondache",
+    "form": "roundshield",
+    "material": "Chêne, fer et cuir",
+    "metal": "iron",
+    "cloth": "#536074",
+    "leather": "#69442e",
+    "motif": "rivet",
+    "variant": 0
+  },
+  {
+    "id": "atelier-guet-legs",
+    "setId": "atelier-guet",
+    "setName": "Guet de pierre",
+    "tier": 0,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "legs",
+    "title": "Bottes de la patrouille",
+    "type": "Bottes",
+    "form": "boots",
+    "material": "Cuir cousu et fer",
+    "metal": "iron",
+    "cloth": "#536074",
+    "leather": "#69442e",
+    "motif": "rivet",
+    "variant": 0
+  },
+  {
+    "id": "atelier-lisiere-weapon",
+    "setId": "atelier-lisiere",
+    "setName": "Sentier des lisières",
+    "tier": 0,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "weapon",
+    "title": "Arc du guetteur",
+    "type": "Arc court",
+    "form": "shortbow",
+    "material": "If et corde de lin",
+    "metal": "bronze",
+    "cloth": "#52664b",
+    "leather": "#685039",
+    "motif": "leaf",
+    "variant": 1
+  },
+  {
+    "id": "atelier-lisiere-chest",
+    "setId": "atelier-lisiere",
+    "setName": "Sentier des lisières",
+    "tier": 0,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "chest",
+    "title": "Veste des taillis",
+    "type": "Armure de cuir",
+    "form": "leather",
+    "material": "Cuir tanné et laine",
+    "metal": "bronze",
+    "cloth": "#52664b",
+    "leather": "#685039",
+    "motif": "leaf",
+    "variant": 1
+  },
+  {
+    "id": "atelier-lisiere-guard",
+    "setId": "atelier-lisiere",
+    "setName": "Sentier des lisières",
+    "tier": 0,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "guard",
+    "title": "Brassards du pisteur",
+    "type": "Brassards",
+    "form": "bracers",
+    "material": "Cuir renforcé et bronze",
+    "metal": "bronze",
+    "cloth": "#52664b",
+    "leather": "#685039",
+    "motif": "leaf",
+    "variant": 1
+  },
+  {
+    "id": "atelier-lisiere-legs",
+    "setId": "atelier-lisiere",
+    "setName": "Sentier des lisières",
+    "tier": 0,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "legs",
+    "title": "Guêtres des sous-bois",
+    "type": "Bottes de piste",
+    "form": "gaiters",
+    "material": "Cuir souple et toile",
+    "metal": "bronze",
+    "cloth": "#52664b",
+    "leather": "#685039",
+    "motif": "leaf",
+    "variant": 1
+  },
+  {
+    "id": "atelier-copiste-weapon",
+    "setId": "atelier-copiste",
+    "setName": "Premier cercle",
+    "tier": 0,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "weapon",
+    "title": "Baguette du copiste",
+    "type": "Baguette",
+    "form": "wand",
+    "material": "Houx et quartz",
+    "metal": "pewter",
+    "cloth": "#434779",
+    "leather": "#65422f",
+    "motif": "rune",
+    "variant": 2
+  },
+  {
+    "id": "atelier-copiste-chest",
+    "setId": "atelier-copiste",
+    "setName": "Premier cercle",
+    "tier": 0,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "chest",
+    "title": "Robe du premier cercle",
+    "type": "Robe",
+    "form": "robe",
+    "material": "Laine indigo et étain",
+    "metal": "pewter",
+    "cloth": "#434779",
+    "leather": "#65422f",
+    "motif": "rune",
+    "variant": 2
+  },
+  {
+    "id": "atelier-copiste-guard",
+    "setId": "atelier-copiste",
+    "setName": "Premier cercle",
+    "tier": 0,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "guard",
+    "title": "Grimoire des protections",
+    "type": "Grimoire de garde",
+    "form": "book",
+    "material": "Cuir, papier et étain",
+    "metal": "pewter",
+    "cloth": "#434779",
+    "leather": "#65422f",
+    "motif": "rune",
+    "variant": 2
+  },
+  {
+    "id": "atelier-copiste-legs",
+    "setId": "atelier-copiste",
+    "setName": "Premier cercle",
+    "tier": 0,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "legs",
+    "title": "Souliers de l’apprenti",
+    "type": "Souliers",
+    "form": "shoes",
+    "material": "Cuir et laine",
+    "metal": "pewter",
+    "cloth": "#434779",
+    "leather": "#65422f",
+    "motif": "rune",
+    "variant": 2
+  },
+  {
+    "id": "atelier-cloitre-weapon",
+    "setId": "atelier-cloitre",
+    "setName": "Gardiens du cloître",
+    "tier": 0,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "weapon",
+    "title": "Masse du veilleur",
+    "type": "Masse consacrée",
+    "form": "mace",
+    "material": "Fer, laiton et frêne",
+    "metal": "brass",
+    "cloth": "#bbb08d",
+    "leather": "#654c37",
+    "motif": "sun",
+    "variant": 3
+  },
+  {
+    "id": "atelier-cloitre-chest",
+    "setId": "atelier-cloitre",
+    "setName": "Gardiens du cloître",
+    "tier": 0,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "chest",
+    "title": "Tunique du cloître",
+    "type": "Tunique",
+    "form": "tunic",
+    "material": "Lin écru et cuir",
+    "metal": "brass",
+    "cloth": "#bbb08d",
+    "leather": "#654c37",
+    "motif": "sun",
+    "variant": 3
+  },
+  {
+    "id": "atelier-cloitre-guard",
+    "setId": "atelier-cloitre",
+    "setName": "Gardiens du cloître",
+    "tier": 0,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "guard",
+    "title": "Médaillon du refuge",
+    "type": "Talisman protecteur",
+    "form": "medallion",
+    "material": "Laiton et corde tressée",
+    "metal": "brass",
+    "cloth": "#bbb08d",
+    "leather": "#654c37",
+    "motif": "sun",
+    "variant": 3
+  },
+  {
+    "id": "atelier-cloitre-legs",
+    "setId": "atelier-cloitre",
+    "setName": "Gardiens du cloître",
+    "tier": 0,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "legs",
+    "title": "Sandales du pèlerin",
+    "type": "Sandales",
+    "form": "sandals",
+    "material": "Cuir tressé et laiton",
+    "metal": "brass",
+    "cloth": "#bbb08d",
+    "leather": "#654c37",
+    "motif": "sun",
+    "variant": 3
+  },
+  {
+    "id": "atelier-roncefer-weapon",
+    "setId": "atelier-roncefer",
+    "setName": "Ordre de Roncefer",
+    "tier": 1,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "weapon",
+    "title": "Épée de Roncefer",
+    "type": "Épée longue",
+    "form": "sword",
+    "material": "Acier, bronze et cuir rouge",
+    "metal": "steel",
+    "cloth": "#653744",
+    "leather": "#412c26",
+    "motif": "thorn",
+    "variant": 4
+  },
+  {
+    "id": "atelier-roncefer-chest",
+    "setId": "atelier-roncefer",
+    "setName": "Ordre de Roncefer",
+    "tier": 1,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "chest",
+    "title": "Haubert de la passe",
+    "type": "Cotte de mailles",
+    "form": "mail",
+    "material": "Acier et laine pourpre",
+    "metal": "steel",
+    "cloth": "#653744",
+    "leather": "#412c26",
+    "motif": "thorn",
+    "variant": 4
+  },
+  {
+    "id": "atelier-roncefer-guard",
+    "setId": "atelier-roncefer",
+    "setName": "Ordre de Roncefer",
+    "tier": 1,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "guard",
+    "title": "Écu du sentier rouge",
+    "type": "Écu",
+    "form": "heater",
+    "material": "Bois, acier et cuir",
+    "metal": "steel",
+    "cloth": "#653744",
+    "leather": "#412c26",
+    "motif": "thorn",
+    "variant": 4
+  },
+  {
+    "id": "atelier-roncefer-legs",
+    "setId": "atelier-roncefer",
+    "setName": "Ordre de Roncefer",
+    "tier": 1,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "legs",
+    "title": "Grèves de l’écuyer",
+    "type": "Grèves",
+    "form": "greaves",
+    "material": "Acier et cuir",
+    "metal": "steel",
+    "cloth": "#653744",
+    "leather": "#412c26",
+    "motif": "thorn",
+    "variant": 4
+  },
+  {
+    "id": "atelier-fauconnier-weapon",
+    "setId": "atelier-fauconnier",
+    "setName": "Guetteurs du col",
+    "tier": 1,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "weapon",
+    "title": "Arbalète du fauconnier",
+    "type": "Arbalète",
+    "form": "crossbow",
+    "material": "If, acier et corde",
+    "metal": "steel",
+    "cloth": "#526978",
+    "leather": "#614333",
+    "motif": "feather",
+    "variant": 5
+  },
+  {
+    "id": "atelier-fauconnier-chest",
+    "setId": "atelier-fauconnier",
+    "setName": "Guetteurs du col",
+    "tier": 1,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "chest",
+    "title": "Brigandine des guetteurs",
+    "type": "Brigandine",
+    "form": "brigandine",
+    "material": "Cuir bleu et plaques d’acier",
+    "metal": "steel",
+    "cloth": "#526978",
+    "leather": "#614333",
+    "motif": "feather",
+    "variant": 5
+  },
+  {
+    "id": "atelier-fauconnier-guard",
+    "setId": "atelier-fauconnier",
+    "setName": "Guetteurs du col",
+    "tier": 1,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "guard",
+    "title": "Targe du col",
+    "type": "Targe",
+    "form": "targe",
+    "material": "Frêne, acier et cuir",
+    "metal": "steel",
+    "cloth": "#526978",
+    "leather": "#614333",
+    "motif": "feather",
+    "variant": 5
+  },
+  {
+    "id": "atelier-fauconnier-legs",
+    "setId": "atelier-fauconnier",
+    "setName": "Guetteurs du col",
+    "tier": 1,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "legs",
+    "title": "Bottes des crêtes",
+    "type": "Bottes fourrées",
+    "form": "furboots",
+    "material": "Cuir, laine et acier",
+    "metal": "steel",
+    "cloth": "#526978",
+    "leather": "#614333",
+    "motif": "feather",
+    "variant": 5
+  },
+  {
+    "id": "atelier-alchimiste-weapon",
+    "setId": "atelier-alchimiste",
+    "setName": "Sceau de cuivre",
+    "tier": 1,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "weapon",
+    "title": "Sceptre du creuset",
+    "type": "Sceptre",
+    "form": "scepter",
+    "material": "Cuivre, quartz et chêne",
+    "metal": "copper",
+    "cloth": "#32706b",
+    "leather": "#45332f",
+    "motif": "rune",
+    "variant": 6
+  },
+  {
+    "id": "atelier-alchimiste-chest",
+    "setId": "atelier-alchimiste",
+    "setName": "Sceau de cuivre",
+    "tier": 1,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "chest",
+    "title": "Manteau des formules",
+    "type": "Manteau",
+    "form": "coat",
+    "material": "Drap vert, cuivre et verre",
+    "metal": "copper",
+    "cloth": "#32706b",
+    "leather": "#45332f",
+    "motif": "rune",
+    "variant": 6
+  },
+  {
+    "id": "atelier-alchimiste-guard",
+    "setId": "atelier-alchimiste",
+    "setName": "Sceau de cuivre",
+    "tier": 1,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "guard",
+    "title": "Prisme de garde",
+    "type": "Prisme protecteur",
+    "form": "prism",
+    "material": "Cristal et cuivre",
+    "metal": "copper",
+    "cloth": "#32706b",
+    "leather": "#45332f",
+    "motif": "rune",
+    "variant": 6
+  },
+  {
+    "id": "atelier-alchimiste-legs",
+    "setId": "atelier-alchimiste",
+    "setName": "Sceau de cuivre",
+    "tier": 1,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "legs",
+    "title": "Bottines du sceau",
+    "type": "Bottines runiques",
+    "form": "runeboots",
+    "material": "Cuir vert et cuivre",
+    "metal": "copper",
+    "cloth": "#32706b",
+    "leather": "#45332f",
+    "motif": "rune",
+    "variant": 6
+  },
+  {
+    "id": "atelier-pelerin-weapon",
+    "setId": "atelier-pelerin",
+    "setName": "Chemin de l’aube",
+    "tier": 1,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "weapon",
+    "title": "Cloche des voyageurs",
+    "type": "Cloche rituelle",
+    "form": "bell",
+    "material": "Bronze et cuir",
+    "metal": "brass",
+    "cloth": "#c3b694",
+    "leather": "#7c5439",
+    "motif": "sun",
+    "variant": 7
+  },
+  {
+    "id": "atelier-pelerin-chest",
+    "setId": "atelier-pelerin",
+    "setName": "Chemin de l’aube",
+    "tier": 1,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "chest",
+    "title": "Aube du chemin blanc",
+    "type": "Aube",
+    "form": "chasuble",
+    "material": "Lin, brocart et laiton",
+    "metal": "brass",
+    "cloth": "#c3b694",
+    "leather": "#7c5439",
+    "motif": "sun",
+    "variant": 7
+  },
+  {
+    "id": "atelier-pelerin-guard",
+    "setId": "atelier-pelerin",
+    "setName": "Chemin de l’aube",
+    "tier": 1,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "guard",
+    "title": "Reliquaire du chemin",
+    "type": "Reliquaire",
+    "form": "reliquary",
+    "material": "Laiton et nacre",
+    "metal": "brass",
+    "cloth": "#c3b694",
+    "leather": "#7c5439",
+    "motif": "sun",
+    "variant": 7
+  },
+  {
+    "id": "atelier-pelerin-legs",
+    "setId": "atelier-pelerin",
+    "setName": "Chemin de l’aube",
+    "tier": 1,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "legs",
+    "title": "Sandales des ermites",
+    "type": "Sandales lacées",
+    "form": "laced_sandals",
+    "material": "Cuir tressé et bronze",
+    "metal": "brass",
+    "cloth": "#c3b694",
+    "leather": "#7c5439",
+    "motif": "sun",
+    "variant": 7
+  },
+  {
+    "id": "atelier-bastion-weapon",
+    "setId": "atelier-bastion",
+    "setName": "Bastion d’airain",
+    "tier": 2,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "weapon",
+    "title": "Marteau du bastion",
+    "type": "Marteau de guerre",
+    "form": "hammer",
+    "material": "Bronze, acier et frêne",
+    "metal": "bronze",
+    "cloth": "#35474c",
+    "leather": "#382b28",
+    "motif": "chevron",
+    "variant": 8
+  },
+  {
+    "id": "atelier-bastion-chest",
+    "setId": "atelier-bastion",
+    "setName": "Bastion d’airain",
+    "tier": 2,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "chest",
+    "title": "Cuirasse du col de fer",
+    "type": "Cuirasse",
+    "form": "breastplate",
+    "material": "Acier bruni et bronze",
+    "metal": "bronze",
+    "cloth": "#35474c",
+    "leather": "#382b28",
+    "motif": "chevron",
+    "variant": 8
+  },
+  {
+    "id": "atelier-bastion-guard",
+    "setId": "atelier-bastion",
+    "setName": "Bastion d’airain",
+    "tier": 2,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "guard",
+    "title": "Pavois de la passe",
+    "type": "Pavois",
+    "form": "pavise",
+    "material": "Bois, acier et bronze",
+    "metal": "bronze",
+    "cloth": "#35474c",
+    "leather": "#382b28",
+    "motif": "chevron",
+    "variant": 8
+  },
+  {
+    "id": "atelier-bastion-legs",
+    "setId": "atelier-bastion",
+    "setName": "Bastion d’airain",
+    "tier": 2,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "legs",
+    "title": "Solerets du rempart",
+    "type": "Solerets",
+    "form": "sabatons",
+    "material": "Acier articulé et cuir",
+    "metal": "bronze",
+    "cloth": "#35474c",
+    "leather": "#382b28",
+    "motif": "chevron",
+    "variant": 8
+  },
+  {
+    "id": "atelier-cerf-weapon",
+    "setId": "atelier-cerf",
+    "setName": "Veilleurs du grand cerf",
+    "tier": 2,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "weapon",
+    "title": "Arc des hautes futaies",
+    "type": "Arc long",
+    "form": "longbow",
+    "material": "If, corne et argent",
+    "metal": "silver",
+    "cloth": "#3e6657",
+    "leather": "#664532",
+    "motif": "antler",
+    "variant": 9
+  },
+  {
+    "id": "atelier-cerf-chest",
+    "setId": "atelier-cerf",
+    "setName": "Veilleurs du grand cerf",
+    "tier": 2,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "chest",
+    "title": "Broigne des ramures",
+    "type": "Armure à écailles",
+    "form": "scale",
+    "material": "Cuir vert et écailles d’acier",
+    "metal": "silver",
+    "cloth": "#3e6657",
+    "leather": "#664532",
+    "motif": "antler",
+    "variant": 9
+  },
+  {
+    "id": "atelier-cerf-guard",
+    "setId": "atelier-cerf",
+    "setName": "Veilleurs du grand cerf",
+    "tier": 2,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "guard",
+    "title": "Bouclier des racines",
+    "type": "Bouclier elfique",
+    "form": "leafshield",
+    "material": "Bois vivant et argent",
+    "metal": "silver",
+    "cloth": "#3e6657",
+    "leather": "#664532",
+    "motif": "antler",
+    "variant": 9
+  },
+  {
+    "id": "atelier-cerf-legs",
+    "setId": "atelier-cerf",
+    "setName": "Veilleurs du grand cerf",
+    "tier": 2,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "legs",
+    "title": "Bottes du sentier caché",
+    "type": "Bottes elfiques",
+    "form": "elfboots",
+    "material": "Cuir vert et argent",
+    "metal": "silver",
+    "cloth": "#3e6657",
+    "leather": "#664532",
+    "motif": "antler",
+    "variant": 9
+  },
+  {
+    "id": "atelier-lunaire-weapon",
+    "setId": "atelier-lunaire",
+    "setName": "Archives lunaires",
+    "tier": 2,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "weapon",
+    "title": "Orbe de la marée céleste",
+    "type": "Orbe",
+    "form": "orb",
+    "material": "Cristal bleu et argent",
+    "metal": "silver",
+    "cloth": "#434a84",
+    "leather": "#322d3d",
+    "motif": "moon",
+    "variant": 10
+  },
+  {
+    "id": "atelier-lunaire-chest",
+    "setId": "atelier-lunaire",
+    "setName": "Archives lunaires",
+    "tier": 2,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "chest",
+    "title": "Manteau de la lune claire",
+    "type": "Manteau de mage",
+    "form": "mantle",
+    "material": "Velours bleu et argent",
+    "metal": "silver",
+    "cloth": "#434a84",
+    "leather": "#322d3d",
+    "motif": "moon",
+    "variant": 10
+  },
+  {
+    "id": "atelier-lunaire-guard",
+    "setId": "atelier-lunaire",
+    "setName": "Archives lunaires",
+    "tier": 2,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "guard",
+    "title": "Miroir des passages",
+    "type": "Miroir pare-sort",
+    "form": "mirror",
+    "material": "Verre de nuit et argent",
+    "metal": "silver",
+    "cloth": "#434a84",
+    "leather": "#322d3d",
+    "motif": "moon",
+    "variant": 10
+  },
+  {
+    "id": "atelier-lunaire-legs",
+    "setId": "atelier-lunaire",
+    "setName": "Archives lunaires",
+    "tier": 2,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "legs",
+    "title": "Bottes du pas lunaire",
+    "type": "Bottes enchantées",
+    "form": "runeboots",
+    "material": "Cuir indigo et argent",
+    "metal": "silver",
+    "cloth": "#434a84",
+    "leather": "#322d3d",
+    "motif": "moon",
+    "variant": 10
+  },
+  {
+    "id": "atelier-veille-weapon",
+    "setId": "atelier-veille",
+    "setName": "Veille du sanctuaire",
+    "tier": 2,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "weapon",
+    "title": "Fléau du sanctuaire",
+    "type": "Fléau consacré",
+    "form": "flail",
+    "material": "Acier, or et cuir",
+    "metal": "gold",
+    "cloth": "#c6b788",
+    "leather": "#6a4d3c",
+    "motif": "sun",
+    "variant": 11
+  },
+  {
+    "id": "atelier-veille-chest",
+    "setId": "atelier-veille",
+    "setName": "Veille du sanctuaire",
+    "tier": 2,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "chest",
+    "title": "Haubert de l’aube",
+    "type": "Haubert consacré",
+    "form": "surcoat",
+    "material": "Mailles, lin ivoire et or",
+    "metal": "gold",
+    "cloth": "#c6b788",
+    "leather": "#6a4d3c",
+    "motif": "sun",
+    "variant": 11
+  },
+  {
+    "id": "atelier-veille-guard",
+    "setId": "atelier-veille",
+    "setName": "Veille du sanctuaire",
+    "tier": 2,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "guard",
+    "title": "Égide des pèlerins",
+    "type": "Bouclier solaire",
+    "form": "sunshield",
+    "material": "Acier émaillé et or",
+    "metal": "gold",
+    "cloth": "#c6b788",
+    "leather": "#6a4d3c",
+    "motif": "sun",
+    "variant": 11
+  },
+  {
+    "id": "atelier-veille-legs",
+    "setId": "atelier-veille",
+    "setName": "Veille du sanctuaire",
+    "tier": 2,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "legs",
+    "title": "Grèves du sanctuaire",
+    "type": "Grèves consacrées",
+    "form": "greaves",
+    "material": "Acier et or",
+    "metal": "gold",
+    "cloth": "#c6b788",
+    "leather": "#6a4d3c",
+    "motif": "sun",
+    "variant": 11
+  },
+  {
+    "id": "atelier-dragon-weapon",
+    "setId": "atelier-dragon",
+    "setName": "Serment du dragon",
+    "tier": 3,
+    "damageTypes": [
+      "MELEE",
+      "DIVINE"
+    ],
+    "school": "WARRIOR",
+    "slot": "weapon",
+    "title": "Hallebarde du serment",
+    "type": "Hallebarde",
+    "form": "halberd",
+    "material": "Acier noir, or et grenat",
+    "metal": "darksteel",
+    "cloth": "#662b30",
+    "leather": "#352123",
+    "motif": "dragon",
+    "variant": 12
+  },
+  {
+    "id": "atelier-dragon-chest",
+    "setId": "atelier-dragon",
+    "setName": "Serment du dragon",
+    "tier": 3,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "chest",
+    "title": "Cuirasse draconique",
+    "type": "Cuirasse à écailles",
+    "form": "dragonplate",
+    "material": "Acier noir et or",
+    "metal": "darksteel",
+    "cloth": "#662b30",
+    "leather": "#352123",
+    "motif": "dragon",
+    "variant": 12
+  },
+  {
+    "id": "atelier-dragon-guard",
+    "setId": "atelier-dragon",
+    "setName": "Serment du dragon",
+    "tier": 3,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "guard",
+    "title": "Rempart du dragon",
+    "type": "Écu draconique",
+    "form": "dragonshield",
+    "material": "Acier noir, émail rouge et or",
+    "metal": "darksteel",
+    "cloth": "#662b30",
+    "leather": "#352123",
+    "motif": "dragon",
+    "variant": 12,
+    "curse": {
+      "key": "JAM",
+      "stat": "Jambes",
+      "value": 45
+    }
+  },
+  {
+    "id": "atelier-dragon-legs",
+    "setId": "atelier-dragon",
+    "setName": "Serment du dragon",
+    "tier": 3,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "legs",
+    "title": "Grèves du souffle rouge",
+    "type": "Grèves de guerre",
+    "form": "dragonboots",
+    "material": "Acier noir et cuir rouge",
+    "metal": "darksteel",
+    "cloth": "#662b30",
+    "leather": "#352123",
+    "motif": "dragon",
+    "variant": 12
+  },
+  {
+    "id": "atelier-rose-weapon",
+    "setId": "atelier-rose",
+    "setName": "Cour de la Rose",
+    "tier": 3,
+    "damageTypes": [
+      "RANGED",
+      "ARCANIST"
+    ],
+    "school": "RANGER",
+    "slot": "weapon",
+    "title": "Arc de la Rose éternelle",
+    "type": "Arc enchanté",
+    "form": "rosebow",
+    "material": "If noir et argent",
+    "metal": "silver",
+    "cloth": "#60384c",
+    "leather": "#382c38",
+    "motif": "rose",
+    "variant": 13
+  },
+  {
+    "id": "atelier-rose-chest",
+    "setId": "atelier-rose",
+    "setName": "Cour de la Rose",
+    "tier": 3,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "chest",
+    "title": "Manteau des ronces",
+    "type": "Manteau elfique",
+    "form": "leafmantle",
+    "material": "Velours pourpre et argent",
+    "metal": "silver",
+    "cloth": "#60384c",
+    "leather": "#382c38",
+    "motif": "rose",
+    "variant": 13
+  },
+  {
+    "id": "atelier-rose-guard",
+    "setId": "atelier-rose",
+    "setName": "Cour de la Rose",
+    "tier": 3,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "guard",
+    "title": "Targe du jardin secret",
+    "type": "Targe enchantée",
+    "form": "roseshield",
+    "material": "Bois sombre, argent et grenat",
+    "metal": "silver",
+    "cloth": "#60384c",
+    "leather": "#382c38",
+    "motif": "rose",
+    "variant": 13
+  },
+  {
+    "id": "atelier-rose-legs",
+    "setId": "atelier-rose",
+    "setName": "Cour de la Rose",
+    "tier": 3,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "legs",
+    "title": "Bottes de la danse des épines",
+    "type": "Bottes elfiques",
+    "form": "elfboots",
+    "material": "Cuir pourpre et argent",
+    "metal": "silver",
+    "cloth": "#60384c",
+    "leather": "#382c38",
+    "motif": "rose",
+    "variant": 13
+  },
+  {
+    "id": "atelier-ombre-weapon",
+    "setId": "atelier-ombre",
+    "setName": "Pacte de la treizième porte",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "weapon",
+    "title": "Lanterne des âmes errantes",
+    "type": "Lanterne rituelle",
+    "form": "lantern",
+    "material": "Argent noir et verre violet",
+    "metal": "darksteel",
+    "cloth": "#3f3152",
+    "leather": "#211c2c",
+    "motif": "moon",
+    "variant": 14
+  },
+  {
+    "id": "atelier-ombre-chest",
+    "setId": "atelier-ombre",
+    "setName": "Pacte de la treizième porte",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "chest",
+    "title": "Robe du pacte silencieux",
+    "type": "Robe rituelle",
+    "form": "hoodrobe",
+    "material": "Velours noir et améthyste",
+    "metal": "darksteel",
+    "cloth": "#3f3152",
+    "leather": "#211c2c",
+    "motif": "moon",
+    "variant": 14
+  },
+  {
+    "id": "atelier-ombre-guard",
+    "setId": "atelier-ombre",
+    "setName": "Pacte de la treizième porte",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "guard",
+    "title": "Codex des portes closes",
+    "type": "Codex protecteur",
+    "form": "chainedbook",
+    "material": "Cuir noir, argent et améthyste",
+    "metal": "darksteel",
+    "cloth": "#3f3152",
+    "leather": "#211c2c",
+    "motif": "moon",
+    "variant": 14,
+    "curse": {
+      "key": "JAM",
+      "stat": "Jambes",
+      "value": 45
+    }
+  },
+  {
+    "id": "atelier-ombre-legs",
+    "setId": "atelier-ombre",
+    "setName": "Pacte de la treizième porte",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "legs",
+    "title": "Bottes des ombres liées",
+    "type": "Bottes lacées",
+    "form": "laceboots",
+    "material": "Cuir noir et argent",
+    "metal": "darksteel",
+    "cloth": "#3f3152",
+    "leather": "#211c2c",
+    "motif": "moon",
+    "variant": 14
+  },
+  {
+    "id": "atelier-seraphin-weapon",
+    "setId": "atelier-seraphin",
+    "setName": "Ailes du sanctuaire",
+    "tier": 3,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "weapon",
+    "title": "Sceptre des sept aurores",
+    "type": "Sceptre sacré",
+    "form": "sunstaff",
+    "material": "Or, nacre et opale",
+    "metal": "gold",
+    "cloth": "#cabfa3",
+    "leather": "#8b6948",
+    "motif": "feather",
+    "variant": 15
+  },
+  {
+    "id": "atelier-seraphin-chest",
+    "setId": "atelier-seraphin",
+    "setName": "Ailes du sanctuaire",
+    "tier": 3,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "chest",
+    "title": "Chasuble séraphique",
+    "type": "Chasuble",
+    "form": "seraphrobe",
+    "material": "Brocart ivoire et fil d’or",
+    "metal": "gold",
+    "cloth": "#cabfa3",
+    "leather": "#8b6948",
+    "motif": "feather",
+    "variant": 15
+  },
+  {
+    "id": "atelier-seraphin-guard",
+    "setId": "atelier-seraphin",
+    "setName": "Ailes du sanctuaire",
+    "tier": 3,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "guard",
+    "title": "Reliquaire aux sept ailes",
+    "type": "Reliquaire protecteur",
+    "form": "wingrelic",
+    "material": "Or, nacre et cristal",
+    "metal": "gold",
+    "cloth": "#cabfa3",
+    "leather": "#8b6948",
+    "motif": "feather",
+    "variant": 15
+  },
+  {
+    "id": "atelier-seraphin-legs",
+    "setId": "atelier-seraphin",
+    "setName": "Ailes du sanctuaire",
+    "tier": 3,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "legs",
+    "title": "Sandales du jardin blanc",
+    "type": "Sandales sacrées",
+    "form": "wingboots",
+    "material": "Cuir ivoire, or et perles",
+    "metal": "gold",
+    "cloth": "#cabfa3",
+    "leather": "#8b6948",
+    "motif": "feather",
+    "variant": 15
+  },
+  {
+    "id": "atelier-griffon-weapon",
+    "setId": "atelier-griffon",
+    "setName": "Griffon royal",
+    "tier": 4,
+    "damageTypes": [
+      "MELEE",
+      "DIVINE"
+    ],
+    "school": "WARRIOR",
+    "slot": "weapon",
+    "title": "Le Jugement du griffon",
+    "type": "Espadon",
+    "form": "greatsword",
+    "material": "Acier damassé, or et grenat",
+    "metal": "steel",
+    "cloth": "#4b2834",
+    "leather": "#302323",
+    "motif": "feather",
+    "variant": 16
+  },
+  {
+    "id": "atelier-griffon-chest",
+    "setId": "atelier-griffon",
+    "setName": "Griffon royal",
+    "tier": 4,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "chest",
+    "title": "La Cuirasse des cent rois",
+    "type": "Armure royale",
+    "form": "royalplate",
+    "material": "Acier, velours rouge et or",
+    "metal": "steel",
+    "cloth": "#4b2834",
+    "leather": "#302323",
+    "motif": "feather",
+    "variant": 16
+  },
+  {
+    "id": "atelier-griffon-guard",
+    "setId": "atelier-griffon",
+    "setName": "Griffon royal",
+    "tier": 4,
+    "damageTypes": [
+      "MELEE",
+      "DIVINE"
+    ],
+    "school": "WARRIOR",
+    "slot": "guard",
+    "title": "Le Rempart des rois",
+    "type": "Pavois héraldique",
+    "form": "royalshield",
+    "material": "Acier, émail rouge et or",
+    "metal": "steel",
+    "cloth": "#4b2834",
+    "leather": "#302323",
+    "motif": "feather",
+    "variant": 16
+  },
+  {
+    "id": "atelier-griffon-legs",
+    "setId": "atelier-griffon",
+    "setName": "Griffon royal",
+    "tier": 4,
+    "damageTypes": [
+      "MELEE"
+    ],
+    "school": "WARRIOR",
+    "slot": "legs",
+    "title": "La Marche des cataphractes",
+    "type": "Grèves articulées",
+    "form": "royalboots",
+    "material": "Acier, velours et or",
+    "metal": "steel",
+    "cloth": "#4b2834",
+    "leather": "#302323",
+    "motif": "feather",
+    "variant": 16
+  },
+  {
+    "id": "atelier-sylve-weapon",
+    "setId": "atelier-sylve",
+    "setName": "Couronne de la forêt",
+    "tier": 4,
+    "damageTypes": [
+      "RANGED",
+      "ARCANIST"
+    ],
+    "school": "RANGER",
+    "slot": "weapon",
+    "title": "La Branche du premier arbre",
+    "type": "Grand arc sylvestre",
+    "form": "antlerbow",
+    "material": "Bois millénaire, jade et bronze",
+    "metal": "bronze",
+    "cloth": "#36584b",
+    "leather": "#3e3527",
+    "motif": "antler",
+    "variant": 17
+  },
+  {
+    "id": "atelier-sylve-chest",
+    "setId": "atelier-sylve",
+    "setName": "Couronne de la forêt",
+    "tier": 4,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "chest",
+    "title": "La Peau de la forêt ancienne",
+    "type": "Armure sylvestre",
+    "form": "drakescale",
+    "material": "Écailles vertes, bronze et jade",
+    "metal": "bronze",
+    "cloth": "#36584b",
+    "leather": "#3e3527",
+    "motif": "antler",
+    "variant": 17
+  },
+  {
+    "id": "atelier-sylve-guard",
+    "setId": "atelier-sylve",
+    "setName": "Couronne de la forêt",
+    "tier": 4,
+    "damageTypes": [
+      "RANGED",
+      "ARCANIST"
+    ],
+    "school": "RANGER",
+    "slot": "guard",
+    "title": "Le Gardien des racines",
+    "type": "Grand bouclier sylvestre",
+    "form": "antlershield",
+    "material": "Bois pétrifié, bronze et jade",
+    "metal": "bronze",
+    "cloth": "#36584b",
+    "leather": "#3e3527",
+    "motif": "antler",
+    "variant": 17
+  },
+  {
+    "id": "atelier-sylve-legs",
+    "setId": "atelier-sylve",
+    "setName": "Couronne de la forêt",
+    "tier": 4,
+    "damageTypes": [
+      "RANGED"
+    ],
+    "school": "RANGER",
+    "slot": "legs",
+    "title": "La Course du lynx royal",
+    "type": "Bottes de chasse",
+    "form": "lynxboots",
+    "material": "Cuir, fourrure et bronze",
+    "metal": "bronze",
+    "cloth": "#36584b",
+    "leather": "#3e3527",
+    "motif": "antler",
+    "variant": 17
+  },
+  {
+    "id": "atelier-astral-weapon",
+    "setId": "atelier-astral",
+    "setName": "Cartographes des étoiles",
+    "tier": 4,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "weapon",
+    "title": "La Veille de l’astronome",
+    "type": "Bâton astral",
+    "form": "astralstaff",
+    "material": "Ébène, argent et cristal bleu",
+    "metal": "silver",
+    "cloth": "#293650",
+    "leather": "#24273a",
+    "motif": "star",
+    "variant": 18
+  },
+  {
+    "id": "atelier-astral-chest",
+    "setId": "atelier-astral",
+    "setName": "Cartographes des étoiles",
+    "tier": 4,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "chest",
+    "title": "La Nuit aux mille étoiles",
+    "type": "Robe d’astromancien",
+    "form": "astralrobe",
+    "material": "Velours indigo et argent",
+    "metal": "silver",
+    "cloth": "#293650",
+    "leather": "#24273a",
+    "motif": "star",
+    "variant": 18,
+    "curse": {
+      "key": "DOS",
+      "stat": "Dos",
+      "value": 60
+    }
+  },
+  {
+    "id": "atelier-astral-guard",
+    "setId": "atelier-astral",
+    "setName": "Cartographes des étoiles",
+    "tier": 4,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "guard",
+    "title": "L’Iris des neuf mondes",
+    "type": "Astrolabe de garde",
+    "form": "astrolabe",
+    "material": "Argent, or et saphir",
+    "metal": "silver",
+    "cloth": "#293650",
+    "leather": "#24273a",
+    "motif": "star",
+    "variant": 18
+  },
+  {
+    "id": "atelier-astral-legs",
+    "setId": "atelier-astral",
+    "setName": "Cartographes des étoiles",
+    "tier": 4,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "legs",
+    "title": "Les Pas entre les mondes",
+    "type": "Bottes astrales",
+    "form": "astralboots",
+    "material": "Cuir indigo, argent et saphir",
+    "metal": "silver",
+    "cloth": "#293650",
+    "leather": "#24273a",
+    "motif": "star",
+    "variant": 18
+  },
+  {
+    "id": "atelier-aurore-weapon",
+    "setId": "atelier-aurore",
+    "setName": "Première aurore",
+    "tier": 4,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "weapon",
+    "title": "Le Chant du premier soleil",
+    "type": "Encensoir",
+    "form": "censer",
+    "material": "Or, nacre et opale",
+    "metal": "gold",
+    "cloth": "#c9bd9d",
+    "leather": "#70553c",
+    "motif": "sun",
+    "variant": 19
+  },
+  {
+    "id": "atelier-aurore-chest",
+    "setId": "atelier-aurore",
+    "setName": "Première aurore",
+    "tier": 4,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "chest",
+    "title": "La Chasuble de l’origine",
+    "type": "Chasuble sacrée",
+    "form": "sunrobe",
+    "material": "Soie ivoire, or et perles",
+    "metal": "gold",
+    "cloth": "#c9bd9d",
+    "leather": "#70553c",
+    "motif": "sun",
+    "variant": 19
+  },
+  {
+    "id": "atelier-aurore-guard",
+    "setId": "atelier-aurore",
+    "setName": "Première aurore",
+    "tier": 4,
+    "damageTypes": [
+      "DIVINE"
+    ],
+    "school": "PRIEST",
+    "slot": "guard",
+    "title": "Le Triptyque de l’aurore",
+    "type": "Reliquaire articulé",
+    "form": "triptych",
+    "material": "Or, nacre et cristal",
+    "metal": "gold",
+    "cloth": "#c9bd9d",
+    "leather": "#70553c",
+    "motif": "sun",
+    "variant": 19
+  },
+  {
+    "id": "atelier-aurore-legs",
+    "setId": "atelier-aurore",
+    "setName": "Première aurore",
+    "tier": 4,
+    "damageTypes": [
+      "DIVINE",
+      "MELEE"
+    ],
+    "school": "PRIEST",
+    "slot": "legs",
+    "title": "Les Pas du soleil levant",
+    "type": "Solerets sacrés",
+    "form": "sunboots",
+    "material": "Acier ivoire et or",
+    "metal": "gold",
+    "cloth": "#c9bd9d",
+    "leather": "#70553c",
+    "motif": "sun",
+    "variant": 19
+  },
+  {
+    "id": "atelier-menestrel-weapon",
+    "setId": "atelier-menestrel",
+    "setName": "Dernier chant",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "weapon",
+    "title": "Luth du dernier souffle",
+    "type": "Luth enchanté",
+    "form": "lute",
+    "material": "Noyer, argent et nacre",
+    "metal": "silver",
+    "cloth": "#3f6469",
+    "leather": "#4b3027",
+    "motif": "lyre",
+    "variant": 20
+  },
+  {
+    "id": "atelier-menestrel-chest",
+    "setId": "atelier-menestrel",
+    "setName": "Dernier chant",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "chest",
+    "title": "Pourpoint des ballades",
+    "type": "Pourpoint de barde",
+    "form": "doublet",
+    "material": "Velours bleu et cuir",
+    "metal": "silver",
+    "cloth": "#3f6469",
+    "leather": "#4b3027",
+    "motif": "lyre",
+    "variant": 20
+  },
+  {
+    "id": "atelier-menestrel-guard",
+    "setId": "atelier-menestrel",
+    "setName": "Dernier chant",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "guard",
+    "title": "Le Livre des échos",
+    "type": "Recueil protecteur",
+    "form": "musicbook",
+    "material": "Cuir, argent et nacre",
+    "metal": "silver",
+    "cloth": "#3f6469",
+    "leather": "#4b3027",
+    "motif": "lyre",
+    "variant": 20
+  },
+  {
+    "id": "atelier-menestrel-legs",
+    "setId": "atelier-menestrel",
+    "setName": "Dernier chant",
+    "tier": 3,
+    "damageTypes": [
+      "ARCANIST"
+    ],
+    "school": "MAGE",
+    "slot": "legs",
+    "title": "Bottes du troubadour",
+    "type": "Bottes souples",
+    "form": "bardboots",
+    "material": "Cuir, velours et argent",
+    "metal": "silver",
+    "cloth": "#3f6469",
+    "leather": "#4b3027",
+    "motif": "lyre",
+    "variant": 20
+  }
+]

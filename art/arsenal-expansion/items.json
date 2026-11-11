@@ -1,0 +1,4069 @@
+{
+  "exp-bastion-weapon": {
+    "form": "partisan",
+    "cut": 5,
+    "lining": "umber",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Pertuisane du bastion",
+    "type": "Pertuisane",
+    "material": "Acier, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 0,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bastion",
+        "name": "Garde du bastion"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bastion-chest": {
+    "form": "gambeson",
+    "cut": 6,
+    "lining": "umber",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Gambison des remparts",
+    "type": "Gambison",
+    "material": "Acier, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 0,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bastion",
+        "name": "Garde du bastion"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bastion-guard": {
+    "form": "scutum",
+    "cut": 7,
+    "lining": "umber",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Scutum du pont de pierre",
+    "type": "Scutum",
+    "material": "Acier, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 0,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bastion",
+        "name": "Garde du bastion"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bastion-legs": {
+    "form": "tallcavalry",
+    "cut": 8,
+    "lining": "umber",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Bottes de la ronde",
+    "type": "Bottes de cavalerie",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 0,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bastion",
+        "name": "Garde du bastion"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bouleau-weapon": {
+    "form": "huntingcrossbow",
+    "cut": 2,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Arbalète du sous-bois",
+    "type": "Arbalète de chasse",
+    "material": "If, acier et chanvre",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 0,
+      "slot": "weapon",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bouleau",
+        "name": "Sentiers de bouleau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bouleau-chest": {
+    "form": "leathercoat",
+    "cut": 3,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Pourpoint du veneur",
+    "type": "Pourpoint de cuir",
+    "material": "Acier, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 0,
+      "slot": "chest",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bouleau",
+        "name": "Sentiers de bouleau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bouleau-guard": {
+    "form": "targe",
+    "cut": 4,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Targe des lisières",
+    "type": "Targe",
+    "material": "Acier, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 0,
+      "slot": "guard",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bouleau",
+        "name": "Sentiers de bouleau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bouleau-legs": {
+    "form": "foldedboots",
+    "cut": 5,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Bottes du sentier clair",
+    "type": "Bottes à revers",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 0,
+      "slot": "legs",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bouleau",
+        "name": "Sentiers de bouleau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-copiste-weapon": {
+    "form": "wand",
+    "cut": 3,
+    "lining": "navy",
+    "motif": "star",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Baguette du copiste",
+    "type": "Baguette",
+    "material": "Buis et quartz",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 0,
+      "slot": "weapon",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-copiste",
+        "name": "Atelier du copiste"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-copiste-chest": {
+    "form": "tunic",
+    "cut": 4,
+    "lining": "navy",
+    "motif": "star",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Tunique des encres bleues",
+    "type": "Tunique",
+    "material": "Laine et lin et agrafe de bronze",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 0,
+      "slot": "chest",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-copiste",
+        "name": "Atelier du copiste"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-copiste-guard": {
+    "form": "scrollward",
+    "cut": 5,
+    "lining": "navy",
+    "motif": "star",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Parchemin de sauvegarde",
+    "type": "Parchemin de protection",
+    "material": "Parchemin, argent et encre runique",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 0,
+      "slot": "guard",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-copiste",
+        "name": "Atelier du copiste"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-copiste-legs": {
+    "form": "slippers",
+    "cut": 6,
+    "lining": "navy",
+    "motif": "star",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Souliers du scriptorium",
+    "type": "Souliers",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 0,
+      "slot": "legs",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-copiste",
+        "name": "Atelier du copiste"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hospitalier-weapon": {
+    "form": "bell",
+    "cut": 0,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "bronze",
+    "angle": -8,
+    "name": "Cloche du dispensaire",
+    "type": "Cloche rituelle",
+    "material": "Bronze, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 0,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hospitalier",
+        "name": "Hospice de la source"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hospitalier-chest": {
+    "form": "alb",
+    "cut": 1,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Aube des mains ouvertes",
+    "type": "Aube",
+    "material": "Laine et lin et agrafe de bronze",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 0,
+      "slot": "chest",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hospitalier",
+        "name": "Hospice de la source"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hospitalier-guard": {
+    "form": "rosary",
+    "cut": 2,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Chapelet de la source",
+    "type": "Chapelet",
+    "material": "Bronze, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 0,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hospitalier",
+        "name": "Hospice de la source"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hospitalier-legs": {
+    "form": "pilgrimshoes",
+    "cut": 3,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Souliers de l’hospitalier",
+    "type": "Souliers de pèlerin",
+    "material": "Bronze, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 0,
+      "slot": "legs",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hospitalier",
+        "name": "Hospice de la source"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronde-weapon": {
+    "form": "maul",
+    "cut": 5,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Maillet des créneaux",
+    "type": "Maillet de guerre",
+    "material": "Acier, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 0,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronde",
+        "name": "Ronde des créneaux"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronde-chest": {
+    "form": "brigandine",
+    "cut": 6,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Brigandine du rempart",
+    "type": "Brigandine",
+    "material": "Acier, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 0,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronde",
+        "name": "Ronde des créneaux"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronde-guard": {
+    "form": "heater",
+    "cut": 7,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Écu de la ronde noire",
+    "type": "Écu",
+    "material": "Acier, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 0,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronde",
+        "name": "Ronde des créneaux"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronde-legs": {
+    "form": "greaves",
+    "cut": 8,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Grèves du guet nocturne",
+    "type": "Grèves",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 0,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronde",
+        "name": "Ronde des créneaux"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chantre-weapon": {
+    "form": "lyre",
+    "cut": 3,
+    "lining": "ochre",
+    "motif": "knot",
+    "metal": "bronze",
+    "angle": -8,
+    "name": "Lyre du chemin creux",
+    "type": "Lyre",
+    "material": "Érable, cordes et bronze",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 0,
+      "slot": "weapon",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chantre",
+        "name": "Chantres des chemins"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chantre-chest": {
+    "form": "coat",
+    "cut": 4,
+    "lining": "ochre",
+    "motif": "knot",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Habit du chantre",
+    "type": "Habit",
+    "material": "Laine et lin et agrafe de bronze",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 0,
+      "slot": "chest",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chantre",
+        "name": "Chantres des chemins"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chantre-guard": {
+    "form": "amulet",
+    "cut": 5,
+    "lining": "ochre",
+    "motif": "knot",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Médaillon de résonance",
+    "type": "Médaillon",
+    "material": "Bronze, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 0,
+      "slot": "guard",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chantre",
+        "name": "Chantres des chemins"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chantre-legs": {
+    "form": "laceboots",
+    "cut": 6,
+    "lining": "ochre",
+    "motif": "knot",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Bottes des longues veillées",
+    "type": "Bottes lacées",
+    "material": "Bronze, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 0,
+      "slot": "legs",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chantre",
+        "name": "Chantres des chemins"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-argile-weapon": {
+    "form": "glaive",
+    "cut": 7,
+    "lining": "oxblood",
+    "motif": "tower",
+    "metal": "bronze",
+    "angle": -8,
+    "name": "Vouge des terres rouges",
+    "type": "Vouge",
+    "material": "Bronze, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 1,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-argile",
+        "name": "Sentinelles d’argile"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-argile-chest": {
+    "form": "splintcoat",
+    "cut": 8,
+    "lining": "oxblood",
+    "motif": "tower",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Armure des dalles rouges",
+    "type": "Armure à éclisses",
+    "material": "Bronze, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 1,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-argile",
+        "name": "Sentinelles d’argile"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-argile-guard": {
+    "form": "pavise",
+    "cut": 0,
+    "lining": "oxblood",
+    "motif": "tower",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Pavois des portes d’argile",
+    "type": "Pavois",
+    "material": "Bronze, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 1,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-argile",
+        "name": "Sentinelles d’argile"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-argile-legs": {
+    "form": "tallcavalry",
+    "cut": 1,
+    "lining": "oxblood",
+    "motif": "tower",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Bottes du cavalier d’argile",
+    "type": "Bottes de cavalerie",
+    "material": "Bronze, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 1,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-argile",
+        "name": "Sentinelles d’argile"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bruyere-weapon": {
+    "form": "longbow",
+    "cut": 1,
+    "lining": "plum",
+    "motif": "rose",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Arc des hautes bruyères",
+    "type": "Arc long",
+    "material": "If et corde de lin",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 1,
+      "slot": "weapon",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bruyere",
+        "name": "Veilleurs de bruyère"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bruyere-chest": {
+    "form": "forestcloak",
+    "cut": 2,
+    "lining": "plum",
+    "motif": "rose",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Cape des chemins mauves",
+    "type": "Cape de forêt",
+    "material": "Laine et lin et agrafe de bronze",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 1,
+      "slot": "chest",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bruyere",
+        "name": "Veilleurs de bruyère"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bruyere-guard": {
+    "form": "bracers",
+    "cut": 3,
+    "lining": "plum",
+    "motif": "rose",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Brassards de la futaie",
+    "type": "Brassards",
+    "material": "Acier, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 1,
+      "slot": "guard",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bruyere",
+        "name": "Veilleurs de bruyère"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-bruyere-legs": {
+    "form": "foldedboots",
+    "cut": 4,
+    "lining": "plum",
+    "motif": "rose",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Bottes de la lande",
+    "type": "Bottes à revers",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 1,
+      "slot": "legs",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-bruyere",
+        "name": "Veilleurs de bruyère"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astres-weapon": {
+    "form": "lanternstaff",
+    "cut": 1,
+    "lining": "indigo",
+    "motif": "moon",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Bâton de la veille bleue",
+    "type": "Bâton-lanterne",
+    "material": "Frêne, laiton et cristal",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 1,
+      "slot": "weapon",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astres",
+        "name": "Veilleurs de l’observatoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astres-chest": {
+    "form": "starrobe",
+    "cut": 2,
+    "lining": "indigo",
+    "motif": "moon",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Robe de l’observatoire",
+    "type": "Robe astrale",
+    "material": "Laine et lin et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 1,
+      "slot": "chest",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astres",
+        "name": "Veilleurs de l’observatoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astres-guard": {
+    "form": "spellcage",
+    "cut": 3,
+    "lining": "indigo",
+    "motif": "moon",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Cage du feu follet",
+    "type": "Focaliseur de garde",
+    "material": "Acier et argent, cristal et émaux",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 1,
+      "slot": "guard",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astres",
+        "name": "Veilleurs de l’observatoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astres-legs": {
+    "form": "runecuffs",
+    "cut": 4,
+    "lining": "indigo",
+    "motif": "moon",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Bottines de la carte céleste",
+    "type": "Bottines runiques",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 1,
+      "slot": "legs",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astres",
+        "name": "Veilleurs de l’observatoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ambre-weapon": {
+    "form": "sunmace",
+    "cut": 6,
+    "lining": "ochre",
+    "motif": "sun",
+    "metal": "bronze",
+    "angle": -8,
+    "name": "Masse de la chapelle",
+    "type": "Masse consacrée",
+    "material": "Bronze, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 1,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ambre",
+        "name": "Chapelle d’ambre"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ambre-chest": {
+    "form": "chasuble",
+    "cut": 7,
+    "lining": "ochre",
+    "motif": "sun",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Chasuble des cierges",
+    "type": "Chasuble",
+    "material": "Laine et lin et agrafe de bronze",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 1,
+      "slot": "chest",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ambre",
+        "name": "Chapelle d’ambre"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ambre-guard": {
+    "form": "sunshield",
+    "cut": 8,
+    "lining": "ochre",
+    "motif": "sun",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Disque du seuil sacré",
+    "type": "Disque consacré",
+    "material": "Bronze, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 1,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ambre",
+        "name": "Chapelle d’ambre"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ambre-legs": {
+    "form": "pilgrimboots",
+    "cut": 0,
+    "lining": "ochre",
+    "motif": "sun",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Bottes de l’officiant",
+    "type": "Bottes de procession",
+    "material": "Bronze, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 1,
+      "slot": "legs",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ambre",
+        "name": "Chapelle d’ambre"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-sanglier-weapon": {
+    "form": "doubleaxe",
+    "cut": 7,
+    "lining": "moss",
+    "motif": "boar",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Hache du Sanglier vert",
+    "type": "Hache à deux tranchants",
+    "material": "Acier, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 1,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-sanglier",
+        "name": "Compagnie du Sanglier vert"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-sanglier-chest": {
+    "form": "mail",
+    "cut": 8,
+    "lining": "moss",
+    "motif": "boar",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Haubert des chênes",
+    "type": "Haubert",
+    "material": "Acier, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 1,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-sanglier",
+        "name": "Compagnie du Sanglier vert"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-sanglier-guard": {
+    "form": "hornshield",
+    "cut": 0,
+    "lining": "moss",
+    "motif": "boar",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Écu du sanglier de fer",
+    "type": "Écu à défenses",
+    "material": "Acier, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 1,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-sanglier",
+        "name": "Compagnie du Sanglier vert"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-sanglier-legs": {
+    "form": "scalegreaves",
+    "cut": 1,
+    "lining": "moss",
+    "motif": "boar",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Grèves du gué moussu",
+    "type": "Grèves à écailles",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 1,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-sanglier",
+        "name": "Compagnie du Sanglier vert"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-saltimbanque-weapon": {
+    "form": "viol",
+    "cut": 8,
+    "lining": "teal",
+    "motif": "wave",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Vièle des vieilles halles",
+    "type": "Vièle",
+    "material": "Érable, cordes et crin",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 1,
+      "slot": "weapon",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-saltimbanque",
+        "name": "Échos des vieilles halles"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-saltimbanque-chest": {
+    "form": "leathercoat",
+    "cut": 0,
+    "lining": "teal",
+    "motif": "wave",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Pourpoint du conteur",
+    "type": "Pourpoint de cuir",
+    "material": "Acier et argent, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 1,
+      "slot": "chest",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-saltimbanque",
+        "name": "Échos des vieilles halles"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-saltimbanque-guard": {
+    "form": "book",
+    "cut": 1,
+    "lining": "teal",
+    "motif": "wave",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Recueil des voix anciennes",
+    "type": "Grimoire",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 1,
+      "slot": "guard",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-saltimbanque",
+        "name": "Échos des vieilles halles"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-saltimbanque-legs": {
+    "form": "slippers",
+    "cut": 2,
+    "lining": "teal",
+    "motif": "wave",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Souliers du refrain",
+    "type": "Souliers",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 1,
+      "slot": "legs",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-saltimbanque",
+        "name": "Échos des vieilles halles"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chene-weapon": {
+    "form": "partisan",
+    "cut": 2,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": -8,
+    "name": "Pertuisane du Chêne",
+    "type": "Pertuisane",
+    "material": "Bronze, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chene",
+        "name": "Serment du Chêne"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chene-chest": {
+    "form": "scalehauberk",
+    "cut": 3,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Haubert des feuilles de bronze",
+    "type": "Haubert à écailles",
+    "material": "Bronze, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chene",
+        "name": "Serment du Chêne"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chene-guard": {
+    "form": "leafshield",
+    "cut": 4,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Égide de l’écorce vive",
+    "type": "Bouclier feuille",
+    "material": "Bronze, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chene",
+        "name": "Serment du Chêne"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-chene-legs": {
+    "form": "drakegreaves",
+    "cut": 5,
+    "lining": "moss",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Grèves des racines de fer",
+    "type": "Grèves à écailles",
+    "material": "Bronze, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-chene",
+        "name": "Serment du Chêne"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corail-weapon": {
+    "form": "harpoon",
+    "cut": 4,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Harpon des trois récifs",
+    "type": "Harpon",
+    "material": "Acier et argent, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corail",
+        "name": "Vigies des récifs"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corail-chest": {
+    "form": "leathercoat",
+    "cut": 5,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Veste des vigies",
+    "type": "Pourpoint de cuir",
+    "material": "Acier et argent, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corail",
+        "name": "Vigies des récifs"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corail-guard": {
+    "form": "shell",
+    "cut": 6,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Carapace des marées",
+    "type": "Carapace",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corail",
+        "name": "Vigies des récifs"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corail-legs": {
+    "form": "tideboots",
+    "cut": 7,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Bottes des roches salées",
+    "type": "Bottes des marées",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corail",
+        "name": "Vigies des récifs"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cendre-weapon": {
+    "form": "lanternstaff",
+    "cut": 4,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": -8,
+    "name": "Bâton des braises grises",
+    "type": "Bâton-lanterne",
+    "material": "Frêne, laiton et cristal",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cendre",
+        "name": "Veilleurs des cendres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cendre-chest": {
+    "form": "hood",
+    "cut": 5,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": 0,
+    "name": "Capuche du veilleur cendré",
+    "type": "Capuche",
+    "material": "Laine et lin et agrafe de bronze",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cendre",
+        "name": "Veilleurs des cendres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cendre-guard": {
+    "form": "scrollward",
+    "cut": 6,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": 0,
+    "name": "Sceau de la cendre froide",
+    "type": "Parchemin de protection",
+    "material": "Parchemin, argent et encre runique",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cendre",
+        "name": "Veilleurs des cendres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cendre-legs": {
+    "form": "runecuffs",
+    "cut": 7,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": 0,
+    "name": "Bottines des runes grises",
+    "type": "Bottines runiques",
+    "material": "Acier noir et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cendre",
+        "name": "Veilleurs des cendres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ivoire-weapon": {
+    "form": "horn",
+    "cut": 6,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Cor de la procession",
+    "type": "Cor rituel",
+    "material": "Corne, bronze et nacre",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ivoire",
+        "name": "Procession d’ivoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ivoire-chest": {
+    "form": "ceremonialcape",
+    "cut": 7,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Mantelet des lys blancs",
+    "type": "Manteau de cérémonie",
+    "material": "Laine et lin et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ivoire",
+        "name": "Procession d’ivoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ivoire-guard": {
+    "form": "reliquary",
+    "cut": 8,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Reliquaire des trois vœux",
+    "type": "Reliquaire",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ivoire",
+        "name": "Procession d’ivoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ivoire-legs": {
+    "form": "pilgrimshoes",
+    "cut": 0,
+    "lining": "ivory",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Souliers des marches sacrées",
+    "type": "Souliers de pèlerin",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ivoire",
+        "name": "Procession d’ivoire"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-faucon-weapon": {
+    "form": "huntingcrossbow",
+    "cut": 6,
+    "lining": "navy",
+    "motif": "feather",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Arbalète du col bleu",
+    "type": "Arbalète de chasse",
+    "material": "If, acier et chanvre",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-faucon",
+        "name": "Faucons du col"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-faucon-chest": {
+    "form": "scoutvest",
+    "cut": 7,
+    "lining": "navy",
+    "motif": "feather",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Gilet des falaises",
+    "type": "Gilet de piste",
+    "material": "Acier, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-faucon",
+        "name": "Faucons du col"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-faucon-guard": {
+    "form": "kite",
+    "cut": 8,
+    "lining": "navy",
+    "motif": "feather",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Écu des grands vents",
+    "type": "Écu en amande",
+    "material": "Acier, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-faucon",
+        "name": "Faucons du col"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-faucon-legs": {
+    "form": "ridinggreaves",
+    "cut": 0,
+    "lining": "navy",
+    "motif": "feather",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Grèves des sentiers hauts",
+    "type": "Grèves de cavalerie",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-faucon",
+        "name": "Faucons du col"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-voute-weapon": {
+    "form": "maul",
+    "cut": 5,
+    "lining": "plum",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": -8,
+    "name": "Maillet des piliers",
+    "type": "Maillet de guerre",
+    "material": "Acier, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-voute",
+        "name": "Gardiens de la Voûte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-voute-chest": {
+    "form": "splintcoat",
+    "cut": 6,
+    "lining": "plum",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Armure de la Voûte",
+    "type": "Armure à éclisses",
+    "material": "Acier, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-voute",
+        "name": "Gardiens de la Voûte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-voute-guard": {
+    "form": "targe",
+    "cut": 7,
+    "lining": "plum",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Targe des neuf arches",
+    "type": "Targe",
+    "material": "Acier, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-voute",
+        "name": "Gardiens de la Voûte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-voute-legs": {
+    "form": "royalgreaves",
+    "cut": 8,
+    "lining": "plum",
+    "motif": "tower",
+    "metal": "steel",
+    "angle": 0,
+    "name": "Grèves des marches profondes",
+    "type": "Grèves héraldiques",
+    "material": "Acier, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-voute",
+        "name": "Gardiens de la Voûte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cristal-weapon": {
+    "form": "harp",
+    "cut": 7,
+    "lining": "teal",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Harpe des stalactites",
+    "type": "Harpe",
+    "material": "If, cordes et argent",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cristal",
+        "name": "Cercle du cristal pâle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cristal-chest": {
+    "form": "starrobe",
+    "cut": 8,
+    "lining": "teal",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Robe du cristal pâle",
+    "type": "Robe astrale",
+    "material": "Laine et lin et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cristal",
+        "name": "Cercle du cristal pâle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cristal-guard": {
+    "form": "prism",
+    "cut": 0,
+    "lining": "teal",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Prisme des échos gelés",
+    "type": "Prisme",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cristal",
+        "name": "Cercle du cristal pâle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cristal-legs": {
+    "form": "orbitalboots",
+    "cut": 1,
+    "lining": "teal",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Bottes des lignes de givre",
+    "type": "Bottes orbitales",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cristal",
+        "name": "Cercle du cristal pâle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-vignes-weapon": {
+    "form": "scepter",
+    "cut": 4,
+    "lining": "oxblood",
+    "motif": "rose",
+    "metal": "bronze",
+    "angle": -8,
+    "name": "Sceptre des vendanges",
+    "type": "Sceptre",
+    "material": "Bronze, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 2,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-vignes",
+        "name": "Abbaye des vignes"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-vignes-chest": {
+    "form": "regalia",
+    "cut": 5,
+    "lining": "oxblood",
+    "motif": "rose",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Armure de l’abbaye des vignes",
+    "type": "Armure de cérémonie",
+    "material": "Bronze, cuir et soie brodée",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 2,
+      "slot": "chest",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-vignes",
+        "name": "Abbaye des vignes"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-vignes-guard": {
+    "form": "rosary",
+    "cut": 6,
+    "lining": "oxblood",
+    "motif": "rose",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Rosaire du jardin clos",
+    "type": "Chapelet",
+    "material": "Bronze, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 2,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-vignes",
+        "name": "Abbaye des vignes"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-vignes-legs": {
+    "form": "sandals",
+    "cut": 7,
+    "lining": "oxblood",
+    "motif": "rose",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Sandales des sept terrasses",
+    "type": "Sandales",
+    "material": "Bronze, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 2,
+      "slot": "legs",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-vignes",
+        "name": "Abbaye des vignes"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-phoenix-weapon": {
+    "form": "sunblade",
+    "cut": 7,
+    "lining": "oxblood",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": -8,
+    "name": "Aile de braise",
+    "type": "Épée consacrée",
+    "material": "Acier et or, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-phoenix",
+        "name": "Ordre du Phénix"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-phoenix-chest": {
+    "form": "regalia",
+    "cut": 8,
+    "lining": "oxblood",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Armure de la renaissance",
+    "type": "Armure de cérémonie",
+    "material": "Acier et or, cuir et soie brodée",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-phoenix",
+        "name": "Ordre du Phénix"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-phoenix-guard": {
+    "form": "phoenixshield",
+    "cut": 0,
+    "lining": "oxblood",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Égide du Phénix",
+    "type": "Bouclier du phénix",
+    "material": "Acier et or, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-phoenix",
+        "name": "Ordre du Phénix"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-phoenix-legs": {
+    "form": "sungreaves",
+    "cut": 1,
+    "lining": "oxblood",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Grèves des cendres vives",
+    "type": "Grèves solaires",
+    "material": "Acier et or, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-phoenix",
+        "name": "Ordre du Phénix"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cerf-weapon": {
+    "form": "antlerbow",
+    "cut": 2,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Ramure de lune",
+    "type": "Arc à ramures",
+    "material": "If, ramure et argent",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cerf",
+        "name": "Cerf de la lune verte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cerf-chest": {
+    "form": "ceremonialcape",
+    "cut": 3,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Manteau du Cerf vert",
+    "type": "Manteau de cérémonie",
+    "material": "Soie brodée et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cerf",
+        "name": "Cerf de la lune verte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cerf-guard": {
+    "form": "hornshield",
+    "cut": 4,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Rempart des bois éveillés",
+    "type": "Écu à ramures",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cerf",
+        "name": "Cerf de la lune verte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cerf-legs": {
+    "form": "thornboots",
+    "cut": 5,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Bottes des sentiers oubliés",
+    "type": "Bottes des ronces",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cerf",
+        "name": "Cerf de la lune verte"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-maree-weapon": {
+    "form": "lanternstaff",
+    "cut": 0,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Le Phare des étoiles",
+    "type": "Bâton-lanterne",
+    "material": "Frêne, laiton et cristal",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-maree",
+        "name": "Astronomes des marées"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-maree-chest": {
+    "form": "astralcloak",
+    "cut": 1,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Manteau des routes marines",
+    "type": "Manteau astral",
+    "material": "Soie brodée et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-maree",
+        "name": "Astronomes des marées"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-maree-guard": {
+    "form": "astrolabe",
+    "cut": 2,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Cadran des marées célestes",
+    "type": "Astrolabe",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-maree",
+        "name": "Astronomes des marées"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-maree-legs": {
+    "form": "tideboots",
+    "cut": 3,
+    "lining": "teal",
+    "motif": "anchor",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Les Pas des eaux calmes",
+    "type": "Bottes des marées",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-maree",
+        "name": "Astronomes des marées"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hiver-weapon": {
+    "form": "doubleaxe",
+    "cut": 2,
+    "lining": "ivory",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": -8,
+    "name": "Les Deux Morsures",
+    "type": "Hache à deux tranchants",
+    "material": "Acier et argent, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hiver",
+        "name": "Chevaliers de l’Hiver blanc"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hiver-chest": {
+    "form": "splintcoat",
+    "cut": 3,
+    "lining": "ivory",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Armure de l’Hiver blanc",
+    "type": "Armure à éclisses",
+    "material": "Acier et argent, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hiver",
+        "name": "Chevaliers de l’Hiver blanc"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hiver-guard": {
+    "form": "kingshield",
+    "cut": 4,
+    "lining": "ivory",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Rempart des congères",
+    "type": "Pavois royal",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hiver",
+        "name": "Chevaliers de l’Hiver blanc"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hiver-legs": {
+    "form": "furboots",
+    "cut": 5,
+    "lining": "ivory",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Bottes du serment gelé",
+    "type": "Bottes fourrées",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-hiver",
+        "name": "Chevaliers de l’Hiver blanc"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cantique-weapon": {
+    "form": "harp",
+    "cut": 3,
+    "lining": "ochre",
+    "motif": "bell",
+    "metal": "gold",
+    "angle": -8,
+    "name": "La Harpe du matin",
+    "type": "Harpe",
+    "material": "If, cordes et argent",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cantique",
+        "name": "Chœur du matin"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cantique-chest": {
+    "form": "seraphrobe",
+    "cut": 4,
+    "lining": "ochre",
+    "motif": "bell",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Habit des voix dorées",
+    "type": "Chasuble séraphique",
+    "material": "Soie brodée et fil d’or",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cantique",
+        "name": "Chœur du matin"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cantique-guard": {
+    "form": "triptych",
+    "cut": 5,
+    "lining": "ochre",
+    "motif": "bell",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Le Triptyque du chant",
+    "type": "Triptyque",
+    "material": "Acier et or, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cantique",
+        "name": "Chœur du matin"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-cantique-legs": {
+    "form": "pilgrimshoes",
+    "cut": 6,
+    "lining": "ochre",
+    "motif": "bell",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Souliers du premier cantique",
+    "type": "Souliers de pèlerin",
+    "material": "Acier et or, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-cantique",
+        "name": "Chœur du matin"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corbeau-weapon": {
+    "form": "glaive",
+    "cut": 8,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": -8,
+    "name": "L’Aile du crépuscule",
+    "type": "Vouge",
+    "material": "Acier noir et argent, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corbeau",
+        "name": "Ailes du Corbeau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corbeau-chest": {
+    "form": "scalehauberk",
+    "cut": 0,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": 0,
+    "name": "Haubert des plumes sombres",
+    "type": "Haubert à écailles",
+    "material": "Acier noir et argent, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corbeau",
+        "name": "Ailes du Corbeau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corbeau-guard": {
+    "form": "moonscutum",
+    "cut": 1,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": 0,
+    "name": "Égide de la nuit attentive",
+    "type": "Scutum lunaire",
+    "material": "Acier noir et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corbeau",
+        "name": "Ailes du Corbeau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-corbeau-legs": {
+    "form": "palegreaves",
+    "cut": 2,
+    "lining": "charcoal",
+    "motif": "raven",
+    "metal": "black",
+    "angle": 0,
+    "name": "Grèves du messager noir",
+    "type": "Grèves spectrales",
+    "material": "Acier noir et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-corbeau",
+        "name": "Ailes du Corbeau"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-lion-weapon": {
+    "form": "maul",
+    "cut": 2,
+    "lining": "ochre",
+    "motif": "lion",
+    "metal": "gold",
+    "angle": -8,
+    "name": "Le Marteau du Levant",
+    "type": "Maillet de guerre",
+    "material": "Acier et or, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-lion",
+        "name": "Lions du Levant"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-lion-chest": {
+    "form": "royallamellar",
+    "cut": 3,
+    "lining": "ochre",
+    "motif": "lion",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Lamelles de la Cour solaire",
+    "type": "Armure lamellaire",
+    "material": "Acier et or, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-lion",
+        "name": "Lions du Levant"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-lion-guard": {
+    "form": "lionshield",
+    "cut": 4,
+    "lining": "ochre",
+    "motif": "lion",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Le Lion des remparts",
+    "type": "Bouclier au lion",
+    "material": "Acier et or, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-lion",
+        "name": "Lions du Levant"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-lion-legs": {
+    "form": "royalgreaves",
+    "cut": 5,
+    "lining": "ochre",
+    "motif": "lion",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Grèves des portes d’or",
+    "type": "Grèves héraldiques",
+    "material": "Acier et or, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-lion",
+        "name": "Lions du Levant"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-miroirs-weapon": {
+    "form": "viol",
+    "cut": 8,
+    "lining": "plum",
+    "motif": "serpent",
+    "metal": "silver",
+    "angle": -8,
+    "name": "La Vièle des reflets",
+    "type": "Vièle",
+    "material": "Érable, cordes et crin",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-miroirs",
+        "name": "Serments du miroir"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-miroirs-chest": {
+    "form": "starrobe",
+    "cut": 0,
+    "lining": "plum",
+    "motif": "serpent",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Robe des mille visages",
+    "type": "Robe astrale",
+    "material": "Soie brodée et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-miroirs",
+        "name": "Serments du miroir"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-miroirs-guard": {
+    "form": "eyemirror",
+    "cut": 1,
+    "lining": "plum",
+    "motif": "serpent",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Le Témoin d’argent",
+    "type": "Miroir de garde",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-miroirs",
+        "name": "Serments du miroir"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-miroirs-legs": {
+    "form": "portalboots",
+    "cut": 2,
+    "lining": "plum",
+    "motif": "serpent",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Bottes du seuil invisible",
+    "type": "Bottes de translation",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-miroirs",
+        "name": "Serments du miroir"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronces-weapon": {
+    "form": "huntingcrossbow",
+    "cut": 2,
+    "lining": "umber",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": -8,
+    "name": "L’Arbalète des ronces",
+    "type": "Arbalète de chasse",
+    "material": "If, acier et chanvre",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronces",
+        "name": "Ronces de l’ancienne forêt"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronces-chest": {
+    "form": "drakecloak",
+    "cut": 3,
+    "lining": "umber",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Manteau des écailles brunes",
+    "type": "Manteau à écailles",
+    "material": "Bronze, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronces",
+        "name": "Ronces de l’ancienne forêt"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronces-guard": {
+    "form": "beetleshield",
+    "cut": 4,
+    "lining": "umber",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Carapace du vieux chêne",
+    "type": "Carapace de garde",
+    "material": "Bronze, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronces",
+        "name": "Ronces de l’ancienne forêt"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-ronces-legs": {
+    "form": "lynxboots",
+    "cut": 5,
+    "lining": "umber",
+    "motif": "oak",
+    "metal": "bronze",
+    "angle": 0,
+    "name": "Bottes du lynx des halliers",
+    "type": "Bottes de traque",
+    "material": "Bronze, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-ronces",
+        "name": "Ronces de l’ancienne forêt"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-veille-weapon": {
+    "form": "censer",
+    "cut": 2,
+    "lining": "navy",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": -8,
+    "name": "La Veilleuse des âmes",
+    "type": "Encensoir",
+    "material": "Acier et argent, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-veille",
+        "name": "Veille des sépulcres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-veille-chest": {
+    "form": "ceremonialcape",
+    "cut": 3,
+    "lining": "navy",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Manteau des lys nocturnes",
+    "type": "Manteau de cérémonie",
+    "material": "Soie brodée et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 3,
+      "slot": "chest",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-veille",
+        "name": "Veille des sépulcres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-veille-guard": {
+    "form": "scrollward",
+    "cut": 4,
+    "lining": "navy",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Litanie du dernier refuge",
+    "type": "Parchemin de protection",
+    "material": "Parchemin, argent et encre runique",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 3,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-veille",
+        "name": "Veille des sépulcres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-veille-legs": {
+    "form": "runegreaves",
+    "cut": 5,
+    "lining": "navy",
+    "motif": "lily",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Grèves des sentinelles bleues",
+    "type": "Grèves runiques",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 3,
+      "slot": "legs",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-veille",
+        "name": "Veille des sépulcres"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-dragon-weapon": {
+    "form": "dragonlance",
+    "cut": 5,
+    "lining": "oxblood",
+    "motif": "dragon",
+    "metal": "gold",
+    "angle": -8,
+    "name": "Le Croc du roi-dragon",
+    "type": "Lance draconique",
+    "material": "Acier et or, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-dragon",
+        "name": "Héritage du Dragon vermeil"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-dragon-chest": {
+    "form": "regalia",
+    "cut": 6,
+    "lining": "oxblood",
+    "motif": "dragon",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Le Trône des écailles",
+    "type": "Armure de cérémonie",
+    "material": "Acier et or, cuir et soie brodée",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 4,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-dragon",
+        "name": "Héritage du Dragon vermeil"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-dragon-guard": {
+    "form": "dragonshield",
+    "cut": 7,
+    "lining": "oxblood",
+    "motif": "dragon",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Le Cœur de la montagne",
+    "type": "Bouclier draconique",
+    "material": "Acier et or, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-dragon",
+        "name": "Héritage du Dragon vermeil"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-dragon-legs": {
+    "form": "drakegreaves",
+    "cut": 8,
+    "lining": "oxblood",
+    "motif": "dragon",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Les Pas du Dragon vermeil",
+    "type": "Grèves à écailles",
+    "material": "Acier et or, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 4,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-dragon",
+        "name": "Héritage du Dragon vermeil"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-aurore-weapon": {
+    "form": "horn",
+    "cut": 6,
+    "lining": "ivory",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": -8,
+    "name": "Le Cor de l’Aurore",
+    "type": "Cor rituel",
+    "material": "Corne, bronze et nacre",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-aurore",
+        "name": "Cour de l’Aurore éternelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-aurore-chest": {
+    "form": "seraphrobe",
+    "cut": 7,
+    "lining": "ivory",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Les Plumes du jour éternel",
+    "type": "Chasuble séraphique",
+    "material": "Soie brodée et fil d’or",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 4,
+      "slot": "chest",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-aurore",
+        "name": "Cour de l’Aurore éternelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-aurore-guard": {
+    "form": "phoenixshield",
+    "cut": 8,
+    "lining": "ivory",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Le Soleil aux ailes d’or",
+    "type": "Bouclier du phénix",
+    "material": "Acier et or, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-aurore",
+        "name": "Cour de l’Aurore éternelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-aurore-legs": {
+    "form": "angelgreaves",
+    "cut": 0,
+    "lining": "ivory",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": 0,
+    "name": "La Marche des séraphins",
+    "type": "Grèves ailées",
+    "material": "Acier et or, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 4,
+      "slot": "legs",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-aurore",
+        "name": "Cour de l’Aurore éternelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-foret-weapon": {
+    "form": "falconbow",
+    "cut": 4,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": -8,
+    "name": "L’Arc des saisons",
+    "type": "Arc enchanté",
+    "material": "If et argent",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-foret",
+        "name": "Couronne des forêts"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-foret-chest": {
+    "form": "ceremonialcape",
+    "cut": 5,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Le Manteau du roi-cerf",
+    "type": "Manteau de cérémonie",
+    "material": "Soie brodée et agrafe d’argent",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 4,
+      "slot": "chest",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-foret",
+        "name": "Couronne des forêts"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-foret-guard": {
+    "form": "hornshield",
+    "cut": 6,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": 0,
+    "name": "La Ramure du premier arbre",
+    "type": "Écu à ramures",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-foret",
+        "name": "Couronne des forêts"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-foret-legs": {
+    "form": "thornboots",
+    "cut": 7,
+    "lining": "moss",
+    "motif": "stag",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Les Pas de la forêt vive",
+    "type": "Bottes des ronces",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 4,
+      "slot": "legs",
+      "school": "RANGER",
+      "damageTypes": [
+        "RANGED",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-foret",
+        "name": "Couronne des forêts"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astral-weapon": {
+    "form": "harp",
+    "cut": 8,
+    "lining": "indigo",
+    "motif": "star",
+    "metal": "silver",
+    "angle": -8,
+    "name": "La Harpe des mondes",
+    "type": "Harpe",
+    "material": "If, cordes et argent",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astral",
+        "name": "Cartographes de l’infini"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astral-chest": {
+    "form": "regalia",
+    "cut": 0,
+    "lining": "indigo",
+    "motif": "star",
+    "metal": "silver",
+    "angle": 0,
+    "name": "La Voûte portée",
+    "type": "Armure de cérémonie",
+    "material": "Acier et argent, cuir et soie brodée",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 4,
+      "slot": "chest",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astral",
+        "name": "Cartographes de l’infini"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astral-guard": {
+    "form": "spellcage",
+    "cut": 1,
+    "lining": "indigo",
+    "motif": "star",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Le Cœur des constellations",
+    "type": "Focaliseur de garde",
+    "material": "Acier et argent, cristal et émaux",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astral",
+        "name": "Cartographes de l’infini"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-astral-legs": {
+    "form": "orbitalboots",
+    "cut": 2,
+    "lining": "indigo",
+    "motif": "star",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Les Pas entre les étoiles",
+    "type": "Bottes orbitales",
+    "material": "Acier et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 4,
+      "slot": "legs",
+      "school": "MAGE",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-astral",
+        "name": "Cartographes de l’infini"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-abysses-weapon": {
+    "form": "trident",
+    "cut": 6,
+    "lining": "teal",
+    "motif": "serpent",
+    "metal": "black",
+    "angle": -8,
+    "name": "La Dent des abysses",
+    "type": "Trident",
+    "material": "Acier noir et argent, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-abysses",
+        "name": "Trône des abysses"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-abysses-chest": {
+    "form": "scalehauberk",
+    "cut": 7,
+    "lining": "teal",
+    "motif": "serpent",
+    "metal": "black",
+    "angle": 0,
+    "name": "Les Écailles du roi englouti",
+    "type": "Haubert à écailles",
+    "material": "Acier noir et argent, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 4,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-abysses",
+        "name": "Trône des abysses"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-abysses-guard": {
+    "form": "dragonshield",
+    "cut": 8,
+    "lining": "teal",
+    "motif": "serpent",
+    "metal": "black",
+    "angle": 0,
+    "name": "La Gueule des profondeurs",
+    "type": "Bouclier draconique",
+    "material": "Acier noir et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-abysses",
+        "name": "Trône des abysses"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-abysses-legs": {
+    "form": "tidegreaves",
+    "cut": 0,
+    "lining": "teal",
+    "motif": "serpent",
+    "metal": "black",
+    "angle": 0,
+    "name": "La Marche des eaux noires",
+    "type": "Grèves des profondeurs",
+    "material": "Acier noir et argent, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 4,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-abysses",
+        "name": "Trône des abysses"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-citadelle-weapon": {
+    "form": "greatsword",
+    "cut": 8,
+    "lining": "navy",
+    "motif": "tower",
+    "metal": "gold",
+    "angle": -8,
+    "name": "Le Serment de pierre",
+    "type": "Espadon",
+    "material": "Acier et or, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-citadelle",
+        "name": "Dernière Citadelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-citadelle-chest": {
+    "form": "splintcoat",
+    "cut": 0,
+    "lining": "navy",
+    "motif": "tower",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Les Murs de la Dernière Cité",
+    "type": "Armure à éclisses",
+    "material": "Acier et or, cuir et étoffe",
+    "reviewNote": "Vêtement ou armure assemblée, ouvertures et superpositions lisibles.",
+    "card": {
+      "tier": 4,
+      "slot": "chest",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-citadelle",
+        "name": "Dernière Citadelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-citadelle-guard": {
+    "form": "kingshield",
+    "cut": 1,
+    "lining": "navy",
+    "motif": "tower",
+    "metal": "gold",
+    "angle": 0,
+    "name": "La Porte qui demeure",
+    "type": "Pavois royal",
+    "material": "Acier et or, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-citadelle",
+        "name": "Dernière Citadelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-citadelle-legs": {
+    "form": "tallcavalry",
+    "cut": 2,
+    "lining": "navy",
+    "motif": "tower",
+    "metal": "gold",
+    "angle": 0,
+    "name": "Les Pas du dernier gardien",
+    "type": "Bottes de cavalerie",
+    "material": "Acier et or, cuir et doublure tissée",
+    "reviewNote": "Paire gauche/droite ; cheville, cou-de-pied et semelle conservés.",
+    "card": {
+      "tier": 4,
+      "slot": "legs",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": false,
+      "introduced": 6,
+      "set": {
+        "id": "exp-set-citadelle",
+        "name": "Dernière Citadelle"
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-requiem-weapon": {
+    "form": "viol",
+    "cut": 1,
+    "lining": "plum",
+    "motif": "raven",
+    "metal": "black",
+    "angle": -8,
+    "name": "Requiem, les voix perdues",
+    "type": "Vièle",
+    "material": "Érable, cordes et crin",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": true,
+      "introduced": 6,
+      "set": null
+    },
+    "collection": "expansion-550"
+  },
+  "exp-aiguillon-weapon": {
+    "form": "rapier",
+    "cut": 7,
+    "lining": "navy",
+    "motif": "serpent",
+    "metal": "silver",
+    "angle": -8,
+    "name": "L’Aiguillon de la reine",
+    "type": "Rapière",
+    "material": "Acier et argent, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE"
+      ],
+      "signature": true,
+      "introduced": 6,
+      "set": null
+    },
+    "collection": "expansion-550"
+  },
+  "exp-oraison-weapon": {
+    "form": "lute",
+    "cut": 4,
+    "lining": "ivory",
+    "motif": "phoenix",
+    "metal": "gold",
+    "angle": -8,
+    "name": "Oraison, les cordes de l’aube",
+    "type": "Luth",
+    "material": "Érable, nacre et cordes",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 4,
+      "slot": "weapon",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": true,
+      "introduced": 6,
+      "set": null
+    },
+    "collection": "expansion-550"
+  },
+  "exp-comete-weapon": {
+    "form": "flail",
+    "cut": 4,
+    "lining": "indigo",
+    "motif": "star",
+    "metal": "silver",
+    "angle": -8,
+    "name": "La Comète captive",
+    "type": "Fléau",
+    "material": "Acier et argent, frêne et cuir",
+    "reviewNote": "Assemblage, poignée et partie active distincts ; ornement attaché à la structure.",
+    "card": {
+      "tier": 3,
+      "slot": "weapon",
+      "school": "WARRIOR",
+      "damageTypes": [
+        "MELEE",
+        "ARCANIST"
+      ],
+      "signature": true,
+      "introduced": 6,
+      "set": null,
+      "curse": {
+        "key": "DOS",
+        "stat": "Dos",
+        "value": 45
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-pacte-guard": {
+    "form": "spellcage",
+    "cut": 7,
+    "lining": "oxblood",
+    "motif": "serpent",
+    "metal": "black",
+    "angle": 0,
+    "name": "Le Pacte aux sept sceaux",
+    "type": "Focaliseur de garde",
+    "material": "Acier noir et argent, cristal et émaux",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "OCCULTIST",
+      "damageTypes": [
+        "ARCANIST"
+      ],
+      "signature": true,
+      "introduced": 6,
+      "set": null,
+      "curse": {
+        "key": "JAM",
+        "stat": "Jambes",
+        "value": 60
+      }
+    },
+    "collection": "expansion-550"
+  },
+  "exp-hiver-miroir-guard": {
+    "form": "mirror",
+    "cut": 7,
+    "lining": "ivory",
+    "motif": "snow",
+    "metal": "silver",
+    "angle": 0,
+    "name": "Le Reflet du premier hiver",
+    "type": "Miroir rituel",
+    "material": "Acier et argent, bois et cuir",
+    "reviewNote": "Bordures, prise et structure protectrice ; décor cohérent avec le rôle.",
+    "card": {
+      "tier": 4,
+      "slot": "guard",
+      "school": "PRIEST",
+      "damageTypes": [
+        "DIVINE"
+      ],
+      "signature": true,
+      "introduced": 6,
+      "set": null
+    },
+    "collection": "expansion-550"
+  }
+}

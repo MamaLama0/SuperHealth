@@ -1,0 +1,70 @@
+.card-tilt{position:relative;display:block;aspect-ratio:50/73;width:100%}
+.full-card{position:relative;display:block;aspect-ratio:50/73;isolation:isolate;overflow:hidden;border-radius:5.5% / 4%;background:#201926;transform:perspective(680px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .18s ease;box-shadow:0 8px 16px #0006}
+.card-tilt>.full-card{width:100%;height:100%;pointer-events:none}
+.full-card .card-face{display:block;width:100%;height:100%}
+.full-card .card-object{transform-box:fill-box;transform-origin:center}
+.card-effect,.card-motes,.card-glitch,.card-bless-seal{position:absolute;inset:0 0 21%;z-index:2;pointer-events:none;border-radius:inherit}
+.full-card.shiny .card-effect{background:repeating-linear-gradient(126deg,#c0d1ff0c 0 1px,transparent 1px 4px),linear-gradient(115deg,transparent 28%,#91bcf030 39%,#e6f6ff90 47%,#fff7dcb0 50%,#96dcff59 55%,transparent 68%);background-size:100% 100%,250% 160%;background-position:0 0,var(--light,120%) 54%;animation:card-foil-strip 4s ease-in-out infinite;mix-blend-mode:screen}
+.full-card.animated .card-effect{background:radial-gradient(ellipse at 52% 44%,#b4a8ff59,transparent 51%);mix-blend-mode:screen;animation:card-drift-light 2.55s ease-in-out infinite}
+.full-card.animated .card-object{animation:card-float 2.55s ease-in-out infinite}
+.full-card.chroma .card-effect{inset:0;border-radius:inherit;box-shadow:inset 0 0 0 2px #e0d8ffb0,inset 0 0 25px #ba91fd82;background:repeating-linear-gradient(132deg,#fff2 0 1px,transparent 1px 5px),linear-gradient(123deg,#ff985c8a,#ef6fb376 24%,#797fff8a 43%,#68e7e77e 63%,#ffe68388);background-size:100% 100%,190% 170%;background-position:0 0,var(--light,50%) 50%;mix-blend-mode:screen;animation:card-prism 4.4s ease-in-out infinite alternate}
+.full-card.blessed .card-effect{background:radial-gradient(ellipse at 50% 44%,#fff6b145 0 18%,#ffcf7122 30%,transparent 65%),conic-gradient(from -45deg at 50% 44%,transparent 0 12%,#fff3bd80 15%,transparent 20% 43%,#fbd17574 47%,transparent 53% 82%,#fff2c255 89%,transparent 94%);mix-blend-mode:screen;animation:card-blessing 3.2s ease-in-out infinite alternate}
+.card-bless-seal{width:58%;height:58%;left:21%;top:14%;border-radius:50%;border:1px solid #fff0a494;box-shadow:0 0 16px #ffc25085,inset 0 0 18px #ffed9569;transform:scaleY(.83);animation:card-ring 2.8s ease-in-out infinite alternate}
+.card-bless-seal::after{content:"";position:absolute;inset:9%;border:1px dashed #fff0a9c0;border-radius:50%;animation:card-ring-spin 13s linear infinite}
+.full-card.bug .card-effect{inset:0;background:repeating-linear-gradient(0deg,#63fff133 0 1px,transparent 2px 6px),linear-gradient(104deg,#ff3e8d75,#62f3df46 38%,#6b68ff85 59%,#f443b379);background-size:100% 100%,190% 100%;background-position:0 0,var(--light,52%) 50%;mix-blend-mode:screen;box-shadow:inset 3px 0 #ff3c938f,inset -3px 0 #78fff0a0;animation:card-bug-scan 3.1s ease-in-out infinite alternate}
+.full-card.bug .card-object{filter:drop-shadow(-3px 0 #ff559c) drop-shadow(3px 0 #50eff1);animation:card-bug-object 2.8s steps(1,end) infinite}
+.card-glitch{overflow:hidden;mix-blend-mode:screen}
+.card-glitch i{position:absolute;display:block;left:var(--x);top:var(--y);width:var(--w);height:var(--h);background:linear-gradient(90deg,transparent,#f762bead 17%,#faf3f7c0 30%,#60f5f8 32%,#755fff6e 85%,transparent);opacity:.36;animation:card-block 2.9s steps(1,end) infinite;animation-delay:var(--lag)}
+.full-card.cursed::after{content:"";position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;background:radial-gradient(ellipse at 48% 43%,#fc3e8c4f,transparent 59%);box-shadow:inset 0 0 0 1px #f27dacb8,inset 0 0 26px #e0458da2;mix-blend-mode:screen;animation:card-curse 2.6s ease-in-out infinite alternate}
+.card-motes{overflow:hidden;mix-blend-mode:screen}
+.card-motes i{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);border-radius:50%;color:var(--particle);background:currentColor;box-shadow:0 0 7px currentColor,0 0 11px currentColor;opacity:.45;animation:card-particle var(--duration) ease-in-out infinite;animation-delay:var(--lag)}
+.card-motes i:nth-child(4n){border-radius:0;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);transform:scale(2)}
+.card-motes.maudite i{animation-name:card-ash}
+.full-card.manual-foil.shiny .card-effect,.full-card.manual-foil.chroma .card-effect,.full-card.manual-foil.bug .card-effect,.full-card.pointer-foil.shiny .card-effect,.full-card.pointer-foil.chroma .card-effect,.full-card.pointer-foil.bug .card-effect{animation:none}
+@keyframes card-foil-strip{0%,14%{background-position:0 0,122% 54%}76%,100%{background-position:0 0,-28% 54%}}
+@keyframes card-prism{from{background-position:0 0,0% 55%}to{background-position:0 0,100% 55%}}
+@keyframes card-float{0%,100%{transform:translate(-2px,6px) rotate(-3deg) scale(.99)}50%{transform:translate(4px,-13px) rotate(4deg) scale(1.07)}}
+@keyframes card-drift-light{0%,100%{transform:translate(-6%,4%);opacity:.55}50%{transform:translate(5%,-5%);opacity:1}}
+@keyframes card-blessing{from{opacity:.55;transform:scale(1.02) rotate(-5deg)}to{opacity:1;transform:scale(1.11) rotate(8deg)}}
+@keyframes card-ring{from{opacity:.45;transform:rotate(-7deg) scaleY(.78) scale(.93)}to{opacity:1;transform:rotate(8deg) scaleY(.94) scale(1.05)}}
+@keyframes card-ring-spin{to{transform:rotate(360deg)}}
+@keyframes card-bug-scan{from{background-position:0 0,1% 50%}to{background-position:0 11px,99% 50%}}
+@keyframes card-bug-object{0%,22%,51%,75%,100%{transform:translateX(0)}32%{transform:translateX(5px) skewX(-2deg)}64%{transform:translateX(-5px) skewX(2deg)}}
+@keyframes card-block{0%,20%,51%,86%,100%{opacity:.23;transform:translateX(0)}34%{opacity:.63;transform:translateX(var(--shift))}68%{opacity:.47;transform:translateX(calc(0px - var(--shift)))}}
+@keyframes card-particle{0%,100%{opacity:.22;transform:translate(0,11px) scale(.55)}45%{opacity:.96;transform:translate(var(--dx),-10px) scale(1.35)}76%{opacity:.66;transform:translate(var(--dx),-25px) scale(.8)}}
+@keyframes card-ash{0%,100%{opacity:.24;transform:translate(0,8px) scale(.6)}48%{opacity:.92;transform:translate(var(--dx),-14px) scale(1.14)}80%{opacity:.44;transform:translate(var(--dx),-32px) scale(.8)}}
+@keyframes card-curse{from{opacity:.57}to{opacity:1}}
+.equipment-item{border:0;background:transparent;box-shadow:none;overflow:visible}.equipment-item .item-text{padding:4px 2px 7px}
+@media(prefers-reduced-motion:reduce){.full-card,.full-card *, .full-card::after,.card-bless-seal::after{animation:none!important;transition:none!important}.full-card{transform:none!important}.full-card.shiny .card-effect{background-position:0 0,50% 50%}}
+
+/* Finishes illuminate the illustration without washing out names or combat values. */
+.full-card .card-effect,.full-card .card-motes,.full-card .card-glitch{bottom:31%}
+.full-card.chroma .card-effect,.full-card.bug .card-effect{bottom:31%;opacity:.68}
+.full-card.rarity-4{box-shadow:0 14px 32px #0009,0 0 0 1px #d7b77766}
+.full-card.rarity-3{box-shadow:0 12px 28px #0009,0 0 0 1px #c9a4e544}
+.full-card .card-bless-seal{width:56%;height:39%;left:22%;top:16%;opacity:.65}
+@media(prefers-reduced-motion:reduce){.full-card,.full-card *{animation:none!important;transition:none!important}}
+
+/* The frame belongs to rarity; effects are confined to the illustration. */
+.full-card .card-effect,.full-card .card-motes,.full-card .card-glitch{top:11%;bottom:25%;left:4%;right:4%}
+.full-card.chroma .card-effect{opacity:.36;mix-blend-mode:soft-light;box-shadow:none}
+.full-card.blessed .card-effect{opacity:.55}
+.full-card.cursed::after{inset:12% 5% 26%;box-shadow:inset 0 -18px 24px -18px #d84b91;opacity:.5}
+.full-card.shiny .card-effect{opacity:.58}
+@keyframes card-float{0%,100%{transform:translate(-1px,3px) rotate(-1deg)}50%{transform:translate(2px,-5px) rotate(1deg)}}
+
+/* The alpha mask uses full-card coordinates, exactly matching the embedded render. */
+.full-card.atelier .card-effect{inset:0;transform:none}
+.full-card.atelier.blessed .card-effect,.full-card.atelier.animated .card-effect{animation:atelier-glow 3s ease-in-out infinite alternate}
+@keyframes atelier-glow{from{opacity:.3}to{opacity:.65}}
+
+/* Intrinsic rarity effects: also present on a normal epic / legendary. */
+.full-card.rarity-3{box-shadow:0 15px 35px #0009,0 0 19px #ac65e548}
+.full-card.rarity-4{box-shadow:0 18px 40px #000a,0 0 25px #efb84c55}
+.full-card .rarity-halo{animation:rarity-breathe 4.8s ease-in-out infinite alternate}
+.full-card .rarity-rays{animation:rarity-rays 7s ease-in-out infinite alternate;transform-origin:150px 190px}
+.full-card .rarity-sparks>g{animation:rarity-spark 3.2s ease-in-out infinite;animation-delay:var(--spark-delay)}
+@keyframes rarity-breathe{from{opacity:.55}to{opacity:1}}
+@keyframes rarity-rays{from{opacity:.3;transform:rotate(-3deg)}to{opacity:.8;transform:rotate(3deg)}}
+@keyframes rarity-spark{0%,100%{opacity:.3}45%{opacity:1}68%{opacity:.5}}
+@media(prefers-reduced-motion:reduce){.full-card .rarity-halo,.full-card .rarity-rays,.full-card .rarity-sparks>g{animation:none!important}}

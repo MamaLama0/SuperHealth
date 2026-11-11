@@ -171,7 +171,7 @@ object CardStore {
             Economy.sync(ctx, sessions)
         }
         snapshot.value = if (state.value.demo) Demo.snapshot() else compute(ctx, history)
-        snapshot.value?.now?.takeIf { it.values != state.value.lastStats?.values || it.ovr10 != state.value.lastStats?.ovr10 }?.let { now ->
+        snapshot.value?.now?.takeIf { it.character != state.value.lastStats?.character || it.values != state.value.lastStats?.values || it.ovr10 != state.value.lastStats?.ovr10 }?.let { now ->
             update(ctx) { it.copy(lastOvr10 = now.ovr10 ?: it.lastOvr10, lastStats = now.copy(muscles = emptyMap())) }
         }
         runCatching { app.superhealth.ui.widget.CardWidgets.refresh(ctx) }
@@ -222,7 +222,12 @@ object CardStore {
         }.getOrNull() ?: League.state.value.weeklyTargets["STRENGTH"] ?: 3
         fun at(t: Long) = AthleteStatsEngine.compute(AthleteStatsEngine.Input(history, db, bodyweight, sex, age, t, target, vo2, runs, cardioMinutes, trackedDays = tracked, dailySteps28 = steps,
             endurance = endurance, steps = daySteps, restingHr = resting, heightCm = profile?.heightCm?.takeIf { analytics?.currentTrendKg != null }))
-        return Snapshot(at(now), at(now - 7 * 86_400_000L), at(now - 28 * 86_400_000L))
+        val current = at(now)
+        val progress = app.superhealth.league.ProgressRepository.current.value
+        val character = progress?.takeIf { it.summary.throughDay == LocalDate.now().toEpochDay() }?.let {
+            CharacterStats.from(it, app.superhealth.league.ProgressRepository.selectedTracks(sh), current)
+        }
+        return Snapshot(current.copy(character = character), at(now - 7 * 86_400_000L), at(now - 28 * 86_400_000L))
     }
 
     // ---- Packs -------------------------------------------------------------------------------------------

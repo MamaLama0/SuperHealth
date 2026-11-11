@@ -3,10 +3,24 @@ package app.superhealth.ui.league
 import android.net.Uri
 import android.widget.MediaController
 import android.widget.VideoView
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
+import app.superhealth.ui.cards.EquipmentPacks
+import app.superhealth.ui.cards.DungeonTeaser
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,11 +37,13 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -42,11 +58,13 @@ import app.superhealth.social.boundedForCircle
 import app.superhealth.league.*
 import app.superhealth.nutrition.ui.components.*
 import app.superhealth.nutrition.ui.screens.DetailScaffold
+import app.superhealth.ui.LocalTabBarInset
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.dashboard.DashboardScreen
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.tabBackground
 import app.superhealth.ui.theme.Mf
+import app.superhealth.ui.theme.edge
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import kotlinx.coroutines.Dispatchers
@@ -57,18 +75,15 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** Left page is the feed, right page is the existing dashboard. No feed navigation button. */
+/** Le geste vers la droite depuis le tableau de bord ouvre le Groupe. */
 @Composable
-fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.compose.foundation.pager.PagerState) {
+internal fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.compose.foundation.pager.PagerState,
+    socialPage: SocialPage, onDashboard: () -> Unit) {
     val settings by SuperPrefs.settings.collectAsState()
-    val scope = rememberCoroutineScope()
-    // Les cartes de l'Arène utilisent un gros shader : il se compile en arrière-plan dès l'accueil.
-    val appCtx = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(Unit) { app.superhealth.ui.cards.CardPerf.init(appCtx) }
     if (settings.socialFeedEnabled && settings.leagueEnabled) {
-        BackHandler(pager.currentPage == 0) { scope.launch { pager.animateScrollToPage(1) } }
-        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), key = { it }) { page ->
-            if (page == 0) SocialFeed(nav, active = pager.settledPage == 0) else DashboardScreen(vm, nav)
+        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1, key = { it }) { page ->
+            if (page == 0) SocialFeed(nav, active = pager.settledPage == 0, socialPage, onDashboard)
+            else DashboardScreen(vm, nav)
         }
     } else DashboardScreen(vm, nav)
     // Présentation du fil : seulement une fois le plugin Groupe installé, jamais dans l'expérience de base.
@@ -76,22 +91,63 @@ fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.com
         icon = { GameArt(GameArtKind.TROPHY, Modifier.size(64.dp)) },
         title = { Text(tr("Bienvenue dans le Groupe")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(tr("Depuis le dashboard, glissez vers la droite : le fil se trouve juste à gauche."))
-            Text(tr("Vos cartes, vos quêtes et vos combats, puis les photos, vidéos et sorties de vos amis. Glissez vers la gauche pour revenir."))
-            Text(tr("Vous pouvez désactiver ce fil dans Réglages → Groupe. Vos widgets sociaux restent disponibles sur le dashboard."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("Depuis le tableau de bord, glissez vers la droite pour ouvrir le Groupe."))
+            Text(tr("Ouvrez votre paquet du jour, ou retrouvez les photos, messages et sorties de vos amis dans le Fil."))
+            Text(tr("Glissez vers la gauche pour revenir au tableau de bord."), style = MaterialTheme.typography.bodySmall)
         } },
         confirmButton = { TextButton({ SuperPrefs.update { it.copy(socialFeedIntroSeen = true) } }) { Text(tr("Compris")) } })
 }
 
+internal enum class SocialPage(val title: String) { PACKS("Paquets"), FEED("Fil") }
+
+@Composable
+internal fun SocialFeed(nav: NavHostController, active: Boolean, page: SocialPage, onDashboard: () -> Unit) {
+    val accent = Mf.colors.accent
+    val saveable = rememberSaveableStateHolder()
+    Column(Modifier.fillMaxSize().tabBackground(accent).statusBarsPadding().padding(bottom = LocalTabBarInset.current)) {
+        // Keep the GPU scene alive when switching tabs; the dashboard pager also warms it offscreen.
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            EquipmentPacks(nav, active && page == SocialPage.PACKS,
+                Modifier.fillMaxSize().graphicsLayer { alpha = if (page == SocialPage.PACKS) 1f else 0f }
+                    .then(if (page == SocialPage.PACKS) Modifier else Modifier.clearAndSetSemantics {}), onDashboard)
+            if (page == SocialPage.FEED) saveable.SaveableStateProvider(SocialPage.FEED.name) {
+                GroupConversation(nav, active)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun GroupDock(page: SocialPage, modifier: Modifier, select: (SocialPage) -> Unit) {
+    val shape = RoundedCornerShape(26.dp)
+    val colors = Mf.colors
+    BoxWithConstraints(modifier.fillMaxWidth().height(68.dp)
+            .clip(shape).background(colors.card).border(1.dp, colors.edge, shape).padding(5.dp).selectableGroup()) {
+            val half = maxWidth / 2
+            val offset by animateDpAsState(half * page.ordinal, spring(dampingRatio = .75f, stiffness = 430f), label = "group-indicator")
+            Box(Modifier.offset(x = offset).width(half).fillMaxHeight().background(colors.accent.copy(alpha = .18f), CircleShape))
+            Row(Modifier.fillMaxSize()) {
+                SocialPage.entries.forEach { tab ->
+                    val current = page == tab
+                    Row(Modifier.weight(1f).fillMaxHeight().clip(CircleShape)
+                        .selectable(current, role = Role.Tab) { select(tab) },
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+                        Icon(if (tab == SocialPage.PACKS) Icons.Rounded.CollectionsBookmark else Icons.Rounded.Forum, null, tint = if (current) colors.accent else colors.textSecondary)
+                        Text(tr(tab.title), color = if (current) colors.text else colors.textSecondary, style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+            }
+        }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SocialFeed(nav: NavHostController, active: Boolean) {
+private fun GroupConversation(nav: NavHostController, active: Boolean) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
     val state by League.state.collectAsState()
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var showCreate by rememberSaveable { mutableStateOf(false) }
-    var tab by rememberSaveable { mutableStateOf(GroupTab.ARENE) }
     fun refresh(userInitiated: Boolean = false) { scope.launch {
         if (busy) return@launch
         busy = true; if (userInitiated) error = null
@@ -106,96 +162,85 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         val author = friend?.id ?: League.myId()
         SocialPreferences.hidden(author, post.id) || SocialPreferences.muted(author) || (friend != null && SocialPreferences.blocked(friend.key))
     } }
+    var filter by rememberSaveable { mutableStateOf("all") }
+    val visiblePosts = posts.filter { (post, friend) -> when (filter) {
+        "activity" -> post.kind in setOf("WORKOUT", "ACTIVITY", "PR", "RUN") || post.workout != null || post.activity != null || post.record != null
+        "mine" -> friend == null
+        else -> true
+    } }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // Actualiser en tirant le fil vers le bas, comme les autres listes Android, plutôt qu'avec un bouton d'en-tête.
     PullToRefreshBox(isRefreshing = busy && state.lastSync > 0L, onRefresh = { refresh(userInitiated = true) },
-        modifier = Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding()) {
+        modifier = Modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().imePadding(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = app.superhealth.ui.LocalTabBarInset.current + 24.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 72.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // En-tête au format des onglets (TabHeader + boutons ronds) ; l'avatar ouvre les réglages de l'app, comme sur tous les onglets.
         item(key = "header") {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 14.dp, bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
-                    app.superhealth.ui.theme.Overline(tr("Vos efforts, ensemble"))
-                    Text(tr("Groupe"), style = MaterialTheme.typography.headlineLarge, maxLines = 1)
+                    app.superhealth.ui.theme.Overline(tr("Groupe"))
+                    Text(tr("Fil de conversation"), style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     NotificationBell(nav)
-                    CircleAction(Icons.Rounded.Add, tr("Publier")) { showCreate = true }
-                    SettingsAvatar { nav.go("settings") }
+                    CircleAction(Icons.Rounded.Storefront, tr("Marché")) { nav.go("cards/market") }
+                    CircleAction(Icons.Rounded.Groups, tr("Cercles privés")) { nav.go("group/circles") }
                 }
             }
         }
-        item(key = "group-tabs") { GroupTabs(tab) { tab = it } }
+        item(key = "arena") { app.superhealth.ui.cards.ArenaTeaser(nav, active) }
         item(key = "friend-requests") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { FriendRequestsBanner() } }
-        // Cartes : ta carte et tes packs, le combat, les quêtes, l'album et les échanges, puis les duels du jour.
-        if (tab == GroupTab.ARENE) {
-            item(key = "arena-hero") { ArenaHero(nav) }
-            item(key = "arena-combat") { CombatButton(nav, state.friends) }
-            item(key = "arena-quests") { ArenaQuests(nav) }
-            item(key = "arena-badges") { ArenaBadges(nav) }
-            item(key = "arena-shortcuts") { ArenaShortcuts(nav) }
-            item(key = "arena-duels") { ArenaDuels(nav, state.friends) }
-        }
-        if (tab == GroupTab.CERCLES) item(key = "circles") { CirclesPanel(nav, state.friends.size) }
-        if (tab == GroupTab.FIL) item(key = "compose") { ComposeSurface(onClick = { showCreate = true }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(34.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Mf.colors.accent), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Add, null, Modifier.size(20.dp), tint = Mf.colors.onStrong)
-                }
-                Text(tr("Créer une publication"), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-            }
-            // raccourcis colorés : chaque type de partage s'ouvre directement, avec la teinte de son domaine
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                fun open(route: String) { SocialPosts.draft.value = null; nav.go(route) }
-                // Les cartes d'abord : ma carte Athlète (ou l'album pour choisir un fond).
-                ShareShortcut(Icons.Rounded.Style, tr("Carte"), app.superhealth.ui.cards.Gold, Modifier.weight(1f)) {
-                    val bg = app.superhealth.cards.CardStore.background()
-                    if (bg == null) nav.go("cards/album") else {
-                        app.superhealth.cards.CardShare.open(bg, app.superhealth.cards.CardStore.state.value.level(bg.card), app.superhealth.cards.CardShare.Event.ATHLETE, app.superhealth.cards.CardStore.snapshot.value?.now?.ovr)
-                        nav.go("social/compose")
-                    }
-                }
-                ShareShortcut(Icons.Rounded.AddPhotoAlternate, tr("Photo"), app.superhealth.ui.theme.Hues.pack.pink, Modifier.weight(1f)) { open("social/compose") }
-                ShareShortcut(Icons.Rounded.FitnessCenter, tr("Séance"), app.superhealth.ui.theme.HealthHues.Fitness, Modifier.weight(1f)) { open("social/share/workout") }
-                ShareShortcut(Icons.Rounded.DirectionsRun, tr("Activité"), app.superhealth.ui.theme.HealthHues.Activity, Modifier.weight(1f)) { open("social/share/activity") }
-                ShareShortcut(Icons.Rounded.EmojiEvents, tr("PR"), RankGold, Modifier.weight(1f)) { open("social/share/pr") }
-            }
-        } }
-        if (tab == GroupTab.FIL && (history.pending.isNotEmpty())) item(key = "pending") {
+        if (history.pending.isNotEmpty()) item(key = "pending") {
             GroupSurface {
                 Text(tr("Des publications ou réponses attendent leur envoi"), style = MaterialTheme.typography.bodySmall)
                 TextButton(enabled = !busy, onClick = { refresh(userInitiated = true) }) { Text(tr("Réessayer")) }
                 TextButton({ nav.go("social/outbox") }) { Text(tr("Envois en attente")) }
             }
         }
-        if (tab == GroupTab.FIL && (busy && posts.isEmpty() && state.lastSync == 0L)) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (busy && posts.isEmpty() && state.lastSync == 0L) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         error?.let { message -> item(key = "error") { Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
-        if (state.friends.isEmpty() && tab != GroupTab.CERCLES) item(key = "invite") { GroupSurface {
+        if (state.friends.isEmpty()) item(key = "invite") { GroupSurface {
             Text(tr("Invitez votre premier ami"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Partagez vos activités et encouragez-vous. Vous choisissez les informations publiées."), color = Mf.colors.textSecondary)
             TextButton({ nav.go("friends/add") }) { Text(tr("Inviter ou saisir un code")) }
         } }
-        if (tab == GroupTab.FIL && (state.lastSuccessfulSync > 0)) item(key = "last-sync") {
+        if (state.lastSuccessfulSync > 0) item(key = "last-sync") {
             Text(trf("Dernière actualisation · %1\$s", android.text.format.DateUtils.getRelativeTimeSpanString(
                 state.lastSuccessfulSync, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()),
                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
         }
-        if (tab == GroupTab.FIL && (posts.isEmpty() && state.friends.isNotEmpty())) item(key = "empty") { GroupSurface {
+        if (posts.isEmpty() && state.friends.isNotEmpty()) item(key = "empty") { GroupSurface {
             Text(tr(if (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty()) "Votre fil est vide" else "Votre Groupe commence ici"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Partagez votre première séance ou ajoutez vos amis. Leurs publications apparaîtront ici."), modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
             TextButton({ nav.go("social/compose") }) { Text(tr("Écrire un message")) }
             TextButton({ nav.go("social/share/workout") }) { Text(tr("Partager une séance")) }
         } }
-        if (tab == GroupTab.FIL && (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty())) item(key = "reading-preferences") {
+        if (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty()) item(key = "reading-preferences") {
             TextButton({ nav.go("group/preferences") }) { Text(tr("Contenus masqués et sourdines")) }
         }
-        if (tab == GroupTab.FIL) items(posts, key = { (post, friend) -> (friend?.id ?: "me") + ":" + post.id }) { (post, friend) ->
+        item(key = "composer") {
+            Surface(onClick = { showCreate = true }, color = Mf.colors.card, shape = RoundedCornerShape(20.dp)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Rounded.Edit, null, tint = Mf.colors.accent)
+                    Text(tr("Une victoire à partager ?"), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    Icon(Icons.Rounded.AddPhotoAlternate, null, tint = Mf.colors.textSecondary)
+                }
+            }
+        }
+        item(key = "filters") {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("all" to "Tout", "activity" to "Activités", "mine" to "Mes publications").forEach { (key, label) ->
+                    FilterChip(selected = filter == key, onClick = { filter = key }, label = { Text(tr(label)) })
+                }
+            }
+            if (visiblePosts.isEmpty() && posts.isNotEmpty()) Text(tr("Aucune publication dans ce filtre."), color = Mf.colors.textSecondary)
+        }
+        items(visiblePosts, key = { (post, friend) -> (friend?.id ?: "me") + ":" + post.id }) { (post, friend) ->
             SocialPostCard(post, friend)
         }
-        if (tab == GroupTab.FIL && (GroupHistory.hasOlder())) item(key = "older") {
+        if (GroupHistory.hasOlder()) item(key = "older") {
             TextButton(enabled = !busy, onClick = { scope.launch {
                 busy = true; error = null
                 try { GroupHistory.refresh(ctx, older = true) }
@@ -205,6 +250,11 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
             } }) { Text(tr("Charger les publications plus anciennes")) }
         }
     }
+    FloatingActionButton(
+        onClick = { showCreate = true },
+        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 12.dp).size(52.dp),
+        shape = CircleShape, containerColor = Mf.colors.accent, contentColor = Mf.colors.onStrong,
+    ) { Icon(Icons.Rounded.Edit, tr("Créer une publication")) }
     }
     if (showCreate) ModalBottomSheet(onDismissRequest = { showCreate = false }, containerColor = Mf.colors.background) {
         fun open(route: String) {
@@ -212,34 +262,12 @@ fun SocialFeed(nav: NavHostController, active: Boolean) {
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(tr("Créer une publication"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
-            SettingRow(tr("Partager ma carte ou un fond"), icon = Icons.Rounded.Style) { showCreate = false; nav.go("cards/album") }
             SettingRow(tr("Cercle privé"), icon = Icons.Rounded.Groups) { open("group/circles") }
             SettingRow(tr("Message, photo ou vidéo"), icon = Icons.Rounded.AddPhotoAlternate) { open("social/compose") }
             SettingRow(tr("Partager une séance"), icon = Icons.Rounded.FitnessCenter) { open("social/share/workout") }
             SettingRow(tr("Partager une activité"), icon = Icons.Rounded.DirectionsRun) { open("social/share/activity") }
             SettingRow(tr("Partager un PR"), icon = Icons.Rounded.EmojiEvents) { open("social/share/pr") }
         }
-    }
-}
-
-/** Raccourci de partage : icône sur pastille teintée, libellé dessous. */
-@Composable
-private fun ShareShortcut(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(14.dp)).background(hue.copy(alpha = .12f)).clickable(onClick = onClick).padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, Modifier.size(20.dp), tint = hue)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Mf.colors.text, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
-    }
-}
-
-/** Pastille de navigation du Groupe : largeur donnée par la rangée, libellé raccourci si la police est grande. */
-@Composable
-private fun GroupNavChip(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, modifier: Modifier, onClick: () -> Unit) {
-    Row(modifier.height(38.dp).clip(androidx.compose.foundation.shape.CircleShape).background(hue.copy(alpha = .14f)).clickable(onClick = onClick)
-        .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-        Icon(icon, null, Modifier.size(16.dp), tint = hue)
-        Spacer(Modifier.width(5.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 
@@ -407,13 +435,15 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
                 Spacer(Modifier.width(6.dp))
                 Text(if (replyCount > 0) tr("Répondre") + " · " + replyCount else tr("Répondre"))
             }
-            Spacer(Modifier.weight(1f))
-            counts.entries.sortedByDescending { it.value }.take(4).forEach { (kind, count) ->
+        }
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            (counts.keys.sortedByDescending { counts[it] } + listOf("CLAP", "FIRE", "HEART")).distinct().take(5).forEach { kind ->
+                val count = counts[kind] ?: 0
                 Surface(onClick = { react(kind) }, enabled = !reacting, shape = androidx.compose.foundation.shape.CircleShape,
                     color = if (selected == kind) Mf.colors.accent.copy(alpha = .12f) else Color.Transparent) {
                     Row(Modifier.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(SocialReactions.emoji(kind), style = MaterialTheme.typography.bodyLarge)
-                        if (count > 1) Text(" $count", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                        if (count > 0) Text(" $count", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                     }
                 }
             }

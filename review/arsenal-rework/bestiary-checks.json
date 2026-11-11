@@ -1,0 +1,127 @@
+{
+  "models": [
+    {
+      "id": "gobelin-berserker",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 0.8333333134651184,
+        "Attack": 1.3333333730697632,
+        "Hit": 0.5333333611488342,
+        "Death": 0.6333333253860474
+      }
+    },
+    {
+      "id": "gobelin-eclaireur",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 0.8333333134651184,
+        "Attack": 1.3333333730697632,
+        "Hit": 0.5333333611488342,
+        "Death": 0.6333333253860474
+      }
+    },
+    {
+      "id": "gobelin-maraudeur",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 0.8333333134651184,
+        "Attack": 1.3333333730697632,
+        "Hit": 0.5333333611488342,
+        "Death": 0.6333333253860474
+      }
+    },
+    {
+      "id": "gobelin-occultiste",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 0.8333333134651184,
+        "Attack": 1.3333333730697632,
+        "Hit": 0.5333333611488342,
+        "Death": 0.6333333253860474
+      }
+    },
+    {
+      "id": "gobelin-rempart",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 0.8333333134651184,
+        "Attack": 1.3333333730697632,
+        "Hit": 0.5333333611488342,
+        "Death": 0.6333333253860474
+      }
+    },
+    {
+      "id": "slime-ambre",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 1.0333333015441895,
+        "Attack": 1.2000000476837158,
+        "Hit": 0.7333333492279053,
+        "Death": 1.3333333730697632
+      }
+    },
+    {
+      "id": "slime-azur",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 1.0333333015441895,
+        "Attack": 1.2000000476837158,
+        "Hit": 0.7333333492279053,
+        "Death": 1.3333333730697632
+      }
+    },
+    {
+      "id": "slime-carmin",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 1.0333333015441895,
+        "Attack": 1.2000000476837158,
+        "Hit": 0.7333333492279053,
+        "Death": 1.3333333730697632
+      }
+    },
+    {
+      "id": "slime-maudit",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 1.0333333015441895,
+        "Attack": 1.2000000476837158,
+        "Hit": 0.7333333492279053,
+        "Death": 1.3333333730697632
+      }
+    },
+    {
+      "id": "slime-mousse",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 1.0333333015441895,
+        "Attack": 1.2000000476837158,
+        "Hit": 0.7333333492279053,
+        "Death": 1.3333333730697632
+      }
+    },
+    {
+      "id": "troll-brisefer",
+      "unique": 4,
+      "error": 0,
+      "durations": {
+        "Idle": 1.5666667222976685,
+        "Attack": 1.3333333730697632,
+        "Hit": 0.5333333611488342,
+        "Death": 1.3333333730697632
+      }
+    }
+  ],
+  "contextLossFallback": true,
+  "noWebGLFallback": true
+}

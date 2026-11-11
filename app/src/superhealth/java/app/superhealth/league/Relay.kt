@@ -29,7 +29,7 @@ object Relay {
     fun readKey(ctx: Context) = secret(ctx, "league_aes_read_key", RelayCrypto::newKey)
     private fun allowedTransport(url: okhttp3.HttpUrl) = url.isHttps ||
         ((nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID in setOf("app.superhealth.grouptest", "app.superhealth.socialtest", "app.superhealth.cardstest") ||
-            (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG && nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID in setOf("app.superhealth.qa", "app.superhealth.hikingtest"))) &&
+            (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG && nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID in setOf("app.superhealth.qa", "app.superhealth.hikingtest", "app.superhealth.arsenalqa"))) &&
             url.scheme == "http" && url.host == "127.0.0.1")
     fun validBase(raw: String): Boolean = raw.toHttpUrlOrNull()?.let {
         allowedTransport(it) && it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null && it.encodedPath == "/"

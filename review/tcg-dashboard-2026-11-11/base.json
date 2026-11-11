@@ -1,0 +1,11 @@
+{
+  "head": "feb0ea2da64e402703d3608121c456c1de81279a",
+  "branch": "superhealth",
+  "note": "Build from current working tree including pre-existing uncommitted Arsenal changes.",
+  "files": {
+    "app/src/superhealth/assets/arsenal/pack.js": "29ea15370705a216af272d208c7110119aaadd4c2a6af82c99259ab12b1cdd6c",
+    "app/src/superhealth/assets/arsenal/pack.css": "e88e31fa1196e711ef27e38edc190a9c43967c83cc8858ca53df25dbbfeb7ed1",
+    "app/src/superhealth/assets/arsenal/directions.js": "959ccc5b0727d960dfd39cea501b8f7091fafa7bc0795c226584c51d4025654a",
+    "tools/qa-pack-loading.cjs": "74f6482b4f22276620e833a9041227634d910ffb9008d293522cb906ddf779f0"
+  }
+}

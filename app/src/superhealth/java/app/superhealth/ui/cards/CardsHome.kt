@@ -143,7 +143,7 @@ internal fun FriendCardViewer(face: CardFace, note: String, onClose: () -> Unit,
                             Text(b?.toString() ?: "–", color = if ((b ?: 0) > (a ?: 0)) Color(0xFFFF8A80) else Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, textAlign = TextAlign.End, modifier = Modifier.width(36.dp))
                         }
                     }
-                    Text(tr("Hors bonus de fond, ajoutés pendant le duel."), color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text(tr("Stats sportives avant le bonus de rareté du duel."), color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
                 if (onDuel != null) GlowButton("⚔ " + tr("Défier"), Modifier.fillMaxWidth().padding(top = 16.dp), listOf(Color(0xFFE53935), Color(0xFFFF8A1F)), enabled = mine?.ovr10 != null, onClick = onDuel)
                 if (onDuel != null && mine?.ovr10 == null) Text(tr("Ta carte doit d'abord être évaluée (quelques séances)."), color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
