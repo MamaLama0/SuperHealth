@@ -60,8 +60,8 @@
       "nameEn": "Group",
       "summary": "Le côté social de SuperHealth : carte Athlète, packs, quêtes, défis, amis, fil et cercles. Se retire à tout moment, ta collection et tes amis sont conservés.",
       "summaryEn": "The social side of SuperHealth: Athlete card, packs, quests, challenges, friends, feed and circles. Remove it anytime, your collection and friends are kept.",
-      "changelog": "Le Groupe devient un plugin à part : installe-le ou retire-le quand tu veux.",
-      "changelogEn": "The Group is now a separate plugin: install or remove it whenever you like."
+      "changelog": "Les illustrations et les modèles 3D des cartes, des paquets et du donjon sont livrés avec le Groupe.",
+      "changelogEn": "Artwork and 3D models for cards, packs and the dungeon now ship with Group."
     },
     {
       "id": "hiking",
