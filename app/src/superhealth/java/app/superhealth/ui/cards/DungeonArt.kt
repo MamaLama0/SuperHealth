@@ -163,8 +163,8 @@ internal enum class DungeonCreature(val nameFr: String, val light: Long, val mod
         val adventurers = listOf(KNIGHT, MAGE, RANGER, BARBARIAN, ROGUE)
         fun floor(n: Int) = if (n % 4 == 0) {
             // Both guardians now share ARCANIST / MELEE; keep their alternating silhouettes.
-            if (n % 8 == 0) SKELETONWARRIOR else TROLL_BRISEFER
+            if (n % 8 == 0) SKELETONGOLEM else TROLL_BRISEFER
         } else (if (((n - 1) / 5) % 2 == 0) slimes else goblins)[(n - 1).mod(5)]
-        fun weekly(week: Long) = if (((week + 3) / 7) % 2 == 0L) SKELETONGOLEM else NECROMANCER
+        fun weekly(week: Long) = if (((week + 3) / 7) % 2 == 0L) SKELETONGOLEM else TROLL_BRISEFER
     }
 }

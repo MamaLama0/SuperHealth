@@ -7,6 +7,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DungeonBestiaryTest {
+    @Test fun bossesRotateBetweenTheTwoLargeCreatures() {
+        val bosses = setOf(DungeonCreature.SKELETONGOLEM, DungeonCreature.TROLL_BRISEFER)
+        assertEquals(bosses, (4..32 step 4).map(DungeonCreature::floor).toSet())
+        assertEquals(bosses, (0L..28L step 7L).map(DungeonCreature::weekly).toSet())
+    }
+
     @Test fun importedCreaturesAreReachableAndMatchTheCombatRules() {
         val assets = File("src/superhealth/assets/arsenal")
         val catalogue = JSONObject(File(assets, "bestiary/catalogue.json").readText())

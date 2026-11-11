@@ -223,16 +223,30 @@ class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<
         val oneRm: Double
         val prevWeight: Double?
         val progress: Double
+        var recentStrength: Double? = null
         if (done.isNotEmpty()) {
-            val rm = (if (e.usesReps && "aw" !in e.metrics) inSessionStrength(e, done, ex.restSec, history, settings, gym) else {
+            val useStrengthModel = e.usesReps && "aw" !in e.metrics
+            val rm = (if (useStrengthModel) inSessionStrength(e, done, ex.restSec, history, settings, gym) else {
                 val actual = done.map { PastSet(it.weight!!, it.reps!!, it.rir, 0, it.partialReps) }
                 Progression.currentOneRm(actual, e.upperBody, ex.restSec / 60.0)
             }) ?: return s
             var fatigue = 0.0
+            var lastFreshStrength: Double? = null
             done.forEachIndexed { i, set ->
+                if (useStrengthModel && i == done.lastIndex && set.weight!!.isFinite() && set.reps!! <= StrengthModel.MAX_REPS) {
+                    val remaining = 1 - Strength.fatigueDrop(fatigue)
+                    if (remaining > 0.5) {
+                        val bias = context(history, settings.experience).bias
+                        lastFreshStrength = StrengthModel.observedOneRm(set, e.upperBody, bias) / remaining
+                    }
+                }
                 fatigue = Strength.recover(fatigue + Strength.fatiguingReps(set.reps!!, set.partialReps), Progression.restMinutes(set, done.getOrNull(i + 1), ex.restSec))
             }
-            oneRm = rm * (1 - Strength.fatigueDrop(fatigue)); prevWeight = done.last().weight; progress = 1.0
+            val remaining = 1 - Strength.fatigueDrop(fatigue)
+            recentStrength = lastFreshStrength?.times(remaining)
+            oneRm = recentStrength?.let { 0.60 * it + 0.40 * rm * remaining } ?: (rm * remaining)
+            prevWeight = done.last().weight
+            progress = 1.0
         } else {
             val last = lastSets(ex.exerciseId, history.filter { it.matchesGym(gym) }.ifEmpty { history })
             oneRm = openingStrength(e, history, settings, gym, last) ?: return s
@@ -247,6 +261,8 @@ class SessionEngine(private val db: ExerciseDb, private val exerciseConfig: Map<
             prevWeight, settings.weightMatch, settings.expandRepRange, progress,
             manualReps = pending.mapIndexedNotNull { k, iv -> iv.value.reps?.takeIf { it > 0 && iv.value.repsEdited }?.let { k to it } }.toMap(),
             forced = pending.withIndex().mapNotNull { (k, iv) -> forced[iv.index]?.let { k to it } }.toMap(),
+            recentStrength = recentStrength,
+            recentReps = done.lastOrNull()?.reps,
         )
         val sets = ex.sets.toMutableList()
         pending.forEachIndexed { k, iv ->

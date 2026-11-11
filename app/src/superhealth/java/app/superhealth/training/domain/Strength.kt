@@ -202,6 +202,7 @@ object Progression {
         oneRm: Double, targets: List<TargetSet>, upper: Boolean, ladder: LoadLadder,
         prevWeight: Double?, weightMatch: Boolean, expandRange: Boolean, progress: Double = Strength.SESSION_PROGRESS,
         forced: Map<Int, Double> = emptyMap(), manualReps: Map<Int, Int> = emptyMap(),
+        recentStrength: Double? = null, recentReps: Int? = null,
     ): List<Suggestion> {
         val strength = oneRm * progress
         var fatigue = 0.0
@@ -231,6 +232,16 @@ object Progression {
                 if (r in t.minReps..t.maxReps || (expandRange && r in t.minReps..t.maxReps + 2)) w = keep
             }
             var reps = repsAt(w)
+            // Une série comparable déjà réussie peut justifier de rester à un palier de sa charge.
+            if (k == 0 && recentStrength != null && (recentReps ?: 0) >= t.minReps && prevWeight != null) {
+                val previousLoad = ladder.floor(prevWeight)
+                val lowerLoad = ladder.below(previousLoad) ?: previousLoad
+                val recentRepsAtLowerLoad = Strength.rtfAt(lowerLoad, recentStrength, upper) - t.rir
+                if (w < lowerLoad && recentRepsAtLowerLoad >= t.minReps) {
+                    w = lowerLoad
+                    reps = max(repsAt(w), t.minReps)
+                }
+            }
             var widened = false
             var outOfRange = false
             if (reps > t.maxReps) {

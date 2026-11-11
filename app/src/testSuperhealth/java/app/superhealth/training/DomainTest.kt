@@ -103,6 +103,24 @@ class DomainTest {
         assertTrue(heavier[1].weight <= 90.0 && heavier[1].reps >= 6) // suite : charge choisie gardée si la plage tient
     }
 
+    @Test fun recentSuccessfulSetLimitsTheDropForTheNextComparableSet() {
+        val ladder = LoadLadder.step(2.5)
+        val target = TargetSet(minReps = 8, maxReps = 12, rir = 2)
+        val baseline = Strength.e1rm(70.0, 8, 2, true)
+        val recent = Strength.e1rm(80.0, 8, 2, true)
+        fun next(t: TargetSet, recentReps: Int, recentStrength: Double = recent, forced: Map<Int, Double> = emptyMap()) =
+            Progression.suggest(baseline, listOf(t), true, ladder, 80.0, weightMatch = false,
+                expandRange = false, progress = 1.0, recentStrength = recentStrength, recentReps = recentReps,
+                forced = forced).single()
+
+        assertEquals(77.5, next(target, 8).weight, 0.0)
+        assertEquals(8, next(target, 8).reps)
+        assertEquals(70.0, next(target, 6).weight, 0.0)
+        assertEquals(70.0, next(target, 8, recentStrength = baseline).weight, 0.0)
+        assertTrue(next(target.copy(minReps = 12), 8).weight < 77.5)
+        assertEquals(65.0, next(target, 8, forced = mapOf(0 to 65.0)).weight, 0.0)
+    }
+
     @Test fun databaseLoads() {
         assertTrue(db.exercises.size > 1300)
         assertEquals("Barbell bench press", db.exercise(bench)?.name)

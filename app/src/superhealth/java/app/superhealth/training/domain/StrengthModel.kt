@@ -17,7 +17,7 @@ import kotlin.math.max
  */
 object StrengthModel {
     private const val DAY = 86_400_000.0
-    private const val MAX_REPS = 30
+    internal const val MAX_REPS = 30
 
     data class Measurement(val time: Long, val z: Double, val r: Double, val sets: Int, val impliedBias: Double?)
 
@@ -62,6 +62,9 @@ object StrengthModel {
         return reps + (stated - bias).coerceAtLeast(0.0)
     }
 
+    internal fun observedOneRm(set: SetLog, upper: Boolean, bias: Double): Double =
+        set.weight!! / Strength.pct(rtf(set, bias).coerceAtLeast(1.0), upper)
+
     /** Mesure d'une séance pour un exercice (un ou plusieurs blocs). Null sans série exploitable. */
     fun measure(blocks: List<SessionExercise>, upper: Boolean, bias: Double, time: Long): Measurement? {
         var num = 0.0; var den = 0.0; var count = 0
@@ -73,7 +76,7 @@ object StrengthModel {
             for ((i, set) in sets.withIndex()) {
                 val drop = Strength.fatigueDrop(fatigue)
                 if (drop < 0.5) {
-                    val e = set.weight!! / Strength.pct(rtf(set, bias).coerceAtLeast(1.0), upper) / (1 - drop)
+                    val e = observedOneRm(set, upper, bias) / (1 - drop)
                     val sigma = setSigma(set.reps!!, set.rir, set.proven())
                     num += ln(e) / (sigma * sigma); den += 1 / (sigma * sigma); count++
                     fresh += Triple(set, drop, e)
