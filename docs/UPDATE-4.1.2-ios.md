@@ -1,6 +1,6 @@
-# SuperHealth iOS 4.1.1
+# SuperHealth iOS 4.1.2
 
-Même version que l'APK Android (4.1.1, build 79). Rattrape toutes les versions Android depuis la 3.7.
+Même version que l’APK Android (4.1.2, build 80). Rattrape toutes les versions Android depuis la 3.7.
 
 **Groupe et cartes Athlète**
 - Le fil du Groupe se place à gauche du tableau de bord (Groupe › Réglages › « Fil du Groupe ») ; en bas, « Mes cartes » ouvre packs, combats entre amis, quêtes et album, et « Publier » ouvre l'éditeur. La barre suit le glissement de la page.

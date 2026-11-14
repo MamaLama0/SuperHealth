@@ -129,8 +129,8 @@ jobs:
           # version normale, mais jamais « Latest » : la dernière version reste l'APK Android (lue par la mise à jour intégrée)
           prerelease: false
           make_latest: false
-          name: SuperHealth iOS 4.1.1
-          body_path: docs/UPDATE-4.1.1-ios.md
+          name: SuperHealth iOS 4.1.2
+          body_path: docs/UPDATE-4.1.2-ios.md
           files: |
             SuperHealth.ipa
             SideStore-HealthKit.ipa
