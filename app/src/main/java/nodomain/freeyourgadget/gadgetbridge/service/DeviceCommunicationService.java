@@ -642,6 +642,11 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                     try {
                         final boolean connected;
                         if (firstTime) {
+                            // SuperHealth : juste après le jumelage, la première connexion d'une Garmin échoue souvent
+                            // (pile Bluetooth encore occupée par le lien) ; elle est retentée au lieu d'être abandonnée.
+                            if (gbDevice.getDeviceCoordinator() instanceof nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCoordinator) {
+                                deviceSupport.setAutoReconnect(true);
+                            }
                             connected = deviceSupport.connectFirstTime();
                         } else {
                             deviceSupport.setAutoReconnect(autoReconnect);
