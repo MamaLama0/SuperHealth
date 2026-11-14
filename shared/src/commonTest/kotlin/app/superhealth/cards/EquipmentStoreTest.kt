@@ -4,8 +4,8 @@ import app.superhealth.platform.*
 
 import app.superhealth.league.Progression.Track
 import kotlin.random.Random
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
+import kotlin.test.Test
 
 class EquipmentStoreTest {
     @Test fun legacyRollKeepsItsPercentileAndDoesNotDoubleUpgrade() {

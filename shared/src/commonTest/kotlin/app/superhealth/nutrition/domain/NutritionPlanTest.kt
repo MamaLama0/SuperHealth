@@ -2,10 +2,10 @@ package app.superhealth.nutrition.domain
 
 import app.superhealth.platform.*
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.Test
 
 class NutritionPlanTest {
     private val monday = 20_766L // lundi 9 novembre 2026

@@ -4,8 +4,8 @@ import app.superhealth.platform.*
 import app.superhealth.nutrition.data.FoodEntryEntity
 import app.superhealth.nutrition.domain.Macros
 import kotlinx.serialization.json.Json
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
+import kotlin.test.Test
 class MealPlanTest {
     private val meal = MealPlanner.Meal(1, "Lunch", logged = true, entryIds = listOf(10, 11))
     private val plan = MealPlanner.Plan(100, "foods", listOf(meal))

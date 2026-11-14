@@ -2,8 +2,8 @@ package app.superhealth.coach
 
 import app.superhealth.platform.*
 import app.superhealth.nutrition.data.DayFlagEntity
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
+import kotlin.test.Test
 class FoodContextTest {
     @Test fun explicitIncompleteAndFastingDaysOverrideRecordedTotals() {
         assertTrue(FoodContext.status(DayFlagEntity(1, partial = true), true, false).startsWith("incomplete"))

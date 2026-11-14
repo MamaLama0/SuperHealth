@@ -5,8 +5,8 @@ import app.superhealth.platform.*
 import app.superhealth.nutrition.domain.Sex
 import app.superhealth.training.domain.*
 import kotlinx.serialization.json.Json
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
+import kotlin.test.Test
 
 class CharacterTrainingTest {
     private val day = 86_400_000L

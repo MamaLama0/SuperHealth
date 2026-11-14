@@ -4,8 +4,8 @@ import app.superhealth.platform.*
 
 import app.superhealth.league.Progression
 import app.superhealth.league.Progression.Track
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
+import kotlin.test.Test
 
 class CharacterStatsTest {
     private val today = 21000L

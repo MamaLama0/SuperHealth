@@ -2,8 +2,8 @@ package app.superhealth.cards
 
 import app.superhealth.platform.*
 
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
+import kotlin.test.Test
 
 class FriendlyDuelTest {
     private fun athlete(vararg values: Int) = AthleteStats(values = Stat.entries.zip(values.toList()).associate { (s, v) -> s.code to v })
