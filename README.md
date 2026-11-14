@@ -7,7 +7,7 @@ Nutrition, musculation et santé dans une app gratuite, sans compte : vos donné
 **Android** : téléchargez l'APK dans les [versions](https://github.com/MamaLama0/SuperHealth/releases/latest) et
 ouvrez-le. Les nouvelles versions sont proposées dans l’app ; Android peut demander de confirmer leur installation.
 
-**iPhone** (expérimental) : installation par SideStore, avec un ordinateur la première fois seulement.
+**iPhone** (expérimental) : mêmes numéros de version, fichiers `.ipa` dans la même [version](https://github.com/MamaLama0/SuperHealth/releases/latest) que l'APK. Installation par SideStore, avec un ordinateur la première fois seulement.
 
 1. iPhone : installez **LocalDevVPN** (App Store), touchez **Connect**.
 2. Ordinateur : avec **iloader**, installez `SideStore-HealthKit.ipa` sur l'iPhone branché.
