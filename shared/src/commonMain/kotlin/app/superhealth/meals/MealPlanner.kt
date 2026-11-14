@@ -147,7 +147,6 @@ object MealPlanner {
         })
     }
 
-    @Synchronized
     fun reconcile(day: Long, entries: List<FoodEntryEntity>) {
         val plan = plans.value[day] ?: return
         val next = reconciled(plan, entries)
@@ -155,7 +154,6 @@ object MealPlanner {
     }
 
     /** Copy only into empty slots; consumed entries are never copied to the journal. */
-    @Synchronized
     fun copyDay(from: Long, to: Long, slots: Set<Int>? = null): Int {
         if (from == to) return 0
         val source = plans.value[from] ?: return 0
@@ -192,31 +190,26 @@ object MealPlanner {
         }.sortedBy { slotOrder.indexOf(it.slot) }
     }
 
-    @Synchronized
     fun move(day: Long, from: Int, to: Int) {
         val plan = plans.value[day] ?: return
         val meals = moved(plan.meals, from, to)
         if (meals != plan.meals) save(plans.value + (day to plan.copy(meals = meals)))
     }
 
-    @Synchronized
     fun remove(day: Long, slot: Int) {
         val plan = plans.value[day] ?: return
         val kept = plan.meals.filter { it.slot != slot || it.logged }
         if (kept != plan.meals) save(if (kept.isEmpty()) plans.value - day else plans.value + (day to plan.copy(meals = kept)))
     }
 
-    @Synchronized
     fun clear(day: Long) = save(plans.value - day)
 
-    @Synchronized
     fun clearSuggestions(day: Long) {
         val plan = plans.value[day] ?: return
         val kept = plan.meals.filter { it.manual || it.logged }
         save(if (kept.isEmpty()) plans.value - day else plans.value + (day to plan.copy(meals = kept)))
     }
 
-    @Synchronized
     fun planFoods(day: Long, slot: Int, foods: List<Pair<FoodEntity, Double>>) {
         require(slot in slotOrder)
         require(foods.isNotEmpty() && foods.all { (_, grams) -> grams.isFinite() && grams in 0.1..5000.0 })
