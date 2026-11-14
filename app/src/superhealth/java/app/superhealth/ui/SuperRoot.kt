@@ -1,5 +1,8 @@
 package app.superhealth.ui
 
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.graphics.graphicsLayer
 import app.superhealth.ui.onboarding.tourTarget
 
 import androidx.activity.compose.BackHandler
@@ -370,7 +373,15 @@ fun SuperRoot(vm: SuperViewModel) {
         ) {
         Column(Modifier.fillMaxWidth().onSizeChanged { barPx = it.height }) {
             if (!groupContext && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
-            BottomBar(current, groupContext, onCards = { nav.go("social") }, onCompose = { app.superhealth.ui.league.socialCreateSheet = true }, onTab = { route ->
+            // Part du fil à l'écran (1 = fil, 0 = tableau de bord), lue à chaque image : la barre glisse avec la page.
+            val feedOn = sh.socialFeedEnabled && sh.leagueEnabled
+            BottomBar(current, {
+                when {
+                    current == "feed" -> 1f
+                    current == "home" && feedOn -> (1f - (homePager.currentPage + homePager.currentPageOffsetFraction)).coerceIn(0f, 1f)
+                    else -> 0f
+                }
+            }, onCards = { nav.go("social") }, onCompose = { app.superhealth.ui.league.socialCreateSheet = true }, onTab = { route ->
                 if (route == "home") homePager.requestScrollToPage(1)
                 nav.openTab(route)
             }, onPlus = {
@@ -428,9 +439,35 @@ val LocalTabBarInset = androidx.compose.runtime.compositionLocalOf { 0.dp }
  * Barre de navigation : une pilule flottante bordée d'un filet, les onglets à parts égales (symbole et nom, l'actif sur une
  * pastille d'encre) et, à côté, le « + » rond sous le pouce (ou au milieu de la barre).
  */
+/**
+ * Barre du bas. Sur le panneau social, elle devient « Mes cartes » à gauche et « Publier » à droite. [groupProgress] dit
+ * quelle part du fil est à l'écran : les deux barres glissent avec la page, sans attendre la fin du geste.
+ */
 @Composable
-private fun BottomBar(current: String?, group: Boolean, onCards: () -> Unit, onCompose: () -> Unit,
+private fun BottomBar(current: String?, groupProgress: () -> Float, onCards: () -> Unit, onCompose: () -> Unit,
     onTab: (String) -> Unit, onPlus: () -> Unit) {
+    val progress = rememberUpdatedState(groupProgress)
+    // Seuls ces deux booléens recomposent ; la position est lue au dessin.
+    val social by remember { derivedStateOf { progress.value() > 0.001f } }
+    val tabs by remember { derivedStateOf { progress.value() < 0.999f } }
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp)) {
+        if (tabs) Box(Modifier.graphicsLayer {
+            val p = progress.value(); translationX = p * size.width; alpha = (1f - p * 1.6f).coerceIn(0f, 1f)
+        }) { TabsBar(current, onTab, onPlus) }
+        if (social) Row(Modifier.fillMaxWidth().graphicsLayer {
+            val p = progress.value(); translationX = -(1f - p) * size.width; alpha = (p * 1.6f - 0.6f).coerceIn(0f, 1f)
+        }, verticalAlignment = Alignment.CenterVertically) {
+            // Panneau social : les cartes à gauche, la publication à droite, quel que soit le côté choisi pour le « + ».
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { app.superhealth.ui.cards.CardsDock(onCards) }
+            Spacer(Modifier.width(10.dp))
+            PlusButton(64.dp, onCompose, compose = true)
+        }
+    }
+}
+
+/** Barre de navigation : une pilule flottante bordée d'un filet, les onglets à parts égales, et le « + » rond. */
+@Composable
+private fun TabsBar(current: String?, onTab: (String) -> Unit, onPlus: () -> Unit) {
     val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
     val installed = app.superhealth.modules.Modules.installed.collectAsState().value
     val shown = remember(sh, installed) { visibleTabs(sh).let { if (settingsIsTab(sh)) it + settingsTab else it } }
@@ -439,22 +476,17 @@ private fun BottomBar(current: String?, group: Boolean, onCards: () -> Unit, onC
     val pill = Modifier.height(68.dp)
         .shadow(if (dark) 0.dp else 12.dp, shape, ambientColor = Color.Black.copy(alpha = 0.14f), spotColor = Color.Black.copy(alpha = 0.10f))
         .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.edge, shape).padding(horizontal = 4.dp)
-    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        // Panneau social : les cartes à gauche, la publication à droite, quel que soit le côté choisi pour le « + ».
-        if (sh.plusSide == "RIGHT" || group) {
-            AnimatedContent(group, Modifier.weight(1f), transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(140)) },
-                label = "dock") { social ->
-                Box(Modifier.fillMaxWidth(), contentAlignment = if (social) Alignment.CenterStart else Alignment.CenterEnd) {
-                    if (social) app.superhealth.ui.cards.CardsDock(onCards)
-                    else Row((if (shown.size < tabs.size) Modifier.widthIn(max = (84 * shown.size + 8).dp) else Modifier).fillMaxWidth().then(pill)) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        when (sh.plusSide) {
+            "RIGHT" -> {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    Row((if (shown.size < tabs.size) Modifier.widthIn(max = (84 * shown.size + 8).dp) else Modifier).fillMaxWidth().then(pill)) {
                         shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
                     }
                 }
+                Spacer(Modifier.width(10.dp))
+                PlusButton(64.dp, onPlus)
             }
-            Spacer(Modifier.width(10.dp))
-            PlusButton(64.dp, if (group) onCompose else onPlus, compose = group)
-        } else when (sh.plusSide) {
             // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
             "CENTER" -> Row(pill.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 val left = shown.take(shown.size / 2)
