@@ -6,7 +6,7 @@ Version expérimentale de SuperHealth : nutrition, musculation et données via A
 
 Prévoir un iPhone compatible, un identifiant Apple, un ordinateur et un câble pour la première installation. Un compte Apple gratuit suffit.
 
-1. Depuis les [versions](https://github.com/MamaLama0/SuperHealth/releases), télécharger `SuperHealth.ipa` de la dernière pré-version `ios-v…` et `SideStore-HealthKit.ipa` de la dernière pré-version `sidestore-healthkit-…`.
+1. Dans la [dernière version](https://github.com/MamaLama0/SuperHealth/releases/latest) (la même que l’APK Android), télécharger `SideStore-HealthKit.ipa` sur l’ordinateur et `SuperHealth.ipa` sur l’iPhone (Safari, puis Fichiers → Téléchargements). Ignorer l’APK, le zip du simulateur et « Source code ».
 2. Sur l’iPhone, installer [LocalDevVPN](https://apps.apple.com/app/localdevvpn/id6755608044) et toucher **Connect**.
 3. Sur l’ordinateur, ouvrir [iloader](https://iloader.app), brancher et déverrouiller l’iPhone, puis utiliser **Import IPA** pour installer `SideStore-HealthKit.ipa`. Placer le fichier de jumelage depuis **Manage Pairing File → Place**.
 4. Dans les réglages de l’iPhone, autoriser l’application de développeur et activer le **Mode développeur**. Ouvrir SideStore avec le même identifiant Apple et renouveler SideStore une première fois.
@@ -18,7 +18,7 @@ Le [guide détaillé](docs/INSTALLATION.md#installer-sur-iphone) explique les r�
 
 Avec un compte gratuit, renouveler les apps avant leur expiration de 7 jours : LocalDevVPN connecté, SideStore → **Refresh All**. La limite habituelle est de 3 apps, SideStore compris.
 
-Pour mettre SuperHealth à jour, installer la nouvelle IPA par-dessus l’ancienne, sans la supprimer. Exporter une sauvegarde au préalable. Pour SideStore, utiliser la nouvelle **IPA HealthKit fournie ici** ; le bouton de mise à jour officielle peut retirer ce correctif.
+L’app iPhone ne se met pas à jour seule : à chaque nouvelle version, installer la nouvelle `SuperHealth.ipa` par-dessus l’ancienne (SideStore → **My Apps → +**), sans la supprimer. Exporter une sauvegarde au préalable. Pour SideStore, utiliser la `SideStore-HealthKit.ipa` de la dernière version ; ne jamais toucher au bouton **Update** de SideStore, qui retire l’accès à Apple Santé.
 
 ## Données et confidentialité
 

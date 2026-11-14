@@ -4,8 +4,15 @@ Nutrition, musculation et santé dans une app gratuite, sans compte : vos donné
 
 ## Installer
 
-**Android** : téléchargez l'APK dans les [versions](https://github.com/MamaLama0/SuperHealth/releases/latest) et
-ouvrez-le. Les mises à jour sont automatiques.
+Tout est dans la [dernière version](https://github.com/MamaLama0/SuperHealth/releases/latest), commune à Android et
+iPhone :
+
+| Fichier | Pour |
+| --- | --- |
+| `SuperHealth-x.y.z.apk` | Android : téléchargez-le sur le téléphone et ouvrez-le. Les mises à jour sont ensuite proposées dans l'app. |
+| `SideStore-HealthKit.ipa` | iPhone, à télécharger **sur l'ordinateur** (première installation). |
+| `SuperHealth.ipa` | iPhone, à télécharger **sur l'iPhone** avec Safari. |
+| `SuperHealth-simulator.zip` | Développeurs seulement (simulateur Xcode) : à ignorer. |
 
 **iPhone** (expérimental) : installation par SideStore, avec un ordinateur la première fois seulement.
 
@@ -26,9 +33,8 @@ Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](#in
 - **IA offerte** sans clé, ou la vôtre.
 - **Tableau de bord**, widgets, sauvegardes chiffrées, français et anglais.
 
-La version iOS 3.0 reprend les interfaces sociales clarifiées, les quêtes hebdomadaires, les suivis, la méditation, la mobilité et les outils de programmes. Six nouveaux widgets WidgetKit (classement, progression, séries, quêtes, amis et vue sociale) sont proposés en petit, moyen et grand.
-
-[Notes du portage et vérifications](UPDATE-3.0-ios.md).
+L'app iPhone porte le même numéro que l'APK Android et reprend les mêmes fonctions (Groupe, cartes Athlète, plan
+nutrition, eau…), avec des widgets WidgetKit en petit, moyen et grand. [Nouveautés de la 4.1.2](UPDATE-4.1.2-ios.md).
 
 ## Vie privée
 
@@ -51,10 +57,13 @@ Elle inclut aussi le correctif des erreurs de connexion -80045 / -80046 ([code](
   récent, ou Linux à jour.
 - Un **câble USB** et le **Wi-Fi** sur l'iPhone.
 - Un **identifiant Apple** (un compte gratuit suffit ; ce n'est pas forcément celui de l'iPhone).
-- Les deux fichiers de la dernière version iOS, [`ios-v3.0`](https://github.com/MamaLama0/SuperHealth/releases/tag/ios-v3.0)
-  (ou une `ios-v…` plus récente dans les [versions](https://github.com/MamaLama0/SuperHealth/releases)) :
+- Les deux fichiers iPhone de la [dernière version](https://github.com/MamaLama0/SuperHealth/releases/latest) (la même que
+  l'APK Android ; ouvrez « Assets » en bas de la page si la liste est repliée) :
   - `SideStore-HealthKit.ipa` : à télécharger **sur l'ordinateur** ;
   - `SuperHealth.ipa` : à télécharger **sur l'iPhone**, avec Safari (elle va dans Fichiers > Téléchargements).
+
+Ne prenez pas « Source code (zip) » : ce n'est pas l'app. Si Safari affiche l'`.ipa` au lieu de la télécharger,
+touchez **Télécharger** ; elle se trouve ensuite dans Fichiers > Téléchargements.
 
 #### Étape 1 — LocalDevVPN sur l'iPhone
 
@@ -142,12 +151,13 @@ mais **ses données restent**, et un renouvellement la relance.
 
 #### Mettre à jour
 
-- **SuperHealth** : téléchargez la nouvelle `SuperHealth.ipa`, puis SideStore > My Apps > **+** > choisissez-la,
+- **SuperHealth** : l'app iPhone ne se met pas à jour seule. Quand une nouvelle version sort, téléchargez sa
+  `SuperHealth.ipa` sur l'iPhone, puis SideStore > My Apps > **+** > choisissez-la,
   **sans supprimer** l'ancienne : les données sont conservées.
 - **SideStore** : **ne touchez pas au bouton « Update » de SideStore** ; la mise à jour officielle n'a pas le
   correctif HealthKit et SuperHealth perdrait Apple Santé au renouvellement suivant. Installez plutôt la
-  `SideStore-HealthKit.ipa` de la dernière pré-version `sidestore-healthkit-…` d’ici, depuis SideStore (My Apps > **+**) ou avec iloader
-  (Import IPA).
+  `SideStore-HealthKit.ipa` de la [dernière version](https://github.com/MamaLama0/SuperHealth/releases/latest), depuis SideStore
+  (My Apps > **+**) ou avec iloader (Import IPA).
 
 #### Limites d'un identifiant Apple gratuit
 
@@ -165,7 +175,7 @@ mais **ses données restent**, et un renouvellement la relance.
 | SuperHealth n'apparaît pas dans Santé > Accès aux données | Même cause : réinstallez depuis SideStore + HealthKit, puis rouvrez Apple Santé dans SuperHealth. |
 | « No Wi-Fi or VPN connection » / échec de connexion AFC | Wi-Fi et LocalDevVPN connectés, bloqueurs DNS désactivés, réessayez ; sinon redémarrez SideStore puis LocalDevVPN ; sinon replacez le fichier d'appairage (ligne suivante). |
 | SideStore n'installe plus rien (après une mise à jour d'iOS, une réinitialisation, ou sans raison) | Le fichier d'appairage a expiré. Dans iloader, iPhone branché : **Delete Stored Pairing**, sélectionnez l'iPhone et touchez **Se fier**, puis **Manage Pairing File** > **Place** à droite de SideStore. |
-| « Failed to Sign In … (-80045) » ou (-80046) | Depuis fin octobre 2026, Apple refuse l'ancienne façon de se connecter de SideStore. La `SideStore-HealthKit.ipa` de la version `ios-v3.0` ou plus récente contient le correctif : réinstallez-la avec iloader (Import IPA), sans supprimer SideStore, puis reconnectez-vous **une seule fois** et patientez (des essais répétés font bloquer le compte quelques heures par Apple). Avec une version plus ancienne, à la main : SideStore > Réglages > **User Customizations** : désactivez **On-Device Anisette** ; dans **Anisette Servers**, choisissez **SideStore (New)** et désactivez **Enable Auto Rotation** ; dans **Anisette Client Configuration** > **Remote Server Sync**, touchez **Fetch** puis **Save as Overrides** ; revenez et touchez **Reset adi.pb**. |
+| « Failed to Sign In … (-80045) » ou (-80046) | Depuis fin octobre 2026, Apple refuse l'ancienne façon de se connecter de SideStore. La `SideStore-HealthKit.ipa` de la [dernière version](https://github.com/MamaLama0/SuperHealth/releases/latest) contient le correctif : réinstallez-la avec iloader (Import IPA), sans supprimer SideStore, puis reconnectez-vous **une seule fois** et patientez (des essais répétés font bloquer le compte quelques heures par Apple). Avec une version plus ancienne, à la main : SideStore > Réglages > **User Customizations** : désactivez **On-Device Anisette** ; dans **Anisette Servers**, choisissez **SideStore (New)** et désactivez **Enable Auto Rotation** ; dans **Anisette Client Configuration** > **Remote Server Sync**, touchez **Fetch** puis **Save as Overrides** ; revenez et touchez **Reset adi.pb**. |
 | Erreur à la connexion dans SideStore | Souvent le serveur « Anisette » indisponible : réessayez plus tard ou changez « Anisette URL » dans les réglages de SideStore. |
 | L'installation reste bloquée en cours de route | Redémarrez SideStore ; sinon videz le cache (réglages de SideStore), redémarrez l'iPhone, replacez le fichier d'appairage, et en dernier recours réinstallez SideStore avec iloader. |
 | Une app ne s'ouvre plus | Elle a expiré (7 jours) : SideStore > My Apps > touchez son compteur pour la renouveler. Vos données sont intactes. |
@@ -187,6 +197,5 @@ Plus d'aide : [documentation de SideStore](https://docs.sidestore.io) ([FAQ](htt
 
 - [Contribuer](https://github.com/MamaLama0/SuperHealth/blob/superhealth/CONTRIBUTING.md) : une PR iOS cible `ios`.
 - [Index](https://github.com/MamaLama0/SuperHealth/blob/superhealth/docs/README.md) et [issues](https://github.com/MamaLama0/SuperHealth/issues).
-- [SideStore avec HealthKit](https://github.com/MamaLama0/SuperHealth/tree/sidestore) : choisir la pré-version `sidestore-healthkit-…` la plus récente pour mettre SideStore à jour. L’IPA jointe à une ancienne version iOS peut être plus ancienne.
-
-Les notes Android 3.0.4 ne constituent pas une mise à jour du port iOS. Les ajouts sociaux, avatars et recettes de cette version doivent être portés et vérifiés séparément sur iOS.
+- [SideStore avec HealthKit](https://github.com/MamaLama0/SuperHealth/tree/sidestore) : code du SideStore fourni ; sa
+  dernière compilation est jointe à chaque version de SuperHealth.
