@@ -126,6 +126,11 @@ internal fun FriendSheet(f0: League.Friend, onDismiss: () -> Unit) {
                     Text(tr("Indice"), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
                 }
             }
+            if (f.athlete != null) {
+                var card by remember { mutableStateOf(false) }
+                PillButton(tr("Voir sa carte Athlète"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.EmojiEvents) { card = true }
+                if (card) app.superhealth.ui.cards.FriendCardViewer(app.superhealth.ui.cards.friendFace(f), tr("Ami"), { card = false }, account = f.cardTrade, onDuel = null)
+            }
             Spacer(Modifier.height(12.dp))
             ProfileDecor(f.profileTitle, f.profileBadges)
             FriendProgressDetails(f)

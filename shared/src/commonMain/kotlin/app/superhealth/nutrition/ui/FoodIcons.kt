@@ -2,14 +2,14 @@ package app.superhealth.nutrition.ui
 
 import app.superhealth.platform.*
 
-
-import app.superhealth.platform.Context
-import app.superhealth.platform.LruCache
 import app.superhealth.SuperPrefs
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import app.superhealth.platform.Context
+import app.superhealth.platform.LruCache
 import app.superhealth.platform.Normalizer
 
 /**
@@ -52,6 +52,7 @@ object FoodIcons {
     }
 
     /** Identifiant d'icône (ex. « i1000 ») le plus pertinent pour un nom d'aliment, ou null. */
+    @Synchronized
     fun match(name: String): String? = chosen(name) ?: matchCache.getOrPut(name) { compute(name) }
 
     /** Icône choisie à la main pour cet aliment (Réglages, sauvegardée avec eux). */

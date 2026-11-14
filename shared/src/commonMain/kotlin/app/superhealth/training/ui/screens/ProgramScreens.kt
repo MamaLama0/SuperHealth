@@ -8,14 +8,11 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +29,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Check
@@ -50,7 +46,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,7 +59,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -78,11 +72,9 @@ import app.superhealth.training.domain.Periodization
 import app.superhealth.training.domain.Program
 import app.superhealth.training.domain.ProgramDay
 import app.superhealth.training.domain.ProgramEdit
-import app.superhealth.training.domain.ProgramExercise
 import app.superhealth.training.domain.Split
 import app.superhealth.training.domain.TargetSet
 import app.superhealth.training.ui.AppViewModel
-import app.superhealth.training.ui.Picker
 import app.superhealth.training.ui.components.ChipChoice
 import app.superhealth.training.ui.components.ExerciseThumb
 import app.superhealth.training.ui.components.GenerationTargetsEditor
@@ -95,12 +87,20 @@ import app.superhealth.training.ui.components.RowDivider
 import app.superhealth.training.ui.components.SectionLabel
 import app.superhealth.training.ui.components.SettingRow
 import app.superhealth.training.ui.components.TextInput
-import app.superhealth.training.ui.restLabel
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.ProgramColors
 import app.superhealth.ui.theme.WorkoutBlue
 import kotlinx.coroutines.delay
 import app.superhealth.platform.UUID
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.text.font.FontWeight
+import app.superhealth.training.domain.ProgramExercise
+import app.superhealth.training.ui.Picker
+import app.superhealth.training.ui.restLabel
 
 // ----- Assistant de création (CreateWorkoutProgramModuleSection) -----
 

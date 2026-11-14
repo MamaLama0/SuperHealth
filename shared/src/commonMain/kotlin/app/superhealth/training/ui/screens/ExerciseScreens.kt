@@ -61,10 +61,8 @@ import app.superhealth.training.domain.Exercise
 import app.superhealth.training.domain.ExerciseConfig
 import app.superhealth.training.domain.Generator
 import app.superhealth.training.domain.MuscleGroup
-import app.superhealth.training.domain.ProgramExercise
 import app.superhealth.training.domain.SetLog
 import app.superhealth.training.domain.SetType
-import app.superhealth.training.domain.TargetSet
 import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.Assets
 import app.superhealth.training.ui.AsyncAsset
@@ -88,6 +86,8 @@ import app.superhealth.ui.theme.WorkoutBlue
 import app.superhealth.training.ui.weight
 import app.superhealth.training.ui.estimate
 import app.superhealth.platform.UUID
+import app.superhealth.training.domain.ProgramExercise
+import app.superhealth.training.domain.TargetSet
 
 /** Sélecteur d'exercices (SelectExerciseView / AddExercisesView / SwapExerciseView). */
 @Composable

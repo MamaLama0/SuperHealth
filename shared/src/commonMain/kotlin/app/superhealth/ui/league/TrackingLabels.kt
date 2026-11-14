@@ -23,4 +23,5 @@ fun trackingGoal(track: Progression.Track): String = tr(when (track) {
     Progression.Track.STEPS -> "Objectif de pas du jour"
     Progression.Track.SLEEP -> "Objectif de durée de sommeil"
     Progression.Track.MIND -> "10 minutes d'esprit et mobilité"
+    Progression.Track.HIKE -> "Jours de randonnée cette semaine"
 })

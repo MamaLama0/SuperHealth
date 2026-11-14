@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bestiaire 3D</title>
+<script>
+  // Start the correct local assets while the renderer is being parsed and compiled.
+  const initialCreature = new URLSearchParams(location.search).get('model');
+  const creatureAtlases = {skeletonminion:'skeleton',skeletonrogue:'skeleton',skeletonwarrior:'skeleton',skeletonmage:'skeleton',skeletongolem:'skeleton',necromancer:'skeleton',knight:'knight',mage:'mage',barbarian:'barbarian',ranger:'ranger',rogue:'rogue'};
+  const bestiaryModels=['gobelin-berserker','gobelin-eclaireur','gobelin-maraudeur','gobelin-occultiste','gobelin-rempart','slime-ambre','slime-azur','slime-carmin','slime-maudit','slime-mousse','troll-brisefer'];
+  if(bestiaryModels.includes(initialCreature)){
+    const link=document.createElement('link');link.rel='preload';link.as='fetch';link.crossOrigin='anonymous';link.href='bestiary/'+initialCreature+'.glb';document.head.append(link);
+  }
+  if (Object.hasOwn(creatureAtlases, initialCreature)) {
+    for (const [href,as] of [['creature-'+initialCreature+'.mesh','fetch'],['kaykit-'+creatureAtlases[initialCreature]+'.webp','image']]) {
+      const link=document.createElement('link');link.rel='preload';link.href=href;link.as=as;
+      if(as==='fetch')link.crossOrigin='anonymous';document.head.append(link);
+    }
+  }
+</script>
+<style>
+  *{box-sizing:border-box}body{margin:0;height:var(--view-height,100vh);overflow:hidden}
+  main{height:100%;position:relative;isolation:isolate;display:grid;place-items:center}
+  main::before{content:"";position:absolute;inset:10% 8% 9%;background:radial-gradient(ellipse at 50% 58%,var(--glow,#916bc62c),transparent 63%);pointer-events:none}
+  main::after{content:"";position:absolute;z-index:-1;bottom:8%;left:21%;width:58%;height:18%;background:radial-gradient(ellipse,#100b1ba8,transparent 68%);pointer-events:none}
+  main.dungeon{overflow:hidden}
+  main.dungeon::before{inset:0;background:radial-gradient(ellipse at 50% 60%,var(--glow,#916bc62c),transparent 56%);opacity:.45}
+  main.dungeon::after{z-index:0;bottom:10%;left:30%;width:40%;height:8%;background:radial-gradient(ellipse,#100910a8,transparent 68%)}
+  canvas,img{position:absolute;z-index:1;inset:0;width:100%;height:100%}img{object-fit:contain;pointer-events:none}
+  [hidden]{display:none}
+</style>
+</head>
+<body><main><canvas role="img" aria-label="Modèle en trois dimensions"></canvas><img hidden alt=""></main>
+<script src="viewport.js"></script><script src="creature-gltf.js"></script><script src="creature.js"></script>
+</body></html>

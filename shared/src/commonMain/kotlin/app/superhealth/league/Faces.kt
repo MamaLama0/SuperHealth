@@ -25,7 +25,10 @@ object Faces {
     private const val REFRESH_MS = 20L * 86_400_000
     private const val CACHE_MS = 86_400_000L
     private const val MISS_MS = 3_600_000L
-    private const val CARD_MAX = 78_000
+    // Ré-encodée en base64 dans la charge signée (×4/3) : au-delà de ~68 000 caractères, le serveur (92 000 octets) refusait la photo.
+    private const val CARD_MAX = 60_000
+    /** Charge signée de la photo de carte (image + champs) : bien au-delà des 12 000 octets des messages, sous la limite du serveur. */
+    private const val CARD_SIGNED = 64_000
     private val misses = mutableMapOf<String, Long>()
     /** Le système de fichiers iOS ne donne pas la date du cache : on la garde en mémoire. */
     private val fetched = mutableMapOf<String, Long>()
@@ -46,7 +49,7 @@ object Faces {
         val image = source?.let(::cardImage) ?: ""
         val now = System.currentTimeMillis()
         val payload = JsonObject(mapOf("t" to JsonPrimitive("card"), "id" to JsonPrimitive(id), "at" to JsonPrimitive(now), "image" to JsonPrimitive(image))).toString()
-        val body = JsonObject(mapOf("key" to JsonPrimitive(key), "signed" to JsonPrimitive(League.signSocial(payload)))).toString()
+        val body = JsonObject(mapOf("key" to JsonPrimitive(key), "signed" to JsonPrimitive(League.signSocial(payload, CARD_SIGNED)))).toString()
         val ok = http.newCall(SocialRequest.Builder().url("$base/v2/faces/$id/card").put(body.toRequestBody("application/json".toMediaType())).build()).execute().use {
             it.isSuccessful || it.code == 409
         }
@@ -57,7 +60,7 @@ object Faces {
 
     /** WebP qui tient dans la limite du serveur : la qualité, puis la taille, baissent jusqu'à ce qu'il passe. */
     private fun cardImage(png: ByteArray): String {
-        for (height in intArrayOf(360, 300, 240)) for (quality in intArrayOf(82, 68, 52)) {
+        for (height in intArrayOf(360, 300, 240, 200)) for (quality in intArrayOf(82, 68, 52, 40)) {
             val webp = encodeCardPhoto(png, height, quality) ?: return ""
             val text = Base64.getUrlEncoder().withoutPadding().encodeToString(webp)
             if (text.length <= CARD_MAX) return text
@@ -91,7 +94,7 @@ object Faces {
         }
         val card = json.parseToJsonElement(raw).jsonObject
         check(card["key"]?.jsonPrimitive?.content == key)
-        val payload = json.parseToJsonElement(League.verifySocial(card["signed"]!!.jsonPrimitive.content, key) ?: error("Signature non valable.")).jsonObject
+        val payload = json.parseToJsonElement(League.verifySocial(card["signed"]!!.jsonPrimitive.content, key, CARD_SIGNED) ?: error("Signature non valable.")).jsonObject
         check(payload["t"]?.jsonPrimitive?.content == "card" && payload["id"]?.jsonPrimitive?.content == id && (payload["at"]?.jsonPrimitive?.long ?: 0) > 0)
         val image = payload["image"]?.jsonPrimitive?.content.orEmpty()
         if (image.isEmpty()) return null

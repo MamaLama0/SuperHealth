@@ -54,7 +54,7 @@ data class Series(val id: String, val name: String, val tagline: String, val acc
 /**
  * Série 1 « Nature » : quatre biomes de 36 fonds (14 communes, 11 peu communes, 7 rares, 4 épiques), puis six duos
  * par paire de biomes (2 communes, 2 peu communes, 1 rare, 1 épique), soit 180 fonds, chacun aussi en variante
- * chromatique. Calibré pour 4 à 6 packs par semaine (3.6.2) : en un an, une commune revient une dizaine de fois (ses doublons
+ * chromatique. Calibré pour 2 à 3 packs par semaine : en un an, une commune revient une dizaine de fois (ses doublons
  * se fusionnent ou s'échangent), on tire à peu près la moitié des rares d'un biome et moins d'une épique. Les compositions montent avec la
  * rareté : une commune essaie un cadrage simple, une rare porte le grand élément de son biome, une épique les réunit tous.
  * Les graines sont fixes : un fond reste identique d'une version à l'autre.

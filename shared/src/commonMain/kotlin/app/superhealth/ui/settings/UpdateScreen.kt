@@ -7,6 +7,11 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.superhealth.nutrition.ui.components.*
@@ -14,6 +19,14 @@ import app.superhealth.nutrition.ui.screens.DetailScaffold
 import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.ui.components.SettingRow
+import app.superhealth.nutrition.ui.components.GroupCard
+import app.superhealth.nutrition.ui.components.MfCard
+import app.superhealth.nutrition.ui.components.PillButton
+import app.superhealth.nutrition.ui.components.ProgressBar
+import app.superhealth.nutrition.ui.components.SwitchRow
+import app.superhealth.ui.SuperViewModel
+import app.superhealth.ui.go
+import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
 import app.superhealth.update.Updater
 

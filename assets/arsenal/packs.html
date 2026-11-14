@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Packs Athlète</title>
+<link rel="stylesheet" href="pack.css">
+<style>.help,.actions{display:none!important}body{grid-template-rows:minmax(0,1fr)!important}.meter{display:none}.stage,.focus .stage{background:none}</style>
+</head>
+<body>
+<div class="stage">
+  <canvas class="pack-canvas" aria-label="Pack 3D. Glisse sur le haut pour ouvrir, sur le corps pour tourner."></canvas>
+  <canvas class="fx" aria-hidden="true"></canvas>
+  <button class="fallback-card" aria-label="Pack" type="button"></button>
+  <div class="meter" aria-hidden="true"></div>
+  <div class="results" hidden></div>
+</div>
+<p class="help" aria-live="polite"></p>
+<div class="actions">
+  <button id="open">Ouvrir</button><button id="close" hidden>Refermer</button>
+</div>
+<script src="viewport.js"></script>
+<script src="athlete-packs.js"></script>
+<script src="relic-shaders.js"></script><script src="pack.js"></script>
+</body>
+</html>

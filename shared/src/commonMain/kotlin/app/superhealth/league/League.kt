@@ -51,6 +51,7 @@ object League {
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val athlete: app.superhealth.cards.AthleteStats? = null,
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cardBg: String? = null,
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cardLevel: Int? = null,
+        @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val duelBonuses: Map<String, Int>? = null,
         /** Identifiant d'échange de cartes : permet aux amis de proposer un échange, pas d'écrire dans le compte. */
         @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val cardTrade: String? = null)
 
@@ -63,7 +64,8 @@ object League {
                                     val model: Int = 1, val ready: Boolean = false, val endDay: Long = 0,
                                     val metrics: List<Comparison> = emptyList(), val metricsTime: Long = 0, val remote: String? = null, val revision: Long = 0, val coverage: Int = 0, val metricsEndDay: Long = 0, val relayKey: String? = null, val progress: Progression.Summary? = null,
                                     val trends: Map<String, List<TrendPoint>> = emptyMap(), val relayEtag: String? = null, val inviteRevision: Long = 0, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val space: app.superhealth.social.SpaceContact? = null, val rootKey: String? = null, val posts: List<app.superhealth.social.FriendPost> = emptyList(), val avatar: app.superhealth.social.FriendMedia? = null,
-                                    val athlete: app.superhealth.cards.AthleteStats? = null, val cardBg: String? = null, val cardLevel: Int? = null, val cardTrade: String? = null) {
+                                    val athlete: app.superhealth.cards.AthleteStats? = null, val cardBg: String? = null, val cardLevel: Int? = null, val cardTrade: String? = null,
+                                    val duelBonuses: Map<String, Int>? = null) {
         val shown get() = alias?.takeIf { it.isNotBlank() } ?: name
     }
 
@@ -71,7 +73,7 @@ object League {
 
     @Serializable data class State(val friends: List<Friend> = emptyList(), val best: Map<String, Int> = emptyMap(), val sharePillars: Boolean = true,
         val shareActivities: Boolean = false, val relayUrl: String = "", val customRelay: Boolean = false, val relayEnabled: Boolean = true, val syncsPerDay: Int = 4,
-        val lastSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), val questXp: Long = 0, val questsCompleted: Long = 0, val blockedSocialKeys: Set<String> = emptySet(), val ownPosts: List<app.superhealth.social.FriendPost> = emptyList(), val shareIndex: Boolean = true, val shareProfilePhoto: Boolean = true, val profileAvatar: app.superhealth.social.FriendMedia? = null,
+        val lastSync: Long = 0, val syncError: String? = null, val refreshOnOpen: Boolean = false, val shareProgress: Boolean = true, val tracked: Set<String>? = null, val weeklyTargets: Map<String, Int> = emptyMap(), val earnedBadges: Set<String> = emptySet(), val observedHealthDays: Map<String, Set<Long>> = emptyMap(), val healthSince: Long? = null, val profileTitle: String? = null, val profileBadges: List<String> = emptyList(), val questFocus: Set<WeeklyQuests.Focus>? = null, val questWeeks: List<WeeklyQuests.Week> = emptyList(), /** 3.8 : remise à zéro unique des quêtes de la semaine (identifiant de la remise appliquée). */ val questReset: String = "", val questXp: Long = 0, val questsCompleted: Long = 0, val blockedSocialKeys: Set<String> = emptySet(), val ownPosts: List<app.superhealth.social.FriendPost> = emptyList(), val shareIndex: Boolean = true, val shareProfilePhoto: Boolean = true, val profileAvatar: app.superhealth.social.FriendMedia? = null,
         val hiddenSocialPosts: Set<String> = emptySet(), val mutedSocialFriends: Set<String> = emptySet(), val quietSocialFriends: Set<String> = emptySet(),
         val silentSocialThreads: Set<String> = emptySet(), val blockedSocialAliases: Map<String,String> = emptyMap(), val pendingSocialRevocations: Set<String> = emptySet(), val silentCircles: Set<String> = emptySet(),
         val notifyFriends: Boolean = true, val notifyPosts: Boolean = true, val notifyReplies: Boolean = true, val notifyReactions: Boolean = true, val notifyProgress: Boolean = true, val lastSuccessfulSync: Long = 0)
@@ -88,7 +90,12 @@ object League {
     val incomingError = MutableStateFlow(false)
 
     private fun file(ctx: Context) = File(File(ctx.filesDir, "league").apply { mkdirs() }, "state.json")
-    fun load(ctx: Context) { state.value = runCatching { json.decodeFromString(State.serializer(), AtomicFile(file(ctx)).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(State()).let { if (it.relayUrl.isNotBlank() && !it.customRelay) it.copy(customRelay = true) else it } }
+    fun load(ctx: Context) { state.value = runCatching { json.decodeFromString(State.serializer(), AtomicFile(file(ctx)).openRead().bufferedReader().use { it.readText() }) }.getOrDefault(State()).let { if (it.relayUrl.isNotBlank() && !it.customRelay) it.copy(customRelay = true) else it }
+        // 3.8 : les quêtes de la semaine en cours repartent de zéro (trois par personne), une seule fois ; le serveur
+        // remet à zéro de son côté les packs déjà touchés cette semaine (rewards.json, weekly.reset).
+        .let { if (it.questReset == QUEST_RESET) it else it.copy(questReset = QUEST_RESET,
+            questWeeks = it.questWeeks.filterNot { w -> w.start == Progression.week(LocalDate.now().toEpochDay()) }) } }
+    const val QUEST_RESET = "3.8"
     private fun save(ctx: Context, s: State) { state.value = s; runCatching {
         val atomic = AtomicFile(file(ctx))
         val out = atomic.startWrite()
@@ -207,14 +214,15 @@ object League {
     // ---- Identité ---------------------------------------------------------------------------------------
 
     private fun identity(): SigningIdentity = GroupIdentity.signingIdentity()
-    fun signSocial(payload:String):String {
-        require(payload.toByteArray().size<=12000)
+    /** [max] : 12 000 octets pour les messages ; la photo de carte publique (Faces) a droit à plus. */
+    fun signSocial(payload:String,max:Int=12000):String {
+        require(payload.toByteArray().size<=max)
         return "SHG1.${b64(payload.toByteArray())}.${b64(signIdentity(identity().privateKey,("SuperHealth group v1:"+payload).toByteArray()))}"
     }
-    fun verifySocial(signed:String,key:String):String?=runCatching {
-        require(signed.length<=20000)
+    fun verifySocial(signed:String,key:String,max:Int=12000):String?=runCatching {
+        require(signed.length<=max*4/3+4000)
         val fields=signed.split('.');require(fields.size==3&&fields[0]=="SHG1")
-        val raw=unb64(fields[1]);require(raw.size<=12000&&verifyIdentity(unb64(key),"SuperHealth group v1:".toByteArray()+raw,unb64(fields[2])))
+        val raw=unb64(fields[1]);require(raw.size<=max&&verifyIdentity(unb64(key),"SuperHealth group v1:".toByteArray()+raw,unb64(fields[2])))
         raw.decodeToString()
     }.getOrNull()
     private fun b64(b: ByteArray) = Base64.getUrlEncoder().withoutPadding().encodeToString(b)
@@ -232,9 +240,11 @@ object League {
 
     /** Carte signée de la semaine, prête à partager. */
     private var lastRevision = 0L
-    fun card(name: String, s: Score, remote: String? = null, detailed: Boolean = false, hello: Boolean = false, relayKey: String? = null, invite: Boolean = false): String { synchronized(this) {
+    fun card(name: String, s: Score, remote: String? = null, detailed: Boolean = false, hello: Boolean = false, relayKey: String? = null, invite: Boolean = false,
+        duelBonuses: Map<String, Int>? = null): String { synchronized(this) {
         val pub = myPublic()
         val revision = maxOf(System.currentTimeMillis(), lastRevision + 1).also { lastRevision = it }
+        val athlete = app.superhealth.cards.CardStore.snapshot.value?.now?.takeIf { !hello && !invite && !app.superhealth.cards.CardStore.state.value.demo }
         val c = Card(previousKey = GroupIdentity.current().previous, endorsement = GroupIdentity.current().endorsement, posts = if (detailed && !hello && !invite) FriendSocial.sentPosts() else emptyList(), avatar = state.value.profileAvatar.takeIf { detailed && state.value.shareProfilePhoto && !hello && !invite }, space = SocialSpaces.contact().takeIf { !hello && !invite }, v = 2, k = pub, n = clean(name).ifBlank { "?" }, w = s.week, t = revision / 1000, s = if (state.value.shareIndex) s.total else 0,
             p = if (state.value.shareIndex && state.value.sharePillars) Pillar.entries.map { s.pillars[it] } else emptyList(), st = 0,
             model = if (hello || invite) 2 else HealthIndex.MODEL, ready = state.value.shareIndex && s.ready, endDay = s.endDay,
@@ -242,7 +252,14 @@ object League {
             remote = remote, revision = revision, coverage = if (state.value.shareIndex) s.coverage else 0, hello = hello, relayKey = relayKey, progress = if (state.value.shareProgress && !hello) s.progress else null, invite = invite,
             profileTitle = state.value.profileTitle.takeIf { !hello && !invite },
             profileBadges = if (!hello && !invite) state.value.profileBadges.filter { it in state.value.earnedBadges }.take(3) else emptyList(),
-            athlete = app.superhealth.cards.CardStore.snapshot.value?.now?.takeIf { !hello && !invite && !app.superhealth.cards.CardStore.state.value.demo },
+            athlete = athlete?.let { stats ->
+                val progress = ProgressRepository.current.value
+                val character = if (detailed && progress != null) app.superhealth.cards.CharacterStats.from(progress,
+                    ProgressRepository.selectedTracks(app.superhealth.SuperPrefs.settings.value), stats).equipped(
+                    app.superhealth.cards.EquipmentStore.characterBonuses(app.superhealth.cards.EquipmentStore.state.value,
+                        app.superhealth.cards.EquipmentStore.cards.value)) else stats.character
+                stats.copy(character = character)
+            }, duelBonuses = duelBonuses.takeIf { detailed && athlete != null },
             cardBg = app.superhealth.cards.CardStore.state.value.background.takeIf { !hello && !invite },
             cardLevel = app.superhealth.cards.CardStore.background()?.let { app.superhealth.cards.CardStore.state.value.level(it.card) }?.takeIf { !hello && !invite },
             cardTrade = app.superhealth.cards.CardStore.state.value.tradeId?.takeIf { !hello && !invite && it.matches(Regex("[a-f0-9]{64}")) })
@@ -281,6 +298,8 @@ object League {
         if (c.metrics.size > 128 || c.metrics.any { !it.value.isFinite() || it.value < 0 || it.key.length > 160 || it.label.length > 160 || it.unit.length > 16 || it.scope !in setOf("7d", "all") }) return null
         if (c.relayKey != null && (!RelayCrypto.validKey(c.relayKey) || c.remote == null || !Relay.encryptedEndpoint(c.remote))) return null
         if (c.invite && (c.ready || c.s != 0 || c.p.any { it != null } || c.metrics.isNotEmpty() || c.progress != null)) return null
+        if (c.athlete?.character?.valid() == false) return null
+        if (c.duelBonuses?.let { c.athlete == null || !c.detailSnapshot || c.hello || c.invite || !app.superhealth.cards.FriendlyDuel.validBonuses(it) } == true) return null
         c.progress?.let { g ->
             if (g.model != Progression.MODEL || g.totalXp !in 0..1_000_000_000L || g.level != Progression.level(g.totalXp) || g.weekXp !in 0..(7 * 120 + WeeklyQuests.MAX_WEEKLY_BONUS) ||
                 g.days.size > 7 || g.days.any { it.xp !in 0..120 } || g.streaks.size > 7 || g.streaks.any { it.track !in (Progression.Track.entries.map { t -> t.name } + "HIKE") || it.current !in 0..100000 || it.best < it.current || it.target !in 1..7 || it.progress !in 0..1000 || (it.percent != null && it.percent !in 0..1000) }) return null
@@ -351,6 +370,7 @@ object League {
             metricsEndDay = if (c.detailSnapshot) c.endDay else base.metricsEndDay,
             relayKey = relayKey, progress = c.progress, trends = trends, profileTitle = c.profileTitle, profileBadges = c.profileBadges,
             athlete = c.athlete ?: base.athlete, cardBg = c.cardBg ?: base.cardBg, cardLevel = c.cardLevel ?: base.cardLevel, cardTrade = c.cardTrade?.takeIf { it.matches(Regex("[a-f0-9]{64}")) } ?: base.cardTrade,
+            duelBonuses = if (c.athlete != null && c.detailSnapshot) c.duelBonuses else base.duelBonuses,
             relayEtag = base.relayEtag.takeIf { sameRelay },
             inviteRevision = if (updateMetadata) maxOf(metadataRevision, c.revision) else metadataRevision)
     }
@@ -371,8 +391,15 @@ object League {
     fun isFriend(key: String) = state.value.friends.any { it.key == key }
 
     /** Ma carte du moment : score recalculé. */
-    suspend fun myCard(ctx: Context, detailed: Boolean = false, includeRelayKey: Boolean = true): String = card(app.superhealth.ui.userName() ?: "?", compute(ctx), Relay.myEndpoint(ctx), detailed,
-        relayKey = if (includeRelayKey && Relay.myEndpoint(ctx) != null) Relay.readKey(ctx) else null)
+    suspend fun myCard(ctx: Context, detailed: Boolean = false, includeRelayKey: Boolean = true): String {
+        val bonuses = if (detailed) {
+            val store = app.superhealth.cards.EquipmentStore
+            store.load(ctx)
+            store.duelBonuses(store.state.value, store.cards.value)
+        } else null
+        return card(app.superhealth.ui.userName() ?: "?", compute(ctx), Relay.myEndpoint(ctx), detailed,
+            relayKey = if (includeRelayKey && Relay.myEndpoint(ctx) != null) Relay.readKey(ctx) else null, duelBonuses = bonuses)
+    }
     fun inviteCard(ctx: Context): String {
         val end = LocalDate.now().minusDays(1)
         return card(app.superhealth.ui.userName() ?: "?", Score(weekKey(end), 0, emptyMap(), endDay = end.toEpochDay()), Relay.myEndpoint(ctx),

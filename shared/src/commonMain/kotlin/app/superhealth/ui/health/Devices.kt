@@ -22,13 +22,11 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storage
-import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -56,7 +54,6 @@ import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.NumberField
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.SwitchRow
 import app.superhealth.nutrition.ui.screens.DetailScaffold
@@ -69,6 +66,9 @@ import app.superhealth.bridge.HealthConnectHub
 import app.superhealth.health.data.HealthSources
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material3.IconButton
+import app.superhealth.nutrition.ui.components.SectionLabel
 
 /**
  * Apple Santé et montre : sur iOS, l'Apple Watch (et les montres dont l'app écrit dans Santé : Garmin Connect, Polar,

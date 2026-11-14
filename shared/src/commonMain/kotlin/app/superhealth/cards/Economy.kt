@@ -11,20 +11,22 @@ import kotlinx.serialization.json.*
 import app.superhealth.cards.CardStore.PACK_PRICE
 
 /**
- * Client de l'économie tenue par le serveur SuperHealth (route /v2/economy, voir economy.mjs) : éclats, packs offerts,
+ * Client de l'économie tenue par le serveur SuperHealth (route /v2/economy, voir economy.mjs) : or, packs offerts,
  * collection, fusion des doublons, échanges entre joueurs, pack doré, quêtes et tirage. L'app n'envoie que des événements (séance, quête) avec un identifiant opaque
  * et une date ; le serveur fixe les quêtes et leurs montants et refuse doublons et triches. Le mode démo reste local.
  */
 object Economy {
-    class Unavailable(message: String) : Exception(message)
+    open class Unavailable(message: String) : Exception(message)
+    internal class Offline : Unavailable("Relais injoignable. Réessaie pour récupérer le même tirage.")
+    internal class InsufficientArsenalGold : Unavailable("Il te manque des pièces d’or.")
 
     /**
-     * Quête fixée par le serveur : son genre, son palier de difficulté (0 à 2, adapté à l'utilisateur) et ses éclats.
+     * Quête fixée par le serveur : son genre, son palier de difficulté (0 à 2, adapté à l'utilisateur) et son or.
      * L'app en tire l'objectif concret à partir des habitudes locales (voir [CardStore.quests]).
      */
     @Serializable data class QuestDef(val id: String, val kind: String, val scope: String, val tier: Int = 1, val reward: Int = 0, val stat: String? = null)
     @Serializable data class Gain(val key: String, val copiesBefore: Int, val copiesAfter: Int, val refund: Int = 0)
-    /** Mise d'un échange : une carte ou des éclats, jamais les deux. */
+    /** Mise d'un échange : une carte ou de l'or, jamais les deux. */
     @Serializable data class Stake(val card: String? = null, val eclats: Int? = null) {
         val pull get() = card?.let(Pull::of)
         val json get() = buildJsonObject { if (card != null) put("card", card) else put("eclats", eclats ?: 0) }
@@ -43,7 +45,7 @@ object Economy {
     }
     /**
      * Récompenses en vigueur, envoyées par le serveur à chaque appel (réglables sans mise à jour de l'app, voir rewards.mjs) :
-     * quêtes de la semaine en packs offerts, défis entre amis, éclats des quêtes du jour.
+     * quêtes de la semaine en packs offerts, défis entre amis, or des quêtes du jour.
      */
     @Serializable data class Prize(val packs: Int = 0, val eclats: Int = 0)
     @Serializable data class Weekly(val count: Int = 3, val packs: Int = 1, val done: Int = 0)
@@ -51,11 +53,11 @@ object Economy {
     @Serializable data class Rewards(val weekly: Weekly = Weekly(), val challenge: Challenges = Challenges())
     /** Cadeau du serveur (packs offerts avec une mise à jour, par exemple), versé une fois par compte. */
     @Serializable data class Gift(val id: String = "", val packs: Int = 0, val eclats: Int = 0, val note: String = "")
-    @Serializable data class View(val eclats: Int = 0, val bonusPacks: Int = 0, val opened: Long = 0, val untilGold: Int = PackEngine.GOLD_EVERY, val owned: Map<String, Int> = emptyMap(),
+    @Serializable internal data class View(val eclats: Int = 0, val bonusPacks: Int = 0, val opened: Long = 0, val untilGold: Int = PackEngine.GOLD_EVERY, val owned: Map<String, Int> = emptyMap(),
                                   val merged: Map<String, Int> = emptyMap(), val tradeId: String? = null, val trades: Trades = Trades(), val browse: Browse? = null, val traded: Boolean? = null, val challenge: Challenge? = null,
                                   val badges: List<String>? = null, val baseline: Boolean? = null, val streaks: Map<String, CardStore.StreakPaid>? = null,
                                   val claimed: List<String> = emptyList(), val quests: List<QuestDef> = emptyList(), val pulls: List<Gain>? = null, val prism: Boolean = false, val gold: Boolean = false,
-                                  val rewards: Rewards? = null, val received: List<Gift>? = null, val price: Int = PACK_PRICE)
+                                  val rewards: Rewards? = null, internal val arsenal: ArsenalGame.View? = null, val received: List<Gift>? = null, val price: Int = PACK_PRICE)
     sealed interface Event { val json: JsonObject }
     data class Session(val id: String, val start: Long, val target: Int) : Event {
         override val json get() = buildJsonObject { put("type", "session"); put("id", id); put("start", start); put("target", target) }
@@ -64,7 +66,7 @@ object Economy {
     data class League(val id: String) : Event { override val json get() = buildJsonObject { put("type", "league"); put("id", id) } }
     /** Palier de badge atteint : payé une fois. Série tenue cette semaine : bonus qui grandit de semaine en semaine. */
     data class Badge(val id: String) : Event { override val json get() = buildJsonObject { put("type", "badge"); put("id", id) } }
-    /** Départ de la mise à jour : les badges déjà obtenus comptent comme payés, sans éclats. */
+    /** Départ de la mise à jour : les badges déjà obtenus comptent comme payés, sans or. */
     data class Baseline(val badges: List<String>) : Event { override val json get() = buildJsonObject { put("type", "baseline"); put("badges", JsonArray(badges.map(::JsonPrimitive))) } }
     data class Streak(val track: String, val weeks: Int) : Event { override val json get() = buildJsonObject { put("type", "streak"); put("track", track); put("weeks", weeks) } }
 
@@ -91,19 +93,24 @@ object Economy {
         if (a.account.matches(hex) && a.token.matches(hex)) Secrets.putAll(ctx, mapOf(ACCOUNT to a.account, TOKEN to a.token))
     }
 
-    private suspend fun call(ctx: Context, body: JsonObject): View = withContext(Dispatchers.IO) {
+    private suspend fun call(ctx: Context, body: JsonObject, probe: Boolean = false): View = withContext(Dispatchers.IO) {
         val base = Relay.base() ?: throw Unavailable("Les packs passent par le serveur SuperHealth : active-le dans Groupe › Réglages.")
         val headers = buildMap {
             put("Content-Type", "application/json"); put("X-Write-Token", secret(ctx, TOKEN))
             Relay.publicationKey(ctx).takeIf { it.isNotBlank() }?.let { put("Authorization", "Bearer $it") }
         }
         val payload = JsonObject(body + ("today" to JsonPrimitive(LocalDate.now().toEpochDay()))).toString().encodeToByteArray()
-        val (code, bytes) = try { httpCall("$base/v2/economy/" + secret(ctx, ACCOUNT), "POST", headers, payload, timeoutMs = 20_000) }
-            catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { throw Unavailable("Serveur injoignable. Réessaie dans un instant.") }
+        val (code, bytes) = try { httpCall("$base/v2/economy/" + secret(ctx, ACCOUNT), "POST", headers, payload, timeoutMs = if (probe) 2_000 else 20_000) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { throw Offline() }
         val text = bytes.decodeToString()
+        val arsenalRequest = body["op"]?.jsonPrimitive?.content?.startsWith("arsenal-") == true
         run {
             when {
-                code == 402 -> throw Unavailable(if (body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true) "Il manque la carte ou les éclats pour cet échange." else "Pas assez d'éclats pour ça.")
+                arsenalRequest && code == 400 -> throw ArsenalGame.Unsupported()
+                arsenalRequest && code == 402 -> throw InsufficientArsenalGold()
+                arsenalRequest && code == 409 -> throw Unavailable("Action indisponible. Vérifie le suivi, la carte ou le groupe.")
+                arsenalRequest && code !in 200..299 -> throw Unavailable("L’Arsenal est indisponible ($code).")
+                code == 402 -> throw Unavailable(if (body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true) "Il manque la carte ou l'or pour cet échange." else "Pas assez d'or pour ça.")
                 code == 404 && body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true -> throw Unavailable("Cet échange n'existe plus, ou ton ami n'a pas encore ouvert de pack.")
                 code == 404 || code == 405 -> throw Unavailable("Le serveur SuperHealth doit être mis à jour pour les packs.")
                 code == 429 -> throw Unavailable("Doucement : réessaie dans une minute.")
@@ -111,6 +118,16 @@ object Economy {
             }
             json.decodeFromString(View.serializer(), text)
         }
+    }
+
+    internal suspend fun arsenal(ctx: Context, body: JsonObject, probe: Boolean = false): ArsenalGame.View {
+        val friends = JsonArray(app.superhealth.league.League.state.value.friends.mapNotNull { it.cardTrade }.distinct().take(200).map(::JsonPrimitive))
+        val result = call(ctx, JsonObject(body + ("friends" to friends)), probe)
+        val arsenal = result.arsenal ?: throw ArsenalGame.Unsupported()
+        result.tradeId?.takeIf { it != CardStore.state.value.tradeId }?.let { id ->
+            CardStore.update(ctx) { it.copy(tradeId = id) }
+        }
+        return arsenal
     }
 
     /** Reporte la vue du serveur dans l'état local (affichage hors ligne, fonds possédés). */

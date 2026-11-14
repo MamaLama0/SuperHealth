@@ -55,6 +55,8 @@ data class AthleteStats(
     val computedAt: Long = 0,
     /** Sexe déclaré (« F » ou « M ») : les barèmes de force et de cardio en dépendent, la silhouette par défaut aussi. */
     val sex: String? = null,
+    val character: CharacterStats? = null,
+    val training: CharacterTraining? = null,
 ) {
     val female get() = sex == "F"
     val ovr: Int? get() = ovr10?.let { (it + 5) / 10 }
@@ -104,6 +106,7 @@ object AthleteStatsEngine {
         /** Pas par jour (début du jour en ms → pas) sur 8 semaines, pour pondérer par la récence. */
         val steps: List<Pair<Long, Double>>? = null, val restingHr: Double? = null, val heightCm: Double? = null,
         val zone: ZoneId = ZoneId.systemDefault(),
+        val bodyweightKnown: Boolean = true,
     )
 
     private class ExerciseBest(var points: Double, var last: Long, val confidence: Double)
@@ -161,7 +164,7 @@ object AthleteStatsEngine {
             (parts.sumOf { it.first * it.second } / parts.sumOf { it.second } * 10).roundToInt()
         }
         val muscles = best.entries.associate { it.key.key to it.value.roundToInt().coerceIn(25, 99) }
-        return AthleteStats(values = values, provisional = provisional, ovr10 = ovr10, muscles = muscles, computedAt = now, sex = if (input.sex == Sex.FEMALE) "F" else "M")
+        return AthleteStats(values = values, provisional = provisional, ovr10 = ovr10, muscles = muscles, computedAt = now, sex = if (input.sex == Sex.FEMALE) "F" else "M", training = CharacterTrainingEngine.compute(input))
     }
 
     /**
@@ -176,13 +179,13 @@ object AthleteStatsEngine {
         for (w in workouts) for (entry in w.exercises) {
             val ex = input.db.exercise(entry.exerciseId) ?: continue
             val match = Standards.match(ex) ?: continue
-            val levels = Standards.thresholds(match.lift, input.sex, input.bodyweight)
+            val levels = Standards.athleteThresholds(match.lift, input.sex, input.bodyweight)
             for (set in Analytics.workingSets(entry)) {
                 val reps = set.reps ?: continue
                 if (reps !in 1..12) continue
                 val load = if (match.lift.bodyweightLoad) input.bodyweight * (ex.bodyweight ?: 1.0) + (set.weight ?: 0.0)
                     else set.weight?.takeIf { it.isFinite() && it > 0 } ?: continue
-                val e1rm = Strength.e1rm(load, reps, set.rir, ex.upperBody, set.partialReps)
+                val e1rm = Strength.e1rm(load, reps, set.rir?.coerceIn(0, 3), ex.upperBody, set.partialReps.coerceIn(0, reps))
                 if (!e1rm.isFinite()) continue
                 val months = (input.now - w.startTime) / (30.0 * DAY)
                 val points = Standards.points(e1rm / match.coef / input.bodyweight, levels) - if (aged) (0.5 * (months - 3)).coerceIn(0.0, 4.0) else 0.0 -

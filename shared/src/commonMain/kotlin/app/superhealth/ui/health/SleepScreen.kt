@@ -63,10 +63,8 @@ import app.superhealth.ui.dayLetter
 import app.superhealth.ui.formatDuration
 import app.superhealth.ui.formatNumber
 import app.superhealth.ui.go
-import app.superhealth.ui.relativeDay
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
-import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.timeOf
 import app.superhealth.ui.tr
@@ -83,6 +81,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import app.superhealth.health.data.ActivityKind
+import app.superhealth.ui.relativeDay
+import app.superhealth.ui.theme.container
 
 /*
  * Écran Sommeil : la nuit en détail (hypnogramme, phases face à vos habitudes, parties de Repos, cœur et signes vitaux de

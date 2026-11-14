@@ -95,7 +95,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
         val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
 
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
-        val defaults = listOf(STREAKS, RINGS, VITALS, PROGRESSION, QUESTS, LEAGUE, FRIENDS, CALORIES, WEIGHT, EXPENDITURE, NEXT_WORKOUT, INTAKE, STEPS, HEART, SLEEP, ACTIVITIES, TRAINING_WEEK, HABITS)
+        val defaults = listOf(RINGS, CALORIES, HYDRATION, NEXT_WORKOUT)
     }
 }
 
@@ -253,9 +253,14 @@ data class SuperSettings(
     val haptics: Boolean = true,
     /** Questionnaire d'accueil terminé. */
     val onboarded: Boolean = false,
+    /** Only new installations opt into the introductory tour. Old backups remain quiet. */
+    val appTourPending: Boolean = false,
     val coachEnabled: Boolean = true,
     /** Plugin Groupe (cartes, quêtes, amis) : installé quand le Groupe est activé, absent par défaut d'une nouvelle installation. */
     val leagueEnabled: Boolean = false,
+    val socialFeedEnabled: Boolean = false,
+    val update401Seen: Boolean = false,
+    val arsenalAvatar: String? = null,
     val builtinsAdded: Boolean = false,
     /** 2.31 : verrouillage de l'app (empreinte ou code du téléphone), délai avant de redemander (s), écran masqué dans les Récents. */
     val appLock: Boolean = false,
@@ -397,6 +402,20 @@ data class SuperSettings(
     /** Dernière synchronisation Health Connect (ms) et son résumé. */
     val lastHcSync: Long = 0,
     val lastHcSummary: String? = null,
+    /**
+     * 3.8 : objectif d'eau calculé (poids, séances du jour, protéines) au lieu du chiffre fixe ; taux de sudation mesuré
+     * par pesée avant/après séance (L/h, null : valeurs moyennes de la littérature) ; sodium de la sueur (mg/L, Baker 2017 :
+     * ~950 mg/L en moyenne) ; tailles des contenants du bouton d'eau (ml).
+     */
+    val hydrationAuto: Boolean = true,
+    val sweatRateLh: Double? = null,
+    val sweatSodiumMgL: Double = 950.0,
+    val waterSizes: List<Int> = listOf(250, 500, 750),
+    /**
+     * 3.8 : le cycle dans la Forme du jour, comme le journal du moral. SIMPLE : la phase s'affiche comme explication, sans
+     * effet ; ADVANCED (défaut) : l'effet de chaque phase sur votre propre ressenti est appris et corrige le score.
+     */
+    val cycleForm: String = "ADVANCED",
 )
 
 /** Mesures que la carte Constantes peut afficher (montre ou Health Connect). */
@@ -564,7 +583,7 @@ object SuperPrefs {
         if (!_settings.value.streakHeroAdded) update { s ->
             s.copy(dashboard = withStreakHero(s.dashboard), streakHeroAdded = true)
         }
-        if (newProfile) update { it.copy(dashboard = listOf(DashCard.STREAKS, DashCard.RINGS, DashCard.VITALS) + it.dashboard.filter { c -> c !in setOf(DashCard.STREAKS, DashCard.RINGS, DashCard.VITALS) }) }
+        if (newProfile) update { it.copy(dashboard = DashCard.defaults, appTourPending = true) }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }
 

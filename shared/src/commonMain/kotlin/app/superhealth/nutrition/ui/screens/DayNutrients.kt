@@ -6,7 +6,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -45,6 +44,7 @@ import app.superhealth.nutrition.ui.num
 import app.superhealth.nutrition.ui.tr
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.ui.theme.Mf
+import androidx.compose.foundation.layout.Box
 
 /**
  * Nutriments du jour, dans le journal : quatre repères d'un coup d'œil (fibres, sucres, sodium, caféine ou saturés), la
@@ -59,7 +59,18 @@ fun DayNutrients(entries: List<FoodEntryEntity>, s: NutritionSettings, modifier:
         Micros.sum(entries.map { it.microsJson }).toMutableMap().also { m -> m["fiber"] = entries.sumOf { it.fiber } }
     }
     val withData = remember(entries) { entries.count { !it.microsJson.isNullOrBlank() } }
-    fun target(d: Micros.Def) = s.microTargets[d.code] ?: Micros.reference(d)
+    // Repères du jour : plan nutrition (jour, sinon semaine), puis réglages ; le plafond de sodium monte avec la sueur
+    // des séances (voir Hydration, qui applique déjà le plan et le réglage).
+    val day = entries.first().epochDay
+    val prog = runCatching { app.superhealth.nutrition.NutriApp.repository.prefs.program.value }.getOrNull()
+    val hyd = app.superhealth.health.data.Hydration.today.value?.takeIf { it.date.toEpochDay() == day }
+    val NP = app.superhealth.nutrition.domain.NutritionPlan
+    fun target(d: Micros.Def) = when (d.code) {
+        "fiber" -> prog?.let { NP.fiberAt(it, day) }
+        "sodium" -> hyd?.sodiumTargetMg?.takeIf { hyd.sweatSodiumMg > 0 || prog?.let { p -> NP.sodiumAt(p, day) } != null } ?: prog?.let { NP.sodiumAt(it, day) }
+        "potassium" -> prog?.let { NP.potassiumAt(it, day) }
+        else -> null
+    } ?: s.microTargets[d.code] ?: Micros.reference(d)
     MfCard(modifier.animateContentSize(), onClick = { open = !open }, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Nutriments"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
@@ -108,7 +119,8 @@ fun DayNutrients(entries: List<FoodEntryEntity>, s: NutritionSettings, modifier:
 @Composable
 private fun KeyStat(d: Micros.Def, v: Double, target: Double?, modifier: Modifier) {
     val goal = target ?: d.limit
-    val over = d.limit != null && v > d.limit
+    val cap = if (d.code == "sodium") goal else d.limit
+    val over = cap != null && v > cap
     Column(modifier.clip(RoundedCornerShape(14.dp)).background(Mf.colors.chip).padding(horizontal = 8.dp, vertical = 8.dp)) {
         Text(tr(d.label.substringBefore(" (")), style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(verticalAlignment = Alignment.Bottom) {
@@ -125,7 +137,8 @@ private fun KeyStat(d: Micros.Def, v: Double, target: Double?, modifier: Modifie
 
 @Composable
 private fun NutrientRow(d: Micros.Def, v: Double, target: Double?) {
-    val over = d.limit != null && v > d.limit
+    val cap = if (d.code == "sodium") target ?: d.limit else d.limit
+    val over = cap != null && v > cap
     Column(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tr(d.label), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)

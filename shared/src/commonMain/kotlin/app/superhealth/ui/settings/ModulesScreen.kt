@@ -89,7 +89,6 @@ import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.SwitchRow
 import app.superhealth.nutrition.ui.screens.DetailScaffold
@@ -105,6 +104,7 @@ import app.superhealth.ui.trf
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.launch
+import app.superhealth.nutrition.ui.components.SectionLabel
 
 /** Couleur et symbole d'un module (sa couleur d'index si elle est donnée). */
 internal fun moduleHue(kind: String, color: String?): Color = color?.let { runCatching { parseColor(it) }.getOrNull() }
@@ -194,7 +194,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
                 "Coaching" -> kind == Modules.COACH
                 else -> true
             }
-            matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name)
+            matches && listOfNotNull(m?.name, m?.nameEn, m?.summary, m?.summaryEn, inst?.name, Modules.MEAL_SUGGESTION.takeIf { id == Modules.MEALS })
                 .any { it.contains(query.trim(), ignoreCase = true) }
         }
         if (ids.isEmpty()) MfCard {
@@ -204,7 +204,7 @@ fun ModulesScreen(vm: SuperViewModel, nav: NavHostController) {
         ids.forEach { id ->
             val entry = catalog.firstOrNull { it.module.id == id }; val inst = installed.firstOrNull { it.id == id }
             val m = entry?.module; val kind = m?.kind ?: inst?.kind.orEmpty()
-            val name = (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
+            val name = if (id == Modules.MEALS) Modules.MEAL_SUGGESTION else (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
             val summary = (if (Lang.english) m?.summaryEn else null) ?: m?.summary.orEmpty()
             Spacer(Modifier.height(8.dp))
             GroupCard {
@@ -303,7 +303,7 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
     val m = entry?.module
     val kind = m?.kind ?: inst?.kind ?: ""
     val hue = moduleHue(kind, m?.color)
-    val name = (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
+    val name = if (id == Modules.MEALS) Modules.MEAL_SUGGESTION else (if (Lang.english) m?.nameEn else null) ?: m?.name ?: inst?.name ?: id
     val summary = (if (Lang.english) m?.summaryEn else null) ?: m?.summary ?: ""
     val update = inst?.let { Modules.update(it) }
     val compatible = m == null || Modules.compatible(ctx, m)

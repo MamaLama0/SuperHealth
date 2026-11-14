@@ -2,10 +2,10 @@ package app.superhealth.wellbeing
 
 import app.superhealth.platform.*
 
-import app.superhealth.platform.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import app.superhealth.platform.Context
 import app.superhealth.platform.File
 import app.superhealth.platform.LocalDate
 
@@ -35,6 +35,7 @@ object Journal {
     fun set(ctx: Context, day: Long, e: Entry?) {
         days.value = if (e == null) days.value - day else days.value + (day to e)
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), Store(days.value))) }
+        Form.Model.invalidate()
         Reminders.schedule(ctx)
     }
 

@@ -2,28 +2,19 @@ package app.superhealth.ui.dashboard
 
 import app.superhealth.platform.*
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
 import app.superhealth.health.data.NightSummary
-import app.superhealth.health.data.NightVitals
 import app.superhealth.health.data.Nights
 import app.superhealth.health.data.Scores
 import app.superhealth.ui.dayLetter
@@ -32,15 +23,11 @@ import app.superhealth.ui.formatNumber
 import app.superhealth.ui.formatValue
 import app.superhealth.ui.go
 import app.superhealth.ui.health.HeartChart
-import app.superhealth.ui.health.NightVitalsBody
-import app.superhealth.ui.health.RangeBar
 import app.superhealth.ui.health.RestPartsRows
 import app.superhealth.ui.health.ScheduleChart
 import app.superhealth.ui.health.StageBars
-import app.superhealth.ui.health.VitalTrend
 import app.superhealth.ui.health.color
 import app.superhealth.ui.health.lowestWhen
-import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.timeOf
@@ -48,6 +35,19 @@ import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import app.superhealth.ui.unitOf
 import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import app.superhealth.health.data.NightVitals
+import app.superhealth.ui.health.NightVitalsBody
+import app.superhealth.ui.health.RangeBar
+import app.superhealth.ui.health.VitalTrend
+import app.superhealth.ui.theme.HealthHues
 
 /*
  * Cartes 2.1 du sommeil et des constantes : horaires (coucher et lever des deux semaines), qualité (parties de Repos),
@@ -155,7 +155,7 @@ internal fun NightHeartCard(c: DashCard, w: WatchSnap, modifier: Modifier, nav: 
     }
 }
 
-/** Sommeil, en grand : la nuit, son Repos en mots et les 7 nuits en phases empilées face au besoin. */
+/** Sommeil, en grand : la nuit et les 7 nuits en phases empilées face au besoin. */
 @Composable
 internal fun SleepWeekCard(c: DashCard, h: HealthSnap, modifier: Modifier, nav: NavHostController) {
     val w = h.watch
@@ -165,7 +165,6 @@ internal fun SleepWeekCard(c: DashCard, h: HealthSnap, modifier: Modifier, nav: 
         Row(verticalAlignment = Alignment.Bottom) {
             Value(last?.let { formatDuration(it.asleepMin) } ?: h.latest(app.superhealth.health.data.Metric.SLEEP)?.let { formatValue(app.superhealth.health.data.Metric.SLEEP, it.second) } ?: "—",
                 color = c.ink().onContainer())
-            w.sleepScore?.takeIf { last != null }?.let { Sub(" · " + tr(Scores.restWord(it, last!!.asleepMin, w.needMin ?: Scores.sleepNeed()).label)) }
             Spacer(Modifier.weight(1f))
             week.mapNotNull { it.second?.asleepMin }.takeIf { it.isNotEmpty() }?.let { Sub(trf("Moy. %1\$s", formatDuration(it.average()))) }
         }

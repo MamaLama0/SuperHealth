@@ -55,7 +55,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -82,6 +81,7 @@ import app.superhealth.training.ui.restLabel
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.WorkoutBlue
 import app.superhealth.platform.UUID
+import androidx.compose.ui.graphics.Color
 
 /*
  * Édition manuelle, sans le générateur : jours de programme et séances de la bibliothèque partagent le même éditeur

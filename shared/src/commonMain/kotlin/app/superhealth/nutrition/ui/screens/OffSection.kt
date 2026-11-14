@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,6 +39,7 @@ import app.superhealth.nutrition.data.OpenFoodFacts
 import app.superhealth.nutrition.ui.tr
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.ui.theme.Mf
+import androidx.compose.foundation.layout.height
 
 /**
  * Fiche Open Food Facts d'un produit à code-barres : photo, Nutri-Score, NOVA, Green-Score, ingrédients, allergènes,

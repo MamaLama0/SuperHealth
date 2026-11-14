@@ -1,0 +1,7 @@
+<!doctype html><html lang="fr" class="duel"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arène des duels</title>
+<style>
+*{box-sizing:border-box}body{margin:0;height:var(--view-height,100vh);overflow:hidden}main{position:relative;height:100%;isolation:isolate}canvas{position:absolute;z-index:1;inset:0;width:100%;height:100%;pointer-events:none}#landscape{z-index:0}#effects{z-index:2}.duel-posters{position:absolute;inset:0;display:flex;align-items:flex-end;padding-bottom:16%}.duel-posters img{width:50%;height:78%;object-fit:contain}[hidden]{display:none!important}
+</style></head><body><main><canvas id="landscape" aria-hidden="true"></canvas><canvas class="fighter-canvas" aria-label="Personnages du duel"></canvas><canvas id="effects" aria-hidden="true"></canvas><img hidden alt=""><div class="duel-posters" hidden></div></main>
+<script src="viewport.js"></script><script src="creature.js"></script><script src="arena-scene.js"></script><script src="duel-effects.js"></script><script src="duel.js"></script></body></html>

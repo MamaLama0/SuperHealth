@@ -277,7 +277,7 @@ fun FoodSheet(
         containerColor = Mf.colors.card, dragHandle = null) {
       Column(Modifier.navigationBarsPadding()) {
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            val subtitle = listOf(food.brand, when { food.source == "off" -> tr("Open Food Facts"); isRecipe -> trf("Recette · %1\$s portion(s)", (num(food.recipeServings ?: 1.0, 0))); else -> "" })
+            val subtitle = listOf(food.brand, when { food.source == "off" -> tr("Open Food Facts"); app.superhealth.nutrition.data.FoodServer.isServerSource(food.source) -> app.superhealth.nutrition.data.FoodServer.label(food.source).orEmpty(); isRecipe -> trf("Recette · %1\$s portion(s)", (num(food.recipeServings ?: 1.0, 0))); else -> "" })
             SheetHeader(food.name, subtitle.filter { it.isNotBlank() }.joinToString(" · "), onDismiss) {
                 if (onEdit != null) Box(Modifier.padding(end = 8.dp).size(36.dp).clip(CircleShape).background(Mf.colors.chip).clickable(onClick = onEdit),
                     contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Edit, tr("Modifier"), Modifier.size(20.dp)) }
@@ -330,8 +330,8 @@ fun FoodSheet(
             MicrosSection(app.superhealth.nutrition.data.Micros.parse(food.microsJson).mapValues { it.value * k })
             // produit à code-barres : fiche Open Food Facts (scores, ingrédients, allergènes)
             food.barcode?.takeIf { s.openFoodFactsEnabled && it.length >= 8 && it.all(Char::isDigit) }?.let { OffSection(it) }
-            if (food.source == app.superhealth.nutrition.data.SwissFoods.SOURCE) Text(trf("Source : %1\$s", app.superhealth.nutrition.data.SwissFoods.CREDIT),
-                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 8.dp))
+            when (food.source) { app.superhealth.nutrition.data.SwissFoods.SOURCE -> app.superhealth.nutrition.data.SwissFoods.CREDIT; app.superhealth.nutrition.data.UsdaFoods.SOURCE -> app.superhealth.nutrition.data.UsdaFoods.CREDIT; else -> null }?.let { credit -> Text(trf("Source : %1\$s", credit),
+                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 8.dp)) }
         }
         // Bouton fixé en bas de la fiche, comme dans MacroFactor
         Column(Modifier.fillMaxWidth().background(Mf.colors.card).padding(horizontal = 20.dp, vertical = 12.dp)) {

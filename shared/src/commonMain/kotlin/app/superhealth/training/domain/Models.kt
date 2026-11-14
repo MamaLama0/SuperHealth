@@ -2,7 +2,6 @@ package app.superhealth.training.domain
 
 import app.superhealth.platform.*
 
-
 import kotlinx.serialization.Serializable
 
 // Modèle calqué sur MacroFactor Workouts 1.4.1 (Workouts-analyse/notes/02-modele-de-donnees.md).
@@ -171,6 +170,8 @@ data class SetLog(
     val autoWeight: Double? = null,
     val autoReps: Int? = null,
     val completedAt: Long? = null,
+    val repsEdited: Boolean = false,
+    val weightEdited: Boolean = false,
 )
 
 @Serializable
@@ -231,6 +232,7 @@ data class Workout(
     val rpe: Int? = null,
     /** Nombre de séances prévues dans le cycle au moment de l'enregistrement. */
     val plannedSessions: Int? = null,
+    val gymId: String? = null,
 )
 
 // ----- Salles et réglages -----
@@ -294,4 +296,6 @@ data class Settings(
     val restSound: Boolean = true,
     val activeGymId: String? = null,
     val activeProgramId: String? = null,
+    /** Propositions de cibles refusées ([TargetTuning.Tip.key]). */
+    val dismissedTargetTips: Set<String> = emptySet(),
 )

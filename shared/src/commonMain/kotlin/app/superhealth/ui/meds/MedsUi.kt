@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -67,6 +66,7 @@ import app.superhealth.platform.DayOfWeek
 import app.superhealth.platform.LocalDate
 import app.superhealth.platform.LocalTime
 import app.superhealth.platform.UUID
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 /** Teinte du plugin (comme sa fiche dans Réglages > Plugins). */
 val MedsHue = Color(0xFF3FA7D6)

@@ -34,6 +34,7 @@ object Modules {
     /** Moteurs présents dans cette version de l'app (un module d'un autre type demande une mise à jour). */
     const val COACH = "coach"
     const val MEALS = "meals"
+    const val MEAL_SUGGESTION = "Meal Suggestion"
     const val MEDS = "meds"
     const val STRETCH = "stretch"
     const val MEDITATION = "meditation"
@@ -158,6 +159,12 @@ object Modules {
 
     /** Dossier du module actif du type [kind] (contenu décompressé), ou null. */
     fun dir(kind: String): File? = active(kind)?.let { File(root, it.id) }?.takeIf { it.isDirectory }
+
+    fun arsenalAsset(path: String): File? {
+        val group = active(LEAGUE)?.takeIf { it.verified && it.source == OFFICIAL } ?: return null
+        return File(File(root, group.id), path).takeIf(File::isFile)
+    }
+
 
     fun file(kind: String, name: String): File? = dir(kind)?.let { File(it, name) }?.takeIf { it.isFile }
 
@@ -310,7 +317,7 @@ object Modules {
             MEDITATION -> { app.superhealth.meditation.Meditation.invalidate(); if (on) addCard(app.superhealth.DashCard.MEDITATION) }
             LEAGUE -> {
                 // le plugin porte l'interrupteur du Groupe : installé et activé, le social s'allume ; retiré, il s'éteint
-                SuperPrefs.update { it.copy(leagueEnabled = on) }
+                SuperPrefs.update { it.copy(leagueEnabled = on, socialFeedEnabled = on) }
                 app.superhealth.league.LeagueWorker.schedule(ctx)
                 if (on) addCard(app.superhealth.DashCard.LEAGUE)
             }

@@ -9,10 +9,7 @@ import androidx.compose.ui.draw.shadow
 import app.superhealth.ui.theme.WorkoutBlue
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.theme.Base
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.SentimentSatisfied
-import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Flag
@@ -24,13 +21,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,7 +35,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,7 +71,6 @@ import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.PhotoCamera
-import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,7 +90,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -132,10 +120,7 @@ import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.HeartBroken
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -179,6 +164,21 @@ import kotlinx.coroutines.launch
 import app.superhealth.platform.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.VerticalAlignBottom
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.rounded.Science
+import androidx.compose.ui.draw.scale
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.HeartBroken
 
 /**
  * Questionnaire d'accueil de SuperHealth : un seul parcours pour les trois modules.
@@ -192,7 +192,7 @@ private enum class Step(val section: Int) {
     // le plus court possible : une page par décision, les parties non choisies (USES) sont sautées
     // l'ordre va du général au particulier : qui, quoi suivre, le corps, l'objectif, les activités (dont découle la musculation), les connexions
     WELCOME(0), NAME(0), USES(0), ACTIVITIES(0), BODY(0), WEIGHT(0), BODY_FAT(0), ACTIVITY(0), HISTORY(0),
-    PROGRAM(1), GOAL(1), TARGET(1), PACE(1), TRAINING(1), PREFS(1), MANUAL_TARGETS(1), ENERGY(1), CHECKIN(1),
+    PROGRAM(1), GOAL(1), TARGET(1), PACE(1), TRAINING(1), PREFS(1), MANUAL_TARGETS(1), MANUAL_GOALS(1), MANUAL_PLAN(1), ENERGY(1), CHECKIN(1),
     EXPERIENCE(2), GYM(2), LIFT_GOAL(2), RHYTHM(2),
     WATCH(3), HEALTH(3), AI(3), PLUGINS(3),
     GENERATING(4), RESULT(4),
@@ -221,7 +221,8 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
     Step.TRAINING, Step.EXPERIENCE, Step.GYM -> Icons.Rounded.FitnessCenter to WorkoutBlue
     Step.LIFT_GOAL -> Icons.AutoMirrored.Rounded.TrendingUp to WorkoutBlue
     Step.RHYTHM -> Icons.Rounded.CalendarMonth to WorkoutBlue
-    Step.PROGRAM, Step.MANUAL_TARGETS, Step.PREFS, Step.ENERGY -> Icons.Rounded.Restaurant to Base.Green
+    Step.PROGRAM, Step.MANUAL_TARGETS, Step.MANUAL_GOALS, Step.PREFS, Step.ENERGY -> Icons.Rounded.Restaurant to Base.Green
+    Step.MANUAL_PLAN -> Icons.Rounded.CalendarMonth to Base.Green
     Step.CHECKIN -> Icons.Rounded.CalendarMonth to HealthHues.Body
     Step.WATCH -> Icons.Rounded.Watch to HealthHues.Respiration
     Step.PLUGINS -> androidx.compose.material.icons.Icons.Rounded.Tune to HealthHues.Sleep
@@ -237,7 +238,11 @@ private fun Step.symbol(): Pair<ImageVector, Color> = when (this) {
 enum class OnboardingMode { FULL, NUTRITION_SIM, TRAINING_SIM, NUTRITION_SETUP, TRAINING_SETUP }
 
 @Composable
-fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.FULL, onClose: () -> Unit = {}) {
+/**
+ * [dryRun] : questionnaire complet relancé depuis les Réglages pour le revoir, sans rien enregistrer ni modifier
+ * (pas de Health Connect, de montre, de plugins ni d'IA ; « C'est parti » et « Passer » ferment simplement).
+ */
+fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.FULL, dryRun: Boolean = false, onClose: () -> Unit = {}) {
     val vm = svm.nutrition
     val ctx = LocalContext.current
     val sim = mode == OnboardingMode.NUTRITION_SIM || mode == OnboardingMode.TRAINING_SIM
@@ -247,6 +252,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     val settings by vm.settings.collectAsState()
     /** Questionnaire relancé depuis les Réglages : l'utilisateur a déjà des données. */
     val rerun = !sim && settings.onboarded
+    /** Aperçu : la couleur choisie reste locale. */
+    var demoAccent by rememberSaveable { mutableStateOf(settings.accent) }
 
     var unit by rememberSaveable { mutableStateOf(settings.weightUnit) }
     var sex by rememberSaveable { mutableStateOf(profile.sex) }
@@ -272,6 +279,10 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     // semaine du programme manuel (jours ON / OFF ou jour par jour), réglée par ManualWeekEditor
     var manualWeek by remember { mutableStateOf(program) }
     var manualValid by remember { mutableStateOf(true) }
+    // mode manuel (pratiquants avancés) : objectifs d'eau et de micronutriments, programme sur plusieurs semaines
+    var baseGoals by remember { mutableStateOf(app.superhealth.nutrition.ui.screens.BaseGoalsDraft.current(settings)) }
+    var planChoice by rememberSaveable { mutableIntStateOf(if (program.plan.any { it.startDay + 7 > LocalDate.now().toEpochDay() }) 0 else 1) }
+    var builtPlan by remember { mutableStateOf(emptyList<app.superhealth.nutrition.domain.PlanWeek>()) }
     var tdeeMode by rememberSaveable { mutableStateOf(program.tdeeMode) }
     var staticTdee by rememberSaveable { mutableStateOf(num(settings.energyValue(program.staticTdee), 0)) }
     var initialTdee by rememberSaveable { mutableStateOf(program.initialTdeeOverride?.let { num(settings.energyValue(it), 0) } ?: "") }
@@ -321,6 +332,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     LaunchedEffect(mode) { if (mode == OnboardingMode.FULL) app.superhealth.modules.Modules.refresh() }
     val healthAvailable = remember { HealthConnectHub.status(ctx) == HealthConnectHub.Status.AVAILABLE }
     val steps = Step.entries.filter {
+        if (dryRun && it in setOf(Step.HEALTH, Step.WATCH, Step.PLUGINS, Step.AI)) return@filter false
         if (mode == OnboardingMode.TRAINING_SETUP && it == Step.BODY) return@filter false
         // Une configuration manuelle sans objectif de poids ne demande aucune mesure corporelle.
         if (mode == OnboardingMode.NUTRITION_SETUP && programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL && !weightGoal &&
@@ -340,6 +352,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             Step.BODY_FAT, Step.ACTIVITY, Step.HISTORY, Step.GOAL, Step.PROGRAM, Step.ENERGY -> wantsNutrition
             Step.PREFS -> wantsNutrition && programStyle != app.superhealth.nutrition.domain.ProgramStyle.MANUAL
             Step.MANUAL_TARGETS -> wantsNutrition && programStyle != app.superhealth.nutrition.domain.ProgramStyle.COACHED
+            Step.MANUAL_GOALS, Step.MANUAL_PLAN -> wantsNutrition && programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL
             // le jour du check-in est un réglage du quotidien : proposé à l'accueil, pas dans les simulations
             Step.CHECKIN -> wantsNutrition && !sim && programStyle != app.superhealth.nutrition.domain.ProgramStyle.MANUAL
             // déduit des activités choisies dans l'accueil, encore demandé dans la simulation nutrition
@@ -358,13 +371,14 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var forward by rememberSaveable { mutableStateOf(true) }
     fun next() { forward = true; if (index < steps.lastIndex) index++ }
     fun back() { forward = false; if (index > 0) { index--; if (steps[index] == Step.GENERATING && index > 0) index-- } }
-    BackHandler(step != Step.GENERATING && (index > 0 || mode != OnboardingMode.FULL)) { if (index > 0) back() else onClose() }
+    BackHandler(step != Step.GENERATING && (index > 0 || mode != OnboardingMode.FULL || dryRun)) { if (index > 0) back() else onClose() }
 
     /**
      * « Passer » : relancé depuis les Réglages, on garde tout tel quel ; premier lancement, l'app démarre avec des réglages
      * neutres (maintien du poids, pas de pesée inventée) à compléter plus tard.
      */
     fun skip() {
+        if (dryRun) { onClose(); return }
         if (rerun) { SuperPrefs.update { it.copy(onboarded = true) }; return }
         val t = svm.training
         val myGym = t.gymFromTemplate(GymTemplate.COMMERCIAL, tr("Ma salle"))
@@ -432,7 +446,13 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         manualFat = manualTarget?.fat ?: program.manualFat, manualCarbs = manualTarget?.carbs ?: program.manualCarbs,
         goalType = goal, ratePctPerWeek = if (goal == GoalType.MAINTENANCE) 0.0 else rate,
         targetWeightKg = draftTarget(), startEpochDay = today, training = training, dietPreference = diet, proteinPreference = protein,
-        calorieFloor = floor, highDays = if (shift) highDays else emptySet(), checkInDay = checkInDay)
+        calorieFloor = floor, highDays = if (shift) highDays else emptySet(), checkInDay = checkInDay).let { p ->
+            if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL && planChoice == 1 && builtPlan.isNotEmpty())
+                builtPlan.fold(p) { acc, w -> app.superhealth.nutrition.domain.NutritionPlan.put(acc, w) } else p
+        }
+    /** Réglages nutrition avec les objectifs d'eau et de micronutriments choisis (mode manuel). */
+    fun withGoals(s: app.superhealth.nutrition.domain.Settings) =
+        if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL && wantsNutrition) baseGoals.applyTo(s) else s
     fun draftGoal() = Goal(startDay = today, type = goal, startWeightKg = weightKg, targetWeightKg = draftTarget(),
         ratePctPerWeek = if (goal == GoalType.MAINTENANCE) 0.0 else rate)
     fun draftCheckIn(): Pair<Double, app.superhealth.nutrition.domain.CheckIn> {
@@ -456,6 +476,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     }
 
     fun finish(program: Boolean) {
+        if (dryRun) { onClose(); return }
         if (mode == OnboardingMode.TRAINING_SETUP) {
             val t = svm.training
             val myGym = t.gymFromTemplate(gym, tr("Ma salle"))
@@ -470,7 +491,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             vm.repo.prefs.setProgram(draftProgram())
             if (weightGoal) vm.repo.startGoal(draftGoal())
             val checkIn = draftCheckIn().second
-            vm.repo.prefs.setSettings(settings.copy(weightUnit = unit))
+            vm.repo.prefs.setSettings(withGoals(settings.copy(weightUnit = unit)))
             vm.launch {
                 if (Step.WEIGHT in steps) weighIns.upsert(WeighInEntity(today, weightKg, bodyFat?.toDouble()))
                 saveCheckIn(checkIn)
@@ -479,8 +500,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             return
         }
         if (!wantsNutrition) goal = GoalType.MAINTENANCE
-        val s = settings.copy(weightUnit = unit, healthConnect = health,
-            language = if (Lang.english) Language.EN else Language.FR)
+        val s = withGoals(settings.copy(weightUnit = unit, healthConnect = health,
+            language = if (Lang.english) Language.EN else Language.FR))
         val p = draftProgram(); val g = draftGoal()
         // Prénom : profil Gadgetbridge (envoyé aux montres qui l'affichent).
         app.superhealth.health.data.ActivityUser.edit().putString(app.superhealth.health.data.ActivityUser.PREF_USER_NAME, name.trim()).apply()
@@ -529,13 +550,13 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     Column(Modifier.fillMaxSize().background(Mf.colors.background).safeDrawingPadding().imePadding()) {
         // Barre de progression (masquée sur l'accueil et la génération)
         val showBar = step != Step.WELCOME && step != Step.GENERATING
-        if (sim && !showBar) Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if ((sim || dryRun) && !showBar) Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, tr("Fermer")) }
-            Text(tr("Simulation · rien n'est enregistré"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+            Text(if (dryRun) tr("Aperçu · rien n'est modifié") else tr("Simulation · rien n'est enregistré"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
         }
         Row(Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showBar) {
-                androidx.compose.material3.IconButton(onClick = { if (index == 0 && mode != OnboardingMode.FULL) onClose() else back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
+                androidx.compose.material3.IconButton(onClick = { if (index == 0 && (mode != OnboardingMode.FULL || dryRun)) onClose() else back() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, tr("Retour")) }
                 if (mode == OnboardingMode.NUTRITION_SETUP || mode == OnboardingMode.TRAINING_SETUP) {
                     Column(Modifier.weight(1f).padding(end = 20.dp)) {
                         val fraction by animateFloatAsState((index + 1f) / steps.size, tween(350), label = "setup-progress")
@@ -568,7 +589,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
             } else if (step == Step.WELCOME) {
                 androidx.compose.material3.TextButton(onClick = { skip() }) { Text(tr("Passer"), color = Mf.colors.textSecondary) }
                 Spacer(Modifier.weight(1f))
-                ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { if (it == Language.FR) "FR" else "EN" },
+                if (!dryRun) ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { if (it == Language.FR) "FR" else "EN" },
                     Modifier.width(112.dp)) { l ->
                     vm.repo.prefs.setSettings(settings.copy(language = l)); Lang.apply(l.name)
                 }
@@ -582,7 +603,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         }) { st ->
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
                 when (st) {
-                    Step.WELCOME -> Welcome(settings.accent)
+                    Step.WELCOME -> Welcome(settings.accent, recoverable = !dryRun)
                     Step.USES -> Page(st, tr("Que voulez-vous suivre ?"), tr("Le reste se masque. Tout se réactive dans Réglages > Fonctions.")) {
                         // le cycle se propose avec le sexe déclaré (page « Votre corps »)
                         app.superhealth.Feature.entries.filter { it != app.superhealth.Feature.CYCLE }.forEachIndexed { i, f ->
@@ -613,7 +634,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     Step.NAME -> Page(st, tr("Faisons connaissance"), tr("Votre prénom et votre couleur : elle teinte l'app et le cœur de son icône.")) {
                         // photo facultative, au même endroit que le prénom
                         val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
-                        val pick = rememberImagePicker { bytes -> if (bytes != null) app.superhealth.ui.ProfilePhoto.set(ctx, bytes) }
+                        val pick = rememberImagePicker { bytes -> if (bytes != null && !dryRun) app.superhealth.ui.ProfilePhoto.set(ctx, bytes) }
                         Row(Modifier.padding(bottom = 12.dp).clip(RoundedCornerShape(16.dp)).clickable {
                             pick()
                         }, verticalAlignment = Alignment.CenterVertically) {
@@ -639,9 +660,9 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                             androidx.compose.foundation.layout.FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 app.superhealth.nutrition.domain.AccentColor.entries.forEach { c ->
-                                    val sel = c == settings.accent
+                                    val sel = c == (if (dryRun) demoAccent else settings.accent)
                                     Box(Modifier.size(38.dp).border(if (sel) 2.5.dp else 0.dp, if (sel) c.color() else Color.Transparent, CircleShape).padding(4.dp)
-                                        .clip(CircleShape).background(c.color()).clickable { vm.repo.prefs.setSettings(settings.copy(accent = c)) })
+                                        .clip(CircleShape).background(c.color()).clickable { if (dryRun) demoAccent = c else vm.repo.prefs.setSettings(settings.copy(accent = c)) })
                                 }
                             }
                         }
@@ -734,7 +755,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                     Step.PLUGINS -> Page(st, tr("Personnaliser avec des plugins"), tr("Tout est facultatif. Vous pourrez installer, désactiver et régler chaque plugin dans les paramètres.")) {
                         pluginCatalog.filter { it.verified && it.module.kind in app.superhealth.modules.Modules.engines && app.superhealth.modules.Modules.compatible(ctx, it.module) }.forEach { entry ->
                             val m = entry.module
-                            val title = (if (Lang.english) m.nameEn else null) ?: m.name
+                            val title = if (m.id == app.superhealth.modules.Modules.MEALS) app.superhealth.modules.Modules.MEAL_SUGGESTION else (if (Lang.english) m.nameEn else null) ?: m.name
                             val subtitle = tr(when (m.kind) {
                                 app.superhealth.modules.Modules.COACH -> "Bilans et questions sur vos données ; fournisseur IA dans les paramètres"
                                 app.superhealth.modules.Modules.MEALS -> "Suggestions de repas pour vos cibles alimentaires"
@@ -764,10 +785,10 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         Options(listOf(app.superhealth.nutrition.domain.ProgramStyle.COACHED, app.superhealth.nutrition.domain.ProgramStyle.COLLABORATIVE, app.superhealth.nutrition.domain.ProgramStyle.MANUAL), programStyle, { it.label.tr() }, { when (it) {
                             app.superhealth.nutrition.domain.ProgramStyle.COACHED -> tr("Ajustement automatique chaque semaine")
                             app.superhealth.nutrition.domain.ProgramStyle.COLLABORATIVE -> tr("Calories ajustées, répartition des macros choisie")
-                            app.superhealth.nutrition.domain.ProgramStyle.MANUAL -> tr("Vos calories et macros, sans ajustement automatique")
+                            app.superhealth.nutrition.domain.ProgramStyle.MANUAL -> tr("Préparations et pros : vous fixez calories et macros vous-même, jour par jour et semaine par semaine. Aucun ajustement automatique.")
                         } }) { programStyle = it }
                     }
-                    Step.MANUAL_TARGETS -> Page(st, tr("Vos cibles personnelles"), tr("Choisissez une cible commune ou réglez les calories et les trois macros de chaque jour.")) {
+                    Step.MANUAL_TARGETS -> Page(st, tr("Votre semaine type"), tr("Elle s'applique chaque semaine tant qu'aucun programme ne la remplace. Une cible = calories + protéines, lipides et glucides.")) {
                         if (programStyle == app.superhealth.nutrition.domain.ProgramStyle.MANUAL) {
                             app.superhealth.nutrition.ui.screens.ManualWeekEditor(manualWeek, settings.copy(weightUnit = unit), { manualValid = it }) { w ->
                                 manualWeek = w; manualTarget = app.superhealth.nutrition.domain.ManualTargets.base(w)
@@ -779,6 +800,29 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                                 manualTarget = t
                                 if (t != null) manualWeek = app.superhealth.nutrition.domain.ManualTargets.withBase(manualWeek, t)
                             }
+                        }
+                    }
+                    Step.MANUAL_GOALS -> Page(st, tr("Eau, sodium et micronutriments"), tr("Facultatif : laissez vide pour garder les repères officiels. Une semaine du programme pourra les remplacer.")) {
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Mf.colors.card)) {
+                            app.superhealth.nutrition.ui.screens.BaseGoalsForm(baseGoals) { baseGoals = it }
+                        }
+                        Text(tr("Repères :\n• Eau : environ 35 ml par kg, plus les jours d'entraînement (la sueur fait perdre 0,5 à 2 L par heure).\n• Sodium : moins de 2 000 mg par jour hors sueur (OMS).\n• Potassium : au moins 3 500 mg par jour.\n• Fibres : 25 à 38 g par jour."),
+                            style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 10.dp))
+                    }
+                    Step.MANUAL_PLAN -> Page(st, tr("Programme sur plusieurs semaines"), tr("Facultatif : pour faire évoluer vos cibles d'une semaine à l'autre (sèche, prise de masse, préparation). Tout reste modifiable ensuite dans Nutrition > Plan.")) {
+                        val existing = program.plan.count { it.startDay + 7 > today }
+                        Options(listOf(0, 1), planChoice, { when (it) {
+                            0 -> if (existing > 0) trf("Garder mon plan actuel (%1\$s semaines)", existing) else tr("Non, répéter ma semaine type")
+                            else -> tr("Oui, construire un programme")
+                        } }, { when (it) {
+                            0 -> tr(if (existing > 0) "Les semaines déjà programmées restent telles quelles" else "La semaine réglée plus tôt revient chaque semaine")
+                            else -> tr("Calories et macros qui évoluent semaine après semaine, en quelques réglages")
+                        } }) { planChoice = it }
+                        if (planChoice == 1) {
+                            Spacer(Modifier.height(10.dp))
+                            val tdee = remember(weightKg, bodyFat, activity, sex) { runCatching { draftCheckIn().first }.getOrDefault(weightKg * 33) }
+                            app.superhealth.nutrition.ui.screens.PlanBuilderForm(app.superhealth.nutrition.ui.screens.PlanBasis(weightKg, bodyFat?.let { weightKg * (1 - it / 100.0) },
+                                tdee, sex == app.superhealth.nutrition.domain.Sex.FEMALE, today, program.plan), settings.copy(weightUnit = unit)) { builtPlan = it }
                         }
                     }
                     Step.ENERGY -> Page(st, tr("Votre dépense énergétique"), tr("Ces paramètres restent modifiables dans le programme nutrition.")) {
@@ -972,14 +1016,14 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         if (step != Step.GENERATING) {
             val label = when (step) {
                 Step.WELCOME -> tr("Commencer")
-                Step.RESULT -> if (sim) tr("Nouvelle simulation") else if (mode != OnboardingMode.FULL) tr("Appliquer ma configuration") else tr("C'est parti")
+                Step.RESULT -> if (sim) tr("Nouvelle simulation") else if (dryRun) tr("Fermer l'aperçu") else if (mode != OnboardingMode.FULL) tr("Appliquer ma configuration") else tr("C'est parti")
                 Step.HEALTH -> if (health) tr("Continuer") else tr("Plus tard")
                 Step.NAME -> if (name.isBlank()) tr("Passer") else tr("Continuer")
                 Step.WATCH -> if (watch == WatchChoice.PAIR && !paired) tr("Plus tard") else tr("Continuer")
                 Step.BODY_FAT -> if (bodyFat == null) tr("Passer") else tr("Continuer")
                 else -> tr("Continuer")
             }
-            val ok = (step != Step.RHYTHM || generationTargets.isValid) && (step != Step.TARGET || targetOk()) && (step != Step.MANUAL_TARGETS || (manualValid && manualTarget != null)) &&
+            val ok = (step != Step.RHYTHM || generationTargets.isValid) && (step != Step.TARGET || targetOk()) && (step != Step.MANUAL_TARGETS || (manualValid && manualTarget != null)) && (step != Step.MANUAL_PLAN || planChoice == 0 || builtPlan.isNotEmpty()) &&
                 (step != Step.ENERGY || ((tdeeMode != app.superhealth.nutrition.domain.TdeeMode.STATIC || (staticTdee.replace(',', '.').toDoubleOrNull() ?: 0.0) > 0) && (initialTdee.isBlank() || (initialTdee.replace(',', '.').toDoubleOrNull() ?: 0.0) > 0)))
             Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 PillButton(tr(label), Modifier.fillMaxWidth(), enabled = ok) {
@@ -1007,7 +1051,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
 
 /** Accueil : icône de l'app, titre, fonctions en liste à symboles colorés. */
 @Composable
-private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor) {
+private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor, recoverable: Boolean = true) {
     Spacer(Modifier.height(20.dp))
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AppIcon(88, accent) }
     Spacer(Modifier.height(18.dp))
@@ -1061,18 +1105,6 @@ private fun Page(step: Step, title: String, subtitle: String?, content: @Composa
     Spacer(Modifier.height(22.dp))
     Column(content = content)
     Spacer(Modifier.height(12.dp))
-}
-
-/** Illustration qui flotte doucement. */
-@Composable
-private fun Floating(path: String, sizeDp: Int) {
-    val t = rememberInfiniteTransition(label = "float")
-    val y by t.animateFloat(-6f, 6f, infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "y")
-    val appear = remember { Animatable(0.85f) }
-    LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)) }
-    val d = LocalDensity.current
-    AssetImage(path, Modifier.size(sizeDp.dp).graphicsLayer { translationY = with(d) { y.dp.toPx() }; scaleX = appear.value; scaleY = appear.value }
-        .clip(RoundedCornerShape((sizeDp / 5).dp)))
 }
 
 /** Apparition décalée (fondu + montée) des éléments d'une liste. */

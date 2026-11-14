@@ -2,12 +2,10 @@ package app.superhealth.nutrition.ui.screens
 
 import app.superhealth.platform.*
 
-
 import app.superhealth.nutrition.ui.trf
 import app.superhealth.nutrition.ui.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import app.superhealth.nutrition.domain.ExpenditureVersion
 import app.superhealth.nutrition.domain.GoalType
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.domain.PredictionStyle
@@ -35,7 +33,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import app.superhealth.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.superhealth.nutrition.data.WeighInEntity
@@ -89,8 +85,11 @@ import app.superhealth.nutrition.ui.weightValue
 import app.superhealth.nutrition.data.FoodEntryEntity
 import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.platform.LocalDate
 import kotlin.math.roundToInt
+import app.superhealth.nutrition.domain.ExpenditureVersion
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import app.superhealth.platform.LocalContext
+import app.superhealth.platform.LocalDate
 
 enum class Range(val label: String, val days: Int?) { W1("1S", 7), M1("1M", 30), M3("3M", 90), M6("6M", 182), Y1("1A", 365), ALL(tr("Tout"), null) }
 
@@ -137,7 +136,7 @@ fun ExpenditureScreen(vm: AppViewModel, onBack: () -> Unit) {
                 Series(pts.map { it.epochDay to s.energyValue(it.short) }, Base.Purple.copy(alpha = 0.35f), width = 1.5f),
                 Series(pts.map { it.epochDay to s.energyValue(it.long) }, Base.Purple.copy(alpha = 0.35f), width = 1.5f, dashed = true),
                 Series(pts.map { it.epochDay to s.energyValue(it.tdee) }, Base.Purple),
-            ), height = 220.dp, format = { it.roundToInt().toString() })
+            ), height = 220.dp, format = { it.roundToInt().toString() }, valueFormat = { app.superhealth.ui.formatNumber(it) + " " + s.energyUnit.label.tr() })
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(width = 14.dp, height = 3.dp).background(Base.Purple)); Text(tr("  Dépense   "), style = MaterialTheme.typography.labelSmall)
@@ -225,7 +224,7 @@ fun WeightScreen(vm: AppViewModel, onBack: () -> Unit) {
                 Series(pts.map { it.epochDay to s.weightValue(it.trend) }, Mf.colors.accent,
                     band = pts.filter { it.sd > 0 }.map { Triple(it.epochDay, s.weightValue(it.trend - 2 * it.sd), s.weightValue(it.trend + 2 * it.sd)) }),
                 proj?.takeIf { range.days == null || range.days!! <= 90 }?.let { Series(it, Mf.colors.accent.copy(alpha = 0.6f), dashed = true) },
-            ), height = 230.dp)
+            ), height = 230.dp, valueFormat = { app.superhealth.ui.formatNumber(it, 1) + " " + s.weightUnit.label.tr() })
             Spacer(Modifier.height(12.dp))
             ChipChoice(Range.entries, range, { it.label.tr() }) { range = it }
         }
@@ -482,7 +481,13 @@ fun NutrientsScreen(vm: AppViewModel, onBack: () -> Unit) {
     val an = a
     val n = range.days ?: an?.days?.size ?: 7
     val inRange = if (an == null) emptyList() else allEntries.filter { it.epochDay > an.today - n }
-    val loggedDays = inRange.map { it.epochDay }.distinct().size.coerceAtLeast(1)
+    val loggedDays = inRange.map { it.epochDay }.distinct().size
+    val coverage = remember(inRange) {
+        val keysByDay = inRange.groupBy { it.epochDay }.values.map { entries ->
+            entries.map { app.superhealth.nutrition.data.Micros.parse(it.microsJson).keys }
+        }
+        keysByDay.flatten().flatten().distinct().associateWith { key -> keysByDay.count { entries -> entries.all { key in it } } }
+    }
     DetailScaffold(tr("Nutriments"), onBack) {
         if (an == null) return@DetailScaffold
         val totals = app.superhealth.nutrition.data.Micros.sum(inRange.map { it.microsJson }) + mapOf("fiber" to inRange.sumOf { it.fiber })
@@ -504,17 +509,19 @@ fun NutrientsScreen(vm: AppViewModel, onBack: () -> Unit) {
             GroupCard {
                 list.forEachIndexed { i, d ->
                     val total = macroTotals[d.code] ?: totals[d.code] ?: 0.0
-                    val avg = total / loggedDays
+                    val avg = total / loggedDays.coerceAtLeast(1)
+                    val known = d.code in macroTotals || d.code in totals
+                    val partial = d.code !in macroTotals && d.code != "fiber" && (coverage[d.code] ?: 0) < loggedDays
                     val target = s.microTargets[d.code] ?: (if (d.category == tr("Macronutriments")) d.reference else app.superhealth.nutrition.data.Micros.reference(d))
                     if (i > 0) RowDivider()
                     Column(Modifier.fillMaxWidth().clickable { open = d }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Row {
                             Text(d.label.tr(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                             val v = if (d.code == "kcal") s.energyValue(avg) else avg
-                            Text("${num(v, if (v < 10) 1 else 0)} ${d.unit}" + (target?.let { " / ${num(if (d.code == "kcal") s.energyValue(it) else it, 0)}" } ?: ""),
+                            Text((if (!known || loggedDays == 0) "—" else (if (partial) "≥ " else "") + "${num(v, if (v < 10) 1 else 0)} ${d.unit}") + (target?.let { " / ${num(if (d.code == "kcal") s.energyValue(it) else it, 0)}" } ?: ""),
                                 style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                         }
-                        target?.let {
+                        target?.takeIf { known && loggedDays > 0 && it > 0 }?.let {
                             Spacer(Modifier.height(4.dp))
                             ProgressBar((avg / it).toFloat(), if (avg >= it) Base.Green else Mf.colors.accent, height = 5.dp)
                         }

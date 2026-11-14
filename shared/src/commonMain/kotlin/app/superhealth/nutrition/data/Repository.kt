@@ -6,10 +6,8 @@ import app.superhealth.platform.*
 import app.superhealth.nutrition.data.withTransaction
 import app.superhealth.nutrition.domain.Bmr
 import app.superhealth.nutrition.domain.WeightTrendV2
-import app.superhealth.nutrition.domain.TrendVersion
 import app.superhealth.nutrition.domain.TdeeMode
 import app.superhealth.nutrition.domain.ProgramStyle
-import app.superhealth.nutrition.domain.ExpenditureVersion
 import app.superhealth.nutrition.domain.ExpenditureV3
 import app.superhealth.nutrition.domain.Goal
 import app.superhealth.nutrition.domain.GoalStatus
@@ -21,13 +19,15 @@ import app.superhealth.nutrition.domain.Profile
 import app.superhealth.nutrition.domain.Program
 import app.superhealth.nutrition.domain.Settings
 import app.superhealth.nutrition.domain.Targets
-import app.superhealth.nutrition.domain.WeightTrend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.Serializable
 import app.superhealth.platform.LocalDate
+import app.superhealth.nutrition.domain.TrendVersion
+import app.superhealth.nutrition.domain.ExpenditureVersion
+import app.superhealth.nutrition.domain.WeightTrend
 
 /** Tendance d'un jour (V1 ou V2). */
 data class TrendDay(val epochDay: Long, val scale: Double?, val trend: Double, val tween: Double, val sd: Double)
@@ -94,7 +94,8 @@ data class Analytics(
      * on reprend ce premier check-in plutôt qu'un calcul provisoire jour par jour — sinon le jour du premier
      * check-in ressort avec une cible différente des autres.
      */
-    private fun overrideTarget(day: Long): Targets.DailyTarget? = app.superhealth.nutrition.domain.ManualTargets.overrideAt(program, day)?.let {
+    private fun overrideTarget(day: Long): Targets.DailyTarget? = (app.superhealth.nutrition.domain.ManualTargets.overrideAt(program, day)
+        ?: app.superhealth.nutrition.domain.NutritionPlan.dayAt(program, day)?.target)?.let {
         Targets.DailyTarget(Macros(it.kcal, it.protein, it.fat, it.carbs), tdeeAt(day), false, null)
     }
 
@@ -153,6 +154,7 @@ data class Backup(
 )
 
 class Repository(private val db: AppDatabase, val prefs: Prefs) {
+    internal suspend fun <T> foodTransaction(block: suspend () -> T): T = db.withTransaction(block)
     val foods = db.foods()
     val entries = db.entries()
     val weighIns = db.weighIns()
@@ -246,7 +248,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
     /** Enregistre un aliment OFF dans la bibliothèque (dédupliqué par code-barres). */
     suspend fun saveFood(food: FoodEntity): FoodEntity {
         val existing = food.barcode?.let { foods.byBarcode(it) }
-            ?: if (food.source == SwissFoods.SOURCE) foods.byNameSource(food.name, food.source) else null
+            ?: if (food.source == SwissFoods.SOURCE || food.source == UsdaFoods.SOURCE || FoodServer.isServerSource(food.source)) foods.byNameSource(food.name, food.source) else null
         if (existing != null && food.id == 0L) return existing
         val id = foods.insert(food)
         return food.copy(id = id)

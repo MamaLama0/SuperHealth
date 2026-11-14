@@ -31,6 +31,10 @@ fun LeagueSettingsScreen(nav: NavHostController) {
     var confirmRotate by remember { mutableStateOf(false) }; var message by remember { mutableStateOf<String?>(null) }
     DetailScaffold(tr("Classement et progression"), onBack = { nav.popBackStack() }) {
         GroupCard {
+            SwitchRow(tr("Fil du Groupe"), tr("Glissez vers la droite depuis l’accueil"), sh.socialFeedEnabled) { on ->
+                SuperPrefs.update { it.copy(socialFeedEnabled = on) }
+            }
+            RowDivider()
             // le Groupe se retire comme les autres plugins : collection et amis restent sur le téléphone
             SettingRow(tr("Plugin Groupe"), subtitle = tr("Mettre à jour ou désinstaller")) { nav.go("modules") }
         }

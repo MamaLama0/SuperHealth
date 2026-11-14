@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,7 +63,6 @@ import app.superhealth.ui.charts.Series
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.Lang
 import app.superhealth.ui.SuperViewModel
-import app.superhealth.ui.go
 import app.superhealth.ui.dayLetter
 import app.superhealth.ui.formatValue
 import app.superhealth.ui.formatWithUnit
@@ -83,10 +83,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import app.superhealth.ui.go
 
 private enum class Span(val label: String) { DAY("Jour"), WEEK("Semaine"), MONTH("Mois"), QUARTER("3 mois"), YEAR("Année") }
 
 private data class Period(val from: LocalDate, val to: LocalDate)
+
+/** Décalage (en périodes avant aujourd'hui) de la période [span] qui contient [d]. */
+private fun offsetOf(span: Span, d: LocalDate, today: LocalDate): Int {
+    val months = ChronoUnit.MONTHS.between(YearMonth.from(d), YearMonth.from(today)).toInt()
+    return when (span) {
+        Span.DAY -> ChronoUnit.DAYS.between(d, today).toInt()
+        Span.WEEK -> ChronoUnit.WEEKS.between(d.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+            today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))).toInt()
+        Span.MONTH -> months
+        Span.QUARTER -> months / 3
+        Span.YEAR -> months / 12
+    }.coerceAtLeast(0)
+}
 
 private fun period(span: Span, offset: Int, today: LocalDate): Period = when (span) {
     Span.DAY -> today.minusDays(offset.toLong()).let { Period(it, it) }
@@ -108,6 +122,8 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
     var logging by remember { mutableStateOf(false) }
     val today = LocalDate.now()
     val p = period(span, offset, today)
+    /** Ouvre la période [sp] qui contient [d] (un jour touché sur le graphique, une date du calendrier). */
+    fun jump(d: LocalDate, sp: Span) { span = sp; offset = offsetOf(sp, if (d.isAfter(today)) today else d, today) }
 
     val days by produceState(emptyList<Pair<LocalDate, Double?>>(), metric, span, offset, refresh) {
         // Toute la période (les jours à venir restent vides) pour garder des barres de largeur constante.
@@ -156,10 +172,19 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             RoundButton(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, tr("Précédent")) { offset++ }
-            Text(periodLabel(span, p), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            // toucher la période ouvre le calendrier : aller directement à n'importe quel jour
+            Row(Modifier.weight(1f).clip(CircleShape).clickable {
+                DatePickerDialog(ctx, { _, y, m, dd -> jump(LocalDate.of(y, m + 1, dd), span) }, p.from.year, p.from.monthValue - 1, p.from.dayOfMonth)
+                    .apply { datePicker.maxDate = System.currentTimeMillis() }.show()
+            }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Text(periodLabel(span, p), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Rounded.CalendarMonth, tr("Choisir une date"), Modifier.size(18.dp), tint = Mf.colors.textSecondary)
+            }
             RoundButton(Icons.AutoMirrored.Rounded.KeyboardArrowRight, tr("Suivant"), enabled = offset > 0) { if (offset > 0) offset-- }
         }
+        if (span == Span.DAY) { Spacer(Modifier.height(8.dp)); DayStrip(today, offset) { offset = it } }
         Spacer(Modifier.height(12.dp))
 
         val values = days.mapNotNull { it.second }
@@ -179,10 +204,14 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             if (total != null) source?.let { SourceLine(it) }
             Spacer(Modifier.height(14.dp))
             val color = metric.color
+            // valeur lue au doigt : unité de la mesure, jour ou heure en clair
+            val fmt: (Double) -> String = { formatWithUnit(metric, if (metric == Metric.SLEEP && (span == Span.WEEK || span == Span.MONTH)) it * 60 else it) }
+            androidx.compose.runtime.CompositionLocalProvider(app.superhealth.ui.charts.LocalChartTitle provides tr(metric.label)) {
             when {
                 span == Span.DAY && intraday.isNotEmpty() -> if (metric == Metric.STEPS) {
                     val byHour = (0..23).map { h -> intraday.filter { Instant.ofEpochMilli(it.timestampMs).atZone(ZoneId.systemDefault()).hour == h }.sumOf { it.value }.takeIf { v -> v > 0 } }
-                    BarChart(byHour, byHour.map { null }, color, height = 150.dp, labels = (0..23).map { if (it % 6 == 0) "$it" else "" })
+                    BarChart(byHour, byHour.map { null }, color, height = 150.dp, labels = (0..23).map { if (it % 6 == 0) "$it" else "" },
+                        valueFormat = fmt, pointLabel = { "${it}h – ${it + 1}h" })
                 } else if (metric == Metric.HEART_RATE) {
                     val start = HealthRepository.startMs(p.from)
                     HeartChart(intraday.map { it.timestampMs to it.value }, color, height = 170.dp, from = start, to = start + 86_400_000L,
@@ -190,7 +219,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                 } else {
                     val start = HealthRepository.startMs(p.from) / 60_000
                     LineChart(listOf(Series(intraday.map { it.timestampMs / 60000 to it.value }, color, gap = 60.0)), height = 150.dp,
-                        xFrom = start.toDouble(), xTo = (start + 1440).toDouble(), xLabels = listOf(0, 6, 12, 18).map { start + it * 60 to "${it}h" })
+                        xFrom = start.toDouble(), xTo = (start + 1440).toDouble(), xLabels = listOf(0, 6, 12, 18).map { start + it * 60 to "${it}h" }, valueFormat = fmt)
                 }
                 span == Span.DAY -> Text(tr("Pas de détail heure par heure pour ce jour."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
                 span == Span.QUARTER || span == Span.YEAR -> {
@@ -199,17 +228,29 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
                     val keys = buckets.keys.sorted()
                     val vs = keys.map { k -> aggregate(metric, buckets[k].orEmpty().mapNotNull { it.second }) }
                     val labels = keys.mapIndexed { i, k -> if (span == Span.YEAR) k.month.getDisplayName(DateTextStyle.NARROW, Lang.locale) else if (i % 3 == 0) "${k.dayOfMonth}/${k.monthValue}" else "" }
-                    if (metric.chart == ChartKind.BARS) BarChart(vs, vs.map { null }, color, height = 150.dp, labels = labels)
-                    else LineChart(listOf(Series(keys.zip(vs).mapNotNull { (k, v) -> v?.let { k.toEpochDay() to it } }, color, markers = true)), height = 150.dp)
+                    val bucket = { i: Int -> keys[i].let { k -> if (span == Span.YEAR) k.format(DateTimeFormatter.ofPattern("LLLL yyyy", Lang.locale)) else trf("Semaine du %1\$s", k.format(DateTimeFormatter.ofPattern("d MMM", Lang.locale))) } }
+                    val sub = if (span == Span.YEAR) Span.MONTH else Span.WEEK
+                    if (metric.chart == ChartKind.BARS) BarChart(vs, vs.map { null }, color, height = 150.dp, labels = labels, valueFormat = fmt, pointLabel = bucket,
+                        onPick = { i -> keys.getOrNull(i)?.let { jump(it, sub) } })
+                    else LineChart(listOf(Series(keys.zip(vs).mapNotNull { (k, v) -> v?.let { k.toEpochDay() to it } }, color, markers = true)), height = 150.dp,
+                        valueFormat = fmt, xFormat = { d -> bucket(keys.indexOf(LocalDate.ofEpochDay(d.toLong())).coerceAtLeast(0)) },
+                        onPick = { d -> jump(LocalDate.ofEpochDay(d.toLong()), sub) })
                 }
                 metric.chart == ChartKind.BARS -> {
                     val goal = HealthRepository.goal(metric)?.takeIf { metric != Metric.CARDIO_WEEK }
                     BarChart(days.map { it.second?.let { v -> if (metric == Metric.SLEEP) v / 60 else v } },
                         days.map { goal?.let { g -> if (metric == Metric.SLEEP) g / 60 else g } }, color, height = 150.dp,
-                        labels = days.mapIndexed { i, (d, _) -> if (span == Span.WEEK) dayLetter(d) else if (i % 7 == 0) "${d.dayOfMonth}" else "" })
+                        labels = days.mapIndexed { i, (d, _) -> if (span == Span.WEEK) dayLetter(d) else if (i % 7 == 0) "${d.dayOfMonth}" else "" },
+                        valueFormat = fmt, pointLabel = { app.superhealth.ui.charts.dayLabel(days[it].first) },
+                        onPick = { i -> if (intradayOk) days.getOrNull(i)?.let { jump(it.first, Span.DAY) } })
                 }
-                else -> LineChart(listOf(Series(days.mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }, color, markers = days.size <= 31, gap = 3.0)), height = 150.dp)
+                else -> LineChart(listOf(Series(days.mapNotNull { (d, v) -> v?.let { d.toEpochDay() to it } }, color, markers = days.size <= 31, gap = 3.0)), height = 150.dp,
+                    valueFormat = fmt, onPick = { d -> if (intradayOk) jump(LocalDate.ofEpochDay(d.toLong()), Span.DAY) })
             }
+            }
+            if (span != Span.DAY && (intradayOk || span == Span.QUARTER || span == Span.YEAR)) Text(
+                tr(if (span == Span.QUARTER || span == Span.YEAR) "Touchez une barre pour ouvrir cette période" else "Touchez un jour pour voir son détail heure par heure"),
+                style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 6.dp))
             if (values.size >= 2) {
                 Spacer(Modifier.height(14.dp))
                 Row(Modifier.fillMaxWidth()) {
@@ -220,6 +261,7 @@ fun MetricScreen(vm: SuperViewModel, nav: NavHostController, metric: Metric) {
             }
         }
 
+        if (metric == Metric.HYDRATION) HydrationPanel(vm)
         if (scores.isNotEmpty()) SleepScoreCard(scores, span, scoreSource) { nav.go("h/metric/SLEEP_SCORE") }
         if (metric == Metric.SLEEP) { UsualNight(); SriRow() }
         if (metric == Metric.HEART_RATE && LiveHeart.available()) LiveHeartCard()
@@ -384,5 +426,31 @@ private fun SriRow() {
     app.superhealth.nutrition.ui.components.GroupCard {
         app.superhealth.nutrition.ui.components.SettingRow(tr("Régularité"), subtitle = tr("Même état, endormi ou éveillé, d'un jour à l'autre (SRI, 14 jours)"),
             value = "${v.roundToInt()} / 100")
+    }
+}
+
+/**
+ * Bandeau des derniers jours (aujourd'hui à droite) : un jour précis se choisit d'un toucher, sans enchaîner les flèches.
+ * [offset] : jours avant aujourd'hui du jour affiché.
+ */
+@Composable
+private fun DayStrip(today: LocalDate, offset: Int, onPick: (Int) -> Unit) {
+    val count = maxOf(60, offset + 15)
+    val state = androidx.compose.foundation.lazy.rememberLazyListState()
+    androidx.compose.runtime.LaunchedEffect(offset) { state.animateScrollToItem((offset - 3).coerceAtLeast(0)) }
+    androidx.compose.foundation.lazy.LazyRow(state = state, reverseLayout = true, horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth()) {
+        items(count) { i ->
+            val d = today.minusDays(i.toLong())
+            val on = i == offset
+            Column(Modifier.width(44.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .background(if (on) Mf.colors.strong else Mf.colors.chip).clickable { onPick(i) }.padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(dayLetter(d), style = MaterialTheme.typography.labelSmall, color = if (on) Mf.colors.onStrong else Mf.colors.textSecondary)
+                Text("${d.dayOfMonth}", style = MaterialTheme.typography.titleSmall, color = if (on) Mf.colors.onStrong else Mf.colors.text)
+                if (d.dayOfMonth == 1 || i == count - 1) Text(d.format(DateTimeFormatter.ofPattern("MMM", Lang.locale)), style = MaterialTheme.typography.labelSmall,
+                    color = if (on) Mf.colors.onStrong else Mf.colors.textTertiary, maxLines = 1)
+            }
+        }
     }
 }

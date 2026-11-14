@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -31,7 +30,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -107,6 +105,8 @@ import app.superhealth.ui.timeOf
 import app.superhealth.ui.tr
 import kotlinx.coroutines.launch
 import app.superhealth.ui.theme.dashCardBackground
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.foundation.lazy.items
 
 /** Violet du coach : la même teinte que sa carte et ses raccourcis. */
 internal val CoachHue = Color(0xFF8E7CF0)

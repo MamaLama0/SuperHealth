@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="826" viewBox="0 0 512 826">
+      <defs><linearGradient id="base" x2=".9" y2="1"><stop stop-color="#221e29"/><stop offset=".5" stop-color="#33424b"/><stop offset="1" stop-color="#221e29"/></linearGradient>
+      <linearGradient id="steel"><stop stop-color="#e8e0cf"/><stop offset=".42" stop-color="#ef9b78"/><stop offset=".49" stop-color="#fff8dc"/><stop offset=".53" stop-color="#e8e0cf"/><stop offset="1" stop-color="#497a80"/></linearGradient></defs>
+      <path fill="url(#base)" d="M0 0h512v826H0z"/>
+      <path d="M0 0h512v55H0zM0 771h512v55H0z" fill="#ef9b78"/>
+      <g stroke="#221e29" stroke-width="3" opacity=".55"><path d="M40 18v26m0 738v26"/><path d="M52 18v26m0 738v26"/><path d="M64 18v26m0 738v26"/><path d="M76 18v26m0 738v26"/><path d="M88 18v26m0 738v26"/><path d="M100 18v26m0 738v26"/><path d="M112 18v26m0 738v26"/><path d="M124 18v26m0 738v26"/><path d="M136 18v26m0 738v26"/><path d="M148 18v26m0 738v26"/><path d="M160 18v26m0 738v26"/><path d="M172 18v26m0 738v26"/><path d="M184 18v26m0 738v26"/><path d="M196 18v26m0 738v26"/><path d="M208 18v26m0 738v26"/><path d="M220 18v26m0 738v26"/><path d="M232 18v26m0 738v26"/><path d="M244 18v26m0 738v26"/><path d="M256 18v26m0 738v26"/><path d="M268 18v26m0 738v26"/><path d="M280 18v26m0 738v26"/><path d="M292 18v26m0 738v26"/><path d="M304 18v26m0 738v26"/><path d="M316 18v26m0 738v26"/><path d="M328 18v26m0 738v26"/><path d="M340 18v26m0 738v26"/><path d="M352 18v26m0 738v26"/><path d="M364 18v26m0 738v26"/><path d="M376 18v26m0 738v26"/><path d="M388 18v26m0 738v26"/><path d="M400 18v26m0 738v26"/><path d="M412 18v26m0 738v26"/><path d="M424 18v26m0 738v26"/><path d="M436 18v26m0 738v26"/><path d="M448 18v26m0 738v26"/><path d="M460 18v26m0 738v26"/><path d="M472 18v26m0 738v26"/></g>
+      <path d="M28 74h456v678H28z" fill="none" stroke="#e8e0cf" stroke-width="2"/>
+      <path d="M39 85h434v656H39z" fill="none" stroke="#e8e0cf" opacity=".3"/>
+      <text x="256" y="136" text-anchor="middle" fill="#e8e0cf" font-family="sans-serif" font-weight="bold" font-size="32" letter-spacing="9">ARSENAL</text>
+      <text x="256" y="167" text-anchor="middle" fill="#ef9b78" font-family="sans-serif" font-size="12" letter-spacing="5">SUPERHEALTH</text>
+      <circle cx="256" cy="416" r="177" fill="none" stroke="#ef9b78" opacity=".18" stroke-width="44"/>
+        <path d="M256 205 441 416 256 627 71 416Z" fill="none" stroke="#e8e0cf" opacity=".7" stroke-width="2"/>
+        <circle cx="256" cy="416" r="155" fill="none" stroke="#e8e0cf" stroke-dasharray="2 14" stroke-width="3"/>
+        <g transform="translate(256 416)"><g transform="rotate(28)"><path d="M0-155 23-115 15 60 47 76 43 92 12 82 10 142-10 142-12 82-43 92-47 76-15 60-23-115Z" fill="url(#steel)" stroke="#fff2d4" stroke-width="3"/><path d="M0-140V65" stroke="#252d36" stroke-width="5"/><path d="M-9 97h18m-18 14h18m-18 14h18" stroke="#644744" stroke-width="5"/></g></g>
+        <text x="256" y="666" text-anchor="middle" fill="#e8e0cf" font-family="sans-serif" font-weight="bold" font-size="28" letter-spacing="6">I</text>
+        <path d="M95 654h75m172 0h75" stroke="#e8e0cf" stroke-width="2"/>
+      <path d="M211 710h90" stroke="#ef9b78" stroke-width="4"/>
+      <path d="M0 202 16 212 0 222" fill="#e8e0cf"/>
+    </svg>

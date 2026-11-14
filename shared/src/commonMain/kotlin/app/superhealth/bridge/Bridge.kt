@@ -209,6 +209,9 @@ object Bridge {
         val distanceM: Double? get() = watch?.distanceM ?: run?.distanceM
     }
 
+    /** Une activité par événement, pour les statistiques (même liste qu'[activities] sur iOS, déjà fusionnée). */
+    suspend fun activityFacts(fromMs: Long, toMs: Long = System.currentTimeMillis()): List<Activity> = activities(fromMs, toMs)
+
     suspend fun activities(fromMs: Long, toMs: Long = System.currentTimeMillis()): List<Activity> {
         val gym = WorkoutApp.store.state.value.history.filter { it.startTime in fromMs..toMs }.map { w ->
             Activity("g-${w.id}", Kind.STRENGTH, w.name, w.startTime, w.startTime + w.durationSec * 1000L, Source.GYM, gymId = w.id)

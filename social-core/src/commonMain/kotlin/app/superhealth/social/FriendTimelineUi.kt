@@ -24,13 +24,16 @@ fun FriendTimelineScreen(repository: FriendTimeline, ownId: String, onBack: () -
     refresh: suspend () -> Unit, now: () -> Long, randomId: () -> String, sources: List<FriendPost>,
     savedDraft: TimelineDraft, saveDraft: (TimelineDraft) -> Unit, clearDraft: () -> Unit,
     picker: @Composable ((FriendMedia) -> Unit) -> Unit, mediaView: @Composable (FriendMedia, TimelinePeer) -> Unit,
-    block: suspend (TimelinePeer) -> Unit, initialOwner:String?=null,initialPost:String?=null, notificationBell:@Composable ()->Unit={}, spaces: SpaceRepository?=null, shareCircle: (TimelineDraft)->Unit = {}, formatDate: (Long) -> String) {
+    block: suspend (TimelinePeer) -> Unit, initialOwner:String?=null,initialPost:String?=null, notificationBell:@Composable ()->Unit={}, spaces: SpaceRepository?=null, shareCircle: (TimelineDraft)->Unit = {}, formatDate: (Long) -> String,
+    /** Chaque hausse ouvre l'éditeur (bouton « Publier » de la barre du bas) ; [showBack] : faux quand le fil est un panneau de l'accueil. */
+    composeRequests: Int = 0, showBack: Boolean = true) {
     val state by repository.state.collectAsState()
     val controls = spaces?.state?.collectAsState()?.value
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var composing by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(composeRequests) { if (composeRequests > 0) composing = true }
     var text by rememberSaveable { mutableStateOf(savedDraft.text) }
     var source by remember { mutableStateOf(savedDraft.source) }
     var media by remember { mutableStateOf(savedDraft.media) }
@@ -54,7 +57,7 @@ fun FriendTimelineScreen(repository: FriendTimeline, ownId: String, onBack: () -
     LaunchedEffect(Unit){run{}}
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal=16.dp)) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            TextButton(onBack){Text(tr("Retour"))}
+            if(showBack)TextButton(onBack){Text(tr("Retour"))} else Spacer(Modifier.width(1.dp))
             TextButton(enabled=!busy,onClick={run{}}){Text(tr("Actualiser"))}
         }
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())

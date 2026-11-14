@@ -36,7 +36,6 @@ import androidx.navigation.NavHostController
 import app.superhealth.SuperPrefs
 import app.superhealth.nutrition.ui.components.ChipChoice
 import app.superhealth.nutrition.ui.components.GroupCard
-import app.superhealth.nutrition.ui.components.GroupHeader
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
 import app.superhealth.nutrition.ui.components.SwitchRow
@@ -44,6 +43,7 @@ import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.security.AppLock
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
+import app.superhealth.nutrition.ui.components.GroupHeader
 
 /** Réglages > Sécurité : verrouillage par le système (empreinte, visage ou code du téléphone). */
 @Composable

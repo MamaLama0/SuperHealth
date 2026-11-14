@@ -18,8 +18,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 
+/** 4.1 : chaque hausse ouvre l'éditeur du fil (bouton « Publier » de la barre du bas). */
+internal var socialComposeRequests by mutableStateOf(0)
+
 @Composable
-fun FriendsFeedScreen(nav:NavHostController,initialOwner:String?=null,initialPost:String?=null) {
+fun FriendsFeedScreen(nav:NavHostController,initialOwner:String?=null,initialPost:String?=null,embedded:Boolean=false) {
     val ctx=LocalContext.current
     if(SocialLifecycle.pending(ctx)){TextButton({nav.go("group/lifecycle")}){Text(tr("Poursuivre la révocation"))};return}
     val league by League.state.collectAsState()
@@ -41,7 +44,8 @@ fun FriendsFeedScreen(nav:NavHostController,initialOwner:String?=null,initialPos
         clearDraft={draftFile.delete()},picker={selected->FriendMediaPicker(selected)},mediaView={media,peer->PortableMediaView(media,peer.endpoint)},
         initialOwner=initialOwner,initialPost=initialPost,notificationBell={NotificationBell(nav)},block={peer->SocialPrivacy.block(ctx,peer.key)},spaces=SocialSpaces.repository(ctx),
         shareCircle={draft->CircleShareHandoff.draft=draft.copy(source=draft.source?.boundedForCircle())},
-        formatDate={Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate().format(DateTimeFormatter.ofPattern("d MMM yyyy",app.superhealth.ui.Lang.locale))})
+        formatDate={Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate().format(DateTimeFormatter.ofPattern("d MMM yyyy",app.superhealth.ui.Lang.locale))},
+        composeRequests=socialComposeRequests,showBack=!embedded)
 }
 
 @Composable

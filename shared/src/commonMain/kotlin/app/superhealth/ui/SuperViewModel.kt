@@ -85,6 +85,7 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             if (s.healthConnect && stale) runCatching { HealthConnectHub.sync(ctx.applicationContext) }
             runCatching { Bridge.pullWatch(ctx.applicationContext) }
+            runCatching { app.superhealth.health.data.Hydration.plan(ctx.applicationContext) }
             bump()
         }
     }
@@ -112,7 +113,10 @@ class SuperViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun log(metric: Metric, value: Double, timestampMs: Long = System.currentTimeMillis()) {
-        viewModelScope.launch { ManualLogStore.get(getApplication()).add(metric, timestampMs, value) }
+        viewModelScope.launch {
+            ManualLogStore.get(getApplication()).add(metric, timestampMs, value)
+            if (metric == Metric.HYDRATION) runCatching { app.superhealth.health.data.Hydration.plan(getApplication()) }
+        }
     }
 
     fun deleteLog(id: Long) {

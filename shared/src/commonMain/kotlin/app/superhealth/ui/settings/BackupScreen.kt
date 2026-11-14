@@ -34,7 +34,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,7 +59,6 @@ import app.superhealth.nutrition.ui.components.GroupCard
 import app.superhealth.nutrition.ui.components.MfCard
 import app.superhealth.nutrition.ui.components.PillButton
 import app.superhealth.nutrition.ui.components.RowDivider
-import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.components.SettingRow
 import app.superhealth.nutrition.ui.components.TextInput
 import app.superhealth.nutrition.ui.screens.DetailScaffold
@@ -74,6 +72,8 @@ import app.superhealth.ui.trf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.LaunchedEffect
+import app.superhealth.nutrition.ui.components.SectionLabel
 
 /**
  * Sauvegarde : code de récupération, sauvegarde automatique chiffrée (Nextcloud, WebDAV ou dossier), fichier à exporter

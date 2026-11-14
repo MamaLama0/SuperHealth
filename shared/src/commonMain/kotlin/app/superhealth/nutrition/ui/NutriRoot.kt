@@ -49,23 +49,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
 import app.superhealth.ui.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.superhealth.nutrition.ui.screens.AiLogScreen
 import app.superhealth.nutrition.ui.screens.AiImportScreen
@@ -87,8 +74,21 @@ import app.superhealth.nutrition.ui.screens.ProgramEditScreen
 import app.superhealth.nutrition.ui.screens.RecipeEditScreen
 import app.superhealth.nutrition.ui.screens.StrategyScreen
 import app.superhealth.nutrition.ui.screens.WeightScreen
-import app.superhealth.ui.theme.Mf
 import androidx.navigation.NavGraphBuilder
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import app.superhealth.ui.theme.Mf
 
 /** Modes d'ouverture de la recherche d'aliments. */
 object SearchMode { const val SEARCH = 0; const val SCAN = 1; const val QUICK = 2; const val CREATE = 3; const val INGREDIENT = 4; const val RECIPES = 5 }
@@ -111,7 +111,8 @@ fun NavGraphBuilder.nutritionGraph(vm: AppViewModel, nav: NavHostController) {
     composable("expenditure") { ExpenditureScreen(vm, onBack = { nav.popBackStack() }) }
     composable("nutrition") { NutritionScreen(vm, onBack = { nav.popBackStack() }) }
     composable("targets/override") { app.superhealth.nutrition.ui.screens.TargetOverrideScreen(vm) { nav.popBackStack() } }
-    composable("program") { ProgramEditScreen(vm, onBack = { nav.popBackStack() }) }
+    composable("program") { ProgramEditScreen(vm, onBack = { nav.popBackStack() }, onPlan = { nav.navigate("n/plan") }) }
+    composable("n/plan") { app.superhealth.nutrition.ui.screens.PlanScreen(vm) { nav.popBackStack() } }
     composable("profile") { ProfileScreen(vm, onBack = { nav.popBackStack() }) }
     composable("energy") { EnergyBalanceScreen(vm, onBack = { nav.popBackStack() }) }
     composable("goalprogress") { GoalProgressScreen(vm, onBack = { nav.popBackStack() }) }

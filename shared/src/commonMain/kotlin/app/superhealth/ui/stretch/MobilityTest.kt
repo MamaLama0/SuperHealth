@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +61,7 @@ import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.Color
 
 /** Image du test, gardée dans le cache après la première lecture. Hors connexion : rien, les consignes et le niveau restent. */
 @Composable

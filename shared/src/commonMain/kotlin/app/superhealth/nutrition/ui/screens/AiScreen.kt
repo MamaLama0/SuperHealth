@@ -55,8 +55,6 @@ import app.superhealth.nutrition.data.AiGift
 import app.superhealth.nutrition.data.AiFood
 import app.superhealth.nutrition.data.AiProvider
 import app.superhealth.nutrition.data.FoodEntryEntity
-import app.superhealth.nutrition.data.Micros
-import app.superhealth.nutrition.data.SwissFoods
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.AppViewModel
 import app.superhealth.nutrition.ui.components.AssetImage
@@ -82,6 +80,8 @@ import app.superhealth.platform.ByteArrayOutputStream
 import app.superhealth.platform.File
 import kotlin.math.max
 import kotlin.math.roundToInt
+import app.superhealth.nutrition.data.Micros
+import app.superhealth.nutrition.data.SwissFoods
 
 /** Ligne de l'assiette : élément détecté + quantité retenue (modifiable). */
 private data class PlateRow(val item: AiFood.Item, val grams: String, val useMatch: Boolean)

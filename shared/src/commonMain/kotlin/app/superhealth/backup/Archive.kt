@@ -32,7 +32,7 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
-    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "profile.jpg", "cards/state.json", "cards/cutout.png")
+    private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "meals/plans.json", "league/friend-draft.json", "profile.jpg", "cards/state.json", "cards/cutout.png")
 
     fun fileName(date: app.superhealth.platform.LocalDate = app.superhealth.platform.LocalDate.now()) = "superhealth-$date.$EXT"
 
@@ -80,6 +80,7 @@ object Archive {
         files["group-recovery.json"]?.let { app.superhealth.league.GroupRecovery.restore(ctx,kotlinx.serialization.json.Json.decodeFromString(app.superhealth.league.GroupRecovery.Profile.serializer(),it),clearHistory=false) }
         files["cards-economy.json"]?.let { app.superhealth.cards.Economy.importAccount(ctx, it) }
         app.superhealth.cards.CardStore.reload(ctx)
+        app.superhealth.cards.EquipmentStore.reload(ctx)
         app.superhealth.league.SocialSpaces.reset();app.superhealth.league.FriendSocial.resetCache();app.superhealth.league.SocialInbox.load(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }
@@ -92,6 +93,7 @@ object Archive {
             })
             done += tr("saisies santé")
         }
+        app.superhealth.meals.MealPlanner.init(ctx)
         return if (done.isEmpty()) tr("Fichier illisible") else app.superhealth.ui.trf("Restauré : %1\$s", done.joinToString(", "))
     }
 }

@@ -8,11 +8,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import app.superhealth.platform.HttpURLConnection
 import app.superhealth.platform.URL
 import app.superhealth.platform.URLEncoder
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Client Open Food Facts — seul appel réseau de l'application (remplace la base Typesense de MacroFactor, notes/10 §4).

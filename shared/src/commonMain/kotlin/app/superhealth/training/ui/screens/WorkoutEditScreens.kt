@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -57,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
@@ -65,7 +63,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import app.superhealth.training.domain.ExerciseDb
-import app.superhealth.training.domain.PlanDiff
 import app.superhealth.training.domain.SetLog
 import app.superhealth.training.domain.SetType
 import app.superhealth.training.domain.Settings
@@ -94,6 +91,9 @@ import app.superhealth.platform.LocalDateTime
 import app.superhealth.platform.ZoneId
 import app.superhealth.platform.ZoneOffset
 import app.superhealth.platform.UUID
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.ui.graphics.Color
+import app.superhealth.training.domain.PlanDiff
 
 /** Durée maximale saisissable (« Confirm 9:59:59+ »). */
 const val MAX_WORKOUT_SEC = 10 * 3600L - 1

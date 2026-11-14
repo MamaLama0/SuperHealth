@@ -70,7 +70,6 @@ import app.superhealth.nutrition.ui.num
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import app.superhealth.nutrition.data.OpenFoodFacts
-import app.superhealth.nutrition.data.SwissFoods
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.domain.Settings
 import app.superhealth.nutrition.ui.AppViewModel
@@ -88,6 +87,7 @@ import app.superhealth.nutrition.ui.toKcal
 import app.superhealth.nutrition.ui.toNum
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import app.superhealth.nutrition.data.SwissFoods
 
 private enum class SearchTab(val label: String) { ALL(tr("Tout")), FAVORITES(tr("Favoris")), MINE(tr("Mes aliments")), RECIPES(tr("Recettes")), QUICK(tr("Ajout rapide")), CREATE(tr("Créer")) }
 
@@ -128,8 +128,14 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
         val code = result ?: return@rememberBarcodeScanner
         scope.launch {
             val local = vm.repo.foods.byBarcode(code)
+            // base SuperHealth d'abord (NCC, MND, USDA), Open Food Facts ensuite
+            val server = if (local == null && s.serverFoodsEnabled) {
+                message = trf("Recherche du code %1\$s…", code)
+                app.superhealth.nutrition.data.FoodServer.byBarcode(code).also { message = null }
+            } else null
             when {
                 local != null -> selected = local
+                server != null -> selected = server
                 s.openFoodFactsEnabled -> {
                     message = trf("Recherche du code %1\$s sur Open Food Facts…", code)
                     val off = OpenFoodFacts.byBarcode(code)
@@ -357,11 +363,18 @@ private fun ListHeader(text: String) {
 private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: (FoodEntity) -> Unit) {
     var local by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     var remote by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
+    var server by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
+    var serverLoading by remember { mutableStateOf(false) }
     var swiss by remember { mutableStateOf<List<FoodEntity>>(emptyList()) }
     val ctx = LocalContext.current
     var loading by remember { mutableStateOf(false) }
     var searched by remember { mutableStateOf(false) }
     val recent by remember { vm.repo.foods.recent(30) }.collectAsState(initial = emptyList())
+    LaunchedEffect(Unit) { if (s.serverFoodsEnabled) app.superhealth.nutrition.data.FoodServer.warmUp() }
+    // La section « Base SuperHealth » arrive après les bases embarquées, au-dessus d'elles : sans ça, la liste reste
+    // accrochée à la base suisse et les résultats du serveur restent hors de l'écran.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(server) { if (server.isNotEmpty()) listState.scrollToItem(0) }
 
     LaunchedEffect(query) {
         val q = query.trim()
@@ -369,16 +382,28 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
         swiss = if (q.length < 2 || !s.swissDbEnabled) emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             SwissFoods.search(ctx, q).map(SwissFoods::toFood)
         }
+        // résultats précédents de la base SuperHealth gardés pendant la frappe : pas de liste qui clignote
         remote = emptyList(); searched = false
-        if (q.length >= 3 && s.openFoodFactsEnabled) {
-            delay(550)
-            loading = true
-            remote = OpenFoodFacts.search(q)
-            loading = false; searched = true
+        if (q.length < 2) { server = emptyList(); return@LaunchedEffect }
+        delay(220)
+        // base SuperHealth (rapide, prioritaire) puis Open Food Facts, en parallèle
+        kotlinx.coroutines.coroutineScope {
+            if (s.serverFoodsEnabled) launch {
+                serverLoading = true
+                server = app.superhealth.nutrition.data.FoodServer.search(q)
+                serverLoading = false
+            }
+            if (q.length >= 3 && s.openFoodFactsEnabled) launch {
+                delay(200)
+                loading = true
+                remote = OpenFoodFacts.search(q)
+                loading = false
+            }
         }
+        searched = true
     }
 
-    LazyColumn(Modifier.fillMaxSize()) {
+    LazyColumn(Modifier.fillMaxSize(), state = listState) {
         val shown = if (query.isBlank()) recent else local
         if (shown.isNotEmpty()) item { ListHeader(if (query.isBlank()) tr("Récents et fréquents") else tr("Ma bibliothèque")) }
         items(shown, key = { "l${it.id}" }) { FoodRow(it, s) { onPick(it) } }
@@ -386,12 +411,15 @@ private fun SearchResults(vm: AppViewModel, s: Settings, query: String, onPick: 
             Text(tr("Tapez le nom d'un aliment."),
                 Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary)
         }
+        if (server.isNotEmpty()) item(key = "h-server") { ListHeader(tr("Base SuperHealth")) }
+        items(server.size, key = { "s$it" }) { i -> FoodRow(server[i], s) { onPick(server[i]) } }
+        if (serverLoading && server.isEmpty()) item(key = "server-loading") { Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Mf.colors.accent, strokeWidth = 2.dp, modifier = Modifier.size(24.dp)) } }
         if (swiss.isNotEmpty()) item { ListHeader(tr("Base suisse des valeurs nutritives")) }
         items(swiss, key = { "s" + it.name }) { FoodRow(it, s) { onPick(it) } }
         if (loading) item { Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Mf.colors.accent, strokeWidth = 2.dp, modifier = Modifier.size(28.dp)) } }
         if (remote.isNotEmpty()) item { ListHeader(tr("Open Food Facts")) }
         items(remote) { FoodRow(it, s) { onPick(it) } }
-        if (searched && remote.isEmpty() && local.isEmpty() && swiss.isEmpty()) item {
+        if (searched && remote.isEmpty() && server.isEmpty() && local.isEmpty() && swiss.isEmpty()) item {
             Text(tr("Aucun résultat (ou pas de réseau). Essayez « Créer » ou « Ajout rapide »."), Modifier.padding(16.dp), color = Mf.colors.textSecondary)
         }
         if (!s.openFoodFactsEnabled && query.isNotBlank()) item {

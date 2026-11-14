@@ -5,6 +5,7 @@ import app.superhealth.platform.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,8 +40,8 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 
-private val Red = Color(0xFFFF4F5E)
-private val Blue = Color(0xFF6E7BFF)
+private val Red = SideMine
+private val Blue = SideTheirs
 
 data class Opponent(val id: String, val name: String, val stats: AthleteStats, val bg: Pull?, val note: String, val level: Int = 1, val friend: League.Friend? = null) {
     val face get() = CardFace(name, stats, bg, level = level)
@@ -64,22 +65,49 @@ fun DuelScreen(nav: NavHostController, friendId: String? = null) {
     val c = chosen
     if (c != null && mine != null) { DuelScene(mine, c) { chosen = null }; return }
     viewing?.let { o -> FriendCardViewer(o.friend?.let { friendFace(it) } ?: o.face, o.note, { viewing = null }) { viewing = null; chosen = o } }
-    CardScaffold("Duel", { nav.popBackStack() }, Red) {
-        Text(tr("Les stats s'affrontent une à une, bonus de fond compris. La meilleure carte achève l'autre avec le pouvoir de son biome."), color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
-        if (mine?.ovr10 == null) Text(tr("Ta carte doit d'abord être évaluée (quelques séances)."), color = Gold, modifier = Modifier.padding(top = 16.dp))
-        SectionTitle("Adversaires")
-        if (opponents.isEmpty()) Text(tr("Ajoute un ami, ou reviens dans quelques semaines pour affronter ta carte passée."), color = Color.White.copy(alpha = 0.55f))
-        opponents.forEach { o ->
-            Row(Modifier.padding(bottom = 10.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).clickable { viewing = o }.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                AthleteCard(o.friend?.let { friendFace(it) } ?: o.face, Modifier.width(64.dp), interactive = false, animate = false)
-                Column(Modifier.padding(start = 14.dp).weight(1f)) {
-                    Text("@" + o.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(o.note, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+    CardScaffold("Combat", { nav.popBackStack() }, Red) {
+        Panel(Modifier.fillMaxWidth().padding(top = 4.dp), tint = Red, padding = 14.dp) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AthleteCard(myFace(mine), Modifier.width(86.dp).graphicsLayer { rotationZ = -5f }, interactive = false, animate = false)
+                Column(Modifier.padding(start = 18.dp).weight(1f)) {
+                    Text(tr("Carte contre carte"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                    Text(tr("Les stats s'affrontent une à une, bonus de fond compris. La meilleure carte achève l'autre avec le pouvoir de son biome."),
+                        color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                 }
-                Text(o.stats.ovr?.toString() ?: "–", color = Color.White, fontWeight = FontWeight.Black, fontSize = 26.sp)
             }
+            if (mine?.ovr10 == null) Text(tr("Ta carte doit d'abord être évaluée (quelques séances)."), color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
         }
+        Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Adversaires"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp)
+            Text("${opponents.size}", color = Color.White.copy(alpha = 0.45f), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+        }
+        if (opponents.isEmpty()) Panel(Modifier.fillMaxWidth()) {
+            Text(tr("Personne à défier pour l'instant"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(tr("Ajoute un ami, ou reviens dans quelques semaines pour affronter ta carte passée."), color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+            GhostButton(tr("Ajouter un ami"), Modifier.fillMaxWidth().padding(top = 14.dp)) { nav.navigate("friends/add") }
+        }
+        opponents.forEach { o ->
+            Panel(Modifier.padding(bottom = 10.dp).fillMaxWidth(), padding = 12.dp, onClick = { viewing = o }) { Row(verticalAlignment = Alignment.CenterVertically) {
+                AthleteCard(o.friend?.let { friendFace(it) } ?: o.face, Modifier.width(62.dp), interactive = false, animate = false)
+                Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                    Text("@" + o.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1)
+                    Text(o.note, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, maxLines = 1)
+                    // Pronostic : l'écart de note globale, et qui prend quelle stat (avant bonus de fond).
+                    if (mine?.ovr10 != null && o.stats.ovr10 != null) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val d = mine.ovr10 - o.stats.ovr10
+                        when { d >= 20 -> Tag(tr("Favori"), Color(0xFF6FD3A0)); d <= -20 -> Tag(tr("Outsider"), Color(0xFFFFB37A)); else -> Tag(tr("Serré"), Gold) }
+                        Spacer(Modifier.width(4.dp))
+                        Stat.entries.forEach { s -> val a = mine[s]; val b = o.stats[s]
+                            if (a != null && b != null) Box(Modifier.size(7.dp).clip(RoundedCornerShape(50)).background(if (a > b) Red else if (b > a) Blue else Color.White.copy(alpha = 0.4f))) }
+                    }
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(o.stats.ovr?.toString() ?: "–", color = tierColors(o.stats.tier)[1], fontWeight = FontWeight.Black, fontSize = 28.sp)
+                    Text(tr(o.stats.tier.label).uppercase(), color = Color.White.copy(alpha = 0.5f), fontWeight = FontWeight.Black, fontSize = 9.sp, letterSpacing = 1.sp)
+                }
+            } }
+        }
+        Spacer(Modifier.height(32.dp))
     }
 }
 
@@ -129,7 +157,10 @@ private fun DuelScene(mine: AthleteStats, o: Opponent, onBack: () -> Unit) {
     val total = strike + FINISH
     var t by remember { mutableFloatStateOf(0f) }
     var showResult by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
+    // Revanche : on rejoue la même scène depuis le début.
+    var round by remember { mutableIntStateOf(0) }
+    BackHandler(onBack = onBack)
+    LaunchedEffect(round) {
         var last = withFrameNanos { it }
         val fired = mutableSetOf<Int>()
         while (true) withFrameNanos { now ->
@@ -158,7 +189,7 @@ private fun DuelScene(mine: AthleteStats, o: Opponent, onBack: () -> Unit) {
     val f = t - strike
     val winArt = if (iWin) myArt else theirArt
     val els = elementsOf(winArt, if (iWin) mine else o.stats)
-    BoxWithConstraints(Modifier.fillMaxSize().background(Ink).clickable(remember { MutableInteractionSource() }, null) { if (showResult) onBack() else t = total }) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Ink).clickable(remember { MutableInteractionSource() }, null) { if (!showResult) t = total }) {
         val w = constraints.maxWidth.toFloat(); val h = constraints.maxHeight.toFloat()
         val density = androidx.compose.ui.platform.LocalDensity.current
         val cardW = w * 0.36f; val cardH = cardW / 0.714f
@@ -222,14 +253,23 @@ private fun DuelScene(mine: AthleteStats, o: Opponent, onBack: () -> Unit) {
             Fighter(face, myCenter, true)
             // Les stats s'affrontent au centre, une à une ; elles s'effacent au coup final.
             val fade = 1f - (f / 0.4f).coerceIn(0f, 1f) * 0.75f
-            Column(Modifier.align(Alignment.Center).padding(horizontal = 20.dp).graphicsLayer { alpha = fade }, verticalArrangement = Arrangement.spacedBy(6.dp),
+            Column(Modifier.align(Alignment.Center).padding(horizontal = 12.dp).graphicsLayer { alpha = fade * ((t - 0.45f) / 0.35f).coerceIn(0f, 1f) }
+                .clip(RoundedCornerShape(26.dp)).background(Color.Black.copy(alpha = 0.42f)).border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(26.dp))
+                .padding(horizontal = 12.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 // Manches gagnées, mises à jour à chaque stat tranchée.
                 val settled = pairs.indices.filter { t >= settleAt(it) }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 2.dp)) {
-                    Text("${settled.count { pairs[it].second > pairs[it].third }}", color = Red, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                    Text(tr("MANCHES"), color = Color.White.copy(alpha = 0.5f), fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 2.sp, modifier = Modifier.padding(horizontal = 10.dp))
-                    Text("${settled.count { pairs[it].third > pairs[it].second }}", color = Blue, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
+                    Text("${settled.count { pairs[it].second > pairs[it].third }}", color = Red, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                    // Une pastille par manche : elle prend la couleur de qui l'emporte, celle en cours s'allonge.
+                    Row(Modifier.padding(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        pairs.forEachIndexed { i, (_, a, b) ->
+                            val set = t >= settleAt(i); val live = !set && t >= INTRO + i * STEP
+                            Box(Modifier.size(width = if (live) 24.dp else 12.dp, height = 7.dp).clip(RoundedCornerShape(50))
+                                .background(when { live -> Color.White; !set -> Color.White.copy(alpha = 0.16f); a > b -> Red; b > a -> Blue; else -> Color.White.copy(alpha = 0.55f) }))
+                        }
+                    }
+                    Text("${settled.count { pairs[it].third > pairs[it].second }}", color = Blue, fontWeight = FontWeight.Black, fontSize = 24.sp)
                 }
                 pairs.forEachIndexed { i, (s, a, b) ->
                     val appear = ((t - INTRO - i * STEP + 0.25f) / 0.25f).coerceIn(0f, 1f)
@@ -280,15 +320,37 @@ private fun DuelScene(mine: AthleteStats, o: Opponent, onBack: () -> Unit) {
             Text(if (iWin) tr("VICTOIRE") else tr("DÉFAITE"), style = TextStyle(brush = Brush.verticalGradient(listOf(Color.White, Gold, Color(0xFFFF9A3C))), fontSize = 64.sp,
                 fontWeight = FontWeight.Black, shadow = Shadow(Color(0xFFFF9A3C), Offset.Zero, 30f)), modifier = Modifier.align(Alignment.Center).graphicsLayer { alpha = k; val s = 2.4f - 1.4f * k; scaleX = s; scaleY = s })
         }
-        Text("@" + o.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 6.dp))
+        // Plaques des deux camps, à côté de leur carte : l'adversaire en bleu en haut, moi en rouge en bas.
+        val plateIn = (t / 0.6f).coerceIn(0f, 1f)
+        val gapPx = with(density) { 12.dp.toPx() }
+        val sideW = with(density) { (w / 2 - cardW / 2 - gapPx * 2).toDp() }
+        @Composable fun Plate(name: String, s: AthleteStats, color: Color, role: String, end: Boolean) {
+            Column(Modifier.width(sideW), horizontalAlignment = if (end) Alignment.End else Alignment.Start) {
+                Tag(role, color)
+                Text("@$name", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                Text((s.ovr?.toString() ?: "–") + " · " + tr(s.tier.label), color = tierColors(s.tier)[1], fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, maxLines = 1)
+            }
+        }
+        Box(Modifier.offset { androidx.compose.ui.unit.IntOffset((oppCenter.x + cardW / 2 + gapPx).toInt(), (oppCenter.y - cardH * 0.22f).toInt()) }.graphicsLayer { alpha = plateIn; translationX = (1f - plateIn) * 40f }) {
+            Plate(o.name, o.stats, Blue, tr("Adversaire"), false)
+        }
+        if (!showResult) Box(Modifier.offset { androidx.compose.ui.unit.IntOffset(gapPx.toInt(), (myCenter.y - cardH * 0.22f).toInt()) }.graphicsLayer { alpha = plateIn; translationX = -(1f - plateIn) * 40f }) {
+            Plate(face.name, mine, Red, tr("Toi"), true)
+        }
+        // « VS » qui claque à l'entrée des cartes.
+        if (t < INTRO) {
+            val k = (t / 0.3f).coerceIn(0f, 1f) * (1f - ((t - 0.6f) / 0.3f).coerceIn(0f, 1f))
+            Text("VS", style = TextStyle(brush = Brush.verticalGradient(listOf(Color.White, Gold, Color(0xFFFF7A1A))), fontSize = 84.sp, fontWeight = FontWeight.Black, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                shadow = Shadow(Color(0xFFFF7A1A), Offset.Zero, 36f)), modifier = Modifier.align(Alignment.Center).graphicsLayer { alpha = k; val sc = 2.6f - 1.6f * k; scaleX = sc; scaleY = sc })
+        }
         if (!showResult) Text(tr("Touchez pour passer"), color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp,
-            modifier = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 16.dp, bottom = 12.dp))
-        if (showResult) DuelResult(o, pairs, myTotal, theirTotal, iWin, Modifier.align(Alignment.BottomCenter))
+            modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 16.dp, bottom = 12.dp))
+        if (showResult) DuelResult(o, pairs, myTotal, theirTotal, iWin, Modifier.align(Alignment.BottomCenter), onReplay = { t = 0f; showResult = false; round++ }, onBack = onBack)
     }
 }
 
 @Composable
-private fun DuelResult(o: Opponent, pairs: List<Triple<Stat, Int, Int>>, myTotal: Int, theirTotal: Int, iWin: Boolean, modifier: Modifier) {
+private fun DuelResult(o: Opponent, pairs: List<Triple<Stat, Int, Int>>, myTotal: Int, theirTotal: Int, iWin: Boolean, modifier: Modifier, onReplay: () -> Unit, onBack: () -> Unit) {
     val worst = pairs.maxByOrNull { it.third - it.second }
     val bestGap = pairs.minByOrNull { it.third - it.second }
     val line = when {
@@ -296,12 +358,36 @@ private fun DuelResult(o: Opponent, pairs: List<Triple<Stat, Int, Int>>, myTotal
         bestGap != null -> tr("Tu domines partout. Ton plus gros avantage") + " : " + tr(bestGap.first.label).lowercase() + " (+${bestGap.second - bestGap.third})."
         else -> ""
     }
-    Column(modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Ink, Ink))).navigationBarsPadding().padding(16.dp).padding(top = 40.dp),
+    val rise = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { rise.animateTo(1f, tween(450, easing = FastOutSlowInEasing)) }
+    Column(modifier.fillMaxWidth().graphicsLayer { alpha = rise.value; translationY = (1f - rise.value) * 60.dp.toPx() }
+        .background(Brush.verticalGradient(0f to Color.Transparent, 0.22f to Ink.copy(alpha = 0.94f), 1f to Ink))
+        .clickable(remember { MutableInteractionSource() }, null) {}.navigationBarsPadding().padding(16.dp).padding(top = 64.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(if (iWin) tr("Victoire !") else tr("Défaite… pour l'instant"), color = if (iWin) Gold else Color.White, fontWeight = FontWeight.Black, fontSize = 26.sp)
-        Text("$myTotal " + tr("contre") + " $theirTotal", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
-        Text(line, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
-        Text(tr("Stats avec le bonus des fonds. Touchez pour revenir."), color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+        Text(if (iWin) tr("Victoire !") else tr("Défaite… pour l'instant"), style = TextStyle(brush = if (iWin) Brush.verticalGradient(listOf(Color.White, Gold, Color(0xFFFF9A3C))) else Brush.verticalGradient(listOf(Color.White, Color(0xFFB9C0FF))),
+            fontWeight = FontWeight.Black, fontSize = 30.sp))
+        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("$myTotal", color = if (iWin) Red else Red.copy(alpha = 0.6f), fontWeight = FontWeight.Black, fontSize = 34.sp)
+            Text("–", color = Color.White.copy(alpha = 0.4f), fontWeight = FontWeight.Black, fontSize = 24.sp, modifier = Modifier.padding(horizontal = 12.dp))
+            Text("$theirTotal", color = if (!iWin) Blue else Blue.copy(alpha = 0.6f), fontWeight = FontWeight.Black, fontSize = 34.sp)
+        }
+        // Le détail manche par manche : l'écart de chaque stat, à la couleur de qui l'a prise.
+        Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            pairs.forEach { (s, a, b) ->
+                val c = if (a > b) Red else if (b > a) Blue else Color.White.copy(alpha = 0.6f)
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(c.copy(alpha = 0.16f)).border(1.dp, c.copy(alpha = 0.35f), RoundedCornerShape(14.dp)).padding(vertical = 7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(s.code, color = Color.White.copy(alpha = 0.65f), fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
+                    Text(if (a == b) "=" else (if (a > b) "+" else "−") + abs(a - b), color = c, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                }
+            }
+        }
+        if (line.isNotEmpty()) Text(line, color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GhostButton(tr("Revoir"), Modifier.weight(1f), onReplay)
+            GlowButton(tr("Terminer"), Modifier.weight(1f), listOf(Color(0xFFE53935), Color(0xFFFF8A1F)), onClick = onBack)
+        }
+        Text(tr("Stats avec le bonus des fonds."), color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, modifier = Modifier.padding(top = 10.dp))
     }
 }
 
@@ -355,7 +441,7 @@ private fun DuelBar(s: Stat, a: Int, b: Int, u: Float, active: Boolean, since: F
                     drawCircle(Color.White, radius = size.height * 0.55f, center = c)
                 } else if (done && abs(a - b) > 0) drawCircle(Color.White, radius = size.height * 0.75f, center = c)
                 if (burst >= 0f) {
-                    // La moitié gagnante s'illumine, une onde et des éclats partent de la jonction.
+                    // La moitié gagnante s'illumine, une onde et de l'or partent de la jonction.
                     val glow = (1f - burst) * 0.6f
                     if (a > b) drawRoundRect(Color.White.copy(alpha = glow), size = Size(split, size.height), cornerRadius = radius, blendMode = BlendMode.Plus)
                     else if (b > a) drawRoundRect(Color.White.copy(alpha = glow), topLeft = Offset(split, 0f), size = Size(size.width - split, size.height), cornerRadius = radius, blendMode = BlendMode.Plus)

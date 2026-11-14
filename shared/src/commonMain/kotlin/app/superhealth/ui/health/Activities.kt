@@ -65,7 +65,6 @@ import app.superhealth.nutrition.ui.components.SectionLabel
 import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.formatDuration
-import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import app.superhealth.ui.localDate
 import app.superhealth.ui.relativeDay
@@ -79,7 +78,6 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.foundation.layout.height
 import app.superhealth.nutrition.ui.components.SettingRow
 import androidx.compose.material.icons.rounded.FileOpen
-import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,6 +86,8 @@ import androidx.compose.runtime.setValue
 import app.superhealth.ui.trf
 import kotlinx.coroutines.launch
 import app.superhealth.ui.tr
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.rounded.EmojiEvents
 
 fun Bridge.Kind.icon(): ImageVector = when (this) {
     Bridge.Kind.STRENGTH -> Icons.Rounded.FitnessCenter

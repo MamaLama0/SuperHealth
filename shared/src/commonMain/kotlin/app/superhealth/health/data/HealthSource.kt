@@ -141,7 +141,8 @@ class ActivityUser {
     val activeTimeGoalMinutes: Int get() = sp.getString(PREF_USER_ACTIVETIME_MINUTES, null)?.toIntOrNull() ?: 60
     /** Objectif de sommeil en minutes (Gadgetbridge : 7 h). */
     val sleepDurationGoal: Int get() = (sp.getString(PREF_USER_SLEEP_DURATION, null)?.toIntOrNull() ?: 7) * 60
-    val hydrationGoalMl: Int get() = 0
+    /** Objectif d'eau fixe (ml), quand l'objectif calculé est désactivé. */
+    val hydrationGoalMl: Int get() = sp.getString(PREF_USER_GOAL_HYDRATION_ML, null)?.toIntOrNull() ?: 2000
     /** Sexe recopié du profil (−1 : inconnu, jamais pris pour une femme par défaut). */
     val gender: Int get() = sp.getString(PREF_USER_GENDER, null)?.toIntOrNull() ?: -1
 
@@ -156,6 +157,7 @@ class ActivityUser {
         const val PREF_USER_CALORIES_BURNT = "activity_user_calories_burnt"
         const val PREF_USER_DISTANCE_METERS = "activity_user_distance_meters"
         const val PREF_USER_ACTIVETIME_MINUTES = "activity_user_activetime_minutes"
+        const val PREF_USER_GOAL_HYDRATION_ML = "activity_user_goal_hydration_ml"
         const val GENDER_FEMALE = 0
         const val GENDER_MALE = 1
 

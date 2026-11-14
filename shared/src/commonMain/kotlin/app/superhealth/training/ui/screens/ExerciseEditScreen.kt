@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -57,6 +56,7 @@ import app.superhealth.training.ui.tr
 import app.superhealth.training.ui.trf
 import app.superhealth.platform.UUID
 import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.width
 
 private enum class Metric(val label: String, val codes: List<String>) {
     WEIGHT("Charge et répétitions", listOf("w", "r")), BODYWEIGHT("Poids du corps", listOf("r")),

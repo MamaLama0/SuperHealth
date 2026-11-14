@@ -2,7 +2,6 @@ package app.superhealth.ui.dashboard
 
 import app.superhealth.platform.*
 
-
 import app.superhealth.available
 import app.superhealth.feature
 import app.superhealth.has
@@ -32,8 +31,6 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -61,6 +57,9 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.graphics.Color
 
 /**
  * Personnalisation, en un seul panneau : l'aperçu de la grille est l'outil. Toucher un bloc le sélectionne, une petite
@@ -107,7 +106,7 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
                 hidden.forEach { c -> AddPill(c) { set(shown + c); selected = c } }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(if (sh.appTourPending) 210.dp else 24.dp))
     }
 }
 
@@ -209,7 +208,7 @@ fun VitalsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(if (sh.appTourPending) 210.dp else 24.dp))
     }
 }
 
@@ -265,7 +264,7 @@ fun PlusEditScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(if (sh.appTourPending) 210.dp else 24.dp))
     }
 }
 
@@ -301,7 +300,7 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
         }
-        val hidden = Rings.Kind.entries.filter { with(Rings) { it.available } } - shown.toSet()
+        val hidden = Rings.Kind.entries - shown.toSet()
         if (hidden.isNotEmpty()) {
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Disponibles"), Modifier.padding(start = 0.dp))
             GroupCard {
@@ -316,7 +315,7 @@ fun RingsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(if (sh.appTourPending) 210.dp else 24.dp))
     }
 }
 

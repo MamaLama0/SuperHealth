@@ -2,7 +2,6 @@ package app.superhealth.nutrition.domain
 
 import app.superhealth.platform.*
 
-
 import kotlinx.serialization.Serializable
 
 // Enums alignés sur ceux observés dans MacroFactor (notes/09 §3, objs.txt de dae).
@@ -156,6 +155,8 @@ data class Program(
     val manualOnDays: Set<Int> = emptySet(),
     /** Remplacements datés, prioritaires sur les check-ins, sans changer le programme. */
     val overrides: List<TargetOverride> = emptyList(),
+    /** 3.8 : plan semaine par semaine, jour par jour, programmable à l'avance (voir [NutritionPlan]). */
+    val plan: List<PlanWeek> = emptyList(),
 )
 
 @Serializable
@@ -170,8 +171,12 @@ data class Settings(
     val energyUnit: EnergyUnit = EnergyUnit.KCAL,
     val trendAlpha: TrendAlpha = TrendAlpha.EMA9,
     val openFoodFactsEnabled: Boolean = true,
+    /** 3.9 : base du serveur SuperHealth (NCC, MND, USDA), en ligne, cherchée en premier. */
+    val serverFoodsEnabled: Boolean = true,
     /** Base suisse des valeurs nutritives (embarquée). */
     val swissDbEnabled: Boolean = true,
+    /** USDA FoodData Central (embarquée, en anglais) ; null suit la langue de l'app. */
+    val usdaDbEnabled: Boolean? = null,
     /** Fonctions IA (description / photo) visibles. */
     val aiEnabled: Boolean = true,
     val onboarded: Boolean = false,
@@ -195,7 +200,13 @@ data class Settings(
     val textSize: TextSize = TextSize.NORMAL,
     /** Cibles de micronutriments personnalisées (MicroGoalType.custom) ; absent = référence automatique. */
     val microTargets: Map<String, Double> = emptyMap(),
-)
+    val useFilteredWeightForExpenditure: Boolean = false,
+    val confirmedFoodMatches: Map<String, Long> = emptyMap(),
+) {
+    /** Apprentissages toujours actifs : chacun ne s'applique qu'après avoir battu la règle de base sur deux blocs futurs. */
+    val learnFoodPatterns get() = true
+    val learnActivityEnergy get() = true
+}
 
 /** Objectif de pas du jour [date] : celui de son jour de la semaine s'il est fixé, sinon l'objectif quotidien. */
 fun Settings.stepGoalFor(date: LocalDate): Int = stepGoalDays.getOrNull(date.dayOfWeek.value - 1)?.takeIf { it > 0 } ?: stepGoal

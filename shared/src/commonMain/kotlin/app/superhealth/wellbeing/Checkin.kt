@@ -2,10 +2,10 @@ package app.superhealth.wellbeing
 
 import app.superhealth.platform.*
 
-import app.superhealth.platform.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import app.superhealth.platform.Context
 import app.superhealth.platform.File
 import app.superhealth.platform.LocalDate
 
@@ -16,7 +16,7 @@ import app.superhealth.platform.LocalDate
  * « mauvaise nuit » dégrade la journée). Les réponses entrent dans la Forme du jour.
  */
 object Checkin {
-    @Serializable data class Feel(val sleep: Int, val energy: Int)
+    @Serializable data class Feel(val sleep: Int, val energy: Int, val at: Long = 0L)
 
     @Serializable private data class Store(val days: Map<Long, Feel> = emptyMap())
 
@@ -36,7 +36,8 @@ object Checkin {
     fun today(): Feel? = days.value[LocalDate.now().toEpochDay()]
 
     fun set(feel: Feel, day: Long = LocalDate.now().toEpochDay()) {
-        days.value = days.value + (day to feel)
+        days.value = days.value + (day to feel.copy(at = System.currentTimeMillis()))
+        Form.Model.invalidate()
         // l'alerte des signes de la nuit en tient compte
         BodyAlert.invalidate()
         runCatching { file?.writeText(json.encodeToString(Store.serializer(), Store(days.value))) }

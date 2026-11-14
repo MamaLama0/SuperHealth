@@ -9,21 +9,16 @@ import app.superhealth.platform.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -47,11 +42,7 @@ import app.superhealth.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import app.superhealth.training.domain.Sex
-import app.superhealth.training.domain.Language
-import app.superhealth.training.domain.ThemeMode
 import app.superhealth.training.domain.WarmUpMode
-import app.superhealth.training.domain.WeightUnit
 import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.AsyncAsset
 import app.superhealth.training.ui.GymTemplate
@@ -62,7 +53,6 @@ import app.superhealth.training.ui.components.MfCard
 import app.superhealth.training.ui.components.NumberField
 import app.superhealth.training.ui.components.PillButton
 import app.superhealth.training.ui.components.RowDivider
-import app.superhealth.training.ui.components.ScreenTitle
 import app.superhealth.training.ui.components.SectionLabel
 import app.superhealth.training.ui.components.SettingRow
 import app.superhealth.training.ui.components.SwitchRow
@@ -76,6 +66,16 @@ import app.superhealth.training.ui.w
 import app.superhealth.training.ui.weight
 import app.superhealth.platform.LocalDate
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import app.superhealth.training.domain.Sex
+import app.superhealth.training.domain.Language
+import app.superhealth.training.domain.ThemeMode
+import app.superhealth.training.domain.WeightUnit
+import app.superhealth.training.ui.components.ScreenTitle
 
 /** Plus : profil, réglages d'entraînement (Smart Progression, échauffements, repos), salles, données. */
 @Composable
@@ -189,7 +189,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 RowDivider()
                 SettingRow(tr("Entre gauche et droite"), restLabel(s.restBetweenSidesSec)) { vm.settings { it.copy(restBetweenSidesSec = next(it.restBetweenSidesSec, listOf(0, 15, 30, 45, 60))) } }
                 RowDivider()
-                SwitchRow(tr("Son de fin de repos"), null, s.restSound) { v -> vm.settings { it.copy(restSound = v) } }
+                SwitchRow(tr("Signal sonore de fin de récupération"), tr("Un bip quand le repos est fini, même écran éteint"), s.restSound) { v -> vm.settings { it.copy(restSound = v) } }
             }
 
             }

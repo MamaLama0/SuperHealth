@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,6 +106,7 @@ import app.superhealth.platform.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.mutableIntStateOf
 
 val DAY_NAMES = listOf(tr("Lundi"), tr("Mardi"), tr("Mercredi"), tr("Jeudi"), tr("Vendredi"), tr("Samedi"), tr("Dimanche"))
 private val longFmt get() = DateTimeFormatter.ofPattern("EEEE d MMMM", app.superhealth.nutrition.ui.Lang.locale)
@@ -138,6 +138,13 @@ fun StrategyScreen(vm: AppViewModel, nav: NavHostController) {
             PillButton(tr("Remplacer mes cibles"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("targets/override") }
             if (app.superhealth.nutrition.domain.ManualTargets.overrideAt(p, an.today) != null)
                 Text(tr("Remplacement actif"), color = Mf.colors.accent, modifier = Modifier.padding(6.dp))
+            // 3.8 : plan semaine par semaine, jour par jour, programmable à l'avance
+            Spacer(Modifier.height(8.dp))
+            val planned = p.plan.count { it.startDay + 7 > an.today }
+            PillButton(if (planned > 0) trf("Objectifs par semaine · %1\$s", planned) else tr("Objectifs par semaine"), Modifier.fillMaxWidth(), strong = false) { nav.navigate("n/plan") }
+            app.superhealth.nutrition.domain.NutritionPlan.weekAt(p, an.today)?.let { w ->
+                Text(tr("Plan actif") + " · " + tr(w.phase.label), color = Mf.colors.accent, modifier = Modifier.padding(6.dp))
+            }
             SectionLabel(tr("Cibles de la semaine"))
             val monday = an.today - LocalDate.ofEpochDay(an.today).dayOfWeek.value + 1
             GroupCard {
@@ -594,7 +601,7 @@ private fun CompareRow(label: String, before: Double?, after: Double, color: Col
 }
 
 @Composable
-fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
+fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit, onPlan: (() -> Unit)? = null) {
     val program by vm.program.collectAsState()
     val profile by vm.profile.collectAsState()
     val s by vm.settings.collectAsState()
@@ -605,6 +612,7 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
     var initTdee by remember { mutableStateOf(program.initialTdeeOverride?.let { num(s.energyValue(it), 0) } ?: "") }
     var validTargets by remember { mutableStateOf(true) }
     val goalType = a?.currentGoal?.type ?: GoalType.MAINTENANCE
+    var baseGoals by remember { mutableStateOf(BaseGoalsDraft.current(s)) }
 
     DetailScaffold(tr("Programme"), onBack) {
         MfCard {
@@ -684,7 +692,34 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                             if (t != null) p = app.superhealth.nutrition.domain.ManualTargets.withBase(p, t)
                         }
                     }
-                } else ManualWeekEditor(p, s, { validTargets = it }) { p = it }
+                } else {
+                    // 3.8 : mode manuel réorganisé — résumé de la semaine, cibles, puis semaines à venir
+                    ManualWeekSummary(p, s)
+                    SectionTitleSmall(tr("Cibles de la semaine type"))
+                    ManualWeekEditor(p, s, { validTargets = it }) { p = it }
+                    SectionTitleSmall(tr("Eau, sodium et micronutriments"))
+                    Text(tr("Vos objectifs de tous les jours. Chaque semaine du programme peut les remplacer."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+                    BaseGoalsForm(baseGoals) { baseGoals = it }
+                    SectionTitleSmall(tr("Programme sur plusieurs semaines"))
+                    Text(tr("Préparez des semaines différentes à l'avance (prise de masse, sèche, recharges, pauses diète, semaine de pic, reverse), avec leurs calories, macros, eau et sodium, réglées jour par jour. Elles ne s'appliquent qu'à partir de leur lundi."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+                    val todayE = LocalDate.now().toEpochDay()
+                    val upcoming = p.plan.filter { it.startDay + 7 > todayE }.sortedBy { it.startDay }
+                    if (upcoming.isNotEmpty()) {
+                        app.superhealth.nutrition.domain.NutritionPlan.weekAt(p, todayE)?.let { w ->
+                            Text(trf("Cette semaine : %1\$s", tr(w.phase.label)) + " · " + trf("%1\$s par jour en moyenne",
+                                "${s.energyValue(app.superhealth.nutrition.domain.NutritionPlan.average(w).kcal).roundToInt()} ${s.energyUnit.label}"),
+                                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(4.dp))
+                        }
+                        PlanPreview(upcoming, s, maxRows = 4)
+                    } else Text(tr("Aucune semaine programmée : la semaine type ci-dessus se répète."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(4.dp))
+                    if (onPlan != null) PillButton(if (upcoming.isNotEmpty()) trf("Objectifs par semaine · %1\$s", upcoming.size) else tr("Objectifs par semaine"),
+                        Modifier.fillMaxWidth().padding(top = 6.dp), strong = upcoming.isEmpty()) {
+                        vm.repo.prefs.setProgram(p); vm.repo.prefs.setSettings(baseGoals.applyTo(vm.repo.prefs.settings.value)); onPlan()
+                    }
+                }
             }
             app.superhealth.nutrition.ui.components.SwitchRow(tr("Objectif de poids"), tr("Désactivez pour suivre seulement vos calories et macros"), p.weightGoalEnabled) {
                 p = p.copy(weightGoalEnabled = it)
@@ -706,6 +741,7 @@ fun ProgramEditScreen(vm: AppViewModel, onBack: () -> Unit) {
             )
             vm.repo.prefs.setProgram(newP)
             vm.repo.prefs.setProfile(profile.copy(bmrEquation = bmr))
+            if (p.style == ProgramStyle.MANUAL) vm.repo.prefs.setSettings(baseGoals.applyTo(vm.repo.prefs.settings.value))
             vm.launch {
                 val fresh = analytics().first()
                 saveCheckIn(fresh.provisionalCheckIn(fresh.today))
@@ -777,3 +813,7 @@ internal fun minTargetText(age: Int, heightCm: Double, startKg: Double, weight: 
     return if (byFloor) trf("Visez au moins %1\$s (IMC %2\$s) : en dessous, le risque augmente.", weight(min), num(r.floorBmi, 1))
     else trf("À votre âge, perdez au plus %1\$s %% par objectif : visez au moins %2\$s, puis refaites le point.", ((r.maxLoss ?: 0.0) * 100).roundToInt(), weight(min))
 }
+
+@Composable
+private fun SectionTitleSmall(text: String) = Text(text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
+    modifier = Modifier.padding(start = 4.dp, top = 18.dp, bottom = 6.dp))

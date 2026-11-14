@@ -5,6 +5,7 @@ import app.superhealth.platform.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import app.superhealth.SuperPrefs
+import kotlinx.coroutines.flow.callbackFlow
 
 data class DeviceUi(
     val address: String,

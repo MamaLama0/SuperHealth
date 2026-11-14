@@ -38,8 +38,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -50,10 +48,8 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.DropdownMenu
@@ -83,15 +79,10 @@ import app.superhealth.nutrition.data.FoodEntryEntity
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.AppViewModel
 import app.superhealth.nutrition.ui.SearchMode
-import app.superhealth.nutrition.ui.components.AssetImage
 import app.superhealth.nutrition.ui.components.FoodIcon
-import app.superhealth.nutrition.ui.components.MacroLine
-import app.superhealth.nutrition.ui.components.MacroSummary
 import app.superhealth.nutrition.ui.components.Ring
-import app.superhealth.nutrition.ui.dayLabel
 import app.superhealth.nutrition.ui.energy
 import app.superhealth.nutrition.ui.energyValue
-import app.superhealth.nutrition.ui.hourLabel
 import app.superhealth.nutrition.ui.macros
 import app.superhealth.nutrition.ui.minuteOf
 import app.superhealth.nutrition.ui.num
@@ -101,6 +92,15 @@ import app.superhealth.platform.LocalDate
 import app.superhealth.platform.LocalTime
 import app.superhealth.ui.theme.dashCardBackground
 import app.superhealth.ui.theme.edge
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.rounded.MoreVert
+import app.superhealth.nutrition.ui.components.AssetImage
+import app.superhealth.nutrition.ui.components.MacroLine
+import app.superhealth.nutrition.ui.components.MacroSummary
+import app.superhealth.nutrition.ui.dayLabel
+import app.superhealth.nutrition.ui.hourLabel
 
 private val DAY_LETTERS get() = (1..7).map { app.superhealth.nutrition.ui.dayLetter(it) }
 
@@ -123,6 +123,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
     val clipboard by vm.clipboard.collectAsState()
     val ctx = LocalContext.current
 
+    val future = day > LocalDate.now().toEpochDay()
     val total = remember(entries) { entries.fold(Macros.ZERO) { acc, e -> acc + e.macros() } }
     val mealEnds = app.superhealth.SuperPrefs.settings.collectAsState().value.mealEnds
     var mealHours by remember { mutableStateOf(false) }
@@ -150,13 +151,13 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                             Box {
                                 app.superhealth.nutrition.ui.components.CircleAction(Icons.Rounded.MoreHoriz, tr("Options du jour")) { menu = true }
                                 DropdownMenu(menu, { menu = false }, containerColor = Mf.colors.elevated, shape = RoundedCornerShape(14.dp)) {
-                                    if (clipboard.isNotEmpty()) DropdownMenuItem({ Text(trf("Coller %1\$s élément(s)", clipboard.size)) }, onClick = {
+                                    if (!future && clipboard.isNotEmpty()) DropdownMenuItem({ Text(trf("Coller %1\$s élément(s)", clipboard.size)) }, onClick = {
                                         menu = false; val items = clipboard; vm.launch { paste(items, day) }
                                     })
                                     DropdownMenuItem({ Text(tr("Horaires des repas")) }, onClick = { menu = false; mealHours = true })
                                     DropdownMenuItem({ Text(tr("Nutriments du jour")) }, enabled = entries.isNotEmpty(), onClick = { menu = false; nutrients = !nutrients })
                                     DropdownMenuItem({ Text(tr("Copier la journée")) }, enabled = entries.isNotEmpty(), onClick = { menu = false; vm.clipboard.value = entries })
-                                    DropdownMenuItem({ Text(tr("Copier la veille ici")) }, onClick = { menu = false; vm.launch { copyDay(day - 1, day) } })
+                                    if (!future) DropdownMenuItem({ Text(tr("Copier la veille ici")) }, onClick = { menu = false; vm.launch { copyDay(day - 1, day) } })
                                     DropdownMenuItem({ Text(if (flag?.fasted == true) tr("Annuler « jour de jeûne »") else tr("Marquer comme jour de jeûne")) }, onClick = {
                                         menu = false; vm.launch { dayFlags.upsert((flag ?: DayFlagEntity(day)).let { it.copy(fasted = !it.fasted) }) }
                                     })
@@ -173,6 +174,18 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                         val v = if (d == day) total.kcal else intakeByDay[d]
                         if (t == null || v == null || t <= 0) 0f else (v / t).toFloat()
                     }
+                    if (future) {
+                        val plans by app.superhealth.meals.MealPlanner.plans.collectAsState()
+                        val count = plans[day]?.meals.orEmpty().size
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton({ nav.go("meals/planning") }, Modifier.weight(1f)) {
+                                Text(if (count == 0) tr("Planifier les repas de ce jour") else trf("%1\$s repas prévus", count))
+                            }
+                            androidx.compose.material3.FilledTonalIconButton({ nav.go("meals/planning?add=true") }) {
+                                Icon(Icons.Rounded.Add, tr("Planifier les repas de ce jour"))
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(12.dp))
                     val box = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
                     Column(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(box).dashCardBackground(app.superhealth.ui.theme.CaloriesColor)
@@ -184,9 +197,8 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                     }
                 }
             }
-            // plugin Planificateur de repas : repas restants pour tomber sur les cibles
-            item(key = "mealplan") {
-                app.superhealth.ui.meals.MealPlanCard(day, entries, target, { s.energy(it) }, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp))
+            if (!future) item(key = "mealplan") {
+                app.superhealth.ui.meals.MealPlanCard(day, target, { s.energy(it) }, Modifier.padding(horizontal = 14.dp).padding(top = 12.dp))
             }
             // 2.2 : vitamines, minéraux, caféine… du jour
             if (nutrients && entries.isNotEmpty()) item(key = "nutrients") {
@@ -199,8 +211,8 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                     // copie directe vers maintenant (aujourd'hui, heure actuelle) : le cas le plus fréquent, sans passer par « Coller »
                     IconButton(onClick = {
                         val items = entries.filter { it.id in selection }; selection = emptySet()
-                        val now = java.time.LocalTime.now()
-                        vm.launch { paste(items, java.time.LocalDate.now().toEpochDay(), now.hour * 60 + now.minute) }
+                        val now = LocalTime.now()
+                        vm.launch { paste(items, LocalDate.now().toEpochDay(), now.hour * 60 + now.minute) }
                         app.superhealth.platform.toast(trf("%1\$s aliment(s) copié(s) vers maintenant", items.size))
                     }) {
                         Box {
@@ -234,7 +246,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            if (entries.isEmpty()) item { EmptyLog(onAdd = { nav.openSearch() }) }
+            if (entries.isEmpty() && !future) item { EmptyLog(onAdd = { nav.openSearch() }) }
             // repas déduits de l'heure de chaque aliment (petit-déjeuner, déjeuner, collation, dîner), dans l'ordre du jour
             val groups = meals
             groups.forEach { (slot, list) ->
@@ -247,7 +259,7 @@ fun FoodLogScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        SearchPill(Modifier.align(Alignment.BottomCenter).padding(bottom = app.superhealth.ui.LocalTabBarInset.current), onSearch = { nav.openSearch() }, onScan = { nav.openSearch(SearchMode.SCAN) },
+        if (!future) SearchPill(Modifier.align(Alignment.BottomCenter).padding(bottom = app.superhealth.ui.LocalTabBarInset.current), onSearch = { nav.openSearch() }, onScan = { nav.openSearch(SearchMode.SCAN) },
             onAi = if (s.aiEnabled) ({ nav.navigate("ai") }) else null)
         if (undo.isNotEmpty()) {
             val gone = undo

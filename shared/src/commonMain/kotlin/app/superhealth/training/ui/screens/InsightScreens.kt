@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,7 +36,6 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,6 +88,8 @@ import app.superhealth.training.ui.volume
 import app.superhealth.training.ui.weight
 import app.superhealth.training.ui.estimate
 import app.superhealth.platform.LocalDate
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.IconButton
 
 internal fun intensity(sets: Map<MuscleGroup, Double>, scale: Double) = sets.entries.associate { it.key.key to (it.value / scale).toFloat().coerceIn(0f, 1f) }
 

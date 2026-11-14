@@ -156,6 +156,33 @@ data class PastSet(val weight: Double, val reps: Int, val rir: Int?, val time: L
 object Progression {
     data class Suggestion(val weight: Double, val reps: Int, val rir: Int, val outOfRange: Boolean = false, val widened: Boolean = false)
 
+    /** Médiane des estimations à froid, en tenant compte du repos prévu entre séries. */
+    fun typicalFreshStrength(sets: List<SetLog>, upper: Boolean, restSec: Int): Double? {
+        var fatigue = 0.0
+        val estimates = mutableListOf<Double>()
+        for ((index, set) in sets.withIndex()) {
+            val kg = set.weight ?: continue
+            val reps = set.reps ?: continue
+            if (!kg.isFinite() || kg <= 0 || reps !in 1..100) continue
+            val remaining = 1 - Strength.fatigueDrop(fatigue)
+            if (remaining > 0.5 && reps <= 20) {
+                estimates += Strength.e1rm(kg, reps, set.rir ?: 2, upper, set.partialReps) / remaining
+            }
+            fatigue = Strength.recover(fatigue + Strength.fatiguingReps(reps, set.partialReps),
+                restMinutes(set, sets.getOrNull(index + 1), restSec))
+        }
+        if (estimates.isEmpty()) return null
+        estimates.sort()
+        return (estimates[estimates.lastIndex / 2] + estimates[estimates.size / 2]) / 2
+    }
+
+    internal fun restMinutes(set: SetLog, next: SetLog?, plannedSeconds: Int): Double {
+        val planned = plannedSeconds.coerceAtLeast(0).toDouble()
+        val interval = set.completedAt?.let { at -> next?.completedAt?.let { (it - at) / 1000.0 } }
+        // Batch confirmations have equal or almost equal timestamps.
+        return (if (interval != null && interval >= 15) minOf(planned, interval) else planned) / 60
+    }
+
     /** 1RM courant estimé : meilleure série de la dernière séance, corrigée de la fatigue au moment de la série. */
     fun currentOneRm(lastSession: List<PastSet>, upper: Boolean, restMin: Double = 2.0): Double? {
         var fatigue = 0.0
@@ -176,7 +203,8 @@ object Progression {
     fun suggest(
         oneRm: Double, targets: List<TargetSet>, upper: Boolean, ladder: LoadLadder,
         prevWeight: Double?, weightMatch: Boolean, expandRange: Boolean, progress: Double = Strength.SESSION_PROGRESS,
-        forced: Map<Int, Double> = emptyMap(),
+        forced: Map<Int, Double> = emptyMap(), manualReps: Map<Int, Int> = emptyMap(),
+        recentStrength: Double? = null, recentReps: Int? = null,
     ): List<Suggestion> {
         val strength = oneRm * progress
         var fatigue = 0.0
@@ -193,7 +221,7 @@ object Progression {
                 reps = max(1, reps)
                 out += Suggestion(w, reps, t.rir, outOfRange = reps < t.minReps, widened = widened)
                 previousSetWeight = w
-                fatigue = Strength.recover(fatigue + reps, t.restSec / 60.0)
+                fatigue = Strength.recover(fatigue + (manualReps[k] ?: reps), t.restSec / 60.0)
                 continue
             }
             val keep = previousSetWeight ?: if (weightMatch) prevWeight else null
@@ -206,6 +234,16 @@ object Progression {
                 if (r in t.minReps..t.maxReps || (expandRange && r in t.minReps..t.maxReps + 2)) w = keep
             }
             var reps = repsAt(w)
+            // Une série comparable déjà réussie peut justifier de rester à un palier de sa charge.
+            if (k == 0 && recentStrength != null && (recentReps ?: 0) >= t.minReps && prevWeight != null) {
+                val previousLoad = ladder.floor(prevWeight)
+                val lowerLoad = ladder.below(previousLoad) ?: previousLoad
+                val recentRepsAtLowerLoad = Strength.rtfAt(lowerLoad, recentStrength, upper) - t.rir
+                if (w < lowerLoad && recentRepsAtLowerLoad >= t.minReps) {
+                    w = lowerLoad
+                    reps = max(repsAt(w), t.minReps)
+                }
+            }
             var widened = false
             var outOfRange = false
             if (reps > t.maxReps) {
@@ -220,7 +258,7 @@ object Progression {
             reps = max(1, reps)
             out += Suggestion(w, reps, t.rir, outOfRange, widened)
             previousSetWeight = w
-            fatigue = Strength.recover(fatigue + reps, t.restSec / 60.0)
+            fatigue = Strength.recover(fatigue + (manualReps[k] ?: reps), t.restSec / 60.0)
         }
         return out
     }

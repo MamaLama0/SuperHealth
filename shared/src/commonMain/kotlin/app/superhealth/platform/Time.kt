@@ -103,6 +103,8 @@ enum class ChronoUnit {
         else -> error("unité de date inattendue")
     }
 
+    fun between(a: YearMonth, b: YearMonth): Long = ((b.year - a.year) * 12L + (b.monthValue - a.monthValue)).let { if (this == YEARS) it / 12 else it }
+
     fun between(a: Instant, b: Instant): Long {
         val ms = b.toEpochMilliseconds() - a.toEpochMilliseconds()
         return when (this) { HOURS -> ms / 3_600_000; MINUTES -> ms / 60_000; SECONDS -> ms / 1000; MILLIS -> ms; DAYS -> ms / 86_400_000; else -> error("unité") }
@@ -174,6 +176,7 @@ fun Instant.isBefore(o: Instant) = this < o
 fun Instant.isAfter(o: Instant) = this > o
 
 class ZonedDateTime(val instant: Instant, val zone: ZoneId) {
+    companion object { fun now(zone: ZoneId = ZoneId.systemDefault()) = ZonedDateTime(Instant.fromEpochMilliseconds(nowMs()), zone) }
     private val ldt: LocalDateTime = instant.toLocalDateTime(zone)
     fun toInstant(): Instant = instant
     fun toLocalDate(): LocalDate = ldt.date
@@ -301,4 +304,14 @@ object IsoFields { const val WEEK_BASED_YEAR = 1; const val WEEK_OF_WEEK_BASED_Y
 fun LocalDate.get(field: Int): Int {
     val thursday=plusDays(4-dayOfWeek.value)
     return if(field==IsoFields.WEEK_BASED_YEAR)thursday.year else ((thursday.dayOfYear-1)/7)+1
+}
+
+/** java.time.Duration réduit à ce que l'app utilise (écart entre deux instants). */
+class Duration(private val ms: Long) {
+    fun toDays(): Long = ms / 86_400_000
+    fun toHours(): Long = ms / 3_600_000
+    fun toMinutes(): Long = ms / 60_000
+    companion object {
+        fun between(a: ZonedDateTime, b: ZonedDateTime) = Duration(b.instant.toEpochMilliseconds() - a.instant.toEpochMilliseconds())
+    }
 }

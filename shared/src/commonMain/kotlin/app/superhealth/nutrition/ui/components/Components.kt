@@ -2,6 +2,7 @@ package app.superhealth.nutrition.ui.components
 
 import app.superhealth.platform.*
 
+import app.superhealth.ui.onboarding.tourTarget
 
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -12,7 +13,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -32,14 +32,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.getValue
-import app.superhealth.ui.theme.Base
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -48,9 +44,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.LocalFireDepartment
-import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -63,8 +57,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -84,7 +76,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.ui.FoodIcons
-import app.superhealth.nutrition.ui.num
 import app.superhealth.ui.drawPixelArt
 import app.superhealth.ui.theme.CaloriesColor
 import app.superhealth.ui.theme.CarbsColor
@@ -95,6 +86,16 @@ import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.ProteinColor
 import app.superhealth.ui.theme.partner
 import kotlin.math.roundToInt
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.draw.shadow
+import app.superhealth.ui.theme.Base
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import app.superhealth.nutrition.ui.num
 
 val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
 
@@ -103,7 +104,7 @@ val CardShape = RoundedCornerShape(app.superhealth.ui.theme.CardRadius)
 fun MfCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(16.dp), content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier.fillMaxWidth().clip(CardShape).background(Mf.colors.card).border(1.dp, Mf.colors.line, CardShape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(padding),
+            .then(if (onClick != null) Modifier.clickable { if (!app.superhealth.ui.charts.ChartTouch.busy()) onClick() } else Modifier).padding(padding),
         content = content,
     )
 }
@@ -168,7 +169,7 @@ fun NavBar(title: String, onBack: (() -> Unit)?, modifier: Modifier = Modifier, 
 @Composable
 fun SettingsAvatar(onClick: () -> Unit) {
     val name = remember { app.superhealth.ui.userName() }
-    Box(Modifier.size(38.dp).clip(CircleShape).background(Mf.colors.card).clickable(onClickLabel = tr("Réglages"), onClick = onClick),
+    Box(Modifier.size(38.dp).tourTarget("settings", onClick).clip(CircleShape).background(Mf.colors.card).clickable(onClickLabel = tr("Réglages"), onClick = onClick),
         contentAlignment = Alignment.Center) {
         val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
         if (photo != null) androidx.compose.foundation.Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
@@ -372,7 +373,8 @@ fun SettingRow(title: String, value: String? = null, subtitle: String? = null, i
 /** Interrupteur de Material 3, à la couleur d'accent. [onChange] null : la ligne qui le porte gère l'appui. */
 @Composable
 fun Toggle(checked: Boolean, onChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    androidx.compose.material3.Switch(checked, onChange, modifier, enabled = enabled, colors = androidx.compose.material3.SwitchDefaults.colors(
+    val haptic = app.superhealth.ui.rememberHaptics()
+    androidx.compose.material3.Switch(checked, onChange?.let { f -> { v: Boolean -> haptic.toggle(v); f(v) } }, modifier, enabled = enabled, colors = androidx.compose.material3.SwitchDefaults.colors(
         checkedTrackColor = Mf.colors.accent, checkedThumbColor = Mf.colors.onStrong, checkedBorderColor = Mf.colors.accent,
         uncheckedTrackColor = Mf.colors.chip, uncheckedThumbColor = Mf.colors.textTertiary, uncheckedBorderColor = Mf.colors.textTertiary,
     ))
@@ -380,7 +382,8 @@ fun Toggle(checked: Boolean, onChange: ((Boolean) -> Unit)?, modifier: Modifier 
 
 @Composable
 fun SwitchRow(title: String, subtitle: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clickable { onChange(!checked) }.padding(start = 16.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
+    val haptic = app.superhealth.ui.rememberHaptics()
+    Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clickable { haptic.toggle(!checked); onChange(!checked) }.padding(start = 16.dp, end = 14.dp, top = 9.dp, bottom = 9.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(tr(title), style = MaterialTheme.typography.bodyLarge)
@@ -424,6 +427,7 @@ fun PillButton(text: String, modifier: Modifier = Modifier, strong: Boolean = tr
 @Composable
 fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier: Modifier = Modifier, onSelect: (T) -> Unit) {
     val labels = options.map { tr(label(it)) }
+    val haptic = app.superhealth.ui.rememberHaptics()
     // segmenté : jusqu'à 4 libellés courts, ou 6 très courts (plages « 1S 1M 3M… »)
     if ((options.size in 2..4 && labels.sumOf { it.length } <= 30 && labels.all { it.length <= 12 }) ||
         (options.size in 5..6 && labels.all { it.length <= 5 })) {
@@ -437,11 +441,11 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
             val shape = RoundedCornerShape(8.dp)
             Row(
                 Modifier.height(34.dp).clip(shape).background(if (sel) Mf.colors.accent.container(1.4f) else Color.Transparent)
-                    .border(1.dp, if (sel) Color.Transparent else Mf.colors.divider.copy(alpha = 1f), shape).clickable { onSelect(o) }
-                    .padding(start = if (sel) 8.dp else 14.dp, end = 14.dp),
+                    .border(1.dp, if (sel) Color.Transparent else Mf.colors.divider.copy(alpha = 1f), shape).clickable { if (!sel) haptic.tick(); onSelect(o) }
+                    .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (sel) { Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()); Spacer(Modifier.width(6.dp)) }
+                Box(Modifier.size(17.dp)) { if (sel) Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()) }; Spacer(Modifier.width(6.dp))
                 Text(labels[i], style = MaterialTheme.typography.labelLarge, color = if (sel) Mf.colors.accent.onContainer() else Mf.colors.text)
             }
         }
@@ -452,6 +456,7 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
 @Composable
 fun Segmented(labels: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
     val n = labels.size.coerceAtLeast(1)
+    val haptic = app.superhealth.ui.rememberHaptics()
     // largeur mesurée après coup (pas de BoxWithConstraints : il casse les rangées à hauteur intrinsèque du tableau de bord)
     var widthPx by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -464,7 +469,7 @@ fun Segmented(labels: List<String>, selected: Int, modifier: Modifier = Modifier
         Row(Modifier.fillMaxSize()) {
             labels.forEachIndexed { i, l ->
                 Box(Modifier.weight(1f).fillMaxHeight().clip(CircleShape).clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelect(i) },
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { if (i != selected) haptic.tick(); onSelect(i) },
                     contentAlignment = Alignment.Center) {
                     Text(l, style = MaterialTheme.typography.labelLarge, color = if (i == selected) Mf.colors.accent.onContainer() else Mf.colors.textSecondary,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp))

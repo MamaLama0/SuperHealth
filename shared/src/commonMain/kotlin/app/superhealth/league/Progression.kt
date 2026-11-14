@@ -9,7 +9,7 @@ object Progression {
     const val MODEL = 2
     enum class Track(val label: String, val xp: Int, val weekly: Boolean = false) {
         FOOD("Nutrition", 20), STRENGTH("Musculation", 40, true), RUN("Course", 30, true),
-        STEPS("Pas", 10), SLEEP("Sommeil", 10), MIND("Esprit et mobilité", 20)
+        STEPS("Pas", 10), SLEEP("Sommeil", 10), MIND("Esprit et mobilité", 20), HIKE("Randonnée", 30, true)
     }
     @Serializable data class Streak(val track: String, val current: Int, val best: Int, val weekly: Boolean, val target: Int,
         val progress: Int = 0, val capped: Boolean = false, val percent: Int? = null)
@@ -18,7 +18,7 @@ object Progression {
         val weekStart: Long = 0, val throughDay: Long = 0, val days: List<DayXp> = emptyList(), val streaks: List<Streak> = emptyList(), val records: Int = 0, val totals: Map<String, Long> = emptyMap(),
         /** Quêtes terminées de la semaine [weekStart] (noms de [WeeklyQuests.Metric]). */
         val questsDone: List<String> = emptyList(),
-        /** Séries à la semaine de chaque suivi (bonus d'éclats et badges de série). */
+        /** Séries à la semaine de chaque suivi (bonus d'or et badges de série). */
         val weekly: List<WeekStreak> = emptyList())
     /**
      * Série à la semaine : une semaine compte dès [need] jours tenus (4 sur 7 pour un suivi quotidien, l'objectif de
@@ -49,7 +49,9 @@ object Progression {
             WeekStreak(t.name, current, best, done, held[now] ?: 0, need(t, now).coerceIn(1, 7))
         }
     }
-    data class Result(val summary: Summary, val since: Long) {
+    data class Result(val summary: Summary, val since: Long, val daily: Map<Long, Int> = emptyMap(),
+        val validatedToday: Set<Track> = emptySet(), val recentValidated: Map<Long, Set<Track>> = emptyMap(),
+        val sportDays: Set<Long> = emptySet()) {
         val intoLevel get() = summary.totalXp - threshold(summary.level)
         val nextLevel get() = threshold(summary.level + 1) - threshold(summary.level)
     }
