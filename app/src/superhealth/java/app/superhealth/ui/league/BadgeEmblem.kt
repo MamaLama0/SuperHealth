@@ -62,13 +62,13 @@ object BadgeTheme {
 
     /** Ce que rapporte un type de badge, en une phrase. */
     fun explain(metric: String): String = when (metric) {
-        "sessions" -> "Chaque séance de musculation enregistrée compte. Un palier atteint paie ses éclats une fois."
-        "records" -> "Chaque record battu sur un exercice compte. Un palier atteint paie ses éclats une fois."
+        "sessions" -> "Chaque séance de musculation enregistrée compte. Un palier atteint paie son or une fois."
+        "records" -> "Chaque record battu sur un exercice compte. Un palier atteint paie son or une fois."
         "foodDays" -> "Un jour compte quand tes repas sont notés et proches de ta cible. Paiement unique par palier."
         "mindMinutes" -> "Minutes de méditation et d'étirements enregistrées. Paiement unique par palier."
         "quests" -> "Chaque quête du jour ou de la semaine terminée compte. Paiement unique par palier."
         "distanceKm" -> "Distance du téléphone ou de la montre, sinon tes pas × ta foulée, jour après jour. Paiement unique par palier."
-        else -> "Une semaine compte dès 4 jours tenus sur 7. Chaque semaine d'affilée rapporte 10 éclats de plus, jusqu'à 100."
+        else -> "Une semaine compte dès 4 jours tenus sur 7. Chaque semaine d'affilée rapporte 10 or de plus, jusqu'à 100."
     }
 
     /** Métal du liseré, du premier au huitième palier. */

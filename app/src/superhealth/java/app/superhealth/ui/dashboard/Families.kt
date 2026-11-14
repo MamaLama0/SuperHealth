@@ -23,16 +23,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -544,7 +543,7 @@ internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: Na
         c == DashCard.RUNNING -> WCourse(size, i, h, m) { nav.go("h/activities") }
         c == DashCard.MEDITATION -> WMeditation(size, i, m) { openSection("MEDITATION", tab) }
         c == DashCard.STRETCH -> WEtirements(size, i, m) { openSection("STRETCH", tab) }
-        c == DashCard.LEAGUE -> WPersonnage(size, i, m, refresh) { nav.go("social") }
+        c == DashCard.LEAGUE -> WClassement(size, i, m, refresh) { nav.go("league") }
         c == DashCard.QUESTS -> WQuests(size, i, m, refresh) { nav.go("cards/quests") }
         c == DashCard.PROGRESSION -> WProgression(size, i, m, refresh) { nav.go("progress") }
         c == DashCard.FRIENDS -> WFriends(size, i, m) { nav.go("friends") }
@@ -1327,40 +1326,27 @@ private fun WEtirements(sz: CardSize, icon: ImageVector, m: Modifier, onClick: (
 }
 
 @Composable
-private fun WPersonnage(sz: CardSize, icon: ImageVector, m: Modifier, refresh: Int, onClick: () -> Unit) {
+private fun WClassement(sz: CardSize, icon: ImageVector, m: Modifier, refresh: Int, onClick: () -> Unit) {
+    // 4.0 : le classement laisse place à la carte Athlète (note, palier, packs à ouvrir).
     val ctx = LocalContext.current
     val snap by app.superhealth.cards.CardStore.snapshot.collectAsState()
-    val equipment by app.superhealth.cards.EquipmentStore.state.collectAsState()
-    LaunchedEffect(refresh) {
-        runCatching { app.superhealth.cards.EquipmentStore.load(ctx) }
-        runCatching { app.superhealth.cards.CardStore.refresh(ctx) }
-    }
+    val cards by app.superhealth.cards.CardStore.state.collectAsState()
+    val photo by app.superhealth.ui.cards.CardPhoto.bitmap.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(refresh) { app.superhealth.cards.CardStore.load(ctx); app.superhealth.ui.cards.CardPhoto.load(ctx); runCatching { app.superhealth.cards.CardStore.refresh(ctx) } }
     val hue = DashCard.LEAGUE.hue()
     val stats = snap?.now
-    val progress by app.superhealth.league.ProgressRepository.current.collectAsState()
-    val settings by app.superhealth.SuperPrefs.settings.collectAsState()
-    val character = progress?.let { app.superhealth.cards.CharacterStats.from(it,
-        app.superhealth.league.ProgressRepository.selectedTracks(settings), stats) }
-    val ovr = character?.scoreLine ?: "—"
+    val ovr = stats?.ovr?.toString() ?: "—"
     val detail = when {
-        equipment.equipped.isNotEmpty() -> trf("%1\$s / 4 pièces équipées", equipment.equipped.size)
         stats?.ovr10 == null -> tr("Carte en préparation")
-        else -> tr(stats.tier.label)
+        cards.packsAvailable > 0 -> trf("%1\$s · %2\$s pack(s) à ouvrir", tr(stats.tier.label), cards.packsAvailable)
+        else -> tr(stats.tier.label) + (stats.mostProfitable?.let { " · " + tr("le plus rentable") + " : " + tr(it.label).lowercase() } ?: "")
     }
-    if (sz == CardSize.W) SocialStrip(m, icon, tr("Mon personnage"), detail, ovr, hue, onClick)
-    else SocialCard(sz, m, icon, tr("Mon personnage"), hue, onClick) {
+    if (sz == CardSize.W) SocialStrip(m, icon, tr("Ma carte"), detail, ovr, hue, onClick)
+    else SocialCard(sz, m, icon, tr("Ma carte"), hue, onClick) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (sz != CardSize.S) Box(Modifier.size(if (sz == CardSize.L) 68.dp else 46.dp)
-                .clip(CircleShape).background(Mf.colors.chip), contentAlignment = Alignment.Center) {
-                val photo = app.superhealth.ui.ProfilePhoto.bitmap.value
-                if (photo == null) Icon(Icons.Rounded.Person, null, tint = hue.onContainer())
-                else androidx.compose.foundation.Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-            }
-            Column(Modifier.weight(1f)) {
-                Text(ovr, style = MaterialTheme.typography.titleLarge, color = hue.onContainer(), fontWeight = FontWeight.Bold)
-                Text("FOR · DEX · CON", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
-                Text(detail, style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
-            }
+            if (sz != CardSize.S) app.superhealth.ui.cards.AthleteCard(app.superhealth.ui.cards.myFace(stats),
+                Modifier.width(if (sz == CardSize.L) 92.dp else 58.dp), interactive = false, animate = false)
+            Column(Modifier.weight(1f)) { SocialValue(ovr, detail, hue, sz == CardSize.S) }
         }
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,70 +68,40 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** Le geste vers la droite depuis le tableau de bord ouvre le Groupe. */
+/** Le geste vers la droite depuis le tableau de bord ouvre le fil du Groupe. */
 @Composable
-internal fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.compose.foundation.pager.PagerState,
-    socialPage: SocialPage, onDashboard: () -> Unit) {
+internal fun HomeWithFeed(vm: SuperViewModel, nav: NavHostController, pager: androidx.compose.foundation.pager.PagerState, onDashboard: () -> Unit) {
     val settings by SuperPrefs.settings.collectAsState()
+    // Les cartes Athlète utilisent un gros shader : il se compile en arrière-plan dès l'accueil.
+    val appCtx = LocalContext.current
+    LaunchedEffect(Unit) { app.superhealth.ui.cards.CardPerf.init(appCtx) }
     if (settings.socialFeedEnabled && settings.leagueEnabled) {
         androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1, key = { it }) { page ->
-            if (page == 0) SocialFeed(nav, active = pager.settledPage == 0, socialPage, onDashboard)
+            if (page == 0) SocialFeed(nav, active = pager.settledPage == 0, onDashboard)
             else DashboardScreen(vm, nav)
         }
     } else DashboardScreen(vm, nav)
-
 }
 
-internal enum class SocialPage(val title: String) { PACKS("Paquets"), FEED("Fil") }
+/** Feuille « Créer une publication » : ouverte par le bouton de la barre du bas, quand le fil est à l'écran. */
+internal var socialCreateSheet by mutableStateOf(false)
 
+/** Le panneau social : le fil d'activités, et rien d'autre. Les cartes s'ouvrent depuis la barre du bas. */
 @Composable
-internal fun SocialFeed(nav: NavHostController, active: Boolean, page: SocialPage, onDashboard: () -> Unit) {
-    val accent = Mf.colors.accent
-    val saveable = rememberSaveableStateHolder()
-    Column(Modifier.fillMaxSize().tabBackground(accent).statusBarsPadding().padding(bottom = LocalTabBarInset.current)) {
-        // Keep the GPU scene alive when switching tabs; the dashboard pager also warms it offscreen.
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            EquipmentPacks(nav, active && page == SocialPage.PACKS,
-                Modifier.fillMaxSize().graphicsLayer { alpha = if (page == SocialPage.PACKS) 1f else 0f }
-                    .then(if (page == SocialPage.PACKS) Modifier else Modifier.clearAndSetSemantics {}), onDashboard)
-            if (page == SocialPage.FEED) saveable.SaveableStateProvider(SocialPage.FEED.name) {
-                GroupConversation(nav, active)
-            }
-        }
+internal fun SocialFeed(nav: NavHostController, active: Boolean, onDashboard: () -> Unit) {
+    Box(Modifier.fillMaxSize().tabBackground(Mf.colors.accent).statusBarsPadding().padding(bottom = LocalTabBarInset.current)) {
+        GroupConversation(nav, active, onDashboard)
     }
-}
-
-@Composable
-internal fun GroupDock(page: SocialPage, modifier: Modifier, select: (SocialPage) -> Unit) {
-    val shape = RoundedCornerShape(26.dp)
-    val colors = Mf.colors
-    BoxWithConstraints(modifier.fillMaxWidth().height(68.dp)
-            .clip(shape).background(colors.card).border(1.dp, colors.edge, shape).padding(5.dp).selectableGroup()) {
-            val half = maxWidth / 2
-            val offset by animateDpAsState(half * page.ordinal, spring(dampingRatio = .75f, stiffness = 430f), label = "group-indicator")
-            Box(Modifier.offset(x = offset).width(half).fillMaxHeight().background(colors.accent.copy(alpha = .18f), CircleShape))
-            Row(Modifier.fillMaxSize()) {
-                SocialPage.entries.forEach { tab ->
-                    val current = page == tab
-                    Row(Modifier.weight(1f).fillMaxHeight().clip(CircleShape)
-                        .selectable(current, role = Role.Tab) { select(tab) },
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
-                        Icon(if (tab == SocialPage.PACKS) Icons.Rounded.CollectionsBookmark else Icons.Rounded.Forum, null, tint = if (current) colors.accent else colors.textSecondary)
-                        Text(tr(tab.title), color = if (current) colors.text else colors.textSecondary, style = MaterialTheme.typography.titleSmall)
-                    }
-                }
-            }
-        }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun GroupConversation(nav: NavHostController, active: Boolean) {
+private fun GroupConversation(nav: NavHostController, active: Boolean, onDashboard: () -> Unit) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope()
     val state by League.state.collectAsState()
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var showCreate by rememberSaveable { mutableStateOf(false) }
+    var showCreate by ::socialCreateSheet
     fun refresh(userInitiated: Boolean = false) { scope.launch {
         if (busy) return@launch
         busy = true; if (userInitiated) error = null
@@ -156,23 +127,24 @@ private fun GroupConversation(nav: NavHostController, active: Boolean) {
     PullToRefreshBox(isRefreshing = busy && state.lastSync > 0L, onRefresh = { refresh(userInitiated = true) },
         modifier = Modifier.fillMaxSize()) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().imePadding(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 72.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // En-tête au format des onglets (TabHeader + boutons ronds) ; l'avatar ouvre les réglages de l'app, comme sur tous les onglets.
         item(key = "header") {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 14.dp, bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
-                    app.superhealth.ui.theme.Overline(tr("Groupe"))
-                    Text(tr("Fil de conversation"), style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    // L'heure de la dernière actualisation tient dans le surtitre, plutôt qu'en ligne perdue au milieu du fil.
+                    app.superhealth.ui.theme.Overline(if (state.lastSuccessfulSync > 0) tr("Groupe") + " · " + android.text.format.DateUtils.getRelativeTimeSpanString(
+                        state.lastSuccessfulSync, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString() else tr("Groupe"))
+                    Text(tr("Fil d’activités"), style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     NotificationBell(nav)
-                    CircleAction(Icons.Rounded.Storefront, tr("Marché")) { nav.go("cards/market") }
                     CircleAction(Icons.Rounded.Groups, tr("Cercles privés")) { nav.go("group/circles") }
+                    CircleAction(Icons.AutoMirrored.Rounded.ArrowForward, tr("Revenir au tableau de bord"), onClick = onDashboard)
                 }
             }
         }
-        item(key = "arena") { app.superhealth.ui.cards.ArenaTeaser(nav, active) }
         item(key = "friend-requests") { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { FriendRequestsBanner() } }
         if (history.pending.isNotEmpty()) item(key = "pending") {
             GroupSurface {
@@ -183,16 +155,6 @@ private fun GroupConversation(nav: NavHostController, active: Boolean) {
         }
         if (busy && posts.isEmpty() && state.lastSync == 0L) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         error?.let { message -> item(key = "error") { Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
-        if (state.friends.isEmpty()) item(key = "invite") { GroupSurface {
-            Text(tr("Invitez votre premier ami"), style = MaterialTheme.typography.titleLarge)
-            Text(tr("Partagez vos activités et encouragez-vous. Vous choisissez les informations publiées."), color = Mf.colors.textSecondary)
-            TextButton({ nav.go("friends/add") }) { Text(tr("Inviter ou saisir un code")) }
-        } }
-        if (state.lastSuccessfulSync > 0) item(key = "last-sync") {
-            Text(trf("Dernière actualisation · %1\$s", android.text.format.DateUtils.getRelativeTimeSpanString(
-                state.lastSuccessfulSync, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()),
-                style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
-        }
         if (posts.isEmpty() && state.friends.isNotEmpty()) item(key = "empty") { GroupSurface {
             Text(tr(if (state.hiddenSocialPosts.isNotEmpty() || state.mutedSocialFriends.isNotEmpty()) "Votre fil est vide" else "Votre Groupe commence ici"), style = MaterialTheme.typography.titleLarge)
             Text(tr("Partagez votre première séance ou ajoutez vos amis. Leurs publications apparaîtront ici."), modifier = Modifier.padding(top = 8.dp), color = Mf.colors.textSecondary)
@@ -204,12 +166,31 @@ private fun GroupConversation(nav: NavHostController, active: Boolean) {
         }
         item(key = "composer") {
             Surface(onClick = { showCreate = true }, color = Mf.colors.card, shape = RoundedCornerShape(20.dp)) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically,
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Rounded.Edit, null, tint = Mf.colors.accent)
-                    Text(tr("Une victoire à partager ?"), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                    Icon(Icons.Rounded.AddPhotoAlternate, null, tint = Mf.colors.textSecondary)
+                    FriendAvatar(null, app.superhealth.ui.userName() ?: tr("Vous"), 36.dp)
+                    Text(tr("Une victoire à partager ?"), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, color = Mf.colors.textSecondary)
+                    Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Mf.colors.accent.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.AddPhotoAlternate, null, Modifier.size(20.dp), tint = Mf.colors.accent)
+                    }
                 }
+            }
+        }
+        if (state.friends.isEmpty()) item(key = "invite") {
+            val shape = RoundedCornerShape(24.dp)
+            Column(Modifier.fillMaxWidth().clip(shape).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Mf.colors.accent, androidx.compose.ui.graphics.lerp(Mf.colors.accent, Color(0xFF7C4DFF), 0.65f))))
+                .clickable { nav.go("friends/add") }.padding(18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(46.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White.copy(alpha = .2f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.PersonAdd, null, tint = Color.White)
+                    }
+                    Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                        Text(tr("Invitez votre premier ami"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(tr("Partagez vos activités et encouragez-vous. Vous choisissez les informations publiées."), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = .85f), modifier = Modifier.padding(top = 2.dp))
+                    }
+                }
+                Text(tr("Inviter ou saisir un code"), color = Mf.colors.accent, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = 14.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White).padding(horizontal = 16.dp, vertical = 9.dp))
             }
         }
         item(key = "filters") {
@@ -233,11 +214,6 @@ private fun GroupConversation(nav: NavHostController, active: Boolean) {
             } }) { Text(tr("Charger les publications plus anciennes")) }
         }
     }
-    FloatingActionButton(
-        onClick = { showCreate = true },
-        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 12.dp).size(52.dp),
-        shape = CircleShape, containerColor = Mf.colors.accent, contentColor = Mf.colors.onStrong,
-    ) { Icon(Icons.Rounded.Edit, tr("Créer une publication")) }
     }
     if (showCreate) ModalBottomSheet(onDismissRequest = { showCreate = false }, containerColor = Mf.colors.background) {
         fun open(route: String) {
@@ -405,29 +381,28 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
             finally { busy = false }
         } }) { Icon(if (video) Icons.Rounded.PlayCircle else Icons.Rounded.Image, null); Spacer(Modifier.width(8.dp)); Text(tr(if (video) "Lire la vidéo" else "Afficher la photo")) }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        HorizontalDivider(Modifier.padding(top = 12.dp), color = Mf.colors.divider.copy(alpha = .6f))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { showReactions = true }, enabled = !reacting) {
-                if (selected == null) Icon(Icons.Rounded.AddReaction, null, Modifier.size(20.dp))
-                else Text(SocialReactions.emoji(selected), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.width(6.dp))
-                Text(tr(if (selected == null) "Réagir" else "Ma réaction"))
-            }
-            if (!closed || replyCount > 0) TextButton(onClick = { repliesOpen = !repliesOpen }) {
-                Icon(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_group_comments), null, Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(if (replyCount > 0) tr("Répondre") + " · " + replyCount else tr("Répondre"))
-            }
-        }
-        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            (counts.keys.sortedByDescending { counts[it] } + listOf("CLAP", "FIRE", "HEART")).distinct().take(5).forEach { kind ->
+        // Une seule ligne d'actions : les réactions en pastilles (les plus données d'abord), « + » pour les autres, répondre à droite.
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            (counts.keys.sortedByDescending { counts[it] } + listOfNotNull(selected) + listOf("CLAP", "FIRE", "HEART")).distinct().take(4).forEach { kind ->
                 val count = counts[kind] ?: 0
+                val mine = selected == kind
                 Surface(onClick = { react(kind) }, enabled = !reacting, shape = androidx.compose.foundation.shape.CircleShape,
-                    color = if (selected == kind) Mf.colors.accent.copy(alpha = .12f) else Color.Transparent) {
-                    Row(Modifier.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    color = if (mine) Mf.colors.accent.copy(alpha = .16f) else Mf.colors.chip,
+                    border = if (mine) androidx.compose.foundation.BorderStroke(1.dp, Mf.colors.accent.copy(alpha = .6f)) else null) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(SocialReactions.emoji(kind), style = MaterialTheme.typography.bodyLarge)
-                        if (count > 0) Text(" $count", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary)
+                        if (count > 0) Text(" $count", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = if (mine) Mf.colors.accent else Mf.colors.textSecondary)
                     }
+                }
+            }
+            Surface(onClick = { showReactions = true }, enabled = !reacting, shape = androidx.compose.foundation.shape.CircleShape, color = Mf.colors.chip) {
+                Icon(Icons.Rounded.AddReaction, tr("Réagir"), Modifier.padding(8.dp).size(20.dp), tint = Mf.colors.textSecondary)
+            }
+            Spacer(Modifier.weight(1f))
+            if (!closed || replyCount > 0) Surface(onClick = { repliesOpen = !repliesOpen }, shape = androidx.compose.foundation.shape.CircleShape, color = if (repliesOpen) Mf.colors.accent.copy(alpha = .16f) else Mf.colors.chip) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_group_comments), tr("Répondre"), Modifier.size(18.dp), tint = Mf.colors.textSecondary)
+                    if (replyCount > 0) Text(" $replyCount", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Mf.colors.textSecondary)
                 }
             }
         }

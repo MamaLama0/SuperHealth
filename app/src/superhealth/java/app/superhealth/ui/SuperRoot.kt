@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import app.superhealth.plusActions
 import app.superhealth.has
@@ -110,8 +111,6 @@ import app.superhealth.training.ui.Picker
 import app.superhealth.training.ui.handleTrainingRoute
 import app.superhealth.training.ui.trainingGraph
 import app.superhealth.ui.dashboard.DashboardEditScreen
-import app.superhealth.ui.league.SocialPage
-import app.superhealth.ui.league.GroupDock
 import kotlinx.coroutines.launch
 import app.superhealth.ui.health.ActivitiesHistoryScreen
 import app.superhealth.ui.health.DevicesScreen
@@ -185,7 +184,6 @@ fun SuperRoot(vm: SuperViewModel) {
     val isTab = isTabRoute(current) || current == "feed"
     val groupVisible = sh.socialFeedEnabled && sh.leagueEnabled && homePager.settledPage == 0
     val groupContext = current == "feed" || (current == "home" && groupVisible)
-    var socialPage by rememberSaveable { mutableStateOf(SocialPage.FEED) }
     val scope = rememberCoroutineScope()
     val dashboard: () -> Unit = {
         if (current == "feed") {
@@ -196,6 +194,9 @@ fun SuperRoot(vm: SuperViewModel) {
     var plus by remember { mutableStateOf(false) }
     var plusAction by remember { mutableStateOf<String?>(null) }
     var logSheet by remember { mutableStateOf(false) }
+    // Cartes Athlète : présentation unique, puis les cadeaux envoyés par le serveur, droit vers les packs.
+    if (sh.leagueEnabled) app.superhealth.ui.cards.DopamineIntro { if (current != "cards/packs") nav.go("cards/packs") }
+    if (sh.leagueEnabled) app.superhealth.ui.cards.GiftIntro { if (current != "cards/packs") nav.go("cards/packs") }
 
     // Fin de séance de musculation : écran « séance terminée ».
     val completed by vm.training.completed.collectAsState()
@@ -247,8 +248,8 @@ fun SuperRoot(vm: SuperViewModel) {
             popEnterTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.EnterTransition.None else slideInHorizontally(push) { -it / 5 } + fadeIn(tween(220, 60)) },
             popExitTransition = { if (isTabRoute(targetState.destination.route) && isTabRoute(initialState.destination.route)) androidx.compose.animation.ExitTransition.None else slideOutHorizontally(push) { it / 5 } + fadeOut(tween(120)) },
         ) {
-            composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav, homePager, socialPage, dashboard) }
-            composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true, socialPage, dashboard) }
+            composable("home") { app.superhealth.ui.league.HomeWithFeed(vm, nav, homePager, dashboard) }
+            composable("feed") { app.superhealth.ui.league.SocialFeed(nav, active = true, dashboard) }
             composable("social/compose") { app.superhealth.ui.league.SocialComposer(nav) }
             composable("social/share/workout") { app.superhealth.ui.league.SocialComposer(nav, "WORKOUT") }
             composable("group/post/{author}/{post}?reply={reply}", listOf(navArgument("author") { type = NavType.StringType }, navArgument("post") { type = NavType.StringType }, navArgument("reply") { type = NavType.StringType; nullable = true; defaultValue = null })) { entry ->
@@ -293,15 +294,12 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("stretch/all") { app.superhealth.ui.stretch.StretchAllScreen(nav) }
             composable("stretch/test") { app.superhealth.ui.stretch.MobilityTestScreen(vm, nav) }
             composable("settings/activities") { app.superhealth.ui.activities.ActivitySettingsScreen(nav) }
-            composable("social") { app.superhealth.ui.cards.EquipmentProfile(nav) }
-            composable("cards/equipment?edit={edit}", listOf(navArgument("edit") { type = NavType.BoolType; defaultValue = false })) { entry -> app.superhealth.ui.cards.EquipmentProfile(nav, entry.arguments?.getBoolean("edit") == true) }
-            composable("cards/packs") { app.superhealth.ui.cards.DailyPackRoute(nav) }
+            composable("social") { app.superhealth.ui.cards.CardsHome(nav) }
+            composable("cards/packs") { app.superhealth.ui.cards.PackShopScreen(nav) }
             composable("cards/album") { app.superhealth.ui.cards.AlbumScreen(nav) }
-            composable("cards/quests") { app.superhealth.ui.cards.ArsenalQuestRoute(nav) }
-            composable("cards/trades") { app.superhealth.ui.cards.ArsenalMarket(nav, startTab = 1) }
-            composable("cards/market") { app.superhealth.ui.cards.ArsenalMarket(nav) }
-            composable("cards/dungeon") { app.superhealth.ui.cards.DungeonRoute(nav) }
-            composable("cards/rates") { app.superhealth.ui.cards.EquipmentRatesRoute(nav) }
+            composable("cards/quests") { app.superhealth.ui.cards.CardQuestsScreen(nav) }
+            composable("cards/trades") { app.superhealth.ui.cards.TradesScreen(nav) }
+            composable("cards/rates") { app.superhealth.ui.cards.PackRatesScreen(nav) }
             composable("cards/cutout") { app.superhealth.ui.cards.CutoutScreen(nav) }
             composable("cards/duel?friend={friend}", listOf(navArgument("friend") { type = NavType.StringType; nullable = true; defaultValue = null })) {
                 app.superhealth.ui.cards.DuelScreen(nav, it.arguments?.getString("friend"))
@@ -372,7 +370,7 @@ fun SuperRoot(vm: SuperViewModel) {
         ) {
         Column(Modifier.fillMaxWidth().onSizeChanged { barPx = it.height }) {
             if (!groupContext && tst.session != null) ActiveSessionBar(tst.session!!.name, tst.session!!.startTime) { nav.navigate("session") }
-            BottomBar(current, socialPage.takeIf { groupContext }, { socialPage = it }, dashboard, onTab = { route ->
+            BottomBar(current, groupContext, onCards = { nav.go("social") }, onCompose = { app.superhealth.ui.league.socialCreateSheet = true }, onTab = { route ->
                 if (route == "home") homePager.requestScrollToPage(1)
                 nav.openTab(route)
             }, onPlus = {
@@ -417,10 +415,6 @@ fun SuperRoot(vm: SuperViewModel) {
         app.superhealth.SuperPrefs.update { it.copy(appTourPending = false) }
         nav.openTab("home")
     }
-    if (current != null && !sh.appTourPending && !sh.update401Seen &&
-        nodomain.freeyourgadget.gadgetbridge.BuildConfig.VERSION_NAME.substringBefore('+') == "4.0.1") {
-        Update401Dialog { app.superhealth.SuperPrefs.update { it.copy(update401Seen = true) } }
-    }
     app.superhealth.ui.league.LeagueIncomingDialog()
 }
 
@@ -435,7 +429,7 @@ val LocalTabBarInset = androidx.compose.runtime.compositionLocalOf { 0.dp }
  * pastille d'encre) et, à côté, le « + » rond sous le pouce (ou au milieu de la barre).
  */
 @Composable
-private fun BottomBar(current: String?, social: SocialPage?, onSocial: (SocialPage) -> Unit, onDashboard: () -> Unit,
+private fun BottomBar(current: String?, group: Boolean, onCards: () -> Unit, onCompose: () -> Unit,
     onTab: (String) -> Unit, onPlus: () -> Unit) {
     val sh = app.superhealth.SuperPrefs.settings.collectAsState().value
     val installed = app.superhealth.modules.Modules.installed.collectAsState().value
@@ -447,22 +441,19 @@ private fun BottomBar(current: String?, social: SocialPage?, onSocial: (SocialPa
         .clip(shape).background(if (dark) Mf.colors.elevated else Mf.colors.card).border(1.dp, Mf.colors.edge, shape).padding(horizontal = 4.dp)
     Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        if (sh.plusSide == "RIGHT") {
-            AnimatedContent(social != null, Modifier.weight(1f), transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(140)) },
-                label = "dock") { group ->
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                    if (group) GroupDock(social ?: SocialPage.PACKS, Modifier, onSocial)
+        // Panneau social : les cartes à gauche, la publication à droite, quel que soit le côté choisi pour le « + ».
+        if (sh.plusSide == "RIGHT" || group) {
+            AnimatedContent(group, Modifier.weight(1f), transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(140)) },
+                label = "dock") { social ->
+                Box(Modifier.fillMaxWidth(), contentAlignment = if (social) Alignment.CenterStart else Alignment.CenterEnd) {
+                    if (social) app.superhealth.ui.cards.CardsDock(onCards)
                     else Row((if (shown.size < tabs.size) Modifier.widthIn(max = (84 * shown.size + 8).dp) else Modifier).fillMaxWidth().then(pill)) {
                         shown.forEach { TabItem(it, current == it.route, Modifier.weight(1f)) { onTab(it.route) } }
                     }
                 }
             }
             Spacer(Modifier.width(10.dp))
-            PlusButton(64.dp, if (social == null) onPlus else onDashboard, backToDashboard = social != null)
-        } else if (social != null) {
-            GroupDock(social, Modifier.weight(1f), onSocial)
-            Spacer(Modifier.width(10.dp))
-            PlusButton(64.dp, onDashboard, backToDashboard = true)
+            PlusButton(64.dp, if (group) onCompose else onPlus, compose = group)
         } else when (sh.plusSide) {
             // au milieu : le « + » dans la barre, les onglets répartis de part et d'autre
             "CENTER" -> Row(pill.weight(1f), verticalAlignment = Alignment.CenterVertically) {
@@ -486,7 +477,7 @@ private fun BottomBar(current: String?, social: SocialPage?, onSocial: (SocialPa
 }
 
 @Composable
-private fun PlusButton(size: Dp, onPlus: () -> Unit, backToDashboard: Boolean = false) {
+private fun PlusButton(size: Dp, onPlus: () -> Unit, compose: Boolean = false) {
     val r = RoundedCornerShape(size * 0.31f)
     Box(
         Modifier.size(size).shadow(10.dp, r, ambientColor = Color.Black.copy(alpha = 0.2f), spotColor = Color.Black.copy(alpha = 0.14f))
@@ -494,12 +485,12 @@ private fun PlusButton(size: Dp, onPlus: () -> Unit, backToDashboard: Boolean = 
             .clickable(onClick = onPlus),
         contentAlignment = Alignment.Center,
     ) {
-        AnimatedContent(backToDashboard, transitionSpec = {
+        AnimatedContent(compose, transitionSpec = {
             (fadeIn(tween(190)) + slideInHorizontally(tween(210)) { it / 3 }) togetherWith
                 (fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { -it / 3 })
-        }, label = "dock-action") { back ->
-            Icon(if (back) Icons.AutoMirrored.Rounded.ArrowForward else Icons.Rounded.Add,
-                tr(if (back) "Revenir au tableau de bord" else "Ajouter"),
+        }, label = "dock-action") { post ->
+            Icon(if (post) Icons.Rounded.Edit else Icons.Rounded.Add,
+                tr(if (post) "Créer une publication" else "Ajouter"),
                 tint = app.superhealth.ui.theme.actionInk(), modifier = Modifier.size(size * .47f))
         }
     }

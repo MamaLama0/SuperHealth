@@ -128,7 +128,7 @@ fun GiftIntro(onOpenPacks: () -> Unit) {
                 }
                 Text(tr("CADEAU"), color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 6.sp, modifier = Modifier.padding(top = 22.dp))
                 val amount = listOfNotNull(gift.packs.takeIf { it > 0 }?.let { "$it " + tr(if (it > 1) "packs offerts" else "pack offert") },
-                    gift.eclats.takeIf { it > 0 }?.let { "$it " + tr("éclats") }).joinToString(" + ")
+                    gift.eclats.takeIf { it > 0 }?.let { "$it " + tr("or") }).joinToString(" + ")
                 Text(amount, fontWeight = FontWeight.Black, fontSize = 34.sp, textAlign = TextAlign.Center,
                     style = TextStyle(brush = Brush.linearGradient(listOf(Gold, Color(0xFFFFB238), Color(0xFFFFF2B0))), shadow = Shadow(Gold.copy(alpha = 0.6f), Offset.Zero, 24f)))
                 if (gift.note.isNotBlank()) Text(gift.note, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))

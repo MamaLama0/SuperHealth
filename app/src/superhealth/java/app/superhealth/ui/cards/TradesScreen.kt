@@ -49,7 +49,7 @@ private fun nameOf(tradeId: String?, partners: List<Partner>) = partners.firstOr
 
 /**
  * Échanges entre joueurs : pas de boutique, les cartes ne changent de main qu'entre amis. Carte contre carte de même
- * rareté, ou carte contre éclats (dans un sens ou dans l'autre). Ce qu'on propose est mis de côté jusqu'à la réponse.
+ * rareté, ou carte contre or (dans un sens ou dans l'autre). Ce qu'on propose est mis de côté jusqu'à la réponse.
  */
 @Composable
 fun TradesScreen(nav: NavHostController) {
@@ -69,7 +69,7 @@ fun TradesScreen(nav: NavHostController) {
 
     CardScaffold("Échanges", { nav.popBackStack() }, Color(0xFF1FA67A)) {
         Wallet(st)
-        Text(tr("Pas de boutique : les cartes se gagnent à l'entraînement et ne changent de main qu'entre amis. Carte contre carte de même rareté, ou carte contre éclats."),
+        Text(tr("Pas de boutique : les cartes se gagnent à l'entraînement et ne changent de main qu'entre amis. Carte contre carte de même rareté, ou carte contre or."),
             color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
         error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
 
@@ -142,13 +142,13 @@ private fun StakeView(s: Economy.Stake, modifier: Modifier, onZoom: (Pull) -> Un
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("✦", color = EclatColor, fontSize = 30.sp)
                 Text("${s.eclats ?: 0}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                Text(tr("éclats"), color = EclatColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(tr("or"), color = EclatColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-/** Composer une proposition : ce que je donne (une carte ou des éclats), puis ce que je demande. */
+/** Composer une proposition : ce que je donne (une carte ou de l'or), puis ce que je demande. */
 @Composable
 private fun TradeComposer(partner: Partner, onZoom: (Pull) -> Unit, onClose: () -> Unit, onSend: (Economy.Stake, Economy.Stake) -> Unit) {
     val ctx = LocalContext.current
@@ -206,12 +206,12 @@ private fun EmptyStake() = Box(Modifier.padding(top = 6.dp).fillMaxWidth(0.8f).a
     Text("?", color = Color.White.copy(alpha = 0.3f), fontSize = 34.sp, fontWeight = FontWeight.Black)
 }
 
-/** Des éclats en mise : interrupteur puis curseur (par 10). */
+/** De l'or en mise : interrupteur puis curseur (par 10). */
 @Composable
 private fun EclatPicker(max: Int, value: Int?, onChange: (Int?) -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).clickable { onChange(if (value == null) minOf(50, max).coerceAtLeast(1) else null) }.padding(horizontal = 14.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("✦ " + tr("Des éclats"), color = EclatColor, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("✦ " + tr("De l'or"), color = EclatColor, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(value?.let { "$it" } ?: tr("non"), color = Color.White, fontWeight = FontWeight.Black)
         }
         if (value != null && max >= 10) Slider(value.toFloat(), { onChange((it / 10).toInt().coerceAtLeast(1) * 10) }, valueRange = 10f..max.coerceAtMost(5000).toFloat(),

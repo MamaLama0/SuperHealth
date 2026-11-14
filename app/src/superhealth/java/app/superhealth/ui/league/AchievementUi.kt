@@ -28,7 +28,7 @@ import app.superhealth.ui.trf
 import kotlinx.coroutines.launch
 
 /**
- * Page des badges : tout finit en éclats. En tête, ce qu'il reste à récupérer ; puis les séries de la semaine et leur
+ * Page des badges : tout finit en or. En tête, ce qu'il reste à récupérer ; puis les séries de la semaine et leur
  * bonus qui grandit ; puis chaque type de badge sur le fond de son biome, avec son palier actuel, le prochain et
  * l'échelle complète de ses paliers.
  */
@@ -46,7 +46,7 @@ fun ProfileBadgesScreen(nav: NavHostController, initialCategory: String = "") {
     var busy by remember { mutableStateOf(false) }
     val types = BADGE_TYPES
     CardScaffold("Badges", { nav.popBackStack() }, Color(0xFF2F6FDE)) {
-        // En tête : paliers atteints, éclats déjà gagnés, et le bouton qui récupère le reste.
+        // En tête : paliers atteints, or déjà gagnés, et le bouton qui récupère le reste.
         val visible = Achievements.catalog
         val won = visible.filter { it.id in st.badgesPaid }.sumOf(Achievements::reward)
         val total = payout?.let { p -> p.badges.sumOf(Achievements::reward) + p.streaks.filter { it.claimable }.sumOf { it.reward } } ?: 0
@@ -60,18 +60,18 @@ fun ProfileBadgesScreen(nav: NavHostController, initialCategory: String = "") {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("$won ✦", color = Gold, fontWeight = FontWeight.Black, fontSize = 24.sp)
-                    Text(tr("éclats gagnés en badges"), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                    Text(tr("or gagné en badges"), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                 }
             }
-            Text(tr("Chaque palier rapporte des éclats une seule fois, de plus en plus haut. Chaque semaine où une série tient, son bonus grandit de 10 éclats."),
+            Text(tr("Chaque palier rapporte de l'or une seule fois, de plus en plus haut. Chaque semaine où une série tient, son bonus grandit de 10 or."),
                 color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-            if (total > 0) GlowButton(if (busy) "…" else trf("Récupérer +%1\$s éclats", total), Modifier.fillMaxWidth().padding(top = 14.dp), listOf(Gold, Color(0xFFFFB238))) {
+            if (total > 0) GlowButton(if (busy) "…" else trf("Récupérer +%1\$s or", total), Modifier.fillMaxWidth().padding(top = 14.dp), listOf(Gold, Color(0xFFFFB238))) {
                 if (!busy) { busy = true; scope.launch { runCatching { CardStore.collect(ctx) }.onSuccess { Rumble.reveal(ctx) }; busy = false } }
             }
         }
 
         payout?.streaks?.takeIf { it.isNotEmpty() }?.let { streaks ->
-            Section(tr("Séries de la semaine"), tr("Une semaine compte dès 4 jours sur 7 (ou ton objectif de séances). +10 éclats par semaine d'affilée, jusqu'à 100. Les paliers de série paient en plus : 200 à 10 semaines, 250 à 30."))
+            Section(tr("Séries de la semaine"), tr("Une semaine compte dès 4 jours sur 7 (ou ton objectif de séances). +10 or par semaine d'affilée, jusqu'à 100. Les paliers de série paient en plus : 200 à 10 semaines, 250 à 30."))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(InkCard), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 streaks.forEach { s -> StreakRow(s, earned) }
             }
@@ -131,7 +131,7 @@ private fun TypeCard(label: String, tiers: List<Achievements.Badge>, earned: Set
                 } else Text(tr("Tous les paliers atteints"), color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 6.dp))
             }
         }
-        // L'échelle complète : chaque palier, son seuil et ses éclats.
+        // L'échelle complète : chaque palier, son seuil et son or.
         Row(Modifier.padding(top = 14.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             tiers.forEach { b ->
                 val on = b.id in earned

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Toll
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.navigation.NavHostController
 import app.superhealth.cards.*
@@ -61,7 +62,7 @@ fun AlbumScreen(nav: NavHostController) {
                 Text(tr("Série Nature"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
                 Text("$owned / ${Catalog.cards.size} " + tr("fonds") + " · ${Catalog.cards.count(::ownsChroma)} / ${Catalog.cards.size} " + tr("chromatiques"), color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
             }
-            WalletChip(Icons.Rounded.AutoAwesome, "${state.eclats} " + tr("éclats"), EclatColor)
+            WalletChip(Icons.Rounded.Toll, "${state.eclats} " + tr("or"), EclatColor)
         }
         Box(Modifier.padding(vertical = 10.dp).fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
             Box(Modifier.fillMaxWidth(owned / Catalog.cards.size.toFloat()).fillMaxHeight().clip(RoundedCornerShape(50)).background(Color(0xFF9AA8FF)))
@@ -114,7 +115,7 @@ fun AlbumScreen(nav: NavHostController) {
                 }
             }
             item(span = { GridItemSpan(3) }) {
-                Text(tr("Les fonds se gagnent dans les packs de leur biome. Fusionne les doublons pour renforcer un fond (2, 4, 16 puis 256 exemplaires, et 20 à 160 éclats), ou échange-les avec tes amis."), color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp,
+                Text(tr("Les fonds se gagnent dans les packs de leur biome. Fusionne les doublons pour renforcer un fond (2, 4, 16 puis 256 exemplaires, et 20 à 160 or), ou échange-les avec tes amis."), color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp,
                     textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
             }
         }

@@ -9,8 +9,8 @@ object Strings31 {
         "packs offerts" to "free packs",
         "Simple" to "Solo",
         "Rapidité" to "Speed",
-        "Chaque jour, des quêtes qui rapportent des éclats. Chaque semaine, trois quêtes de domaines différents qui offrent des packs : en simple, en groupe ou en rapidité contre tes amis." to
-            "Every day, quests that earn shards. Every week, three quests from different areas that give free packs: solo, as a group or as a speed race against your friends.",
+        "Chaque jour, des quêtes qui rapportent de l'or. Chaque semaine, trois quêtes de domaines différents qui offrent des packs : en simple, en groupe ou en rapidité contre tes amis." to
+            "Every day, quests that earn gold. Every week, three quests from different areas that give free packs: solo, as a group or as a speed race against your friends.",
         "Détail de mes quêtes de la semaine" to "My weekly quests in detail",
         "Quête bonus" to "Bonus quest",
         "Valider la quête" to "Complete the quest",

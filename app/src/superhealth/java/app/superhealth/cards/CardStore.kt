@@ -31,9 +31,9 @@ import kotlin.math.roundToInt
 
 /**
  * Collection, portefeuille et statistiques de la carte Athlète. Le portefeuille et la collection sont tenus par le
- * serveur ([Economy]) ; cet état en est le reflet, pour l'affichage hors ligne. Une seule monnaie : les éclats, gagnés
+ * serveur ([Economy]) ; cet état en est le reflet, pour l'affichage hors ligne. Une seule monnaie : l'or, gagnés
  * avec les séances et les quêtes que le serveur génère pour chacun, qui ouvrent les packs. Pas de boutique : les
- * doublons se fusionnent pour renforcer un fond ([Levels]) ou s'échangent entre amis, contre une carte ou des éclats.
+ * doublons se fusionnent pour renforcer un fond ([Levels]) ou s'échangent entre amis, contre une carte ou de l'or.
  * Le mode démo des builds de test joue tout en local.
  */
 object CardStore {
@@ -41,7 +41,7 @@ object CardStore {
 
     /** Bonus de série déjà touché pour un suivi : semaine (lundi, jour epoch) et semaines d'affilée. */
     @Serializable data class StreakPaid(val week: Long, val n: Int)
-    /** Bonus de série : 10 éclats la première semaine, +10 chaque semaine tenue d'affilée, jusqu'à 100 à 10 semaines (BADGES.streak du serveur). */
+    /** Bonus de série : 10 or la première semaine, +10 chaque semaine tenue d'affilée, jusqu'à 100 à 10 semaines (BADGES.streak du serveur). */
     const val STREAK_STEP = 10
     const val STREAK_WEEKS = 10
 
@@ -79,7 +79,7 @@ object CardStore {
         val challenge: Economy.Challenge? = null,
         /** Dernières stats calculées, pour dessiner la carte dans le widget. */
         val lastStats: AthleteStats? = null,
-        /** Badges dont les éclats ont été touchés, et bonus de série par suivi. */
+        /** Badges dont l'or ont été touchés, et bonus de série par suivi. */
         val badgesPaid: Set<String> = emptySet(),
         /** Départ de la mise à jour fait : anciens badges comptés comme payés, quête de la semaine remise à zéro. */
         val started: Boolean = false,
@@ -106,11 +106,11 @@ object CardStore {
         /** Doublons à fusionner pour le niveau suivant (null au max). */
         fun fuseCost(card: CardDef) = Levels.cost(level(card))
         fun fusePrice(card: CardDef) = Levels.price(level(card))
-        /** Assez de doublons et d'éclats pour la fusion suivante. */
+        /** Assez de doublons et d'or pour la fusion suivante. */
         fun canFuse(card: CardDef) = owns(card) && fuseCost(card)?.let { spare(card) >= it } == true && eclats >= (fusePrice(card) ?: 0)
         /** Échanges reçus en attente de réponse. */
         val pendingTrades get() = trades.incoming.size
-        /** Packs offerts (cadeau de lancement, mode démo), ouverts avant de dépenser des éclats. */
+        /** Packs offerts (cadeau de lancement, mode démo), ouverts avant de dépenser de l'or. */
         val packsAvailable get() = bonusPacks
         /** Packs à ouvrir avant le prochain pack doré, celui-ci compris. */
         val untilGold get() = PackEngine.untilGold(packsOpened)
@@ -255,7 +255,7 @@ object CardStore {
 
     fun canOpen() = state.value.bonusPacks > 0 || state.value.eclats >= state.value.price
 
-    /** Ouvre un pack : par le serveur, ou en local en mode démo. Un pack offert passe avant les éclats. */
+    /** Ouvre un pack : par le serveur, ou en local en mode démo. Un pack offert passe avant l'or. */
     suspend fun open(ctx: Context, booster: Booster): Opening {
         if (!state.value.demo) return Economy.open(ctx, booster).also { o -> update(ctx) { it.copy(booster = booster, pending = o.saved) } }
         var opening: Opening? = null
@@ -271,13 +271,13 @@ object CardStore {
             opening = Opening(result, gains, booster)
             st.copy(booster = booster, packsOpened = st.packsOpened + 1, pending = opening!!.saved)
         }
-        return opening ?: throw Economy.Unavailable("Pas assez d'éclats pour ce pack.")
+        return opening ?: throw Economy.Unavailable("Pas assez d'or pour ce pack.")
     }
 
     /** Fusionne des doublons d'un fond pour lui faire gagner un niveau (+10 % d'effet). */
     suspend fun fuse(ctx: Context, card: CardDef) {
         if (!state.value.demo) return Economy.fuse(ctx, card)
-        if (!state.value.canFuse(card)) throw Economy.Unavailable("Pas assez de doublons ou d'éclats pour cette fusion.")
+        if (!state.value.canFuse(card)) throw Economy.Unavailable("Pas assez de doublons ou d'or pour cette fusion.")
         update(ctx) { s ->
             var cost = s.fuseCost(card) ?: 0
             var owned = s.owned
@@ -298,7 +298,7 @@ object CardStore {
     suspend fun offer(ctx: Context, tradeId: String, give: Economy.Stake, want: Economy.Stake) {
         if (!state.value.demo) return Economy.offer(ctx, tradeId, give, want)
         val s = state.value
-        if (give.card != null && (s.owned[give.card] ?: 0) < 1 || give.eclats != null && s.eclats < give.eclats) throw Economy.Unavailable("Il manque la carte ou les éclats pour cet échange.")
+        if (give.card != null && (s.owned[give.card] ?: 0) < 1 || give.eclats != null && s.eclats < give.eclats) throw Economy.Unavailable("Il manque la carte ou l'or pour cet échange.")
         update(ctx) { st -> hold(st, give).copy(trades = st.trades.copy(out = st.trades.out + Economy.Trade("demo-" + System.nanoTime(), give, want, System.currentTimeMillis(), to = tradeId))) }
     }
 
@@ -313,7 +313,7 @@ object CardStore {
                 "decline" -> st.copy(trades = t)
                 else -> {
                     val w = trade.want
-                    if (w.card != null && (st.owned[w.card] ?: 0) < 1 || w.eclats != null && st.eclats < w.eclats) throw Economy.Unavailable("Il manque la carte ou les éclats pour cet échange.")
+                    if (w.card != null && (st.owned[w.card] ?: 0) < 1 || w.eclats != null && st.eclats < w.eclats) throw Economy.Unavailable("Il manque la carte ou l'or pour cet échange.")
                     done = true; pay(hold(st, w), trade.give).copy(trades = t)
                 }
             }
@@ -340,7 +340,7 @@ object CardStore {
     enum class Difficulty(val label: String, val color: Long) {
         FACILE("Facile", 0xFF39D98A), NORMAL("Normal", 0xFF4FA8FF), DIFFICILE("Difficile", 0xFFFFB238), HEROIQUE("Héroïque", 0xFFFF4F7B)
     }
-    /** [reward] : éclats et [packs] : packs offerts, fixés par le serveur pour cette quête. */
+    /** [reward] : or et [packs] : packs offerts, fixés par le serveur pour cette quête. */
     /** [league] : quête de la semaine du Groupe (récupérée par [League.claimQuest]). */
     data class Quest(val id: String, val title: String, val difficulty: Difficulty, val progress: Int, val target: Int, val claimed: Boolean, val reward: Int, val weekly: Boolean = false,
                      val league: app.superhealth.league.WeeklyQuests.Metric? = null, val challenge: Economy.Challenge? = null, val note: String? = null, val packs: Int = 0,
@@ -355,8 +355,8 @@ object CardStore {
         Economy.QuestDef("d:$day:session", "session", "d", 0, 6), Economy.QuestDef("d:$day:sets", "sets", "d", 1, 7), Economy.QuestDef("d:$day:focus", "focus", "d", 0, 6, "JAM"))
 
     /**
-     * Quêtes du moment, qui rapportent des éclats : deux ou trois quêtes du jour, dont le serveur choisit le genre, le
-     * palier et les éclats (l'objectif concret vient des habitudes de l'utilisateur sur quatre semaines), puis la quête
+     * Quêtes du moment, qui rapportent de l'or : deux ou trois quêtes du jour, dont le serveur choisit le genre, le
+     * palier et l'or (l'objectif concret vient des habitudes de l'utilisateur sur quatre semaines), puis la quête
      * de la semaine du Groupe et sa secondaire, adaptées en local à tous les domaines suivis ([WeeklyQuests]).
      */
     fun quests(today: LocalDate = LocalDate.now()): List<Quest> {
@@ -497,8 +497,8 @@ object CardStore {
     }
 
     /**
-     * Départ de la mise à jour, une fois : tout le monde part de 0 éclat. Les badges obtenus avant comptent comme payés
-     * (pas de rattrapage), et la quête de la semaine déjà récupérée en XP redevient à récupérer, en éclats cette fois.
+     * Départ de la mise à jour, une fois : tout le monde part de 0 or. Les badges obtenus avant comptent comme payés
+     * (pas de rattrapage), et la quête de la semaine déjà récupérée en XP redevient à récupérer, en or cette fois.
      */
     suspend fun start(ctx: Context, earned: Set<String>) {
         load(ctx)
@@ -532,11 +532,11 @@ object CardStore {
     /** Cadeau du serveur montré : on le retire de la file. */
     fun giftSeen(ctx: Context, id: String) = update(ctx) { s -> s.copy(gifts = s.gifts.filterNot { it.id == id }) }
 
-    /** Récompense d'une quête en clair : « +1 pack » ou « +20 éclats ». */
+    /** Récompense d'une quête en clair : « +1 pack » ou « +20 or ». */
     fun prize(q: Quest, short: Boolean = false): String = when {
         q.packs > 0 -> "+${q.packs} " + app.superhealth.ui.tr(if (q.packs > 1) "packs" else "pack")
         short -> "+${q.reward} ✦"
-        else -> "+${q.reward} " + app.superhealth.ui.tr("éclats")
+        else -> "+${q.reward} " + app.superhealth.ui.tr("or")
     }
 
     // ---- Mode démo (builds de test) ------------------------------------------------------------------------
@@ -549,7 +549,7 @@ object CardStore {
         challenge = if (on) Economy.Challenge("demo", "race", "target", 3, reward = 40, week = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toEpochDay(),
             members = listOf(it.tradeId ?: "me", Demo.TRADE_ID)) else it.challenge) }
 
-    /** En démo, le rival propose deux échanges dès qu'on a des cartes : une carte contre une carte, une carte contre des éclats. */
+    /** En démo, le rival propose deux échanges dès qu'on a des cartes : une carte contre une carte, une carte contre de l'or. */
     fun seedDemoTrades(ctx: Context) {
         val s = state.value
         if (!s.demo || s.trades.incoming.isNotEmpty() || s.owned.isEmpty()) return

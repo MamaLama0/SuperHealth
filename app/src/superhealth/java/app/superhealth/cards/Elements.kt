@@ -69,7 +69,7 @@ object Levels {
     fun boost(level: Int) = 1 + 0.1 * (level.coerceIn(1, MAX) - 1)
     /** Doublons à fusionner pour passer du niveau [level] au suivant (null au max). */
     fun cost(level: Int): Int? = if (level >= MAX) null else copies[level] - copies[level - 1]
-    /** Éclats d'une fusion vers le niveau 2, 3, 4 puis 5 (FUSE_PRICE du serveur) : un petit coût qui monte avec le niveau. */
+    /** Or d'une fusion vers le niveau 2, 3, 4 puis 5 (FUSE_PRICE du serveur) : un petit coût qui monte avec le niveau. */
     private val prices = intArrayOf(20, 40, 80, 160)
     fun price(level: Int): Int? = if (level >= MAX) null else prices[level.coerceAtLeast(1) - 1]
     /** Progression vers le niveau suivant : (exemplaires fusionnés dans ce niveau, exemplaires nécessaires), null au max. */

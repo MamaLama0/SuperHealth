@@ -27,7 +27,9 @@ let motion=motions[0],yaw=-.24,targetYaw=yaw,cut=0,renderedCut=0,tornAtOpening=0
 let latest=performance.now(),stageScale=1,lastTick=0,fallbackTimer,first=null,motionAt=null,tearDirection=0;
 let rewardArt=[],cardIndex=0,faceUp=false,allRevealed=false,leavingCard=null,discoveryReady=false;
 let cardDrag=null,cardOffset=0,incoming=null,revealAt=null,summaryTimer;
-let english=false;
+let english=false,tearOnly=false,tornSent=false;
+const wrapperArt=()=>style.art?style.art(gold,english):null;
+const meshKey=()=>style.mesh||slot;
 const say=(fr,en)=>english?en:fr;
 const wrapperSlug=style=>style.slug+(english&&style.material==='prism'?'-en':'');
 const initialHelp=()=>say('Glisse sur le tiers supérieur pour déchirer le sachet.','Swipe across the top third to open the pack.');
@@ -84,8 +86,8 @@ function select(next,nextGold,canOpen,nextSkin=skin,nextEdition=edition){
   style=special||{...base,edition:tintOnly?.edition,accent:tintOnly?.accent??base.accent,
     wrapper:tintOnly?.base??base.tints[skin%3]};
   const tint=style.wrapper??style.base;
-  stage.style.setProperty('--card-back','url("card-back-'+slot+'.svg")');
-  stage.style.setProperty('--wrapper', 'url("'+wrapperSlug(style)+'-0.webp")');
+  stage.style.setProperty('--card-back','url("'+(style.back?style.back(gold):'card-back-'+slot+'.svg')+'")');
+  stage.style.setProperty('--wrapper', 'url("'+(wrapperArt()?.[0]??wrapperSlug(style)+'-0.webp')+'")');
   stage.style.setProperty('--tone',gold?'#e8bd68':style.accent);
   fallback.style.setProperty('--pack',tint);
   fallback.textContent='';
@@ -125,7 +127,34 @@ function showOpening(data,direction=1,progress=0){
     if(!discoveryReady){if(gl)enableFallback();else beginDiscovery();}
   },!gl?mouthHold.ms+650:motion.ms*1.28+mouthHold.ms+1350);
 }
+// Packs Athlète : le sachet se déchire ici, les cartes se révèlent ensuite côté application.
+function showTear(data,direction=1,progress=0){
+  if(first===data.id)return;
+  loading=false;tearOnly=true;tornSent=false;
+  first=data.id;
+  select(data.slot,data.gold,true,0,'');
+  tearDirection=direction===-1?-1:1;
+  document.documentElement.classList.add('focus');
+  rewardArt=Array.from({length:Math.max(1,data.count|0)},()=>({}));
+  motion=motions[Math.abs(data.seed|0)%motions.length];
+  yaw=targetYaw=0;
+  tornAtOpening=Math.max(.03,Math.min(1,progress));cut=1;
+  openedAt=performance.now();
+  motionAt=null;
+  closeButton.hidden=openButton.hidden=true;
+  help.textContent='';
+  if(!gl)fallback.className='fallback-card opening';
+  clearTimeout(fallbackTimer);
+  fallbackTimer=setTimeout(torn,!gl?mouthHold.ms+650:motion.ms*1.28+mouthHold.ms+1350);
+}
+function torn(){
+  if(tornSent)return;
+  tornSent=true;
+  clearTimeout(fallbackTimer);
+  native('torn');
+}
 function beginDiscovery(){
+  if(tearOnly)return torn();
   if(discoveryReady)return;
   discoveryReady=true;
   clearTimeout(fallbackTimer);
@@ -203,7 +232,7 @@ fallback.addEventListener('touchend',event=>{
 },{passive:true});
 
 if(window.ArsenalHost)document.documentElement.classList.add('native');
-window.arena={language:value=>{const changed=english!==value;english=value;if(changed&&selected&&openedAt===null)select(slot,gold,eligible,skin,edition);openButton.textContent=say('Ouvrir','Open');closeButton.textContent=say('Refermer','Close');updateControls();},select,prepareOpen,showOpening,showAll,releaseWaiting:()=>{if(loading){loading=false;stage.classList.remove('seam-primed');closePack();}},clearIfOpened:()=>{if(openedAt!==null)clearOpening()},openingFailed,pause:value=>{paused=value},colors:(ink,muted)=>{
+window.arena={showTear,language:value=>{const changed=english!==value;english=value;if(changed&&selected&&openedAt===null)select(slot,gold,eligible,skin,edition);openButton.textContent=say('Ouvrir','Open');closeButton.textContent=say('Refermer','Close');updateControls();},select,prepareOpen,showOpening,showAll,releaseWaiting:()=>{if(loading){loading=false;stage.classList.remove('seam-primed');closePack();}},clearIfOpened:()=>{if(openedAt!==null)clearOpening()},openingFailed,pause:value=>{paused=value},colors:(ink,muted)=>{
   document.documentElement.style.setProperty('--ink',ink);
   document.documentElement.style.setProperty('--muted',muted);
 }};
@@ -517,7 +546,9 @@ function run(){
   ]));
   const textures=new Map();
   function themeTextures(style){
-    const slug=wrapperSlug(style);
+    // L'habillage vient du style demandé (et non du style courant) : les autres sachets se préparent ainsi d'avance.
+    const art=style.art?style.art(gold,english):null;
+    const slug=art?style.slug+(gold?'|or':'')+(english?'|en':''):wrapperSlug(style);
     if(textures.has(slug))return textures.get(slug);
     const entry={ready:false,textures:[]};
     let count=0;
@@ -533,15 +564,22 @@ function run(){
         entry.ready=++count===2;
       };
       image.onerror=enableFallback;
-      image.src=slug+'-'+i+'.webp';
+      image.src=art?art[i]:slug+'-'+i+'.webp';
       return id;
     });
     textures.set(slug,entry);
     return entry;
   }
   gl.uniform1i(vars.objectArt,1);
+  // Unité 1 jamais vide : sinon le pilote journalise un avertissement à chaque image.
+  const blank=gl.createTexture();
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,blank);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,0]));
+  gl.activeTexture(gl.TEXTURE0);
   const backs=new Map();
   function backTexture(family){
+    const source=style.back?style.back(gold):'card-back-'+family+'.svg';
+    family=style.back?family+(gold?'|or':''):family;
     if(backs.has(family))return backs.get(family);
     const texture=gl.createTexture(),art=new Image();
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);
@@ -553,7 +591,7 @@ function run(){
       gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,art);
       gl.generateMipmap(gl.TEXTURE_2D);
     };
-    art.src='card-back-'+family+'.svg';
+    art.src=source;
     backs.set(family,texture);
     return texture;
   }
@@ -581,7 +619,7 @@ function run(){
       img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
     }
     batch.forEach((reward,i)=>{
-      load(reward.face,texture=>{if(!movingTextures[i])rewardTextures[i]=texture;else gl.deleteTexture(texture)});
+      if(reward.face)load(reward.face,texture=>{if(!movingTextures[i])rewardTextures[i]=texture;else gl.deleteTexture(texture)});
       if(reward.baseFace&&reward.objectFace){
         load(reward.objectFace,object=>{
           pendingObjects[i]=object;
@@ -610,7 +648,7 @@ function run(){
   function warmNext(keys){
     const key=keys.shift();
     if(!key||!gl)return;
-    loadModel(key);themeTextures(directionsBySlot[key]);
+    loadModel(directionsBySlot[key].mesh||key);themeTextures(directionsBySlot[key]);
     setTimeout(()=>warmNext(keys),160);
   }
   function tick(now) {
@@ -624,8 +662,8 @@ function run(){
     if(!gl)return;
     if(!selected||document.hidden||(paused&&reportedRender===slot+'|'+skin+'|'+edition)||allRevealed){latest=now;requestAnimationFrame(tick);return;}
     const skinTextures=themeTextures(style);
-    loadModel(slot);
-    const parts=models.get(slot);
+    loadModel(meshKey());
+    const parts=models.get(meshKey());
     const loaded=!!parts&&skinTextures.ready;
     stage.classList.toggle('loading-model',!loaded);
     canvas.style.visibility=loaded?'visible':'hidden';
@@ -677,8 +715,8 @@ function run(){
     gl.uniform3f(vars.color,...rgb(accent));
     gl.uniform3f(vars.originalWrap,...rgb(style.base));
     gl.uniform3f(vars.wrapTint,...rgb(style.wrapper??style.base));
-    gl.uniform1f(vars.editionFx,style.edition==='prisme'?2:style.edition==='maudit'?3:gold?1:0);
-    gl.uniform1f(vars.wrapperFx,style.material==='prism'?(gold?2:1):0);
+    gl.uniform1f(vars.editionFx,style.edition==='prisme'?2:style.edition==='maudit'?3:gold&&!style.art?1:0);
+    gl.uniform1f(vars.wrapperFx,style.material==='prism'?(gold?2:1):style.art&&gold?2:0);
     gl.uniform1f(vars.packWidth,width);
     const reading=smooth(1.08,1.28,t);
     const revealScale=cardReadingScale(w,h);
@@ -829,6 +867,7 @@ function run(){
       ctx.globalAlpha=1;
       ctx.globalCompositeOperation='source-over';
     }
+    if(tearOnly&&t>=1.22)torn();
     if(t>=1.28&&!discoveryReady) beginDiscovery();
     if(!reduceMotion&&faceUp&&!allRevealed&&revealAt!==null){
       const item=rewardArt[cardIndex],age=(now-revealAt)*.001;

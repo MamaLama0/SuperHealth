@@ -19,13 +19,13 @@ object Achievements {
         }
     }
     fun find(id: String?) = catalog.firstOrNull { it.id == id }
-    /** Éclats d'un palier, alignés sur BADGES.reward du serveur : de plus en plus à mesure que le palier monte. */
+    /** Or d'un palier, alignés sur BADGES.reward du serveur : de plus en plus à mesure que le palier monte. */
     val REWARDS = listOf(25, 50, 100, 175, 275, 400, 600)
     /** Paliers de série (1, 4, 10, 20, 30, 52, 104 semaines) : 200 à 10 semaines, 250 à 30. */
     val STREAK_REWARDS = listOf(20, 100, 200, 225, 250, 400, 600)
     /** Rang du badge dans son type (0 : premier palier). */
     fun rank(b: Badge) = catalog.filter { it.metric == b.metric }.indexOf(b)
-    /** Éclats d'un badge. */
+    /** Or d'un badge. */
     fun reward(b: Badge): Int = (if (b.metric.startsWith("streak:")) STREAK_REWARDS else REWARDS).getOrElse(rank(b)) { 0 }
     /** Prochain palier non atteint d'un type, ou null s'ils le sont tous. */
     fun next(metric: String, earned: Set<String>) = catalog.firstOrNull { it.metric == metric && it.id !in earned }

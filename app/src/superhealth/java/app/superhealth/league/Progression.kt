@@ -20,7 +20,7 @@ object Progression {
         val weekStart: Long = 0, val throughDay: Long = 0, val days: List<DayXp> = emptyList(), val streaks: List<Streak> = emptyList(), val records: Int = 0, val totals: Map<String, Long> = emptyMap(),
         /** Quêtes terminées de la semaine [weekStart] (noms de [WeeklyQuests.Metric]), pour le défi miroir entre amis. */
         val questsDone: List<String> = emptyList(),
-        /** Séries à la semaine de chaque suivi (bonus d'éclats et badges de série). */
+        /** Séries à la semaine de chaque suivi (bonus d'or et badges de série). */
         val weekly: List<WeekStreak> = emptyList())
     /**
      * Série à la semaine : une semaine compte dès [need] jours tenus (3 sur 7 pour un suivi quotidien, l'objectif de

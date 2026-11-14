@@ -42,7 +42,8 @@ import kotlinx.coroutines.launch
 internal val Ink = Color(0xFF07080D)
 internal val InkCard = Color(0xFF141724)
 internal val Gold = Color(0xFFFFD36B)
-internal val EclatColor = Color(0xFF8AE0FF)
+/** Couleur de la monnaie : or. */
+internal val EclatColor = Color(0xFFFFC94A)
 
 /** Photo détourée de la carte, rechargée après chaque passage dans l'éditeur. */
 object CardPhoto {
@@ -131,19 +132,20 @@ internal fun FriendCardViewer(face: CardFace, note: String, onClose: () -> Unit,
                 AthleteCard(face, Modifier.padding(top = 12.dp).fillMaxWidth(0.82f), interactive = true, animate = true)
                 Text(tr("Touchez la carte pour la retourner"), color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                 val theirs = face.stats
-                if (theirs != null && mine != null) Column(Modifier.padding(top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row { Text(tr("Toi"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text("@" + face.name, color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                    Stat.entries.forEach { stat ->
-                        val a = mine[stat]; val b = theirs[stat]
-                        if (a != null || b != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(a?.toString() ?: "–", color = if ((a ?: 0) > (b ?: 0)) Color(0xFF6FD3A0) else Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, modifier = Modifier.width(36.dp))
-                            Text(stat.code + " · " + tr(stat.label), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-                            Text(b?.toString() ?: "–", color = if ((b ?: 0) > (a ?: 0)) Color(0xFFFF8A80) else Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, textAlign = TextAlign.End, modifier = Modifier.width(36.dp))
-                        }
+                if (theirs != null && mine != null) Panel(Modifier.padding(top = 14.dp).fillMaxWidth(), padding = 14.dp) {
+                    val shared = Stat.entries.filter { mine[it] != null && theirs[it] != null }
+                    val won = shared.count { mine[it]!! > theirs[it]!! }; val lost = shared.count { theirs[it]!! > mine[it]!! }
+                    Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Toi"), color = SideMine, fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+                        Text("$won", color = SideMine, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                        Text(tr("STATS"), color = Color.White.copy(alpha = 0.45f), fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 2.sp, modifier = Modifier.padding(horizontal = 10.dp))
+                        Text("$lost", color = SideTheirs, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                        Text("@" + face.name, color = SideTheirs, fontSize = 13.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.weight(1f))
                     }
-                    Text(tr("Stats sportives avant le bonus de rareté du duel."), color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Stat.entries.forEach { stat -> if (mine[stat] != null || theirs[stat] != null) MirrorBar(mine[stat], theirs[stat], stat.code + " · " + tr(stat.label), SideMine, SideTheirs) }
+                    }
+                    Text(tr("Stats sportives avant le bonus de rareté du duel."), color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp, modifier = Modifier.padding(top = 10.dp))
                 }
                 if (onDuel != null) GlowButton("⚔ " + tr("Défier"), Modifier.fillMaxWidth().padding(top = 16.dp), listOf(Color(0xFFE53935), Color(0xFFFF8A1F)), enabled = mine?.ovr10 != null, onClick = onDuel)
                 if (onDuel != null && mine?.ovr10 == null) Text(tr("Ta carte doit d'abord être évaluée (quelques séances)."), color = Gold, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
@@ -187,7 +189,7 @@ fun CardScaffold(title: String, onBack: () -> Unit, tint: Color = Color(0xFF2C4C
 @Composable
 internal fun Wallet(state: CardStore.State, modifier: Modifier = Modifier) {
     Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        WalletChip(Icons.Rounded.Diamond, "${state.eclats} " + tr("éclats"), EclatColor)
+        WalletChip(Icons.Rounded.Toll, "${state.eclats} " + tr("or"), EclatColor)
         if (state.packsAvailable > 0) WalletChip(Icons.Rounded.CardGiftcard, "${state.packsAvailable} " + tr(if (state.packsAvailable > 1) "packs offerts" else "pack offert"), Color(0xFF9AA8FF))
         WalletChip(Icons.Rounded.AutoAwesome, if (state.nextGold) tr("Prochain pack doré") else tr("Doré dans") + " ${state.untilGold}", Gold)
     }
@@ -232,6 +234,28 @@ internal fun Tile(icon: ImageVector, title: String, subtitle: String?, modifier:
     }
 }
 
+/** Grande action de l'accueil des cartes : un dégradé franc, une icône en filigrane, ce qui attend en pastille. */
+@Composable
+internal fun ActionCard(icon: ImageVector, title: String, subtitle: String, colors: List<Color>, modifier: Modifier = Modifier, badge: Int = 0, onClick: () -> Unit) {
+    val pulse by rememberInfiniteTransition(label = "action").animateFloat(0.25f, 0.6f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "a")
+    Box(modifier.height(104.dp).drawBehind {
+        drawRoundRect(colors.first().copy(alpha = pulse * 0.55f), topLeft = Offset(-5f, -5f), size = androidx.compose.ui.geometry.Size(size.width + 10f, size.height + 10f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(26.dp.toPx()))
+    }.clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(colors)).clickable(onClick = onClick)) {
+        Icon(icon, null, Modifier.align(Alignment.BottomEnd).padding(end = 2.dp).size(84.dp).graphicsLayer { rotationZ = -14f; translationX = 18f; translationY = 20f }, tint = Color.White.copy(alpha = 0.22f))
+        Column(Modifier.fillMaxSize().padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, Modifier.size(22.dp), tint = Color.White)
+                Spacer(Modifier.weight(1f))
+                if (badge > 0) Text("$badge", color = colors.first(), fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.clip(CircleShape).background(Color.White).padding(horizontal = 8.dp, vertical = 2.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            Text(tr(title), color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp)
+            Text(subtitle, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
+        }
+    }
+}
+
 @Composable
 internal fun SectionTitle(text: String) = Text(tr(text).uppercase(), color = Color.White.copy(alpha = 0.5f), fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.4.sp,
     modifier = Modifier.padding(top = 22.dp, bottom = 8.dp))
@@ -245,11 +269,13 @@ fun CardsHome(nav: NavHostController) {
     val photo by CardPhoto.bitmap.collectAsState()
     val league by League.state.collectAsState()
     LaunchedEffect(Unit) { CardStore.load(ctx); CardPhoto.load(ctx); runCatching { CardStore.refresh(ctx) } }
+    // Le sachet 3D se prépare pendant qu'on regarde sa carte : l'écran des paquets s'ouvre ensuite sans attente.
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(500); runCatching { PackWeb.warm(ctx) } }
     val bg = CardStore.background()
     val stats = snap?.now
     val tint = (bg?.card ?: Catalog.defaultFor(stats?.tier ?: Tier.BRONZE)).palette.b.c()
     val claimable = remember(state.claimed, snap) { runCatching { CardStore.quests().count { it.complete && !it.claimed } }.getOrDefault(0) }
-    CardScaffold("Ma carte", { nav.popBackStack() }, tint, action = {
+    CardScaffold("Mes cartes", { nav.popBackStack() }, tint, action = {
         // Partager ma carte : son fond, son niveau et la note globale, rien d'autre.
         if (bg != null) IconButton({ CardShare.open(bg, state.level(bg.card), CardShare.Event.ATHLETE, stats?.ovr); nav.go("social/compose") }) {
             Icon(Icons.Rounded.Share, tr("Partager"), tint = Color.White.copy(alpha = 0.7f))
@@ -258,21 +284,45 @@ fun CardsHome(nav: NavHostController) {
     }) {
         Wallet(state, Modifier.padding(top = 4.dp))
         val float by rememberInfiniteTransition(label = "float").animateFloat(-5f, 5f, infiniteRepeatable(tween(2600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "f")
-        AthleteCard(myFace(stats, bg, snap?.inForm == true),
-            Modifier.padding(top = 18.dp).fillMaxWidth(0.82f).align(Alignment.CenterHorizontally).graphicsLayer { translationY = float * density })
+        // La carte en vedette : un halo de la couleur du fond et des rayons qui tournent lentement derrière elle.
+        val spin by rememberInfiniteTransition(label = "spin").animateFloat(0f, 360f, infiniteRepeatable(tween(60000, easing = LinearEasing)), label = "s")
+        Box(Modifier.padding(top = 18.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+                val r = size.width * 0.7f
+                drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = 0.55f), Color.Transparent), center, r), r)
+                repeat(12) { i ->
+                    val a = Math.toRadians((spin + i * 30.0)); val h = Math.toRadians(5.0)
+                    drawPath(Path().apply { moveTo(center.x, center.y)
+                        lineTo(center.x + r * kotlin.math.cos(a - h).toFloat(), center.y + r * kotlin.math.sin(a - h).toFloat())
+                        lineTo(center.x + r * kotlin.math.cos(a + h).toFloat(), center.y + r * kotlin.math.sin(a + h).toFloat()); close() },
+                        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.09f), Color.Transparent), center, r))
+                }
+            }
+            AthleteCard(myFace(stats, bg, snap?.inForm == true), Modifier.fillMaxWidth(0.82f).graphicsLayer { translationY = float * density })
+        }
+        Text(tr("Touchez la carte pour voir la toile de vos stats"), color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
         if (stats?.ovr10 == null) Text(tr("Ta carte s'évalue après quelques séances : deux familles de muscles suffisent pour une note."),
             color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 14.dp))
-        bg?.let { BackgroundBonus(it, state.level(it.card)) }
         stats?.ovr10?.let { o -> NextLevel(o, stats) }
-        GlowButton(tr("Ouvrir un pack"), Modifier.fillMaxWidth().padding(top = 18.dp), badge = state.packsAvailable.takeIf { it > 0 }?.toString()) { nav.go("cards/packs") }
-        Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            val owned = Catalog.cards.count { state.owns(it) }
-            Tile(Icons.Rounded.CollectionsBookmark, "Album", "$owned/${Catalog.cards.size}", Modifier.weight(1f), Color(0xFF9AA8FF)) { nav.go("cards/album") }
-            Tile(Icons.Rounded.Bolt, "Duels", tr("Carte contre carte"), Modifier.weight(1f), Color(0xFFFF5E7A)) { nav.go("cards/duel") }
+        bg?.let { BackgroundBonus(it, state.level(it.card)) }
+        // Les deux gestes du jeu : ouvrir un pack, défier un ami.
+        Row(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            val packs = state.packsAvailable
+            ActionCard(Icons.Rounded.Style, "Packs", when { packs > 1 -> trf("%1\$s packs à ouvrir", packs); packs == 1 -> trf("%1\$s pack à ouvrir", 1)
+                state.nextGold -> tr("Prochain pack doré"); else -> trf("%1\$s or le pack", state.price) },
+                listOf(Color(0xFFFF5E7A), Color(0xFFFF9A3C)), Modifier.weight(1f), packs) { nav.go("cards/packs") }
+            val rivals = league.friends.count { it.athlete != null }
+            ActionCard(Icons.Rounded.Bolt, "Combat", if (rivals > 0) trf(if (rivals > 1) "%1\$s amis à défier" else "%1\$s ami à défier", rivals) else tr("Carte contre carte"),
+                listOf(Color(0xFF5B4BFF), Color(0xFF29B6F6)), Modifier.weight(1f)) { nav.go("cards/duel") }
         }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile(Icons.Rounded.Flag, "Quêtes", tr("Gagne des éclats"), Modifier.weight(1f), Gold, claimable) { nav.go("cards/quests") }
-            Tile(Icons.Rounded.ContentCut, "Ma photo", tr(state.photo.label), Modifier.weight(1f), Color(0xFF6FD3A0)) { nav.go("cards/cutout") }
+            val owned = Catalog.cards.count { state.owns(it) }
+            Tile(Icons.Rounded.Flag, "Quêtes", tr("Gagne de l'or"), Modifier.weight(1f), Gold, claimable) { nav.go("cards/quests") }
+            Tile(Icons.Rounded.CollectionsBookmark, "Album", "$owned/${Catalog.cards.size}", Modifier.weight(1f), Color(0xFF9AA8FF)) { nav.go("cards/album") }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Tile(Icons.Rounded.SwapHoriz, "Échanges", tr("Avec tes amis"), Modifier.weight(1f), Color(0xFF6FD3A0), state.pendingTrades) { nav.go("cards/trades") }
+            Tile(Icons.Rounded.ContentCut, "Ma photo", tr(state.photo.label), Modifier.weight(1f), Color(0xFFFFB37A)) { nav.go("cards/cutout") }
         }
         // 3.8 : vitrine, les fonds préférés mis en avant
         val shelf = remember(state.showcase, state.owned) { CardStore.showcase() }
@@ -300,7 +350,7 @@ fun CardsHome(nav: NavHostController) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(InkCard).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(tr("Mode démo"), color = Color.White, fontWeight = FontWeight.Bold)
-                    Text(tr("Carte d'exemple, rival fictif, +10 packs, +500 éclats, 1er pack doré, sans serveur"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+                    Text(tr("Carte d'exemple, rival fictif, +10 packs, +500 or, 1er pack doré, sans serveur"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
                 }
                 Switch(state.demo, { on -> CardStore.setDemo(ctx, on); CardStore.snapshot.value = null })
             }
@@ -316,18 +366,25 @@ private fun NextLevel(ovr10: Int, stats: AthleteStats) {
     val progress = (ovr10 % 10) / 10f
     val anim by animateFloatAsState(progress, tween(1200, easing = FastOutSlowInEasing), label = "p")
     val tier = stats.tier
-    Column(Modifier.fillMaxWidth().padding(top = 18.dp)) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("%.1f".format(ovr10 / 10.0).replace('.', ',') + " → $next", color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp, modifier = Modifier.weight(1f))
-            tier.next?.let { Text(tr(it.label) + " " + tr("à") + " ${it.min}", color = tierColors(it)[1], fontWeight = FontWeight.ExtraBold, fontSize = 15.sp) }
+    val colors = tierColors(tier)
+    Panel(Modifier.fillMaxWidth().padding(top = 18.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Tag(tr(tier.label), colors[1])
+            Spacer(Modifier.weight(1f))
+            tier.next?.let { Text(tr(it.label) + " " + tr("à") + " ${it.min}", color = tierColors(it)[1], fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) }
+        }
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
+            Text("%.1f".format(ovr10 / 10.0).replace('.', ','), color = Color.White, fontWeight = FontWeight.Black, fontSize = 32.sp)
+            Text(" → $next", color = Color.White.copy(alpha = 0.5f), fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.padding(bottom = 5.dp).weight(1f))
+            Text("${(progress * 100).toInt()} %", color = colors[1], fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.padding(bottom = 5.dp))
         }
         Box(Modifier.padding(vertical = 8.dp).fillMaxWidth().height(10.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
-            Box(Modifier.fillMaxWidth(anim.coerceAtLeast(0.03f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Color(0xFF4FA8FF), Color(0xFF8AE0FF)))))
+            Box(Modifier.fillMaxWidth(anim.coerceAtLeast(0.03f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(colors[1].copy(alpha = 0.7f), lerp(colors[1], Color.White, 0.45f)))))
         }
         val gap = (next * 10 - ovr10) / 10.0
         val best = stats.mostProfitable
         Text(tr("Encore") + " " + "%.1f".format(gap).replace('.', ',') + " " + tr("point pour") + " $next." + (best?.let { " " + tr("Le plus rentable") + " : " + tr(it.mine) + " (${stats[it]})." } ?: ""),
-            color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp)
+            color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
     }
 }
 
@@ -352,21 +409,65 @@ fun CardQuestsScreen(nav: NavHostController) {
     val scope = rememberCoroutineScope()
     var error by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { runCatching { CardStore.refresh(ctx) } }
+    val ready = quests.filter { it.complete && !it.claimed }
+    val done = quests.count { it.complete }
     CardScaffold("Quêtes", { nav.popBackStack() }, Gold) {
         Wallet(state)
-        Text(tr("Chaque jour, des quêtes qui rapportent des éclats. Chaque semaine, trois quêtes de domaines différents qui offrent des packs : en simple, en groupe ou en rapidité contre tes amis."),
-            color = Color.White.copy(alpha = 0.65f), fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        // Bilan : où j'en suis, ce qu'il reste à gagner, et tout récupérer d'un geste.
+        Panel(Modifier.padding(top = 14.dp).fillMaxWidth(), tint = Gold) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Ring(if (quests.isEmpty()) 0f else done.toFloat() / quests.size, Gold, 76.dp, 7.dp) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("$done/${quests.size}", color = Color.White, fontWeight = FontWeight.Black, fontSize = 19.sp)
+                        Text(tr("faites"), color = Color.White.copy(alpha = 0.55f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Column(Modifier.padding(start = 16.dp).weight(1f)) {
+                    Text(tr(when { quests.isEmpty() -> "Pas de quête pour l'instant"; ready.isNotEmpty() -> "Récompenses prêtes"
+                        done == quests.size -> "Tout est fait, bravo"; else -> "Quêtes en cours" }), color = Color.White, fontWeight = FontWeight.Black, fontSize = 19.sp)
+                    val left = quests.filter { !it.claimed }
+                    val gold = left.filter { it.packs == 0 }.sumOf { it.reward }; val packs = left.sumOf { it.packs }
+                    if (gold > 0 || packs > 0) Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("À gagner"), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                        if (gold > 0) WalletChip(Icons.Rounded.Toll, "$gold", EclatColor)
+                        if (packs > 0) WalletChip(Icons.Rounded.Style, "$packs", Gold)
+                    }
+                }
+            }
+            if (ready.isNotEmpty()) GlowButton(trf("Tout récupérer (%1\$s)", ready.size), Modifier.fillMaxWidth().padding(top = 14.dp), listOf(Color(0xFFFFB300), Color(0xFFFF7A1A))) {
+                scope.launch {
+                    ready.forEach { q -> runCatching { CardStore.claim(ctx, q) }.onSuccess { error = null }.onFailure { error = it.message } }
+                    haptics.confirm(); Rumble.reveal(ctx)
+                }
+            }
+        }
         error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
-        for (group in listOf("Aujourd'hui" to false, "Cette semaine" to true)) {
-            SectionTitle(group.first)
-            quests.filter { it.weekly == group.second }.sortedByDescending { it.challenge != null }.forEach { q -> QuestRow(q) { scope.launch {
+        val now = remember { java.time.ZonedDateTime.now() }
+        fun left(until: java.time.ZonedDateTime): String {
+            val d = java.time.Duration.between(now, until)
+            return if (d.toDays() >= 1) trf("Encore %1\$s j %2\$s h", d.toDays(), d.toHours() % 24) else trf("Encore %1\$s h %2\$s", d.toHours(), "%02d".format(d.toMinutes() % 60))
+        }
+        val midnight = now.toLocalDate().plusDays(1).atStartOfDay(now.zone)
+        val monday = now.toLocalDate().with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY)).atStartOfDay(now.zone)
+        for ((title, weekly, end) in listOf(Triple("Aujourd'hui", false, midnight), Triple("Cette semaine", true, monday))) {
+            val group = quests.filter { it.weekly == weekly }
+            if (group.isEmpty()) continue
+            Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr(title), color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                Text("${group.count { it.complete }}/${group.size}", color = Color.White.copy(alpha = 0.45f), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp).weight(1f))
+                Icon(Icons.Rounded.Schedule, null, Modifier.size(13.dp), tint = Color.White.copy(alpha = 0.5f))
+                Text(left(end), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
+            }
+            // À récupérer d'abord, déjà récupérées en dernier.
+            group.sortedWith(compareBy<CardStore.Quest> { it.claimed }.thenByDescending { it.complete }.thenByDescending { it.challenge != null }).forEach { q -> QuestRow(q) { scope.launch {
                 runCatching { CardStore.claim(ctx, q) }.onSuccess { error = null; haptics.confirm(); Rumble.reveal(ctx) }.onFailure { error = it.message }
             } } }
         }
-        // La quête de la semaine se règle sur les domaines choisis (musculation, nutrition, course, quotidien…).
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).clickable { nav.go("quests") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Détail de mes quêtes de la semaine"), color = Color.White, modifier = Modifier.weight(1f))
-            Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.4f))
+        Panel(Modifier.padding(top = 14.dp).fillMaxWidth(), padding = 0.dp) {
+            Text(tr("Chaque jour, des quêtes qui rapportent de l'or. Chaque semaine, trois quêtes de domaines différents qui offrent des packs : en simple, en groupe ou en rapidité contre tes amis."),
+                color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp))
+            // La quête de la semaine se règle sur les domaines choisis (musculation, nutrition, course, quotidien…).
+            LinkRow(Icons.Rounded.Tune, "Détail de mes quêtes de la semaine", null) { nav.go("quests") }
         }
         Spacer(Modifier.height(32.dp))
     }
@@ -380,7 +481,7 @@ internal fun ModePill(mode: CardStore.Mode) {
         modifier = Modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 
-/** Récompense d'une quête : un pack offert (pastille dorée, en forme de mini pack) ou des éclats. */
+/** Récompense d'une quête : un pack offert (pastille dorée, en forme de mini pack) ou de l'or. */
 @Composable
 internal fun RewardChip(q: CardStore.Quest, dim: Boolean = q.claimed) {
     val alpha = if (dim) 0.4f else 1f
@@ -395,31 +496,40 @@ internal fun RewardChip(q: CardStore.Quest, dim: Boolean = q.claimed) {
 private fun DifficultyPill(d: CardStore.Difficulty) = Text(tr(d.label).uppercase(), color = d.color.c(), fontWeight = FontWeight.Black, fontSize = 10.sp, letterSpacing = 1.sp,
     modifier = Modifier.clip(RoundedCornerShape(50)).background(d.color.c().copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 3.dp))
 
+/** Icône d'une quête : son mode pour celles de la semaine, son geste pour celles du jour. */
+private fun questIcon(q: CardStore.Quest): ImageVector = when {
+    q.challenge != null || q.mode == CardStore.Mode.RAPIDITE -> Icons.Rounded.Bolt
+    q.mode == CardStore.Mode.GROUPE -> Icons.Rounded.Groups
+    q.weekly -> Icons.Rounded.Flag
+    "sets" in q.id -> Icons.Rounded.Repeat
+    "focus" in q.id -> Icons.Rounded.TrackChanges
+    else -> Icons.Rounded.FitnessCenter
+}
+
 @Composable
 private fun QuestRow(q: CardStore.Quest, onClaim: () -> Unit) {
     val color = q.difficulty.color.c()
-    Column(Modifier.padding(bottom = 10.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard)
-        .border(1.dp, if (q.complete && !q.claimed) color.copy(alpha = 0.7f) else Color.Transparent, RoundedCornerShape(18.dp)).padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            DifficultyPill(q.difficulty)
-            if (q.weekly) ModePill(q.mode)
-            Spacer(Modifier.weight(1f))
-            RewardChip(q)
-        }
-        Text(tr(q.title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 8.dp))
-        // Défi entre amis : qui l'a reçue, et ce qu'il faut pour le bonus.
-        q.note?.let { Text(tr(it), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
-        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.1f))) {
-                Box(Modifier.fillMaxWidth((q.progress.toFloat() / q.target).coerceIn(0.02f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(color))
+    val ready = q.complete && !q.claimed
+    Panel(Modifier.padding(bottom = 10.dp).fillMaxWidth().graphicsLayer { alpha = if (q.claimed) 0.5f else 1f }, tint = if (ready) color else null, padding = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Ring(q.progress.toFloat() / q.target, color, 52.dp) {
+                Icon(if (q.claimed) Icons.Rounded.Check else questIcon(q), null, Modifier.size(22.dp), tint = if (q.complete) color else Color.White.copy(alpha = 0.85f))
             }
-            Text("${q.progress}/${q.target}", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 10.dp))
-            when {
-                q.claimed -> Icon(Icons.Rounded.CheckCircle, null, tint = color)
-                q.complete -> Text(tr("Récupérer"), color = Ink, fontWeight = FontWeight.Black, fontSize = 13.sp,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(color).clickable(onClick = onClaim).padding(horizontal = 12.dp, vertical = 6.dp))
+            Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                Text(tr(q.title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DifficultyPill(q.difficulty)
+                    if (q.weekly) ModePill(q.mode)
+                    Text("${q.progress.coerceAtMost(q.target)}/${q.target}", color = Color.White.copy(alpha = 0.55f), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                // Défi entre amis : qui l'a reçue, et ce qu'il faut pour le bonus.
+                q.note?.let { Text(tr(it), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp)) }
             }
+            Box(Modifier.padding(start = 8.dp)) { RewardChip(q) }
         }
+        if (ready) Text(tr("Récupérer") + " " + CardStore.prize(q), color = Ink, fontWeight = FontWeight.Black, fontSize = 14.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 12.dp).fillMaxWidth().clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(color, lerp(color, Color.White, 0.35f))))
+                .clickable(onClick = onClaim).padding(vertical = 10.dp))
     }
 }
 
@@ -428,7 +538,7 @@ private fun QuestRow(q: CardStore.Quest, onClaim: () -> Unit) {
 private fun BackgroundBonus(bg: Pull, level: Int) {
     val card = bg.card
     val st = CardStore.state.collectAsState().value
-    Row(Modifier.padding(top = 14.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(InkCard).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Panel(Modifier.padding(top = 10.dp).fillMaxWidth(), tint = card.element.mid.c(), padding = 12.dp) { Row(verticalAlignment = Alignment.CenterVertically) {
         card.elements.forEach { ElementChip(it, 3.2.dp, Modifier.padding(end = 6.dp)) }
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
             Text(card.name + " · " + tr("Niv.") + " $level", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -436,7 +546,7 @@ private fun BackgroundBonus(bg: Pull, level: Int) {
         }
         st.fuseCost(card)?.let { need -> Text("${st.spare(card).coerceAtMost(need)}/$need " + tr("doublons"), color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp) }
             ?: Text(tr("Niveau max"), color = Gold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-    }
+    } }
 }
 
 @Composable
@@ -444,8 +554,10 @@ fun PackRatesScreen(nav: NavHostController) {
     CardScaffold("Taux des packs", { nav.popBackStack() }) {
         Text(tr("Trois cartes par pack, et une quatrième une fois sur quatre. Chaque booster contient les 36 fonds de son biome et les duos qui le croisent. Une carte peut être un duo (1 chance sur 200, deux stats renforcées) et, en plus, brillante, animée ou chromatique : une épique chromatique duo existe. Pas de boutique : tout se gagne à l'entraînement ou s'échange entre amis."),
             color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+        SectionTitle("Pack doré")
+        GoldProgress(CardStore.state.collectAsState().value)
         SectionTitle("Charte des cartes")
-        EffectChart()
+        EffectChart(CardStore.state.collectAsState().value.nextGold)
         for ((title, table) in listOf("1ʳᵉ carte" to PackEngine.slot1, "2ᵉ carte" to PackEngine.slot2, "3ᵉ carte" to PackEngine.slot3, "4ᵉ carte (1 pack sur 4)" to PackEngine.slot4)) {
             SectionTitle(title)
             Column(Modifier.clip(RoundedCornerShape(18.dp)).background(InkCard).padding(vertical = 4.dp)) {
@@ -467,7 +579,7 @@ fun PackRatesScreen(nav: NavHostController) {
         }
         SectionTitle("Doublons et bonus")
         Column(Modifier.clip(RoundedCornerShape(18.dp)).background(InkCard).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(tr("Fusionne tes doublons pour renforcer un fond : 2 exemplaires pour +10 % d'effet, 4 pour +20 %, 16 pour +30 %, 256 pour +40 %, contre 20, 40, 80 puis 160 éclats. Un doublon peut aussi s'échanger avec un ami, contre une autre carte de même rareté ou contre des éclats."), color = Color.White)
+            Text(tr("Fusionne tes doublons pour renforcer un fond : 2 exemplaires pour +10 % d'effet, 4 pour +20 %, 16 pour +30 %, 256 pour +40 %, contre 20, 40, 80 puis 160 or. Un doublon peut aussi s'échanger avec un ami, contre une autre carte de même rareté ou contre de l'or."), color = Color.White)
             Text(tr("Le fond équipé renforce la stat de son biome en duel :") + " " + Rarity.entries.joinToString(" · ") { it.symbol + " " + (it.bonus / 10.0).toString().replace(".0", "").replace('.', ',') + " %" } +
                 tr(", × 1,1 en brillante, × 1,25 en animée, × 1,5 en chromatique. Chaque fusion ajoute 10 % à ce bonus. Un duo renforce ses deux stats. Régularité et cardio ne se boostent pas. La note globale ne change pas."), color = Color.White)
             Text(Element.entries.joinToString("\n") { tr(it.label) + " → " + it.stat.code + " · " + tr(it.tagline) }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)

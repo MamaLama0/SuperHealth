@@ -1,6 +1,11 @@
 package app.superhealth.ui.cards
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -16,11 +21,14 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,8 +58,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import kotlin.math.sin
 
-private const val TEAR_LINE = 0.13f
-
 /** Scène du biome à pleine richesse, pour la pochette et le décor plein écran. */
 internal fun Booster.art() = CardDef("_pack_$name", 0, label, Rarity.RARE, element, Catalog.palettes[element]!![0], 2.7f + ordinal * 3.1f, Catalog.NATURE, Look(1 or 2 or 4, -0.1f, 1f))
 private val Entries = Booster.entries
@@ -70,81 +76,143 @@ internal fun BoxScope.BiomeBackdrop(booster: Booster, time: () -> Float, dim: Fl
     }
 }
 
+private val Booster.packKey get() = name.lowercase()
+
+/**
+ * Les packs : le sachet 3D du biome choisi (glisser de haut en bas pour changer de biome, sur le corps pour le faire
+ * tourner, sur la bande du haut pour le déchirer). Le tirage se fait sur le serveur ; le sachet finit de se déchirer
+ * une fois la réponse reçue, puis les cartes se révèlent.
+ */
 @Composable
 fun PackShopScreen(nav: NavHostController) {
     val ctx = LocalContext.current
     val state by CardStore.state.collectAsState()
     // Un pack payé mais pas encore révélé reprend là où on l'avait laissé.
     var opening by remember { mutableStateOf<CardStore.Opening?>(run { CardStore.load(ctx); CardStore.state.value.pending?.opening() }) }
+    var torn by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { CardStore.load(ctx); runCatching { CardStore.refresh(ctx) } }
-    val pager = rememberPagerState(initialPage = state.booster.ordinal) { Entries.size }
-    val booster = Entries[pager.currentPage]
+    var index by rememberSaveable { mutableIntStateOf(state.booster.ordinal) }
+    val booster = Entries[index.mod(Entries.size)]
     val haptics = app.superhealth.ui.rememberHaptics()
-    LaunchedEffect(pager.currentPage) { haptics.tick() }
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    // Le tirage se fait sur le serveur (ou en local en mode démo) ; l'animation commence quand il a répondu.
-    fun open(again: Boolean = false) {
-        if (busy) return
-        busy = true; error = null
+    var side by remember { mutableIntStateOf(1) }
+    var tearAt by remember { mutableFloatStateOf(0f) }
+    var serial by remember { mutableIntStateOf(0) }
+    // Le tirage se fait sur le serveur (ou en local en mode démo) ; le sachet s'ouvre quand il a répondu.
+    fun open(direction: Int = 1, progress: Float = 0f, again: Boolean = false) {
+        if (busy || (opening != null && !again)) return
+        busy = true; error = null; side = direction; tearAt = progress
         scope.launch {
-            runCatching { CardStore.open(ctx, booster) }.onSuccess { opening = it }.onFailure { error = it.message; if (again) opening = null }
+            runCatching { CardStore.open(ctx, booster) }
+                .onSuccess { serial++; torn = false; opening = it }
+                .onFailure { error = it.message ?: tr("Ouverture impossible. Réessaie."); if (again) { opening = null; torn = false } }
             busy = false
         }
     }
-    opening?.let { o ->
-        key(o) { PackOpening(o, onDone = { opening = null }, onAgain = { open(again = true) }, onAlbum = { opening = null; nav.go("cards/album") },
-            onShare = { g -> CardShare.open(g.pull, g.level, CardShare.Event.PULL); opening = null; nav.go("social/compose") }) }
+    fun step(offset: Int) {
+        if (busy || opening != null) return
+        error = null; index = (index + offset).mod(Entries.size); haptics.tick()
+    }
+    val o = opening
+    if (o != null && torn) {
+        key(o) { PackOpening(o, onDone = { opening = null; torn = false }, onAgain = { open(again = true) }, onAlbum = { opening = null; torn = false; nav.go("cards/album") },
+            onShare = { g -> CardShare.open(g.pull, g.level, CardShare.Event.PULL); opening = null; torn = false; nav.go("social/compose") }) }
         return
     }
-    val tilt by rememberTilt()
+    // Filet de sécurité : si le sachet ne signale pas la fin de la déchirure, les cartes arrivent quand même.
+    LaunchedEffect(o) { if (o != null) { delay(9000); torn = true } }
+    val shown = o?.booster ?: booster
+    val gold = o?.result?.gold ?: state.nextGold
+    val best = o?.result?.pulls?.maxOf { it.card.rarity }
+    val announce = o != null && (best!! >= Rarity.RARE || o.result.prism)
+    LaunchedEffect(o) { if (o != null && best!!.big) { delay(250); Rumble.rise(ctx) } }
+    val allowed = CardStore.canOpen() && o == null
     val time by rememberCardTime()
-    CardScaffold("Packs", { nav.popBackStack() }, booster.element.outer.c(), action = {
-        IconButton({ nav.go("cards/rates") }) { Icon(Icons.Rounded.Info, tr("Taux"), tint = Color.White.copy(alpha = 0.7f)) }
-    }, backdrop = {
-        // Le décor ne change qu'une fois le geste fini : un fondu plein écran au milieu du swipe le faisait saccader.
-        BiomeBackdrop(Entries[pager.settledPage], { time })
-        WarmPackShaders()
-    }) {
-        Wallet(state)
-        val float by rememberInfiniteTransition(label = "pf").animateFloat(-8f, 8f, infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "f")
-        // Le carrousel coupe ce qui dépasse de ses bords : le halo des packs (glowReach) s'éteint avant.
-        val clocks = remember { PageClocks(Entries.size) }
-        HorizontalPager(pager, Modifier.padding(top = 10.dp).fillMaxWidth().height(470.dp), contentPadding = PaddingValues(horizontal = 50.dp), pageSpacing = 0.dp) { page ->
-            // Lu au dessin seulement : glisser ne recompose pas les pochettes.
-            val off = { (pager.currentPage - page + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f) }
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                PackVisual(Entries[page], Modifier.fillMaxHeight(0.95f).graphicsLayer {
-                    val o = off(); val s = 1f - 0.18f * o; scaleX = s; scaleY = s; alpha = 1f - 0.45f * o
-                    translationY = float * density * (1f - o); rotationY = tilt.x * 14f * (1f - o) + (page - pager.currentPage - pager.currentPageOffsetFraction) * -18f
-                    rotationX = -tilt.y * 10f * (1f - o); cameraDistance = 14f * density
-                }, { val o = off(); if (o >= 1f) Offset.Zero else tilt * (1f - o) }, { clocks.at(page, pager.currentPage) { time } },
-                    glow = if (state.nextGold) Gold else Entries[page].element.mid.c(), glowBoost = { 0.2f * (1f - off()) }, gold = state.nextGold, glowReach = 0.46f)
+    val chrome by animateFloatAsState(if (o == null) 1f else 0f, tween(260), label = "chrome")
+    val halo by animateFloatAsState(if (announce) 1f else 0f, tween(900), label = "halo")
+    val script = "arena.language(${app.superhealth.ui.Lang.english});arena.pause(false);" +
+        (if (o == null) "arena.clearIfOpened();arena.select('${shown.packKey}',$gold,$allowed,0,'');" +
+            (if (busy) "arena.prepareOpen();" else "") +
+            (error?.let { "arena.openingFailed(" + org.json.JSONObject.quote(it) + ");" } ?: "") +
+            (if (!busy && error == null) "arena.releaseWaiting();" else "")
+        else "arena.showTear({id:'$serial-${o.result.pulls.size}-${shown.packKey}',slot:'${shown.packKey}',gold:$gold,count:${o.result.pulls.size},seed:$serial},$side,$tearAt);")
+    BackHandler(o != null || busy) {}
+    CardScaffold("Packs", { if (o == null && !busy) nav.popBackStack() }, shown.element.outer.c(), scroll = false, action = {
+        IconButton({ if (o == null) nav.go("cards/rates") }) { Icon(Icons.Rounded.Info, tr("Taux"), tint = Color.White.copy(alpha = 0.7f * chrome)) }
+    }, backdrop = { BiomeBackdrop(shown, { time }, dim = 0.66f) }) {
+        Wallet(state, Modifier.graphicsLayer { alpha = chrome })
+        Box(Modifier.weight(1f).fillMaxWidth().drawBehind {
+            // Halo du biome derrière le sachet ; il vire à la couleur de la meilleure carte quand elle est rare.
+            val tone = if (gold) Gold else shown.element.mid.c()
+            val color = if (halo > 0f && best != null) androidx.compose.ui.graphics.lerp(tone, rarityColors(best)[1], halo) else tone
+            drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.34f + 0.3f * halo + 0.05f * sin(time * 2.4f)), Color.Transparent),
+                center, size.minDimension * (0.62f + 0.2f * halo)), size.minDimension * (0.62f + 0.2f * halo))
+        }) {
+            // Pendant la déchirure, les illustrations tirées se dessinent une première fois en tout petit : leurs shaders
+            // sont prêts quand les cartes sortent, sans à-coup sur les premières images.
+            if (o != null) Row(Modifier.align(Alignment.TopStart).zIndex(-1f).graphicsLayer { alpha = 0.01f }) {
+                o.result.pulls.forEach { CardArt(it.card, it.finish, Modifier.size(4.dp), resolution = 1f) }
+            }
+            // Tant que le premier sachet n'est pas dessiné, sa silhouette aux couleurs du biome tient la place.
+            val drawn by PackWeb.rendered.collectAsState()
+            val wait by animateFloatAsState(if (drawn) 0f else 1f, tween(280), label = "wait")
+            if (wait > 0f) Canvas(Modifier.align(Alignment.Center).fillMaxHeight(0.62f).aspectRatio(0.62f).graphicsLayer { alpha = wait * (0.55f + 0.25f * sin(time * 4f)) }) {
+                val r = androidx.compose.ui.geometry.CornerRadius(size.width * 0.06f)
+                drawRoundRect(Brush.verticalGradient(listOf(shown.element.mid.c().copy(alpha = 0.55f), shown.element.outer.c().copy(alpha = 0.35f))), cornerRadius = r)
+                drawRoundRect(Color.White.copy(alpha = 0.35f), cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))
+                with(Vfx) { emblem(shown.element, center, size.width * 0.16f, Color.White.copy(alpha = 0.8f)) }
+            }
+            EquipmentWeb(PackWeb.PAGE, script, Modifier.fillMaxSize(), ownsGestures = true, keepAlive = true) { kind, value ->
+                when (kind) {
+                    "step" -> if (value == "1" || value == "-1") step(value.toInt())
+                    "open" -> {
+                        val gesture = value.split('|', limit = 3)
+                        if (gesture.firstOrNull() == booster.packKey) open(if (gesture.getOrNull(1) == "-1") -1 else 1,
+                            gesture.getOrNull(2)?.toFloatOrNull()?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f)
+                    }
+                    "torn" -> torn = true
+                    "haptic" -> when (value) {
+                        "tear-start" -> haptics.press(); "tear-tick" -> haptics.tick(); "tear-end" -> haptics.release()
+                        "eject" -> haptics.confirm(); "card" -> haptics.toggle()
+                    }
+                }
+            }
+            if (o != null && (o.result.prism || o.result.gold)) Text(tr(if (o.result.prism) "PACK PRISME" else "PACK DORÉ"), Modifier.align(Alignment.TopCenter).padding(top = 6.dp),
+                style = TextStyle(brush = Brush.horizontalGradient(if (o.result.prism) rarityColors(Rarity.EPIQUE) else listOf(Color(0xFFB8860B), Gold, Color(0xFFFFF4C8), Gold)),
+                    fontWeight = FontWeight.Black, fontSize = 26.sp, letterSpacing = 4.sp, shadow = Shadow(Gold, Offset.Zero, 24f)))
+            // Les biomes, à portée de pouce : un point par booster, et les flèches pour qui ne glisse pas.
+            Column(Modifier.align(Alignment.CenterEnd).graphicsLayer { alpha = chrome }, horizontalAlignment = Alignment.CenterHorizontally) {
+                IconButton({ step(-1) }, Modifier.size(40.dp)) { Icon(Icons.Rounded.ExpandLess, tr("Booster précédent"), tint = Color.White.copy(alpha = 0.8f)) }
+                Entries.forEachIndexed { i, b ->
+                    Box(Modifier.padding(vertical = 4.dp).size(8.dp, if (b == booster) 22.dp else 8.dp).clip(RoundedCornerShape(50))
+                        .background(if (b == booster) b.element.mid.c() else Color.White.copy(alpha = 0.25f)).clickable { step(i - index.mod(Entries.size)) })
+                }
+                IconButton({ step(1) }, Modifier.size(40.dp)) { Icon(Icons.Rounded.ExpandMore, tr("Booster suivant"), tint = Color.White.copy(alpha = 0.8f)) }
             }
         }
-        val e = booster.element
-        Text(tr("Booster") + " " + tr(booster.label), color = Color.White, fontWeight = FontWeight.Black, fontSize = 26.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-        Text(tr(e.tagline), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
-        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
-            val content = Catalog.ofBooster(booster)
-            InfoPill("${content.count { state.owns(it) }}/${content.size} " + tr("fonds"), Color.White)
-            InfoPill(tr("Bonus") + " " + e.stat.code, e.mid.c())
-            InfoPill(if (state.nextGold) tr("Pack doré · chances ×3") else tr("3 à 4 cartes"), if (state.nextGold) Gold else Color.White)
+        Column(Modifier.fillMaxWidth().graphicsLayer { alpha = chrome }.padding(bottom = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            val e = booster.element
+            AnimatedContent(booster, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) }, label = "booster") { b ->
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tr("Booster") + " " + tr(b.label), color = Color.White, fontWeight = FontWeight.Black, fontSize = 26.sp, textAlign = TextAlign.Center)
+                    Text(tr(b.element.tagline), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+                val content = Catalog.ofBooster(booster)
+                InfoPill("${content.count { state.owns(it) }}/${content.size} " + tr("fonds"), Color.White)
+                InfoPill(tr("Bonus") + " " + e.stat.code, e.mid.c())
+                InfoPill(if (state.nextGold) tr("Pack doré · chances ×3") else tr("3 à 4 cartes"), Gold)
+            }
+            // Un seul bouton : il ouvre d'abord un pack offert, sinon dépense de l'or.
+            val gift = state.packsAvailable > 0
+            GlowButton(when { busy -> tr("Ouverture…"); gift -> tr("Ouvrir · pack offert"); else -> trf("Ouvrir · %1\$s or", state.price) }, Modifier.fillMaxWidth().padding(top = 14.dp),
+                listOf(e.outer.c(), e.mid.c()), enabled = !busy && allowed, badge = state.packsAvailable.takeIf { it > 0 }?.toString()) { open() }
+            Text(error ?: if (allowed) tr("Ou déchire la bande du haut du sachet.") else if (o == null && !busy) tr("Termine des quêtes pour gagner de l'or et des packs.") else "",
+                color = if (error != null) Color(0xFFFF8A80) else Color.White.copy(alpha = 0.55f), fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
-        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.Center) {
-            Entries.forEachIndexed { i, b -> Box(Modifier.padding(4.dp).size(if (i == pager.currentPage) 22.dp else 8.dp, 8.dp).clip(RoundedCornerShape(50)).background(if (i == pager.currentPage) b.element.mid.c() else Color.White.copy(alpha = 0.25f))) }
-        }
-        // Un seul bouton : il ouvre d'abord un pack offert, sinon dépense des éclats.
-        val gift = state.packsAvailable > 0
-        GlowButton(when { busy -> tr("Ouverture…"); gift -> tr("Ouvrir · pack offert"); else -> trf("Ouvrir · %1\$s éclats", CardStore.state.value.price) }, Modifier.fillMaxWidth().padding(top = 14.dp),
-            listOf(e.outer.c(), e.mid.c()), enabled = !busy && CardStore.canOpen(), badge = state.packsAvailable.takeIf { it > 0 }?.toString()) { open() }
-        error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) }
-        SectionTitle("Pack doré")
-        GoldProgress(state)
-        SectionTitle("Charte des raretés et effets")
-        EffectChart(state.nextGold)
-        Spacer(Modifier.height(32.dp))
     }
 }
 
@@ -226,184 +294,31 @@ internal fun EffectChart(highlightGold: Boolean = false) {
     }
 }
 
-/** Pochette du booster. [tear] de 0 à 1 arrache la bande du haut ; [cut] trace la ligne incandescente sous le doigt. */
-@Composable
-fun PackVisual(booster: Booster, modifier: Modifier, tilt: () -> Offset, time: () -> Float, glow: Color? = null, tear: Float = 0f, glowBoost: () -> Float = { 0f }, cut: Float = 0f, gold: Boolean = false, glowReach: Float = 0.7f) {
-    val density = LocalDensity.current
-    Box(modifier.aspectRatio(0.62f).drawBehind {
-        val b = glowBoost()
-        if (glow != null) drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = (0.3f + b * 0.5f + 0.08f * sin(time() * 3f)).coerceIn(0f, 1f)), Color.Transparent)),
-            radius = size.maxDimension * (glowReach + b * 0.3f))
-    }) {
-        // Pochette entière tant qu'elle n'est pas déchirée : la bande du haut n'existe qu'à l'ouverture, sinon la scène se calculait deux fois.
-        Box(Modifier.fillMaxSize().drawWithContent { if (tear > 0f) clipRect(top = size.height * TEAR_LINE) { this@drawWithContent.drawContent() } else drawContent() }) { PackFace(booster, tilt, time, gold) }
-        if (tear > 0f) Box(Modifier.fillMaxSize().graphicsLayer {
-            transformOrigin = TransformOrigin(0f, TEAR_LINE)
-            translationX = tear * size.width * 1.25f; translationY = -tear * size.height * 0.22f; rotationZ = tear * 32f; alpha = 1f - tear * 0.5f
-        }.drawWithContent { clipRect(bottom = size.height * TEAR_LINE) { this@drawWithContent.drawContent() } }) { PackFace(booster, tilt, time, gold) }
-        Canvas(Modifier.fillMaxSize()) {
-            val y = size.height * TEAR_LINE
-            if (tear < 0.02f && cut < 0.01f) drawLine(Color.White.copy(alpha = 0.6f), Offset(size.width * 0.05f, y), Offset(size.width * 0.95f, y), strokeWidth = with(density) { 1.2.dp.toPx() },
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f), -time() * 40f))
-            if (cut > 0f && tear < 1f) {
-                val x = size.width * cut
-                drawLine(booster.element.mid.c(), Offset(0f, y), Offset(x, y), strokeWidth = with(density) { 6.dp.toPx() }, alpha = 0.6f, blendMode = BlendMode.Plus)
-                drawLine(Color.White, Offset(0f, y), Offset(x, y), strokeWidth = with(density) { 2.dp.toPx() }, blendMode = BlendMode.Plus)
-                with(Vfx) { aura(booster.element, Offset(x, y), size.width * 0.12f, time(), 1f, 18) }
-            }
-        }
-    }
-}
-
-/** Horloge propre à chaque pochette du carrousel : figée hors du centre, elle reprend où elle s'était arrêtée (sans saut de pluie ni d'éclair). */
-private class PageClocks(n: Int) {
-    private val frozen = FloatArray(n); private val shift = FloatArray(n); private var current = -1
-    fun at(page: Int, now: Int, time: () -> Float): Float {
-        if (now != current) { val t = time(); if (current >= 0) frozen[current] = t - shift[current]; shift[now] = t - frozen[now]; current = now }
-        return if (page == current) time() - shift[page] else frozen[page]
-    }
-}
-
-/** Dessine une fois chaque scène de pack en tout petit, sous le décor : le GPU compile leurs programmes à l'entrée de l'écran, pas au premier swipe. */
-@Composable
-private fun BoxScope.WarmPackShaders() {
-    var warm by remember { mutableStateOf(true) }
-    LaunchedEffect(Unit) { delay(1500); warm = false }
-    if (warm) Row(Modifier.align(Alignment.TopStart).zIndex(-1f)) { Entries.forEach { CardArt(it.art(), Finish.BRILLANTE, Modifier.size(4.dp), resolution = 1f) } }
-}
-
-/** Face de la pochette : la scène du biome en pleine page, sertie de bandes métalliques à sa couleur. */
-@Composable
-private fun PackFace(booster: Booster, tilt: () -> Offset, time: () -> Float, gold: Boolean = false) {
-    val e = booster.element
-    // Pack doré : bandes, médaillon et nom passent à l'or.
-    val core = if (gold) Color(0xFFFFF4C8) else e.core.c(); val mid = if (gold) Gold else e.mid.c(); val outer = if (gold) Color(0xFF8A5A00) else e.outer.c()
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val u = maxWidth / 100
-        val su = with(LocalDensity.current) { u.toSp() }
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(5))) {
-            CardArt(booster.art(), Finish.BRILLANTE, Modifier.fillMaxSize(), tilt, time)
-            Canvas(Modifier.fillMaxSize()) {
-                val step = size.width / 14
-                for (i in -14..28) drawLine(Color.White.copy(alpha = 0.04f), Offset(i * step, 0f), Offset(i * step - size.height * 0.5f, size.height), strokeWidth = step * 0.12f)
-                drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.35f), 0.3f to Color.Transparent, 0.55f to Color.Transparent, 0.8f to Color.Black.copy(alpha = 0.6f), 1f to Color.Black.copy(alpha = 0.8f)))
-                // Médaillon de l'élément, sous le nom.
-                val c = Offset(size.width / 2, size.height * 0.875f); val r = size.width * 0.075f
-                drawCircle(Brush.radialGradient(listOf(mid, outer)), r, c)
-                drawCircle(Brush.sweepGradient(listOf(Color.White, core, outer, Color.White), c), r, c, style = Stroke(size.width * 0.012f))
-                with(Vfx) { magicCircle(c, r * 1.5f, time(), mid, 1f, alpha = 0.7f); emblem(e, c, r * 0.5f, Color.White) }
-                for (top in listOf(true, false)) {
-                    val h = size.height * 0.06f; val y0 = if (top) 0f else size.height - h
-                    drawRect(Brush.verticalGradient(listOf(core, outer, mid), y0, y0 + h), Offset(0f, y0), Size(size.width, h))
-                    val teeth = 26; val tw = size.width / teeth
-                    val edge = if (top) 0f else size.height
-                    val path = Path().apply { moveTo(0f, edge)
-                        for (i in 0 until teeth) { lineTo(i * tw + tw / 2, if (top) h * 0.35f else edge - h * 0.35f); lineTo((i + 1) * tw, edge) }; close() }
-                    drawPath(path, Color.Black.copy(alpha = 0.35f))
-                }
-                val gx = size.width * (0.5f + tilt().x * 0.6f)
-                drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.22f), Color.Transparent), Offset(gx - size.width * 0.3f, 0f), Offset(gx + size.width * 0.3f, size.height * 0.4f)), blendMode = BlendMode.Plus)
-                if (gold) {
-                    drawRect(Brush.verticalGradient(listOf(Gold.copy(alpha = 0.22f), Color.Transparent, Gold.copy(alpha = 0.3f))), blendMode = BlendMode.Plus)
-                    val sx = (time() * 0.3f % 1f) * size.width * 2f - size.width * 0.5f
-                    drawRect(Brush.linearGradient(listOf(Color.Transparent, Color(0xFFFFF4C8).copy(alpha = 0.35f), Color.Transparent), Offset(sx - size.width * 0.15f, 0f), Offset(sx + size.width * 0.15f, size.height)), blendMode = BlendMode.Plus)
-                }
-            }
-            Column(Modifier.fillMaxSize().padding(top = u * 15, bottom = u * 33), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("SUPERHEALTH · NATURE", style = TextStyle(color = Color.White.copy(alpha = 0.9f), fontWeight = FontWeight.Black, fontSize = su * 4f, letterSpacing = su * 1.2f, shadow = Shadow(Color.Black, Offset(0f, 2f), 8f)))
-                Spacer(Modifier.weight(1f))
-                val name = tr(booster.label).uppercase()
-                if (gold) Text(tr("PACK DORÉ"), style = TextStyle(color = Color(0xFF3A2400), fontWeight = FontWeight.Black, fontSize = su * 4.2f, letterSpacing = su * 1f),
-                    modifier = Modifier.padding(bottom = u * 1.5f).clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Color(0xFFB8860B), Gold, Color(0xFFFFF4C8), Gold))).padding(horizontal = u * 4, vertical = u * 0.8f))
-                Text(name, style = TextStyle(brush = Brush.verticalGradient(listOf(Color.White, core, mid)), fontWeight = FontWeight.Black,
-                    fontSize = su * (100f / name.length).coerceIn(10f, 15f), letterSpacing = su * 0.3f, shadow = Shadow(Color.Black, Offset(0f, 4f), 16f)))
-                Text(if (gold) tr("CHANCES ×3") + " · " + tr("BONUS") + " " + e.stat.code else "3–4 " + tr("CARTES") + " · " + tr("BONUS") + " " + e.stat.code, style = TextStyle(color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.Bold, fontSize = su * 3.8f,
-                    letterSpacing = su * 0.8f, shadow = Shadow(Color.Black, Offset(0f, 2f), 8f)), modifier = Modifier.padding(top = u * 1.5f))
-            }
-        }
-    }
-}
-
-private enum class Stage { TEAR, FAN, SUMMARY }
+private enum class Stage { FAN, SUMMARY }
 
 @Composable
 private fun PackOpening(o: CardStore.Opening, onDone: () -> Unit, onAgain: () -> Unit, onAlbum: () -> Unit, onShare: (CardStore.Gain) -> Unit) {
     val ctx = LocalContext.current
-    var stage by remember { mutableStateOf(Stage.TEAR) }
+    var stage by remember { mutableStateOf(Stage.FAN) }
     val pulls = o.result.pulls
     val best = pulls.maxOf { it.card.rarity }
     val tiltS = rememberTilt()
     val timeS = rememberCardTime()
+    // Un éclat de lumière fait la jonction entre le sachet 3D et les cartes : le changement de scène ne se voit pas.
+    val flash = remember { Animatable(1f) }
+    LaunchedEffect(Unit) { flash.animateTo(0f, tween(480, easing = LinearOutSlowInEasing)) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         BiomeBackdrop(o.booster, { timeS.value }, dim = if (stage == Stage.SUMMARY) 0.8f else 0.62f)
         Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             when (stage) {
-                Stage.TEAR -> Tear(o.booster, best, o.result.prism, o.result.gold, { tiltS.value }, { timeS.value }) { stage = Stage.FAN }
                 Stage.FAN -> Fan(o, { tiltS.value }, { timeS.value }) { stage = Stage.SUMMARY }
                 Stage.SUMMARY -> { LaunchedEffect(Unit) { CardStore.seen(ctx) }; Summary(o, onDone, onAgain, onAlbum, onShare) }
             }
         }
-    }
-    LaunchedEffect(Unit) { if (best.big) { delay(250); Rumble.rise(ctx) } }
-}
-
-@Composable
-private fun BoxScope.Tear(booster: Booster, best: Rarity, prism: Boolean, gold: Boolean, tilt: () -> Offset, time: () -> Float, onOpened: () -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val progress = remember { Animatable(0f) }
-    val tear = remember { Animatable(0f) }
-    val slit = remember { Animatable(0f) }
-    val exit = remember { Animatable(0f) }
-    var lastTick by remember { mutableIntStateOf(0) }
-    var done by remember { mutableStateOf(false) }
-    val shake by rememberInfiniteTransition(label = "shake").animateFloat(-1f, 1f, infiniteRepeatable(tween(80), RepeatMode.Reverse), label = "s")
-    val announce = best >= Rarity.RARE || prism
-    val beam = if (announce) rarityColors(best)[1] else Color.White
-    val dropIn = remember { Animatable(1f) }
-    LaunchedEffect(Unit) { dropIn.animateTo(0f, spring(dampingRatio = 0.55f, stiffness = 120f)) }
-    fun finish() = scope.launch {
-        if (done) return@launch
-        done = true
-        progress.animateTo(1f, tween(120)); Rumble.thud(ctx)
-        launch { tear.animateTo(1f, tween(380, easing = FastOutSlowInEasing)) }
-        slit.animateTo(1f, tween(650)); if (announce) Rumble.reveal(ctx)
-        exit.animateTo(1f, tween(340, easing = FastOutLinearInEasing)); onOpened()
-    }
-    Column(Modifier.fillMaxSize().pointerInput(Unit) {
-        detectDragGestures(onDragEnd = { scope.launch { if (progress.value > 0.55f) finish() else if (!done) progress.animateTo(0f, spring()) } }) { change, drag ->
-            change.consume()
-            if (done) return@detectDragGestures
-            scope.launch { progress.snapTo((progress.value + drag.x / (size.width * 0.7f)).coerceIn(0f, 1f)) }
-            val step = (progress.value * 12).toInt()
-            if (step > lastTick) { lastTick = step; Rumble.tick(ctx, 0.2f + progress.value * 0.6f) }
-            if (progress.value >= 0.98f) finish()
+        Canvas(Modifier.fillMaxSize()) {
+            val f = flash.value
+            if (f > 0f) drawRect(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.85f * f), o.booster.element.core.c().copy(alpha = 0.5f * f), Color.Transparent), Offset(size.width / 2, size.height * 0.42f), size.height * (0.9f - 0.4f * f)))
         }
-    }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        if (prism) Text(tr("PACK PRISME"), style = TextStyle(brush = Brush.horizontalGradient(rarityColors(Rarity.EPIQUE)), fontWeight = FontWeight.Black, fontSize = 28.sp, letterSpacing = 4.sp))
-        else if (gold) Text(tr("PACK DORÉ"), style = TextStyle(brush = Brush.horizontalGradient(listOf(Color(0xFFB8860B), Gold, Color(0xFFFFF4C8), Gold)), fontWeight = FontWeight.Black, fontSize = 28.sp, letterSpacing = 4.sp,
-            shadow = Shadow(Gold, Offset.Zero, 24f)), modifier = Modifier.padding(bottom = 10.dp))
-        // Le pack reste immobile tant que le doigt suit la ligne ; il ne tremble qu'une fois ouvert.
-        val shakeAmp = if (announce) 3f * slit.value * (1 - exit.value) else 0f
-        Box(Modifier.fillMaxWidth(0.82f), contentAlignment = Alignment.Center) {
-            PackVisual(booster, Modifier.fillMaxWidth().graphicsLayer {
-                translationY = dropIn.value * size.height * 1.2f + exit.value * size.height * 1.3f
-                rotationZ = shake * shakeAmp
-            }, { Offset.Zero }, time, glow = if (announce) beam else if (gold) Gold else booster.element.mid.c(), tear = tear.value, glowBoost = { if (announce) 0.6f else 0.1f }, cut = progress.value, gold = gold)
-            if (slit.value > 0f) Canvas(Modifier.matchParentSize()) {
-                val y = size.height * TEAR_LINE + exit.value * size.height * 1.3f
-                val k = slit.value * (1 - exit.value)
-                for (i in 0 until 7) {
-                    val spread = (i - 3) * size.width * 0.16f
-                    val p = Path().apply { moveTo(size.width * 0.15f + i * size.width * 0.1f, y); lineTo(size.width / 2 + spread * 2.4f - size.width * 0.06f, y - size.height * 1.2f)
-                        lineTo(size.width / 2 + spread * 2.4f + size.width * 0.06f, y - size.height * 1.2f); close() }
-                    drawPath(p, Brush.verticalGradient(listOf(beam.copy(alpha = 0.6f * k), Color.Transparent), y, y - size.height * 1.2f), blendMode = BlendMode.Plus)
-                }
-                drawLine(Color.White.copy(alpha = k), Offset(0f, y), Offset(size.width, y), strokeWidth = 8f, blendMode = BlendMode.Plus)
-                with(Vfx) { aura(booster.element, Offset(size.width / 2, y), size.width * 0.6f, time(), k, 40) }
-            }
-        }
-        Text(tr("Glisse le long de la ligne pour ouvrir"), color = Color.White.copy(alpha = if (progress.value < 0.05f) 0.8f else 0f), fontSize = 14.sp, modifier = Modifier.padding(top = 34.dp))
     }
 }
 
@@ -430,13 +345,16 @@ private fun BoxScope.Fan(o: CardStore.Opening, tilt: () -> Offset, time: () -> F
     val enter = remember { Animatable(0f) }
     // La première carte se retourne d'un geste fluide à la sortie du pack ; les suivantes sont déjà face visible.
     val reveal = remember { Animatable(if (wantsWalkoutFirst(o, prefs)) 0f else 180f) }
-    LaunchedEffect(Unit) { delay(120); reveal.animateTo(0f, tween(520, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(Unit) { delay(400); reveal.animateTo(0f, tween(480, easing = FastOutSlowInEasing)) }
     // Un duo ou une chromatique a toujours droit à son invocation : ils sont rares à toutes les raretés.
     fun wantsWalkout(i: Int) = (pulls[i].card.rarity >= prefs.walkoutMin || pulls[i].card.duo || pulls[i].finish == Finish.CHROMATIQUE) && (!prefs.walkoutNewOnly || o.gains[i].fresh)
-    LaunchedEffect(Unit) { enter.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 240f)) }
+    // La pile sort de l'endroit où était le sachet et grandit jusqu'à sa place, sans rebond ; elle se déploie ensuite.
+    LaunchedEffect(Unit) { enter.animateTo(1f, tween(460, easing = FastOutSlowInEasing)) }
     // Chaque carte qui arrive au-dessus de la pile se révèle : impact de son biome, ou invocation pour les grosses.
     LaunchedEffect(index) {
         if (index >= n || index in shown) return@LaunchedEffect
+        // La première attend d'être sortie et retournée avant son impact.
+        if (index == 0) delay(if (wantsWalkout(0)) 480 else 780)
         if (wantsWalkout(index)) walkout = index
         else { shown += index; burstAt = time(); if (pulls[index].card.rarity >= Rarity.RARE) Rumble.reveal(ctx) else Rumble.tick(ctx, 0.5f) }
     }
@@ -482,10 +400,11 @@ private fun BoxScope.Fan(o: CardStore.Opening, tilt: () -> Offset, time: () -> F
                 fun rz(d: Int) = if (d == 0) 0f else d * (if (d % 2 == 1) 4f else -3f)
                 // Toute la pile avance d'un cran pendant qu'on écarte la carte du dessus : rien ne saute au changement.
                 val k = if (depth >= 1) (kotlin.math.abs(dragX) / (w * 0.6f)).coerceIn(0f, 1f) else 0f
-                translationY = ty(depth - k) + (1 - e) * h * (1f + depth * 0.1f)
-                translationX = tx(depth) + (tx(depth - 1) - tx(depth)) * k
-                rotationZ = rz(depth) + (rz(depth - 1) - rz(depth)) * k
-                val s = 1f - (depth - k) * 0.06f; scaleX = s; scaleY = s
+                translationY = ty(depth - k) * e - (1 - e) * h * 0.08f
+                translationX = (tx(depth) + (tx(depth - 1) - tx(depth)) * k) * e
+                rotationZ = (rz(depth) + (rz(depth - 1) - rz(depth)) * k) * e
+                val s = (1f - (depth - k) * 0.06f) * (0.4f + 0.6f * e); scaleX = s; scaleY = s
+                alpha = (e * 4f).coerceAtMost(1f)
                 if (depth == 0) {
                     translationX = dragX; rotationZ = dragX / w * 18f
                     rotationY = flip.value + reveal.value + tilt().x * 6f; cameraDistance = 16f * density

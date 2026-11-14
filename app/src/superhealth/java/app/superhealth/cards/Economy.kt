@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 import app.superhealth.cards.CardStore.PACK_PRICE
 
 /**
- * Client de l'économie tenue par le serveur SuperHealth (route /v2/economy, voir economy.mjs) : éclats, packs offerts,
+ * Client de l'économie tenue par le serveur SuperHealth (route /v2/economy, voir economy.mjs) : or, packs offerts,
  * collection, fusion des doublons, échanges entre joueurs, pack doré, quêtes et tirage. L'app n'envoie que des événements (séance, quête) avec un identifiant opaque
  * et une date ; le serveur fixe les quêtes et leurs montants et refuse doublons et triches. Le mode démo reste local.
  */
@@ -26,12 +26,12 @@ object Economy {
     internal class InsufficientArsenalGold : Unavailable("Il te manque des pièces d’or.")
 
     /**
-     * Quête fixée par le serveur : son genre, son palier de difficulté (0 à 2, adapté à l'utilisateur) et ses éclats.
+     * Quête fixée par le serveur : son genre, son palier de difficulté (0 à 2, adapté à l'utilisateur) et son or.
      * L'app en tire l'objectif concret à partir des habitudes locales (voir [CardStore.quests]).
      */
     @Serializable data class QuestDef(val id: String, val kind: String, val scope: String, val tier: Int = 1, val reward: Int = 0, val stat: String? = null)
     @Serializable data class Gain(val key: String, val copiesBefore: Int, val copiesAfter: Int, val refund: Int = 0)
-    /** Mise d'un échange : une carte ou des éclats, jamais les deux. */
+    /** Mise d'un échange : une carte ou de l'or, jamais les deux. */
     @Serializable data class Stake(val card: String? = null, val eclats: Int? = null) {
         val pull get() = card?.let(Pull::of)
         val json get() = buildJsonObject { if (card != null) put("card", card) else put("eclats", eclats ?: 0) }
@@ -50,7 +50,7 @@ object Economy {
     }
     /**
      * Récompenses en vigueur, envoyées par le serveur à chaque appel (réglables sans mise à jour de l'app, voir rewards.mjs) :
-     * quêtes de la semaine en packs offerts, défis entre amis, éclats des quêtes du jour.
+     * quêtes de la semaine en packs offerts, défis entre amis, or des quêtes du jour.
      */
     @Serializable data class Prize(val packs: Int = 0, val eclats: Int = 0)
     @Serializable data class Weekly(val count: Int = 3, val packs: Int = 1, val done: Int = 0)
@@ -71,7 +71,7 @@ object Economy {
     data class League(val id: String) : Event { override val json get() = buildJsonObject { put("type", "league"); put("id", id) } }
     /** Palier de badge atteint : payé une fois. Série tenue cette semaine : bonus qui grandit de semaine en semaine. */
     data class Badge(val id: String) : Event { override val json get() = buildJsonObject { put("type", "badge"); put("id", id) } }
-    /** Départ de la mise à jour : les badges déjà obtenus comptent comme payés, sans éclats. */
+    /** Départ de la mise à jour : les badges déjà obtenus comptent comme payés, sans or. */
     data class Baseline(val badges: List<String>) : Event { override val json get() = buildJsonObject { put("type", "baseline"); put("badges", JsonArray(badges.map(::JsonPrimitive))) } }
     data class Streak(val track: String, val weeks: Int) : Event { override val json get() = buildJsonObject { put("type", "streak"); put("track", track); put("weeks", weeks) } }
 
@@ -117,7 +117,7 @@ object Economy {
                 arsenalRequest && r.code == 409 -> throw Unavailable("Action indisponible. Vérifie le suivi, la carte ou le groupe.")
                 arsenalRequest && !r.isSuccessful -> throw Unavailable("L’Arsenal est indisponible (${r.code}).")
                 r.code == 402 && body["op"]?.jsonPrimitive?.content?.startsWith("arsenal-") == true -> throw Unavailable("Pas assez d’or pour cet achat ou cette enchère.")
-                r.code == 402 -> throw Unavailable(if (body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true) "Il manque la carte ou les éclats pour cet échange." else "Pas assez d'éclats pour ça.")
+                r.code == 402 -> throw Unavailable(if (body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true) "Il manque la carte ou l'or pour cet échange." else "Pas assez d'or pour ça.")
                 r.code == 404 && body["op"]?.jsonPrimitive?.content?.startsWith("trade") == true -> throw Unavailable("Cet échange n'existe plus, ou ton ami n'a pas encore ouvert de pack.")
                 r.code == 404 || r.code == 405 -> throw Unavailable("Le serveur SuperHealth doit être mis à jour pour les packs.")
                 r.code == 429 -> throw Unavailable("Doucement : réessaie dans une minute.")

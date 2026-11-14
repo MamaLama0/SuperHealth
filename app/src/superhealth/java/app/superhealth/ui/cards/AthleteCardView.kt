@@ -300,40 +300,52 @@ private fun StatLine(s: Stat, stats: AthleteStats?, bonus: Double?, su: TextUnit
     }
 }
 
+/** Verso : la toile des six stats, puis ce que le fond apporte et la stat la plus rentable à travailler. */
 @Composable
 private fun Back(face: CardFace, art: CardDef, tier: Tier, u: Dp) {
     val stats = face.stats
     val su = with(LocalDensity.current) { u.toSp() }
+    val tone = if (art.neutral) tierColors(tier)[1] else art.element.mid.c()
     RarityFrame(art.rarity, u, { 0f }) {
         CardArt(art, Finish.NORMALE, Modifier.fillMaxSize())
-        Box(Modifier.fillMaxSize().background(Color(0xE6080A12)))
-        Column(Modifier.fillMaxSize().padding(u * 8), verticalArrangement = Arrangement.spacedBy(u * 2.2f)) {
-            Text(tr("Détail par muscle"), color = Color.White, fontSize = su * 6, fontWeight = FontWeight.ExtraBold)
-            for (s in Stat.families) {
-                val v = stats?.get(s)
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(tr(s.label), color = Color.White.copy(alpha = 0.85f), fontSize = su * 4.2f, modifier = Modifier.weight(1f))
-                        Text(tr(Element.of(s)!!.label) + (face.bonus[s]?.let { " " + Bonus.format(it) } ?: ""), color = Element.of(s)!!.mid.c(), fontSize = su * 3.4f, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = u * 2))
-                        Text(v?.toString() ?: "–", color = Color.White, fontSize = su * 4.6f, fontWeight = FontWeight.Black)
-                    }
-                    Box(Modifier.padding(top = u * 0.8f).fillMaxWidth().height(u * 1.4f).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.12f))) {
-                        Box(Modifier.fillMaxWidth(((v ?: 0) / 99f).coerceIn(0f, 1f)).fillMaxHeight().clip(RoundedCornerShape(50)).background(Brush.horizontalGradient(listOf(Element.of(s)!!.outer.c(), Element.of(s)!!.mid.c()))))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xD9080A12), Color(0xF2080A12)))))
+        Column(Modifier.fillMaxSize().padding(horizontal = u * 7).padding(top = u * 7, bottom = u * 5.5f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("@" + face.name, color = Color.White, fontSize = su * 6.4f, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tr(tier.label).uppercase(), color = tierColors(tier)[1], fontSize = su * 3.4f, fontWeight = FontWeight.Black, letterSpacing = su * 0.5f)
+                }
+                Text(stats?.ovr?.toString() ?: "–", color = Color.White, fontSize = su * 13, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.weight(1f))
+            if (stats != null) StatRadar(stats, Modifier.fillMaxWidth(), color = androidx.compose.ui.graphics.lerp(tone, Color.White, 0.3f),
+                valueSize = su * 6, codeSize = su * 3.4f, labelGap = u * 10, bonus = face.bonus)
+            Spacer(Modifier.weight(1f))
+            // Détail des quatre familles de muscles, avec le bonus du fond quand il en donne un.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(u * 2)) {
+                for (s in Stat.families) {
+                    val e = Element.of(s)!!
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(u * 3)).background(e.mid.c().copy(alpha = 0.14f)).border(u * 0.25f, e.mid.c().copy(alpha = 0.4f), RoundedCornerShape(u * 3)).padding(vertical = u * 1.6f),
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(s.code, color = Color.White.copy(alpha = 0.7f), fontSize = su * 3.2f, fontWeight = FontWeight.Bold)
+                        Text(face.bonus[s]?.let { Bonus.format(it) } ?: tr(e.label), color = e.mid.c(), fontSize = su * 3.2f, fontWeight = FontWeight.Black, maxLines = 1)
                     }
                 }
             }
-            Spacer(Modifier.weight(1f))
             stats?.mostProfitable?.let {
-                Text(tr("Le plus rentable") + " : " + tr(it.mine) + " (${stats[it]})", color = Color(0xFFFFD36B), fontSize = su * 4.2f, fontWeight = FontWeight.Bold)
+                Text(tr("Le plus rentable") + " : " + tr(it.mine) + " (${stats[it]})", color = Color(0xFFFFD36B), fontSize = su * 3.8f, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = u * 3))
             }
-            if (!art.neutral) Text(art.elements.joinToString(" + ") { tr(it.label) } + " · " + art.rarityText() + " · " + tr("Niv.") + " ${face.level} · " + Bonus.label(art, face.level, face.background?.finish ?: Finish.NORMALE),
-                color = art.element.mid.c(), fontSize = su * 3.6f, fontWeight = FontWeight.Bold)
-            Text(tr("Touchez pour retourner"), color = Color.White.copy(alpha = 0.45f), fontSize = su * 3.2f, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            if (!art.neutral) Text(art.rarityText() + " · " + tr("Niv.") + " ${face.level} · " + Bonus.label(art, face.level, face.background?.finish ?: Finish.NORMALE),
+                color = art.element.mid.c(), fontSize = su * 3.4f, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = u * 1.2f))
+            Text(tr("Touchez pour retourner"), color = Color.White.copy(alpha = 0.4f), fontSize = su * 3f, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = u * 2))
         }
     }
 }
 
-/** Carte d'album : fond, cadre de rareté, bandeau avec gemmes, élément et numéro. */
+/**
+ * Carte de fond, façon carte à collectionner : un bandeau de titre (biome et nom), l'illustration au centre, et un
+ * cartouche en bas avec la rareté, le bonus en duel, le numéro et le niveau. Non possédée : l'ombre de son biome.
+ */
 @Composable
 fun CollectibleCard(card: CardDef, finish: Finish, modifier: Modifier = Modifier, owned: Boolean = true, live: Boolean = false, tilt: () -> Offset = { Offset.Zero }, level: Int? = null) {
     val shiny = finish != Finish.NORMALE || card.rarity.big
@@ -342,35 +354,59 @@ fun CollectibleCard(card: CardDef, finish: Finish, modifier: Modifier = Modifier
         val u = maxWidth / 100
         val su = with(LocalDensity.current) { u.toSp() }
         val rc = rarityColors(card.rarity)
+        val tone = card.element.mid.c()
         if (!owned) {
-            Box(Modifier.fillMaxSize().clip(CardShape).background(Brush.verticalGradient(listOf(Color(0xFF1B1E27), Color(0xFF0C0D12)))).border(u * 1.2f, rc[1].copy(alpha = 0.35f), CardShape)) {
-                Text("?", color = Color.White.copy(alpha = 0.16f), fontSize = su * 40, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.Center).offset(y = -u * 8))
+            Box(Modifier.fillMaxSize().clip(CardShape)
+                .background(Brush.verticalGradient(listOf(androidx.compose.ui.graphics.lerp(card.element.outer.c(), Color(0xFF0B0D14), 0.78f), Color(0xFF090A10))))
+                .border(u * 1.2f, Brush.verticalGradient(listOf(tone.copy(alpha = 0.45f), rc[1].copy(alpha = 0.2f))), CardShape)) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val c = Offset(size.width / 2, size.height * 0.42f)
+                    drawCircle(Brush.radialGradient(listOf(tone.copy(alpha = 0.22f), Color.Transparent), c, size.width * 0.5f), size.width * 0.5f, c)
+                    drawCircle(tone.copy(alpha = 0.28f), size.width * 0.27f, c, style = Stroke(u.toPx() * 0.6f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(u.toPx() * 2.4f, u.toPx() * 2.4f))))
+                    with(Vfx) { emblem(card.element, c, size.width * 0.15f, Color.White.copy(alpha = 0.22f)) }
+                }
                 Column(Modifier.align(Alignment.BottomCenter).padding(bottom = u * 8), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(card.rarity.symbol, color = rc[1].copy(alpha = 0.7f), fontSize = su * 9, fontWeight = FontWeight.Black)
-                    Text(card.code, color = Color.White.copy(alpha = 0.45f), fontSize = su * 5, fontWeight = FontWeight.SemiBold)
+                    Text(card.rarity.symbol, color = rc[1].copy(alpha = 0.8f), fontSize = su * 7, fontWeight = FontWeight.Black)
+                    Text(card.code, color = Color.White.copy(alpha = 0.5f), fontSize = su * 5, fontWeight = FontWeight.SemiBold)
                 }
             }
             return@BoxWithConstraints
         }
         RarityFrame(card.rarity, u, { time }) {
             CardArt(card, finish, Modifier.fillMaxSize(), tilt, { time }, holo = shiny)
-            Row(Modifier.align(Alignment.TopStart).padding(u * 7), horizontalArrangement = Arrangement.spacedBy(-u * 3)) { card.elements.forEach { ElementChip(it, u * 1.3f) } }
-            if (finish != Finish.NORMALE) Text(when (finish) { Finish.CHROMATIQUE -> "✺"; Finish.ANIMEE -> "✦✦"; else -> "✦" }, color = Color.White, fontSize = su * 8, modifier = Modifier.align(Alignment.TopEnd).padding(u * 7))
             // Variante chromatique : liseré arc-en-ciel.
             if (finish == Finish.CHROMATIQUE) Canvas(Modifier.fillMaxSize()) {
                 drawRoundRect(Brush.sweepGradient(listOf(Color(0xFFFF4F7B), Color(0xFFFFD36B), Color(0xFF39D98A), Color(0xFF4FA8FF), Color(0xFFB46CFF), Color(0xFFFF4F7B))),
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.05f), style = Stroke(size.width * 0.018f))
             }
-            // Bandeau de rareté : couleur, gemmes et nom, lisibles même en vignette.
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f), Color.Black.copy(alpha = 0.85f))))
-                .padding(horizontal = u * 6).padding(top = u * 10, bottom = u * 7), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(card.name, color = Color.White, fontSize = su * 6.5f, fontWeight = FontWeight.Bold, maxLines = 2, textAlign = TextAlign.Center, lineHeight = su * 7.5f)
-                Row(Modifier.padding(top = u * 2).clip(RoundedCornerShape(50)).background(if (card.rarity == Rarity.EPIQUE) Brush.horizontalGradient(rc) else Brush.horizontalGradient(listOf(rc[3], rc[1], rc[3]))).padding(horizontal = u * 4, vertical = u * 1),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(card.rarity.symbol + " " + card.rarityText().uppercase(), color = Color.White, fontSize = su * 4.2f, fontWeight = FontWeight.Black, letterSpacing = su * 0.3f)
+            // Bandeau de titre : le ou les biomes, le nom, la finition.
+            Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.72f), Color.Black.copy(alpha = 0.4f), Color.Transparent)))
+                .padding(start = u * 5.5f, end = u * 6, top = u * 5.5f, bottom = u * 9), verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(-u * 3)) { card.elements.forEach { ElementChip(it, u * 1.15f) } }
+                Text(card.name, color = Color.White, fontSize = su * 6.2f, fontWeight = FontWeight.ExtraBold, maxLines = 2, lineHeight = su * 6.8f, overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.7f), Offset(0f, 1f), 4f)), modifier = Modifier.weight(1f).padding(start = u * 3))
+                if (finish != Finish.NORMALE) Text(when (finish) { Finish.CHROMATIQUE -> "✺"; Finish.ANIMEE -> "✦✦"; else -> "✦" }, color = Color.White, fontSize = su * 7, modifier = Modifier.padding(start = u * 2))
+            }
+            // Cartouche : rareté et bonus en duel, puis numéro et niveau.
+            val plate = RoundedCornerShape(u * 4.5f)
+            Column(Modifier.align(Alignment.BottomCenter).padding(horizontal = u * 5.5f).padding(bottom = u * 5.5f).fillMaxWidth().clip(plate)
+                .background(Brush.verticalGradient(listOf(Color(0xE6101320), Color(0xF207080D))))
+                .border(u * 0.35f, Brush.verticalGradient(listOf(rc[1].copy(alpha = 0.9f), rc[1].copy(alpha = 0.25f))), plate)
+                .padding(horizontal = u * 4, vertical = u * 3)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(card.rarity.symbol + " " + card.rarityText().uppercase(), fontSize = su * 4.1f, fontWeight = FontWeight.Black, letterSpacing = su * 0.25f, maxLines = 1,
+                        style = TextStyle(brush = if (card.rarity == Rarity.EPIQUE) Brush.horizontalGradient(rc) else Brush.horizontalGradient(listOf(rc[0], rc[1]))), modifier = Modifier.weight(1f))
                 }
-                Text(card.code + (level?.let { "  ·  " + "●".repeat(it) + "○".repeat(Levels.MAX - it) } ?: ""), color = Color.White.copy(alpha = 0.6f), fontSize = su * 4.2f,
-                    fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = u * 1.4f))
+                Text(Bonus.label(card, level ?: 1, finish) + " " + tr("en duel"), color = tone, fontSize = su * 4.1f, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = u * 0.6f))
+                Box(Modifier.padding(vertical = u * 1.8f).fillMaxWidth().height(u * 0.3f).background(Color.White.copy(alpha = 0.12f)))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(card.code, color = Color.White.copy(alpha = 0.6f), fontSize = su * 3.8f, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    // Niveau : une barrette par palier, allumée à la couleur du biome.
+                    if (level != null) Row(horizontalArrangement = Arrangement.spacedBy(u * 1.1f)) {
+                        repeat(Levels.MAX) { i -> Box(Modifier.size(width = u * 4.2f, height = u * 1.7f).clip(RoundedCornerShape(50)).background(if (i < level) tone else Color.White.copy(alpha = 0.16f))) }
+                    }
+                }
             }
         }
     }

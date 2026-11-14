@@ -96,7 +96,7 @@ internal fun ArenaHero(nav: NavHostController) {
                 color = a.muted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (st.packsAvailable > 0) Pill("${st.packsAvailable} " + tr(if (st.packsAvailable > 1) "packs offerts" else "pack offert"), a.pack, a.chip)
-                Pill("${st.eclats} " + tr("éclats"), a.eclat, a.chip)
+                Pill("${st.eclats} " + tr("or"), a.eclat, a.chip)
             }
             GlowButton(tr("Ouvrir un pack"), Modifier.padding(top = 10.dp).fillMaxWidth().height(44.dp), listOf(tint, camp?.mid?.c() ?: Color(0xFF8AE0FF)),
                 badge = st.packsAvailable.takeIf { it > 0 }?.toString()) { nav.go("cards/packs") }
@@ -290,8 +290,8 @@ internal fun ArenaQuests(nav: NavHostController) {
 }
 
 /**
- * Badges et séries dans l'Arène : le prochain palier de chaque type (avec ses éclats), les séries tenues et leur bonus de
- * la semaine, et un bouton qui récupère tout d'un coup. Plus secondaire que les quêtes : tout finit en éclats, donc en packs.
+ * Badges et séries dans l'Arène : le prochain palier de chaque type (avec son or), les séries tenues et leur bonus de
+ * la semaine, et un bouton qui récupère tout d'un coup. Plus secondaire que les quêtes : tout finit en or, donc en packs.
  */
 @Composable
 internal fun ArenaBadges(nav: NavHostController) {
@@ -314,7 +314,7 @@ internal fun ArenaBadges(nav: NavHostController) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Badges et séries"), color = blue, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                Text(tr("Chaque palier et chaque semaine tenue rapportent des éclats"), color = a.muted, fontSize = 11.sp)
+                Text(tr("Chaque palier et chaque semaine tenue rapportent de l'or"), color = a.muted, fontSize = 11.sp)
             }
             val total = payout.badges.sumOf(app.superhealth.league.Achievements::reward) + payout.streaks.filter { it.claimable }.sumOf { it.reward }
             if (total > 0) Text(if (busy) "…" else "+$total ✦", color = Ink, fontWeight = FontWeight.Black, fontSize = 13.sp,
