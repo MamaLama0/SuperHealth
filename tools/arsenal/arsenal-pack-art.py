@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
 
-ROOT = Path(__file__).resolve().parents[1] / "app/src/superhealth/assets/arsenal"
+ROOT = Path(__file__).resolve().parents[2] / "app/src/superhealth/assets/arsenal"
 # The same engraving families are printed on both sides of each foil sachet.
 FAMILIES = {
     "weapon": ("bra-2", "#893448", "#260d22", "#ffe0a3", "#f7796a", "#f7d5aa",

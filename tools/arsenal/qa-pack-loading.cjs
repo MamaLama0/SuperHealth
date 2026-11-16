@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const assets = path.join(__dirname, '../app/src/superhealth/assets/arsenal');
+const assets = path.join(__dirname, '../../app/src/superhealth/assets/arsenal');
 function boot(native) {
   const messages = [], nodes = new Map();
   function node() {

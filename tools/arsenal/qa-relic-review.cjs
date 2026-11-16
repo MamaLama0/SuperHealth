@@ -3,7 +3,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
 (async()=>{const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/opt/helium/chrome',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
 try{
  const page=await browser.newPage({viewport:{width:1300,height:950},acceptDownloads:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- const url='file://'+path.resolve(__dirname,'../review/arsenal-rework/index.html');await page.goto(url);
+ const url='file://'+path.resolve(__dirname,'../../review/arsenal-rework/index.html');await page.goto(url);
  assert.equal(await page.locator('#count').innerText(),'550 objets');assert.equal(await page.locator('.tile').count(),12);
  await page.locator('[data-score="4"]').click();await page.locator('[data-decision="rework"]').click();
  const note='Belle forme, métal plus sombre. <script>window.injected=true</script>';await page.locator('#comment').fill(note);

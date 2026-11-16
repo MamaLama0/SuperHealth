@@ -5,7 +5,7 @@ Même format compact que swissfcdb.json, lu par UsdaFoods.kt :
   {"v": version, "n": [codes micros], "f": [[id, nom, synonymes, catégorie, kcal, prot, lip, gluc, fibres, sucres, AGS, sel, {micro: valeur}]]}
 Valeurs pour 100 g. Les glucides sont « disponibles » (par différence moins fibres), comme la base suisse.
 
-Usage : python3 -I tools/import_usda_fdc.py <dossier FoodData_Central_sr_legacy_food_csv_*> <sortie.json>
+Usage : python3 -I tools/nutrition/import_usda_fdc.py <dossier FoodData_Central_sr_legacy_food_csv_*> <sortie.json>
 """
 import csv
 import json

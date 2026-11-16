@@ -8,7 +8,7 @@ import json
 import subprocess
 from tempfile import TemporaryDirectory
 
-ROOT = Path(__file__).resolve().parents[1] / 'app/src/superhealth/assets/arsenal'
+ROOT = Path(__file__).resolve().parents[2] / 'app/src/superhealth/assets/arsenal'
 
 
 def emblem(weapon, gold):

@@ -1,5 +1,5 @@
 // Pixel-art 16x16 dans le style du pack, à partir des icônes plates MacroFactor.
-// usage: node tools/pixel_food_icons.js <IconSheet 16x16 en rgba brut, via magick ... rgba:-> <outdir> <id:path.webp>...
+// usage: node tools/nutrition/pixel_food_icons.js <IconSheet 16x16 en rgba brut, via magick ... rgba:-> <outdir> <id:path.webp>...
 const fs = require("fs");
 const { execFileSync } = require("child_process");
 

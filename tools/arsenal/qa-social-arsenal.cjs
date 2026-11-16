@@ -10,7 +10,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),path
   for(const family of ['weapon','chest'])for(const golden of [false,true]) {
    await page.evaluate(({family,golden})=>arena.select(family,golden,true,0,golden?'or-solaire':''),{family,golden});
    await page.waitForFunction(()=>ready,null,{timeout:15000});
-   await page.screenshot({path:path.join(__dirname,'../review/social-arena',family+(golden?'-gold':'')+'.png')});
+   await page.screenshot({path:path.join(__dirname,'../../review/social-arena',family+(golden?'-gold':'')+'.png')});
   }
   const counts=await page.evaluate(()=>({
    stats:[...new Set(ArsenalCatalog.allCatalog.map(c=>c.stat))].sort(),

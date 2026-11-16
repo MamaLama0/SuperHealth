@@ -2,7 +2,7 @@
 """Build the Zepp OS exercise catalog from captured training-template JSON files.
 
 Usage:
-    tools/zeppos_exercise_catalog.py [-c CAPTURES] [-o OUTPUT] [--check]
+    tools/exercises/zeppos_exercise_catalog.py [-c CAPTURES] [-o OUTPUT] [--check]
 """
 
 import argparse

@@ -5,7 +5,7 @@ import app.superhealth.nutrition.domain.Settings
 
 /**
  * USDA FoodData Central, SR Legacy (domaine public), en anglais et embarquée (assets/usdafcdb.json, générée par
- * tools/import_usda_fdc.py). Hors ligne, avec micronutriments ; complète la base suisse sans la remplacer.
+ * tools/nutrition/import_usda_fdc.py). Hors ligne, avec micronutriments ; complète la base suisse sans la remplacer.
  */
 object UsdaFoods {
     const val SOURCE = "usda"

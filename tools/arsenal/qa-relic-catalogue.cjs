@@ -1,11 +1,11 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
-const root=path.join(__dirname,'../app/src/superhealth/assets/arsenal'),ctx=vm.createContext({});
+const root=path.join(__dirname,'../../app/src/superhealth/assets/arsenal'),ctx=vm.createContext({});
 for(const file of ['cartes','armes-etudes','equipment-expansion','classes','relic-expansion','relic-sculpt','relic-forge','relic-art','relic-curation','fantasy-art','atelier-data','atelier-images','atelier-art','refinement-data','refined-art','catalogue'])vm.runInContext(fs.readFileSync(path.join(root,file+'.js'),'utf8'),ctx);
 const cards=vm.runInContext('ArsenalCatalog.catalog',ctx),loot=JSON.parse(fs.readFileSync(path.join(root,'loot.json')));
 assert.equal(cards.length,550);assert.equal(new Set(cards.map(c=>c.id)).size,550);
 const all=vm.runInContext('ArsenalCatalog.allCatalog',ctx);assert.equal(all.length,634);assert.equal(all.filter(c=>c.available===false).length,84);
-assert.deepEqual(JSON.parse(fs.readFileSync(path.join(__dirname,'../../SuperHealth-server/arsenal-catalogue.json'))),loot);
+assert.deepEqual(JSON.parse(fs.readFileSync(path.join(__dirname,'../../../SuperHealth-server/arsenal-catalogue.json'))),loot);
 assert.equal(cards.filter(c=>c.tier>=3).length,182);
 assert.equal(cards.filter(c=>c.signature).length,30);
 assert.equal(cards.filter(c=>c.introduced===6).length,150);
@@ -43,7 +43,7 @@ assert.equal(sets.size,66);
 for(const [id,pieces] of sets){assert.deepEqual(pieces.map(c=>c.slot).sort(),['chest','guard','legs','weapon'],id+' full set');assert(pieces[0].damageTypes.some(t=>pieces.every(c=>c.damageTypes.includes(t))),id+' shared affinity');}
 for(const type of ['MELEE','RANGED','ARCANIST','DIVINE'])for(let tier=0;tier<5;tier++)for(const slot of ['weapon','chest','guard','legs'])assert(cards.some(c=>c.tier===tier&&c.slot===slot&&c.damageTypes.includes(type)),[type,tier,slot]+' missing equipment');
 assert(cards.some(c=>c.tier===4&&c.damageTypes.length===1));
-const icons=vm.runInContext('RelicCuration.types',ctx),native=fs.readFileSync(path.join(__dirname,'../app/src/superhealth/java/app/superhealth/ui/cards/DamageIcons.kt'),'utf8');
+const icons=vm.runInContext('RelicCuration.types',ctx),native=fs.readFileSync(path.join(__dirname,'../../app/src/superhealth/java/app/superhealth/ui/cards/DamageIcons.kt'),'utf8');
 for(const spec of Object.values(icons))assert(native.includes(spec.path),'Native/card icon mismatch');
 if(process.argv[2]){
   const before=JSON.parse(fs.readFileSync(process.argv[2]));

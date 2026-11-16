@@ -3,7 +3,7 @@
 // NODE_PATH may point at an existing Playwright installation. No downloads are performed.
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=path.join(__dirname,'..'),out=path.join(root,'app/src/superhealth/assets/arsenal-thumbs');
+const root=path.join(__dirname,'../..'),out=path.join(root,'app/src/superhealth/assets/arsenal-thumbs');
 (async()=>{
   const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/opt/helium/chrome',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
   try{

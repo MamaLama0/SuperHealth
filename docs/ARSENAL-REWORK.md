@@ -66,7 +66,7 @@ lors de cette passe visuelle. Une double affinité partage le poids d’une piè
 ## Recueillir les avis
 
 - Galerie : `app/src/superhealth/assets/arsenal/review.html`.
-- Copie autonome hors ligne : `review/arsenal-rework/index.html`, générée par `tools/build-relic-review.cjs` (non versionnée).
+- Copie autonome hors ligne : `review/arsenal-rework/index.html`, générée par `tools/arsenal/build-relic-review.cjs` (non versionnée).
 - Notes de 1 à 5, Garder / Retoucher / Retirer, commentaire libre.
 - Filtres de rareté, affinité, emplacement, ensemble, verdict et signature.
 - Recherche par nom, type, matériau et ID ; reprise de la carte et des filtres.
@@ -87,10 +87,10 @@ esthétique finale appartient au retour carte par carte de l’utilisateur.
 Commandes de reconstruction :
 
 ```sh
-node tools/build-refined-assets.cjs
-node tools/equipment-catalogue.cjs
+node tools/arsenal/build-refined-assets.cjs
+node tools/arsenal/equipment-catalogue.cjs
 cp app/src/superhealth/assets/arsenal/loot.json ../SuperHealth-server/arsenal-catalogue.json
-node tools/build-relic-review.cjs
+node tools/arsenal/build-relic-review.cjs
 ```
 
 Contrôles exécutés pour cette version :
@@ -136,7 +136,7 @@ silhouette/texte hors cadre, 2 400 combinaisons de finition, parité du catalogu
 Les 36 planches ont été régénérées. Inspection visuelle des 100 protections,
 des 100 pièces de jambes, et de toutes les épiques/légendaires des autres familles.
 
-`tools/qa-relic-prestige.cjs` vérifie en plus les cartes normales de trois raretés,
+`tools/arsenal/qa-relic-prestige.cjs` vérifie en plus les cartes normales de trois raretés,
 leur récapitulatif, WebGL, le rendu de secours et la réduction des animations.
 Le scénario attend le chargement du paquet sélectionné avant de simuler son
 ouverture, comme le bouton réel ; un lancement prématuré déclenchait le délai

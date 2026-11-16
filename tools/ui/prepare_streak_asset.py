@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Adapt the attributed Rive source for continuous native flame animation.
 
-Usage: python3 tools/prepare_streak_asset.py ORIGINAL.riv OUTPUT.riv
+Usage: python3 tools/ui/prepare_streak_asset.py ORIGINAL.riv OUTPUT.riv
 Source: https://rive.app/marketplace/28627-54130-streak-animation-improved/
 CC BY 4.0, indoorraccoon, remix of Dynamic streak fire by aristote.
 The two changes set StateTransitionFlags.Disabled (bit 0), defined by

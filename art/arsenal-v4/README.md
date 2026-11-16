@@ -31,9 +31,9 @@ Depuis la racine du dépôt Android :
 
 ```sh
 blender -b -noaudio -t 8 --python art/arsenal-v4/build.py -- --samples 48
-python3 tools/build-atelier-assets.py
-node tools/equipment-catalogue.cjs
-node tools/build-relic-review.cjs
+python3 tools/arsenal/build-atelier-assets.py
+node tools/arsenal/equipment-catalogue.cjs
+node tools/arsenal/build-relic-review.cjs
 ```
 
 `--ids id1,id2` permet de reprendre quelques modèles seulement. Le rendu utilise

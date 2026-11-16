@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Vérifie les vraies cartes et RemoteViews sur des appareils ADB, exclusivement dans app.superhealth.qa.
 
-Exemple : python3 tools/qa_widgets.py --serial SERIAL_A --serial SERIAL_B --output /tmp/sh-widgets
+Exemple : python3 tools/qa/qa_widgets.py --serial SERIAL_A --serial SERIAL_B --output /tmp/sh-widgets
 Les réglages d'apparence de la QA, le thème Android et la police système sont restaurés à la fin.
 Aucune donnée de suivi n'est injectée et aucune installation personnelle n'est modifiée.
 """

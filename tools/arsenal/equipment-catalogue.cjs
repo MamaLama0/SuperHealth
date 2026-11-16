@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const dir = path.join(__dirname, '../app/src/superhealth/assets/arsenal');
+const dir = path.join(__dirname, '../../app/src/superhealth/assets/arsenal');
 const renderer = vm.createContext({});
 for (const name of ['cartes.js', 'armes-etudes.js', 'equipment-expansion.js', 'classes.js', 'relic-expansion.js', 'relic-sculpt.js', 'relic-forge.js', 'relic-art.js', 'relic-curation.js', 'fantasy-art.js', 'atelier-data.js', 'atelier-images.js', 'atelier-art.js', 'refinement-data.js', 'refined-art.js', 'catalogue.js']) {
   vm.runInContext(fs.readFileSync(path.join(dir, name), 'utf8'), renderer);

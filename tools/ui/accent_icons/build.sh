@@ -3,7 +3,7 @@
 # res/mipmap-*/sh_launcher_foreground_<accent>.png et res/mipmap-anydpi-v26/ic_launcher_<accent>.xml.
 # Le rose garde l'icône d'origine. Relancer après un changement de l'icône de base.
 set -euo pipefail
-cd "$(dirname "$0")/../../app/src/superhealth/res"
+cd "$(dirname "$0")/../../../app/src/superhealth/res"
 declare -A COLORS=([blue]=4285F4 [green]=34A853 [yellow]=F9B500 [purple]=9C5AE6 [orange]=F2803A [gray]=8E9199)
 mix() { # mix <hex> <hex2> <part de hex2 0..100>
   python3 - "$1" "$2" "$3" <<'PY'

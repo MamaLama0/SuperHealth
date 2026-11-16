@@ -2,7 +2,7 @@
 """Build the Garmin exercise catalog from the FIT profile and the picker name lists.
 
 Usage:
-    tools/garmin_exercise_catalog.py [-p PROFILE] [-l LISTS] [-o OUTPUT] [--check]
+    tools/exercises/garmin_exercise_catalog.py [-p PROFILE] [-l LISTS] [-o OUTPUT] [--check]
 
 This takes:
 * The (exercise_category, exercise_name) pairs from FIT profile (fit_profile.json)

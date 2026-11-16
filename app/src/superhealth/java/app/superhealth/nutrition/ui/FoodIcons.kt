@@ -18,7 +18,7 @@ import java.text.Normalizer
  * Les noms français sont traduits mot à mot via [FR_EN] avant la recherche.
  * assets/foods/pack.json échange une partie de ces icônes contre le pack pixel-art acheté (foods/pack/NNN.png, 16×16)
  * et ajoute quelques aliments absents de MacroFactor (identifiants « pNNN ») ; les autres ont une version pixel-art générée
- * dans le même style (foods/gen/iNNNN.png, tools/pixel_food_icons.js).
+ * dans le même style (foods/gen/iNNNN.png, tools/nutrition/pixel_food_icons.js).
  */
 object FoodIcons {
     @Serializable

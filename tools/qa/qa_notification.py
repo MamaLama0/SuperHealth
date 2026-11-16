@@ -75,7 +75,7 @@ def main():
         nodes()
         activity = shell('dumpsys', 'activity', 'activities').stdout.decode()
         resumed = [line for line in activity.splitlines() if 'ResumedActivity' in line]
-        manifest = ET.parse(pathlib.Path(__file__).resolve().parents[1] / 'app/src/superhealth/AndroidManifest.xml')
+        manifest = ET.parse(pathlib.Path(__file__).resolve().parents[2] / 'app/src/superhealth/AndroidManifest.xml')
         android = '{http://schemas.android.com/apk/res/android}'
         launchers = ['app.superhealth.MainActivity'] + [n.get(android + 'name') for n in manifest.iter('activity-alias') if n.get(android + 'targetActivity') == 'app.superhealth.MainActivity']
         assert any(PACKAGE + '/' + target in line for line in resumed for target in launchers), 'Battery notification opened an unexpected activity'

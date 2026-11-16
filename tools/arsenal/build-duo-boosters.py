@@ -4,7 +4,7 @@ import json
 import subprocess
 from tempfile import TemporaryDirectory
 
-root = Path(__file__).resolve().parents[1] / 'app/src/superhealth/assets/arsenal'
+root = Path(__file__).resolve().parents[2] / 'app/src/superhealth/assets/arsenal'
 
 def wrapper(kind, gold, back):
     weapon = kind == 'weapon'

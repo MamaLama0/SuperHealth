@@ -1,7 +1,7 @@
 'use strict';
 // The authored manifest is the source of truth. No image service is involved.
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=path.join(__dirname,'..');
+const root=path.join(__dirname,'../..');
 const original=JSON.parse(fs.readFileSync(path.join(root,'art/arsenal-v5/refinements.json'),'utf8'));
 const additions=JSON.parse(fs.readFileSync(path.join(root,'art/arsenal-expansion/items.json'),'utf8'));
 assert.equal(Object.keys(original).length,400);assert.equal(Object.keys(additions).length,150);

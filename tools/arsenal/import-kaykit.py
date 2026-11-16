@@ -1,7 +1,7 @@
 """Convert the CC0 KayKit miniatures for the Arsenal viewer.
 
 Run with Blender in background:
-  blender -b -t 2 --python tools/import-kaykit.py -- <Adventurers zip> <Skeletons zip> <Arsenal assets>
+  blender -b -t 2 --python tools/arsenal/import-kaykit.py -- <Adventurers zip> <Skeletons zip> <Arsenal assets>
 """
 from pathlib import Path
 import array

@@ -34,6 +34,6 @@ Les APK sont sous `app/build/outputs/apk/superhealth/`. Les fonctions locales se
 
 Indiquez la plateforme, la version, les étapes, le résultat attendu et le résultat observé. Une PR explique le changement et les vérifications réellement faites. Testez les parcours concernés en français et en anglais ; vérifiez chargements, erreurs et conservation des données. Ajoutez un test de régression lorsqu’il est utile.
 
-Ne joignez pas de secrets, codes amis ou données de santé. Masquez les informations personnelles des captures. Conservez les licences et attributions des sources et ressources tierces. Les [crédits SuperHealth](CONTRIBUTORS.rst) sont séparés de l’historique Gadgetbridge.
+Ne joignez pas de secrets, codes amis ou données de santé. Masquez les informations personnelles des captures. Conservez les licences et attributions des sources et ressources tierces. Les contributions à SuperHealth sont suivies dans l’historique des commits et les pull requests ; les [crédits historiques de Gadgetbridge](docs/upstream/Gadgetbridge-CONTRIBUTORS.rst) en sont séparés.
 
 Les notes de version publiques restent centrées sur l’utilisateur : 1 à 4 puces, 80 mots maximum, sans diagnostics ni données privées. Le mainteneur gère les numéros de version et la publication.

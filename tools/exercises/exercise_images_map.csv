@@ -1,6 +1,6 @@
 # Image redessinée (../Asset-free/assets/exbis) -> image d'origine qu'elle remplace (../Asset-free/assets/ex).
 # Ordre de l'utilisateur : ex1-ex6 = tri naturel des noms d'origine, ex7 = tri alphabétique du reste ; vérifié image par image
-# (silhouettes comparées, 39 paires les moins proches contrôlées à l'oeil). Après modification : python3 tools/exercise_images.py
+# (silhouettes comparées, 39 paires les moins proches contrôlées à l'oeil). Après modification : python3 tools/exercises/exercise_images.py
 exbis,ex
 ex1/filename_prefix_0001.png,1a05c6f170d880a5b43fe13bcb1b6f3a_a.webp
 ex1/filename_prefix_0002.png,1a05c6f170d880a5b43fe13bcb1b6f3a_b.webp

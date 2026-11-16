@@ -8,7 +8,7 @@ from pathlib import Path
 import math
 import struct
 
-ROOT = Path(__file__).resolve().parents[1] / 'app/src/superhealth/assets/arsenal'
+ROOT = Path(__file__).resolve().parents[2] / 'app/src/superhealth/assets/arsenal'
 BOTTOM, TOP = -1.74, .26
 NX = 64
 

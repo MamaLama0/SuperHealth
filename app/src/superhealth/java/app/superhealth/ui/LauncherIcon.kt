@@ -7,7 +7,7 @@ import app.superhealth.nutrition.domain.AccentColor
 
 /**
  * Icône du lanceur : le cœur prend la couleur d'accent choisie (alias d'activité du manifeste, un seul activé à la fois).
- * Les images viennent de tools/accent_icons/build.sh ; le rose garde l'icône d'origine.
+ * Les images viennent de tools/ui/accent_icons/build.sh ; le rose garde l'icône d'origine.
  */
 object LauncherIcon {
     private fun alias(a: AccentColor) = "app.superhealth.Launcher" + when (a) {
