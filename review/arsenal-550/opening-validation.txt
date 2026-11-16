@@ -1,1 +1,0 @@
-Opening + six finishes + animated layers + summary, WebGL and fallback: OK

@@ -66,7 +66,7 @@ lors de cette passe visuelle. Une double affinité partage le poids d’une piè
 ## Recueillir les avis
 
 - Galerie : `app/src/superhealth/assets/arsenal/review.html`.
-- Copie autonome hors ligne : `review/arsenal-rework/index.html`.
+- Copie autonome hors ligne : `review/arsenal-rework/index.html`, générée par `tools/build-relic-review.cjs` (non versionnée).
 - Notes de 1 à 5, Garder / Retoucher / Retirer, commentaire libre.
 - Filtres de rareté, affinité, emplacement, ensemble, verdict et signature.
 - Recherche par nom, type, matériau et ID ; reprise de la carte et des filtres.
@@ -79,8 +79,8 @@ Les avis appartiennent au navigateur utilisé. Pour les transmettre, exporter
 
 ## Contrôles et reconstruction
 
-Les 36 planches avant et après se trouvent dans `review/arsenal-v5/`.
-`audit.json` relie chaque ID à sa planche et sa cellule. La comparaison visuelle
+Les 36 planches avant et après se génèrent localement dans `review/arsenal-v5/`
+(dossier non versionné). `audit.json` y relie chaque ID à sa planche et sa cellule. La comparaison visuelle
 porte sur les 400 silhouettes, leur dénomination et leur lisibilité ; l’évaluation
 esthétique finale appartient au retour carte par carte de l’utilisateur.
 
@@ -113,7 +113,7 @@ Les preuves de contrôle sont internes ; elles ne constituent pas un changelog p
 
 Cette passe reste dans l’édition vectorielle 5 et ne modifie aucun ID, jet,
 ensemble, effet de jeu ou inventaire. Les fichiers de comparaison de cette passe
-sont regroupés dans `review/arsenal-v6/` ; « v6 » désigne ici l’audit graphique,
+se génèrent dans `review/arsenal-v6/` (non versionné) ; « v6 » désigne ici l’audit graphique,
 pas une migration du catalogue.
 
 - Bottes reconstruites en vue de trois quarts : cheville resserrée, cou-de-pied,
@@ -187,7 +187,7 @@ client compatible. Cette passe modifie les sources du serveur, sans déploiement
 Contrôles de l’extension :
 - inspection visuelle des 150 ajouts sur 14 planches, avec seconde inspection
   des dessins corrigés ; correspondance ID/planche/cellule dans
-  `review/arsenal-550/audit.json` ;
+  `review/arsenal-550/audit.json` (généré localement) ;
 - rendu des 550 SVG, cadrage des objets et textes, 3 300 combinaisons de finition,
   miniatures de collection régénérées et parité client/serveur ;
 - 66 ensembles complets, unicité des noms et conservation des 484 définitions ;

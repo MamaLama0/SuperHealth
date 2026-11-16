@@ -79,3 +79,6 @@ __pycache__/
 
 # Distribution relay (local only)
 local.server.properties
+
+# QA outputs (captures, audits) generated locally by tools/
+review/
