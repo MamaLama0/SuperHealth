@@ -548,6 +548,7 @@ internal fun FamilyCard(c: DashCard, size: CardSize, vm: SuperViewModel, nav: Na
         c == DashCard.PROGRESSION -> WProgression(size, i, m, refresh) { nav.go("progress") }
         c == DashCard.FRIENDS -> WFriends(size, i, m) { nav.go("friends") }
         c == DashCard.STREAKS -> WStreaksHero(size, m, refresh) { nav.go("progress") }
+        c == DashCard.WATCH_BATTERY -> WMontre(size, i, m) { nav.go("h/devices") }
         else -> return false
     }
     return true

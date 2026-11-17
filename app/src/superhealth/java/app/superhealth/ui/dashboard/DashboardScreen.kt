@@ -234,6 +234,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.WEEK_COMPARE -> HealthHues.Respiration
     DashCard.ACTIVE_DAYS -> HealthHues.Fitness
     DashCard.HOURLY_STEPS -> HealthHues.Activity
+    DashCard.WATCH_BATTERY -> app.superhealth.ui.theme.Base.Green
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -298,6 +299,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.WEEK_COMPARE -> Icons.Rounded.DateRange
     DashCard.ACTIVE_DAYS -> Icons.Rounded.CalendarMonth
     DashCard.HOURLY_STEPS -> Icons.Rounded.Schedule
+    DashCard.WATCH_BATTERY -> Icons.Rounded.Watch
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -417,7 +419,8 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     val name = remember(refresh) { app.superhealth.ui.userName() }
     val modules by app.superhealth.modules.Modules.installed.collectAsState()
     val visible = remember(cards, sh.watchModule, sh.healthConnect, sh.leagueEnabled, sh.coachEnabled, devices.size, refresh, modules) {
-        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) }
+        cards.filter { (!it.watch || hasSource(it)) && it.available && (!it.isWatchChart || watchSource(it)) &&
+            (it != DashCard.WATCH_BATTERY || (sh.watchModule && devices.isNotEmpty())) }
     }
     // ressenti du matin : les questions sur la première carte à score visible, en grand de préférence
     checkinFirst = visible.filter { it in app.superhealth.ui.wellbeing.CHECKIN_GATED }
@@ -990,7 +993,8 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     }
     when (c) {
         // dessinées par leur famille (ci-dessus)
-        DashCard.QUESTS, DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS -> Unit
+        DashCard.QUESTS, DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS,
+        DashCard.WATCH_BATTERY -> Unit
         DashCard.MOOD -> MoodCard(c, modifier, nav)
         DashCard.WEEK_COMPARE -> WeekCompareCard(c, vm, modifier) { tab("activities") }
         DashCard.ACTIVE_DAYS -> ActiveDaysCard(c, vm, modifier) { tab("activities") }

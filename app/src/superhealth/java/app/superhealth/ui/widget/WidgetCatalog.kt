@@ -28,6 +28,7 @@ object WidgetCatalog {
         Entry("mind", "Santé", MindWidgetReceiver::class.java, R.string.widget_mind_name, R.string.widget_mind_desc),
         Entry("overview", "Santé", OverviewWidgetReceiver::class.java, R.string.widget_overview_name, R.string.widget_overview_desc),
         Entry("chargeeffort", "Santé", ChargeEffortWidgetReceiver::class.java, R.string.widget_chargeeffort_name, R.string.widget_chargeeffort_desc),
+        Entry("watch", "Santé", WatchBatteryWidgetReceiver::class.java, R.string.widget_watch_name, R.string.widget_watch_desc),
         Entry("today", "Nutrition", TodayWidgetReceiver::class.java, R.string.widget_today_name, R.string.widget_today_desc),
         Entry("kcal", "Nutrition", KcalWidgetReceiver::class.java, R.string.widget_kcal_name, R.string.widget_kcal_desc),
         Entry("macros", "Nutrition", app.superhealth.nutrition.widget.MacrosWidgetReceiver::class.java, R.string.widget_macros_name, R.string.widget_macros_desc),

@@ -50,7 +50,7 @@ private val EffortBlue = Color(0xFF3F8CFF)
 private val Gold = Color(0xFFF2A93B)
 
 /** Jauge en arc (270°), comme sur le tableau de bord. */
-private fun gauge(fraction: Float?, color: Color, px: Int): Bitmap {
+internal fun gauge(fraction: Float?, color: Color, px: Int): Bitmap {
     val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
     val c = android.graphics.Canvas(bmp)
     val s = px * 0.1f
@@ -62,7 +62,7 @@ private fun gauge(fraction: Float?, color: Color, px: Int): Bitmap {
 }
 
 @Composable
-private fun GaugeBox(bmp: Bitmap, value: String, unit: String?, color: Color, size: androidx.compose.ui.unit.Dp) {
+internal fun GaugeBox(bmp: Bitmap, value: String, unit: String?, color: Color, size: androidx.compose.ui.unit.Dp) {
     Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
         Image(ImageProvider(bmp), null, GlanceModifier.size(size))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

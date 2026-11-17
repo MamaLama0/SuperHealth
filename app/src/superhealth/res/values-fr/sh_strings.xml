@@ -29,6 +29,8 @@
     <string name="widget_vo2_desc">VO₂ max, niveau de forme et évolution sur 90 jours</string>
     <string name="widget_chargeeffort_name">Charge et effort</string>
     <string name="widget_chargeeffort_desc">Récupération du matin et charge cardio du jour</string>
+    <string name="widget_watch_name">Montre</string>
+    <string name="widget_watch_desc">Batterie et connexion de la montre</string>
     <string name="widget_sleep_name">Sommeil</string>
     <string name="widget_sleep_desc">Durée et phases de la nuit</string>
     <string name="widget_overview_name">Aperçu</string>

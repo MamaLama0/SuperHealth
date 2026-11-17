@@ -87,7 +87,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** 3.6 : douze semaines de jours actifs. */
     ACTIVE_DAYS("Jours actifs", Section.TRAINING),
     /** 3.6 : pas d'aujourd'hui heure par heure. */
-    HOURLY_STEPS("Pas par heure", Section.HEALTH);
+    HOURLY_STEPS("Pas par heure", Section.HEALTH),
+    /** Batterie et connexion de la montre (masquée sans montre associée). */
+    WATCH_BATTERY("Batterie de la montre", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement"), SOCIAL("Social") }
 
@@ -99,7 +101,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
         val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
 
         /** Sélection de départ : l'essentiel de chaque module, sans surcharger l'écran. */
-        val defaults = listOf(RINGS, CALORIES, HYDRATION, NEXT_WORKOUT)
+        val defaults = listOf(RINGS, CALORIES, HYDRATION, NEXT_WORKOUT, WATCH_BATTERY)
     }
 }
 
@@ -131,7 +133,7 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.QUESTS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
     DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD,
-    DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART)
+    DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.WATCH_BATTERY)
 
 /** Module téléchargeable dont dépend la carte (null : toujours disponible). */
 val DashCard.module: String? get() = when (this) {
@@ -238,7 +240,7 @@ fun DashCard.feature(): Feature? = when (this) {
     DashCard.TRAINING_WEEK, DashCard.MUSCLES, DashCard.RECORDS, DashCard.NEXT_WORKOUT, DashCard.TRAINING_TRENDS,
     DashCard.MUSCLE_SETS, DashCard.LIFTS -> Feature.TRAINING
     DashCard.STEPS, DashCard.RUNNING, DashCard.RECOVERY, DashCard.ACTIVITIES, DashCard.DAY_TIMELINE, DashCard.FORM,
-    DashCard.HOURLY_STEPS, DashCard.ACTIVE_DAYS -> Feature.HEALTH
+    DashCard.HOURLY_STEPS, DashCard.ACTIVE_DAYS, DashCard.WATCH_BATTERY -> Feature.HEALTH
     DashCard.MOOD -> Feature.JOURNAL
     DashCard.CYCLE -> Feature.CYCLE
     else -> if (watch) Feature.HEALTH else null
@@ -311,6 +313,8 @@ data class SuperSettings(
     val notifyRest: Boolean = true,
     /** Séance, randonnée, méditation et rappels de médicaments dans l'île de Notch quand Notch est installé (notch/NotchBridge). */
     val notchIsland: Boolean = true,
+    /** Carte « Batterie de la montre » déjà ajoutée au tableau de bord (migration unique). */
+    val watchBatteryAdded: Boolean = false,
     val remindLog: Int = -1,
     val remindJournal: Int = -1,
     val remindBedtime: Boolean = false,
@@ -614,7 +618,16 @@ object SuperPrefs {
         if (!_settings.value.streakHeroAdded || DashCard.STREAKS in _settings.value.dashboard) update { s ->
             s.copy(dashboard = withQuestHero(s.dashboard), streakHeroAdded = true)
         }
-        if (newProfile) update { it.copy(dashboard = DashCard.defaults, appTourPending = true) }
+        // Batterie de la montre : ajoutée une fois, après les constantes (ou les anneaux) ; masquée sans montre associée.
+        if (!_settings.value.watchBatteryAdded) update { s ->
+            val cards = s.dashboard.toMutableList()
+            if (DashCard.WATCH_BATTERY !in cards) {
+                val after = maxOf(cards.indexOf(DashCard.VITALS), cards.indexOf(DashCard.RINGS))
+                cards.add(if (after >= 0) after + 1 else 0, DashCard.WATCH_BATTERY)
+            }
+            s.copy(dashboard = cards, watchBatteryAdded = true)
+        }
+        if (newProfile) update { it.copy(dashboard = DashCard.defaults, appTourPending = true, watchBatteryAdded = true) }
         _hc.value = sp.getString("hc", null)?.let { runCatching { SuperJson.decodeFromString(HcCache.serializer(), it) }.getOrNull() } ?: HcCache()
     }
 
