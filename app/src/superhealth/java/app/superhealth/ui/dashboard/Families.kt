@@ -924,12 +924,13 @@ private fun usual(v: List<Double>): Pair<Double, Double>? {
 private fun liveBpm(h: HealthSnap): Pair<Double?, Long?> {
     val canLive = remember(h) { app.superhealth.bridge.LiveHeart.available() }
     var window by remember { mutableStateOf(emptyList<Pair<Long, Int>>()) }
-    // Écoute automatique bornée à 2 min par affichage : le mode direct fait émettre la montre chaque seconde et vide sa
-    // batterie si le tableau de bord reste ouvert longtemps. Ensuite, la dernière mesure enregistrée s'affiche.
-    // une seule fenêtre par affichage de la carte : un rafraîchissement des données (synchro, saisie) ne la relance pas
+    // Batterie de la montre : le mode direct la fait mesurer et émettre chaque seconde. L'écoute automatique dure 20 s
+    // au plus, et une seule fois par quart d'heure pour toute l'app (revenir sur le tableau de bord ne la relance pas) ;
+    // ensuite, la dernière mesure enregistrée s'affiche. Le pouls en continu reste disponible sur l'écran Cœur.
     var listened by remember { mutableStateOf(false) }
-    if (canLive && !listened) androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.withTimeoutOrNull(120_000) {
+    if (canLive && !listened && System.currentTimeMillis() - lastAutoLive >= 15 * 60_000L) androidx.compose.runtime.LaunchedEffect(Unit) {
+        lastAutoLive = System.currentTimeMillis()
+        kotlinx.coroutines.withTimeoutOrNull(20_000) {
             app.superhealth.bridge.LiveHeart.samples.collect { s ->
                 val bpm = s.bpm ?: return@collect
                 window = (window + (s.timeMs to bpm)).filter { it.first >= s.timeMs - 10_000 }
@@ -941,6 +942,9 @@ private fun liveBpm(h: HealthSnap): Pair<Double?, Long?> {
     if (fresh != null) return fresh.map { it.second }.sorted()[fresh.size / 2].toDouble() to null
     return h.heartToday.lastOrNull()?.let { it.value to it.timestampMs } ?: (null to null)
 }
+
+/** Dernière écoute automatique du pouls en direct (tableau de bord), pour toute l'app. */
+private var lastAutoLive = 0L
 
 /** « en direct », ou l'âge de la dernière mesure. */
 @Composable

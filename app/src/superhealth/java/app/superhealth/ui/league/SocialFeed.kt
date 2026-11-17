@@ -215,9 +215,13 @@ private fun GroupConversation(nav: NavHostController, active: Boolean, onDashboa
         }
     }
     }
-    if (showCreate) ModalBottomSheet(onDismissRequest = { showCreate = false }, containerColor = Mf.colors.background) {
+    val createState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    if (showCreate) ModalBottomSheet(onDismissRequest = { showCreate = false }, sheetState = createState, containerColor = Mf.colors.background) {
+        // La feuille se referme d'abord, puis l'écran s'ouvre : retirée en pleine navigation, sa fenêtre pouvait rester
+        // affichée en carré noir jusqu'au redémarrage de l'app.
         fun open(route: String) {
-            showCreate = false; SocialPosts.draft.value = null; nav.go(route)
+            SocialPosts.draft.value = null
+            scope.launch { createState.hide() }.invokeOnCompletion { showCreate = false; nav.go(route) }
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
             Text(tr("Créer une publication"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
@@ -588,14 +592,17 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
         }
         Text(tr("Seules les données de l’activité choisie et visibles dans l’aperçu seront partagées. Vous pouvez masquer le parcours et les statistiques détaillées. Les vidéos conservent leur fichier d’origine."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textTertiary)
     }
-    if (choosing != null) ModalBottomSheet(onDismissRequest = { choosing = null }, containerColor = Mf.colors.background) {
+    val chooseState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Choix fait : la feuille se referme avec son animation avant de disparaître (même précaution que « Créer une publication »).
+    fun closeChooser() { scope.launch { chooseState.hide() }.invokeOnCompletion { choosing = null } }
+    if (choosing != null) ModalBottomSheet(onDismissRequest = { choosing = null }, sheetState = chooseState, containerColor = Mf.colors.background) {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp).navigationBarsPadding(), contentPadding = PaddingValues(16.dp)) {
             if (choosing == "WORKOUT") {
                 if (training.history.isEmpty()) item { Text(tr("Aucune séance enregistrée")) }
                 item { Text(tr("Choisir une séance"), style = MaterialTheme.typography.titleLarge) }
                 items(training.history.sortedByDescending { it.startTime }, key = { it.id }) { workout ->
                     val date = Instant.ofEpochMilli(workout.startTime).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy", app.superhealth.ui.Lang.locale))
-                    SettingRow(workout.name, subtitle = "$date · ${workout.durationSec / 60} min") { selectSource(SocialPosts.workoutDraft(workout)); choosing = null }
+                    SettingRow(workout.name, subtitle = "$date · ${workout.durationSec / 60} min") { selectSource(SocialPosts.workoutDraft(workout)); closeChooser() }
                 }
             } else if (choosing == "ACTIVITY") {
                 item { Text(tr("Choisir une activité"), style = MaterialTheme.typography.titleLarge) }
@@ -607,7 +614,7 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                     SettingRow(draft.title, subtitle = "$date · ${draft.detail}") {
                         if (!sourceLoading) scope.launch {
                             sourceLoading = true
-                            try { selectSource(SharedActivity.draft(ctx, run)); choosing = null }
+                            try { selectSource(SharedActivity.draft(ctx, run)); closeChooser() }
                             catch (e: kotlinx.coroutines.CancellationException) { throw e }
                             catch (_: Exception) { error = tr("Détails de l’activité indisponibles. Réessayez.") }
                             finally { sourceLoading = false }
@@ -621,7 +628,7 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 if (records.isEmpty()) item { Text(tr("Aucun PR récent dans vos séances enregistrées")) }
                 items(records, key = { it.exercise + it.metric }) { record ->
                     val draft = GroupRecords.draft(record)
-                    SettingRow(record.name, subtitle = draft.detail) { selectSource(draft); choosing = null }
+                    SettingRow(record.name, subtitle = draft.detail) { selectSource(draft); closeChooser() }
                 }
             } else {
                 val streaks = ProgressRepository.current.value?.summary?.streaks.orEmpty().filter { it.current > 0 }
@@ -629,7 +636,7 @@ fun SocialComposer(nav: NavHostController, initialChoice: String? = null) {
                 items(streaks, key = { it.track }) { streak ->
                     val label = Progression.Track.entries.firstOrNull { it.name == streak.track }?.label ?: streak.track
                     val detail = "${streak.current} " + tr(if (streak.weekly) "semaines" else "jours")
-                    SettingRow(tr(label), detail) { selectSource(SocialPosts.Draft(tr(label), detail, "STREAK")); choosing = null }
+                    SettingRow(tr(label), detail) { selectSource(SocialPosts.Draft(tr(label), detail, "STREAK")); closeChooser() }
                 }
             }
         }
