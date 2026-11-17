@@ -61,7 +61,7 @@
         android:usesCleartextTraffic="true"
         tools:replace="android:name,android:icon,android:roundIcon,android:label">
 
-        <!-- Lecture seule, pour Notch : content://app.superhealth.notch.provider/today -->
+        <!-- Lecture seule, pour Notch : content://app.superhealth.notch.provider/today et …/watch -->
         <provider
             android:name="app.superhealth.notch.NotchSummaryProvider"
             android:authorities="${applicationId}.notch.provider"

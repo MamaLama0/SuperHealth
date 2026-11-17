@@ -60,5 +60,5 @@
     <string name="widget_weekmacros_desc">Average macros and targets across logged days</string>
     <!-- Permission lue par Notch (notch/NotchSummaryProvider) : fenêtre d'autorisation d'Android -->
     <string name="notch_summary_permission_label">read your SuperHealth daily summary</string>
-    <string name="notch_summary_permission_desc">Lets the app read today\'s steps, calories, protein, water, sleep score, resting heart rate and workouts from SuperHealth. Nothing can be written.</string>
+    <string name="notch_summary_permission_desc">Lets the app read today\'s steps, calories, protein, water, sleep score, resting heart rate and workouts from SuperHealth, and your watch\'s battery and connection. Nothing can be written.</string>
 </resources>

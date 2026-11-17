@@ -89,6 +89,12 @@ fun NotificationSettingsScreen(nav: NavHostController) {
                     SuperPrefs.update { it.copy(notchIsland = on) }
                     app.superhealth.notch.NotchBridge.onSettingChanged(ctx)
                 }
+                if (settings.notchIsland) {
+                    RowDivider()
+                    SwitchRow(tr("Événements de la montre dans l'île"), tr("Connexion, déconnexion, batterie faible et charge complète"), settings.notchWatchEvents) { on ->
+                        SuperPrefs.update { it.copy(notchWatchEvents = on) }
+                    }
+                }
             }
         }
         SectionLabel(tr("Application"))

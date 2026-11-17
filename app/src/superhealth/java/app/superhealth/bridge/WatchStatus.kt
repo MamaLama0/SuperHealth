@@ -187,6 +187,7 @@ object WatchStatus {
     private fun emit(info: Info, event: String) {
         // batterie faible ou pleine juste après la connexion : cet événement-là, pas « connectée » par-dessus
         if (event == LOW || event == FULL) pendingConnect.remove(info.key)?.let(main::removeCallbacks)
+        runCatching { app.superhealth.notch.NotchBridge.onWatchEvent(ctx, info, event) }
     }
 
     // endregion

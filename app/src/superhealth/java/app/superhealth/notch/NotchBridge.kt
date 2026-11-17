@@ -39,7 +39,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Montre la séance guidée, la randonnée suivie au GPS, la méditation et les rappels de médicaments dans l'île de
+ * Montre la séance guidée, la randonnée suivie au GPS, la méditation, les rappels de médicaments et les événements de la
+ * montre (connexion, batterie) dans l'île de
  * Notch (app.notch), par son « Live Activity API » public : des diffusions explicites vers son récepteur, réservées aux
  * apps qui déclarent app.notch.permission.POST_LIVE_ACTIVITY (docs/LIVE_ACTIVITY_API.md du dépôt Notch).
  *
@@ -106,12 +107,17 @@ object NotchBridge {
     private const val K_LABEL_INHALE = "sh.label.inhale"
     private const val K_LABEL_EXHALE = "sh.label.exhale"
     private const val K_LABEL_PAUSED = "sh.label.paused"
+    private const val K_WATCH_EVENT = "sh.watch_event"
+    private const val K_BATTERY = "sh.battery"
+    private const val K_CHARGING = "sh.charging"
+    private const val K_CONNECTED = "sh.connected"
     // endregion
 
     private const val WORKOUT = "workout"
     private const val HIKE = "hike"
     private const val MEDITATION = "meditation"
     private const val RINGS = "rings"
+    private const val WATCH = "watch"
 
     /** Mises à jour GPS : une toutes les ~5 s suffit, l'île fait tourner le chrono elle-même. */
     private const val HIKE_INTERVAL_MS = 5_000L
@@ -121,6 +127,8 @@ object NotchBridge {
     /** Pouls plus ancien : la montre ne l'envoie plus (app en arrière-plan), on ne l'affiche pas figé. */
     private const val HEART_FRESH_MS = 30_000L
     private const val INSTALL_CHECK_MS = 30_000L
+    /** Événements de la montre : 5 s dans l'île (le minimum du contrat). */
+    private const val WATCH_TIMEOUT_SEC = 5
     private const val MEDITATION_HUE = 0xFF7B8CDE.toInt()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -446,6 +454,44 @@ object NotchBridge {
 
     /** Identifiant stable et court par prise et par jour ([A-Za-z0-9._-], 64 caractères au plus). */
     private fun medId(key: String, day: Long) = "med-$day-" + Integer.toHexString(key.hashCode())
+
+    // endregion
+
+    // region Montre
+
+    /**
+     * Montre connectée, déconnectée, batterie à 20 % puis 10 % (une fois par décharge), pleine en charge
+     * (WatchStatus détecte et filtre les connexions qui hésitent) : quelques secondes dans l'île, bandeau pour la batterie faible.
+     */
+    fun onWatchEvent(ctx: Context, w: app.superhealth.bridge.WatchStatus.Info, event: String) {
+        if (!SuperPrefs.settings.value.notchWatchEvents || !enabled(ctx)) return
+        val battery = w.battery ?: -1
+        val pct = if (battery >= 0) "$battery %" else null
+        val status = when (event) {
+            app.superhealth.bridge.WatchStatus.LOW -> tr("Batterie faible")
+            app.superhealth.bridge.WatchStatus.FULL -> tr("Chargée")
+            app.superhealth.bridge.WatchStatus.DISCONNECTED -> tr("Déconnectée")
+            else -> app.superhealth.bridge.WatchStatus.stateText(w)
+        }
+        send(ctx, OP_START, WATCH, "h/devices") { i ->
+            i.putExtra(EXTRA_KIND, "custom")
+            i.putExtra(EXTRA_TITLE, w.name.ifBlank { tr("Montre") })
+            i.putExtra(EXTRA_SUBTITLE, listOfNotNull(status, pct).joinToString(" · "))
+            if (pct != null) {
+                i.putExtra(EXTRA_SHORT_TEXT, pct)
+                i.putExtra(EXTRA_PROGRESS, battery / 100f)
+            }
+            i.putExtra(EXTRA_TIMEOUT_SEC, WATCH_TIMEOUT_SEC)
+            if (event == app.superhealth.bridge.WatchStatus.LOW) i.putExtra(EXTRA_ALERT, true)
+            i.putExtra(EXTRA_DATA, Bundle().apply {
+                putString(K_TYPE, WATCH)
+                putString(K_WATCH_EVENT, event)
+                putInt(K_BATTERY, battery)
+                putBoolean(K_CHARGING, w.charging)
+                putBoolean(K_CONNECTED, w.connected)
+            })
+        }
+    }
 
     // endregion
 
