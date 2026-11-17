@@ -28,7 +28,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 
 /**
- * État des montres pour le widget « Montre », la carte du tableau de bord, le fournisseur de Notch et l'île.
+ * État des montres pour le widget « Montre » et la carte du tableau de bord.
  *
  * Gadgetbridge diffuse ACTION_DEVICE_CHANGED à chaque changement (connexion, batterie…) : on relit alors la liste, sans
  * aucune scrutation. La batterie est remise à « inconnue » par Gadgetbridge à la déconnexion : la dernière valeur, l'heure
@@ -52,18 +52,7 @@ object WatchStatus {
         val lastSeen: Long,
     )
 
-    const val CONNECTED = "connected"
-    const val DISCONNECTED = "disconnected"
-    const val LOW = "low"
-    const val FULL = "full"
-
     private const val PREFS = "superhealth_watch_status"
-    /** Une déconnexion suivie d'une reconnexion dans ce délai n'est pas signalée (liaison qui hésite). */
-    private const val FLAP_MS = 20_000L
-    /** La batterie arrive juste après la connexion : on l'attend un peu avant de signaler la montre connectée. */
-    private const val CONNECT_SETTLE_MS = 5_000L
-    /** Démarrage du processus : la reconnexion automatique n'est pas un événement. */
-    private const val STARTUP_GRACE_MS = 30_000L
     /** Widgets redessinés au plus toutes les 5 s. */
     private const val WIDGET_MIN_MS = 5_000L
 
@@ -74,9 +63,6 @@ object WatchStatus {
     private val _state = MutableStateFlow<List<Info>>(emptyList())
     val state: StateFlow<List<Info>> = _state
     private val last = HashMap<String, Info>()
-    private val pendingDisconnect = HashMap<String, Runnable>()
-    private val pendingConnect = HashMap<String, Runnable>()
-    private var installedAt = 0L
     private var refreshPosted = false
     private var widgetPosted = false
     private var lastWidget = 0L
@@ -93,7 +79,6 @@ object WatchStatus {
     fun install(ctx: Context) {
         this.ctx = ctx.applicationContext
         sp = this.ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        installedAt = SystemClock.elapsedRealtime()
         LocalBroadcastManager.getInstance(this.ctx).registerReceiver(receiver, IntentFilter().apply {
             addAction(GBDevice.ACTION_DEVICE_CHANGED)
             addAction(DeviceManager.ACTION_DEVICES_CHANGED)
@@ -130,7 +115,6 @@ object WatchStatus {
             if (dirty) edit.putInt("$key.battery", battery ?: -1).putLong("$key.at", updatedAt).putLong("$key.seen", lastSeen)
             val info = Info(key, d.aliasOrName ?: "", connected, d.isConnecting, battery, charging, updatedAt, lastSeen)
             if (prev == null || prev.name != info.name || prev.connected != connected || prev.battery != battery || prev.charging != charging) changed = true
-            events(prev, info, edit)
             info
         }.sortedWith(compareByDescending<Info> { it.connected }.thenByDescending { it.lastSeen })
         edit.apply()
@@ -138,59 +122,6 @@ object WatchStatus {
         _state.value = out
         if (changed) refreshWidgets()
     }
-
-    // region Événements pour l'île de Notch
-
-    private fun events(prev: Info?, now: Info, edit: SharedPreferences.Editor) {
-        val k = now.key
-        if (prev != null && prev.connected && !now.connected) {
-            pendingConnect.remove(k)?.let(main::removeCallbacks)
-            val r = Runnable {
-                pendingDisconnect.remove(k)
-                last[k]?.takeIf { !it.connected }?.let { emit(it, DISCONNECTED) }
-            }
-            pendingDisconnect[k] = r
-            main.postDelayed(r, FLAP_MS)
-        } else if (prev != null && !prev.connected && now.connected) {
-            val flap = pendingDisconnect.remove(k)
-            if (flap != null) main.removeCallbacks(flap)
-            else if (SystemClock.elapsedRealtime() - installedAt >= STARTUP_GRACE_MS) {
-                val r = Runnable {
-                    pendingConnect.remove(k)
-                    last[k]?.takeIf { it.connected }?.let { emit(it, CONNECTED) }
-                }
-                pendingConnect[k] = r
-                main.postDelayed(r, CONNECT_SETTLE_MS)
-            }
-        }
-        val b = now.battery ?: return
-        if (!now.connected) return
-        // Une fois par décharge : réarmé en charge ou au-dessus de 30 % ; « pleine » une fois par charge, réarmée sous 90 %.
-        val low20 = sp.getBoolean("$k.low20", false)
-        val low10 = sp.getBoolean("$k.low10", false)
-        val full = sp.getBoolean("$k.full", false)
-        if (now.charging || b >= 30) {
-            if (low20 || low10) edit.putBoolean("$k.low20", false).putBoolean("$k.low10", false)
-        } else if (b <= 10 && !low10) {
-            edit.putBoolean("$k.low10", true).putBoolean("$k.low20", true)
-            emit(now, LOW)
-        } else if (b <= 20 && !low20) {
-            edit.putBoolean("$k.low20", true)
-            emit(now, LOW)
-        }
-        if (now.charging && b >= 100 && !full) {
-            edit.putBoolean("$k.full", true)
-            emit(now, FULL)
-        } else if (b <= 90 && full) edit.putBoolean("$k.full", false)
-    }
-
-    private fun emit(info: Info, event: String) {
-        // batterie faible ou pleine juste après la connexion : cet événement-là, pas « connectée » par-dessus
-        if (event == LOW || event == FULL) pendingConnect.remove(info.key)?.let(main::removeCallbacks)
-        runCatching { app.superhealth.notch.NotchBridge.onWatchEvent(ctx, info, event) }
-    }
-
-    // endregion
 
     private fun refreshWidgets() {
         if (widgetPosted) return

@@ -130,8 +130,6 @@ object Meds {
             .putExtra(app.superhealth.MainActivity.EXTRA_ROUTE, "meds").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val id = d.key.hashCode()
-        // Île de Notch avant la notification : son bandeau (avec « Pris » / « Plus tard ») remplace celui de la notification.
-        runCatching { app.superhealth.notch.NotchBridge.onMedDue(ctx, d, day, action(ACTION_TAKEN, id), action(ACTION_SNOOZE, id + 1)) }
         nm.notify(day.toString(), id, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_stat_meds)
             .setContentTitle(d.med.name).setContentText(d.med.dose.ifBlank { tr("C'est l'heure") }).setContentIntent(open).setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -143,7 +141,6 @@ object Meds {
         val manager = ctx.getSystemService(NotificationManager::class.java)
         manager.cancel(day.toString(), key.hashCode())
         manager.cancel(key.hashCode()) // notification posted before this update
-        runCatching { app.superhealth.notch.NotchBridge.onMedHandled(ctx, key, day) } // île de Notch : prise cochée ou repoussée
     }
 
     /** « Plus tard » : la même prise renotifiée dans quelques minutes (durée du plugin). */

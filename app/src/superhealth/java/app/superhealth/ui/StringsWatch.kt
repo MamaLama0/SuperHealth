@@ -1,6 +1,6 @@
 package app.superhealth.ui
 
-/** Montre : widget et carte de batterie, notification de connexion, événements de la montre dans l'île de Notch. */
+/** Montre : widget et carte de batterie, notification de connexion. */
 internal object StringsWatch {
     val map = mapOf(
         "Batterie de la montre" to "Watch battery",
@@ -15,8 +15,6 @@ internal object StringsWatch {
         "Chargée" to "Charged",
         "Aucune montre" to "No watch",
         "Associez une montre dans Appareils" to "Pair a watch in Devices",
-        "Événements de la montre dans l'île" to "Watch events in the island",
-        "Connexion, déconnexion, batterie faible et charge complète" to "Connect, disconnect, low battery and fully charged",
         "Coupée : les notifications de SuperHealth sont désactivées" to "Off: SuperHealth notifications are disabled",
         "Coupée dans les réglages Android" to "Turned off in Android settings",
         "Affichée" to "Shown",
@@ -28,7 +26,6 @@ internal object StringsWatch {
         "Réafficher maintenant" to "Show again now",
         "Batterie dans la notification" to "Battery in the notification",
         "Niveau de batterie de la montre à côté de son état" to "Watch battery level next to its status",
-        "Notch peut la masquer de l'île : elle reste dans le volet des notifications." to "Notch may hide it from the island: it stays in the notification shade.",
         "Elle s'affiche quand une montre est connectée." to "It appears while a watch is connected.",
     )
 }

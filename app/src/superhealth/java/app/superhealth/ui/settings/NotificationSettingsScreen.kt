@@ -81,22 +81,6 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             SwitchRow(tr("Alerte de fin de repos"), tr("Vibration à la fin du minuteur (le bip se règle dans Musculation)"), settings.notifyRest) { on -> SuperPrefs.update { it.copy(notifyRest = on) } }
         }
         if (settings.watchModule) WatchConnectionSettings(resumed, watches)
-        // Île de Notch : proposée seulement quand Notch est installé (notch/NotchBridge).
-        if (remember { app.superhealth.notch.NotchBridge.notchInstalled(ctx) }) {
-            SectionLabel("Notch")
-            GroupCard {
-                SwitchRow(tr("Afficher dans l'île Notch"), tr("Séance, randonnée, méditation et rappels de médicaments autour de la caméra"), settings.notchIsland) { on ->
-                    SuperPrefs.update { it.copy(notchIsland = on) }
-                    app.superhealth.notch.NotchBridge.onSettingChanged(ctx)
-                }
-                if (settings.notchIsland) {
-                    RowDivider()
-                    SwitchRow(tr("Événements de la montre dans l'île"), tr("Connexion, déconnexion, batterie faible et charge complète"), settings.notchWatchEvents) { on ->
-                        SuperPrefs.update { it.copy(notchWatchEvents = on) }
-                    }
-                }
-            }
-        }
         SectionLabel(tr("Application"))
         GroupCard {
             SwitchRow(tr("Retour haptique"), tr("Légères vibrations au toucher des graphiques, interrupteurs et validations"), settings.haptics) { on ->
@@ -153,7 +137,7 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             battery = v
         }
     }
-    Text(tr(if (connected) "Notch peut la masquer de l'île : elle reste dans le volet des notifications." else "Elle s'affiche quand une montre est connectée."),
+    if (!connected) Text(tr("Elle s'affiche quand une montre est connectée."),
         style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
 }
 

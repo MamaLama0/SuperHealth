@@ -311,10 +311,6 @@ data class SuperSettings(
     val remindWeigh: Int = -1,
     val notifyWorkout: Boolean = true,
     val notifyRest: Boolean = true,
-    /** Séance, randonnée, méditation et rappels de médicaments dans l'île de Notch quand Notch est installé (notch/NotchBridge). */
-    val notchIsland: Boolean = true,
-    /** Connexion, déconnexion, batterie faible et charge complète de la montre dans l'île (sous [notchIsland]). */
-    val notchWatchEvents: Boolean = true,
     /** Carte « Batterie de la montre » déjà ajoutée au tableau de bord (migration unique). */
     val watchBatteryAdded: Boolean = false,
     val remindLog: Int = -1,

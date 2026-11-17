@@ -59,6 +59,4 @@
     <string name="widget_weekcalories_desc">Calories quotidiennes et moyenne sur les jours renseignés</string>
     <string name="widget_weekmacros_name">Macros sur 7 jours</string>
     <string name="widget_weekmacros_desc">Moyennes des macros et objectifs sur les jours renseignés</string>
-    <string name="notch_summary_permission_label">lire votre résumé du jour SuperHealth</string>
-    <string name="notch_summary_permission_desc">Permet à l\'app de lire les pas, calories, protéines, eau, score de sommeil, fréquence cardiaque au repos et séances du jour dans SuperHealth, ainsi que la batterie et la connexion de votre montre. Aucune écriture possible.</string>
 </resources>

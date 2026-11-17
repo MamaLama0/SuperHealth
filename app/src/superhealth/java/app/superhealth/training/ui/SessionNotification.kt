@@ -28,8 +28,6 @@ object SessionNotification {
     const val ACTION_SUB = "app.superhealth.training.SUB_REST"
 
     fun update(ctx: Context, st: AppState) {
-        // Île de Notch : même état que la notification (changement de séance, repos, fin du repos), indépendante de son réglage.
-        runCatching { app.superhealth.notch.NotchBridge.onWorkout(ctx.applicationContext, st) }
         val nm = ctx.getSystemService(NotificationManager::class.java)
         if (!app.superhealth.SuperPrefs.settings.value.notifyWorkout) { nm.cancel(ID); return }
         val s = st.session ?: run { nm.cancel(ID); return }
