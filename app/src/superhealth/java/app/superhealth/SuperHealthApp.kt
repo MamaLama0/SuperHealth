@@ -62,8 +62,8 @@ class SuperHealthApp : GBApplication() {
         }
         // icône du lanceur : exactement un alias actif (l'ancien code réactivait le rose à côté de la couleur choisie)
         runCatching { app.superhealth.ui.LauncherIcon.repair(this, NutriApp.repository.prefs.settings.value.accent) }
-        // Île de Notch : dépôts prêts pour son fournisseur de résumé, séance ou sortie en cours renvoyée à l'île.
-        app.superhealth.notch.NotchBridge.init(this)
+        // Île de Notch : dépôts prêts, son fournisseur de résumé peut répondre.
+        app.superhealth.notch.NotchBridge.init()
     }
 
     /** Écrans Gadgetbridge (réglages de la montre, association…) : police et formes de SuperHealth. */

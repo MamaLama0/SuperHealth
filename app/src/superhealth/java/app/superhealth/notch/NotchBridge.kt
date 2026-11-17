@@ -1,6 +1,5 @@
 package app.superhealth.notch
 
-import android.app.Application
 import android.app.BroadcastOptions
 import android.app.PendingIntent
 import android.content.ComponentName
@@ -141,14 +140,13 @@ object NotchBridge {
     private var installedAt = 0L
     private var installed = false
 
-    /** Fin de SuperHealthApp.onCreate : le fournisseur de résumé attend ce signal avant de lire les dépôts. */
-    fun init(app: Application) {
+    /**
+     * Fin de SuperHealthApp.onCreate : le fournisseur de résumé attend ce signal avant de lire les dépôts.
+     * Rien d'autre à relancer : une séance en cours revient par SessionNotification.update (appelé au démarrage par
+     * WorkoutApp), une randonnée quand son suivi GPS repart (une sortie oubliée ne réapparaît pas à chaque démarrage).
+     */
+    fun init() {
         ready.countDown()
-        // Séance ou randonnée déjà en cours au démarrage du processus (reprise après un arrêt d'Android).
-        scope.launch {
-            runCatching { onWorkout(app, WorkoutApp.store.state.value) }
-            runCatching { onHike(app, Hiking.session.value) }
-        }
     }
 
     fun awaitReady(timeoutMs: Long): Boolean = ready.await(timeoutMs, TimeUnit.MILLISECONDS)
