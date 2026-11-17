@@ -21,6 +21,7 @@ import app.superhealth.nutrition.ui.screens.DetailScaffold
 import app.superhealth.ui.go
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
+import kotlinx.coroutines.launch
 
 @Composable
 fun NotificationSettingsScreen(nav: NavHostController) {
@@ -31,10 +32,13 @@ fun NotificationSettingsScreen(nav: NavHostController) {
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         allowed = NotificationManagerCompat.from(ctx).areNotificationsEnabled()
     }
+    // notification de connexion de la montre : relue au retour des réglages Android et à chaque changement de la montre
+    var resumed by remember { mutableIntStateOf(0) }
+    val watches by app.superhealth.bridge.WatchStatus.state.collectAsState()
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) allowed = NotificationManagerCompat.from(ctx).areNotificationsEnabled()
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) { allowed = NotificationManagerCompat.from(ctx).areNotificationsEnabled(); resumed++ }
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
@@ -76,6 +80,7 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             RowDivider()
             SwitchRow(tr("Alerte de fin de repos"), tr("Vibration à la fin du minuteur (le bip se règle dans Musculation)"), settings.notifyRest) { on -> SuperPrefs.update { it.copy(notifyRest = on) } }
         }
+        if (settings.watchModule) WatchConnectionSettings(resumed, watches)
         // Île de Notch : proposée seulement quand Notch est installé (notch/NotchBridge).
         if (remember { app.superhealth.notch.NotchBridge.notchInstalled(ctx) }) {
             SectionLabel("Notch")
@@ -100,6 +105,50 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             SettingRow(tr("Mises à jour")) { nav.go("update") }
         }
     }
+}
+
+/**
+ * Notification permanente de la montre (« Connectée · Batterie 80 % ») : son état, un raccourci vers son canal dans les
+ * réglages Android (seul l'utilisateur peut la bloquer ou la rétablir), la batterie dedans, et la réafficher après un balayage.
+ */
+@Composable private fun WatchConnectionSettings(resumed: Int, watches: List<app.superhealth.bridge.WatchStatus.Info>) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var tick by remember { mutableIntStateOf(0) }
+    val connected = watches.any { it.connected }
+    val state = remember(resumed, tick, watches) { app.superhealth.bridge.ConnectionNotification.state(ctx) }
+    var battery by remember(resumed, watches.size) { mutableStateOf(app.superhealth.bridge.ConnectionNotification.batteryShown()) }
+    val on = app.superhealth.bridge.ConnectionNotification.allowed(state)
+    val detail = when (state) {
+        app.superhealth.bridge.ConnectionNotification.State.APP_BLOCKED -> tr("Coupée : les notifications de SuperHealth sont désactivées")
+        app.superhealth.bridge.ConnectionNotification.State.CHANNEL_BLOCKED -> tr("Coupée dans les réglages Android")
+        app.superhealth.bridge.ConnectionNotification.State.SHOWN -> tr("Affichée")
+        app.superhealth.bridge.ConnectionNotification.State.QUIET -> tr("Affichée en mode discret")
+        app.superhealth.bridge.ConnectionNotification.State.DISMISSED -> tr("Balayée : elle revient au prochain changement de la montre")
+        app.superhealth.bridge.ConnectionNotification.State.NO_WATCH -> tr("Autorisée ; aucune montre connectée")
+    }
+    SectionLabel(tr("Montre"))
+    GroupCard {
+        // Android seul peut couper ou rétablir ce canal : l'interrupteur ouvre ses réglages.
+        SwitchRow(tr("Notification de connexion"), detail, on) { app.superhealth.bridge.ConnectionNotification.openSettings(ctx, state) }
+        if (!on) {
+            PillButton(tr("Réactiver dans Android"), Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp), strong = false) {
+                app.superhealth.bridge.ConnectionNotification.openSettings(ctx, state)
+            }
+        } else if (state == app.superhealth.bridge.ConnectionNotification.State.DISMISSED) {
+            PillButton(tr("Réafficher maintenant"), Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp), strong = false) {
+                app.superhealth.bridge.ConnectionNotification.repost(ctx)
+                scope.launch { kotlinx.coroutines.delay(400); tick++ }
+            }
+        }
+        RowDivider()
+        SwitchRow(tr("Batterie dans la notification"), tr("Niveau de batterie de la montre à côté de son état"), battery) { v ->
+            app.superhealth.bridge.ConnectionNotification.setBatteryShown(ctx, v)
+            battery = v
+        }
+    }
+    Text(tr(if (connected) "Notch peut la masquer de l'île : elle reste dans le volet des notifications." else "Elle s'affiche quand une montre est connectée."),
+        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
 }
 
 @Composable private fun TextButtonRow(label: String, action: () -> Unit) {
