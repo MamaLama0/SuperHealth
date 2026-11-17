@@ -390,7 +390,7 @@ object NotchBridge {
             putString(K_LABEL_EXHALE, tr("Expirez"))
             putString(K_LABEL_PAUSED, tr("En pause"))
         }
-        send(ctx, opFor(MEDITATION), MEDITATION, "home") { i ->
+        send(ctx, opFor(MEDITATION), MEDITATION, null) { i ->
             i.putExtra(EXTRA_KIND, "timer")
             i.putExtra(EXTRA_TITLE, title)
             i.putExtra(EXTRA_SUBTITLE, tr("Méditation"))
@@ -499,7 +499,7 @@ object NotchBridge {
 
     private fun end(ctx: Context, id: String) {
         live.remove(id)
-        send(ctx, OP_END, id, "home")
+        send(ctx, OP_END, id, null)
     }
 
     /**
@@ -514,15 +514,19 @@ object NotchBridge {
         }
     }
 
-    /** Écran de SuperHealth ouvert au toucher de l'île ; son créateur (SuperHealth) est aussi notre identité pour Notch. */
-    private fun open(ctx: Context, route: String): PendingIntent = PendingIntent.getActivity(
-        ctx, REQUEST_BASE + (route.hashCode() and 0xFF),
-        Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_ROUTE, route)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
+    /**
+     * Écran de SuperHealth ouvert au toucher de l'île ; son créateur (SuperHealth) est aussi notre identité pour Notch.
+     * Sans route, l'app revient simplement au premier plan (l'écran de méditation n'est pas une route externe, et y
+     * naviguer fermerait la séance). Un code par route : FLAG_UPDATE_CURRENT ne réécrit jamais la route d'un autre.
+     */
+    private fun open(ctx: Context, route: String?): PendingIntent {
+        val intent = Intent(ctx, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        if (route != null) intent.putExtra(MainActivity.EXTRA_ROUTE, route)
+        return PendingIntent.getActivity(ctx, "notch:${route.orEmpty()}".hashCode(), intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    }
 
-    private fun send(ctx: Context, op: String, id: String, route: String, fill: (Intent) -> Unit = {}) {
+    private fun send(ctx: Context, op: String, id: String, route: String?, fill: (Intent) -> Unit = {}) {
         val intent = Intent(ACTION).setComponent(ComponentName(NOTCH_PACKAGE, RECEIVER))
             .putExtra(EXTRA_VERSION, 1)
             .putExtra(EXTRA_OP, op)
@@ -544,8 +548,6 @@ object NotchBridge {
         val s = seconds.coerceAtLeast(0)
         return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
     }
-
-    private const val REQUEST_BASE = 0x4E00
 
     // endregion
 }
