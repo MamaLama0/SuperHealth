@@ -309,6 +309,8 @@ data class SuperSettings(
     val remindWeigh: Int = -1,
     val notifyWorkout: Boolean = true,
     val notifyRest: Boolean = true,
+    /** Séance, randonnée, méditation et rappels de médicaments dans l'île de Notch quand Notch est installé (notch/NotchBridge). */
+    val notchIsland: Boolean = true,
     val remindLog: Int = -1,
     val remindJournal: Int = -1,
     val remindBedtime: Boolean = false,

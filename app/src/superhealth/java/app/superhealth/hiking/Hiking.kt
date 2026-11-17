@@ -197,6 +197,8 @@ object Hiking {
             write(ctx,"session",json.encodeToString(Session.serializer(),checkpoint(next)));checkpointAt=now
         }
         session.value = next
+        // Île de Notch : distance, allure et chrono de la sortie (limité à une mise à jour toutes les ~5 s).
+        runCatching { app.superhealth.notch.NotchBridge.onHike(ctx.applicationContext, next) }
     }
     fun elapsed(s: Session, now: Long = System.currentTimeMillis()) = s.seconds + if (s.paused || !tracking.value) 0 else ((now-s.resumed)/1000).coerceAtLeast(0)
     fun finish(ctx: Context): HikeRoute? {

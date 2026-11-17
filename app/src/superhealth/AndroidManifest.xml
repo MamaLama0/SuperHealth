@@ -38,9 +38,19 @@
     <uses-permission android:name="android.permission.health.READ_SPEED" />
     <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />
     <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
+    <!-- Île de Notch (notch/NotchBridge) : séance, randonnée, méditation et rappels envoyés à son Live Activity API. -->
+    <uses-permission android:name="app.notch.permission.POST_LIVE_ACTIVITY" />
+    <!-- Résumé du jour pour Notch (notch/NotchSummaryProvider). « dangerous » : données de santé, Android demande
+         l'accord de l'utilisateur ; « signature » impossible (Notch a sa propre clé), « normal » serait lisible par toute app. -->
+    <permission
+        android:name="${applicationId}.permission.READ_SUMMARY"
+        android:description="@string/notch_summary_permission_desc"
+        android:label="@string/notch_summary_permission_label"
+        android:protectionLevel="dangerous" />
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
         <package android:name="com.google.android.apps.docs" />
+        <package android:name="app.notch" />
     </queries>
 
     <application
@@ -50,6 +60,13 @@
         android:label="${superhealthLabel}"
         android:usesCleartextTraffic="true"
         tools:replace="android:name,android:icon,android:roundIcon,android:label">
+
+        <!-- Lecture seule, pour Notch : content://app.superhealth.notch.provider/today -->
+        <provider
+            android:name="app.superhealth.notch.NotchSummaryProvider"
+            android:authorities="${applicationId}.notch.provider"
+            android:exported="true"
+            android:permission="${applicationId}.permission.READ_SUMMARY" />
 
         <service android:name="app.superhealth.hiking.HikeTrackingService" android:exported="false" android:foregroundServiceType="location" />
 

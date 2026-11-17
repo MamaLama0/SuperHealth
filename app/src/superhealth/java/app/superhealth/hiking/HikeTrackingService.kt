@@ -47,6 +47,7 @@ class HikeTrackingService : Service(), LocationListener {
             val s = Hiking.session.value!!
             Hiking.setSession(this,s.copy(resumed = System.currentTimeMillis(),segment = s.segment+1))
             Hiking.tracking.value = true
+            app.superhealth.notch.NotchBridge.onHike(this, Hiking.session.value) // île de Notch : le chrono repart
             Hiking.gpsError.value = tr("Recherche du signal GPS…")
             manager.requestLocationUpdates(provider,3000,3f,this)
         } catch (_: SecurityException) {
@@ -80,6 +81,7 @@ class HikeTrackingService : Service(), LocationListener {
         val s = Hiking.session.value
         if (s != null && Hiking.tracking.value) Hiking.setSession(this,s.copy(seconds = Hiking.elapsed(s),resumed = System.currentTimeMillis()))
         Hiking.tracking.value = false
+        runCatching { app.superhealth.notch.NotchBridge.onHike(this, Hiking.session.value) } // île de Notch : suivi arrêté = en pause
         super.onDestroy()
     }
 }

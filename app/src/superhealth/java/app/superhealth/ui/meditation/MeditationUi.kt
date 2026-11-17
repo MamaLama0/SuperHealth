@@ -242,6 +242,7 @@ fun MeditationPlayScreen(nav: NavHostController) {
     DisposableEffect(Unit) {
         gong("gong_timer")
         onDispose {
+            app.superhealth.notch.NotchBridge.onMeditationClosed(ctx) // île de Notch : séance fermée
             loop[0]?.runCatching { stop(); release() }
             sounds.toList().forEach { it.runCatching { release() } }
         }
@@ -255,6 +256,8 @@ fun MeditationPlayScreen(nav: NavHostController) {
     }
     LaunchedEffect(sh.meditationVolume) { loop[0]?.setVolume(sh.meditationVolume, sh.meditationVolume) }
     LaunchedEffect(running, finished) {
+        // Île de Notch : début, pause, reprise et fin (le temps restant défile dans l'île sans envoi chaque seconde).
+        app.superhealth.notch.NotchBridge.onMeditation(ctx, p.title, total, elapsed, running, finished)
         loop[0]?.runCatching { if (running && !finished) start() else pause() }
         sounds.toList().forEach { it.runCatching { if (running) start() else if (isPlaying) pause() } }
         while (running && !finished) {
@@ -265,6 +268,7 @@ fun MeditationPlayScreen(nav: NavHostController) {
                 finished = true
                 gong("gong_timer")
                 Meditation.record(ctx, p.minutes, p.kind)
+                app.superhealth.notch.NotchBridge.onMeditation(ctx, p.title, total, elapsed, running, true) // île de Notch : terminé
             }
         }
     }

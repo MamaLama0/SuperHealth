@@ -76,6 +76,16 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             RowDivider()
             SwitchRow(tr("Alerte de fin de repos"), tr("Vibration à la fin du minuteur (le bip se règle dans Musculation)"), settings.notifyRest) { on -> SuperPrefs.update { it.copy(notifyRest = on) } }
         }
+        // Île de Notch : proposée seulement quand Notch est installé (notch/NotchBridge).
+        if (remember { app.superhealth.notch.NotchBridge.notchInstalled(ctx) }) {
+            SectionLabel("Notch")
+            GroupCard {
+                SwitchRow(tr("Afficher dans l'île Notch"), tr("Séance, randonnée, méditation et rappels de médicaments autour de la caméra"), settings.notchIsland) { on ->
+                    SuperPrefs.update { it.copy(notchIsland = on) }
+                    app.superhealth.notch.NotchBridge.onSettingChanged(ctx)
+                }
+            }
+        }
         SectionLabel(tr("Application"))
         GroupCard {
             SwitchRow(tr("Retour haptique"), tr("Légères vibrations au toucher des graphiques, interrupteurs et validations"), settings.haptics) { on ->
