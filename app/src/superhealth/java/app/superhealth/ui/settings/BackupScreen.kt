@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.TableChart
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -109,6 +110,18 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
                 val bytes = Archive.build(ctx)
                 withContext(Dispatchers.IO) { ctx.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(bytes) } }
                 tr("Sauvegarde chiffrée exportée")
+            }.getOrElse(::err))
+            busy = false
+        }
+    }
+    var confirmReadable by remember { mutableStateOf(false) }
+    val exportReadable = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            busy = true
+            toast(runCatching {
+                withContext(Dispatchers.IO) { ctx.contentResolver.openOutputStream(uri, "wt")!!.use { Archive.writeReadable(ctx, it) } }
+                tr("Données exportées")
             }.getOrElse(::err))
             busy = false
         }
@@ -234,12 +247,22 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
                 exportFile.launch(Archive.fileName())
             }
             RowDivider()
+            SettingRow(tr("Exporter toutes mes données"), subtitle = tr("ZIP lisible, non chiffré : JSON, photos, fichiers et tableaux CSV. Restaurable aussi."), icon = Icons.Rounded.TableChart) {
+                confirmReadable = true
+            }
+            RowDivider()
             SettingRow(tr("Restaurer un fichier"), subtitle = tr("Sauvegarde SuperHealth, anciens exports nutrition ou musculation, La Bouffe ou La Salle"), icon = Icons.Rounded.Restore) {
                 importFile.launch(arrayOf("*/*"))
             }
         }
         Spacer(Modifier.height(24.dp))
     }
+
+    if (confirmReadable) AlertDialog(onDismissRequest = { confirmReadable = false }, containerColor = Mf.colors.card,
+        title = { Text(tr("Exporter toutes mes données")) },
+        text = { Text(tr("Ce fichier n'est pas chiffré : il contient vos journaux de santé, photos et séances en clair. Gardez-le en lieu sûr."), color = Mf.colors.textSecondary) },
+        confirmButton = { TextButton(onClick = { confirmReadable = false; exportReadable.launch(Archive.readableFileName()) }) { Text(tr("Exporter"), color = Mf.colors.text) } },
+        dismissButton = { TextButton(onClick = { confirmReadable = false }) { Text(tr("Annuler"), color = Mf.colors.textSecondary) } })
 
     pickRemote?.let { list ->
         AlertDialog(onDismissRequest = { pickRemote = null }, containerColor = Mf.colors.card,

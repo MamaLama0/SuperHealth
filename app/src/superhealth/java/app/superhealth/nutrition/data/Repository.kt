@@ -150,7 +150,7 @@ data class Analytics(
 
 @Serializable
 data class Backup(
-    val version: Int = 3,
+    val version: Int = 4,
     val exportedAt: Long = System.currentTimeMillis(),
     val profile: Profile,
     val program: Program,
@@ -163,6 +163,8 @@ data class Backup(
     val checkIns: List<CheckIn> = emptyList(),
     val recipeItems: List<RecipeItemEntity> = emptyList(),
     val bodyMetrics: List<BodyMetricEntity> = emptyList(),
+    /** v4 : photos de progression (lignes ; les images voyagent à côté dans l'archive, dossier photos/). */
+    val photos: List<ProgressPhotoEntity>? = null,
 )
 
 class Repository(private val db: AppDatabase, val prefs: Prefs) {
@@ -332,7 +334,7 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
         profile = prefs.profile.value, program = prefs.program.value, settings = prefs.settings.value,
         foods = foods.all(), entries = entries.all(), weighIns = weighIns.all(), dayFlags = dayFlags.all(),
         goals = prefs.goals.value, checkIns = prefs.checkIns.value,
-        recipeItems = recipes.all(), bodyMetrics = body.metrics(),
+        recipeItems = recipes.all(), bodyMetrics = body.metrics(), photos = body.photos(),
     )
 
     suspend fun restore(b: Backup) {
@@ -340,6 +342,8 @@ class Repository(private val db: AppDatabase, val prefs: Prefs) {
             foods.clear(); entries.clear(); weighIns.clear(); dayFlags.clear(); recipes.clear(); body.clearMetrics()
             foods.upsertAll(b.foods); entries.upsertAll(b.entries); weighIns.upsertAll(b.weighIns); dayFlags.upsertAll(b.dayFlags)
             recipes.upsertAll(b.recipeItems); body.upsertMetrics(b.bodyMetrics)
+            // Les sauvegardes d'avant la v4 n'emportaient pas les photos : on garde alors celles du téléphone.
+            b.photos?.let { body.clearPhotos(); body.upsertPhotos(it) }
         }
         prefs.setProfile(b.profile); prefs.setProgram(b.program); prefs.setSettings(b.settings)
         prefs.setGoals(b.goals); prefs.setCheckIns(b.checkIns)

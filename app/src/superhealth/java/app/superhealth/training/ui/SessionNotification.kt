@@ -27,6 +27,26 @@ object SessionNotification {
     const val ACTION_ADD = "app.superhealth.training.ADD_REST"
     const val ACTION_SUB = "app.superhealth.training.SUB_REST"
 
+    /** « Squat · Série 3/4 — 80 kg × 8 » : prochaine série à faire à partir de l'exercice affiché ; null si tout est fait. */
+    fun nextSetText(st: AppState): String? {
+        val s = st.session ?: return null
+        val app = WorkoutApp
+        // prochaine série à faire à partir de l'exercice affiché
+        val next = (s.exercises.indices.drop(s.current) + s.exercises.indices.take(s.current)).firstNotNullOfOrNull { i ->
+            s.exercises[i].sets.indexOfFirst { !it.done }.takeIf { it >= 0 }?.let { i to it }
+        }
+        return next?.let { (i, si) ->
+            val ex = s.exercises[i]
+            val set = ex.sets[si]
+            val work = ex.sets.filter { it.type != SetType.WARMUP }
+            val label = if (set.type == SetType.WARMUP) tr("Échauffement") else trf("Série %1\$s/%2\$s", (work.indexOf(set) + 1), work.size)
+            val wgt = set.weight ?: set.autoWeight
+            val reps = set.reps ?: set.autoReps
+            val load = listOfNotNull(wgt?.let { "${clean(st.settings.w(it))} ${st.settings.unit.label.tr()}" }, reps?.let { trf("× %1\$s", it) }).joinToString(" ")
+            listOf("${app.exerciseName(ex.exerciseId)} · $label", load).filter { it.isNotBlank() }.joinToString(" — ")
+        }
+    }
+
     fun update(ctx: Context, st: AppState) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         if (!app.superhealth.SuperPrefs.settings.value.notifyWorkout) { nm.cancel(ID); return }
@@ -36,23 +56,9 @@ object SessionNotification {
             setShowBadge(false); setSound(null, null); enableVibration(false)
         })
         val now = System.currentTimeMillis()
-        val app = WorkoutApp
         val done = s.exercises.sumOf { e -> e.sets.count { it.done } }
         val total = s.exercises.sumOf { it.sets.size }
-        // prochaine série à faire à partir de l'exercice affiché
-        val next = (s.exercises.indices.drop(s.current) + s.exercises.indices.take(s.current)).firstNotNullOfOrNull { i ->
-            s.exercises[i].sets.indexOfFirst { !it.done }.takeIf { it >= 0 }?.let { i to it }
-        }
-        val text = next?.let { (i, si) ->
-            val ex = s.exercises[i]
-            val set = ex.sets[si]
-            val work = ex.sets.filter { it.type != SetType.WARMUP }
-            val label = if (set.type == SetType.WARMUP) tr("Échauffement") else trf("Série %1\$s/%2\$s", (work.indexOf(set) + 1), work.size)
-            val wgt = set.weight ?: set.autoWeight
-            val reps = set.reps ?: set.autoReps
-            val load = listOfNotNull(wgt?.let { "${clean(st.settings.w(it))} ${st.settings.unit.label.tr()}" }, reps?.let { trf("× %1\$s", it) }).joinToString(" ")
-            listOf("${app.exerciseName(ex.exerciseId)} · $label", load).filter { it.isNotBlank() }.joinToString(" — ")
-        } ?: tr("Toutes les séries sont faites")
+        val text = nextSetText(st) ?: tr("Toutes les séries sont faites")
         val resting = s.restEndsAt != null && s.restEndsAt > now && s.pausedAt == null
         val open = PendingIntent.getActivity(ctx, 2, Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_ROUTE, "training:session")
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

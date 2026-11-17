@@ -223,17 +223,65 @@ internal fun RecordCard(db: ExerciseDb, settings: Settings, r: Analytics.NewReco
     }
 }
 
-/** Niveaux : séries hebdomadaires par muscle (1 principal, ½ secondaire) contre les repères 8–16 séries. */
+/**
+ * Niveaux : carte des muscles en trois vues. Volume : séries hebdomadaires (1 principal, ½ secondaire) contre les repères
+ * 8–16 séries. Récupération : fatigue laissée par les séances des trois derniers jours. Négligés : temps depuis le dernier travail.
+ */
 @Composable
 fun LevelsScreen(vm: AppViewModel, nav: NavHostController) {
     val st by vm.state.collectAsState()
     val db = vm.db.collectAsState().value ?: return
+    var mode by androidx.compose.runtime.saveable.rememberSaveable { mutableIntStateOf(0) }
     var weeks by remember { mutableIntStateOf(1) }
-    val since = System.currentTimeMillis() - weeks * 7L * 86_400_000
+    val now = remember(st.history) { System.currentTimeMillis() }
+    val since = now - weeks * 7L * 86_400_000
     val sets = Analytics.setsByMuscle(st.history.filter { it.startTime >= since }, db).mapValues { it.value / weeks }
+    val recovery = remember(st.history, db) { app.superhealth.training.domain.MuscleStatus.recovery(st.history, db, now) }
+    val idle = remember(st.history, db) { app.superhealth.training.domain.MuscleStatus.daysSinceTrained(st.history, db, now) }
+    val groups = MuscleGroup.entries.filter { it != MuscleGroup.HIP_FLEXORS }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
-        ScreenTitle(tr("Niveaux"), subtitle = tr("Séries de travail par muscle et par semaine"), onBack = { nav.popBackStack() })
+        ScreenTitle(tr("Niveaux"), subtitle = tr(when (mode) { 1 -> "Ce qui récupère encore des dernières séances"; 2 -> "Depuis quand chaque muscle n'a pas travaillé"; else -> "Séries de travail par muscle et par semaine" }),
+            onBack = { nav.popBackStack() })
         Column(Modifier.padding(horizontal = 16.dp)) {
+            ChipChoice(listOf(0, 1, 2), mode, { tr(when (it) { 1 -> "Récupération"; 2 -> "Négligés"; else -> "Volume" }) }) { mode = it }
+            Spacer(Modifier.height(8.dp))
+            when (mode) {
+                1 -> {
+                    MfCard { BodyMap(recovery.mapKeys { it.key.key }.mapValues { it.value.fatigue.toFloat() }, st.settings.sex, Modifier.fillMaxWidth().height(280.dp), color = RecoveryColor) }
+                    SectionLabel(tr("Muscles encore chargés"))
+                    val tired = groups.filter { (recovery[it]?.fatigue ?: 0.0) > 0.02 }.sortedByDescending { recovery[it]?.fatigue ?: 0.0 }
+                    GroupCard {
+                        if (tired.isEmpty()) Text(tr("Tout est récupéré : aucun muscle chargé par les séances des trois derniers jours."),
+                            style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(14.dp))
+                        tired.forEachIndexed { i, g ->
+                            if (i > 0) RowDivider()
+                            val r = recovery.getValue(g)
+                            val hours = r.readyAt?.let { ((it - now) / 3_600_000L).coerceAtLeast(1) }
+                            MuscleStatusRow(g, st.settings.sex, trf("Récupéré à %1\$s %%", (100 - Math.round(r.fatigue * 100)).toInt()),
+                                hours?.let { if (it >= 24) trf("prêt dans ~%1\$s j", Math.round(it / 24.0)) else trf("prêt dans ~%1\$s h", it) } ?: "",
+                                r.fatigue, RecoveryColor)
+                        }
+                    }
+                    Text(tr("Estimation : une série laisse une fatigue qui disparaît en 48 h (petits muscles) ou 72 h (grands muscles). Muscles secondaires : ½ série."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(8.dp))
+                }
+                2 -> {
+                    fun level(g: MuscleGroup) = idle[g]?.let { (it / 14.0).coerceIn(0.0, 1.0) } ?: 1.0
+                    MfCard { BodyMap(groups.associate { it.key to level(it).toFloat() }, st.settings.sex, Modifier.fillMaxWidth().height(280.dp), color = IdleColor) }
+                    SectionLabel(tr("Du plus ancien au plus récent"))
+                    GroupCard {
+                        groups.sortedWith(compareByDescending<MuscleGroup> { idle[it] ?: Long.MAX_VALUE }).forEachIndexed { i, g ->
+                            if (i > 0) RowDivider()
+                            val d = idle[g]
+                            MuscleStatusRow(g, st.settings.sex,
+                                when { d == null -> tr("Jamais travaillé"); d == 0L -> tr("Aujourd'hui"); d == 1L -> tr("Hier"); else -> trf("Il y a %1\$s jours", d) },
+                                if (d != null && d >= 14) tr("à reprendre") else "", level(g), IdleColor)
+                        }
+                    }
+                    Text(tr("Un muscle passe au plus foncé après 14 jours sans série de travail (principale ou secondaire)."),
+                        style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(8.dp))
+                }
+                else -> {
             ChipChoice(listOf(1, 4, 12), weeks, { if (it == 1) tr("7 derniers jours") else trf("Moyenne %1\$s semaines", it) }) { weeks = it }
             Spacer(Modifier.height(10.dp))
             MfCard { BodyMap(intensity(sets, Analytics.SETS_HIGH), st.settings.sex, Modifier.fillMaxWidth().height(280.dp)) }
@@ -268,7 +316,29 @@ fun LevelsScreen(vm: AppViewModel, nav: NavHostController) {
             }
             Text(tr("Repère : 8 à 16 séries par muscle et par semaine. Muscles secondaires : ½ série."),
                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(8.dp))
+                }
+            }
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+private val RecoveryColor = androidx.compose.ui.graphics.Color(0xFFFF7A45)
+private val IdleColor = androidx.compose.ui.graphics.Color(0xFF9B6CFF)
+
+@Composable
+private fun MuscleStatusRow(g: MuscleGroup, sex: app.superhealth.training.domain.Sex, value: String, hint: String, level: Double, color: androidx.compose.ui.graphics.Color) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        MuscleThumb(g, sex, 40.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Row {
+                Text(g.label.tr(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(value, style = MaterialTheme.typography.labelLarge, color = if (level > 0.5) color else Mf.colors.text)
+            }
+            Spacer(Modifier.height(6.dp))
+            ProgressBar(level.toFloat(), color, height = 6.dp)
+            if (hint.isNotEmpty()) Text(hint, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 3.dp))
         }
     }
 }
