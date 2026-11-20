@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.superhealth.neutralLook
 import app.superhealth.nutrition.domain.AccentColor
 import app.superhealth.nutrition.domain.TextSize
 import app.superhealth.nutrition.domain.ThemeMode
@@ -121,13 +122,20 @@ enum class Surface(val label: String, val light: List<Long>, val dark: List<Long
     // fond, carte, bloc posé sur une carte, remplissage neutre (pistes, champs)
     // le fond d'origine de l'app : cartes pleines et douces, sans filet
     ORIGINE("Origine", listOf(0xFFF1F3F8, 0xFFFFFFFF, 0xFFE9ECF3, 0xFFE7EAF1), listOf(0xFF111318, 0xFF1D2026, 0xFF282B32, 0xFF2A2D35)),
+    // le style neutre : gris sans teinte et blanc en clair, noir pur et anthracite en sombre
+    ENCRE("Neutre", listOf(0xFFF5F5F5, 0xFFFFFFFF, 0xFFEEEEEE, 0xFFECECED), listOf(0xFF000000, 0xFF131314, 0xFF1E1E20, 0xFF222224)),
 }
+
+/** Encre du style neutre : le texte, et à sa suite les actions, les liens et la sélection. */
+private fun ink(dark: Boolean) = if (dark) Color(0xFFF7F7F8) else Color(0xFF0B0B0C)
 
 /** Fond légèrement teinté d'une couleur (pastilles, sélection), lisible en clair comme en sombre. */
 @Composable
 fun Color.container(strength: Float = 1f): Color =
+    // style neutre : aucune teinte dans les fonds, un gris tiré de l'encre
+    if (Mf.neutral) androidx.compose.ui.graphics.lerp(Mf.colors.card, Mf.colors.text, 0.07f * strength)
     // en sombre, une teinte chaude mêlée au fond vire au brun : fond neutre à la place, la couleur reste au symbole
-    if (Mf.colors.dark && isWarm()) androidx.compose.ui.graphics.lerp(Mf.colors.card, Color.White, 0.07f * strength)
+    else if (Mf.colors.dark && isWarm()) androidx.compose.ui.graphics.lerp(Mf.colors.card, Color.White, 0.07f * strength)
     else androidx.compose.ui.graphics.lerp(Mf.colors.card, this, (if (Mf.colors.dark) 0.24f else 0.14f) * strength)
 
 /**
@@ -263,23 +271,40 @@ private fun onAccent(accent: Color) = if (accent.luminance() > 0.62f) Color(0xFF
 
 private fun lightMf(accent: Color, sf: Surface = Surface.ORIGINE) = MfColors(
     dark = false, background = Color(sf.light[0]), card = Color(sf.light[1]), elevated = Color(sf.light[2]),
-    text = if (sf == Surface.ORIGINE) Color(0xFF1B1C20) else Color(0xFF0F1114), textSecondary = if (sf == Surface.ORIGINE) Color(0xFF5E636D) else Color(0xFF5F646D),
-    textTertiary = if (sf == Surface.ORIGINE) Color(0xFFA0A5AE) else Color(0xFF9EA3AC),
-    divider = if (sf == Surface.ORIGINE) Color(0xFFE2E5EC) else Color(0x14000000), line = if (sf == Surface.ORIGINE) Color.Transparent else Color(0x12000000), chip = Color(sf.light[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
+    text = if (sf == Surface.ORIGINE) Color(0xFF1B1C20) else ink(false), textSecondary = if (sf == Surface.ORIGINE) Color(0xFF5E636D) else Color(0xFF5A5A5E),
+    textTertiary = if (sf == Surface.ORIGINE) Color(0xFFA0A5AE) else Color(0xFFA6A6AA),
+    divider = if (sf == Surface.ORIGINE) Color(0xFFE2E5EC) else Color(0xFFE6E6E7), line = Color.Transparent, chip = Color(sf.light[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
 )
 
 private fun darkMf(accent: Color, sf: Surface = Surface.ORIGINE) = MfColors(
     dark = true, background = Color(sf.dark[0]), card = Color(sf.dark[1]), elevated = Color(sf.dark[2]),
-    text = if (sf == Surface.ORIGINE) Color(0xFFE3E4E9) else Color(0xFFF4F5F7), textSecondary = if (sf == Surface.ORIGINE) Color(0xFFA9ADB7) else Color(0xFF8E939B),
-    textTertiary = if (sf == Surface.ORIGINE) Color(0xFF6B707A) else Color(0xFF5E636B),
-    divider = if (sf == Surface.ORIGINE) Color(0xFF30333A) else Color(0x17FFFFFF), line = if (sf == Surface.ORIGINE) Color.Transparent else Color(0x14FFFFFF), chip = Color(sf.dark[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
+    text = if (sf == Surface.ORIGINE) Color(0xFFE3E4E9) else ink(true), textSecondary = if (sf == Surface.ORIGINE) Color(0xFFA9ADB7) else Color(0xFFA2A2A8),
+    textTertiary = if (sf == Surface.ORIGINE) Color(0xFF6B707A) else Color(0xFF606066),
+    divider = if (sf == Surface.ORIGINE) Color(0xFF30333A) else Color(0xFF2A2A2C), line = Color.Transparent, chip = Color(sf.dark[3]), accent = accent, strong = accent, onStrong = onAccent(accent),
 )
 
 val LocalMf = staticCompositionLocalOf { lightMf(Base.Blue) }
 
+/** Style neutre en cours (posé par [SuperTheme]) : hors de [MfColors], les cartes recopient leurs couleurs sans le perdre. */
+val LocalNeutral = staticCompositionLocalOf { false }
+
 object Mf {
     val colors: MfColors @Composable get() = LocalMf.current
+    /** Style neutre : noir et blanc, la couleur réservée aux données. */
+    val neutral: Boolean @Composable get() = LocalNeutral.current
 }
+
+/** Fond d'un élément choisi (onglet, puce, segment) : teinte de l'accent en classique, encre pleine en neutre. */
+@Composable
+fun selectedFill(strength: Float = 1.4f): Color = if (Mf.neutral) Mf.colors.text else Mf.colors.accent.container(strength)
+
+/** Texte et symbole posés sur [selectedFill]. */
+@Composable
+fun selectedInk(): Color = if (Mf.neutral) Mf.colors.card else Mf.colors.accent.onContainer()
+
+/** Symbole décoratif posé sur une pastille : sa teinte en classique, l'encre en neutre (la couleur y reste aux données). */
+@Composable
+fun Color.glyph(): Color = if (Mf.neutral) Mf.colors.text else onContainer()
 
 /** Google Sans Flex (variable, réduite au latin) : graisse et taille optique. */
 @OptIn(ExperimentalTextApi::class)
@@ -346,26 +371,30 @@ private val shapes = androidx.compose.material3.Shapes(
 
 @Composable
 fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentColor.BLUE, textSize: TextSize = TextSize.NORMAL,
-               content: @Composable () -> Unit) {
+               /** Style neutre forcé (aperçus d'Apparence) ; null : celui des réglages. */
+               neutral: Boolean? = null, content: @Composable () -> Unit) {
     val dark = mode.isDark(isSystemInDarkTheme())
     // teintes des données posées avant de lire les couleurs (accent compris) : tout l'écran les suit
     if (Hues.dark != dark) Hues.dark = dark
-    val surface = Surface.ORIGINE
+    val sober = neutral ?: app.superhealth.SuperPrefs.settings.collectAsState().value.neutralLook
+    val surface = if (sober) Surface.ENCRE else Surface.ORIGINE
     val font = AppFont.SANS
-    val acc = accent.color()
+    // style neutre : pas de couleur d'accent, l'encre la remplace partout (actions, liens, sélection)
+    val acc = if (sober) ink(dark) else accent.color()
     val mf = if (dark) darkMf(acc, surface) else lightMf(acc, surface)
     // labo de style : couleur de l'entraînement (bleu, accent ou programme), suivie par WorkoutBlue
     val labWorkout = app.superhealth.SuperPrefs.settings.collectAsState().value.styleWorkoutColor
-    androidx.compose.runtime.SideEffect { if (labWorkout.isNotEmpty()) StyleLab.workoutColor = StyleLab.resolveWorkout(acc) }
+    // (pas depuis un aperçu au style forcé : la couleur de l'app ne doit pas suivre celle de l'aperçu)
+    androidx.compose.runtime.SideEffect { if (neutral == null && labWorkout.isNotEmpty()) StyleLab.workoutColor = StyleLab.resolveWorkout(acc) }
     val scheme = if (dark) darkColorScheme(
-        primary = mf.strong, onPrimary = mf.onStrong, secondary = acc, onSecondary = Color.White,
+        primary = mf.strong, onPrimary = mf.onStrong, secondary = acc, onSecondary = if (sober) mf.onStrong else Color.White,
         background = mf.background, onBackground = mf.text, surface = mf.card, onSurface = mf.text,
         surfaceVariant = mf.elevated, onSurfaceVariant = mf.textSecondary, surfaceContainer = mf.card,
         surfaceContainerLow = mf.card, surfaceContainerHigh = mf.elevated, surfaceContainerHighest = mf.elevated,
         outline = Color(0xFF8E9199), outlineVariant = mf.divider, error = Base.Red, primaryContainer = mf.elevated,
         onPrimaryContainer = mf.text, secondaryContainer = mf.elevated, onSecondaryContainer = mf.text,
     ) else lightColorScheme(
-        primary = mf.strong, onPrimary = mf.onStrong, secondary = acc, onSecondary = Color.White,
+        primary = mf.strong, onPrimary = mf.onStrong, secondary = acc, onSecondary = if (sober) mf.onStrong else Color.White,
         background = mf.background, onBackground = mf.text, surface = mf.card, onSurface = mf.text,
         surfaceVariant = mf.elevated, onSurfaceVariant = mf.textSecondary, surfaceContainer = mf.card,
         surfaceContainerLow = mf.card, surfaceContainerHigh = mf.card, surfaceContainerHighest = mf.elevated,
@@ -375,7 +404,7 @@ fun SuperTheme(mode: ThemeMode = ThemeMode.SYSTEM, accent: AccentColor = AccentC
     // taille du texte : multiplie l'échelle du système, donc aussi les tailles fixées à la main hors typographie
     val density = LocalDensity.current
     val scaled = if (textSize == TextSize.NORMAL) density else Density(density.density, density.fontScale * textSize.scale)
-    CompositionLocalProvider(LocalMf provides mf, LocalDensity provides scaled) {
+    CompositionLocalProvider(LocalMf provides mf, LocalNeutral provides sober, LocalDensity provides scaled) {
         MaterialTheme(colorScheme = scheme, typography = remember(font) { typography(font) }, shapes = shapes) {
             CompositionLocalProvider(LocalContentColor provides mf.text, content = content)
         }

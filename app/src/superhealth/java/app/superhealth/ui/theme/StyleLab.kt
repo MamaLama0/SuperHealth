@@ -19,8 +19,8 @@ import androidx.compose.ui.unit.dp
 import app.superhealth.SuperPrefs
 
 /**
- * Labo de style (version test) : variantes à comparer sur le téléphone avant d'en garder une.
- * Cartes du tableau de bord, du plus neutre au plus vibrant (réglées à part en clair et en sombre), et séance de musculation.
+ * Réglages fins d'Apparence : variantes des cartes du tableau de bord en style classique (réglées à part en clair et en sombre)
+ * et présentation de la séance de musculation. « Neutre » est la carte unie du style neutre de l'app, sans variante.
  */
 object StyleLab {
     /** Du plus neutre au plus coloré. */
@@ -41,9 +41,16 @@ object StyleLab {
     @Composable fun cards(): Cards {
         // dans une carte : la variante de son ton (une carte « Plein » passe en couleurs sombres, sans changer de variante)
         LocalCardStyle.current?.let { return it }
+        // style neutre : cartes unies, sans variante
+        if (Mf.neutral) return Cards.NEUTRAL
         val s by SuperPrefs.settings.collectAsState()
-        return pick(if (Mf.colors.dark) s.styleCardsDark else s.styleCardsLight, Cards.NEUTRAL)
+        return classic(if (Mf.colors.dark) s.styleCardsDark else s.styleCardsLight, Mf.colors.dark)
     }
+    /** Variantes proposées en classique : « Neutre » n'en fait plus partie, c'est devenu le style neutre de l'app. */
+    val classicCards = Cards.entries - Cards.NEUTRAL
+    /** Variante classique enregistrée sous [name] ; une ancienne « Neutre » ou un nom inconnu retombent sur celle d'origine. */
+    fun classic(name: String, dark: Boolean): Cards = classicCards.firstOrNull { it.name == name } ?: if (dark) Cards.VIVID else Cards.GRADIENT
+
     @Composable fun hero(): Hero = pick(SuperPrefs.settings.collectAsState().value.styleHero, Hero.LARGE)
     @Composable fun sets(): Sets = pick(SuperPrefs.settings.collectAsState().value.styleSets, Sets.CARDS)
     fun workoutChoice(): WorkoutColor = pick(SuperPrefs.settings.value.styleWorkoutColor, WorkoutColor.BLUE)
@@ -137,6 +144,8 @@ fun Modifier.dashCardBackground(@Suppress("UNUSED_PARAMETER") hue: Color = Color
 @Composable
 fun dashChipColors(hue: Color, style: StyleLab.Cards = StyleLab.cards()): Pair<Color, Color> = when (style) {
     StyleLab.Cards.VIVID -> hue to Color.White
+    // style neutre : pastille grise, symbole à l'encre
+    StyleLab.Cards.NEUTRAL -> Mf.colors.chip to Mf.colors.text
     StyleLab.Cards.FULL -> lerp(Mf.colors.card, Color.White, 0.22f) to Color.White
     StyleLab.Cards.SOFT, StyleLab.Cards.GRADIENT, StyleLab.Cards.STRONG, StyleLab.Cards.DEEP -> Mf.colors.chip to hue.onContainer()
     else -> hue.container(1.2f) to hue.onContainer()

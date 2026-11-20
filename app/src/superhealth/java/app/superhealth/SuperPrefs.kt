@@ -81,7 +81,7 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** Retirée en 3.6 (les quêtes remplacent les séries) : gardée pour lire les anciens réglages, jamais affichée. */
     STREAKS("Mes séries", Section.SOCIAL),
     /** 3.6 : cinq semaines d'humeur en pastilles. */
-    MOOD("Humeur", Section.HEALTH),
+    MOOD("Moral", Section.HEALTH),
     /** 3.6 : cette semaine face à la précédente, aux mêmes jours. */
     WEEK_COMPARE("Cette semaine", Section.HEALTH),
     /** 3.6 : douze semaines de jours actifs. */
@@ -89,7 +89,9 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     /** 3.6 : pas d'aujourd'hui heure par heure. */
     HOURLY_STEPS("Pas par heure", Section.HEALTH),
     /** Batterie et connexion de la montre (masquée sans montre associée). */
-    WATCH_BATTERY("Batterie de la montre", Section.HEALTH);
+    WATCH_BATTERY("Batterie de la montre", Section.HEALTH),
+    /** 4.2 : plusieurs mesures au choix, l'une sous l'autre, chacune avec ses 7 derniers jours. */
+    MEASURES("Mes mesures", Section.HEALTH);
 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement"), SOCIAL("Social") }
 
@@ -133,7 +135,7 @@ val COMPACT = setOf(DashCard.RINGS, DashCard.CALORIES, DashCard.WEIGHT, DashCard
 /** Cartes conçues en demi-largeur. */
 val HALF = setOf(DashCard.QUESTS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.WEIGHT, DashCard.EXPENDITURE, DashCard.STEPS, DashCard.SLEEP, DashCard.CARDIO, DashCard.ENERGY, DashCard.HYDRATION,
     DashCard.RECOVERY, DashCard.HEART, DashCard.CHARGE, DashCard.EFFORT, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.LOAD,
-    DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.WATCH_BATTERY)
+    DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART, DashCard.WATCH_BATTERY, DashCard.MEASURES)
 
 /** Module téléchargeable dont dépend la carte (null : toujours disponible). */
 val DashCard.module: String? get() = when (this) {
@@ -156,7 +158,9 @@ val DashCard.available: Boolean get() = when (this) {
 val DashCard.sizes: List<CardSize> get() = when (this) {
     DashCard.INSIGHTS -> listOf(CardSize.M, CardSize.W, CardSize.L)
     // grilles et barres : demi-largeur ou pleine largeur
-    DashCard.MOOD, DashCard.WEEK_COMPARE, DashCard.ACTIVE_DAYS, DashCard.HOURLY_STEPS -> listOf(CardSize.M, CardSize.L)
+    DashCard.WEEK_COMPARE, DashCard.ACTIVE_DAYS, DashCard.HOURLY_STEPS -> listOf(CardSize.M, CardSize.L)
+    // liste de mesures : pas de carré
+    DashCard.MEASURES -> listOf(CardSize.M, CardSize.W, CardSize.L)
     else -> CardSize.entries
 }
 
@@ -165,6 +169,34 @@ val DashCard.defaultSize: CardSize get() = if (this == DashCard.FRIENDS) CardSiz
 /** Taille choisie (ou par défaut) d'une carte, toujours parmi celles qu'elle accepte. */
 fun SuperSettings.sizeOf(c: DashCard): CardSize =
     dashSizes[c.name]?.let { n -> CardSize.entries.firstOrNull { it.name == n } }?.takeIf { it in c.sizes } ?: c.defaultSize
+
+/**
+ * Dessin d'une carte quand elle en a plusieurs, choisi dans sa fenêtre de réglage : le classique, le niveau qui remplit la
+ * carte jusqu'à l'objectif, la courbe des pas de la journée, le fil du jour (une piste par donnée).
+ */
+enum class CardVariant(val label: String) { CLASSIC("Classique"), LEVEL("Niveau"), CURVE("Courbe du jour"), TRACKS("Fil du jour") }
+
+/** Dessins proposés pour la carte (vide : un seul). */
+val DashCard.variants: List<CardVariant> get() = when (this) {
+    DashCard.HYDRATION, DashCard.CALORIES, DashCard.CARDIO -> listOf(CardVariant.CLASSIC, CardVariant.LEVEL)
+    DashCard.STEPS -> listOf(CardVariant.CLASSIC, CardVariant.LEVEL, CardVariant.CURVE)
+    DashCard.DAY_TIMELINE -> listOf(CardVariant.CLASSIC, CardVariant.TRACKS)
+    else -> emptyList()
+}
+
+/** Dessin de départ : l'eau en niveau (la vague), les autres en classique. */
+val DashCard.defaultVariant: CardVariant get() = if (this == DashCard.HYDRATION) CardVariant.LEVEL else CardVariant.CLASSIC
+
+fun SuperSettings.variantOf(c: DashCard): CardVariant = c.variants.firstOrNull { it.name == dashVariants[c.name] } ?: c.defaultVariant
+
+/** Cartes que « Mes mesures » peut lister : celles qui ont une valeur du jour et un historique court. */
+val MEASURE_CHOICES = listOf(DashCard.STEPS, DashCard.SLEEP, DashCard.HEART, DashCard.HYDRATION, DashCard.CALORIES, DashCard.WEIGHT, DashCard.CARDIO,
+    DashCard.ENERGY, DashCard.HRV_STATUS, DashCard.STRESS_DAY, DashCard.CHARGE, DashCard.EFFORT, DashCard.MACROS, DashCard.INTAKE, DashCard.EXPENDITURE,
+    DashCard.BALANCE, DashCard.RUNNING, DashCard.TRAINING_WEEK)
+
+val MEASURE_DEFAULTS = listOf("STEPS", "SLEEP", "HEART", "HYDRATION", "CALORIES", "WEIGHT")
+
+val SuperSettings.measureCards: List<DashCard> get() = measures.mapNotNull { n -> MEASURE_CHOICES.firstOrNull { it.name == n } }.distinct()
 
 /**
  * Rangées de la grille : dans l'ordre, chaque rangée prend la première carte restante puis, tant qu'il reste de la place,
@@ -345,6 +377,10 @@ data class SuperSettings(
     val vitalsHero: Boolean = false,
     /** Taille de chaque carte (nom de [DashCard] → nom de [CardSize]) ; absente : taille par défaut. */
     val dashSizes: Map<String, String> = emptyMap(),
+    /** 4.2 : dessin choisi de chaque carte qui en a plusieurs (nom de [DashCard] → nom de [CardVariant]) ; absent : celui de départ. */
+    val dashVariants: Map<String, String> = emptyMap(),
+    /** 4.2 : mesures de la carte « Mes mesures », dans l'ordre (noms de [DashCard] parmi [MEASURE_CHOICES]). */
+    val measures: List<String> = MEASURE_DEFAULTS,
     /** Mesures des anneaux du jour, de l'extérieur vers l'intérieur (noms de Rings.Kind). */
     val rings: List<String> = listOf("STEPS", "ENERGY", "KCAL"),
     /** Anneaux du jour déjà placés au-dessus des constantes (migration unique). */
@@ -419,6 +455,8 @@ data class SuperSettings(
     /** Parties de l'app activées (noms de [Feature]). */
     val features: Set<String> = Feature.entries.filter { it != Feature.CYCLE }.map { it.name }.toSet(),
     /** Labo de style (version test) : cartes du tableau de bord en clair et en sombre, séance de musculation. Noms des enums de ui.theme.StyleLab. */
+    /** Style de l'app (Réglages > Apparence) : "CLASSIC" ou "NEUTRAL" (noir et blanc, la couleur réservée aux données). Vide : jamais choisi. */
+    val look: String = "",
     val styleCardsLight: String = "GRADIENT",
     val styleCardsDark: String = "VIVID",
     val styleWorkoutColor: String = "PROGRAM",
@@ -496,6 +534,12 @@ data class HcSession(val id: String, val type: Int, val title: String?, val star
                      val distanceM: Double? = null, val kcal: Double? = null, val avgHr: Int? = null, val maxHr: Int? = null,
                      val totalKcal: Double? = null, val clientRecordId: String? = null, val modifiedAt: Long? = null,
                      val heartRate: List<Pair<Long, Int>>? = null)
+
+/**
+ * Style neutre : choisi dans Apparence, ou hérité de l'ancienne variante de cartes « Neutre » quand elle était réglée en clair
+ * comme en sombre (le style neutre la remplace).
+ */
+val SuperSettings.neutralLook: Boolean get() = look == "NEUTRAL" || (look.isEmpty() && styleCardsLight == "NEUTRAL" && styleCardsDark == "NEUTRAL")
 
 private val SuperJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; coerceInputValues = true }
 

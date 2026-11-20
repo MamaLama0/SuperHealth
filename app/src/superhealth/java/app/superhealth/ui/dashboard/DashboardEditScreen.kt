@@ -12,6 +12,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import app.superhealth.sizes
 import app.superhealth.sizeOf
+import app.superhealth.measureCards
+import app.superhealth.variantOf
+import app.superhealth.variants
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -83,12 +86,16 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
             CardToolbar(c, sh, onMove = { d ->
                 val i = shown.indexOf(c); val j = (i + d).coerceIn(0, shown.lastIndex)
                 if (i != j) set(shown.toMutableList().apply { add(j, removeAt(i)) })
-            }, onRemove = { set(shown - c); selected = null })
+            }, onRemove = { set(shown - c); selected = null }, onContent = { nav.navigate(it) })
         }
-        // réglages du contenu des deux cartes qui en ont, côte à côte
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ContentLink(tr("Constantes"), DashCard.VITALS, Modifier.weight(1f)) { nav.navigate("vitals/edit") }
-            ContentLink(tr("Anneaux"), DashCard.RINGS, Modifier.weight(1f)) { nav.navigate("rings/edit") }
+        // réglages du contenu des cartes affichées qui en ont un (constantes, anneaux, mesures), côte à côte ; le même lien
+        // est dans la barre de la carte et dans sa fenêtre sur l'accueil
+        shown.filter { it.content() != null }.chunked(2).forEach { line ->
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                line.forEach { c ->
+                    ContentLink(tr(when (c) { DashCard.VITALS -> "Constantes"; DashCard.RINGS -> "Anneaux"; else -> c.label }), c, Modifier.weight(1f)) { nav.navigate(c.content()!!.second) }
+                }
+            }
         }
         // cartes masquées : une pastille par carte, regroupées par partie ; une touche l'ajoute à la fin
         val sections = DashCard.Section.entries.map { section ->
@@ -105,9 +112,9 @@ fun DashboardEditScreen(vm: SuperViewModel, nav: NavHostController) {
     }
 }
 
-/** Barre de la carte sélectionnée : taille, déplacer avant / après, retirer. */
+/** Barre de la carte sélectionnée : taille, dessin et contenu quand la carte en a, déplacer avant / après, retirer. */
 @Composable
-private fun CardToolbar(c: DashCard, sh: app.superhealth.SuperSettings, onMove: (Int) -> Unit, onRemove: () -> Unit) {
+private fun CardToolbar(c: DashCard, sh: app.superhealth.SuperSettings, onMove: (Int) -> Unit, onRemove: () -> Unit, onContent: (String) -> Unit) {
     Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(Mf.colors.background)
         .padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -126,6 +133,25 @@ private fun CardToolbar(c: DashCard, sh: app.superhealth.SuperSettings, onMove: 
                     modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.strong else Mf.colors.chip)
                         .clickable { SuperPrefs.update { it.copy(dashSizes = it.dashSizes + (c.name to z.name)) } }
                         .padding(horizontal = 12.dp, vertical = 5.dp))
+            }
+        }
+        // le dessin de la carte (Classique, Niveau…), puis ce qu'elle montre
+        if (c.variants.size > 1) Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val now = sh.variantOf(c)
+            c.variants.forEach { v ->
+                val on = v == now
+                Text(tr(v.label), style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                    color = if (on) Mf.colors.onStrong else Mf.colors.text,
+                    modifier = Modifier.clip(CircleShape).background(if (on) Mf.colors.strong else Mf.colors.chip)
+                        .clickable { SuperPrefs.update { it.copy(dashVariants = it.dashVariants + (c.name to v.name)) } }
+                        .padding(horizontal = 12.dp, vertical = 5.dp))
+            }
+        }
+        c.content()?.let { (label, route) ->
+            Row(Modifier.padding(top = 8.dp).clip(CircleShape).background(Mf.colors.chip).clickable { onContent(route) }.padding(start = 12.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(tr(label), style = MaterialTheme.typography.labelMedium, maxLines = 1, color = Mf.colors.text)
+                Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.size(16.dp).graphicsLayer(rotationZ = -90f), tint = Mf.colors.textTertiary)
             }
         }
     }
@@ -199,6 +225,58 @@ fun VitalsEditScreen(vm: SuperViewModel, nav: NavHostController) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(tr(label(n)), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         app.superhealth.nutrition.ui.components.Toggle(false, { set(shown + n) })
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(if (sh.appTourPending) 210.dp else 24.dp))
+    }
+}
+
+/** Mes mesures : quelles mesures dans la carte, et dans quel ordre (même écran que Constantes et Anneaux). */
+@Composable
+fun MeasuresEditScreen(vm: SuperViewModel, nav: NavHostController) {
+    val sh by vm.settings.collectAsState()
+    val shown = sh.measureCards
+    fun set(list: List<DashCard>) = SuperPrefs.update { it.copy(measures = list.map { c -> c.name }) }
+    DetailScaffold(tr("Mes mesures"), onBack = { nav.popBackStack() }, action = {
+        TextButton(onClick = { SuperPrefs.update { it.copy(measures = app.superhealth.MEASURE_DEFAULTS) } }) { Text(tr("Par défaut"), color = Mf.colors.accent, maxLines = 1) }
+    }) {
+        Text(tr("La carte montre les premières mesures de la liste : quatre en moyen, trois en bandeau, six en grand. Les mesures sans source restent masquées."),
+            style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Affichées"), Modifier.padding(start = 0.dp))
+        if (shown.isEmpty()) Text(tr("Aucune mesure"), color = Mf.colors.textSecondary, modifier = Modifier.padding(4.dp))
+        else GroupCard {
+            shown.forEachIndexed { i, c ->
+                if (i > 0) RowDivider()
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(c.icon(), null, Modifier.size(20.dp), tint = c.hue())
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (!measureUsable(c, sh)) Text(tr("Pas de source pour l'instant"), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, maxLines = 1)
+                    }
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i - 1, removeAt(i)) }) }, enabled = i > 0) {
+                        Icon(Icons.Rounded.KeyboardArrowUp, tr("Monter"), tint = if (i > 0) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    IconButton(onClick = { set(shown.toMutableList().apply { add(i + 1, removeAt(i)) }) }, enabled = i < shown.lastIndex) {
+                        Icon(Icons.Rounded.KeyboardArrowDown, tr("Descendre"), tint = if (i < shown.lastIndex) Mf.colors.text else Mf.colors.textTertiary)
+                    }
+                    app.superhealth.nutrition.ui.components.Toggle(true, { set(shown - c) }, Modifier.padding(end = 8.dp))
+                }
+            }
+        }
+        val hidden = app.superhealth.MEASURE_CHOICES.filter { it !in shown && (it.feature()?.let { f -> sh.has(f) } ?: true) }
+        if (hidden.isNotEmpty()) {
+            app.superhealth.nutrition.ui.components.GroupHeader(tr("Disponibles"), Modifier.padding(start = 0.dp))
+            GroupCard {
+                hidden.forEachIndexed { i, c ->
+                    if (i > 0) RowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(c.icon(), null, Modifier.size(20.dp), tint = c.hue())
+                        Spacer(Modifier.width(12.dp))
+                        Text(tr(c.label), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        app.superhealth.nutrition.ui.components.Toggle(false, { set(shown + c) })
                     }
                 }
             }

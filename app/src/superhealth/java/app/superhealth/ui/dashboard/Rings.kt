@@ -90,6 +90,8 @@ fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifi
     val stroke = size * (0.28f / n)
     val gap = stroke * 0.2f
     val dark = app.superhealth.ui.theme.Mf.colors.dark
+    // style neutre : piste grise, la couleur ne reste qu'à l'arc rempli
+    val plain = if (app.superhealth.ui.theme.Mf.neutral) app.superhealth.ui.theme.Mf.colors.chip else null
     val anims = rings.map { r ->
         val a = remember(r.kind) { Animatable(r.progress) }
         LaunchedEffect(r.progress) { a.animateTo(r.progress, tween(1100, easing = FastOutSlowInEasing)) }
@@ -104,7 +106,7 @@ fun ActivityRings(rings: List<Rings.Ring>, size: Dp, modifier: Modifier = Modifi
                 val box = Size(this.size.width - inset * 2, this.size.height - inset * 2)
                 val c = r.kind.color
                 // piste : la couleur de l'anneau seule (jamais mélangée au fond : une teinte complémentaire la rendrait grise)
-                drawArc(trackOf(c, dark), 0f, 360f, false, tl, box, style = Stroke(s))
+                drawArc(plain ?: trackOf(c, dark), 0f, 360f, false, tl, box, style = Stroke(s))
                 val p = anims[i].value
                 if (p <= 0.001f) return@forEachIndexed
                 rotate(-90f) {

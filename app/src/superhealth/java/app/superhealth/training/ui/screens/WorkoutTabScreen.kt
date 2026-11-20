@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.seriesContainer
+import app.superhealth.ui.theme.glyph
 import app.superhealth.ui.coach.askCoach
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.ui.graphics.graphicsLayer
@@ -144,9 +145,11 @@ fun WorkoutTabScreen(
 @Composable
 private fun ActionTile(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, hue: Color, modifier: Modifier, onClick: () -> Unit) {
     Column(modifier.clip(RoundedCornerShape(22.dp)).background(hue.seriesContainer()).clickable(onClick = onClick).padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, Modifier.size(22.dp), tint = hue.onContainer())
+        // raccourci : sa teinte en classique, l'encre en style neutre
+        val ink = hue.glyph()
+        Icon(icon, null, Modifier.size(22.dp), tint = ink)
         Spacer(Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, color = hue.onContainer(), maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = ink, maxLines = 1)
     }
 }
 

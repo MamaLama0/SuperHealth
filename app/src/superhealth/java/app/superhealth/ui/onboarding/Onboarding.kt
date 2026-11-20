@@ -1125,7 +1125,7 @@ private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor, recove
     ).forEachIndexed { i, (icon, hue, text) -> Staggered(i) { Feature(icon, text, hue) } }
 }
 
-/** Icône de l'app (cœur de la couleur d'accent sur fond blanc), ronde comme sur le lanceur, avec une ombre douce. */
+/** Icône de l'app (cœur anneau de la couleur d'accent sur fond sombre), ronde comme sur le lanceur, avec une ombre douce. */
 @Composable
 private fun AppIcon(sizeDp: Int, accent: app.superhealth.nutrition.domain.AccentColor) {
     val res = when (accent) {
@@ -1138,8 +1138,8 @@ private fun AppIcon(sizeDp: Int, accent: app.superhealth.nutrition.domain.Accent
         app.superhealth.nutrition.domain.AccentColor.GRAY -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_gray
     }
     Box(Modifier.size(sizeDp.dp).shadow(10.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.2f))
-        .clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-        // le premier plan adaptatif fait 108 dp pour 72 dp visibles
+        .clip(CircleShape).background(Color(0xFF0B0B0C)), contentAlignment = Alignment.Center) {
+        // le premier plan adaptatif fait 108 dp pour 72 dp visibles ; même fond que ic_launcher_background
         androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(res), null,
             Modifier.requiredSize((sizeDp * 1.5f).dp))
     }

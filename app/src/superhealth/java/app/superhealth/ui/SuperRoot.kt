@@ -126,6 +126,7 @@ import app.superhealth.ui.onboarding.OnboardingScreen
 import app.superhealth.ui.settings.SettingsScreen
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
+import app.superhealth.ui.theme.glyph
 import app.superhealth.ui.theme.edge
 import app.superhealth.ui.theme.onContainer
 import androidx.compose.foundation.layout.width
@@ -283,6 +284,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("update") { app.superhealth.ui.settings.UpdateScreen(vm, nav) }
             composable("settings/look") { app.superhealth.ui.settings.LookSettingsScreen(vm, nav) }
             composable("settings/style") { app.superhealth.ui.settings.StyleLabScreen(vm, nav) }
+            composable("settings/style/workout") { app.superhealth.ui.settings.WorkoutStyleScreen(nav) }
             composable("settings/units") { app.superhealth.ui.settings.UnitsSettingsScreen(vm, nav) }
             composable("settings/hc") { app.superhealth.ui.settings.HealthConnectSettingsScreen(vm, nav) }
             composable("settings/activity-import") { app.superhealth.ui.health.ActivityImportScreen(vm, nav) }
@@ -337,6 +339,7 @@ fun SuperRoot(vm: SuperViewModel) {
             composable("settings/sleep") { app.superhealth.ui.settings.SleepSettingsScreen(nav) }
             composable("vitals/edit") { app.superhealth.ui.dashboard.VitalsEditScreen(vm, nav) }
             composable("rings/edit") { app.superhealth.ui.dashboard.RingsEditScreen(vm, nav) }
+            composable("measures/edit") { app.superhealth.ui.dashboard.MeasuresEditScreen(vm, nav) }
             composable("plus/edit") { app.superhealth.ui.dashboard.PlusEditScreen(vm, nav) }
             composable("setup/nutrition") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.NUTRITION_SETUP) { nav.popBackStack() } }
             composable("setup/training") { OnboardingScreen(vm, app.superhealth.ui.onboarding.OnboardingMode.TRAINING_SETUP) { nav.popBackStack() } }
@@ -530,15 +533,14 @@ private fun PlusButton(size: Dp, onPlus: () -> Unit, compose: Boolean = false) {
 
 @Composable
 private fun TabItem(tab: Tab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    // onglet actif : pastille teintée de l'accent derrière le symbole, nom en gras
-    val accent = Mf.colors.accent
+    // onglet actif : pastille derrière le symbole (teintée de l'accent, ou inversée à l'encre en style neutre), nom en gras
     val pill by animateDpAsState(if (selected) 56.dp else 24.dp, spring(dampingRatio = 0.8f, stiffness = 600f), label = "pill")
     Column(
         modifier.fillMaxHeight().tourTarget("tab:${tab.route}", onClick).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = { onClick() }),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
-        Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) accent.container(1.4f) else Color.Transparent), contentAlignment = Alignment.Center) {
-            Icon(tab.icon, tr(tab.label), tint = if (selected) accent.onContainer() else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
+        Box(Modifier.width(pill).height(32.dp).clip(CircleShape).background(if (selected) app.superhealth.ui.theme.selectedFill() else Color.Transparent), contentAlignment = Alignment.Center) {
+            Icon(tab.icon, tr(tab.label), tint = if (selected) app.superhealth.ui.theme.selectedInk() else Mf.colors.textSecondary, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.height(3.dp))
         Text(tr(tab.label), fontSize = 12.sp, color = if (selected) Mf.colors.text else Mf.colors.textSecondary,
@@ -654,7 +656,7 @@ private fun ActionTile(a: QuickAction, hue: Color, modifier: Modifier, onClick: 
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Top,
     ) {
         Box(Modifier.size(42.dp).clip(CircleShape).background(hue.container(1.3f)), contentAlignment = Alignment.Center) {
-            Icon(a.icon, null, Modifier.size(22.dp), tint = hue.onContainer())
+            Icon(a.icon, null, Modifier.size(22.dp), tint = hue.glyph())
         }
         Spacer(Modifier.height(9.dp))
         Text(tr(a.label), style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,

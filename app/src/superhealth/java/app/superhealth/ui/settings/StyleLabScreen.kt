@@ -39,8 +39,8 @@ import app.superhealth.ui.tr
 import kotlinx.coroutines.launch
 
 /**
-  * Style : variantes des cartes du tableau de bord, réglées à part en clair et en sombre (aperçu
- * des deux côte à côte), et de la séance de musculation. Tout s'applique tout de suite dans l'app.
+ * Cartes du tableau de bord en style classique : la variante de couleur, réglée à part en clair et en sombre (aperçu sous chaque
+ * choix). Le style neutre n'a pas de variante : cet écran n'y est pas proposé.
  */
 @Composable
 fun StyleLabScreen(vm: SuperViewModel, nav: NavHostController) {
@@ -53,52 +53,66 @@ fun StyleLabScreen(vm: SuperViewModel, nav: NavHostController) {
         runCatching { app.superhealth.training.widget.Widgets.refresh(ctx) }
     }
     val accent = vm.nutrition.settings.collectAsState().value.accent
-    fun <E : Enum<E>> pick(entries: List<E>, name: String, default: E) = entries.firstOrNull { it.name == name } ?: default
-    DetailScaffold(tr("Style"), onBack = { nav.popBackStack() }) {
-        Text(tr("Du plus neutre au plus vibrant. Tableau de bord et widgets de l'écran d'accueil suivent le choix."), style = MaterialTheme.typography.bodyMedium,
+    DetailScaffold(tr("Cartes du tableau de bord"), onBack = { nav.popBackStack() }) {
+        Text(tr("Du plus sobre au plus coloré. Les widgets de l'écran d'accueil suivent le choix."), style = MaterialTheme.typography.bodyMedium,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
 
-        app.superhealth.nutrition.ui.components.GroupHeader(tr("Cartes · thème clair"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Thème clair"))
         MfCard {
-            ChipChoice(StyleLab.Cards.entries, pick(StyleLab.Cards.entries, sh.styleCardsLight, StyleLab.Cards.NEUTRAL), { tr(it.label) }) { c ->
+            ChipChoice(StyleLab.classicCards, StyleLab.classic(sh.styleCardsLight, false), { tr(it.label) }) { c ->
                 SuperPrefs.update { it.copy(styleCardsLight = c.name) }; widgets()
             }
             Spacer(Modifier.height(12.dp))
-            SuperTheme(ThemeMode.LIGHT, accent) { Preview() }
+            SuperTheme(ThemeMode.LIGHT, accent, neutral = false) { Preview() }
         }
 
-        app.superhealth.nutrition.ui.components.GroupHeader(tr("Cartes · thème sombre"))
+        app.superhealth.nutrition.ui.components.GroupHeader(tr("Thème sombre"))
         MfCard {
-            ChipChoice(StyleLab.Cards.entries, pick(StyleLab.Cards.entries, sh.styleCardsDark, StyleLab.Cards.NEUTRAL), { tr(it.label) }) { c ->
+            ChipChoice(StyleLab.classicCards, StyleLab.classic(sh.styleCardsDark, true), { tr(it.label) }) { c ->
                 SuperPrefs.update { it.copy(styleCardsDark = c.name) }; widgets()
             }
             Spacer(Modifier.height(12.dp))
-            SuperTheme(ThemeMode.DARK, accent) { Preview() }
+            SuperTheme(ThemeMode.DARK, accent, neutral = false) { Preview() }
         }
+        Spacer(Modifier.height(12.dp))
+        val origin = app.superhealth.SuperSettings()
+        PillButton(tr("Rétablir les cartes d'origine"), Modifier.fillMaxWidth(), strong = false) {
+            SuperPrefs.update { it.copy(styleCardsLight = origin.styleCardsLight, styleCardsDark = origin.styleCardsDark) }
+            widgets()
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
 
-        app.superhealth.nutrition.ui.components.GroupHeader(tr("Musculation"))
+/** Séance de musculation : couleur de l'entraînement, image de l'exercice, présentation des séries. */
+@Composable
+fun WorkoutStyleScreen(nav: NavHostController) {
+    val sh by SuperPrefs.settings.collectAsState()
+    fun <E : Enum<E>> pick(entries: List<E>, name: String, default: E) = entries.firstOrNull { it.name == name } ?: default
+    DetailScaffold(tr("Séance de musculation"), onBack = { nav.popBackStack() }) {
+        Text(tr("Visible pendant une séance (onglet Activités)."), style = MaterialTheme.typography.bodyMedium, color = Mf.colors.textSecondary,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        Spacer(Modifier.height(8.dp))
         MfCard {
             Label(tr("Couleur de l'entraînement"))
             ChipChoice(StyleLab.WorkoutColor.entries, pick(StyleLab.WorkoutColor.entries, sh.styleWorkoutColor, StyleLab.WorkoutColor.BLUE), { tr(it.label) }) { c ->
                 SuperPrefs.update { it.copy(styleWorkoutColor = c.name) }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(18.dp))
             Label(tr("Image de l'exercice"))
             ChipChoice(StyleLab.Hero.entries, pick(StyleLab.Hero.entries, sh.styleHero, StyleLab.Hero.LARGE), { tr(it.label) }) { c ->
                 SuperPrefs.update { it.copy(styleHero = c.name) }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(18.dp))
             Label(tr("Séries"))
             ChipChoice(StyleLab.Sets.entries, pick(StyleLab.Sets.entries, sh.styleSets, StyleLab.Sets.CARDS), { tr(it.label) }) { c ->
                 SuperPrefs.update { it.copy(styleSets = c.name) }
             }
-            Text(tr("Visible pendant une séance (onglet Activités)."), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary,
-                modifier = Modifier.padding(top = 10.dp))
         }
         Spacer(Modifier.height(12.dp))
-        PillButton(tr("Revenir au style actuel"), Modifier.fillMaxWidth(), strong = false) {
-            SuperPrefs.update { it.copy(styleCardsLight = "NEUTRAL", styleCardsDark = "NEUTRAL", styleWorkoutColor = "BLUE", styleHero = "LARGE", styleSets = "CARDS") }
-            widgets()
+        val origin = app.superhealth.SuperSettings()
+        PillButton(tr("Rétablir les réglages d'origine"), Modifier.fillMaxWidth(), strong = false) {
+            SuperPrefs.update { it.copy(styleWorkoutColor = origin.styleWorkoutColor, styleHero = origin.styleHero, styleSets = origin.styleSets) }
         }
         Spacer(Modifier.height(24.dp))
     }

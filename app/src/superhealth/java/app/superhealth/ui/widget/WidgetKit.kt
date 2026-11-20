@@ -37,6 +37,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.superhealth.MainActivity
+import app.superhealth.neutralLook
 import app.superhealth.ui.dashboard.Rings
 import nodomain.freeyourgadget.gadgetbridge.R
 
@@ -82,7 +83,9 @@ internal object WK {
     val chipOn = ColorProvider(Color(0xD9FFFFFF), Color(0xD91C1C1E))
 
     /** Variante de cartes du labo de style, en clair et en sombre (comme le tableau de bord). */
-    private fun style(dark: Boolean) = app.superhealth.SuperPrefs.settings.value.let { if (dark) it.styleCardsDark else it.styleCardsLight }
+    private fun style(dark: Boolean) = app.superhealth.SuperPrefs.settings.value.let {
+        if (it.neutralLook) "NEUTRAL" else app.superhealth.ui.theme.StyleLab.classic(if (dark) it.styleCardsDark else it.styleCardsLight, dark).name
+    }
     /** Part de la couleur dans le fond du widget ; « Plein » reste lisible en « Vif » (texte du widget non inversé). */
     private fun tintOf(dark: Boolean) = when (style(dark)) {
         "SOFT" -> if (dark) 0.20f else 0.13f
@@ -100,14 +103,16 @@ internal object WK {
     fun chipBg(color: Color): androidx.glance.unit.ColorProvider {
         fun one(dark: Boolean): Color = when {
             style(dark) == "VIVID" -> color
+            // style neutre : pastille grise, symbole à l'encre
+            style(dark) == "NEUTRAL" -> if (dark) Color(0xFF2C2C2E) else Color(0xFFF1F1F3)
             tintOf(dark) > 0f -> if (dark) Color(0xD91C1C1E) else Color(0xD9FFFFFF)
             else -> androidx.compose.ui.graphics.lerp(if (dark) night else Color.White, color, if (dark) 0.27f else 0.17f)
         }
         return ColorProvider(one(false), one(true))
     }
     fun chipInk(color: Color): androidx.glance.unit.ColorProvider = ColorProvider(
-        if (style(false) == "VIVID") Color.White else androidx.compose.ui.graphics.lerp(color, Color.Black, 0.18f),
-        if (style(true) == "VIVID") Color.White else androidx.compose.ui.graphics.lerp(color, Color.White, 0.12f))
+        when (style(false)) { "VIVID" -> Color.White; "NEUTRAL" -> Color.Black; else -> androidx.compose.ui.graphics.lerp(color, Color.Black, 0.18f) },
+        when (style(true)) { "VIVID" -> Color.White; "NEUTRAL" -> Color.White; else -> androidx.compose.ui.graphics.lerp(color, Color.White, 0.12f) })
 
     /** Ouvre l'app sur [route] (filtrée par Routes.external). */
     fun open(ctx: Context, route: String): Action =

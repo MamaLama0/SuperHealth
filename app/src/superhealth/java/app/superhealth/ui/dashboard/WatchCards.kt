@@ -138,7 +138,7 @@ internal suspend fun loadWatch(ctx: android.content.Context, cards: List<DashCar
     val hourly = async { if (has(DashCard.DAY_TIMELINE) || DashCard.STEPS in cards) runCatching { Bridge.hourlySteps(ctx, today) }.getOrDefault(emptyList()) else emptyList() }
     // 2.1 : la carte Sommeil en grand empile les phases des 7 nuits ; Horaires en lit 14
     val sleepBig = DashCard.SLEEP in cards && Bridge.hasSource(Metric.SLEEP)
-    val nightCount = when { has(DashCard.SLEEP_SCHEDULE) -> 14L; sleepBig || has(DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART) -> 7L; has(DashCard.SCORES) -> 1L; else -> 0L }
+    val nightCount = when { has(DashCard.SLEEP_SCHEDULE) -> 14L; sleepBig || has(DashCard.SLEEP_QUALITY, DashCard.NIGHT_HEART) -> 7L; has(DashCard.SCORES, DashCard.DAY_TIMELINE) -> 1L; else -> 0L }
     val nights = async { if (nightCount > 0) app.superhealth.health.data.Nights.range(today.minusDays(nightCount - 1), today) else emptyList() }
     val parts = async { if (has(DashCard.SLEEP_QUALITY)) runCatching { Scores.restPartsOf(ctx, today) }.getOrNull() else null }
     val restHist = async {

@@ -67,42 +67,6 @@ import kotlinx.coroutines.withContext
  * heure (façon frise d'activité de Polar).
  */
 
-/** Cinq semaines d'humeur, une pastille par jour, lundi en tête de ligne. */
-@Composable
-internal fun MoodCard(c: DashCard, modifier: Modifier, nav: NavHostController) {
-    val days by Journal.days.collectAsState()
-    val today = LocalDate.now()
-    val start = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(4)
-    val counts = Journal.counts(today.minusDays(29), today)
-    val top = counts.indices.maxByOrNull { counts[it] }?.takeIf { counts[it] > 0 }
-    val empty = Mf.colors.chip
-    Tile(c, tr("Humeur"), modifier, onClick = { nav.go("journal") }) {
-        Value(top?.let { tr(Journal.MOODS[it]) } ?: "—", color = c.ink().onContainer())
-        Sub(if (top == null) tr("Notez votre moral pour remplir la grille") else trf("Le plus fréquent · %1\$s jours notés sur 30", counts.sum()))
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            (0..6).forEach { d ->
-                Text(dayLetter(start.plusDays(d.toLong())), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
-                    color = Mf.colors.textTertiary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-        }
-        Spacer(Modifier.height(4.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            (0..4).forEach { w ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    (0..6).forEach { d ->
-                        val day = start.plusDays(w * 7L + d)
-                        val mood = days[day.toEpochDay()]?.mood
-                        Box(Modifier.weight(1f).aspectRatio(1f).clip(CircleShape)
-                            .background(when { day.isAfter(today) -> Color.Transparent; mood != null -> moodColor(mood); else -> empty })
-                            .then(if (day == today) Modifier.border(1.5.dp, Mf.colors.text, CircleShape) else Modifier))
-                    }
-                }
-            }
-        }
-    }
-}
-
 private class WeekRow(val label: String, val now: Double?, val before: Double?, val show: (Double) -> String)
 
 /** Cette semaine face à la précédente, aux mêmes jours (lundi → aujourd'hui) : moyennes par jour et minutes d'activité. */

@@ -428,14 +428,14 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
             // puce de filtre de Material 3 : contour fin, ou fond teinté et coche quand elle est choisie
             val shape = RoundedCornerShape(8.dp)
             Row(
-                Modifier.height(34.dp).clip(shape).background(if (sel) Mf.colors.accent.container(1.4f) else Color.Transparent)
+                Modifier.height(34.dp).clip(shape).background(if (sel) app.superhealth.ui.theme.selectedFill() else Color.Transparent)
                     .border(1.dp, if (sel) Color.Transparent else Mf.colors.divider.copy(alpha = 1f), shape).clickable { if (!sel) haptic.tick(); onSelect(o) }
                     .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // la coche ne réserve pas sa place dans les puces non choisies : leur libellé reste centré
-                if (sel) { Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()); Spacer(Modifier.width(6.dp)) }
-                Text(labels[i], style = MaterialTheme.typography.labelLarge, color = if (sel) Mf.colors.accent.onContainer() else Mf.colors.text)
+                if (sel) { Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = app.superhealth.ui.theme.selectedInk()); Spacer(Modifier.width(6.dp)) }
+                Text(labels[i], style = MaterialTheme.typography.labelLarge, color = if (sel) app.superhealth.ui.theme.selectedInk() else Mf.colors.text)
             }
         }
     }
@@ -454,13 +454,13 @@ fun Segmented(labels: List<String>, selected: Int, modifier: Modifier = Modifier
         val w = with(density) { (widthPx / n).toDp() }
         val x by androidx.compose.animation.core.animateDpAsState(w * selected.coerceAtLeast(0),
             androidx.compose.animation.core.spring(dampingRatio = 0.85f, stiffness = 700f), label = "seg")
-        if (selected >= 0 && widthPx > 0) Box(Modifier.offset(x = x).width(w).fillMaxHeight().clip(CircleShape).background(Mf.colors.accent.container(1.5f)))
+        if (selected >= 0 && widthPx > 0) Box(Modifier.offset(x = x).width(w).fillMaxHeight().clip(CircleShape).background(app.superhealth.ui.theme.selectedFill(1.5f)))
         Row(Modifier.fillMaxSize()) {
             labels.forEachIndexed { i, l ->
                 Box(Modifier.weight(1f).fillMaxHeight().clip(CircleShape).clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { if (i != selected) haptic.tick(); onSelect(i) },
                     contentAlignment = Alignment.Center) {
-                    Text(l, style = MaterialTheme.typography.labelLarge, color = if (i == selected) Mf.colors.accent.onContainer() else Mf.colors.textSecondary,
+                    Text(l, style = MaterialTheme.typography.labelLarge, color = if (i == selected) app.superhealth.ui.theme.selectedInk() else Mf.colors.textSecondary,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp))
                 }
             }

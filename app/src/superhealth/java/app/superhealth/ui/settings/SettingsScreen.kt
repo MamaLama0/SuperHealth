@@ -75,6 +75,12 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.foundation.selection.selectable
+import app.superhealth.neutralLook
+import app.superhealth.ui.theme.StyleLab
+import app.superhealth.ui.theme.SuperTheme
+import app.superhealth.ui.theme.edge
 import androidx.compose.material.icons.rounded.Straighten
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material3.IconButton
@@ -178,7 +184,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
             SettingsGroup(tr("Général")) {
                 SettingRow(tr("Notifications"), subtitle = tr("Rappels, amis, séances et mises à jour"), icon = Icons.Rounded.NotificationsActive, hue = Mf.colors.accent) { nav.go("settings/notifications") }
                 RowDivider(56.dp)
-                SettingRow(tr("Apparence et langue"), subtitle = "${tr(s.themeMode.label)} · ${s.accent.let { tr(it.label) }} · ${if (Lang.english) "English" else "Français"}",
+                SettingRow(tr("Apparence et langue"), subtitle = "${tr(if (sh.neutralLook) "Neutre" else "Classique")} · ${tr(s.themeMode.label)} · ${if (Lang.english) "English" else "Français"}",
                     icon = Icons.Rounded.Palette, hue = Mf.colors.accent) { nav.go("settings/look") }
                 RowDivider(56.dp)
                 SettingRow(tr("Unités et objectifs"), subtitle = "${tr(s.weightUnit.label)} · ${tr(s.energyUnit.label)}",
@@ -332,59 +338,151 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     }
 }
 
-/** Apparence et langue : thème, couleur d'accent, langue de l'app. */
+/**
+ * Apparence et langue, du choix le plus large au plus fin : le style de l'app (classique ou neutre), le thème et la couleur
+ * d'accent, les détails (cartes, séance), puis l'affichage et la langue. Le style neutre n'a ni couleur d'accent ni variantes
+ * de cartes : ces réglages disparaissent quand il est choisi.
+ */
 @Composable
 fun LookSettingsScreen(vm: SuperViewModel, nav: NavHostController) {
     val s by vm.nutrition.settings.collectAsState()
+    val sh by SuperPrefs.settings.collectAsState()
     fun set(f: (app.superhealth.nutrition.domain.Settings) -> app.superhealth.nutrition.domain.Settings) = vm.nutrition.repo.prefs.setSettings(f(s))
+    val neutral = sh.neutralLook
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    fun look(toNeutral: Boolean) {
+        if (toNeutral == neutral && sh.look.isNotEmpty()) return
+        // le choix devient explicite ; une ancienne variante de cartes « Neutre » reprend celle d'origine pour le classique
+        SuperPrefs.update {
+            it.copy(look = if (toNeutral) "NEUTRAL" else "CLASSIC",
+                styleCardsLight = StyleLab.classic(it.styleCardsLight, false).name, styleCardsDark = StyleLab.classic(it.styleCardsDark, true).name)
+        }
+        // widgets de l'écran d'accueil : redessinés dans le nouveau style
+        scope.launch {
+            runCatching { app.superhealth.nutrition.widget.Widgets.refresh(ctx) }
+            runCatching { app.superhealth.training.widget.Widgets.refresh(ctx) }
+        }
+    }
     DetailScaffold(tr("Apparence et langue"), onBack = { nav.popBackStack() }) {
+        app.superhealth.nutrition.ui.components.GroupHeader("Style")
+        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LookTile(tr("Classique"), !neutral, s.themeMode, s.accent, false, Modifier.weight(1f)) { look(false) }
+            LookTile(tr("Neutre"), neutral, s.themeMode, s.accent, true, Modifier.weight(1f)) { look(true) }
+        }
+        SettingsNote(tr(if (neutral) "Noir et blanc. La couleur est réservée à vos données." else "Cartes en couleur et couleur d'accent au choix."))
+
+        app.superhealth.nutrition.ui.components.GroupHeader("Thème")
         MfCard {
-            Label(tr("Thème"))
             ChipChoice(ThemeMode.entries, s.themeMode, { tr(it.label) }) { m -> set { it.copy(themeMode = m) } }
-            Spacer(Modifier.height(18.dp))
-            Label(tr("Couleur d'accent"))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                AccentColor.entries.forEach { c ->
-                    val sel = c == s.accent
-                    Box(
-                        // pastille de couleur ; la choisie est cerclée de sa couleur, avec un liseré
-                        Modifier.size(38.dp).border(if (sel) 2.5.dp else 0.dp, if (sel) c.color() else Color.Transparent, CircleShape).padding(4.dp)
-                            .clip(CircleShape).background(c.color()).clickable { set { it.copy(accent = c) } },
-                        contentAlignment = Alignment.Center,
-                    ) {}
+            if (!neutral) {
+                Spacer(Modifier.height(18.dp))
+                Label(tr("Couleur d'accent"))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    AccentColor.entries.forEach { c ->
+                        val sel = c == s.accent
+                        Box(
+                            // pastille de couleur ; la choisie est cerclée de sa couleur, avec un liseré
+                            Modifier.size(38.dp).border(if (sel) 2.5.dp else 0.dp, if (sel) c.color() else Color.Transparent, CircleShape).padding(4.dp)
+                                .clip(CircleShape).background(c.color()).clickable { set { it.copy(accent = c) } },
+                            contentAlignment = Alignment.Center,
+                        ) {}
+                    }
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+
+        val training = sh.has(app.superhealth.Feature.TRAINING)
+        if (!neutral || training) {
+            app.superhealth.nutrition.ui.components.GroupHeader("Détails")
+            GroupCard {
+                if (!neutral) SettingRow(tr("Cartes du tableau de bord"),
+                    subtitle = trf("%1\$s en clair · %2\$s en sombre", tr(StyleLab.classic(sh.styleCardsLight, false).label), tr(StyleLab.classic(sh.styleCardsDark, true).label)),
+                    icon = Icons.Rounded.Dashboard, hue = Mf.colors.accent) { nav.go("settings/style") }
+                if (!neutral && training) RowDivider(56.dp)
+                if (training) SettingRow(tr("Séance de musculation"), subtitle = tr("Couleur, image de l'exercice et séries"),
+                    icon = Icons.Rounded.FitnessCenter, hue = Mf.colors.accent) { nav.go("settings/style/workout") }
+            }
+        }
+
+        app.superhealth.nutrition.ui.components.GroupHeader("Affichage")
         MfCard {
             Label(tr("Taille du texte"))
             ChipChoice(app.superhealth.nutrition.domain.TextSize.entries, s.textSize, { tr(it.label) }) { t -> set { it.copy(textSize = t) } }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
             Text(tr("Aperçu : 2 140 kcal, 150 g de protéines."), style = MaterialTheme.typography.bodyLarge, color = Mf.colors.textSecondary)
-        }
-        Spacer(Modifier.height(12.dp))
-        MfCard {
+            Spacer(Modifier.height(18.dp))
             // place du « + » dans la barre du bas (au milieu, Réglages devient un onglet si le nombre d'onglets le permet)
-            Label(tr("Bouton +"))
-            val sh by SuperPrefs.settings.collectAsState()
+            Label(tr("Place du bouton +"))
             val sides = listOf("LEFT", "CENTER", "RIGHT")
             ChipChoice(sides, sh.plusSide.takeIf { it in sides } ?: "RIGHT", { tr(when (it) { "LEFT" -> "Gauche"; "CENTER" -> "Milieu"; else -> "Droite" }) }) { v ->
                 SuperPrefs.update { it.copy(plusSide = v) }
             }
         }
-        Spacer(Modifier.height(12.dp))
+
+        app.superhealth.nutrition.ui.components.GroupHeader("Langue")
         MfCard {
-            Label(tr("Langue"))
             ChipChoice(listOf(Language.FR, Language.EN), if (Lang.english) Language.EN else Language.FR, { it.label }) { l -> set { it.copy(language = l) } }
         }
-        Spacer(Modifier.height(12.dp))
-        // style des cartes (du plus neutre au plus vibrant, en clair et en sombre) et de la musculation
-        app.superhealth.nutrition.ui.components.GroupCard {
-            SettingRow(tr("Style"), subtitle = tr("Cartes et musculation, en clair et en sombre"), icon = Icons.Rounded.Palette, hue = Mf.colors.accent) {
-                nav.go("settings/style")
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Un style de l'app à choisir : son aperçu miniature, son nom, et une coche sur celui en cours. */
+@Composable
+private fun LookTile(title: String, selected: Boolean, mode: ThemeMode, accent: AccentColor, neutral: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
+    Column(
+        modifier.clip(shape).background(Mf.colors.card).border(2.dp, if (selected) Mf.colors.strong else Color.Transparent, shape)
+            .selectable(selected, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick).padding(10.dp),
+    ) {
+        // l'aperçu est dessiné dans son propre thème, quel que soit le style en cours
+        SuperTheme(mode, accent, neutral = neutral) { LookPreview() }
+        Row(Modifier.padding(start = 4.dp, top = 10.dp, end = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Box(Modifier.size(20.dp).clip(CircleShape).background(if (selected) Mf.colors.strong else Color.Transparent)
+                .border(1.5.dp, if (selected) Color.Transparent else Mf.colors.textTertiary, CircleShape), contentAlignment = Alignment.Center) {
+                if (selected) Icon(Icons.Rounded.Check, null, Modifier.size(14.dp), tint = app.superhealth.ui.theme.actionInk())
             }
         }
-        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Tableau de bord miniature aux couleurs du thème qui l'entoure : fond, deux cartes, barre du bas et « + ». */
+@Composable
+private fun LookPreview() {
+    Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(Mf.colors.background).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LookPreviewCard(app.superhealth.ui.dashboard.Rings.Kind.STEPS.color, 0.72f)
+        LookPreviewCard(app.superhealth.ui.theme.Base.Blue, 0.45f)
+        Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(Modifier.weight(1f).height(22.dp).clip(CircleShape).background(if (Mf.colors.dark) Mf.colors.elevated else Mf.colors.card)
+                .border(1.dp, Mf.colors.edge, CircleShape).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Box(Modifier.size(18.dp, 10.dp).clip(CircleShape).background(app.superhealth.ui.theme.selectedFill()))
+                repeat(2) { Box(Modifier.size(8.dp).clip(CircleShape).background(Mf.colors.textTertiary)) }
+            }
+            Box(Modifier.size(22.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(7.dp)).background(Mf.colors.strong))
+        }
+    }
+}
+
+@Composable
+private fun LookPreviewCard(hue: Color, progress: Float) {
+    app.superhealth.ui.theme.CardTone(hue) {
+        Row(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(11.dp)).background(app.superhealth.ui.theme.LocalCardSurface.current?.brush
+            ?: androidx.compose.ui.graphics.SolidColor(Mf.colors.card)).padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
+            val (chip, ink) = app.superhealth.ui.theme.dashChipColors(hue)
+            Box(Modifier.size(16.dp).clip(CircleShape).background(chip), contentAlignment = Alignment.Center) { Box(Modifier.size(6.dp).clip(CircleShape).background(ink)) }
+            Spacer(Modifier.width(7.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.fillMaxWidth(0.5f).height(5.dp).clip(CircleShape).background(Mf.colors.text.copy(alpha = 0.7f)))
+                // la donnée garde sa couleur dans les deux styles
+                Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(Mf.colors.chip)) {
+                    Box(Modifier.fillMaxWidth(progress).height(5.dp).clip(CircleShape).background(app.superhealth.ui.theme.LocalCardInk.current ?: hue))
+                }
+            }
+        }
     }
 }
 

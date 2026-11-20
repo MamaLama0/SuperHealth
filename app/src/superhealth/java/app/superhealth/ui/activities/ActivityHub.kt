@@ -251,9 +251,12 @@ private fun Modifier.bubbleShadow(dark: Boolean): Modifier = if (dark) this else
 
 @Composable
 private fun BubbleIcon(a: ActivitySection, on: Boolean, bg: Color, border: Color, onClick: () -> Unit) {
-    Box(Modifier.size(58.dp).bubbleShadow(Mf.colors.dark).clip(CircleShape).background(if (on) a.hue else bg)
-        .border(1.dp, if (on) a.hue else border, CircleShape).clickable(onClickLabel = tr(a.label), onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(a.icon, tr(a.label), Modifier.size(28.dp), tint = if (on) Color.White else a.hue)
+    // style neutre : la bulle en cours passe à l'encre, les autres gardent un symbole à l'encre
+    val neutral = Mf.neutral
+    val fill = if (neutral) Mf.colors.strong else a.hue
+    Box(Modifier.size(58.dp).bubbleShadow(Mf.colors.dark).clip(CircleShape).background(if (on) fill else bg)
+        .border(1.dp, if (on) fill else border, CircleShape).clickable(onClickLabel = tr(a.label), onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(a.icon, tr(a.label), Modifier.size(28.dp), tint = if (on) (if (neutral) app.superhealth.ui.theme.actionInk() else Color.White) else if (neutral) Mf.colors.text else a.hue)
     }
 }
 

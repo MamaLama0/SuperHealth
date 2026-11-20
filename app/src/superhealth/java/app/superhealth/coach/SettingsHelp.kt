@@ -14,7 +14,7 @@ object SettingsHelp {
         Destination("nutrition_meals", "Journal et repas", "n/settings/daily", "repas horaires check in jour bilan pesee matin journal"),
         Destination("profile", "Profil", "profile", "sexe age taille masse grasse activite experience sportif poids titre badge profil"),
         Destination("nutrition_goal", "Objectif de poids", "goal", "maigrir grossir maintien objectif poids rythme duree cible"),
-        Destination("appearance", "Apparence et langue", "settings/look", "theme clair sombre couleur police taille texte francais anglais langue"),
+        Destination("appearance", "Apparence et langue", "settings/look", "theme clair sombre couleur style classique neutre noir blanc cartes police taille texte bouton plus francais anglais langue"),
         Destination("units", "Unités et objectifs", "settings/units", "kg livres lbs kcal kilojoules pas objectifs unites"),
         Destination("training_guide", "Guide musculation", "t/setup", "programme assistant musculation creation exercices salle"),
         Destination("training_level", "Programme et expérience", "t/settings/program", "niveau debutant intermediaire avance programme bibliotheque"),

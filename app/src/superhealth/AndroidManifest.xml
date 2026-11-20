@@ -89,7 +89,7 @@
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
 
-        <!-- Cœur du lanceur dans la couleur d'accent (ui/LauncherIcon.kt) : un seul alias activé ; « Launcher » = rose d'origine -->
+        <!-- Cœur du lanceur dans la couleur d'accent (ui/LauncherIcon.kt) : un seul alias activé ; « Launcher » = rose, par défaut -->
         <activity-alias
             android:name="app.superhealth.LauncherBlue"
             android:targetActivity="app.superhealth.MainActivity"

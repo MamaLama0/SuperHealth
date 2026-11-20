@@ -74,6 +74,8 @@ import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.material.icons.rounded.ViewAgenda
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.EventAvailable
@@ -119,7 +121,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import app.superhealth.DashCard
+import app.superhealth.measureCards
 import app.superhealth.sizeOf
+import app.superhealth.variantOf
+import app.superhealth.variants
+import app.superhealth.ui.theme.glyph
+import kotlinx.coroutines.launch
 import app.superhealth.sizes
 import app.superhealth.vitalMetrics
 import app.superhealth.bridge.Bridge
@@ -236,6 +243,7 @@ internal fun DashCard.hue(): Color = when (this) {
     DashCard.ACTIVE_DAYS -> HealthHues.Fitness
     DashCard.HOURLY_STEPS -> HealthHues.Activity
     DashCard.WATCH_BATTERY -> app.superhealth.ui.theme.Base.Green
+    DashCard.MEASURES -> HealthHues.Body
 }
 
 internal fun DashCard.icon(): ImageVector = when (this) {
@@ -301,6 +309,7 @@ internal fun DashCard.icon(): ImageVector = when (this) {
     DashCard.ACTIVE_DAYS -> Icons.Rounded.CalendarMonth
     DashCard.HOURLY_STEPS -> Icons.Rounded.Schedule
     DashCard.WATCH_BATTERY -> Icons.Rounded.Watch
+    DashCard.MEASURES -> Icons.Rounded.ViewAgenda
 }
 
 /** Mesures santé lues pour le tableau de bord. */
@@ -343,7 +352,7 @@ private fun Metric.dashMetrics(card: DashCard): Boolean = when (card) {
  * Une carte « montre » s'affiche dès qu'une source existe (montre qui mesure, ou Health Connect), sans attendre ses données :
  * les cartes ne surgissent plus après coup en décalant tout l'écran.
  */
-private fun hasSource(c: DashCard): Boolean = when (c) {
+internal fun hasSource(c: DashCard): Boolean = when (c) {
     DashCard.HEART -> Bridge.hasSource(Metric.HEART_RATE) || Bridge.hasSource(Metric.RESTING_HR)
     DashCard.SLEEP -> Bridge.hasSource(Metric.SLEEP)
     DashCard.CARDIO -> Bridge.hasSource(Metric.CARDIO_WEEK)
@@ -405,13 +414,15 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     // parties de l'app coupées : leurs cartes ne s'affichent pas (elles restent dans la liste, pour revenir à la réactivation)
     val cards = sh.dashboard.filter { c -> c.feature()?.let { sh.has(it) } ?: true }
 
-    val base by produceState(lastSnap, refresh, cards, sh.watchModule, devices.size, sh.vitals, sh.rings) {
+    // « Mes mesures » lit les données des mesures choisies, même si leurs cartes ne sont pas affichées
+    val dataCards = remember(cards, sh.measures) { if (DashCard.MEASURES in cards) (cards + sh.measureCards.filter { measureUsable(it, sh) }).distinct() else cards }
+    val base by produceState(lastSnap, refresh, dataCards, sh.watchModule, devices.size, sh.vitals, sh.rings) {
         // Lectures de la base de la montre hors du thread principal (elles faisaient saccader l'écran à chaque retour).
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadHealth(ctx, cards) }.also { lastSnap = it }
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadHealth(ctx, dataCards) }.also { lastSnap = it }
     }
     // scores et graphiques de montre (Charge sur 60 nuits…) lus à part : ils ne retardent pas les autres cartes
-    val watchSnap by produceState(lastWatch, refresh, cards, sh.watchModule, devices.size) {
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { loadWatch(ctx, cards) }.getOrDefault(lastWatch) }.also { lastWatch = it }
+    val watchSnap by produceState(lastWatch, refresh, dataCards, sh.watchModule, devices.size) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { loadWatch(ctx, dataCards) }.getOrDefault(lastWatch) }.also { lastWatch = it }
     }
     val health = remember(base, watchSnap) { base.with(watchSnap) }
 
@@ -433,8 +444,21 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
     var arranging by remember { mutableStateOf(false) }
     val arrange = remember { Arrange() }
     androidx.activity.compose.BackHandler(arranging) { arranging = false }
+    // Moral : sans carte Moral sur l'accueil, le bandeau ; avec, c'est la carte qui demande (mêmes règles), et tant qu'elle
+    // n'est pas à l'écran un petit rappel en haut y mène.
+    val moodNow = moodDueNow(vm, sh, now, refresh)
+    val moodRow = remember(rows) { rows.indexOfFirst { DashCard.MOOD in it } }
+    androidx.compose.runtime.SideEffect { moodDue = moodNow && moodRow >= 0 }
+    val list = androidx.compose.foundation.lazy.rememberLazyListState()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val moodOnScreen by remember(moodRow) { androidx.compose.runtime.derivedStateOf {
+        val info = list.layoutInfo; val end = info.viewportEndOffset - info.afterContentPadding
+        // en-tête et bandeaux d'abord : la rangée i est l'élément i + 2
+        info.visibleItemsInfo.any { it.index == moodRow + 2 && it.offset + it.size * 0.4f <= end }
+    } }
     // Liste paresseuse : seules les rangées à l'écran sont composées (premier affichage plus rapide, moins de mémoire).
-    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().statusBarsPadding(),
+    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().statusBarsPadding(), state = list,
         contentPadding = PaddingValues(bottom = app.superhealth.ui.LocalTabBarInset.current + 16.dp)) {
         item(key = "header") {
             // En-tête : salutation et date, réglages du tableau de bord, avatar (profil).
@@ -461,7 +485,8 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                 else {
                     CheckInBanner(vm, an, now)
                     WeighBanner(vm, an, now)
-                    MoodBanner(vm, sh, now, refresh)
+                    if (moodRow < 0) PromptBanner(moodNow, Icons.Rounded.SentimentSatisfied, HealthHues.Mind, tr("Moral du jour"), { app.superhealth.ui.wellbeing.moodSheet = true }) { skipMood() }
+                    else MoodHint(moodNow && !moodOnScreen) { scope.launch { list.animateScrollToItem(moodRow + 2, -with(density) { 12.dp.roundToPx() }) } }
                     // bilan de la semaine : dimanche soir et lundi matin, jusqu'à ouverture
                     val recapWindow = app.superhealth.league.WeeklyRecap.due(java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime(), sh.recapSeenWeek)
                     // pas de bilan sans activité suivie dans la semaine
@@ -516,7 +541,7 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
             }
         }
     }
-    editing?.let { c -> CardSheet(c, sh, onDismiss = { editing = null }) { editing = null; nav.go("dash/edit") } }
+    editing?.let { c -> CardSheet(c, sh, onDismiss = { editing = null }, onContent = { editing = null; arranging = false; nav.go(it) }) { editing = null; nav.go("dash/edit") } }
 }
 
 /** Carte déplacée en mode édition : décalage du doigt, place de chaque carte à l'écran, carte visée. */
@@ -602,9 +627,12 @@ private fun WeighBanner(vm: SuperViewModel, an: app.superhealth.nutrition.data.A
     }
 }
 
-/** Moral pas encore noté aujourd'hui : même bandeau que la pesée, la fenêtre s'ouvre par-dessus (voir SuperRoot). */
+/**
+ * Le moral est-il à demander maintenant : pas encore noté aujourd'hui, pas écarté, et le moment est venu (voir PromptTiming).
+ * Sert au bandeau (même dessin que la pesée, la fenêtre s'ouvre par-dessus, voir SuperRoot) comme à la carte Moral.
+ */
 @Composable
-private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, now: Long, refresh: Int) {
+private fun moodDueNow(vm: SuperViewModel, sh: app.superhealth.SuperSettings, now: Long, refresh: Int): Boolean {
     val ctx = LocalContext.current
     val days by app.superhealth.wellbeing.Journal.days.collectAsState()
     val nutrition by vm.nutrition.settings.collectAsState()
@@ -650,8 +678,25 @@ private fun MoodBanner(vm: SuperViewModel, sh: app.superhealth.SuperSettings, no
     androidx.compose.runtime.LaunchedEffect(onScreen) {
         if (onScreen) app.superhealth.wellbeing.MoodMoments.record(ctx, today, System.currentTimeMillis(), due.second?.name.orEmpty())
     }
-    PromptBanner(visible, Icons.Rounded.SentimentSatisfied, HealthHues.Mind,
-        tr("Moral du jour"), { app.superhealth.ui.wellbeing.moodSheet = true }) { app.superhealth.SuperPrefs.update { it.copy(moodSkipDay = today, moodSkips = (it.moodSkips + today).distinct().takeLast(14)) } }
+    return visible
+}
+
+/** Rappel discret en haut de l'accueil : la carte Moral, plus bas, attend le moral du jour ; un toucher y mène. */
+@Composable
+private fun MoodHint(visible: Boolean, onOpen: () -> Unit) {
+    androidx.compose.animation.AnimatedVisibility(visible,
+        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()) {
+        Box(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
+            Row(Modifier.clip(CircleShape).background(Mf.colors.card).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onOpen)
+                .padding(start = 10.dp, end = 8.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.SentimentSatisfied, null, Modifier.size(18.dp), tint = HealthHues.Mind.glyph())
+                Spacer(Modifier.width(7.dp))
+                Text(tr("Moral à noter"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.text, maxLines = 1)
+                Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.padding(start = 2.dp).size(18.dp), tint = Mf.colors.textSecondary)
+            }
+        }
+    }
 }
 
 /** Bandeau du haut de l'accueil : un toucher ouvre sa fenêtre, la flèche le replie jusqu'à demain. */
@@ -819,7 +864,7 @@ internal val LocalCardLongPress = androidx.compose.runtime.staticCompositionLoca
 /** Réglages rapides d'une carte, sans quitter le tableau de bord. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss: () -> Unit, onMore: () -> Unit) {
+private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss: () -> Unit, onContent: (String) -> Unit, onMore: () -> Unit) {
     fun move(d: Int) = app.superhealth.SuperPrefs.update { st ->
         val i = st.dashboard.indexOf(c); val j = (i + d).coerceIn(0, st.dashboard.lastIndex)
         st.copy(dashboard = with(app.superhealth.training.domain.ProgramEdit) { st.dashboard.moved(i, j) })
@@ -853,6 +898,16 @@ private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss:
                     }
                 }
             }
+            if (c.variants.size > 1) {
+                Spacer(Modifier.height(16.dp))
+                Text(tr("Affichage"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+                Spacer(Modifier.height(8.dp))
+                VariantChips(c, sh)
+            }
+            c.content()?.let { (label, route) ->
+                Spacer(Modifier.height(16.dp))
+                PillButton(tr(label), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Tune) { onContent(route) }
+            }
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PillButton(tr("Monter"), Modifier.weight(1f), strong = false) { move(-1) }
@@ -862,6 +917,22 @@ private fun CardSheet(c: DashCard, sh: app.superhealth.SuperSettings, onDismiss:
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PillButton(tr("Masquer"), Modifier.weight(1f), strong = false) { app.superhealth.SuperPrefs.update { it.copy(dashboard = it.dashboard - c) }; onDismiss() }
                 PillButton(tr("Tout personnaliser"), Modifier.weight(1f), icon = Icons.Rounded.Tune, onClick = onMore)
+            }
+        }
+    }
+}
+
+/** Le dessin d'une carte qui en a plusieurs (Classique, Niveau…) : une pastille par dessin, la même ici et dans Personnaliser. */
+@Composable
+internal fun VariantChips(c: DashCard, sh: app.superhealth.SuperSettings, modifier: Modifier = Modifier) {
+    val now = sh.variantOf(c)
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        c.variants.forEach { v ->
+            val on = v == now
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(if (on) Mf.colors.strong else Mf.colors.card)
+                .clickable(role = androidx.compose.ui.semantics.Role.RadioButton) { app.superhealth.SuperPrefs.update { it.copy(dashVariants = it.dashVariants + (c.name to v.name)) } }
+                .padding(horizontal = 6.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
+                Text(tr(v.label), style = MaterialTheme.typography.labelLarge, color = if (on) Mf.colors.onStrong else Mf.colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -955,7 +1026,7 @@ internal fun Sub(text: String?) {
 /** Cartes aux couleurs multiples (séries, muscles, phases) : en « Plein », fond profond pour que ces couleurs restent lisibles. */
 private val richCards = setOf(DashCard.RINGS, DashCard.MUSCLES, DashCard.MUSCLE_SETS, DashCard.ACTIVITIES, DashCard.VITALS, DashCard.SLEEP_STAGES,
     DashCard.HR_ZONES, DashCard.DAY_TIMELINE, DashCard.MACROS, DashCard.CALORIES, DashCard.INSIGHTS, DashCard.CORRELATION, DashCard.BALANCE,
-    DashCard.FOCUS, DashCard.LOAD, DashCard.CHARGE, DashCard.ENERGY, DashCard.SLEEP, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS)
+    DashCard.FOCUS, DashCard.LOAD, DashCard.CHARGE, DashCard.ENERGY, DashCard.SLEEP, DashCard.NIGHT_VITALS, DashCard.VITALS_TRENDS, DashCard.MEASURES, DashCard.MOOD)
 
 /** Une carte dans son ton (labo de style) : fond et couleurs de la carte suivent la variante choisie. */
 @Composable
@@ -976,6 +1047,11 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
         return
     }
     if (c == DashCard.FOCUS && size == app.superhealth.CardSize.M) { FocusMedium(c, vm, an, h, modifier, nav, tab); return }
+    if (c == DashCard.MEASURES) { MeasuresCard(c, size, vm, nav, h, an, s, modifier, tab); return }
+    if (c == DashCard.MOOD) { MoodCard(c, size, modifier, nav); return }
+    // 4.2 : un autre dessin choisi pour cette carte (Niveau, Courbe du jour, Fil du jour)
+    val sh by vm.settings.collectAsState()
+    if (VariantCard(c, size, sh.variantOf(c), vm, nav, h, an, s, modifier, tab)) return
     // cartes principales : leur famille de widgets, dans les quatre tailles
     if (FamilyCard(c, size, vm, nav, h, an, s, modifier, tab)) return
     // bulle (S) ou tuile générique (M) des cartes sans mise en page demi-largeur propre
@@ -1001,8 +1077,7 @@ private fun CardBody(c: DashCard, size: app.superhealth.CardSize, vm: SuperViewM
     when (c) {
         // dessinées par leur famille (ci-dessus)
         DashCard.QUESTS, DashCard.SCORES, DashCard.MEALS, DashCard.MEDITATION, DashCard.STRETCH, DashCard.LEAGUE, DashCard.PROGRESSION, DashCard.FRIENDS, DashCard.STREAKS,
-        DashCard.WATCH_BATTERY -> Unit
-        DashCard.MOOD -> MoodCard(c, modifier, nav)
+        DashCard.WATCH_BATTERY, DashCard.MEASURES, DashCard.MOOD -> Unit
         DashCard.WEEK_COMPARE -> WeekCompareCard(c, vm, modifier) { tab("activities") }
         DashCard.ACTIVE_DAYS -> ActiveDaysCard(c, vm, modifier) { tab("activities") }
         DashCard.HOURLY_STEPS -> HourlyStepsCard(c, vm, modifier, nav)
