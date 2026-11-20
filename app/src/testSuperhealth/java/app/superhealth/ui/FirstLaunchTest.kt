@@ -14,7 +14,7 @@ class FirstLaunchTest {
         val ctx = RuntimeEnvironment.getApplication()
         ctx.getSharedPreferences("superhealth", 0).edit().clear().commit()
         SuperPrefs.init(ctx)
-        assertEquals(4, SuperPrefs.settings.value.dashboard.size)
+        assertEquals(5, SuperPrefs.settings.value.dashboard.size)
         assertTrue(SuperPrefs.settings.value.appTourPending)
         SuperPrefs.init(ctx)
         assertEquals(DashCard.defaults, SuperPrefs.settings.value.dashboard)
