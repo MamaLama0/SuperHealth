@@ -44,6 +44,8 @@ object StyleLab {
         val s by SuperPrefs.settings.collectAsState()
         return pick(if (Mf.colors.dark) s.styleCardsDark else s.styleCardsLight, Cards.NEUTRAL)
     }
+    /** Retouches de design en cours d'essai : coupées, l'écran revient à l'identique de la version publiée. */
+    @Composable fun polish(): Boolean = SuperPrefs.settings.collectAsState().value.stylePolish
     @Composable fun hero(): Hero = pick(SuperPrefs.settings.collectAsState().value.styleHero, Hero.LARGE)
     @Composable fun sets(): Sets = pick(SuperPrefs.settings.collectAsState().value.styleSets, Sets.CARDS)
     fun workoutChoice(): WorkoutColor = pick(SuperPrefs.settings.value.styleWorkoutColor, WorkoutColor.BLUE)

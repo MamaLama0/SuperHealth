@@ -184,7 +184,7 @@ internal fun WeekHabit(history: List<Workout>) {
     while ((0..6).any { days.contains(w.plusDays(it.toLong())) }) { streak++; w = w.minusWeeks(1) }
     Row(verticalAlignment = Alignment.Bottom) {
         Text("${streak}", style = MaterialTheme.typography.displaySmall)
-        Text(tr(" semaine(s) active(s) de suite"), color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
+        Text(app.superhealth.ui.plurals("$streak" + tr(" semaine(s) active(s) de suite"), app.superhealth.ui.Lang.english).removePrefix("$streak"), color = Mf.colors.textSecondary, modifier = Modifier.padding(bottom = 6.dp))
     }
     Spacer(Modifier.height(10.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

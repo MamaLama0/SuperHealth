@@ -648,8 +648,10 @@ private fun ActionGroup(title: String, hue: Color, actions: List<QuickAction>, o
 @Composable
 private fun ActionTile(a: QuickAction, hue: Color, modifier: Modifier, onClick: () -> Unit) {
     Column(
-        modifier.heightIn(min = 108.dp).clip(RoundedCornerShape(20.dp)).background(Mf.colors.card).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+        modifier.heightIn(min = 108.dp).clip(RoundedCornerShape(20.dp)).background(Mf.colors.card).clickable(onClick = onClick)
+            .padding(start = 6.dp, end = 6.dp, top = if (app.superhealth.ui.theme.StyleLab.polish()) 16.dp else 12.dp, bottom = 12.dp),
+        // retouche : symbole calé en haut, donc aligné d'une tuile à l'autre même quand un libellé prend deux lignes
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = if (app.superhealth.ui.theme.StyleLab.polish()) Arrangement.Top else Arrangement.Center,
     ) {
         Box(Modifier.size(42.dp).clip(CircleShape).background(hue.container(1.3f)), contentAlignment = Alignment.Center) {
             Icon(a.icon, null, Modifier.size(22.dp), tint = hue.onContainer())

@@ -1212,7 +1212,7 @@ private fun SetCalc(vm: AppViewModel, settings: Settings, ex: SessionExercise?, 
         listOf(1, 3, 5, 8, 10, 12, 15).forEach { n ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("${n}", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary)
-                Text("${(app.superhealth.training.domain.Strength.pct(n.toDouble(), upper) * 100).roundToInt()}%", style = MaterialTheme.typography.labelMedium)
+                Text("${(app.superhealth.training.domain.Strength.pct(n.toDouble(), upper) * 100).roundToInt()} %", style = MaterialTheme.typography.labelMedium)
             }
         }
     }

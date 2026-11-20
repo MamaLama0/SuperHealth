@@ -131,7 +131,7 @@ internal fun ModulesRow(nav: NavHostController) {
     SettingRow(tr("Plugins"), subtitle = when {
         updates > 0 -> trf(if (updates > 1) "%1\$s mises à jour disponibles" else "%1\$s mise à jour disponible", updates)
         installed.isEmpty() -> tr("Repas, médication, méditation…")
-        else -> trf("%1\$s plugins installés · %2\$s actifs", installed.size, installed.count { it.enabled })
+        else -> trf("%1\$s plugin(s) installé(s) · %2\$s actif(s)", installed.size, installed.count { it.enabled })
     }, icon = Icons.Rounded.Extension, hue = app.superhealth.ui.theme.HealthHues.Sleep) { nav.go("modules") }
 }
 

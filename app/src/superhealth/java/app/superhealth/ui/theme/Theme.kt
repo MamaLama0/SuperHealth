@@ -131,6 +131,15 @@ fun Color.container(strength: Float = 1f): Color =
     else androidx.compose.ui.graphics.lerp(Mf.colors.card, this, (if (Mf.colors.dark) 0.24f else 0.14f) * strength)
 
 /**
+ * Fond d'une pastille dans une série de couleurs différentes (macros, raccourcis) : en sombre, [container] laisse les teintes
+ * chaudes neutres et teinte les froides, et la série paraît dépareillée. Ici toute la série prend le même fond neutre ; la
+ * couleur reste au texte et au symbole. En clair, rien ne change.
+ */
+@Composable
+fun Color.seriesContainer(strength: Float = 1f): Color =
+    if (Mf.colors.dark && StyleLab.polish()) androidx.compose.ui.graphics.lerp(Mf.colors.card, Color.White, 0.07f * strength) else container(strength)
+
+/**
  * Second ton du dégradé d'une donnée : teinte voisine (les froides glissent vers le bleu-violet, les chaudes vers le rose),
  * un peu plus claire, même saturation : un dégradé de deux couleurs proches, jamais fluo.
  */

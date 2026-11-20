@@ -252,7 +252,7 @@ fun EnergySummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Do
     fun remaining(index: Int): String {
         val (taken, goal) = values[index]
         val value = goal?.minus(taken) ?: taken
-        return (if (goal != null && value < 0) "+" else "") + kotlin.math.abs(value).roundToInt() + "g"
+        return (if (goal != null && value < 0) "+" else "") + kotlin.math.abs(value).roundToInt() + " g"
     }
     if (collapsed) {
         Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -292,7 +292,7 @@ fun EnergySummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Do
             letters.forEachIndexed { i, letter ->
                 Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(letter, style = MaterialTheme.typography.labelSmall, color = colors[i], fontWeight = FontWeight.Bold, modifier = Modifier.width(16.dp))
-                    Text("${values[i].first.roundToInt()}g", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
+                    Text("${values[i].first.roundToInt()} g", style = MaterialTheme.typography.labelSmall, color = Mf.colors.textSecondary, modifier = Modifier.weight(1f))
                     Text(if (values[i].second == null) "—" else remaining(i), style = MaterialTheme.typography.labelSmall, color = colors[i], fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(end = 14.dp))
                 }
@@ -327,7 +327,7 @@ fun MacroLine(m: Macros, energyValue: (Double) -> Double, suffix: String? = null
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(energyValue(m.kcal).roundToInt().toString(), style = style, color = color)
         Icon(Icons.Rounded.LocalFireDepartment, null, Modifier.size(11.dp).padding(start = 1.dp), tint = color)
-        Text(trf("  %1\$sP  %2\$sL  %3\$sG", (m.protein.roundToInt()), (m.fat.roundToInt()), (m.carbs.roundToInt())) + (suffix?.let { "  •  ${it}" } ?: ""),
+        Text(trf("  %1\$sP  %2\$sL  %3\$sG", (m.protein.roundToInt()), (m.fat.roundToInt()), (m.carbs.roundToInt())) + (suffix?.let { "  ·  ${it}" } ?: ""),
             style = style, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -422,6 +422,7 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
         Segmented(labels, options.indexOf(selected), modifier) { onSelect(options[it]) }
         return
     }
+    val polish = app.superhealth.ui.theme.StyleLab.polish()
     androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEachIndexed { i, o ->
             val sel = o == selected
@@ -430,10 +431,12 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
             Row(
                 Modifier.height(34.dp).clip(shape).background(if (sel) Mf.colors.accent.container(1.4f) else Color.Transparent)
                     .border(1.dp, if (sel) Color.Transparent else Mf.colors.divider.copy(alpha = 1f), shape).clickable { if (!sel) haptic.tick(); onSelect(o) }
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = if (polish) 14.dp else 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(17.dp)) { if (sel) Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()) }; Spacer(Modifier.width(6.dp))
+                // retouche : la coche ne réserve plus sa place dans les puces non choisies (libellé centré)
+                if (!polish) { Box(Modifier.size(17.dp)) { if (sel) Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()) }; Spacer(Modifier.width(6.dp)) }
+                else if (sel) { Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()); Spacer(Modifier.width(6.dp)) }
                 Text(labels[i], style = MaterialTheme.typography.labelLarge, color = if (sel) Mf.colors.accent.onContainer() else Mf.colors.text)
             }
         }
@@ -534,7 +537,9 @@ fun EmptyState(icon: ImageVector, title: String, text: String? = null, modifier:
 /** Pastille de pourcentage colorée (fiche aliment). */
 @Composable
 fun PercentPill(pct: Int, color: Color) {
-    Text("${pct}%", Modifier.clip(CircleShape).background(color.copy(alpha = 0.28f)).border(0.dp, Color.Transparent, CircleShape).padding(horizontal = 8.dp, vertical = 2.dp),
-        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Mf.colors.text)
+    // retouche : en sombre, une couleur chaude en voile vire au brun ; fond neutre commun, la couleur passe au chiffre
+    val calm = Mf.colors.dark && app.superhealth.ui.theme.StyleLab.polish()
+    Text("${pct} %", Modifier.clip(CircleShape).background(if (calm) Mf.colors.chip else color.copy(alpha = 0.28f)).padding(horizontal = 8.dp, vertical = 2.dp),
+        style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = if (calm) androidx.compose.ui.graphics.lerp(color, Color.White, 0.25f) else Mf.colors.text)
 }
 

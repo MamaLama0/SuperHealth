@@ -80,7 +80,7 @@ fun NutrientHeader(m: Macros, s: Settings) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         Column(Modifier.weight(1.3f)) {
             Text(s.energyValue(m.kcal).roundToInt().toString(), style = MaterialTheme.typography.displayMedium)
-            Text(s.energyUnit.label.tr().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
+            Text(s.energyUnit.label.tr(), style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
         }
         MacroColumn(pct(m.protein, 4), m.protein, tr("Protéines (g)"), ProteinColor, Modifier.weight(1f))
         MacroColumn(pct(m.fat, 9), m.fat, tr("Lipides (g)"), FatColor, Modifier.weight(1f))
@@ -110,7 +110,7 @@ fun TargetImpact(m: Macros, target: Macros?) {
         ).forEach { (label, r, c) ->
             val f = if (r.isFinite()) r else 0.0
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Ring(f.toFloat(), c, 58.dp, stroke = 5.dp) { Text("${(f * 100).roundToInt()}%", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
+                Ring(f.toFloat(), c, 58.dp, stroke = 5.dp) { Text("${(f * 100).roundToInt()} %", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.height(6.dp))
                 Text(label, style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary)
             }

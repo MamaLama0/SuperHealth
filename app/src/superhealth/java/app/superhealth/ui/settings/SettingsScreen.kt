@@ -198,7 +198,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                     Icons.Rounded.FitnessCenter, HealthHues.Fitness, sh.has(app.superhealth.Feature.TRAINING), onClick = { nav.go("t/settings") }) { toggle(app.superhealth.Feature.TRAINING, it) }
                 RowDivider(56.dp)
                 // activités et montre : couper la partie coupe aussi le module montre (connexions Bluetooth)
-                IconSwitchRow(tr("Montre"), if (sh.watchModule && sh.has(app.superhealth.Feature.HEALTH)) trf("%1\$s appareil(s)", devices.size) else tr("Montre désactivée"),
+                IconSwitchRow(tr("Montre"), if (sh.watchModule && sh.has(app.superhealth.Feature.HEALTH)) (if (devices.isEmpty()) tr("Aucun appareil") else trf("%1\$s appareil(s)", devices.size)) else tr("Montre désactivée"),
                     Icons.Rounded.Watch, HealthHues.Respiration, sh.watchModule && sh.has(app.superhealth.Feature.HEALTH), onClick = { nav.go("h/devices") }) { on ->
                     if (on) toggle(app.superhealth.Feature.HEALTH, true)
                     vm.setWatchModule(on)

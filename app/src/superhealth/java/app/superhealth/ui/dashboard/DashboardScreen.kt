@@ -162,6 +162,7 @@ import app.superhealth.ui.localDate
 import app.superhealth.ui.longToday
 import app.superhealth.ui.theme.CaloriesColor
 import app.superhealth.ui.theme.CardRadius
+import app.superhealth.ui.theme.seriesContainer
 import app.superhealth.ui.theme.CarbsColor
 import app.superhealth.ui.theme.FatColor
 import app.superhealth.ui.theme.HealthHues
@@ -505,7 +506,13 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                     }
                 }
                 Spacer(Modifier.height(4.dp))
-                PillButton(tr("Personnaliser le tableau de bord"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Tune) { nav.go("dash/edit") }
+                if (app.superhealth.ui.theme.StyleLab.polish()) Row(Modifier.fillMaxWidth().clip(CircleShape).clickable(role = androidx.compose.ui.semantics.Role.Button) { nav.go("dash/edit") }
+                    .heightIn(min = 48.dp).padding(horizontal = 20.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    // retouche : action secondaire en bas de page, en gris, sans fond
+                    Icon(Icons.Rounded.Tune, null, Modifier.size(18.dp), tint = Mf.colors.textSecondary)
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("Personnaliser le tableau de bord"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
+                } else PillButton(tr("Personnaliser le tableau de bord"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Tune) { nav.go("dash/edit") }
             }
         }
     }
@@ -1337,7 +1344,7 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
 @Composable
 private fun MacroPill(label: String, value: Double, target: Double, color: Color) {
     val left = target - value
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(color.container(1.4f)).padding(horizontal = 10.dp, vertical = 7.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(color.seriesContainer(1.4f)).padding(horizontal = 10.dp, vertical = 7.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = color.onContainer(), modifier = Modifier.weight(1f), maxLines = 1)
             Text(trf(if (left >= 0) "%1\$s g restants" else "%1\$s g en trop", abs(left).roundToInt()), style = MaterialTheme.typography.labelMedium,

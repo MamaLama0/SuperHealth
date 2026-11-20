@@ -35,7 +35,25 @@ private val reverse: Map<String, String> by lazy { dictionaries.reversed().flatM
 fun tr(s: String): String = if (Lang.english) dictionaries.firstNotNullOfOrNull { it[s] } ?: s else reverse[s] ?: s
 
 /** Libellé avec arguments : le gabarit source utilise %1$s, %2$s… */
-fun trf(fmt: String, vararg args: Any?): String = String.format(Lang.locale, tr(fmt), *args)
+fun trf(fmt: String, vararg args: Any?): String = String.format(Lang.locale, tr(fmt), *args).let { if ('(' in it) plurals(it, Lang.english) else it }
+
+private val pluralMark = Regex("""(\d+(?:[.,]\d+)?)|\((s|x)\)""")
+
+/**
+ * Accords écrits « série(s) validée(s) » dans les gabarits : chaque marque suit le dernier nombre lu avant elle. En français
+ * 0 et 1 sont au singulier, en anglais seulement 1. Une marque sans nombre devant elle reste telle quelle.
+ */
+internal fun plurals(text: String, english: Boolean): String {
+    var many: Boolean? = null
+    return pluralMark.replace(text) { m ->
+        val number = m.groupValues[1]
+        if (number.isNotEmpty()) {
+            val n = number.replace(',', '.').toDoubleOrNull()
+            many = n?.let { if (english) it != 1.0 else it >= 2.0 }
+            m.value
+        } else when (many) { null -> m.value; true -> m.groupValues[2]; false -> "" }
+    }
+}
 
 @JvmName("trExt") fun String.tr(): String = tr(this)
 

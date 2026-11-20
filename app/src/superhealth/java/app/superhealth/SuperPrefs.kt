@@ -420,6 +420,8 @@ data class SuperSettings(
     val styleWorkoutColor: String = "PROGRAM",
     val styleHero: String = "LARGE",
     val styleSets: String = "CARDS",
+    /** Retouches de design de la version test (tons unis en sombre, alignements, puces) : à comparer avant de les garder. */
+    val stylePolish: Boolean = true,
     /** Fin (minute du jour) du petit-déjeuner, du déjeuner et de la collation ; le dîner va jusqu'à minuit. */
     val mealEnds: List<Int> = listOf(630, 900, 1110),
     /** Tâches ajoutées à la carte À faire, et le dernier jour où chacune a été cochée. */
