@@ -21,12 +21,10 @@ connexion de SideStore (« -80045 » / « -80046 » dans Réglages > Compte). Le
 serveur Mac par défaut (`new.ani.sidestore.io`) et coupe l'anisette sur l'appareil. Il est sauté automatiquement le
 jour où SideStore l'inclut.
 
-
-
 ## Télécharger
 
-`SideStore-HealthKit.ipa` est jointe à chaque version iOS de SuperHealth (pré-versions `ios-v…` des
-[versions](https://github.com/MamaLama0/SuperHealth/releases)) et à la pré-version `sidestore-healthkit-<version>-<empreinte des correctifs>`
+`SideStore-HealthKit.ipa` est jointe à chaque version de SuperHealth, à côté de l'APK et de `SuperHealth.ipa`
+([dernière version](https://github.com/MamaLama0/SuperHealth/releases/latest)), et à la pré-version `sidestore-healthkit-<version>-<empreinte des correctifs>`
 compilée par GitHub Actions ([`.github/workflows/sidestore.yml`](.github/workflows/sidestore.yml)) : à chaque modification du workflow ou des correctifs, et chaque lundi. Le workflow est également présent sur la branche par défaut `superhealth`, condition nécessaire pour que le cron GitHub fonctionne. Il récupère toujours les sources de la branche `sidestore`. Une nouvelle version amont ou une modification des correctifs produit une nouvelle pré-version ; une compilation hebdomadaire identique est ignorée. La compilation échoue (au lieu de
 publier) si le patch ne s'applique plus ou si la capacité HealthKit manque dans le binaire.
 
