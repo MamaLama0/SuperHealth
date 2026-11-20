@@ -79,6 +79,14 @@ fun NotificationSettingsScreen(nav: NavHostController) {
             }
             RowDivider()
             SwitchRow(tr("Alerte de fin de repos"), tr("Vibration à la fin du minuteur (le bip se règle dans Musculation)"), settings.notifyRest) { on -> SuperPrefs.update { it.copy(notifyRest = on) } }
+            RowDivider()
+            SwitchRow(tr("Fin du repos sur la montre"), tr("La montre connectée à SuperHealth vibre et affiche la prochaine série"), settings.restOnWatch) { on -> SuperPrefs.update { it.copy(restOnWatch = on) } }
+            RowDivider()
+            SwitchRow(tr("Via l'app de la montre"), tr("Notification relayée par Wear OS, Garmin Connect, Zepp ou Galaxy Wearable"), settings.restWatchNotification) { on -> SuperPrefs.update { it.copy(restWatchNotification = on) } }
+            if (settings.restOnWatch || settings.restWatchNotification) {
+                RowDivider()
+                SettingRow(tr("Essayer sur la montre"), subtitle = tr("Envoie une fin de repos d'essai")) { app.superhealth.training.ui.WatchRest.test(ctx) }
+            }
         }
         if (settings.watchModule) WatchConnectionSettings(resumed, watches)
         SectionLabel(tr("Application"))

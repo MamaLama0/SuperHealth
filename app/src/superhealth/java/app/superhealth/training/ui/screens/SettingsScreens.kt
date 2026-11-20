@@ -101,7 +101,7 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 RowDivider()
                 SettingRow(tr("Échauffements et repos"), subtitle = tr("Séries préparatoires, minuteurs et sons")) { nav.navigate("t/settings/session") }
                 RowDivider()
-                SettingRow(tr("Données musculation"), subtitle = tr("Importer un programme")) { nav.navigate("t/settings/data") }
+                SettingRow(tr("Données musculation"), subtitle = tr("Importer un programme ou un historique")) { nav.navigate("t/settings/data") }
             }
             }
             if (section == "program") {
@@ -178,6 +178,11 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
                 SettingRow(tr("Entre gauche et droite"), restLabel(s.restBetweenSidesSec)) { vm.settings { it.copy(restBetweenSidesSec = next(it.restBetweenSidesSec, listOf(0, 15, 30, 45, 60))) } }
                 RowDivider()
                 SwitchRow(tr("Signal sonore de fin de récupération"), tr("Un bip quand le repos est fini, même écran éteint"), s.restSound) { v -> vm.settings { it.copy(restSound = v) } }
+                RowDivider()
+                val sh by app.superhealth.SuperPrefs.settings.collectAsState()
+                SwitchRow(tr("Fin du repos sur la montre"), tr("La montre connectée à SuperHealth vibre et affiche la prochaine série"), sh.restOnWatch) { v ->
+                    app.superhealth.SuperPrefs.update { it.copy(restOnWatch = v) }
+                }
             }
 
             }
@@ -185,6 +190,8 @@ fun MoreScreen(vm: AppViewModel, nav: NavHostController, section: String? = null
             app.superhealth.nutrition.ui.components.GroupHeader(tr("Données"), Modifier.padding(start = 0.dp))
             GroupCard {
                 SettingRow(tr("Importer un programme"), subtitle = tr("JSON SuperHealth ou Workouts ; ajouté sans remplacer vos données"), icon = Icons.Rounded.Download) { importProgram.launch(arrayOf("application/json", "*/*")) }
+                RowDivider()
+                HistoryImportRow(vm)
                 RowDivider()
                 SettingRow(tr("Sauvegarde"), subtitle = tr("Une seule sauvegarde chiffrée pour toute l'app"), icon = Icons.Rounded.Upload) { nav.navigate("backup") }
             }

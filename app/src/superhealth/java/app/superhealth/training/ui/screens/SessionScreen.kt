@@ -561,6 +561,13 @@ private fun ExercisePage(
             delay(320)
             bring.bringIntoView(androidx.compose.ui.geometry.Rect(0f, 0f, currentSize.width.toFloat(), currentSize.height + restPad))
         }
+        // Série supprimée : bandeau « Annuler » quelques secondes ; dupliquer insère une copie à refaire juste après.
+        var undo by remember(ex.id) { mutableStateOf<Pair<Int, SetLog>?>(null) }
+        LaunchedEffect(undo) { if (undo != null) { delay(6000); undo = null } }
+        fun deleteSet(si: Int, set: SetLog) { undo = si to set; edit { it.copy(sets = it.sets.filterIndexed { j, _ -> j != si }) } }
+        fun copySet(si: Int, set: SetLog) = edit { cur ->
+            cur.copy(sets = cur.sets.toMutableList().also { l -> l.add((si + 1).coerceAtMost(l.size), set.copy(id = UUID.randomUUID().toString(), done = false, completedAt = null)) })
+        }
         indexed.forEach { (si, set) ->
             androidx.compose.runtime.key(set.id) {
                 val compact = set.done
@@ -569,7 +576,7 @@ private fun ExercisePage(
                     if (compact) DoneSetRow(settings, set, labels[si]!!, e?.usesWeight != false,
                         record = best != null && set.type != SetType.WARMUP && (set.weight ?: 0.0) > 0 && (set.reps ?: 0) > 0 &&
                             Strength.e1rm(set.weight!!, set.reps!!, set.rir, e?.upperBody == true, set.partialReps) > best * 1.001,
-                        onOpen = { editing = set }, onToggle = { onToggle(si) })
+                        onOpen = { editing = set }, onToggle = { onToggle(si) }, onCopy = { copySet(si, set) }, onDelete = { deleteSet(si, set) })
                     else SetCard(settings, set, labels[si]!!, prevByIndex[si], e?.usesWeight != false, current = si == firstTodo,
                         showTarget = set.target != null && set.target != ex.sets.getOrNull(si - 1)?.target,
                         onChange = { ns ->
@@ -580,8 +587,18 @@ private fun ExercisePage(
                         },
                         onToggle = { onToggle(si) }, onPlates = onPlates, onNudge = { up -> vm.nudgeWeight(index, si, up) },
                         onType = { t -> edit { it.copy(sets = it.sets.toMutableList().also { l -> l[si] = set.copy(type = t) }) } },
-                        onDelete = { edit { it.copy(sets = it.sets.filterIndexed { j, _ -> j != si }) } })
+                        onDelete = { deleteSet(si, set) }, onCopy = { copySet(si, set) })
                 }
+            }
+        }
+        undo?.let { (at, removed) ->
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Mf.colors.card)
+                .padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Série supprimée"), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                androidx.compose.material3.TextButton(onClick = {
+                    undo = null
+                    edit { cur -> cur.copy(sets = cur.sets.toMutableList().also { l -> l.add(at.coerceAtMost(l.size), removed) }) }
+                }) { Text(tr("Annuler"), color = WorkoutBlue, fontWeight = FontWeight.Bold) }
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -731,6 +748,7 @@ private fun TargetLine(ex: SessionExercise, settings: Settings) {
 private fun SetCard(
     settings: Settings, set: SetLog, label: String, prev: SetLog?, usesWeight: Boolean, current: Boolean, showTarget: Boolean = false,
     onChange: (SetLog) -> Unit, onToggle: () -> Unit, onPlates: (Double) -> Unit, onNudge: (Boolean) -> Unit, onType: (SetType) -> Unit, onDelete: () -> Unit,
+    onCopy: (() -> Unit)? = null,
 ) {
     var menu by remember { mutableStateOf(false) }
     var partials by remember { mutableStateOf(set.partialReps > 0) }
@@ -759,6 +777,7 @@ private fun SetCard(
                     if (!warm) DropdownMenuItem({ Text(if (partials) tr("Retirer les partielles") else tr("Répétitions partielles")) }, onClick = {
                         menu = false; partials = !partials; if (!partials) onChange(set.copy(partialReps = 0))
                     })
+                    if (onCopy != null) DropdownMenuItem({ Text(tr("Dupliquer la série")) }, onClick = { menu = false; onCopy() })
                     if (!set.done) DropdownMenuItem({ Text(tr("Supprimer la série"), color = Danger) }, onClick = { menu = false; onDelete() })
                 }
             }
@@ -817,8 +836,16 @@ private fun SetCard(
 
 /** Série validée, rétractée : coche pleine, résultat ; touche = rouvrir pour corriger, coche = dévalider. */
 @Composable
-private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeight: Boolean, record: Boolean = false, onOpen: () -> Unit, onToggle: () -> Unit) {
-    Row(Modifier.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClick = onOpen)
+@OptIn(ExperimentalFoundationApi::class)
+private fun DoneSetRow(settings: Settings, set: SetLog, label: String, usesWeight: Boolean, record: Boolean = false, onOpen: () -> Unit, onToggle: () -> Unit,
+                       onCopy: () -> Unit = {}, onDelete: () -> Unit = {}) {
+    // appui long : dupliquer ou supprimer une série déjà validée
+    var menu by remember { mutableStateOf(false) }
+    DropdownMenu(menu, { menu = false }, containerColor = Mf.colors.card) {
+        DropdownMenuItem({ Text(tr("Dupliquer la série")) }, onClick = { menu = false; onCopy() })
+        DropdownMenuItem({ Text(tr("Supprimer la série"), color = Danger) }, onClick = { menu = false; onDelete() })
+    }
+    Row(Modifier.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onOpen, onLongClick = { menu = true })
         .padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.width(34.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
         Spacer(Modifier.width(8.dp))

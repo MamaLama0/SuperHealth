@@ -313,6 +313,10 @@ data class SuperSettings(
     val notifyRest: Boolean = true,
     /** Carte « Batterie de la montre » déjà ajoutée au tableau de bord (migration unique). */
     val watchBatteryAdded: Boolean = false,
+    /** Fin du repos envoyée aux montres connectées à SuperHealth (Garmin, Amazfit, Huawei, Bangle.js…). */
+    val restOnWatch: Boolean = true,
+    /** Fin du repos aussi en notification du téléphone, relayée par Wear OS, Garmin Connect, Zepp, Galaxy Wearable… */
+    val restWatchNotification: Boolean = false,
     val remindLog: Int = -1,
     val remindJournal: Int = -1,
     val remindBedtime: Boolean = false,

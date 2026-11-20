@@ -23,10 +23,11 @@ import nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupExportJob
 import nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupImportJob
 
 /**
- * Sauvegarde complète en une archive : nutrition, musculation, réglages SuperHealth, saisies santé et, dans « montre.zip »,
- * la sauvegarde Gadgetbridge (base de la montre, réglages des appareils, fichiers .fit). Toujours chiffrée avec le code de
- * récupération ([BackupCrypto]) ; la restauration lit aussi les anciennes archives ZIP en clair et les JSON de La Bouffe /
- * La Salle.
+ * Sauvegarde complète en une archive : nutrition, musculation, réglages SuperHealth, saisies santé, tous les fichiers privés de
+ * l'app ([BackupFiles] : photos de progression, courses importées, journaux, randonnées, cartes, Groupe…) et, dans
+ * « montre.zip », la sauvegarde Gadgetbridge (base de la montre, réglages des appareils, fichiers .fit). La sauvegarde est
+ * chiffrée avec le code de récupération ([BackupCrypto]) ; l'export lisible ([writeReadable]) est la même archive en ZIP clair,
+ * avec des CSV en plus. La restauration lit les deux, ainsi que les anciennes archives et les JSON de La Bouffe / La Salle.
  */
 object Archive {
     const val EXT = "shbak"
@@ -35,23 +36,32 @@ object Archive {
     @kotlinx.serialization.Serializable
     private data class LogRow(val metric: String, val ts: Long, val value: Double)
 
+    /** Noms aplatis des anciennes archives (avant [BackupFiles]) : relus à la restauration seulement. */
     private val PLUGIN_FILES = listOf("stretch_log.json", "stretch_personal.json", "stretch_mobility.json", "meditation_log.json", "league/state.json", "league/spaces.json", "league/draft.json", "league/friend-history.json", "league/friend-draft.json", "league/group-history.json", "league/notifications.json", "hiking/library.json", "hiking/session.json", "hiking/progress.json", "profile.jpg", "cards/state.json", "cards/cutout.png", app.superhealth.cards.EquipmentStore.SAVE_FILE, "wellbeing/journal.json", "wellbeing/mood_moments.json", "wellbeing/checkin.json", "wellbeing/cycle.json", "meds/meds.json", "coach/chat.json", "coach/brief.json", "meals/plans.json")
 
     fun fileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-$date.$EXT"
+    fun readableFileName(date: java.time.LocalDate = java.time.LocalDate.now()) = "superhealth-donnees-$date.zip"
 
     /** Archive chiffrée, prête à écrire où l'on veut. */
     suspend fun build(ctx: Context): ByteArray = BackupCrypto.encrypt(zip(ctx), Secrets.backupCode(ctx))
 
-    private suspend fun zip(ctx: Context): ByteArray {
+    /**
+     * Toutes les données en ZIP non chiffré (JSON, fichiers, photos, CSV), écrites directement dans [out] (pas de copie
+     * en mémoire, même avec beaucoup de photos) : lisible sur un ordinateur et restaurable.
+     */
+    suspend fun writeReadable(ctx: Context, out: java.io.OutputStream) = zip(ctx, out, csv = true)
+
+    private suspend fun zip(ctx: Context): ByteArray = ByteArrayOutputStream().also { zip(ctx, it, csv = false) }.toByteArray()
+
+    private suspend fun zip(ctx: Context, target: java.io.OutputStream, csv: Boolean) {
         val nutrition = AppJson.encodeToString(Backup.serializer(), NutriApp.repository.backup())
         val training = WorkoutApp.store.export()
         val logs = ManualLogStore.get(ctx).query(null, 0L, Long.MAX_VALUE).map { LogRow(it.metric.name, it.timestampMs, it.value) }
         val health = AppJson.encodeToString(kotlinx.serialization.builtins.ListSerializer(LogRow.serializer()), logs)
-        return withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             val watch = File(ctx.cacheDir, "montre-backup.zip").apply { delete() }
             runGbJob { cb -> ZipBackupExportJob(ctx, cb, Uri.fromFile(watch)) }
-            val out = ByteArrayOutputStream()
-            ZipOutputStream(out).use { zip ->
+            ZipOutputStream(target).use { zip ->
                 listOf("nutrition.json" to nutrition, "musculation.json" to training, "superhealth.json" to app.superhealth.SuperPrefs.exportSettings(),
                     "sante.json" to health).forEach { (name, text) ->
                     zip.putNextEntry(ZipEntry(name)); zip.write(text.toByteArray()); zip.closeEntry()
@@ -61,15 +71,16 @@ object Archive {
                 zip.putNextEntry(ZipEntry("group-recovery.json"))
                 zip.write(kotlinx.serialization.json.Json.encodeToString(app.superhealth.league.GroupRecovery.Profile.serializer(), app.superhealth.league.GroupRecovery.export(ctx)).toByteArray())
                 zip.closeEntry()
-                // Journaux des plugins, classement et photo de profil
-                PLUGIN_FILES.forEach { name -> File(ctx.filesDir, name).takeIf { it.isFile }?.let { f -> zip.putNextEntry(ZipEntry(name.replace('/', '_'))); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry() } }
-                app.superhealth.hiking.HikePhotos.backupFiles(ctx).forEach { photo ->
-                    zip.putNextEntry(ZipEntry("hiking_photo_${photo.name}"));photo.inputStream().use{it.copyTo(zip)};zip.closeEntry()
+                // Tous les fichiers privés : journaux des plugins, photos, courses importées, randonnées, Groupe, cartes…
+                BackupFiles.list(ctx.filesDir).forEach { (name, f) ->
+                    runCatching { f.inputStream() }.getOrNull()?.use { input -> zip.putNextEntry(ZipEntry(name)); input.copyTo(zip); zip.closeEntry() }
+                }
+                if (csv) ReadableExport.csvFiles(ctx, logs.map { Triple(it.metric, it.ts, it.value) }).forEach { (name, text) ->
+                    zip.putNextEntry(ZipEntry("csv/$name")); zip.write(text.toByteArray()); zip.closeEntry()
                 }
                 if (watch.length() > 0) { zip.putNextEntry(ZipEntry("montre.zip")); watch.inputStream().use { it.copyTo(zip) }; zip.closeEntry() }
             }
             watch.delete()
-            out.toByteArray()
         }
     }
 
@@ -92,7 +103,15 @@ object Archive {
                     ZipInputStream(plain.inputStream()).use { zip ->
                         generateSequence { zip.nextEntry }.forEach { e ->
                             val plugin = PLUGIN_FILES.firstOrNull { it.replace('/', '_') == e.name }
-                            if (e.name.matches(Regex("hiking_photo_[a-f0-9]{64}\\.jpg"))) {
+                            val file = BackupFiles.target(ctx.filesDir, e.name)
+                            if (file != null) {
+                                // Écrit à côté puis renommé : un fichier lu par l'app n'est jamais à moitié remplacé.
+                                val tmp = File(file.path + ".tmp").apply { parentFile?.mkdirs() }
+                                tmp.outputStream().use { zip.copyTo(it) }
+                                if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
+                            }
+                            else if (e.name.startsWith(BackupFiles.PREFIX) || e.name.startsWith("csv/")) Unit
+                            else if (e.name.matches(Regex("hiking_photo_[a-f0-9]{64}\\.jpg"))) {
                                 val out=ByteArrayOutputStream();val buffer=ByteArray(8192)
                                 while(true){val n=zip.read(buffer);if(n<0)break;require(out.size()+n<=app.superhealth.hiking.HikePhotos.MAX_BYTES);out.write(buffer,0,n)}
                                 File(ctx.filesDir,"hiking/photos/"+e.name.removePrefix("hiking_photo_")).apply{parentFile?.mkdirs();writeBytes(out.toByteArray())}
@@ -116,6 +135,8 @@ object Archive {
         app.superhealth.cards.CardStore.reload(ctx)
         app.superhealth.cards.EquipmentStore.reload(ctx)
         app.superhealth.league.SocialSpaces.reset()
+        app.superhealth.bridge.RunImport.init(ctx); app.superhealth.coach.Coach.init(ctx)
+        app.superhealth.coach.Week.note.value = null; app.superhealth.coach.Week.load(ctx)
         app.superhealth.meds.Meds.init(ctx); app.superhealth.wellbeing.Journal.init(ctx); app.superhealth.wellbeing.MoodMoments.init(ctx); app.superhealth.wellbeing.Checkin.init(ctx); app.superhealth.wellbeing.Cycle.init(ctx)
         val done = mutableListOf<String>()
         files["nutrition.json"]?.let { NutriApp.repository.restore(AppJson.decodeFromString(Backup.serializer(), it)); done += tr("nutrition") }
