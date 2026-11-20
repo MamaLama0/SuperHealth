@@ -8,10 +8,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import app.localhealth.ui.HealthApp
 import app.localhealth.ui.theme.HealthTheme
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.activities.PermissionsActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.welcome.WelcomeActivity
-import nodomain.freeyourgadget.gadgetbridge.util.PermissionsUtils
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.activities.PermissionsActivity
+import app.superhealth.engine.activities.welcome.WelcomeActivity
+import app.superhealth.engine.util.PermissionsUtils
 
 class HealthActivity : ComponentActivity() {
     private val vm: HealthViewModel by viewModels()
@@ -21,7 +21,7 @@ class HealthActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent { HealthTheme { HealthApp(vm) } }
 
-        // Reuse Gadgetbridge's onboarding: welcome flow on first run, permission check afterwards
+        // Reuse SuperHealth's onboarding: welcome flow on first run, permission check afterwards
         if (savedInstanceState == null) {
             val prefs = GBApplication.getPrefs()
             if (prefs.getBoolean("first_run", true)) {

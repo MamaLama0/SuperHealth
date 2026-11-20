@@ -20,7 +20,7 @@ import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Pouls minute par minute lu dans Health Connect (Garmin Connect, NOOP, autres apps), un fichier par jour : base de l'Effort,
+ * Pouls minute par minute lu dans Health Connect (Garmin Connect, WHOOP, autres apps), un fichier par jour : base de l'Effort,
  * des zones et de la courbe du jour quand la montre n'est pas gérée par SuperHealth. Trop volumineux pour les préférences.
  */
 object HcHeart {
@@ -63,7 +63,7 @@ object HcHeart {
 }
 
 /**
- * Séances d'autres apps (Garmin Connect, Fitbit, NOOP…) affichées comme celles de la montre : résumé de l'app (distance,
+ * Séances d'autres apps (Garmin Connect, Fitbit, WHOOP…) affichées comme celles de la montre : résumé de l'app (distance,
  * calories), pouls lu dans Health Connect (courbe, zones), et ce que l'app source y écrit pendant la séance : tracé GPS
  * (après accord de l'utilisateur, [ExerciseRouteRequestContract]), vitesse, cadence et dénivelé.
  */
@@ -194,14 +194,14 @@ object HcWorkouts {
         val pts = (s.heartRate ?: days.flatMap { HcHeart.minutes(it) }).filter { it.first * 1000 in s.start..s.end }
             .map { (t, bpm) -> app.superhealth.health.data.TrackPoint((t * 1000 - s.start) / 1000.0, 0.0, null, null, null, bpm, null, null) }
         val kind = when (Bridge.hcKindOf(s.type)) {
-            Bridge.Kind.RUN -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.RUNNING
-            Bridge.Kind.WALK -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.WALKING
-            Bridge.Kind.HIKE -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.HIKING
-            Bridge.Kind.BIKE -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.CYCLING
-            Bridge.Kind.SWIM -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.SWIMMING
-            Bridge.Kind.YOGA -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.YOGA
-            Bridge.Kind.STRENGTH -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.STRENGTH_TRAINING
-            Bridge.Kind.OTHER -> nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.ACTIVITY
+            Bridge.Kind.RUN -> app.superhealth.engine.model.ActivityKind.RUNNING
+            Bridge.Kind.WALK -> app.superhealth.engine.model.ActivityKind.WALKING
+            Bridge.Kind.HIKE -> app.superhealth.engine.model.ActivityKind.HIKING
+            Bridge.Kind.BIKE -> app.superhealth.engine.model.ActivityKind.CYCLING
+            Bridge.Kind.SWIM -> app.superhealth.engine.model.ActivityKind.SWIMMING
+            Bridge.Kind.YOGA -> app.superhealth.engine.model.ActivityKind.YOGA
+            Bridge.Kind.STRENGTH -> app.superhealth.engine.model.ActivityKind.STRENGTH_TRAINING
+            Bridge.Kind.OTHER -> app.superhealth.engine.model.ActivityKind.ACTIVITY
         }
         return app.superhealth.health.data.WorkoutDetail(
             id = id, name = s.title?.takeIf { it.isNotBlank() } ?: Bridge.kindLabel(Bridge.hcKindOf(s.type).name), kind = kind,

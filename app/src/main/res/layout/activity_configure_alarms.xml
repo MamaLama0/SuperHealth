@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.ConfigureAlarms">
+    tools:context="app.superhealth.engine.activities.ConfigureAlarms">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/alarm_list"

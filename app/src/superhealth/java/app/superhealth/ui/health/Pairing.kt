@@ -25,7 +25,7 @@ import androidx.core.app.ActivityCompat
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import nodomain.freeyourgadget.gadgetbridge.activities.discovery.DiscoveryActivityV2
+import app.superhealth.engine.activities.discovery.DiscoveryActivityV2
 
 /**
  * Apps officielles des montres : une montre ne parle en Bluetooth qu'à une seule app ; si son app officielle reste
@@ -45,7 +45,7 @@ private val VENDOR_APPS = linkedMapOf(
     "com.yf.smart.coros.dist" to "COROS",
     "com.withings.wiscale2" to "Withings",
     "com.whoop.android" to "WHOOP",
-    "com.noop.whoop" to "NOOP",
+    "com.noop.whoop" to "WHOOP",
 )
 
 fun installedVendorApp(ctx: Context): String? = VENDOR_APPS.entries.firstOrNull { (pkg, _) ->

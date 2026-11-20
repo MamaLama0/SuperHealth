@@ -31,7 +31,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Gadgetbridge"
+rootProject.name = "SuperHealth"
 
 include(":app")
 include(":GBDaoGenerator")

@@ -28,11 +28,11 @@ import androidx.glance.text.TextStyle
 import app.superhealth.bridge.WatchStatus
 import app.superhealth.ui.dashboard.batteryColor
 import app.superhealth.ui.tr
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /**
  * Montre : batterie en jauge (couleur selon le niveau, éclair en charge), nom, connexion, et dernière connexion montre
- * déconnectée. Petit : la jauge seule. Redessiné par WatchStatus quand Gadgetbridge signale un changement.
+ * déconnectée. Petit : la jauge seule. Redessiné par WatchStatus quand le moteur montre signale un changement.
  */
 class WatchBatteryWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(WK.ALL)

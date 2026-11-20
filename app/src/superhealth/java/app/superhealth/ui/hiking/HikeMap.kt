@@ -30,8 +30,8 @@ internal fun HikeMap(route: HikeRoute, modifier: Modifier = Modifier, interactiv
     position: HikePoint? = null, recorded: List<HikePoint> = emptyList()) {
     val revision by RegionalMaps.revision.collectAsState()
     var unavailable by remember(route.id,revision) { mutableStateOf(false) }
-    val folder = nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().getString(
-        nodomain.freeyourgadget.gadgetbridge.util.maps.MapsManager.PREF_MAPS_FOLDER, "")
+    val folder = app.superhealth.engine.GBApplication.getPrefs().getString(
+        app.superhealth.engine.util.maps.MapsManager.PREF_MAPS_FOLDER, "")
     if (interactive && folder.isNotEmpty() && !unavailable) {
         Box(modifier.clip(RoundedCornerShape(24.dp))) {
             RegionalHikeMap(route,Modifier.fillMaxSize(),position,recorded) { unavailable = true }

@@ -73,7 +73,7 @@ fun preloadBodies(sex: Sex) {
 }
 
 /**
- * Silhouettes avant / arrière (assets/body de MacroFactor Workouts) : un tracé par groupe musculaire, coloré selon
+ * Silhouettes avant / arrière (assets/body) : un tracé par groupe musculaire, coloré selon
  * l'intensité 0..1 (gris #EEEEEE → bleu #276EF1), comme l'écran « Workout Complete ».
  */
 @Composable

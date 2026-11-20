@@ -72,7 +72,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /*
- * Cartes reprises des tableaux de bord de MacroFactor (habitudes, bilan) et de MacroFactor Workouts (prochaine séance,
+ * Cartes de tableau de bord : nutrition (habitudes, bilan) et musculation (prochaine séance,
  * tendances, séries par muscle, progression des exercices).
  */
 

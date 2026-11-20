@@ -1,0 +1,107 @@
+/*  Copyright (C) 2023-2024 Arjan Schrijver, José Rebelo
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.adapter;
+
+
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import app.superhealth.engine.R;
+import app.superhealth.engine.activities.ConfigureContacts;
+import app.superhealth.engine.entities.Contact;
+
+/**
+ * Adapter for displaying Contact instances.
+ */
+public class GBContactListAdapter extends RecyclerView.Adapter<GBContactListAdapter.ViewHolder> {
+
+    private final Context mContext;
+    private ArrayList<Contact> contactList;
+
+    public GBContactListAdapter(Context context) {
+        this.mContext = context;
+    }
+
+    public void setContactList(List<Contact> contacts) {
+        this.contactList = new ArrayList<>(contacts);
+    }
+
+    public ArrayList<Contact> getContactList() {
+        return contactList;
+    }
+
+    @NonNull
+    @Override
+    public GBContactListAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        final View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_contact, parent, false);
+        return new ViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, final int position) {
+        final Contact contact = contactList.get(position);
+
+        holder.container.setOnClickListener(v -> ((ConfigureContacts) mContext).configureContact(contact));
+
+        holder.delete.setOnClickListener(v -> new MaterialAlertDialogBuilder(v.getContext())
+                .setTitle(R.string.contact_delete_confirm_title)
+                .setMessage(mContext.getString(R.string.contact_delete_confirm_description, contact.getName()))
+                .setIcon(R.drawable.ic_warning)
+                .setPositiveButton(R.string.delete, (dialog, whichButton) -> ((ConfigureContacts) mContext).deleteContact(contact))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show());
+
+        holder.contactName.setText(contact.getName());
+        holder.contactNumber.setText(contact.getNumber());
+    }
+
+    @Override
+    public int getItemCount() {
+        return contactList.size();
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        final MaterialCardView container;
+
+        final TextView contactName;
+        final TextView contactNumber;
+        final ImageButton delete;
+
+        ViewHolder(final View view) {
+            super(view);
+
+            container = view.findViewById(R.id.card_contact);
+
+            contactName = view.findViewById(R.id.contact_item_name);
+            contactNumber = view.findViewById(R.id.contact_item_phone_number);
+            delete = view.findViewById(R.id.contact_item_delete);
+        }
+    }
+}

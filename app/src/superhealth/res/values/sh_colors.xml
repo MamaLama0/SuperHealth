@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Palette SuperHealth (voir ui/theme/Theme.kt) appliquée aux écrans natifs de Gadgetbridge -->
+    <!-- Palette SuperHealth (voir ui/theme/Theme.kt) appliquée aux écrans natifs du module montre -->
     <color name="primary_light" type="color">#5A95F9</color>
     <color name="primarydark_light" type="color">#5A95F9</color>
     <color name="primary_dark" type="color">#5A95F9</color>

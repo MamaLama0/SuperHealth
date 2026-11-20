@@ -15,7 +15,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.layout.RowScope
 import android.graphics.Bitmap
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 import kotlin.math.roundToInt
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget

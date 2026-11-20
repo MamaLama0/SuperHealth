@@ -1,0 +1,296 @@
+/*  Copyright (C) 2015-2024 Andreas Shimokawa, Arjan Schrijver, Carsten
+    Pfeiffer, Damien Gaignon, Daniel Dakhno, Daniele Gobbetti, José Rebelo,
+    Matthieu Baerts, Petr Vaněk
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.devices.pebble;
+
+import android.app.Activity;
+import android.content.Context;
+import android.net.Uri;
+import android.os.Bundle;
+
+import androidx.annotation.DrawableRes;
+import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import app.superhealth.engine.GBApplication;
+import app.superhealth.engine.R;
+import app.superhealth.engine.activities.ExternalPebbleJSActivity;
+import app.superhealth.engine.activities.appmanager.AppManagerActivity;
+import app.superhealth.engine.activities.appmanager.PebbleAppStoreActivity;
+import app.superhealth.engine.activities.devicesettings.DeviceSpecificSettings;
+import app.superhealth.engine.activities.devicesettings.DeviceSpecificSettingsCustomizer;
+import app.superhealth.engine.activities.devicesettings.DeviceSpecificSettingsScreen;
+import app.superhealth.engine.devices.AbstractBLClassicDeviceCoordinator;
+import app.superhealth.engine.devices.InstallHandler;
+import app.superhealth.engine.devices.SampleProvider;
+import app.superhealth.engine.entities.AbstractActivitySample;
+import app.superhealth.engine.entities.DaoSession;
+import app.superhealth.engine.impl.GBDevice;
+import app.superhealth.engine.service.DeviceSupport;
+import app.superhealth.engine.service.devices.pebble.PebbleSupport;
+import app.superhealth.engine.util.PebbleUtils;
+import app.superhealth.engine.util.preferences.DevicePrefs;
+
+public class PebbleCoordinator extends AbstractBLClassicDeviceCoordinator {
+    private static final String BG_JS_ENABLED = "pebble_enable_background_javascript";
+    private static final boolean BG_JS_ENABLED_DEFAULT = false;
+    private static final String APP_STORE_PREF = "pebble_app_store";
+    private static final String APP_STORE_DEFAULT = "rebble";
+
+    public PebbleCoordinator() {
+    }
+
+    @Override
+    protected Pattern getSupportedDeviceName() {
+        return Pattern.compile("Pebble.*");
+    }
+
+    @Override
+    public Class<? extends Activity> getPairingActivity() {
+        return PebblePairingActivity.class;
+    }
+
+    @Override
+    public SampleProvider<? extends AbstractActivitySample> getSampleProvider(GBDevice device, DaoSession session) {
+        DevicePrefs prefs = GBApplication.getDevicePrefs(device);
+        int activityTracker = prefs.getInt("pebble_activitytracker", SampleProvider.PROVIDER_PEBBLE_HEALTH);
+        return switch (activityTracker) {
+            case SampleProvider.PROVIDER_PEBBLE_MISFIT -> new PebbleMisfitSampleProvider(device, session);
+            case SampleProvider.PROVIDER_PEBBLE_MORPHEUZ -> new PebbleMorpheuzSampleProvider(device, session);
+            default -> new PebbleHealthSampleProvider(device, session);
+        };
+    }
+
+    @Override
+    public InstallHandler findInstallHandler(Uri uri, Bundle options, Context context) {
+        PBWInstallHandler installHandler = new PBWInstallHandler(uri, context);
+        return installHandler.isValid() ? installHandler : null;
+    }
+
+    @Override
+    public boolean supportsFlashing(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsActivityTracking(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsDataFetching(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsScreenshots(final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public int getCannedRepliesSlotCount(final GBDevice device) {
+        return 16;
+    }
+
+    @Override
+    public boolean supportsHeartRateMeasurement(GBDevice device) {
+        return PebbleHardware.hasHRM(device.getModel());
+    }
+
+    @Override
+    public String getManufacturer() {
+        return "Pebble";
+    }
+
+    @Override
+    public boolean supportsAppsManagement(final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public Class<? extends Activity> getAppsManagementActivity(final GBDevice device) {
+        return AppManagerActivity.class;
+    }
+
+    @Override
+    public Class<? extends Activity> getAppStoreActivity(final GBDevice device) {
+        return PebbleAppStoreActivity.class;
+    }
+
+    @Override
+    public Class<? extends Activity> getAppConfigurationActivity(final GBDevice device) {
+        return ExternalPebbleJSActivity.class;
+    }
+
+    @Override
+    public File getAppCacheDir() throws IOException {
+        return PebbleUtils.getPbwCacheDir();
+    }
+
+    @Override
+    public String getAppCacheSortFilename() {
+        return "pbwcacheorder.txt";
+    }
+
+    @Override
+    public String getAppFileExtension() {
+        return ".pbw";
+    }
+
+    @Override
+    public boolean supportsAppListFetching(final GBDevice device) {
+        return false;
+    }
+
+    @Override
+    public boolean supportsAppReordering(final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsCalendarEvents(final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsWeather(final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsAppNotifications(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsPhoneCalls(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsCallControl(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsInternetAccess(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsSmsReply(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsFindDevice(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsMusicInfo(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsUnicodeEmojis(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsDebugLogs(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public DeviceSpecificSettings getDeviceSpecificSettings(final GBDevice device) {
+        final DeviceSpecificSettings deviceSpecificSettings = new DeviceSpecificSettings();
+
+        final List<Integer> generic = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.GENERIC);
+        generic.add(R.xml.devicesettings_pebble_generic);
+
+        final List<Integer> notifications = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.CALLS_AND_NOTIFICATIONS);
+        notifications.add(R.xml.devicesettings_autoremove_notifications);
+        notifications.add(R.xml.devicesettings_pebble_calls_notifications);
+        notifications.add(R.xml.devicesettings_canned_reply_16);
+        notifications.add(R.xml.devicesettings_canned_dismisscall_16);
+        notifications.add(R.xml.devicesettings_transliteration);
+
+        final List<Integer> calendar = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.CALENDAR);
+        calendar.add(R.xml.devicesettings_sync_calendar);
+        calendar.add(R.xml.devicesettings_pebble_calendar);
+
+        final List<Integer> activity = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.ACTIVITY_INFO);
+        activity.add(R.xml.devicesettings_pebble_activity);
+
+        final List<Integer> dev = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.DEVELOPER);
+        dev.add(R.xml.devicesettings_pebble_developer);
+
+        return deviceSpecificSettings;
+    }
+
+    @Override
+    public DeviceSpecificSettingsCustomizer getDeviceSpecificSettingsCustomizer(GBDevice device) {
+        return new PebbleSettingsCustomizer();
+    }
+
+    @NonNull
+    @Override
+    public Class<? extends DeviceSupport> getDeviceSupportClass(final GBDevice device) {
+        return PebbleSupport.class;
+    }
+
+    @Override
+    @StringRes
+    public int getDeviceNameResource() {
+        return R.string.devicetype_pebble;
+    }
+
+
+    @Override
+    @DrawableRes
+    public int getDefaultIconResource() {
+        return R.drawable.ic_device_pebble;
+    }
+
+    public boolean isBackgroundJsEnabled(final GBDevice device) {
+        DevicePrefs deviceSpecificPreferences = GBApplication.getDevicePrefs(device);
+        return deviceSpecificPreferences.getBoolean(BG_JS_ENABLED, BG_JS_ENABLED_DEFAULT);
+    }
+
+    public String getAppStoreDomain(final GBDevice device) {
+        DevicePrefs deviceSpecificPreferences = GBApplication.getDevicePrefs(device);
+        final String appStore = deviceSpecificPreferences.getString(APP_STORE_PREF, APP_STORE_DEFAULT);
+        switch (appStore) {
+            case "repebble":
+                return "repebble.com";
+            default:
+                return "rebble.io";
+        }
+    }
+
+    @Override
+    public DeviceKind getDeviceKind(@NonNull GBDevice device) {
+        return DeviceKind.WATCH;
+    }
+}

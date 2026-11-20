@@ -19,15 +19,15 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample
-import nodomain.freeyourgadget.gadgetbridge.model.DeviceService
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.model.ActivitySample
+import app.superhealth.engine.model.DeviceService
 
 /** Mesure envoyée en direct par la montre (fréquence cardiaque, pas cumulés depuis la mesure précédente). */
 data class LiveSample(val timeMs: Long, val bpm: Int?, val steps: Int?)
 
 /**
- * Fréquence cardiaque en direct : le moteur Gadgetbridge demande à la montre ses mesures temps réel tant qu'au moins
+ * Fréquence cardiaque en direct : le moteur montre demande à la montre ses mesures temps réel tant qu'au moins
  * un écran (graphique du tableau de bord, séance en cours) écoute, puis les coupe pour préserver la batterie.
  *
  * Batterie de la montre : le mode direct fait émettre la montre chaque seconde. Il n'est donc actif que l'app au premier

@@ -2,8 +2,8 @@ package app.superhealth.health.data
 
 import android.app.Application
 import android.database.sqlite.SQLiteDatabase
-import nodomain.freeyourgadget.gadgetbridge.database.schema.GadgetbridgeUpdate_160
-import nodomain.freeyourgadget.gadgetbridge.entities.XiaomiSleepTimeSampleDao
+import app.superhealth.engine.database.schema.SchemaUpdate_160
+import app.superhealth.engine.entities.XiaomiSleepTimeSampleDao
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,8 +19,8 @@ class WatchMigrationTest {
             val column = XiaomiSleepTimeSampleDao.Properties.IntoBedTime.columnName
             db.execSQL("CREATE TABLE $table (_id INTEGER PRIMARY KEY, retained TEXT)")
             db.execSQL("INSERT INTO $table VALUES (1, 'keep')")
-            GadgetbridgeUpdate_160().upgradeSchema(db)
-            GadgetbridgeUpdate_160().upgradeSchema(db)
+            SchemaUpdate_160().upgradeSchema(db)
+            SchemaUpdate_160().upgradeSchema(db)
             db.rawQuery("PRAGMA table_info($table)", null).use { c ->
                 val names = mutableListOf<String>()
                 while (c.moveToNext()) names += c.getString(1)

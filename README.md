@@ -56,4 +56,8 @@ Tout en bas des réglages, **Donner mon avis** permet de transmettre une note, u
 - [Issues](https://github.com/MamaLama0/SuperHealth/issues) et [solutions étudiées](docs/ISSUES.md).
 - [Notes de version](docs/updates/).
 
-SuperHealth Android s’appuie sur [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge). Son [README d’origine](docs/upstream/README.md) et ses [contributeurs](docs/upstream/Gadgetbridge-CONTRIBUTORS.rst) sont conservés pour l’attribution et la documentation des appareils. Les bugs propres à SuperHealth se signalent dans ce dépôt.
+## Licence
+
+Le code de SuperHealth est publié sous licence [GNU AGPL v3](LICENSE) : vous pouvez l’utiliser, le modifier et le redistribuer à condition de publier vos modifications sous la même licence. Il est fourni sans aucune garantie. Les notices de droits d’auteur restent en tête des fichiers sources.
+
+Les bibliothèques, polices et ressources incluses gardent leur propre licence. Leurs textes sont dans [`app/src/main/assets/licenses/`](app/src/main/assets/licenses/) et [`app/src/superhealth/assets/licenses/`](app/src/superhealth/assets/licenses/), et dans l’app (bouton **Licences** de l’écran « À propos » du module montre).

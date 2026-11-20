@@ -2,7 +2,7 @@ package app.superhealth.training.domain
 
 import kotlinx.serialization.Serializable
 
-// Modèle calqué sur MacroFactor Workouts 1.4.1 (Workouts-analyse/notes/02-modele-de-donnees.md).
+// Modèle de données de la musculation.
 
 /** ExerciseSetType observé : standard, warmUp, drop, myo, failure. */
 @Serializable enum class SetType(val label: String, val short: String) {

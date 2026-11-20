@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <!-- Not including PREF_LANGUAGE here since GadgetBridge seems to add it for us -->
+    <!-- Not including PREF_LANGUAGE here since SuperHealth seems to add it for us -->
     <PreferenceCategory
         android:title="@string/prefs_wena3_title_activity">
         <SwitchPreferenceCompat

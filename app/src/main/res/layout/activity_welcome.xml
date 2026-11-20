@@ -15,7 +15,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/welcome_page_indicator" />
 
-    <nodomain.freeyourgadget.gadgetbridge.activities.welcome.WelcomePageIndicator
+    <app.superhealth.engine.activities.welcome.WelcomePageIndicator
         android:id="@+id/welcome_page_indicator"
         android:layout_width="match_parent"
         android:layout_height="30dp"

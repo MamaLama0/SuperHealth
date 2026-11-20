@@ -10,10 +10,10 @@ import android.media.AudioAttributes
 import android.media.SoundPool
 import android.os.VibrationEffect
 import android.os.Vibrator
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /**
- * Fin du repos (RestTimerSoundChannel / rest_timer_notification_service de MacroFactor Workouts) :
+ * Fin du repos :
  * alarme système, notification et son « beep.wav » repris de l'APK.
  */
 object RestTimer {
@@ -109,12 +109,12 @@ object WatchRest {
     /** Les montres reçoivent une notification ; la précédente est retirée pour ne pas en empiler une par série. */
     private fun toConnectedWatches(title: String, body: String) {
         if (app.superhealth.bridge.Watch.devices().none { it.isInitialized }) return
-        val service = nodomain.freeyourgadget.gadgetbridge.GBApplication.deviceService()
+        val service = app.superhealth.engine.GBApplication.deviceService()
         if (lastSpecId != 0) service.onDeleteNotification(lastSpecId)
-        val spec = nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec().apply {
-            type = nodomain.freeyourgadget.gadgetbridge.model.NotificationType.UNKNOWN
+        val spec = app.superhealth.engine.model.NotificationSpec().apply {
+            type = app.superhealth.engine.model.NotificationType.UNKNOWN
             sourceName = "SuperHealth"
-            sourceAppId = nodomain.freeyourgadget.gadgetbridge.GBApplication.getContext().packageName
+            sourceAppId = app.superhealth.engine.GBApplication.getContext().packageName
             this.title = title
             this.body = body
             attachedActions = ArrayList()
@@ -139,7 +139,7 @@ object WatchRest {
     /** Coupé avec la séance : plus de rappel en attente sur la montre ou le téléphone. */
     fun clear(ctx: Context) {
         runCatching { ctx.getSystemService(NotificationManager::class.java).cancel(ID) }
-        if (lastSpecId != 0) runCatching { nodomain.freeyourgadget.gadgetbridge.GBApplication.deviceService().onDeleteNotification(lastSpecId) }
+        if (lastSpecId != 0) runCatching { app.superhealth.engine.GBApplication.deviceService().onDeleteNotification(lastSpecId) }
         lastSpecId = 0
     }
 }

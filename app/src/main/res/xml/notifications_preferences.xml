@@ -150,14 +150,14 @@
             android:title="@string/pref_title_notification_times_enabled"
             app:iconSpaceReserved="false" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="08:00"
             android:dependency="notification_times_enabled"
             android:key="notification_times_start"
             android:title="@string/mi2_prefs_do_not_disturb_start"
             app:iconSpaceReserved="false"/>
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="22:00"
             android:dependency="notification_times_enabled"
             android:key="notification_times_end"

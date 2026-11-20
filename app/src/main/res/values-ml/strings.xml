@@ -63,7 +63,6 @@
     <string name="controlcenter_take_screenshot">സ്ക്രീൻ ഷോട്ട് എടുക്കുക</string>
     <string name="controlcenter_find_device">നഷ്ടപ്പെട്ട ഉപകരണം കണ്ടെത്തുക</string>
     <string name="controlcenter_fetch_activity_data">സമകാലികമാക്കുക</string>
-    <string name="action_donate">സംഭാവന ചെയ്യുക</string>
     <string name="action_quit">പുറത്തു കടക്കുക</string>
     <string name="action_debug">തെറ്റുകൾ തിരുത്തുക</string>
     <string name="action_settings">ക്രമീകരണങ്ങൾ</string>

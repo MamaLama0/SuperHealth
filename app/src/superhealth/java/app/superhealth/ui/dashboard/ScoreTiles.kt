@@ -37,7 +37,7 @@ import app.superhealth.ui.theme.arcBrush
 import app.superhealth.ui.theme.dataBrush
 import app.superhealth.ui.theme.veilOf
 import app.superhealth.ui.tr
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.model.ActivityKind
 import kotlin.math.abs
 import kotlin.math.roundToInt
 

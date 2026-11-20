@@ -1,7 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- light theme -->
-    <style name="GadgetbridgeTheme" parent="Theme.Material3.Light">
+    <style name="SuperHealthTheme" parent="Theme.Material3.Light">
         <item name="colorSurface">@color/window_background_light</item>
         <item name="colorSurfaceContainerLowest">@color/surface_container_lowest_light</item>
         <item name="colorSurfaceContainerLow">@color/surface_container_low_light</item>
@@ -29,11 +29,11 @@
 
         <item name="elevationOverlayEnabled">false</item>
 
-        <item name="actionBarStyle">@style/GadgetbridgeTheme.ActionBar</item>
-        <item name="actionOverflowMenuStyle">@style/GadgetbridgeTheme.OverflowMenuStyle</item>
-        <item name="actionModeStyle">@style/GadgetbridgeTheme.ActionMode</item>
+        <item name="actionBarStyle">@style/SuperHealthTheme.ActionBar</item>
+        <item name="actionOverflowMenuStyle">@style/SuperHealthTheme.OverflowMenuStyle</item>
+        <item name="actionModeStyle">@style/SuperHealthTheme.ActionMode</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="actionModeCloseButtonStyle">@style/GadgetbridgeTheme.ActionModeCloseButton</item>
+        <item name="actionModeCloseButtonStyle">@style/SuperHealthTheme.ActionModeCloseButton</item>
         <item name="preferenceTheme">@style/AppPreferenceThemeOverlay</item>
 
         <item name="drawer_header_color">?attr/toolbar_bg</item>
@@ -111,7 +111,7 @@
     </style>
 
     <!-- dark theme -->
-    <style name="GadgetbridgeThemeDark" parent="Theme.Material3.Dark">
+    <style name="SuperHealthThemeDark" parent="Theme.Material3.Dark">
         <!-- Neutral greys, instead of the slightly tinted Material 3 defaults -->
         <item name="colorSurface">@color/window_background_dark</item>
         <item name="colorSurfaceContainerLowest">@color/surface_container_lowest_dark</item>
@@ -140,11 +140,11 @@
 
         <item name="elevationOverlayEnabled">false</item>
 
-        <item name="actionBarStyle">@style/GadgetbridgeTheme.ActionBar</item>
-        <item name="actionOverflowMenuStyle">@style/GadgetbridgeTheme.OverflowMenuStyle</item>
-        <item name="actionModeStyle">@style/GadgetbridgeTheme.ActionMode</item>
+        <item name="actionBarStyle">@style/SuperHealthTheme.ActionBar</item>
+        <item name="actionOverflowMenuStyle">@style/SuperHealthTheme.OverflowMenuStyle</item>
+        <item name="actionModeStyle">@style/SuperHealthTheme.ActionMode</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="actionModeCloseButtonStyle">@style/GadgetbridgeTheme.ActionModeCloseButton</item>
+        <item name="actionModeCloseButtonStyle">@style/SuperHealthTheme.ActionModeCloseButton</item>
         <item name="preferenceTheme">@style/AppPreferenceThemeOverlay</item>
 
         <item name="drawer_header_color">?attr/toolbar_bg</item>
@@ -221,7 +221,7 @@
     </style>
 
     <!-- black theme -->
-    <style name="GadgetbridgeThemeBlack" parent="GadgetbridgeThemeDark">
+    <style name="SuperHealthThemeBlack" parent="SuperHealthThemeDark">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:colorBackground">@android:color/black</item>
         <item name="toolbar_bg">@android:color/black</item>
@@ -232,15 +232,15 @@
     </style>
 
     <!-- Material 3 dynamic color (Material You) themes -->
-    <style name="GadgetbridgeThemeDynamicLight" parent="Theme.Material3.DynamicColors.Light">
+    <style name="SuperHealthThemeDynamicLight" parent="Theme.Material3.DynamicColors.Light">
         <item name="textColorPrimary">?attr/colorOnSurface</item>
         <item name="textColorSecondary">?attr/colorOnSurfaceVariant</item>
         <item name="elevationOverlayEnabled">false</item>
-        <item name="actionBarStyle">@style/GadgetbridgeTheme.ActionBar</item>
-        <item name="actionOverflowMenuStyle">@style/GadgetbridgeTheme.OverflowMenuStyle</item>
-        <item name="actionModeStyle">@style/GadgetbridgeTheme.ActionMode</item>
+        <item name="actionBarStyle">@style/SuperHealthTheme.ActionBar</item>
+        <item name="actionOverflowMenuStyle">@style/SuperHealthTheme.OverflowMenuStyle</item>
+        <item name="actionModeStyle">@style/SuperHealthTheme.ActionMode</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="actionModeCloseButtonStyle">@style/GadgetbridgeTheme.ActionModeCloseButton</item>
+        <item name="actionModeCloseButtonStyle">@style/SuperHealthTheme.ActionModeCloseButton</item>
         <item name="android:statusBarColor">?attr/toolbar_bg</item>
         <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
         <item name="android:colorControlHighlight">?attr/colorPrimary</item>
@@ -304,15 +304,15 @@
         <item name="value_line">?attr/colorOutlineVariant</item>
         <item name="gauge_track">?attr/colorSurfaceContainerHighest</item>
     </style>
-    <style name="GadgetbridgeThemeDynamicDark" parent="Theme.Material3.DynamicColors.Dark">
+    <style name="SuperHealthThemeDynamicDark" parent="Theme.Material3.DynamicColors.Dark">
         <item name="textColorPrimary">?attr/colorOnSurface</item>
         <item name="textColorSecondary">?attr/colorOnSurfaceVariant</item>
         <item name="elevationOverlayEnabled">false</item>
-        <item name="actionBarStyle">@style/GadgetbridgeTheme.ActionBar</item>
-        <item name="actionOverflowMenuStyle">@style/GadgetbridgeTheme.OverflowMenuStyle</item>
-        <item name="actionModeStyle">@style/GadgetbridgeTheme.ActionMode</item>
+        <item name="actionBarStyle">@style/SuperHealthTheme.ActionBar</item>
+        <item name="actionOverflowMenuStyle">@style/SuperHealthTheme.OverflowMenuStyle</item>
+        <item name="actionModeStyle">@style/SuperHealthTheme.ActionMode</item>
         <item name="windowActionModeOverlay">true</item>
-        <item name="actionModeCloseButtonStyle">@style/GadgetbridgeTheme.ActionModeCloseButton</item>
+        <item name="actionModeCloseButtonStyle">@style/SuperHealthTheme.ActionModeCloseButton</item>
         <item name="android:statusBarColor">?attr/toolbar_bg</item>
         <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
         <item name="android:colorControlHighlight">?attr/colorPrimary</item>
@@ -375,10 +375,10 @@
         <item name="value_line">?attr/colorOutlineVariant</item>
         <item name="gauge_track">?attr/colorSurfaceContainerHighest</item>
     </style>
-    <!-- Mirrors GadgetbridgeThemeBlack: black window and black chrome. Explicit colors: toolbar_bg is
+    <!-- Mirrors SuperHealthThemeBlack: black window and black chrome. Explicit colors: toolbar_bg is
          read as a color, so it must not alias windowBackground. Tiles keep the AMOLED values, as a
          wallpaper-tinted tile would break the black look. -->
-    <style name="GadgetbridgeThemeDynamicDarkAmoled" parent="GadgetbridgeThemeDynamicDark">
+    <style name="SuperHealthThemeDynamicDarkAmoled" parent="SuperHealthThemeDynamicDark">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:colorBackground">@android:color/black</item>
         <item name="toolbar_bg">@android:color/black</item>
@@ -388,27 +388,27 @@
     </style>
 
     <!-- theme variants without action bar -->
-    <style name="GadgetbridgeTheme.NoActionBar">
+    <style name="SuperHealthTheme.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
-    <style name="GadgetbridgeThemeDark.NoActionBar">
+    <style name="SuperHealthThemeDark.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
-    <style name="GadgetbridgeThemeBlack.NoActionBar">
+    <style name="SuperHealthThemeBlack.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
-    <style name="GadgetbridgeThemeDynamicLight.NoActionBar">
+    <style name="SuperHealthThemeDynamicLight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
-    <style name="GadgetbridgeThemeDynamicDark.NoActionBar">
+    <style name="SuperHealthThemeDynamicDark.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
-    <style name="GadgetbridgeThemeDynamicDarkAmoled.NoActionBar">
+    <style name="SuperHealthThemeDynamicDarkAmoled.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
@@ -425,8 +425,8 @@
         <item name="android:textSize">12sp</item>
         <item name="android:textColor">?attr/toolbar_subtitle</item>
     </style>
-    <style name="GadgetbridgeTheme.ToolbarTitleStyle" parent="TextAppearance.App.ToolbarTitle" />
-    <style name="GadgetbridgeTheme.ToolbarSubtitleStyle" parent="TextAppearance.App.ToolbarSubtitle" />
+    <style name="SuperHealthTheme.ToolbarTitleStyle" parent="TextAppearance.App.ToolbarTitle" />
+    <style name="SuperHealthTheme.ToolbarSubtitleStyle" parent="TextAppearance.App.ToolbarSubtitle" />
 
     <style name="ShapeAppearance.App.RoundedPhoto" parent="">
         <item name="cornerFamily">rounded</item>
@@ -483,43 +483,43 @@
         <item name="android:textColor">?attr/textColorSecondary</item>
     </style>
 
-    <style name="GadgetbridgeTheme.ToolbarIconOverlay" parent="">
+    <style name="SuperHealthTheme.ToolbarIconOverlay" parent="">
         <item name="colorControlNormal">?attr/toolbar_icon</item>
         <item name="actionMenuTextColor">?attr/toolbar_icon</item>
     </style>
 
-    <style name="GadgetbridgeTheme.ActionBar" parent="Widget.Material3.ActionBar.Solid">
+    <style name="SuperHealthTheme.ActionBar" parent="Widget.Material3.ActionBar.Solid">
         <item name="background">?attr/toolbar_bg</item>
         <item name="android:height">52dp</item>
-        <item name="titleTextStyle">@style/GadgetbridgeTheme.ToolbarTitleStyle</item>
-        <item name="subtitleTextStyle">@style/GadgetbridgeTheme.ToolbarSubtitleStyle</item>
+        <item name="titleTextStyle">@style/SuperHealthTheme.ToolbarTitleStyle</item>
+        <item name="subtitleTextStyle">@style/SuperHealthTheme.ToolbarSubtitleStyle</item>
         <!-- No shadow under the bar: it showed as a gradient on the tab row below -->
         <item name="elevation">0dp</item>
-        <item name="android:theme">@style/GadgetbridgeTheme.ToolbarIconOverlay</item>
+        <item name="android:theme">@style/SuperHealthTheme.ToolbarIconOverlay</item>
     </style>
-    <style name="GadgetbridgeTheme.ActionMode" parent="Widget.AppCompat.ActionMode">
+    <style name="SuperHealthTheme.ActionMode" parent="Widget.AppCompat.ActionMode">
         <item name="background">?attr/toolbar_bg</item>
-        <item name="titleTextStyle">@style/GadgetbridgeTheme.ActionModeTitleStyle</item>
-        <item name="subtitleTextStyle">@style/GadgetbridgeTheme.ActionModeTitleStyle</item>
-        <item name="android:theme">@style/GadgetbridgeTheme.ActionModeOverlay</item>
+        <item name="titleTextStyle">@style/SuperHealthTheme.ActionModeTitleStyle</item>
+        <item name="subtitleTextStyle">@style/SuperHealthTheme.ActionModeTitleStyle</item>
+        <item name="android:theme">@style/SuperHealthTheme.ActionModeOverlay</item>
     </style>
-    <style name="GadgetbridgeTheme.ActionModeOverlay" parent="">
+    <style name="SuperHealthTheme.ActionModeOverlay" parent="">
         <item name="colorControlNormal">?attr/toolbar_icon</item>
         <item name="actionmenu_icon_color">?attr/toolbar_icon</item>
     </style>
-    <style name="GadgetbridgeTheme.ActionModeCloseButton" parent="Widget.AppCompat.ActionButton">
+    <style name="SuperHealthTheme.ActionModeCloseButton" parent="Widget.AppCompat.ActionButton">
         <item name="android:tint">?attr/toolbar_icon</item>
     </style>
-    <style name="GadgetbridgeTheme.ActionModeTitleStyle" parent="TextAppearance.Material3.ActionBar.Title">
+    <style name="SuperHealthTheme.ActionModeTitleStyle" parent="TextAppearance.Material3.ActionBar.Title">
         <item name="android:textColor">?attr/toolbar_title</item>
     </style>
-    <style name="GadgetbridgeTheme.OverflowMenuStyle" parent="Widget.Material3.PopupMenu.Overflow" />
+    <style name="SuperHealthTheme.OverflowMenuStyle" parent="Widget.Material3.PopupMenu.Overflow" />
 
     <!-- splash screen -->
     <style name="SplashTheme" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/window_background_light</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
-        <item name="postSplashScreenTheme">@style/GadgetbridgeTheme.NoActionBar</item>
+        <item name="postSplashScreenTheme">@style/SuperHealthTheme.NoActionBar</item>
         <item name="android:statusBarColor">@color/window_background_light</item>
         <item name="android:navigationBarColor">@color/window_background_light</item>
         <item name="android:windowLightStatusBar">true</item>

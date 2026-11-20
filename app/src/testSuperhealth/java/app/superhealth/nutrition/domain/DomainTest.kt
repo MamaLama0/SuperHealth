@@ -12,7 +12,7 @@ class DomainTest {
 
     @Test fun cunningham() = assertEquals(500 + 22 * 60.0, Bmr.cunningham(60.0), 1e-9)
     @Test fun estimatedBodyFat() {
-        // IMC 22, homme de 40 ans : CUN-BAE sous 25 % → défaut MacroFactor gardé
+        // IMC 22, homme de 40 ans : CUN-BAE sous 25 % → défaut gardé
         assertEquals(25.0, Bmr.estimatedBodyFat(Sex.MALE, 40, 67.4, 175.0), 1e-9)
         // IMC 52, homme de 40 ans : CUN-BAE ≈ 50,9 %
         assertEquals(50.9, Bmr.estimatedBodyFat(Sex.MALE, 40, 159.25, 175.0), 0.1)
@@ -22,7 +22,7 @@ class DomainTest {
     @Test fun mifflinInObesity() {
         assertEquals(10 * 140.0 + 6.25 * 175 - 5 * 40 + 5, Bmr.mifflin(Sex.MALE, 140.0, 175.0, 40), 1e-9)
         val p = Profile(sex = Sex.MALE, heightCm = 175.0)
-        // IMC 45,7 sans masse grasse : Mifflin ; avec masse grasse mesurée : équation de MacroFactor
+        // IMC 45,7 sans masse grasse : Mifflin ; avec masse grasse mesurée : équation automatique
         assertEquals(Bmr.mifflin(Sex.MALE, 140.0, 175.0, 40), Bmr.bmr(p, 140.0, null, 40), 1e-6)
         assertTrue(Bmr.bmr(p, 140.0, 40.0, 40) != Bmr.mifflin(Sex.MALE, 140.0, 175.0, 40))
     }

@@ -10,9 +10,9 @@
 >
 
     <metadata>
-        <name>Gadgetbridge's TestGpxImport.gpx</name>
+        <name>SuperHealth's TestGpxImport.gpx</name>
         <author>
-            <name>Gadgetbridge test author</name>
+            <name>SuperHealth test author</name>
         </author>
         <time>2025-10-03T18:20:45Z</time>
     </metadata>
@@ -72,7 +72,7 @@
     </rte>
 
     <trk>
-        <name>Gadgetbridge import test track</name>
+        <name>SuperHealth import test track</name>
         <trkseg>
             <trkpt lat="47.5048828125" lon="9.7393798828125">
                 <ele>-440.2 <!-- comment --></ele>

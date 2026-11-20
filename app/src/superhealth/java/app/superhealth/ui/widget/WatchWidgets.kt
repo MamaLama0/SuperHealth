@@ -43,8 +43,8 @@ import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import java.time.LocalDate
-import nodomain.freeyourgadget.gadgetbridge.R
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.R
+import app.superhealth.engine.model.ActivityKind
 
 private val EffortBlue = Color(0xFF3F8CFF)
 private val Gold = Color(0xFFF2A93B)

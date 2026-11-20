@@ -55,7 +55,7 @@ class AppViewModel(val repo: Repository) : ViewModel() {
     val dayFlags = repo.dayFlags.allFlow().map { l -> l.associateBy { it.epochDay } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
-    /** Presse-papiers du journal (copier / coller d'entrées, CopyPasteService de MacroFactor). */
+    /** Presse-papiers du journal (copier / coller d'entrées). */
     val clipboard = MutableStateFlow<List<FoodEntryEntity>>(emptyList())
 
     /** Confirmation affichée par la recherche d'aliments après un ajout fait ailleurs (IA). */

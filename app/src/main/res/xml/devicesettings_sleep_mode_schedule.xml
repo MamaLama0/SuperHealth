@@ -14,12 +14,12 @@
             android:summary="@string/pref_sleep_mode_schedule_summary"
             android:title="@string/pref_sleep_mode_schedule_title" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="22:00"
             android:key="sleep_mode_schedule_start"
             android:title="@string/bedtime" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="06:00"
             android:key="sleep_mode_schedule_end"
             android:title="@string/wake_up_time" />

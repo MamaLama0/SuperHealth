@@ -1,7 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.charts.ActivityChartsActivity">
+    tools:context="app.superhealth.engine.activities.charts.ActivityChartsActivity">
     <item
         android:id="@+id/garmin_rt_debug_toggle"
         android:icon="@drawable/ic_developer_mode"

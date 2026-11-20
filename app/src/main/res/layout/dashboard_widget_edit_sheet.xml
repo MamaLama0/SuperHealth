@@ -17,7 +17,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.dashboard.WidgetGridLayout
+        <app.superhealth.engine.activities.dashboard.WidgetGridLayout
             android:id="@+id/dashboard_edit_variants"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

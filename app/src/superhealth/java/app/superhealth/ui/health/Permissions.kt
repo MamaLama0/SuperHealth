@@ -69,7 +69,7 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.container
 import app.superhealth.ui.theme.onContainer
 import app.superhealth.ui.tr
-import nodomain.freeyourgadget.gadgetbridge.externalevents.NotificationListener
+import app.superhealth.engine.externalevents.NotificationListener
 
 /** Autorisations utiles à la montre : ce qu'elle peut afficher (notifications, SMS, appels) et ce qui la garde connectée. */
 private enum class Perm(val title: String, val about: String, val icon: ImageVector, val restricted: Boolean = false) {

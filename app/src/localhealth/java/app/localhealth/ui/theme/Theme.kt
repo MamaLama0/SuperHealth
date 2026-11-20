@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** Google Health "ColorFamily": one hue with its container/data/on-* roles. */
 @Immutable

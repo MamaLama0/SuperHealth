@@ -1,7 +1,7 @@
 syntax = "proto2";
 
 package GDI.Proto.Core;
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.garmin";
+option java_package = "app.superhealth.engine.proto.garmin";
 option java_outer_classname = "GdiCore";
 
 import "garmin/gdi_accessory_utilities.proto";

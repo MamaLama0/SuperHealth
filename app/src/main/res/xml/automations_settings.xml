@@ -8,7 +8,7 @@
             android:icon="@drawable/ic_database"
             android:title="@string/pref_header_auto_export_db">
             <intent
-                android:targetClass="nodomain.freeyourgadget.gadgetbridge.activities.automations.AutoExportDbSettingsActivity"
+                android:targetClass="app.superhealth.engine.activities.automations.AutoExportDbSettingsActivity"
                 android:targetPackage="@string/applicationId" />
         </Preference>
 
@@ -16,7 +16,7 @@
             android:icon="@drawable/ic_zip"
             android:title="@string/pref_header_auto_export_zip">
             <intent
-                android:targetClass="nodomain.freeyourgadget.gadgetbridge.activities.automations.AutoExportZipSettingsActivity"
+                android:targetClass="app.superhealth.engine.activities.automations.AutoExportZipSettingsActivity"
                 android:targetPackage="@string/applicationId" />
         </Preference>
 
@@ -24,7 +24,7 @@
             android:icon="@drawable/ic_gps_location"
             android:title="@string/pref_header_auto_export_gpx">
             <intent
-                android:targetClass="nodomain.freeyourgadget.gadgetbridge.activities.automations.AutoExportGpxSettingsActivity"
+                android:targetClass="app.superhealth.engine.activities.automations.AutoExportGpxSettingsActivity"
                 android:targetPackage="@string/applicationId" />
         </Preference>
 
@@ -32,7 +32,7 @@
             android:icon="@drawable/ic_activity_unknown_small"
             android:title="@string/pref_header_auto_export_fit">
             <intent
-                android:targetClass="nodomain.freeyourgadget.gadgetbridge.activities.automations.AutoExportFitSettingsActivity"
+                android:targetClass="app.superhealth.engine.activities.automations.AutoExportFitSettingsActivity"
                 android:targetPackage="@string/applicationId" />
         </Preference>
 

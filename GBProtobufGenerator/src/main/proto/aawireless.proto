@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package aawireless;
 
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.aawireless";
+option java_package = "app.superhealth.engine.proto.aawireless";
 option java_outer_classname = "AAWirelessProto";
 
 message Status {

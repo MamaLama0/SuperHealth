@@ -3,7 +3,7 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:layout_centerHorizontal="true"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.CalendarSelectionActivity">
+    tools:context="app.superhealth.engine.activities.CalendarSelectionActivity">
 
     <GridView
         android:id="@+id/calendar_color_selection_list_view"

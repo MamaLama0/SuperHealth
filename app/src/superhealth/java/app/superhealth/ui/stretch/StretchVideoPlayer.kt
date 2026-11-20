@@ -46,7 +46,7 @@ import app.superhealth.stretch.Stretch
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
 import kotlinx.coroutines.delay
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** One silent, looping player for the current exercise. Decoder and network buffer are released off-screen. */
 @OptIn(UnstableApi::class)

@@ -164,7 +164,7 @@ internal fun FriendCardViewer(face: CardFace, note: String, onClose: () -> Unit,
 }
 
 internal fun handle(): String = (app.superhealth.ui.userName() ?: "moi").lowercase().replace(Regex("\\s+"), "")
-internal val isTestBuild get() = nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID != "app.superhealth"
+internal val isTestBuild get() = app.superhealth.engine.BuildConfig.APPLICATION_ID != "app.superhealth"
 
 /** Fond sombre commun aux écrans de cartes, teinté par le fond choisi. */
 @Composable

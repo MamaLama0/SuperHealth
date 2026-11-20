@@ -125,7 +125,7 @@ private fun Content(ctx: Context, s: Snap?) {
     }
     Column(GlanceModifier.fillMaxSize().background(app.superhealth.ui.widget.WK.tint(Blue)).cornerRadius(24.dp).padding(14.dp).clickable(open(ctx, "workout"))) {
         if (s == null || !s.onboarded) {
-            Text("La Salle", style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
+            Text(tr("Musculation"), style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
             Text(tr("Ouvrez l'app pour commencer."), style = TextStyle(color = W.sub, fontSize = 12.sp))
             return@Column
         }
@@ -160,7 +160,7 @@ private fun Content(ctx: Context, s: Snap?) {
 class NextWorkoutWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = NextWorkoutWidget() }
 
 object Widgets {
-    /** Par identifiants système (voir La Bouffe : updateAll() dépend d'une table Glance parfois en retard). */
+    /** Par identifiants système (voir le widget nutrition : updateAll() dépend d'une table Glance parfois en retard). */
     suspend fun refresh(ctx: Context) {
         runCatching { app.superhealth.ui.widget.DayWidgets.refresh(ctx) }
         val glance = androidx.glance.appwidget.GlanceAppWidgetManager(ctx)

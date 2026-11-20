@@ -22,7 +22,7 @@
             android:text=""
             android:textSize="48sp" />
 
-        <nodomain.freeyourgadget.gadgetbridge.devices.supercars.JoystickView
+        <app.superhealth.engine.devices.supercars.JoystickView
             android:id="@+id/joystickLeft"
             android:layout_width="wrap_content"
             android:layout_height="300dp"

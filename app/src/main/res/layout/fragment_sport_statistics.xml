@@ -71,7 +71,7 @@
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="8dp">
 
-                <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.ChartLegendView
+                <app.superhealth.engine.activities.charts.mpchart.ChartLegendView
                     android:id="@+id/sport_chart_legend"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -89,7 +89,7 @@
                     app:iconTint="?attr/colorOnSurface" />
             </FrameLayout>
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+            <app.superhealth.engine.activities.charts.mpchart.GbChartView
                 android:id="@+id/sport_chart"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"

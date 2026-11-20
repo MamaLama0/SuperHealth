@@ -5,15 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_BATTERY_SHOW_IN_NOTIFICATION
-import nodomain.freeyourgadget.gadgetbridge.util.GB
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_BATTERY_SHOW_IN_NOTIFICATION
+import app.superhealth.engine.util.GB
 
 /**
- * Notification permanente « Connectée · Batterie 80 % » de Gadgetbridge (service de connexion, canal
+ * Notification permanente « Connectée · Batterie 80 % » du moteur montre (service de connexion, canal
  * GB.NOTIFICATION_CHANNEL_ID_CONNECTION_STATUS). Android impose cette notification au service : seul l'utilisateur peut
  * bloquer ou rétablir son canal (réglages Android). L'app, elle, peut la réafficher après un balayage et choisir d'y
- * mettre la batterie (réglage de chaque montre dans Gadgetbridge).
+ * mettre la batterie (réglage de chaque montre).
  */
 object ConnectionNotification {
     enum class State {
@@ -69,7 +69,7 @@ object ConnectionNotification {
         return runCatching { GB.updateNotification(GBApplication.app().deviceManager.selectedDevices, ctx); true }.getOrDefault(false)
     }
 
-    /** Batterie affichée dans la notification pour toutes les montres (réglage de Gadgetbridge, oui par défaut). */
+    /** Batterie affichée dans la notification pour toutes les montres (réglage du moteur montre, oui par défaut). */
     fun batteryShown(): Boolean = runCatching {
         Watch.devices().all { GBApplication.getDeviceSpecificSharedPrefs(it.address).getBoolean(PREF_BATTERY_SHOW_IN_NOTIFICATION + 0, true) }
     }.getOrDefault(true)

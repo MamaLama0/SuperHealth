@@ -29,14 +29,14 @@
             android:summary="@string/hydration_dnd_summary"
             android:title="@string/mi2_prefs_do_not_disturb" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="12:00"
             android:dependency="pref_hydration_dnd"
             android:icon="@drawable/ic_start"
             android:key="pref_hydration_dnd_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="14:00"
             android:dependency="pref_hydration_dnd"
             android:icon="@drawable/ic_keyboard_tab"

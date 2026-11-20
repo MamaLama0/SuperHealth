@@ -41,7 +41,6 @@ object Strings11 {
         "Exporter" to "Export",
         "Fichier chiffré : nutrition, musculation, montre, réglages" to "Encrypted file: nutrition, training, watch, settings",
         "Restaurer un fichier" to "Restore a file",
-        "SuperHealth (chiffré ou non), La Bouffe ou La Salle" to "SuperHealth (encrypted or not), La Bouffe or La Salle",
         "Aucune sauvegarde à cette destination." to "No backup at this destination.",
         "Cette sauvegarde vient d'un autre téléphone : saisissez son code." to "This backup comes from another phone: enter its code.",
         "Mises à jour" to "Updates",
@@ -158,7 +157,7 @@ object Strings11 {
         "or" to "gold",
         "Aucune" to "None",
         "Pouls au repos" to "Resting heart rate",
-        "Récupération du matin (0–100) : votre VFC de la nuit comparée à votre propre référence, avec le pouls au repos, le sommeil, la respiration et la température. Méthodes publiées reprises par NOOP ; pas le score officiel de WHOOP. Sans VFC, elle repose sur le pouls au repos et le sommeil." to "Morning recovery (0–100): last night's HRV against your own baseline, with resting heart rate, sleep, breathing and temperature. Published methods as used by NOOP; not WHOOP's official score. Without HRV, it relies on resting heart rate and sleep.",
+        "Récupération du matin (0–100) : votre VFC de la nuit comparée à votre propre référence, avec le pouls au repos, le sommeil, la respiration et la température, d'après des méthodes publiées. Sans VFC, elle repose sur le pouls au repos et le sommeil." to "Morning recovery (0–100): last night's HRV against your own baseline, with resting heart rate, sleep, breathing and temperature, based on published methods. Without HRV, it relies on resting heart rate and sleep.",
         "Charge cardiovasculaire de la journée (0–100) : le temps passé dans chaque zone de réserve cardiaque (Karvonen, Edwards), sur une échelle logarithmique où 100 reste exceptionnel." to "Today's cardiovascular load (0–100): time spent in each heart-rate-reserve zone (Karvonen, Edwards), on a logarithmic scale where 100 stays exceptional.",
         "Ce qu'il faut ajouter à votre besoin de sommeil cette nuit : 55 % de ce qui a manqué la veille, reporté de nuit en nuit sur deux semaines. Dormir plus que le besoin ne crée pas d'avance." to "What to add to tonight's sleep need: 55 % of what was missing the night before, carried over night to night for two weeks. Sleeping more than you need builds no credit.",
     )

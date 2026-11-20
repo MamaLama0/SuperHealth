@@ -28,10 +28,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
-import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.FitFile
-import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitRecord
-import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSession
+import app.superhealth.engine.model.ActivityKind
+import app.superhealth.engine.service.devices.garmin.fit.FitFile
+import app.superhealth.engine.service.devices.garmin.fit.messages.FitRecord
+import app.superhealth.engine.service.devices.garmin.fit.messages.FitSession
 import org.slf4j.LoggerFactory
 import org.xmlpull.v1.XmlPullParser
 
@@ -41,7 +41,7 @@ import org.xmlpull.v1.XmlPullParser
  *   (Garmin, Coros, Suunto, Wahoo, Zwift), éventuellement compressés (.gz) ;
  * - archives ZIP, même imbriquées : export « Vos données » de Strava (activities.csv donne nom et type), de Garmin Connect,
  *   de Polar Flow, de Suunto…
- * Les fichiers .fit vont à la montre Garmin associée quand il y en a une (analyse complète de Gadgetbridge, [FitImport]) ;
+ * Les fichiers .fit vont à la montre Garmin associée quand il y en a une (analyse complète du moteur montre, [FitImport]) ;
  * sinon, comme tout le reste, ils sont lus ici. Chaque séance est gardée dans files/runs (résumé + tracé allégé) et apparaît
  * dans les activités comme celles de la montre. Une séance qui recouvre une activité déjà connue est ignorée.
  */
@@ -50,7 +50,7 @@ object RunImport {
 
     @Serializable
     data class Run(
-        /** Négatif : distinct des séances de la montre (identifiants de la base Gadgetbridge). */
+        /** Négatif : distinct des séances de la montre (identifiants de la base de la montre). */
         val id: Long,
         val name: String,
         val kind: String,
@@ -114,7 +114,7 @@ object RunImport {
         val fits = if (garmin) files.filter { it.name.lowercase().endsWith(".fit") } else emptyList()
         val own = files - fits.toSet()
         var ok = 0; var ko = 0; var skipped = 0
-        // .fit avec une montre Garmin : analyse de Gadgetbridge (dynamique de course, effet d'entraînement…)
+        // .fit avec une montre Garmin : analyse du moteur montre (dynamique de course, effet d'entraînement…)
         if (fits.isNotEmpty()) {
             val r = FitImport.importFiles(ctx, fits.map { it.name.substringAfterLast('/') to it.bytes })
             ok += r.imported; ko += r.failed; skipped += r.skipped

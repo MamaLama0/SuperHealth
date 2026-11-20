@@ -47,7 +47,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /**
  * VO₂ max : dernière valeur de la montre (ou de Health Connect), niveau selon l'âge et le sexe, et courbe des 90 derniers

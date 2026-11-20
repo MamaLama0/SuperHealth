@@ -10,7 +10,7 @@ import androidx.core.app.NotificationManagerCompat
 import app.superhealth.MainActivity
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** Événements reçus après vérification des cartes ; aucun contenu personnel sur l'écran verrouillé. */
 object SocialNotifications {

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.workouts.templates.WorkoutExercisePickerActivity">
+    tools:context="app.superhealth.engine.activities.workouts.templates.WorkoutExercisePickerActivity">
 
     <ProgressBar
         android:id="@+id/workout_exercise_picker_progress"

@@ -1,4 +1,4 @@
-// Pixel-art 16x16 dans le style du pack, à partir des icônes plates MacroFactor.
+// Pixel-art 16x16 dans le style du pack, à partir des icônes plates d'origine.
 // usage: node tools/nutrition/pixel_food_icons.js <IconSheet 16x16 en rgba brut, via magick ... rgba:-> <outdir> <id:path.webp>...
 const fs = require("fs");
 const { execFileSync } = require("child_process");
@@ -52,7 +52,7 @@ function shift(c, k) {
   return c.map((v, j) => Math.round(v * (1 - a) + t[j] * a));
 }
 
-// bols et assiettes turquoise de MacroFactor -> vaisselle blanche du pack
+// bols et assiettes turquoise d'origine -> vaisselle blanche du pack
 const near = (c, t, r) => (c[0] - t[0]) ** 2 + (c[1] - t[1]) ** 2 + (c[2] - t[2]) ** 2 < r * r;
 function plate(c) {
   if (near(c, [0, 138, 146], 42)) return [238, 242, 248];

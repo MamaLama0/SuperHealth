@@ -19,11 +19,11 @@
             app:useSimpleSummaryProvider="true"
             android:title="@string/prefs_disconnect_notification" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="00:00"
             android:key="disconnect_notification_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="00:00"
             android:key="disconnect_notification_end"
             android:title="@string/mi2_prefs_do_not_disturb_end" />

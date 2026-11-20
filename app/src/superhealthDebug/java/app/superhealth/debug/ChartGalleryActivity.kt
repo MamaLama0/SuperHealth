@@ -33,7 +33,7 @@ import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.theme.SuperTheme
 import app.superhealth.nutrition.domain.ThemeMode
 import kotlin.math.sin
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind as K
+import app.superhealth.engine.model.ActivityKind as K
 
 /** Galerie des graphiques avec des données de test et leurs cas limites, pour vérifier la charte (build debug). */
 class ChartGalleryActivity : ComponentActivity() {

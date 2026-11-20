@@ -27,7 +27,7 @@ import app.superhealth.ui.dashboard.dashboardRank
 import app.superhealth.ui.dashboard.dashboardScoreEntries
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 import java.time.LocalDate
 
 /** Les quatre cartes principales du social, sans réseau ni identité amie affichée sur l'accueil Android. */

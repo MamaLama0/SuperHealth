@@ -14,7 +14,7 @@
     version="1.0">
     <!--
     This pre-processes GPX v1.0 and v1.1 and common extension for import by
-    Gadgedbridge's nodomain.freeyourgadget.gadgetbridge.util.gpx.GPXParser
+    Gadgedbridge's app.superhealth.engine.util.gpx.GPXParser
     -->
     <xsl:output
         encoding="UTF-8"

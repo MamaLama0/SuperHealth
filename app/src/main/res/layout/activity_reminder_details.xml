@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.ReminderDetails">
+    tools:context="app.superhealth.engine.activities.ReminderDetails">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_repeat"

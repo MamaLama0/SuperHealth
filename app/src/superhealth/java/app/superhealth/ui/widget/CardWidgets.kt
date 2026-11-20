@@ -25,7 +25,7 @@ import app.superhealth.cards.CardStore
 import app.superhealth.cards.Tier
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /**
  * Widgets des cartes Athlète : packs à ouvrir et compteur du pack doré, quêtes du jour, et ta carte (note, fond

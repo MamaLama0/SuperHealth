@@ -15,25 +15,25 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.service.devices.pebble.webview.JSInterface {
+-keepclassmembers class app.superhealth.engine.service.devices.pebble.webview.JSInterface {
     public *;
 }
 # Required for reflection in BangleJSDeviceSupport
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.model.CallSpec {
+-keepclassmembers class app.superhealth.engine.model.CallSpec {
     public static *;
 }
 
 # Keep constructors for support classes, as they're called by reflection in DeviceSupportFactory#createServiceDeviceSupport
--keep public class * extends nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
--keepclassmembers class * extends nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport {
-    public <init>(nodomain.freeyourgadget.gadgetbridge.model.DeviceType);
+-keep public class * extends app.superhealth.engine.service.DeviceSupport
+-keepclassmembers class * extends app.superhealth.engine.service.DeviceSupport {
+    public <init>(app.superhealth.engine.model.DeviceType);
     public <init>();
 }
 -keepattributes JavascriptInterface
 
 # Keep coordinators, they're only referenced from DeviceType
--keep public class * implements nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
--keepclassmembers class * implements nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator {
+-keep public class * implements app.superhealth.engine.devices.DeviceCoordinator
+-keepclassmembers class * implements app.superhealth.engine.devices.DeviceCoordinator {
   <init>();
 }
 
@@ -53,7 +53,7 @@
 -keep class **$Properties { *; }
 
 # Keep database migration classes accessed trough reflection
--keep class **.gadgetbridge.database.schema.* { *; }
+-keep class app.superhealth.engine.database.schema.* { *; }
 
 # Keep Nordic DFU library
 -keep class no.nordicsemi.android.dfu.** { *; }
@@ -74,32 +74,32 @@
 }
 
 # Keep classes that are to be (de)serialized with gson
--keep @nodomain.freeyourgadget.gadgetbridge.util.gson.GsonSerialized class * { *; }
--keep class nodomain.freeyourgadget.gadgetbridge.service.devices.gree.messages.** {*; }
--keep class nodomain.freeyourgadget.gadgetbridge.devices.pinetime.InfiniTimeDFU* { *; }
--keep class nodomain.freeyourgadget.gadgetbridge.activities.workouts.entries.** { *; }
+-keep @app.superhealth.engine.util.gson.GsonSerialized class * { *; }
+-keep class app.superhealth.engine.service.devices.gree.messages.** {*; }
+-keep class app.superhealth.engine.devices.pinetime.InfiniTimeDFU* { *; }
+-keep class app.superhealth.engine.activities.workouts.entries.** { *; }
 
 # Keep generated protobuf classes
 -keep class * extends com.google.protobuf.GeneratedMessageLite { *; }
 
 # Keep preference fragments that might only be referenced from xml
--keep class nodomain.freeyourgadget.gadgetbridge.activities.automations.** extends androidx.fragment.app.Fragment { *; }
--keep class nodomain.freeyourgadget.gadgetbridge.activities.debug.** extends androidx.fragment.app.Fragment { *; }
+-keep class app.superhealth.engine.activities.automations.** extends androidx.fragment.app.Fragment { *; }
+-keep class app.superhealth.engine.activities.debug.** extends androidx.fragment.app.Fragment { *; }
 
 # Keep requests instantiated by reflection
--keep class nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.Request
--keep class * extends nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.Request
+-keep class app.superhealth.engine.service.devices.qhybrid.requests.Request
+-keep class * extends app.superhealth.engine.service.devices.qhybrid.requests.Request
 
 # Keep fields - they're read using reflection
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.service.devices.um25.Data.MeasurementData {
+-keepclassmembers class app.superhealth.engine.service.devices.um25.Data.MeasurementData {
   <fields>;
 }
 
 # Keep no-arg constructors for ConfigItem/DeviceInfo subtypes instantiated by reflection
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.configuration.ConfigurationPutRequest$* {
+-keepclassmembers class app.superhealth.engine.service.devices.qhybrid.requests.fossil.configuration.ConfigurationPutRequest$* {
   <init>();
 }
--keepclassmembers class nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.device_info.*Info {
+-keepclassmembers class app.superhealth.engine.service.devices.qhybrid.requests.fossil.device_info.*Info {
   <init>();
 }
 

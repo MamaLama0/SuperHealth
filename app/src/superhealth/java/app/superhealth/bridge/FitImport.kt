@@ -4,9 +4,9 @@ import android.content.Context
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCoordinator
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
-import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.FitImporter
+import app.superhealth.engine.devices.garmin.GarminCoordinator
+import app.superhealth.engine.impl.GBDevice
+import app.superhealth.engine.service.devices.garmin.fit.FitImporter
 import org.slf4j.LoggerFactory
 
 /**

@@ -21,7 +21,7 @@
                     "--activity-brought-to-front",
                     "-a android.intent.action.MAIN",
                     "-c android.intent.category.LAUNCHER",
-                    "-n nodomain.freeyourgadget.gadgetbridge/nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2"
+                    "-n app.superhealth.engine/app.superhealth.engine.activities.ControlCenterv2"
                 ],
                 "postLaunchPause": 10000,
                 "trace": true

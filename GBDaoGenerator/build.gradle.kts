@@ -12,7 +12,7 @@ java {
 }
 
 application {
-    mainClass = "nodomain.freeyourgadget.gadgetbridge.daogen.GBDaoGenerator"
+    mainClass = "app.superhealth.engine.daogen.GBDaoGenerator"
 }
 
 dependencies {

@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.res.ResourcesCompat
 import app.localhealth.data.ChartKind
 import app.localhealth.ui.theme.ColorFamily
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 @Composable
 private fun rememberGoogleSans(weight: Int): Typeface {

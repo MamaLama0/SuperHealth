@@ -18,7 +18,7 @@
             android:textColor="?attr/textColorPrimary"
             android:textSize="20sp" />
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.workouts.SectionHeaderView
+        <app.superhealth.engine.activities.workouts.SectionHeaderView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:sectionTitle="@string/temperature_daily" />
@@ -27,14 +27,14 @@
             android:layout_width="match_parent"
             android:layout_height="250sp">
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+            <app.superhealth.engine.activities.charts.mpchart.GbChartView
                 android:id="@+id/temperature_period_chart"
                 android:layout_width="fill_parent"
                 android:layout_height="fill_parent"
                 android:layout_weight="2" />
         </LinearLayout>
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.ChartLegendView
+        <app.superhealth.engine.activities.charts.mpchart.ChartLegendView
             android:id="@+id/temperature_period_chart_legend"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -3,7 +3,7 @@ package app.superhealth.nutrition.domain
 import kotlin.math.abs
 
 /**
- * Tendance de poids. V1 MacroFactor = EMA (α = 2/9 ou 0.1, observés).
+ * Tendance de poids. V1 = EMA (α = 2/9 ou 0.1).
  * Le rejet robuste (MAD × 1.4826) reprend la constante observée dans weight_trend_service ;
  * le seuil 3σ et la fenêtre de 14 résidus sont des choix de conception.
  */

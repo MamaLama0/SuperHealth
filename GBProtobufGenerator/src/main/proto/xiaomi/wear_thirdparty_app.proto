@@ -1,6 +1,6 @@
 syntax = "proto2";
 package xiaomi;
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.xiaomi";
+option java_package = "app.superhealth.engine.proto.xiaomi";
 option java_multiple_files = true;
 
 message Rpk{

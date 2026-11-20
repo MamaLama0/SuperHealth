@@ -4,17 +4,17 @@
     android:background="?android:attr/windowBackground"
     android:orientation="vertical"
     android:layout_height="match_parent"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.WorkoutChartsActivity">
+    tools:context="app.superhealth.engine.activities.workouts.charts.WorkoutChartsActivity">
 
 
-    <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+    <app.superhealth.engine.activities.charts.mpchart.GbChartView
         android:id="@+id/workout_data_chart"
         android:layout_width="fill_parent"
         android:layout_height="300dp"
         android:layout_alignParentTop="true"
         />
 
-    <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.ChartLegendView
+    <app.superhealth.engine.activities.charts.mpchart.ChartLegendView
         android:id="@+id/workout_data_chart_legend"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

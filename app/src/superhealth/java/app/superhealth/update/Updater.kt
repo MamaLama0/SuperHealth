@@ -35,7 +35,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.coroutineContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 import okhttp3.OkHttpClient
 import okhttp3.Request
 

@@ -1,0 +1,28 @@
+package app.superhealth.engine.adapter;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+
+import app.superhealth.engine.activities.charts.CaloriesDailyFragment;
+import app.superhealth.engine.activities.charts.CaloriesPeriodFragment;
+
+public class CaloriesFragmentAdapter extends NestedFragmentAdapter {
+
+    public CaloriesFragmentAdapter(Fragment fragment) {
+        super(fragment);
+    }
+
+    @NonNull
+    @Override
+    public Fragment createFragment(int position) {
+        switch (position) {
+            case 0:
+                return new CaloriesDailyFragment();
+            case 1:
+                return CaloriesPeriodFragment.newInstance(7);
+            case 2:
+                return CaloriesPeriodFragment.newInstance(30);
+        }
+        return new CaloriesDailyFragment();
+    }
+}

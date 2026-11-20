@@ -35,7 +35,7 @@ import app.superhealth.neutralLook
 import app.superhealth.nutrition.domain.AccentColor
 import app.superhealth.nutrition.domain.TextSize
 import app.superhealth.nutrition.domain.ThemeMode
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 // Couleurs des données : un jeu de teintes (réglable dans Apparence), décliné pour le clair et le sombre. Même teinte pour une
 // même mesure partout dans l'app ; en sombre, des tons plus clairs mais jamais fluo.

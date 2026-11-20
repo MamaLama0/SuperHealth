@@ -3,7 +3,7 @@ package app.superhealth.wellbeing
 import android.content.Context
 import app.superhealth.bridge.Bridge
 import app.superhealth.health.data.Scores
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.model.ActivityKind
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate

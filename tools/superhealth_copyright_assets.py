@@ -27,16 +27,7 @@ CATEGORIES = [
     ("res/mipmap-xhdpi", "Icône de l'app", "Apple (icône de l'app Santé)", "AndroidManifest (icône du lanceur)"),
     ("res/mipmap-xxhdpi", "Icône de l'app", "Apple (icône de l'app Santé)", "AndroidManifest (icône du lanceur)"),
     ("res/mipmap-xxxhdpi", "Icône de l'app", "Apple (icône de l'app Santé)", "AndroidManifest (icône du lanceur)"),
-    ("assets/misc", "Divers (logos, rubans, assiette)", "MacroFactor / MacroFactor Workouts", "nutrition/ui, training/ui"),
-    ("assets/foods", "Icônes d'aliments", "MacroFactor", "nutrition/ui/FoodIcons.kt"),
-    ("assets/bodyfat", "Repères de masse grasse", "MacroFactor", "nutrition/ui/screens/BodyScreens.kt"),
-    ("assets/body", "Silhouettes (tracés)", "MacroFactor Workouts", "training/ui/components/WorkoutWidgets.kt (BodyMap)"),
-    ("assets/muscles", "Vignettes de muscles", "MacroFactor Workouts", "training/ui/components/WorkoutWidgets.kt"),
-    ("assets/eq", "Équipements", "MacroFactor Workouts", "training/ui/Assets.kt"),
     ("assets/ex", "Illustrations d'exercices", "Gym visual", "training/ui/Assets.kt, training/ui/ExerciseAnimations.kt"),
-    ("assets/md", "Fiches d'exercices (textes)", "MacroFactor Workouts", "training/ui/screens/ExerciseScreens.kt"),
-    ("assets/db/exercises.json", "Base d'exercices", "MacroFactor Workouts", "training/domain/ExerciseDb.kt"),
-    ("res/raw/beep.wav", "Son du minuteur", "MacroFactor Workouts", "training/ui/RestTimer.kt"),
 ]
 
 IMAGE = (".webp", ".png", ".jpg", ".jpeg")

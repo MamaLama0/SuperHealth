@@ -86,7 +86,7 @@
 
             </LinearLayout>
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.dashboard.MiniChartView
+            <app.superhealth.engine.activities.dashboard.MiniChartView
                 android:id="@+id/tile_chart"
                 android:layout_width="match_parent"
                 android:layout_height="6dp"
@@ -122,7 +122,7 @@
                 android:orientation="vertical"
                 android:visibility="gone" />
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.dashboard.MiniChartView
+            <app.superhealth.engine.activities.dashboard.MiniChartView
                 android:id="@+id/tile_large_chart"
                 android:layout_width="match_parent"
                 android:layout_height="78dp"

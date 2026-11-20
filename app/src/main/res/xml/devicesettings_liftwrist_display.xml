@@ -18,12 +18,12 @@
             app:useSimpleSummaryProvider="true"
             android:title="@string/mi2_prefs_activate_display_on_lift" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="00:00"
             android:key="display_on_lift_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="00:00"
             android:key="display_on_lift_end"
             android:title="@string/mi2_prefs_do_not_disturb_end" />

@@ -18,8 +18,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.model.RecordedDataTypes
 
 class HealthViewModel(app: Application) : AndroidViewModel(app) {
     val devices: StateFlow<List<DeviceUi>> = deviceStateFlow(app)

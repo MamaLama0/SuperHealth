@@ -73,24 +73,24 @@
 
             </RelativeLayout>
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.workouts.SectionHeaderView
+            <app.superhealth.engine.activities.workouts.SectionHeaderView
                 android:id="@+id/acute_load_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:sectionTitle="@string/training_acute_load" />
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+            <app.superhealth.engine.activities.charts.mpchart.GbChartView
                 android:id="@+id/acute_load_chart"
                 android:layout_width="fill_parent"
                 android:layout_height="250sp"
                 android:layout_weight="2" />
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.ChartLegendView
+            <app.superhealth.engine.activities.charts.mpchart.ChartLegendView
                 android:id="@+id/acute_load_legend"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp" />
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartChipScrollView
+            <app.superhealth.engine.activities.charts.ChartChipScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingStart="10dp"
@@ -106,7 +106,7 @@
                     android:layout_marginBottom="10dp"
                     app:selectionRequired="true" />
 
-            </nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartChipScrollView>
+            </app.superhealth.engine.activities.charts.ChartChipScrollView>
 
             <LinearLayout
                 android:id="@+id/acute_chronic_load_stats_container"
@@ -118,7 +118,7 @@
                 android:orientation="vertical" />
         </LinearLayout>
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.workouts.SectionHeaderView
+        <app.superhealth.engine.activities.workouts.SectionHeaderView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/chart_section_spacing"
@@ -126,7 +126,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="250sp">
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+            <app.superhealth.engine.activities.charts.mpchart.GbChartView
                 android:id="@+id/daily_load_chart"
                 android:layout_width="fill_parent"
                 android:layout_height="fill_parent"

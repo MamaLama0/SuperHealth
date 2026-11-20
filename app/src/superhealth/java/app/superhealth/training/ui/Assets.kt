@@ -42,7 +42,7 @@ object Assets {
     fun text(path: String): String? = runCatching { app.assets.open(path).use { it.readBytes().decodeToString() } }.getOrNull()
 }
 
-/** Image d'asset chargée hors du fil principal ; repli sur les initiales (comme les vignettes « DS » de MacroFactor). */
+/** Image d'asset chargée hors du fil principal ; repli sur les initiales */
 @Composable
 fun AsyncAsset(path: String?, modifier: Modifier, crop: Boolean = true, fallback: String? = null, sample: Int = 1) {
     // image déjà en cache : affichée tout de suite, sans passer par les initiales

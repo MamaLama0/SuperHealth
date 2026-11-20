@@ -60,11 +60,11 @@ import java.time.ZoneId
 import kotlin.reflect.KClass
 
 /**
- * Health Connect pour toute l'app (regroupe les intégrations de La Bouffe, La Salle et LocalHealth) :
+ * Health Connect pour toute l'app (nutrition, musculation et montre) :
  * - lit les pas, pesées, masse grasse, fréquence cardiaque (minute par minute), sommeil, VFC, respiration, SpO₂, VO₂ max,
- *   distance, calories actives et séances (distance, calories, pouls) des autres apps : Garmin Connect, NOOP (WHOOP)… ;
+ *   distance, calories actives et séances (distance, calories, pouls) des autres apps : Garmin Connect, WHOOP… ;
  * - écrit les pesées, le total nutritionnel du jour, les séances de musculation et l'hydratation.
- * Les données de la montre sont exportées par Gadgetbridge lui-même (Réglages > Montre > Health Connect).
+ * Les données de la montre sont exportées par le moteur montre lui-même (Réglages > Montre > Health Connect).
  * Health Connect est un stockage local d'Android : rien ne sort du téléphone.
  */
 /** Préfixe des données de démonstration écrites par la version de test (app.superhealth.debug.DemoDataActivity). */

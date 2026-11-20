@@ -56,7 +56,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import nodomain.freeyourgadget.gadgetbridge.R;
+import app.superhealth.engine.R;
 
 
 public class DragSortListPreference extends ListPreference {

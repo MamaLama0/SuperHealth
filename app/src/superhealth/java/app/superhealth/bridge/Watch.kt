@@ -1,12 +1,12 @@
 package app.superhealth.bridge
 
 import app.superhealth.SuperPrefs
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
-import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.impl.GBDevice
+import app.superhealth.engine.util.GBPrefs
 
 /**
- * Module LocalHealth : le moteur Gadgetbridge (montres, balances, capteurs Bluetooth).
+ * Module montre : montres, balances et capteurs Bluetooth.
  * Désactivé, il ne se connecte plus à rien et ses cartes disparaissent ; Health Connect prend le relais pour les constantes.
  */
 object Watch {
@@ -48,13 +48,13 @@ object Watch {
     fun sync(device: GBDevice) {
         if (!enabled) return
         if (!device.isInitialized) GBApplication.deviceService(device).connect()
-        else GBApplication.deviceService(device).onFetchRecordedData(nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes.TYPE_SYNC)
+        else GBApplication.deviceService(device).onFetchRecordedData(app.superhealth.engine.model.RecordedDataTypes.TYPE_SYNC)
     }
 
     fun syncAll() = devices().forEach(::sync)
 
     /** Montre Garmin : peut renvoyer les activités qu'elle garde en mémoire, même celles déjà synchronisées. */
-    fun supportsHistory(device: GBDevice) = device.deviceCoordinator is nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCoordinator
+    fun supportsHistory(device: GBDevice) = device.deviceCoordinator is app.superhealth.engine.devices.garmin.GarminCoordinator
 
     /**
      * Récupère toutes les activités encore stockées sur la montre (courses, sorties…), y compris celles déjà envoyées
@@ -64,7 +64,7 @@ object Watch {
         if (!enabled || !supportsHistory(device)) return
         if (!device.isInitialized) { GBApplication.deviceService(device).connect(); return }
         historyPrefs().edit().putLong(device.address, System.currentTimeMillis()).apply()
-        GBApplication.deviceService(device).onFetchRecordedData(nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes.TYPE_HISTORY)
+        GBApplication.deviceService(device).onFetchRecordedData(app.superhealth.engine.model.RecordedDataTypes.TYPE_HISTORY)
     }
 
     /** L'historique de cette montre a-t-il déjà été demandé (automatiquement ou à la main) ? */

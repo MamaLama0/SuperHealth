@@ -12,7 +12,7 @@ import android.os.IBinder
 import androidx.core.content.ContextCompat
 import app.superhealth.MainActivity
 import app.superhealth.ui.tr
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** User-started foreground GPS session. Samples and pause boundaries survive process death. */
 class HikeTrackingService : Service(), LocationListener {

@@ -65,7 +65,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
 
-                <nodomain.freeyourgadget.gadgetbridge.activities.dashboard.WidgetGridRecyclerView
+                <app.superhealth.engine.activities.dashboard.WidgetGridRecyclerView
                     android:id="@+id/dashboard_grid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

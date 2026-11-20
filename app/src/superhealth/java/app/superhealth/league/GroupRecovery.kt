@@ -84,7 +84,7 @@ object GroupRecovery {
     private fun applyRestore(ctx: Context, profile: Profile, clearHistory: Boolean) {
         GroupIdentity.restore(profile.identity)
         if (clearHistory) GroupHistory.reset(ctx)
-        nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().preferences.edit().putString(nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_NAME, profile.name).commit()
+        app.superhealth.engine.GBApplication.getPrefs().preferences.edit().putString(app.superhealth.engine.model.ActivityUser.PREF_USER_NAME, profile.name).commit()
         names.forEach { Secrets.put(ctx, it, profile.secrets[it]) }
         listOf("league_published_hash_v2", "league_published_at_v2", "profile_avatar_source", "profile_avatar_media", "profile_avatar_at").forEach { Secrets.put(ctx, it, null) }
         if (clearHistory) {

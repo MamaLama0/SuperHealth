@@ -4,10 +4,10 @@ import android.content.Context
 import app.superhealth.bridge.Watch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
-import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryData
-import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryEntries as E
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.model.ActivityKind
+import app.superhealth.engine.model.ActivitySummaryData
+import app.superhealth.engine.model.ActivitySummaryEntries as E
 import org.slf4j.LoggerFactory
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -73,7 +73,7 @@ object WorkoutDetails {
     private val LOG = LoggerFactory.getLogger(WorkoutDetails::class.java)
 
     suspend fun load(ctx: Context, id: Long): WorkoutDetail? = withContext(Dispatchers.IO) {
-        if (app.superhealth.bridge.HcWorkouts.isHc(id)) return@withContext app.superhealth.bridge.HcWorkouts.fullDetail(ctx, id) // Garmin Connect, Fitbit, NOOP…
+        if (app.superhealth.bridge.HcWorkouts.isHc(id)) return@withContext app.superhealth.bridge.HcWorkouts.fullDetail(ctx, id) // Garmin Connect, Fitbit, WHOOP…
         if (id < 0) return@withContext app.superhealth.bridge.RunImport.detail(id) // séance importée (GPX, TCX, FIT sans montre)
         val summary = GBApplication.acquireDbReadOnly().use { db ->
             db.daoSession.baseActivitySummaryDao.load(id)?.also { it.device } // appareil chargé tant que la session est ouverte

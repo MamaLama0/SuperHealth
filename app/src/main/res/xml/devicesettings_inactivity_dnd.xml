@@ -23,13 +23,13 @@
             android:maxLength="2"
             android:title="@string/mi2_prefs_inactivity_warnings_threshold" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="06:00"
             android:dependency="inactivity_warnings_enable"
             android:key="inactivity_warnings_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="22:00"
             android:dependency="inactivity_warnings_enable"
             android:key="inactivity_warnings_end"
@@ -44,13 +44,13 @@
             android:summary="@string/mi2_prefs_inactivity_warnings_dnd_summary"
             android:title="@string/mi2_prefs_do_not_disturb" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="12:00"
             android:dependency="inactivity_warnings_dnd"
             android:key="inactivity_warnings_dnd_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="14:00"
             android:dependency="inactivity_warnings_dnd"
             android:key="inactivity_warnings_dnd_end"

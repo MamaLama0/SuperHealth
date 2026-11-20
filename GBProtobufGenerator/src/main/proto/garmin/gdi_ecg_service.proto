@@ -2,7 +2,7 @@ syntax = "proto2";
 
 package garmin_vivomovehr;
 
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.garmin";
+option java_package = "app.superhealth.engine.proto.garmin";
 
 message EcgService {
   optional EcgFileTransfer file_transfer = 1;

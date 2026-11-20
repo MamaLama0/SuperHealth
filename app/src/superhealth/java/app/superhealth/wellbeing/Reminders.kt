@@ -107,7 +107,7 @@ object Reminders {
         val open = PendingIntent.getActivity(ctx, 7400 + k.ordinal, Intent(ctx, MainActivity::class.java)
             .putExtra(MainActivity.EXTRA_ROUTE, if (k == Kind.WEIGH && checkInDue()) "checkin" else k.route).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val builder = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_notification)
+        val builder = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(app.superhealth.engine.R.drawable.ic_notification)
             .setContentTitle(tr(k.title)).setContentText(body).setContentIntent(open).setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
         // pesée simple (pas de check-in) : le poids se saisit directement dans la notification
@@ -142,7 +142,7 @@ object Reminders {
         val text = androidx.core.app.RemoteInput.getResultsFromIntent(intent)?.getCharSequence(WEIGHT_KEY)?.toString()
         val kg = parseWeight(text, settings.weightUnit == app.superhealth.nutrition.domain.WeightUnit.LB)
         val nm = ctx.getSystemService(NotificationManager::class.java)
-        val builder = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_notification)
+        val builder = NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(app.superhealth.engine.R.drawable.ic_notification)
             .setContentTitle(tr(Kind.WEIGH.title)).setAutoCancel(true).setOnlyAlertOnce(true).setSilent(true)
         if (kg == null) {
             nm.notify(7500 + Kind.WEIGH.ordinal, builder.setContentText(tr("Poids illisible. Réessayez, par exemple 72,4.")).addAction(weighAction(ctx)).build())

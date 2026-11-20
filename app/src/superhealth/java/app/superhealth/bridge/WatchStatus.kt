@@ -23,15 +23,15 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import nodomain.freeyourgadget.gadgetbridge.devices.DeviceManager
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
-import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
+import app.superhealth.engine.devices.DeviceManager
+import app.superhealth.engine.impl.GBDevice
+import app.superhealth.engine.model.BatteryState
 
 /**
  * État des montres pour le widget « Montre » et la carte du tableau de bord.
  *
- * Gadgetbridge diffuse ACTION_DEVICE_CHANGED à chaque changement (connexion, batterie…) : on relit alors la liste, sans
- * aucune scrutation. La batterie est remise à « inconnue » par Gadgetbridge à la déconnexion : la dernière valeur, l'heure
+ * Le moteur montre diffuse ACTION_DEVICE_CHANGED à chaque changement (connexion, batterie…) : on relit alors la liste, sans
+ * aucune scrutation. La batterie est remise à « inconnue » par le moteur montre à la déconnexion : la dernière valeur, l'heure
  * de la dernière information et la dernière connexion sont donc gardées ici, par appareil, sous un condensat de l'adresse
  * (jamais l'adresse elle-même).
  */

@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        tools:context="nodomain.freeyourgadget.gadgetbridge.activities.charts.ActivityChartsActivity$PlaceholderFragment">
+        tools:context="app.superhealth.engine.activities.charts.ActivityChartsActivity$PlaceholderFragment">
 
         <TextView
             android:id="@+id/stress_dates"
@@ -27,17 +27,17 @@
             android:layout_height="200dp"
             android:layout_marginBottom="@dimen/chart_section_spacing" />
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.workouts.SectionHeaderView
+        <app.superhealth.engine.activities.workouts.SectionHeaderView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:sectionTitle="@string/stress_daily_levels" />
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+        <app.superhealth.engine.activities.charts.mpchart.GbChartView
             android:id="@+id/weekstresschart"
             android:layout_width="fill_parent"
             android:layout_height="250sp" />
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.ChartLegendView
+        <app.superhealth.engine.activities.charts.mpchart.ChartLegendView
             android:id="@+id/weekstress_chart_legend"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

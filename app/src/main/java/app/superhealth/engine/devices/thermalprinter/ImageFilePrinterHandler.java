@@ -1,0 +1,68 @@
+package app.superhealth.engine.devices.thermalprinter;
+
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+
+import androidx.annotation.NonNull;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
+import app.superhealth.engine.activities.install.InstallActivity;
+import app.superhealth.engine.devices.InstallHandler;
+import app.superhealth.engine.impl.GBDevice;
+import app.superhealth.engine.util.UriHelper;
+
+public class ImageFilePrinterHandler implements InstallHandler {
+    private static final Logger LOG = LoggerFactory.getLogger(ImageFilePrinterHandler.class);
+
+    protected final Context mContext;
+    private Bitmap incomingBitmap;
+
+    public ImageFilePrinterHandler(final Uri uri, final Context context) {
+        this.mContext = context;
+
+        final UriHelper uriHelper;
+        try {
+            uriHelper = UriHelper.get(uri, context);
+        } catch (final IOException e) {
+            LOG.error("Failed to get uri", e);
+            return;
+        }
+
+        try {
+            incomingBitmap = BitmapFactory.decodeStream(uriHelper.openInputStream());
+        } catch (FileNotFoundException e) {
+            LOG.error("Failed to create bitmap", e);
+        }
+
+    }
+
+    @NonNull
+    @Override
+    public Class<? extends Activity> getInstallActivity() {
+        return SendToPrinterActivity.class;
+    }
+
+    @Override
+    public boolean isValid() {
+        return incomingBitmap != null;
+    }
+
+    @Override
+    public void validateInstallation(@NonNull InstallActivity installActivity, @NonNull GBDevice device) {
+        installActivity.setPreview(incomingBitmap);
+        installActivity.setInstallEnabled(true);
+    }
+
+    @Override
+    public void onStartInstall(@NonNull GBDevice device) {
+
+    }
+}

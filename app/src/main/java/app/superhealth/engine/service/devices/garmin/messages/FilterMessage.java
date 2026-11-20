@@ -1,0 +1,55 @@
+/*  Copyright (C) 2024-2026 Daniele Gobbetti, Thomas Kuehne
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.service.devices.garmin.messages;
+
+import androidx.annotation.NonNull;
+
+public class FilterMessage extends GFDIMessage {
+
+    private final FilterType filterType;
+
+    public FilterMessage() {
+        this(FilterType.ONLY_NEW_3);
+    }
+
+    /** Also lists archived files when recovering the history kept on the watch. */
+    public FilterMessage(final boolean allFiles) {
+        this(allFiles ? FilterType.ALL_FILES_0 : FilterType.ONLY_NEW_3);
+    }
+
+    public FilterMessage(@NonNull FilterType filterType) {
+        this.garminMessage = GarminMessage.FILTER;
+        this.filterType = filterType;
+    }
+
+    @Override
+    protected boolean generateOutgoing() {
+        final MessageWriter writer = new MessageWriter(response);
+        writer.writeShort(0); // packet size will be filled below
+        writer.writeShort(this.garminMessage.getId());
+        writer.writeByte(filterType.ordinal());
+
+        return true;
+    }
+
+    public enum FilterType {
+        ALL_FILES_0,
+        DEFAULT,
+        UNK_2,
+        ONLY_NEW_3
+    }
+}

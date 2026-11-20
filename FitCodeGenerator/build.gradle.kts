@@ -11,7 +11,7 @@ java {
 }
 
 application {
-    mainClass = "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.codegen.FitCodeGen"
+    mainClass = "app.superhealth.engine.service.devices.garmin.fit.codegen.FitCodeGen"
 }
 
 dependencies {
@@ -25,8 +25,8 @@ tasks.register<JavaExec>("genFit") {
 
     mainClass = application.mainClass
     args(project.file("src/main/resources/fit_profile.json").absolutePath)
-    args(project.rootProject.file("app/build/generated/sources/fit/nodomain/freeyourgadget/gadgetbridge/service/devices/garmin/fit/").absolutePath)
-    args(project.rootProject.file("app/src/main/java/nodomain/freeyourgadget/gadgetbridge/service/devices/garmin/fit/").absolutePath)
+    args(project.rootProject.file("app/build/generated/sources/fit/app/superhealth/engine/service/devices/garmin/fit/").absolutePath)
+    args(project.rootProject.file("app/src/main/java/app/superhealth/engine/service/devices/garmin/fit/").absolutePath)
     classpath = sourceSets.main.get().runtimeClasspath
     if (gradle.startParameter.logLevel <= LogLevel.INFO) {
         jvmArgs("-Dverbose=true")
@@ -37,7 +37,7 @@ tasks.register<JavaExec>("formatFitProfileJson") {
     inputs.dir("src")
     outputs.dir("src/main/resources")
 
-    mainClass = "nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.codegen.FormatFitProfileJson"
+    mainClass = "app.superhealth.engine.service.devices.garmin.fit.codegen.FormatFitProfileJson"
     args(project.file("src/main/resources/fit_profile.json").absolutePath)
     classpath = sourceSets.main.get().runtimeClasspath
     if (gradle.startParameter.logLevel <= LogLevel.INFO) {

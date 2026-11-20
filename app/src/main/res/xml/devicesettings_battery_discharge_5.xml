@@ -29,13 +29,13 @@
                 android:layout="@layout/preference_checkbox"
                 android:title="@string/function_enabled" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval1_start"
                 android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval1_end"
@@ -58,13 +58,13 @@
                 android:layout="@layout/preference_checkbox"
                 android:title="@string/function_enabled" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval2_start"
                 android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval2_end"
@@ -87,13 +87,13 @@
                 android:layout="@layout/preference_checkbox"
                 android:title="@string/function_enabled" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval3_start"
                 android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval3_end"
@@ -116,13 +116,13 @@
                 android:layout="@layout/preference_checkbox"
                 android:title="@string/function_enabled" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval4_start"
                 android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval4_end"
@@ -145,13 +145,13 @@
                 android:layout="@layout/preference_checkbox"
                 android:title="@string/function_enabled" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval5_start"
                 android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="00:00"
                 android:icon="@drawable/ic_access_time"
                 android:key="battery_discharge_interval5_end"

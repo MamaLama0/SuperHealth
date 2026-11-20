@@ -36,7 +36,6 @@
     <string name="action_debug">Разбубати</string>
     <string name="controlcenter_power_off">Искључи</string>
     <string name="action_quit">Напусти</string>
-    <string name="action_donate">Приложите</string>
     <string name="controlcenter_fetch_activity_data">Усклади</string>
     <string name="controlcenter_find_device">Пронађи изгубљени уређај</string>
     <string name="controlcenter_take_screenshot">Усликај заслон</string>
@@ -281,7 +280,6 @@
     <string name="widget_10_minutes">10 минута</string>
     <string name="widget_1_hour">1 сат</string>
     <string name="widget_20_minutes">20 минута</string>
-    <string name="about_additional_device_support">Додатна подршка уређаја</string>
     <string name="Activity">Дејство</string>
     <string name="qhybrid_calibration_100_steps">100 корака</string>
     <string name="qhybrid_calibration_10_steps">10 корака</string>
@@ -552,7 +550,7 @@
     <string name="pairing_in_progress">Упаривање у току: %1$s (%2$s)</string>
     <string name="pairing_already_bonded">Већ је упарен%1$s (%2$s), повезујем…</string>
     <string name="test_notification">Обавештења пробе</string>
-    <string name="this_is_a_test_notification_from_gadgetbridge">Ово је проба обавештења Геџетбрвна</string>
+    <string name="this_is_a_test_notification_from_app">Ово је проба обавештења Геџетбрвна</string>
     <string name="pairing_unable_to_pair_with">Нисам успео да се упарим са %1$s %2$s</string>
     <string name="pref_cache_weather_summary">Подаци о времену ће бити захваћени кроз препокретање програма.</string>
     <string name="vibration_profile_waterdrop">Кап</string>
@@ -645,7 +643,7 @@
     <string name="pref_title_general_autoconnectonbluetooth">Повежи се са уређајем(има) Геџетбрвна када је Блутут укључен</string>
     <string name="pref_summary_datetime_syctimeonconnect">Усклади време са уређајем(има) Геџетбрвна при повезивању, када се време или временска област промене на уређају Андроида, и повремено</string>
     <string name="pref_title_minimize_priority">Сакриј обавештења Геџетбрвна</string>
-    <string name="gadgetbridge_running_generic">Геџетбрвно делује</string>
+    <string name="app_running_generic">Геџетбрвно делује</string>
     <string name="application_name_generic">Геџетбрвно</string>
     <string name="title_activity_controlcenter_generic">Геџетбрвно</string>
     <string name="about_activity_title_generic">О Геџетбрвну</string>
@@ -658,15 +656,15 @@
     <string name="pref_title_development_miaddr">Адреса Ми банда</string>
     <string name="pref_title_pebble_sync_health">Усклади здравље Пебла</string>
     <string name="pref_title_pebble_sync_misfit">Усклади Мисфит</string>
-    <string name="gadgetbridge_running_banglejs_main">Бангл.јс дејствује</string>
+    <string name="app_running_banglejs_main">Бангл.јс дејствује</string>
     <string name="application_name_banglejs_nightly">Бангл.јс Геџетбрвно (ноћно)</string>
     <string name="title_activity_controlcenter_banglejs_nightly">Бангл.јс Геџетбрвно (ноћно)</string>
     <string name="about_activity_title_banglejs_nightly">О Банглу.јс Геџетбрвну (ноћном)</string>
-    <string name="gadgetbridge_running_banglejs_nightly">Ноћни Бангл.јс дејствује</string>
+    <string name="app_running_banglejs_nightly">Ноћни Бангл.јс дејствује</string>
     <string name="title_activity_controlcenter_main_nopebble">Геџетбрвно ноћно без Пебла</string>
     <string name="about_activity_title_main_nopebble">О Геџетбрвну ноћном без Пебла</string>
-    <string name="gadgetbridge_running_main_nopebble">Ноћни безПебла ГБ дејствује</string>
-    <string name="gadgetbridge_running_main_nightly">Ноћно ГБ дејствује</string>
+    <string name="app_running_main_nopebble">Ноћни безПебла ГБ дејствује</string>
+    <string name="app_running_main_nightly">Ноћно ГБ дејствује</string>
     <string name="application_name_main_nopebble">Геџетбрвно (ноћно, нема добављача Пебла)</string>
     <string name="about_description_banglejs_main">Андроидов дружбенички програм за Бангле.јс направљен поврха пројекта Геџетбрвна, са додатим приступом Интернету.
 \n
@@ -1056,7 +1054,6 @@
     <string name="dismiss">Опозови</string>
     <string name="dbmanagementactivity_export_finished">Брисање је завршено</string>
     <string name="timeformat_am_pm">ПрП/ПоП</string>
-    <string name="about_core_team_title">Дружба језгра (поредак од првог доприносиоца кода)</string>
     <string name="about_links">Везе</string>
     <string name="distanceMeters">Размак</string>
     <string name="ascentMeters">Узбрдо</string>
@@ -1107,7 +1104,6 @@
     <string name="filter_mode_none">Не користи пропусник</string>
     <string name="filter_mode">Начин пропуштања</string>
     <string name="qhybrid_use_activity_hand_as_notification_counter">Користи дејствену руку као бројач обавештења</string>
-    <string name="about_contributors">Доприносиоци</string>
     <string name="hrZoneFatBurn">Топљење сала</string>
     <string name="hrZoneWarmUp">Загревање</string>
     <string name="Steps">Кораци</string>
@@ -1252,7 +1248,6 @@
     <string name="about_title">О програму</string>
     <string name="about_version">Издање %s</string>
     <string name="gpx_receiver_overwrite_some_files">Нека датотека(е) већ постоји. Да ли је преписати\?</string>
-    <string name="about_additional_contributions">Велика хвала непоменутим доприносиоцима кода, превода, подршке, замисли, подстрека, пријављивања грешака, новца… ✊</string>
     <string name="require_location_provider">Положај мора бити одобрен</string>
     <string name="sports_activity_quick_filter_this_month">Овог месеца</string>
     <string name="discover_unsupported_devices_description">Омогућавање овога ће приказати све откривене уређаје Блутута приликом претраге. Кратак тап ће умножити име уређаја и адресу мац-а у спремиште исечака. Дуги притисак ће покренути прозорче „Додај пробни уређај“.</string>
@@ -1498,7 +1493,6 @@
 \nНАСТАВИТЕ НА СОПСТВЕНУ ОДГОВОРНОСТ!</string>
     <string name="miband_firmware_suggest_whitelist">Уколико ипак желите да наставите и све ради како треба након тога, молим, јавите програмерима ГеџетБрвна да одобре на списку издање драма %s.</string>
     <string name="fw_upgrade_notice_amazfitcor2">Уградићете драм %s на свој Амејзфит Кор 2. \n \nМолим, уградите датотеку .fw, и након тога датотеку .res. Ваш сат ће се препокренути након уградње датотеке .fw. \n \nПримедба: Не мора да уградите датотеку .res уколико је иста као претходно уграђена. \n \nНАСТАВИТЕ НА СОПСТВЕНУ ОДГОВОРНОСТ! \n \nПОТПУНО ЈЕ НЕПРОВЕРЕН ПОСТУПАК, НАЈВЕРОВАТНИЈЕ ТРЕБА ДА УГРАДИТЕ ДРАМ BEATS_W АКО ЛИ ЈЕ ИМЕ УРЕЂАЈА „Amazfit Band 2“</string>
-    <string name="open_fw_installer_info_text">Уграђивач фирвера/сучеља/програма/датотеке омогућава отпремање/уградњу подржаних датотека (драма, сучеља, програма, ГПС-а, извора, словолика…) на уређај. Можете погледати опширније на страници: https://gadgetbridge.org/internals/features/installer/</string>
     <string name="pref_summary_enable_outgoing_call">Онемогућавање овога ће такође зауставити трешњу Пебла 2/ЛЕ при одлазним позивима</string>
     <string name="fw_upgrade_notice_amazfitcor">Уградићете драм %s на свој Амејзфит Кор.
 \n

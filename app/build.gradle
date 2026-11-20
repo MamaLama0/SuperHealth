@@ -128,7 +128,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    namespace = 'nodomain.freeyourgadget.gadgetbridge'
+    namespace = 'app.superhealth.engine'
     compileSdk {
         version = release(37) {
             it.minorApiLevel = 0
@@ -136,7 +136,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "nodomain.freeyourgadget.gadgetbridge"
+        applicationId "app.superhealth.engine"
 
         // Note: update toolchain.languageVersion when changing targetSdk
         //noinspection OldTargetApi
@@ -180,14 +180,14 @@ android {
         }
 
         localhealth {
-            // LocalHealth: Google Health–style UI on top of the Gadgetbridge engine, no network
+            // Ancienne variante sans réseau (interface seule)
             dimension "device_type"
             applicationId "app.localhealth"
             versionNameSuffix "-localhealth"
         }
 
         superhealth {
-            // SuperHealth: La Bouffe (nutrition) + La Salle (musculation) + LocalHealth (montres), interface MacroFactor
+            // SuperHealth : nutrition, musculation et montres
             dimension "device_type"
             def shAppId = providers.gradleProperty("superhealthAppId").getOrElse("app.superhealth")
             applicationId shAppId
@@ -199,7 +199,7 @@ android {
             versionCode providers.gradleProperty("superhealthTestCode").map { it.toInteger() }.getOrElse(82)
             // Navigation Compose, Room et Health Connect côté nutrition/musculation : Android 8.0 minimum (comme La Bouffe et La Salle)
             minSdk = 26
-            // Interface en français et en anglais seulement : les ~70 langues de Gadgetbridge sont retirées (resources.arsc).
+            // Interface en français et en anglais seulement : les ~70 autres langues sont retirées (resources.arsc).
             resourceConfigurations += ["en", "fr"]
             // Téléphones ARM uniquement (pas d'émulateur x86).
             ndk { abiFilters "arm64-v8a", "armeabi-v7a" }
@@ -207,7 +207,7 @@ android {
 
         banglejs {
             dimension "device_type"
-            applicationId "com.espruino.gadgetbridge"
+            applicationId "app.superhealth.bangle"
             applicationIdSuffix ".banglejs"
             versionNameSuffix "-banglejs"
             buildConfigField "boolean", "INTERNET_ACCESS", "true"
@@ -249,7 +249,7 @@ android {
             initWith debug
             debuggable false
             profileable true
-            // R8 : code inutilisé retiré et optimisé (règles de Gadgetbridge + proguard-superhealth.pro)
+            // R8 : code inutilisé retiré et optimisé (proguard-rules.pro + proguard-superhealth.pro)
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro", "proguard-superhealth.pro"
@@ -475,7 +475,7 @@ gradle.beforeProject {
 }
 
 tasks.register('cleanGenerated', Delete) {
-    delete fileTree('src/main/java/nodomain/freeyourgadget/gadgetbridge/entities') {
+    delete fileTree('src/main/java/app/superhealth/engine/entities') {
         include '**/*.java'
         exclude '**/Abstract*.java'
         exclude '**/GenericActivitySample.java'
@@ -485,7 +485,7 @@ tasks.register('cleanGenerated', Delete) {
 tasks.clean.dependsOn(tasks.cleanGenerated)
 
 kaitai {
-    javaPackage = "nodomain.freeyourgadget.gadgetbridge.kaitai"
+    javaPackage = "app.superhealth.engine.kaitai"
     readWrite = true
 }
 

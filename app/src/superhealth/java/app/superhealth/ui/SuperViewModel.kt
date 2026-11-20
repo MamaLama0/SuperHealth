@@ -28,13 +28,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
+import app.superhealth.engine.GBApplication
 import app.superhealth.nutrition.ui.AppViewModel as NutritionViewModel
 import app.superhealth.training.ui.AppViewModel as TrainingViewModel
 
 /**
  * État de la coque SuperHealth. Les écrans des modules gardent leur ViewModel ([nutrition], [training]) ;
- * celui-ci ajoute la montre (ex-LocalHealth), Health Connect et la navigation entre modules.
+ * celui-ci ajoute la montre, Health Connect et la navigation entre modules.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SuperViewModel(app: Application) : AndroidViewModel(app) {

@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="application_name_generic">Gadgetbridge</string>
-    <string name="title_activity_controlcenter_generic">Gadgetbridge</string>
+    <string name="application_name_generic">SuperHealth</string>
+    <string name="title_activity_controlcenter_generic">SuperHealth</string>
     <string name="action_settings">Axustes</string>
     <string name="action_debug">Depuración</string>
     <string name="action_quit">Saír</string>
-    <string name="action_donate">Doar</string>
     <string name="controlcenter_fetch_activity_data">Sincronizar</string>
     <string name="controlcenter_find_device">Atopar dispositivo perdido</string>
     <string name="controlcenter_take_screenshot">Capturar pantalla</string>
@@ -39,26 +38,26 @@
     <string name="title_activity_fw_app_insaller">Instalador de FW/App</string>
     <string name="fw_upgrade_notice">Está a piques de instalar o firmware %s.</string>
     <string name="fw_multi_upgrade_notice">Está a piques de instalar os firmwares %1$s e %2$s no canto dos que están actualmente na súa Mi Band.</string>
-    <string name="miband_firmware_known">Este firmware foi probado e é compatíbel co Gadgetbridge.</string>
-    <string name="miband_firmware_unknown_warning">Este firmware non foi probado e pode non ser compatíbel co Gadgetbridge. 
+    <string name="miband_firmware_known">Este firmware foi probado e é compatíbel co SuperHealth.</string>
+    <string name="miband_firmware_unknown_warning">Este firmware non foi probado e pode non ser compatíbel co SuperHealth. 
 \n 
 \nRECOMENDASE QUE NON o instale!</string>
-    <string name="miband_firmware_suggest_whitelist">Se aínda así queres proceder e todo continúa a funcionar normalmente, por favor avisa aos programadores do Gadgetbridge para que permitan a versión %s do firmware.</string>
+    <string name="miband_firmware_suggest_whitelist">Se aínda así queres proceder e todo continúa a funcionar normalmente, por favor avisa aos programadores do SuperHealth para que permitan a versión %s do firmware.</string>
     <string name="title_activity_settings">Axustes</string>
     <string name="pref_header_general">Axustes xerais</string>
-    <string name="pref_title_general_autoconnectonbluetooth">Conectar ao dispositivo(s) Gadgetbridge ao activar o Bluetooth</string>
+    <string name="pref_title_general_autoconnectonbluetooth">Conectar ao dispositivo(s) SuperHealth ao activar o Bluetooth</string>
     <string name="pref_title_general_autostartonboot">Iniciar automaticamente</string>
     <string name="pref_title_general_autoreconnect">Reconectar automaticamente</string>
     <string name="pref_title_audio_player">Reprodutor de audio preferido</string>
     <string name="pref_default">Predefinido</string>
     <string name="pref_header_datetime">Data e Hora</string>
     <string name="pref_title_datetime_syctimeonconnect">Sincronizar hora</string>
-    <string name="pref_summary_datetime_syctimeonconnect">Sincronizar a hora no dispositivo(s) Gadgetbridge ao conectar, cando cambia a hora ou a zona horaria no dispositivo Android, e periódicamente</string>
+    <string name="pref_summary_datetime_syctimeonconnect">Sincronizar a hora no dispositivo(s) SuperHealth ao conectar, cando cambia a hora ou a zona horaria no dispositivo Android, e periódicamente</string>
     <string name="pref_title_theme">Decorado</string>
     <string name="pref_theme_light">Claro</string>
     <string name="pref_theme_dark">Escuro</string>
     <string name="pref_title_language">Idioma</string>
-    <string name="pref_title_minimize_priority">Ocultar a notificación de Gadgetbridge</string>
+    <string name="pref_title_minimize_priority">Ocultar a notificación de SuperHealth</string>
     <string name="pref_summary_minimize_priority_off">Amosar icono na barra de estado e notificación na pantalla de bloqueo</string>
     <string name="pref_summary_minimize_priority_on">Ocultar a icona na barra de estado e notificación na pantalla de bloqueo</string>
     <string name="pref_header_notifications">Notificacións</string>
@@ -118,7 +117,7 @@
     <string name="pref_title_pebble_forceuntested">Habilitar características non probadas</string>
     <string name="pref_title_pebble_forcele">Preferir sempre BLE</string>
     <string name="pref_title_pebble_enable_applogs">Activar rexistro das apps do reloxo</string>
-    <string name="pref_summary_pebble_enable_applogs">Causa que os rexistros das apps do reloxo sexan gardados polo Gadgetbridge (necesita reconectar)</string>
+    <string name="pref_summary_pebble_enable_applogs">Causa que os rexistros das apps do reloxo sexan gardados polo SuperHealth (necesita reconectar)</string>
     <string name="pref_title_pebble_reconnect_attempts">Intentos de reconexión</string>
     <string name="pref_title_unit_system">Unidades</string>
     <string name="pref_title_timeformat">Formato de hora</string>
@@ -131,7 +130,7 @@
     <string name="_unknown_">(descoñecido)</string>
     <string name="test">Probar</string>
     <string name="test_notification">Probar notificación</string>
-    <string name="this_is_a_test_notification_from_gadgetbridge">Esta é unha notificación de proba desde Gadgetbridge</string>
+    <string name="this_is_a_test_notification_from_app">Esta é unha notificación de proba desde SuperHealth</string>
     <string name="bluetooth_is_not_supported_">Non hai compatibilidade con Bluetooth.</string>
     <string name="bluetooth_is_disabled_">O Bluetooh está desactivado.</string>
     <string name="tap_connected_device_for_app_mananger">Toque nun dispositivo conectado para xestionar as Apps</string>
@@ -139,7 +138,7 @@
     <string name="tap_connected_device_for_vibration">Toque nun dispositivo conectado para facelo Vibrar</string>
     <string name="tap_a_device_to_connect">Toque nun dispositivo para conectar</string>
     <string name="cannot_connect_bt_address_invalid_">Non foi posíbel conectar. Enderezo Bluetooth inválido?</string>
-    <string name="gadgetbridge_running_generic">Gadgetbridge funcionando</string>
+    <string name="app_running_generic">SuperHealth funcionando</string>
     <string name="installing_binary_d_d">Instalando binario %1$d/%2$d</string>
     <string name="installation_failed_">Fallou a instalación</string>
     <string name="installation_successful">Instalado</string>
@@ -486,7 +485,7 @@
     <string name="menuitem_compass">Compás</string>
     <string name="menuitem_settings">Axustes</string>
     <string name="menuitem_alipay">Alipay</string>
-    <string name="mi2_prefs_button_press_broadcast_default_value" translatable="false">nodomain.freeyourgadget.gadgetbridge.ButtonPressed</string>
+    <string name="mi2_prefs_button_press_broadcast_default_value" translatable="false">app.superhealth.engine.ButtonPressed</string>
     <string name="sonyswr12_settings_title">Axustes Sony SWR12</string>
     <string name="sonyswr12_settings_low_vibration">Vibración baixa habilitada</string>
     <string name="sonyswr12_settings_alarm_interval">Intervalo de alarma intelixente en minutos</string>
@@ -504,11 +503,11 @@
     <string name="controlcenter_change_fm_frequency">Cambiar frecuencia FM</string>
     <string name="controlcenter_change_led_color">Cambiar cor LED</string>
     <string name="find_lost_device_message">Buscar a %1$s\?</string>
-    <string name="about_activity_title_generic">Sobre Gadgetbridge</string>
+    <string name="about_activity_title_generic">Sobre SuperHealth</string>
     <string name="about_description_generic">Aplicación libre e sen servidor substituta das aplicacións Android de código propietario dos fabricantes de dispositivos.</string>
-    <string name="application_name_banglejs_main">Bangle.js Gadgetbridge</string>
-    <string name="title_activity_controlcenter_banglejs_main">Bangle.js Gadgetbridge</string>
-    <string name="about_activity_title_banglejs_main">Sobre Bangle.js Gadgetbridge</string>
+    <string name="application_name_banglejs_main">Bangle.js SuperHealth</string>
+    <string name="title_activity_controlcenter_banglejs_main">Bangle.js SuperHealth</string>
+    <string name="about_activity_title_banglejs_main">Sobre Bangle.js SuperHealth</string>
     <string name="action_changelog">Rexistro de cambios</string>
     <string name="title_activity_gps_track_installer">Instalador da ruta GPS</string>
     <string name="charts_activity_list">Lista de actividades</string>
@@ -528,13 +527,9 @@
     <string name="appwidget_sleep_alarm_widget_label">Alarma para durmir</string>
     <string name="about_title">Sobre</string>
     <string name="about_version">Versión %s</string>
-    <string name="about_core_team_title">Equipo principal (na orde da primeira contribución ao código)</string>
-    <string name="about_contributors">Colaboracións</string>
-    <string name="about_additional_device_support">Compatibilidade adicional de dispositivos</string>
-    <string name="about_additional_contributions">Damos as grazas a todas as persoas colaboradoras que non aparecen na lista, pola súa contribución ao código, con traducións, axuda, ideas, motivación, informe de fallos, cartos… ✊</string>
     <string name="about_links">Ligazóns</string>
     <string name="pref_show_changelog">Mostrar os cambios na app ao iniciar</string>
-    <string name="pref_show_changelog_summary">Mostrar o rexistro de cambios desde a última versión após a actualización de Gadgetbridge</string>
+    <string name="pref_show_changelog_summary">Mostrar o rexistro de cambios desde a última versión após a actualización de SuperHealth</string>
     <string name="distanceMeters">Distancia</string>
     <string name="workout_cadence">Cadencia</string>
     <string name="maxSpeed">Máxima</string>
@@ -570,7 +565,7 @@
     <string name="huawei_trusleep_summary">Vixía a calidade do teu sono en tempo real.</string>
     <string name="huawei_trusleep_summary_light">Vixilancia mellorada do sono</string>
     <string name="pref_summary_opentracks_packagename">Utilizado para iniciar/deter a gravación de rutas GPS en aplicacións de actividade externas.</string>
-    <string name="pref_summary_opentracks_packagename_not_installed">Instalar Opentracks para iniciar/deter a gravación de rutas GPS desde Gadgetbridge.</string>
+    <string name="pref_summary_opentracks_packagename_not_installed">Instalar Opentracks para iniciar/deter a gravación de rutas GPS desde SuperHealth.</string>
     <string name="controlcenter_set_parent_folder">Cartafol de grupo</string>
     <string name="error_setting_parent_folder">Erro ao establecer o cartafol do grupo: %s</string>
     <string name="changelog_full_title">Rexistro de cambios</string>
@@ -684,26 +679,26 @@
         <item quantity="other">ten %d caracteres de máis</item>
     </plurals>
     <string name="first_start_overview_title">Seccións</string>
-    <string name="first_start_overview_desc">Gadgetbridge ten dúas pantallas principais, cadansúa co seu propósito.</string>
+    <string name="first_start_overview_desc">SuperHealth ten dúas pantallas principais, cadansúa co seu propósito.</string>
     <string name="first_start_overview_dashboard">O taboleiro mostra un resumo xeral de como está a ser o teu día. A vista do calendario mostra o estado dos teus obxectivos para o mes completo.</string>
     <string name="first_start_overview_devices">A vista de dispositivos mostra todos os dispositivos que configuraches e o seu estado, e tamén proporciona acceso a funcións específicas do dispositivo como gráficos detallados, axustes, apps e alarmas.</string>
     <string name="first_start_open_source_title">Código Aberto</string>
-    <string name="first_start_open_source_text">Gadgetbridge é unha aplicación de código aberto. Desenvólvea a comunidade, para a comunidade.\n\nAgradecemos calquera colaboración a través do código, documentación, realizando probas e doazóns.\n\nGadgetbridge non ten publicidade e tampouco fai seguimento. Garda os teus datos de xeito local no teu dispositivo Android, polo que é 100% respectuosa coa privacidade.\n\nVisita o noso sitio web para ter máis información, ler a documentación e ver as nosas canles de comunicación.</string>
+    <string name="first_start_open_source_text">SuperHealth é unha aplicación de código aberto. Desenvólvea a comunidade, para a comunidade.\n\nAgradecemos calquera colaboración a través do código, documentación, realizando probas e doazóns.\n\nSuperHealth non ten publicidade e tampouco fai seguimento. Garda os teus datos de xeito local no teu dispositivo Android, polo que é 100% respectuosa coa privacidade.\n\nVisita o noso sitio web para ter máis información, ler a documentación e ver as nosas canles de comunicación.</string>
     <string name="first_start_permissions_title">Permisos</string>
-    <string name="first_start_permissions_desc">Gadgetbridge precisa acceder a moitos servizos para funcionar correctamente. Revisa os permisos e o seu propósito.</string>
+    <string name="first_start_permissions_desc">SuperHealth precisa acceder a moitos servizos para funcionar correctamente. Revisa os permisos e o seu propósito.</string>
     <string name="first_start_permissions_request_all_button">Solicitar todos os pemisos</string>
     <string name="first_start_permissions_do_not_ask_again">Non volver preguntar</string>
     <string name="first_start_permissions_request_button">Solicitar</string>
     <string name="first_start_get_started_title">Comezar</string>
     <string name="first_start_get_started_desc">Engade o teu primeiro dispositivo directamente desde esta pantalla, restablece unha copia de apoio ou comeza cunha base de datos baleira.</string>
-    <string name="gadgetbridge_running_banglejs_main">Bangle.js está funcionando</string>
-    <string name="application_name_banglejs_nightly">Bangle.js Gadgetbridge (Nightly)</string>
-    <string name="title_activity_controlcenter_banglejs_nightly">Bangle.js Gadgetbridge (Nightly)</string>
-    <string name="about_activity_title_banglejs_nightly">Sobre Bangle.js Gadgetbridge (Nightly)</string>
-    <string name="gadgetbridge_running_banglejs_nightly">Nightly Bangle.js está funcionando</string>
-    <string name="application_name_main_nightly">Gadgetbridge (Nightly)</string>
-    <string name="title_activity_controlcenter_main_nightly">Gadgetbridge Nightly</string>
-    <string name="about_activity_title_main_nightly">Sobre Gadgetbridge Nightly</string>
+    <string name="app_running_banglejs_main">Bangle.js está funcionando</string>
+    <string name="application_name_banglejs_nightly">Bangle.js SuperHealth (Nightly)</string>
+    <string name="title_activity_controlcenter_banglejs_nightly">Bangle.js SuperHealth (Nightly)</string>
+    <string name="about_activity_title_banglejs_nightly">Sobre Bangle.js SuperHealth (Nightly)</string>
+    <string name="app_running_banglejs_nightly">Nightly Bangle.js está funcionando</string>
+    <string name="application_name_main_nightly">SuperHealth (Nightly)</string>
+    <string name="title_activity_controlcenter_main_nightly">SuperHealth Nightly</string>
+    <string name="about_activity_title_main_nightly">Sobre SuperHealth Nightly</string>
     <string name="search">Buscar</string>
     <string name="range_percentage">%1$d%% – %2$d%%</string>
     <string name="range_percentage_float">%1$.1f%% – %2$.1f%%</string>
@@ -1003,7 +998,7 @@
     <string name="bottom_nav_dashboard">Panel</string>
     <string name="bottom_nav_devices">Dispositivos</string>
     <string name="pref_dashboard_first_title">Iniciar co panel</string>
-    <string name="pref_dashboard_first_summary">Mostra o panel ao iniciar Gadgetbridge, no lugar da pantalla cos dispositivos</string>
+    <string name="pref_dashboard_first_summary">Mostra o panel ao iniciar SuperHealth, no lugar da pantalla cos dispositivos</string>
     <string name="pref_dashboard_cards_title">Mostra os widgets en tarxetas</string>
     <string name="pref_dashboard_cards_summary">Debuxa un bordo arredor dos widgets no panel</string>
     <string name="pref_dashboard_widget_settings">Axustes do widget</string>
@@ -1331,8 +1326,8 @@
     <string name="add_test_device">Engadir dispositivo en probas</string>
     <string name="permission_navigation_comaps">%1$s precisa permiso para ler os datos de navegación de CoMaps. Toca en «%2$s» para ir aos axustes do sistema e activar o permiso, despois volve aquí para activar outra vez a opción.</string>
     <string name="discover_unsupported_devices_description">Ao activar esta opción mostraranse todos os dispositivos Bluetooth descubertos ao escanear. Un toque curto copia o nome do dispositivo e enderezo MAC ao portapapeis. Unha pulsación longa inicia o diálogo «Engadir dispositivo en probas». Pode causar detencións e problemas na app.</string>
-    <string name="pref_theme_dynamic_colors_not_available_warning">As cores dinámicas non están dispoñibles no teu dispositivo, precísase Android +12. Gadgetbridge vai usar as cores predeterminadas de Material 3.</string>
-    <string name="pref_theme_dynamic_colors_explanation">Nota: para o decorado con cores dinámicas tes que activar Cores do fondo ou Abano de cores nos axustes da aparencia do teu Android +12. Se non é así, Gadgetbridge vai usar as cores predeterminadas de Material 3.</string>
+    <string name="pref_theme_dynamic_colors_not_available_warning">As cores dinámicas non están dispoñibles no teu dispositivo, precísase Android +12. SuperHealth vai usar as cores predeterminadas de Material 3.</string>
+    <string name="pref_theme_dynamic_colors_explanation">Nota: para o decorado con cores dinámicas tes que activar Cores do fondo ou Abano de cores nos axustes da aparencia do teu Android +12. Se non é así, SuperHealth vai usar as cores predeterminadas de Material 3.</string>
     <string name="pref_navigation_app_gmaps">Google Maps</string>
     <string name="pref_navigation_app_comaps">CoMaps</string>
     <string name="auto_reconnect_ble_scan_title">Reconectar co escaneo BLE</string>
@@ -1351,7 +1346,7 @@
     <string name="maps_folder_empty">Non se atoparon ficheiros no cartafol seleccionado</string>
     <string name="maps_file_invalid">Mapa non válido: %1$s</string>
     <string name="prefs_key_enable_deprecated_notificationcollectormonitor_title">Activar o servizo antigo de Monitor para Recolector de Notificacións</string>
-    <string name="prefs_key_enable_deprecated_notificationcollectormonitor_summary">Forza o uso dun segundo servizo en primeiro plano para manter o monitor de notificacións activo, activa esta opción se Gadgetbridge deixa de recibir notificacións.| Ten en conta que podería crear unha segunda notificación persistente no sistema.\nReinicia a aplicación despois de activar.</string>
+    <string name="prefs_key_enable_deprecated_notificationcollectormonitor_summary">Forza o uso dun segundo servizo en primeiro plano para manter o monitor de notificacións activo, activa esta opción se SuperHealth deixa de recibir notificacións.| Ten en conta que podería crear unha segunda notificación persistente no sistema.\nReinicia a aplicación despois de activar.</string>
     <string name="generic_metric_chart_label_with_unit">%1$s (%2$s)</string>
     <string name="miscale_weight_unit_metric">Métrico (kg)</string>
     <string name="miscale_weight_unit_imperial">Imperial (lbs)</string>
@@ -1376,7 +1371,7 @@
     <string name="tap_and_hold">Tocar e manter</string>
     <string name="double_tap_and_hold">Dobre toque e manter</string>
     <string name="continue_pressing">Presión contínua</string>
-    <string name="huawei_sleep_breath_summary">Valora a túa respiración nun ambiente tranquilo. Pode afectar á duración da batería.\nAviso: por agora non se sincroniza con Gadgetbridge.</string>
+    <string name="huawei_sleep_breath_summary">Valora a túa respiración nun ambiente tranquilo. Pode afectar á duración da batería.\nAviso: por agora non se sincroniza con SuperHealth.</string>
     <string name="prefs_activity_recognition">Axustes da identificación da actividade</string>
     <string name="pref_activity_recognize_running">identificar como carreira</string>
     <string name="pref_activity_recognize_biking">identificar como ciclismo</string>
@@ -1440,7 +1435,7 @@
     <string name="step_streaks_achievements_sharing_message">Os meus logros de pasos diarios!</string>
     <string name="weekly_total">Total da semana</string>
     <string name="prefs_hourly_chime_summary">O reloxo vai pitar unha vez por hora</string>
-    <string name="pref_summary_expose_hr">Permite a outras apps acceder a datos do pulso cardíaco en tempo real mentras Gadgetbridge está conectada</string>
+    <string name="pref_summary_expose_hr">Permite a outras apps acceder a datos do pulso cardíaco en tempo real mentras SuperHealth está conectada</string>
     <string name="pref_title_expose_hr">Acceso ao pulso en tempo real por outras apps</string>
     <string name="exercise_category_pose">Postura</string>
     <string name="pref_title_garmin_default_reply_suffix">Usar o sufixo de resposta predeterminado</string>
@@ -1513,7 +1508,7 @@
     <string name="activity_db_management_backup_restore_label">Copia e restablecemento</string>
     <string name="activity_db_management_export_to_zip">Exportar zip</string>
     <string name="activity_db_management_import_from_zip">Importar zip</string>
-    <string name="activity_db_management_backup_restore_explanation">"As operacións de importación/exportación permítenche migrar ou facer copia de todos os axustes de Gadgetbridge, dispositivos  e datos desde/cara un ficheiro zip.\n\nAo importar un ficheiro vas eliminar todos os datos existentes, dispositivos e preferencias, substituíndoas coas que conteña a copia de apoio."</string>
+    <string name="activity_db_management_backup_restore_explanation">"As operacións de importación/exportación permítenche migrar ou facer copia de todos os axustes de SuperHealth, dispositivos  e datos desde/cara un ficheiro zip.\n\nAo importar un ficheiro vas eliminar todos os datos existentes, dispositivos e preferencias, substituíndoas coas que conteña a copia de apoio."</string>
     <string name="backup_restore_exporting">Exportando a zip…</string>
     <string name="backup_restore_exporting_preferences">Exportando preferencias…</string>
     <string name="backup_restore_exporting_database">Exportando a base de datos…</string>
@@ -1568,7 +1563,7 @@
     <string name="discharge_interval_5">Intervalo de descarga 5</string>
     <string name="power_w">Enerxía en W</string>
     <string name="output_power_grid">Saída de enerxía á rede en W</string>
-    <string name="manual_discharge_summary">se desactivado, isto asume que o control intelixente de descarga está controlado por un medidor externo (non compatible con Gadgetbridge)</string>
+    <string name="manual_discharge_summary">se desactivado, isto asume que o control intelixente de descarga está controlado por un medidor externo (non compatible con SuperHealth)</string>
     <string name="battery_allow_pass_though_summary">Se está activado, pódese cargar a batería mentras está descargando</string>
     <string name="battery_allow_pass_through">Permitir paso-a-través na batería</string>
     <string name="permission_disable_doze_title">Ignorar optimizacións da batería</string>
@@ -1727,7 +1722,7 @@
     <string name="activity_send_waypoint_titel">Enviar Punto de paso</string>
     <string name="activity_send_waypoint_no_location">Sen localización</string>
     <string name="activity_send_waypoint_no_location_details">Non se atopa información da localización nos datos recibidos.</string>
-    <string name="activity_send_waypoint_short_plus_code_details">Un Plus Code curto precisa unha posición próxima para atopar a súa ubicación. Establece a túa localización nos axustes de Gadgetbridge, ou usa o código completo (por exemplo 8FVC9G8F+6X no lugar de 9G8F+6X).</string>
+    <string name="activity_send_waypoint_short_plus_code_details">Un Plus Code curto precisa unha posición próxima para atopar a súa ubicación. Establece a túa localización nos axustes de SuperHealth, ou usa o código completo (por exemplo 8FVC9G8F+6X no lugar de 9G8F+6X).</string>
     <string name="activity_send_waypoint_to_device">Enviar</string>
     <string name="activity_send_waypoint_center_on_location">Centrar na posición actual</string>
     <string name="activity_send_waypoint_use_location">Establecer punto de paso na localización actual</string>
@@ -1750,7 +1745,7 @@
     <string name="Strokes">Brazadas</string>
     <string name="swimming_stroke">Brazada</string>
     <string name="pref_health_connect_request_permissions_summary">Non se concederon algúns permisos. Toca para solicitalos.</string>
-    <string name="pref_health_connect_disable_notice">Para desactivar a exportación a Saúde Conectada, retira todos os permisos para Gadgetbridge na app Saúde Conectada</string>
+    <string name="pref_health_connect_disable_notice">Para desactivar a exportación a Saúde Conectada, retira todos os permisos para SuperHealth na app Saúde Conectada</string>
     <string name="pref_health_connect_sync_notice">A sincronización con Saúde Conectada podería durar varios minutos, dependendo da cantidade de datos.</string>
     <string name="health_connect_unsupported">Saúde Conectada non está dispoñible nesta versión de Android</string>
     <string name="health_connect_update_required">Requírese a actualización do provedor Saúde Conectada</string>
@@ -1758,8 +1753,8 @@
     <string name="pref_health_connect_sync_on_event_title">Sincr despois da sincr do dispostivo</string>
     <string name="pref_health_connect_sync_on_event_summary">Sincronizar con Saúde Conectada despois de que o dispositivo seleccionado finalice a sincronización dos seus datos de actividade.</string>
     <string name="health_connect_permissions_rationale_title">Directiva de privacidade e Permisos</string>
-    <string name="health_connect_permissions_rationale_message">Gadgetbridge recolle datos dos teus dispositivos e, co teu permiso, compárteos con Saúde Conectada. Estes datos gárdanse no teu dispositivo e non se comparten con terceiras partes.</string>
-    <string name="health_connect_all_denied">Revogáronse ou denegáronse todos os permisos para Saúde Conectada para os datos de Gadgetbridge.</string>
+    <string name="health_connect_permissions_rationale_message">SuperHealth recolle datos dos teus dispositivos e, co teu permiso, compárteos con Saúde Conectada. Estes datos gárdanse no teu dispositivo e non se comparten con terceiras partes.</string>
+    <string name="health_connect_all_denied">Revogáronse ou denegáronse todos os permisos para Saúde Conectada para os datos de SuperHealth.</string>
     <string name="health_connect_failed_init">Non se puido iniciar o cliente Saúde Conectada despois do cambio do permiso.</string>
     <string name="health_connect_all_granted">Activouse Saúde Conectada. A sincronización dos datos vai comezar para os tipos de datos seleccionados.</string>
     <string name="health_connect_permission_changed">Cambiaron os permisos para Saúde Conectada.</string>
@@ -1788,7 +1783,7 @@
     <string name="health_connect_sync_now_title">Sincronizar agora?</string>
     <string name="health_connect_sync_now">Sincronizar agora</string>
     <string name="health_connect_sync_later">Sincronizar máis tarde</string>
-    <string name="health_connect_prompt_full_dao_reset">Revogáronse todos os permisos de Gadgetbridge para Saúde Conectada. Tamén eliminaches todos os datos? Se é así, restablecendo o historial da sincronización permites volver a sincronizar todos os datos antigos se volves a conceder o permiso.</string>
+    <string name="health_connect_prompt_full_dao_reset">Revogáronse todos os permisos de SuperHealth para Saúde Conectada. Tamén eliminaches todos os datos? Se é así, restablecendo o historial da sincronización permites volver a sincronizar todos os datos antigos se volves a conceder o permiso.</string>
     <string name="health_connect_reset_sync_history">Restablecer historial de sincronización</string>
     <string name="health_connect_keep_sync_history">Manter historial da sincronización</string>
     <string name="health_connect_sync_failed">Fallou a sincronización.</string>
@@ -1796,7 +1791,7 @@
     <string name="health_connect_syncing_device_datatype">Sincronizando %1$s %2$s: %3$s a %4$s</string>
     <string name="health_connect_sync_error_for_device">Erro ao sincr para %1$s (%2$s): %3$s</string>
     <string name="health_connect_sleep_session_title">Tempo durmindo desde %1$s</string>
-    <string name="health_connect_sleep_session_notes">Datos do sono desde o dispositivo Gadgetbridge: %1$s.</string>
+    <string name="health_connect_sleep_session_notes">Datos do sono desde o dispositivo SuperHealth: %1$s.</string>
     <string name="health_connect_workout_sync_failed">Fallou a sincronización con Saúde Conectada</string>
     <string name="health_connect_workout_sync_failed_reason">Fallou a sincr con Saúde Conectada (%1$s): %2$s</string>
     <string name="antplus_title">ANT+</string>

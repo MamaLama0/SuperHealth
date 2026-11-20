@@ -21,7 +21,7 @@
     <string name="lh_last_sync">Synced %1$s</string>
     <string name="lh_device_settings">Device settings</string>
     <string name="lh_settings">LocalHealth settings</string>
-    <string name="lh_advanced">Advanced (Gadgetbridge)</string>
+    <string name="lh_advanced">Advanced (SuperHealth)</string>
     <string name="lh_help">About</string>
     <string name="lh_profile">Profile</string>
     <string name="lh_profile_edit">Tap to edit</string>

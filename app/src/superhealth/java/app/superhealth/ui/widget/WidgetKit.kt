@@ -39,7 +39,7 @@ import androidx.glance.text.TextStyle
 import app.superhealth.MainActivity
 import app.superhealth.neutralLook
 import app.superhealth.ui.dashboard.Rings
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /**
  * Socle commun des widgets SuperHealth : couleurs claires / sombres reprises de l'app, ouverture d'un écran, en-tête à

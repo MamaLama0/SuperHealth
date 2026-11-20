@@ -1,6 +1,6 @@
 package app.superhealth.training.ui
 
-/** Dictionnaire français → anglais (libellés MacroFactor Workouts quand ils existent). Généré depuis tr()/trf(). */
+/** Dictionnaire français → anglais. Généré depuis tr()/trf(). */
 object EnStrings {
     val map: Map<String, String> = hashMapOf(
         "Échauffements automatiques" to "Automatic warm-ups",
@@ -93,7 +93,6 @@ object EnStrings {
         "Réglages" to "Settings",
         "Ne pas recommander" to "Do not recommend",
         "Exclu de la génération de programmes et des remplacements" to "Excluded from program generation and swaps",
-        "Contenu : MacroFactor Workouts (usage personnel)." to "Content: MacroFactor Workouts (personal use).",
         "Cette semaine" to "This week",
         "Séances" to "Workouts",
         "Séries" to "Sets",
@@ -136,7 +135,6 @@ object EnStrings {
         "Connecter Health Connect ?" to "Connect Health Connect?",
         "Vos séances partagées avec vos autres apps." to "Share your workouts with your other apps.",
         "Chaque séance enregistrée comme entraînement" to "Every workout saved as a training session",
-        "Poids de corps lu depuis votre balance ou La Bouffe" to "Body weight read from your scale or La Bouffe",
         "Connecté" to "Connected",
         "Connecter" to "Connect",
         "Les 30 premiers jours" to "First 30 Days",
@@ -323,7 +321,6 @@ object EnStrings {
         "Remplace toutes les données" to "Replaces all data",
         "À propos" to "About",
         "Usage personnel · sans compte · hors ligne" to "Personal use · no account · offline",
-        "Exercices, photos et illustrations : MacroFactor Workouts" to "Exercises, photos and illustrations: MacroFactor Workouts",
         "Non disponible sur cet appareil" to "Not available on this device",
         "Séances et poids de corps" to "Workouts and body weight",
         "Synchroniser" to "Sync now",

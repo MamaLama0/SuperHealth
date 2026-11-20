@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.workouts.templates.WorkoutTemplateListActivity">
+    tools:context="app.superhealth.engine.activities.workouts.templates.WorkoutTemplateListActivity">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/workout_template_list"

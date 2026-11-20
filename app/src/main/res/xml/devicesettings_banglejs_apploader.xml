@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <nodomain.freeyourgadget.gadgetbridge.util.preferences.SubtitleListPreference
+    <app.superhealth.engine.util.preferences.SubtitleListPreference
         android:defaultValue="https://banglejs.com/apps/android.html"
         android:entries="@array/banglejs_webview_url_titles"
         android:entryValues="@array/banglejs_webview_url_values"

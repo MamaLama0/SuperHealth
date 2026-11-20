@@ -13,7 +13,7 @@ import app.superhealth.wellbeing.Checkin
 import app.superhealth.wellbeing.Cycle
 import app.superhealth.wellbeing.Form
 import app.superhealth.wellbeing.Journal
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.model.ActivityKind
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate

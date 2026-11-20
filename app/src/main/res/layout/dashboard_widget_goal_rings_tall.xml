@@ -22,7 +22,7 @@
             android:layout_marginTop="8dp"
             android:layout_weight="1">
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.dashboard.GoalRingsView
+            <app.superhealth.engine.activities.dashboard.GoalRingsView
                 android:id="@+id/tile_goal_rings"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"

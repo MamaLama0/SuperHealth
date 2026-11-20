@@ -413,7 +413,7 @@ fun GoalEditScreen(vm: AppViewModel, onBack: () -> Unit) {
                 ratePctPerWeek = if (type == GoalType.MAINTENANCE) 0.0 else (computedRate ?: 0.5), endDay = if (byDate && type != GoalType.MAINTENANCE) endDay else null,
             )
             vm.repo.startGoal(g)
-            // Nouvel objectif → nouveau programme immédiat (comme « Set New Program » de MacroFactor).
+            // Nouvel objectif → nouveau programme immédiat.
             vm.repo.saveCheckIn(Targets.checkIn(an.today, an.tdeeAt(an.today), trend, an.lbmAt(an.today), an.program, g, an.profile.heightCm, java.time.LocalDate.now().year - an.profile.birthYear, an.profile.sex == app.superhealth.nutrition.domain.Sex.FEMALE))
             onBack()
         }

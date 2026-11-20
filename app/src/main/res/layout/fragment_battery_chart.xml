@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.BatteryInfoChartFragment">
+    tools:context="app.superhealth.engine.activities.BatteryInfoChartFragment">
 
     <HorizontalScrollView
         android:layout_width="match_parent"
@@ -24,19 +24,19 @@
 
     </HorizontalScrollView>
 
-    <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+    <app.superhealth.engine.activities.charts.mpchart.GbChartView
         android:id="@+id/battery_chart"
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:layout_marginTop="4dp" />
 
-    <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.ChartLegendView
+    <app.superhealth.engine.activities.charts.mpchart.ChartLegendView
         android:id="@+id/battery_chart_legend"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp" />
 
-    <nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartChipScrollView
+    <app.superhealth.engine.activities.charts.ChartChipScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingStart="10dp"
@@ -51,6 +51,6 @@
             app:singleLine="true"
             android:layout_marginTop="8dp" />
 
-    </nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartChipScrollView>
+    </app.superhealth.engine.activities.charts.ChartChipScrollView>
 
 </LinearLayout>

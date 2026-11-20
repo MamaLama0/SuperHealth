@@ -3,7 +3,7 @@ package app.superhealth.nutrition.domain
 /**
  * Habitudes (enum Habit observé : foodLogging, weighIn, workout ; HabitStreakType).
  * Série = jours consécutifs remplis jusqu'à aujourd'hui ; un jour d'aujourd'hui encore vide ne casse pas la série.
- * [INFÉRÉ] règle exacte de MacroFactor non décodée (jour de jeûne compté comme journalisé, journal incomplet aussi).
+ * [INFÉRÉ] règle exacte non connue (jour de jeûne compté comme journalisé, journal incomplet aussi).
  */
 object Habits {
     data class Streak(val current: Int, val longest: Int, val done30: Int)
@@ -24,7 +24,7 @@ object Habits {
     fun weekStart(day: Long): Long = day - Math.floorMod(day + 3, 7L)
 
     /**
-     * Semaines actives de suite (au moins un jour fait dans la semaine), comme l'habitude d'entraînement de MacroFactor
+     * Semaines actives de suite (au moins un jour fait dans la semaine)
      * Workouts ; la semaine en cours encore vide ne casse pas la série.
      */
     fun weekStreak(doneDays: Set<Long>, today: Long): Int {

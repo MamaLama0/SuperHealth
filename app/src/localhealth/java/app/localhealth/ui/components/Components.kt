@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.localhealth.ui.theme.ColorFamily
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** Animated 0..1 progress, replayed whenever [target] changes. */
 @Composable

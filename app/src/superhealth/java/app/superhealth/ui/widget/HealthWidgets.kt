@@ -55,7 +55,7 @@ import app.superhealth.ui.formatNumber
 import app.superhealth.ui.theme.HealthHues
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import app.superhealth.nutrition.ui.energyValue

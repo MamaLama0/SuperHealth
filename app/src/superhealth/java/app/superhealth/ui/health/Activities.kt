@@ -419,9 +419,9 @@ fun ColumnScope.WatchHistoryCard(vm: SuperViewModel) {
     var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     if (busy) LaunchedEffect(Unit) {
         while (true) {
-            progress = if (nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupport.historyRunning) {
-                val total = nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupport.historyTotal
-                (total - nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.GarminSupport.historyRemaining).coerceAtLeast(0) to total
+            progress = if (app.superhealth.engine.service.devices.garmin.GarminSupport.historyRunning) {
+                val total = app.superhealth.engine.service.devices.garmin.GarminSupport.historyTotal
+                (total - app.superhealth.engine.service.devices.garmin.GarminSupport.historyRemaining).coerceAtLeast(0) to total
             } else null
             kotlinx.coroutines.delay(1000)
         }

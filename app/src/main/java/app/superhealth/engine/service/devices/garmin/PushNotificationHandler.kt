@@ -1,0 +1,108 @@
+package app.superhealth.engine.service.devices.garmin
+
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.devices.HydrationSampleProvider
+import app.superhealth.engine.model.ActivityUser
+import app.superhealth.engine.proto.garmin.GdiDeviceMessages
+import app.superhealth.engine.proto.garmin.GdiSmartProto.Smart
+import app.superhealth.engine.service.devices.garmin.http.interceptors.HydrationInterceptor
+import app.superhealth.engine.util.protobuf.buildWith
+import org.slf4j.LoggerFactory
+import java.time.LocalDate
+import java.util.Locale
+import kotlin.random.Random
+
+@Suppress("SameParameterValue")
+class PushNotificationHandler(private val deviceSupport: GarminSupport) {
+    fun handle(service: GdiDeviceMessages.DeviceMessageService): Boolean {
+        if (service.hasMessageSubscribe()) {
+            LOG.debug("Last push notification received by the watch: {}", service.messageSubscribe.lastEventId)
+            return true
+        }
+
+        if (service.hasMessageResponse()) {
+            val ack = service.messageResponse
+            if (ack.status == GdiDeviceMessages.CIQMessageResponse.Status.SUCCESS) {
+                LOG.debug("Push notification {} acknowledged", ack.eventId)
+            } else {
+                LOG.warn("Push notification {} failed, status={}", ack.eventId, ack.status)
+            }
+            return true
+        }
+
+        LOG.warn("Unknown push notification message: {}", service)
+        return false
+    }
+
+    /**
+     * A push with the hydration total, goal and last entry for the current day.
+     */
+    fun hydrationUpdate(): Smart? {
+        val device = deviceSupport.device
+        val date = LocalDate.now()
+        val day = HydrationSampleProvider.toDay(date)
+
+        val data = GBApplication.acquireDbReadOnly().use { db ->
+            val provider = device.deviceCoordinator.getHydrationSampleProvider(device, db.daoSession) ?: return null
+            val lastEntry = provider.getLastEntry(day)
+
+            JsonObject().apply {
+                @Suppress("SpellCheckingInspection")
+                addProperty("ciqPayloadType", "hydration_update")
+                addProperty("dailyHydrationTotal", provider.getDayTotal(day))
+                addProperty("dailyHydrationGoal", ActivityUser().hydrationGoalMl)
+                addProperty("calendarDate", date.toString())
+                if (lastEntry != null) {
+                    addProperty("lastEntryTimestamp", HydrationInterceptor.formatTimestampLocal(lastEntry.timestamp))
+                } else {
+                    add("lastEntryTimestamp", JsonNull.INSTANCE)
+                }
+            }
+        }
+
+        return push(HYDRATION_APP_ID, data)
+    }
+
+    /**
+     * A push with the hydration settings.
+     */
+    fun hydrationSettings(): Smart {
+        val data = JsonObject().apply {
+            @Suppress("SpellCheckingInspection")
+            addProperty("ciqPayloadType", "hydration_settings")
+            HydrationInterceptor.buildSettings(deviceSupport.devicePrefs, true).entrySet().forEach { (key, value) ->
+                add(key, value)
+            }
+        }
+
+        return push(HYDRATION_APP_ID, data)
+    }
+
+    private fun push(appId: String, data: JsonObject): Smart {
+        val payload = JsonObject().apply {
+            add("data", data)
+            add("gns", JsonObject())
+        }
+        val id = String.format(Locale.ROOT, "%d-%08x", System.currentTimeMillis(), Random.nextInt())
+
+        LOG.debug("Sending push notification {} for {}: {}", id, appId, payload)
+
+        return Smart.newBuilder().buildWith {
+            deviceMessageService = GdiDeviceMessages.DeviceMessageService.newBuilder().buildWith {
+                messageRequest = GdiDeviceMessages.CIQMessageRequest.newBuilder().buildWith {
+                    this.eventId = id
+                    this.appId = appId
+                    this.payload = payload.toString()
+                }
+            }
+        }
+    }
+
+    companion object {
+        private val LOG = LoggerFactory.getLogger(PushNotificationHandler::class.java)
+
+        private const val HYDRATION_APP_ID = "0b8d4130-e3c6-4217-bd6e-af3933cb1c47"
+    }
+}

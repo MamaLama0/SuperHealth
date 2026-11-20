@@ -6,7 +6,7 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import app.localhealth.data.Metric
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 fun formatNumber(v: Double, digits: Int = 0): String =
     NumberFormat.getNumberInstance(Locale.getDefault()).apply {

@@ -39,7 +39,7 @@
             android:layout_marginStart="35dp"
             android:layout_marginTop="35dp"
             android:contentDescription="@null"
-            app:srcCompat="@drawable/gadgetbridge_img" />
+            app:srcCompat="@drawable/app_img" />
 
         <ProgressBar
             android:layout_width="171dp"

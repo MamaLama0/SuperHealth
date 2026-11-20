@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="gadgetbridge_running">SuperHealth est connecté à votre montre</string>
+    <string name="about_activity_title">À propos de SuperHealth</string>
+    <string name="about_description">Nutrition, musculation et santé dans une app gratuite, sans compte.</string>
+    <string name="app_running">SuperHealth est connecté à votre montre</string>
     <string name="widget_today_desc">Calories et macros restantes, raccourcis de saisie</string>
     <string name="widget_weight_desc">Tendance du poids et courbe sur 30 jours</string>
     <string name="widget_kcal_name">Calories et macros</string>

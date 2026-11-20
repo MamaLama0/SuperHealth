@@ -15,12 +15,12 @@ class HcOutdoorSyncTest {
     }
     @Test fun watchRunningVariantsUseTheHealthConnectRunningTypes() {
         listOf("RUNNING","TRAIL_RUN","ULTRA_RUN","TRACK_RUN","OUTDOOR_RUNNING").forEach { name ->
-            val kind=java.lang.Enum.valueOf(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind::class.java,name)
+            val kind=java.lang.Enum.valueOf(app.superhealth.engine.model.ActivityKind::class.java,name)
             assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
-                nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WorkoutSyncerUtils.mapActivityKindToExerciseType(kind))
+                app.superhealth.engine.util.healthconnect.syncers.WorkoutSyncerUtils.mapActivityKindToExerciseType(kind))
         }
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL,
-            nodomain.freeyourgadget.gadgetbridge.util.healthconnect.syncers.WorkoutSyncerUtils.mapActivityKindToExerciseType(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.TREADMILL))
+            app.superhealth.engine.util.healthconnect.syncers.WorkoutSyncerUtils.mapActivityKindToExerciseType(app.superhealth.engine.model.ActivityKind.TREADMILL))
     }
     @Test fun exportUsesStableIdsSeparateMetricsAndCorrectTimes() {
         val a=HcOutdoorSync.records(listOf(run()),0,now,true,true)

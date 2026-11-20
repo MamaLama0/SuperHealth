@@ -136,11 +136,11 @@ object BodyAlert {
             val rest = Bridge.healthValue(ctx, Metric.RESTING_HR, date) ?: Bridge.healthValue(ctx, Metric.RESTING_HR, eve)
             if (rest != null) {
                 val hr = (Bridge.minuteHeart(eve) + Bridge.minuteHeart(date)).filter { it.first * 1000 in (start - 3 * 3_600_000L) until start }
-                val max = Scores.hrMax(age(), hr.map { it.second }, runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().gender == nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.GENDER_FEMALE }.getOrDefault(false))
+                val max = Scores.hrMax(age(), hr.map { it.second }, runCatching { app.superhealth.engine.model.ActivityUser().gender == app.superhealth.engine.model.ActivityUser.GENDER_FEMALE }.getOrDefault(false))
                 if (hr.count { it.second >= rest + 0.6 * (max - rest) } >= 10) out += Cause.LATE
             }
             // réveils : au moins 45 min éveillé ou 300 pas dans les heures entières de la nuit
-            val awake = night.filter { it.kind == nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60000.0
+            val awake = night.filter { it.kind == app.superhealth.engine.model.ActivityKind.AWAKE_SLEEP }.sumOf { it.end - it.start } / 60000.0
             val steps = (Bridge.hourlySteps(ctx, eve) + Bridge.hourlySteps(ctx, date))
                 .filter { it.timestampMs >= start && it.timestampMs + 3_600_000L <= end }.sumOf { it.value }
             if (awake >= 45 || steps >= 300) out += Cause.RESTLESS
@@ -148,5 +148,5 @@ object BodyAlert {
         return out
     }
 
-    private fun age(): Int = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().age }.getOrDefault(30).coerceIn(10, 100)
+    private fun age(): Int = runCatching { app.superhealth.engine.model.ActivityUser().age }.getOrDefault(30).coerceIn(10, 100)
 }

@@ -45,63 +45,63 @@
         android:title="@string/action_debug">
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.NotificationsDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.NotificationsDebugFragment"
             android:icon="@drawable/ic_notifications"
             android:key="pref_debug_notifications"
             android:persistent="false"
             android:title="@string/menuitem_notifications" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.CallsDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.CallsDebugFragment"
             android:icon="@drawable/ic_phone"
             android:key="pref_debug_calls"
             android:persistent="false"
             android:title="@string/phone_calls" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.MusicDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.MusicDebugFragment"
             android:icon="@drawable/ic_music_note"
             android:key="pref_debug_music"
             android:persistent="false"
             android:title="@string/menuitem_music" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.WeatherDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.WeatherDebugFragment"
             android:icon="@drawable/ic_wb_sunny"
             android:key="pref_debug_weather"
             android:persistent="false"
             android:title="@string/menuitem_weather" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.NavigationDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.NavigationDebugFragment"
             android:icon="@drawable/ic_navigation"
             android:key="pref_debug_navigation"
             android:persistent="false"
             android:title="@string/pref_header_navigation" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.DatabaseDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.DatabaseDebugFragment"
             android:icon="@drawable/ic_database"
             android:key="pref_debug_database"
             android:persistent="false"
             android:title="@string/database" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.PreferencesDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.PreferencesDebugFragment"
             android:icon="@drawable/ic_settings_applications"
             android:key="pref_debug_preferences"
             android:persistent="false"
             android:title="@string/menuitem_settings" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.DeviceListDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.DeviceListDebugFragment"
             android:icon="@drawable/ic_devices_wearables"
             android:key="pref_debug_devices"
             android:persistent="false"
             android:title="@string/bottom_nav_devices" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.CompanionDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.CompanionDebugFragment"
             android:icon="@drawable/ic_devices_other"
             android:key="pref_debug_companion_devices"
             android:persistent="false"
@@ -109,42 +109,42 @@
             tools:ignore="NewApi" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.DashboardDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.DashboardDebugFragment"
             android:icon="@drawable/ic_dashboard"
             android:key="pref_debug_dashboard"
             android:persistent="false"
             android:title="@string/bottom_nav_dashboard" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.WidgetsDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.WidgetsDebugFragment"
             android:icon="@drawable/ic_widgets"
             android:key="pref_debug_widgets"
             android:persistent="false"
             android:title="@string/menuitem_widgets" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.LocationDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.LocationDebugFragment"
             android:icon="@drawable/ic_gps_location"
             android:key="pref_debug_location"
             android:persistent="false"
             android:title="@string/pref_header_location" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.HealthConnectDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.HealthConnectDebugFragment"
             android:icon="@drawable/ic_heart"
             android:key="pref_debug_health_connect"
             android:persistent="false"
             android:title="@string/healthconnect_settings" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.OtherDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.OtherDebugFragment"
             android:icon="@drawable/ic_developer_mode"
             android:key="pref_debug_other"
             android:persistent="false"
             android:title="@string/debug_other_actions" />
 
         <Preference
-            android:fragment="nodomain.freeyourgadget.gadgetbridge.activities.debug.InternetHelperDebugFragment"
+            android:fragment="app.superhealth.engine.activities.debug.InternetHelperDebugFragment"
             android:icon="@drawable/ic_language"
             android:key="pref_debug_internethelper"
             android:persistent="false"

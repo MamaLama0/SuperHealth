@@ -72,7 +72,7 @@ import app.superhealth.nutrition.ui.toKcal
 import app.superhealth.nutrition.ui.toNum
 import kotlin.math.roundToInt
 
-/** Bloc « 33 Calories | 17 % 1,4 Protéines (g) | … » de la fiche aliment MacroFactor. */
+/** Bloc « 33 Calories | 17 % 1,4 Protéines (g) | … » de la fiche aliment. */
 @Composable
 fun NutrientHeader(m: Macros, s: Settings) {
     val kcalFromMacros = (m.protein * 4 + m.fat * 9 + m.carbs * 4).coerceAtLeast(1.0)
@@ -231,7 +231,7 @@ private enum class QtyUnit { GRAMS, SERVINGS, ENERGY }
 
 /**
  * Fiche d'un aliment avant ajout : quantité en grammes, en portions ou en calories (la quantité est déduite de l'énergie
- * voulue, comme « Log by Calories » de MacroFactor), aperçu des macros et de l'impact.
+ * voulue), aperçu des macros et de l'impact.
  * Recette : [onExplode] journalise les ingrédients séparément, [onEdit] ouvre l'éditeur.
  */
 @Composable
@@ -331,7 +331,7 @@ fun FoodSheet(
             when (food.source) { app.superhealth.nutrition.data.SwissFoods.SOURCE -> app.superhealth.nutrition.data.SwissFoods.CREDIT; app.superhealth.nutrition.data.UsdaFoods.SOURCE -> app.superhealth.nutrition.data.UsdaFoods.CREDIT; else -> null }?.let { credit -> Text(trf("Source : %1\$s", credit),
                 style = MaterialTheme.typography.labelSmall, color = Mf.colors.textTertiary, modifier = Modifier.padding(top = 8.dp)) }
         }
-        // Bouton fixé en bas de la fiche, comme dans MacroFactor
+        // Bouton fixé en bas de la fiche
         Column(Modifier.fillMaxWidth().background(Mf.colors.card).padding(horizontal = 20.dp, vertical = 12.dp)) {
             PillButton(addLabel, Modifier.fillMaxWidth(), enabled = grams != null) { onAdd(grams!!) }
             if (onExplode != null) PillButton(tr("Journaliser les ingrédients séparément"), Modifier.fillMaxWidth().padding(top = 8.dp), strong = false,

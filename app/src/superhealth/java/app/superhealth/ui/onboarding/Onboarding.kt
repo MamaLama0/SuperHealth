@@ -104,8 +104,8 @@ import app.superhealth.bridge.HealthConnectHub
 import app.superhealth.bridge.Watch
 import app.superhealth.training.ui.GymTemplate
 import app.superhealth.ui.SuperViewModel
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.model.ActivityUser
 import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -169,10 +169,10 @@ import kotlin.math.roundToInt
 
 /**
  * Questionnaire d'accueil de SuperHealth : un seul parcours pour les trois modules.
- * - Vous : prénom, sexe, naissance, taille, poids, silhouette, activité, historique (questions de MacroFactor) ;
- * - Objectif : type, poids cible, durée (le rythme en découle, comme dans MacroFactor), protéines, diète, plancher, répartition ;
- * - Entraînement : type d'entraînement, puis expérience et salle si musculation (questions de MacroFactor Workouts) ;
- * - Connexions : montre (module LocalHealth, désactivable) et Health Connect ;
+ * - Vous : prénom, sexe, naissance, taille, poids, silhouette, activité, historique ;
+ * - Objectif : type, poids cible, durée (le rythme en découle), protéines, diète, plancher, répartition ;
+ * - Entraînement : type d'entraînement, puis expérience et salle si musculation ;
+ * - Connexions : montre (module montre, désactivable) et Health Connect ;
  * puis génération animée du programme nutrition et, au choix, du programme de musculation.
  */
 private enum class Step(val section: Int) {
@@ -187,10 +187,10 @@ private enum class Step(val section: Int) {
 
 private val SECTIONS = listOf("Profil", "Nutrition", "Musculation", "Connexions")
 
-/** Choix pour la montre : l'associer maintenant, plus tard, ou désactiver le module LocalHealth. */
+/** Choix pour la montre : l'associer maintenant, plus tard, ou désactiver le module montre. */
 private enum class WatchChoice(val label: String, val description: String) {
     PAIR("Oui, l'associer maintenant", "Recherche Bluetooth de votre montre ou bracelet"),
-    APP("Oui, avec son app", "Garmin Connect, NOOP, Zepp… restent installées : données via Health Connect"),
+    APP("Oui, avec son app", "Garmin Connect, WHOOP, Zepp… restent installées : données via Health Connect"),
     LATER("Oui, plus tard", "Le module montre reste actif, à associer dans Réglages"),
     NONE("Non, pas de montre", "Le module montre est désactivé (réactivable dans Réglages)"),
 }
@@ -291,7 +291,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var name by rememberSaveable { mutableStateOf(if (sim) "" else app.superhealth.ui.userName() ?: "") }
     var experience by rememberSaveable { mutableStateOf(if (sim) app.superhealth.training.domain.Experience.INTERMEDIATE else svm.training.state.value.settings.experience) }
     var gym by rememberSaveable { mutableStateOf(GymTemplate.COMMERCIAL) }
-    // Programme de musculation généré à la fin du questionnaire (questions essentielles de l'assistant de La Salle).
+    // Programme de musculation généré à la fin du questionnaire (questions essentielles de l'assistant de musculation).
     var wantProgram by rememberSaveable { mutableStateOf(true) }
     var liftGoal by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Goal.HYPERTROPHY) }
     var liftDays by rememberSaveable { mutableIntStateOf(3) }
@@ -395,8 +395,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         targetKg >= app.superhealth.nutrition.domain.Senior.minTargetKg(age(), heightCm.toDouble(), weightKg) - 0.05
     fun targetOk() = (goal == GoalType.CUT && targetKg < weightKg - 0.05 && seniorFloorOk()) || (goal == GoalType.BULK && targetKg > weightKg + 0.05)
     /**
-     * Durée → rythme en % du poids par semaine (unité des programmes de MacroFactor) : écart / semaines / poids actuel.
-     * Les durées proposées gardent le rythme entre 0,1 % et le maximum de MacroFactor (1 % en perte, 0,5 % en prise).
+     * Durée → rythme en % du poids par semaine : écart / semaines / poids actuel.
+     * Les durées proposées gardent le rythme entre 0,1 % et le maximum (1 % en perte, 0,5 % en prise).
      */
     fun rateFor(w: Int) = abs(targetKg - weightKg) / w / weightKg * 100
     /** Cible par défaut : celle que conseillent l'âge et l'IMC (Senior), gardée si elle va déjà dans le bon sens. */
@@ -415,7 +415,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         val longest = (delta / (weightKg * 0.1 / 100)).toInt().coerceIn(shortest, 156)
         return (shortest..longest).toList()
     }
-    /** Durée par défaut : celle du rythme recommandé de MacroFactor (0,5 % en perte, 0,25 % en prise), 6 mois au moins dès 65 ans, puis le rythme exact qui en découle. */
+    /** Durée par défaut : celle du rythme recommandé (0,5 % en perte, 0,25 % en prise), 6 mois au moins dès 65 ans, puis le rythme exact qui en découle. */
     fun initPace() {
         val options = paceWeeks()
         val pref = abs(targetKg - weightKg) / (weightKg * minOf(if (goal == GoalType.BULK) 0.25 else 0.5, maxPace()) / 100)
@@ -499,7 +499,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         val s = withGoals(settings.copy(weightUnit = unit, healthConnect = health,
             language = if (Lang.english) Language.EN else Language.FR))
         val p = draftProgram(); val g = draftGoal()
-        // Prénom : profil Gadgetbridge (envoyé aux montres qui l'affichent).
+        // Prénom : profil de la montre (envoyé aux montres qui l'affichent).
         GBApplication.getPrefs().preferences.edit().putString(ActivityUser.PREF_USER_NAME, name.trim()).apply()
         vm.repo.prefs.setProfile(draftProfile())
         vm.repo.prefs.setProgram(p)
@@ -934,7 +934,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                         val kgWeek = weightKg * rate / 100
                         val (_, ci) = remember(rate, targetKg, goal) { draftCheckIn() }
-                        // repères sur l'échelle de MacroFactor, pas sur le plafond d'âge : le rythme ESPEN n'est pas « ambitieux »
+                        // repères sur l'échelle des rythmes, pas sur le plafond d'âge : le rythme ESPEN n'est pas « ambitieux »
                         val max = if (goal == GoalType.BULK) 0.5 else 1.0
                         Spacer(Modifier.height(12.dp))
                         Text(trf("%1\$s %% du poids / semaine", num(rate, 2)), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
@@ -999,7 +999,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                                 if (!Watch.enabled) Watch.setEnabled(true)
                                 pairWatch()
                             }
-                            Text(tr("Compatible avec les montres prises en charge par Gadgetbridge (Garmin, Amazfit, Xiaomi, Huawei, Pebble…)."),
+                            Text(tr("Compatible avec la plupart des montres connectées (Garmin, Amazfit, Xiaomi, Huawei, Pebble…)."),
                                 style = MaterialTheme.typography.bodySmall, color = Mf.colors.textSecondary, modifier = Modifier.padding(top = 8.dp))
                         }
                         if (watch == WatchChoice.APP) {
@@ -1129,13 +1129,13 @@ private fun Welcome(accent: app.superhealth.nutrition.domain.AccentColor, recove
 @Composable
 private fun AppIcon(sizeDp: Int, accent: app.superhealth.nutrition.domain.AccentColor) {
     val res = when (accent) {
-        app.superhealth.nutrition.domain.AccentColor.PINK -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground
-        app.superhealth.nutrition.domain.AccentColor.BLUE -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_blue
-        app.superhealth.nutrition.domain.AccentColor.GREEN -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_green
-        app.superhealth.nutrition.domain.AccentColor.YELLOW -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_yellow
-        app.superhealth.nutrition.domain.AccentColor.PURPLE -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_purple
-        app.superhealth.nutrition.domain.AccentColor.ORANGE -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_orange
-        app.superhealth.nutrition.domain.AccentColor.GRAY -> nodomain.freeyourgadget.gadgetbridge.R.mipmap.sh_launcher_foreground_gray
+        app.superhealth.nutrition.domain.AccentColor.PINK -> app.superhealth.engine.R.mipmap.sh_launcher_foreground
+        app.superhealth.nutrition.domain.AccentColor.BLUE -> app.superhealth.engine.R.mipmap.sh_launcher_foreground_blue
+        app.superhealth.nutrition.domain.AccentColor.GREEN -> app.superhealth.engine.R.mipmap.sh_launcher_foreground_green
+        app.superhealth.nutrition.domain.AccentColor.YELLOW -> app.superhealth.engine.R.mipmap.sh_launcher_foreground_yellow
+        app.superhealth.nutrition.domain.AccentColor.PURPLE -> app.superhealth.engine.R.mipmap.sh_launcher_foreground_purple
+        app.superhealth.nutrition.domain.AccentColor.ORANGE -> app.superhealth.engine.R.mipmap.sh_launcher_foreground_orange
+        app.superhealth.nutrition.domain.AccentColor.GRAY -> app.superhealth.engine.R.mipmap.sh_launcher_foreground_gray
     }
     Box(Modifier.size(sizeDp.dp).shadow(10.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.2f))
         .clip(CircleShape).background(Color(0xFF0B0B0C)), contentAlignment = Alignment.Center) {
@@ -1270,7 +1270,7 @@ private fun RowStat(label: String, value: String) {
     }
 }
 
-/** Sélecteur à molette (comme les pickers de MacroFactor). */
+/** Sélecteur à molette. */
 @Composable
 private fun Wheel(values: List<String>, initial: Int, height: Int = 220, modifier: Modifier = Modifier, onIndex: (Int) -> Unit) {
     val itemH = 44.dp
@@ -1427,7 +1427,7 @@ private fun MacroStat(label: String, g: Double, color: Color, modifier: Modifier
     }
 }
 
-/** Grille de silhouettes MacroFactor (assets body_fat) pour choisir son % de masse grasse. */
+/** Grille de silhouettes (assets body_fat) pour choisir son % de masse grasse. */
 @Composable
 fun BodyFatPicker(sex: Sex, selected: Double?, onPick: (Int) -> Unit) {
     val steps = if (sex == Sex.MALE) listOf(6, 10, 15, 20, 25, 30, 35, 40) else listOf(15, 20, 25, 30, 35, 40, 45, 50)

@@ -42,7 +42,7 @@ import app.superhealth.ui.tr
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.model.ActivityKind
 
 /*
  * Graphiques du sommeil, communs à l'écran Sommeil et aux cartes du tableau de bord : hypnogramme, phases nuit par nuit

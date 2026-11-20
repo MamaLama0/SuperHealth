@@ -3,7 +3,6 @@
     <string name="controlcenter_take_screenshot">Veikt ekrānuzņēmumu</string>
     <string name="controlcenter_find_device">Atrast zaudēto ierīci</string>
     <string name="controlcenter_fetch_activity_data">Sinhronizēt</string>
-    <string name="action_donate">Ziedot</string>
     <string name="action_quit">Iziet</string>
     <string name="action_debug">Atkļūdošana</string>
     <string name="action_settings">Iestatījumi</string>

@@ -1,0 +1,315 @@
+/*  Copyright (C) 2024-2026 Arjan Schrijver
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.devices.yawell.ring
+
+import app.superhealth.engine.R
+import app.superhealth.engine.activities.devicesettings.DeviceSpecificSettingsScreen
+import app.superhealth.engine.activities.devicesettings.dsl.DeviceSettingsSpec
+import app.superhealth.engine.activities.devicesettings.dsl.components.heartrateMeasurementInterval
+import app.superhealth.engine.activities.devicesettings.dsl.deviceSettings
+import app.superhealth.engine.capabilities.HeartRateCapability.MeasurementInterval
+import app.superhealth.engine.devices.AbstractBLEDeviceCoordinator
+import app.superhealth.engine.devices.ColmiHrvValueSampleProvider
+import app.superhealth.engine.devices.ColmiSpo2SampleProvider
+import app.superhealth.engine.devices.ColmiStressSampleProvider
+import app.superhealth.engine.devices.ColmiTemperatureSampleProvider
+import app.superhealth.engine.devices.ComputedHrvSummarySampleProvider
+import app.superhealth.engine.devices.DeviceCoordinator
+import app.superhealth.engine.devices.SleepSessionProvider
+import app.superhealth.engine.devices.yawell.ring.samples.ColmiSleepSessionProvider
+import app.superhealth.engine.devices.SampleProvider
+import app.superhealth.engine.devices.TimeSampleProvider
+import app.superhealth.engine.devices.yawell.ring.samples.ColmiActivitySampleProvider
+import app.superhealth.engine.entities.ColmiActivitySample
+import app.superhealth.engine.entities.DaoSession
+import app.superhealth.engine.impl.GBDevice
+import app.superhealth.engine.model.HrvSummarySample
+import app.superhealth.engine.model.HrvValueSample
+import app.superhealth.engine.model.Spo2Sample
+import app.superhealth.engine.model.StressSample
+import app.superhealth.engine.model.TemperatureSample
+import app.superhealth.engine.service.DeviceSupport
+import app.superhealth.engine.service.devices.yawell.ring.YawellRingDeviceSupport
+
+abstract class AbstractYawellRingCoordinator : AbstractBLEDeviceCoordinator() {
+    override fun getManufacturer(): String? {
+        return "Colmi"
+    }
+
+    override fun getDeviceSupportClass(device: GBDevice): Class<out DeviceSupport> {
+        return YawellRingDeviceSupport::class.java
+    }
+
+    override fun getDefaultIconResource(): Int {
+        return R.drawable.ic_device_smartring
+    }
+
+    override fun getBondingStyle(): Int {
+        return BONDING_STYLE_NONE
+    }
+
+    override fun supportsPowerOff(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsFindDevice(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsActivityTracking(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsDataFetching(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsRealtimeData(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsStressMeasurement(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsSpo2(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsHeartRateStats(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsHeartRateMeasurement(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsManualHeartRateMeasurement(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsRemSleep(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsAwakeSleep(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsHrvMeasurement(device: GBDevice): Boolean {
+        return true
+    }
+
+    open fun hasDisplay(): Boolean {
+        return false
+    }
+
+    override fun supportsAppNotifications(device: GBDevice): Boolean {
+        return false
+    }
+
+    override fun supportsPhoneCalls(device: GBDevice): Boolean {
+        return false
+    }
+
+    override fun getSleepSessionProvider(device: GBDevice, session: DaoSession): SleepSessionProvider {
+        return ColmiSleepSessionProvider(device, session)
+    }
+
+    override fun getSampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): SampleProvider<out ColmiActivitySample?> {
+        return ColmiActivitySampleProvider(device, session)
+    }
+
+    override fun getSpo2SampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): TimeSampleProvider<out Spo2Sample?>? {
+        return ColmiSpo2SampleProvider(device, session)
+    }
+
+    override fun getStressSampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): TimeSampleProvider<out StressSample?>? {
+        return ColmiStressSampleProvider(device, session)
+    }
+
+    override fun getHrvSummarySampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): TimeSampleProvider<out HrvSummarySample?>? {
+        return ComputedHrvSummarySampleProvider(
+            getHrvValueSampleProvider(device, session),
+            device,
+            session
+        )
+    }
+
+    override fun getHrvValueSampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): TimeSampleProvider<out HrvValueSample?>? {
+        return ColmiHrvValueSampleProvider(device, session)
+    }
+
+    override fun getTemperatureSampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): TimeSampleProvider<out TemperatureSample?>? {
+        return ColmiTemperatureSampleProvider(device, session)
+    }
+
+    override fun getHeartRateMeasurementIntervals(): MutableList<MeasurementInterval?> {
+        return mutableListOf(
+            MeasurementInterval.OFF,
+            MeasurementInterval.MINUTES_5,
+            MeasurementInterval.MINUTES_10,
+            MeasurementInterval.MINUTES_15,
+            MeasurementInterval.MINUTES_30,
+            MeasurementInterval.MINUTES_45,
+            MeasurementInterval.HOUR_1
+        )
+    }
+
+    override fun getStressRanges(): IntArray? {
+        // 1-29 = relaxed
+        // 30-59 = normal
+        // 60-79 = medium
+        // 80-99 = high
+        return intArrayOf(1, 30, 60, 80)
+    }
+
+    override fun getDeviceSettings(device: GBDevice): DeviceSettingsSpec = deviceSettings {
+        screen(
+            key = DeviceSpecificSettingsScreen.HEALTH.key,
+            title = R.string.pref_header_health,
+            icon = R.drawable.ic_health,
+        ) {
+            heartrateMeasurementInterval(
+                heartRateMeasurementIntervals
+            )
+            switchSetting(
+                key = "heartrate_stress_monitoring",
+                title = R.string.prefs_stress_monitoring_title,
+                summary = R.string.prefs_stress_monitoring_description,
+                icon = R.drawable.ic_mood_bad,
+                defaultValue = false,
+            )
+            switchSetting(
+                key = "spo2_all_day_monitoring_enabled",
+                title = R.string.prefs_spo2_monitoring_title,
+                summary = R.string.prefs_spo2_monitoring_description,
+                icon = R.drawable.ic_spo2,
+                defaultValue = false,
+            )
+            switchSetting(
+                key = "hrv_all_day_monitoring_enabled",
+                title = R.string.prefs_hrv_monitoring_title,
+                summary = R.string.prefs_hrv_monitoring_description,
+                icon = R.drawable.ic_show_chart,
+                defaultValue = false,
+            )
+            switchSetting(
+                key = "continuous_skin_temperature_measurement",
+                title = R.string.pref_continuous_skin_temperature_measurement_title,
+                icon = R.drawable.ic_temperature,
+                defaultValue = false,
+                visibleWhen = { supportsContinuousTemperature(device) },
+            )
+        }
+        screen(
+            key = DeviceSpecificSettingsScreen.CALLS_AND_NOTIFICATIONS.key,
+            title = R.string.pref_header_calls_and_notifications,
+            icon = R.drawable.ic_notifications,
+            visibleWhen = { supportsAppNotifications(device) },
+        ) {
+            seekbar(
+                key = YawellRingConstants.PREF_NOTIFICATION_VIBRATION_COUNT,
+                title = R.string.pref_header_vibration_count,
+                icon = R.drawable.ic_vibration,
+                min = 1,
+                max = 5,
+                defaultValue = 3,
+            )
+        }
+        screen(
+            key = DeviceSpecificSettingsScreen.DISPLAY.key,
+            title = R.string.pref_header_display,
+            icon = R.drawable.ic_device_display,
+            visibleWhen = { hasDisplay() },
+        ) {
+            switchSetting(
+                key = "display_enabled",
+                title = R.string.pref_display_enabled_title,
+                summary = R.string.pref_display_enabled_summary,
+                icon = R.drawable.ic_power_settings_new,
+                defaultValue = false,
+            )
+            list(
+                key = "wearlocation",
+                title = R.string.prefs_wearside,
+                dependency = "display_enabled",
+                defaultValue = "left",
+                icon = R.drawable.ic_switch_left,
+                entriesRes = R.array.wearside,
+                entryValuesRes = R.array.wearmode_values,
+            )
+            seekbar(
+                key = "screen_brightness",
+                title = R.string.pref_screen_brightness,
+                icon = R.drawable.ic_wb_sunny,
+                dependency = "display_enabled",
+                defaultValue = 2,
+                max = 4,
+            )
+            switchSetting(
+                key = "display_all_day",
+                title = R.string.pref_display_enabled_all_day_title,
+                summary = R.string.pref_display_enabled_all_day_summary,
+                icon = R.drawable.ic_timer,
+                dependency = "display_enabled",
+                disableDependentsState = true,
+                defaultValue = true,
+            )
+            time(
+                key = "display_on_start",
+                title = R.string.mi2_prefs_do_not_disturb_start,
+                icon = R.drawable.ic_start,
+                dependency = "display_all_day",
+                defaultValue = "07:00",
+            )
+            time(
+                key = "display_on_end",
+                title = R.string.mi2_prefs_do_not_disturb_end,
+                icon = R.drawable.ic_keyboard_tab,
+                dependency = "display_all_day",
+                defaultValue = "22:00",
+            )
+        }
+    }
+
+    override fun getLiveActivityFragmentPulseInterval(): Int {
+        return 2000
+    }
+
+    override fun getDeviceKind(device: GBDevice): DeviceCoordinator.DeviceKind? {
+        return DeviceCoordinator.DeviceKind.RING
+    }
+}

@@ -12,7 +12,7 @@ import java.net.URL
 import java.net.URLEncoder
 
 /**
- * Client Open Food Facts — seul appel réseau de l'application (remplace la base Typesense de MacroFactor, notes/10 §4).
+ * Client Open Food Facts — seul appel réseau de l'application.
  * Aucun identifiant utilisateur n'est envoyé ; uniquement la requête de recherche ou le code-barres.
  */
 object OpenFoodFacts {

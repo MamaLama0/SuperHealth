@@ -1,0 +1,128 @@
+/*  Copyright (C) 2015-2024 Andreas Shimokawa, Carsten Pfeiffer, Daniele
+    Gobbetti, mvn23, Normano64, Zhong Jianxin
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.externalevents;
+
+import android.app.NotificationManager;
+import android.app.NotificationManager.Policy;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Telephony;
+import android.telephony.SmsMessage;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import app.superhealth.engine.GBApplication;
+import app.superhealth.engine.R;
+import app.superhealth.engine.externalevents.notifications.apps.CompiledNotificationAppConfig;
+import app.superhealth.engine.externalevents.notifications.apps.NotificationAppConfig;
+import app.superhealth.engine.externalevents.notifications.apps.NotificationAppRepository;
+import app.superhealth.engine.externalevents.notifications.apps.NotificationAppRules;
+import app.superhealth.engine.model.NotificationSpec;
+import app.superhealth.engine.model.NotificationType;
+import app.superhealth.engine.util.Prefs;
+
+public class SMSReceiver extends BroadcastReceiver {
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        Prefs prefs = GBApplication.getPrefs();
+        if ("never".equals(prefs.getString("notification_mode_sms", "when_screen_off"))) {
+            return;
+        }
+        if ("when_screen_off".equals(prefs.getString("notification_mode_sms", "when_screen_off"))) {
+            PowerManager powermanager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (powermanager != null && powermanager.isScreenOn()) {
+                return;
+            }
+        }
+
+        NotificationSpec notificationSpec = new NotificationSpec();
+        notificationSpec.setType(NotificationType.GENERIC_SMS);
+
+        Bundle bundle = intent.getExtras();
+        if (bundle != null) {
+            Object[] pdus = (Object[]) bundle.get("pdus");
+            if (pdus != null) {
+                int pduSize = pdus.length;
+                Map<String, StringBuilder> messageMap = new LinkedHashMap<>();
+                SmsMessage[] messages = new SmsMessage[pduSize];
+                for (int i = 0; i < pduSize; i++) {
+                    messages[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
+                    String originatingAddress = messages[i].getOriginatingAddress();
+                    if (!messageMap.containsKey(originatingAddress)) {
+                        messageMap.put(originatingAddress, new StringBuilder());
+                    }
+                    messageMap.get(originatingAddress).append(messages[i].getMessageBody());
+                }
+                final String smsPackage = Telephony.Sms.getDefaultSmsPackage(context);
+                notificationSpec.setSourceAppId(smsPackage);
+                final CompiledNotificationAppConfig appConfig = NotificationAppRepository.INSTANCE.get(smsPackage);
+                final CompiledNotificationAppConfig allAppsConfig = NotificationAppRepository.INSTANCE.get(NotificationAppConfig.ALL_APPS);
+                for (Map.Entry<String, StringBuilder> entry : messageMap.entrySet()) {
+                    String originatingAddress = entry.getKey();
+                    if (originatingAddress != null) {
+                        final String body = entry.getValue().toString();
+                        if (!NotificationAppRules.INSTANCE.passesFilters(allAppsConfig, appConfig, null, body)) {
+                            continue;
+                        }
+                        notificationSpec.setBody(NotificationAppRules.INSTANCE.applyReplacements(allAppsConfig, appConfig, null, body).getBody());
+                        notificationSpec.setPhoneNumber(originatingAddress);
+                        notificationSpec.setAttachedActions(new ArrayList<>());
+
+                        // REPLY action
+                        NotificationSpec.Action replyAction = new NotificationSpec.Action();
+                        replyAction.setTitle(context.getString(R.string._pebble_watch_reply));
+                        replyAction.setType(NotificationSpec.Action.TYPE_SYNTHETIC_REPLY_PHONENR);
+                        notificationSpec.getAttachedActions().add(replyAction);
+
+                        // DISMISS ALL action
+                        NotificationSpec.Action dismissAllAction = new NotificationSpec.Action();
+                        dismissAllAction.setTitle(context.getString(R.string.notifications_dismiss_all));
+                        dismissAllAction.setType(NotificationSpec.Action.TYPE_SYNTHETIC_DISMISS_ALL);
+                        notificationSpec.getAttachedActions().add(dismissAllAction);
+
+                        int dndSuppressed = 0;
+                        switch (GBApplication.getGrantedInterruptionFilter()) {
+                            case NotificationManager.INTERRUPTION_FILTER_ALL:
+                                break;
+                            case NotificationManager.INTERRUPTION_FILTER_ALARMS:
+                            case NotificationManager.INTERRUPTION_FILTER_NONE:
+                                dndSuppressed = 1;
+                                break;
+                            case NotificationManager.INTERRUPTION_FILTER_PRIORITY:
+                                if (GBApplication.isPriorityNumber(Policy.PRIORITY_CATEGORY_MESSAGES, notificationSpec.getPhoneNumber())) {
+                                    break;
+                                }
+                                dndSuppressed = 1;
+                        }
+                        if (prefs.getBoolean("notification_filter", false) && dndSuppressed == 1) {
+                            return;
+                        }
+                        notificationSpec.setDndSuppressed(dndSuppressed);
+                        GBApplication.deviceService().onNotification(notificationSpec);
+                    }
+                }
+            }
+        }
+    }
+}

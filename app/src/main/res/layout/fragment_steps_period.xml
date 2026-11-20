@@ -41,7 +41,7 @@
             android:layout_height="250sp"
             >
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+            <app.superhealth.engine.activities.charts.mpchart.GbChartView
                 android:id="@+id/steps_chart"
                 android:layout_width="0dp"
                 android:layout_height="fill_parent"

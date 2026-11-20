@@ -21,14 +21,14 @@
             android:layout_width="match_parent"
             android:layout_height="250sp">
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+            <app.superhealth.engine.activities.charts.mpchart.GbChartView
                 android:id="@+id/hydration_chart"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="2" />
         </LinearLayout>
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.ChartLegendView
+        <app.superhealth.engine.activities.charts.mpchart.ChartLegendView
             android:id="@+id/hydration_chart_legend"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

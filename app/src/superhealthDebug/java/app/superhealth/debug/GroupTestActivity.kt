@@ -118,13 +118,13 @@ class GroupTestActivity : Activity() {
                     "icon" -> app.superhealth.ui.LauncherIcon.apply(this@GroupTestActivity,
                         app.superhealth.nutrition.domain.AccentColor.valueOf(intent.getStringExtra("accent") ?: "BLUE"))
                     "notification" -> {
-                        val device = nodomain.freeyourgadget.gadgetbridge.impl.GBDevice("00:11:22:33:44:55", "Montre de test", null, null,
-                            nodomain.freeyourgadget.gadgetbridge.model.DeviceType.TEST)
+                        val device = app.superhealth.engine.impl.GBDevice("00:11:22:33:44:55", "Montre de test", null, null,
+                            app.superhealth.engine.model.DeviceType.TEST)
                         device.setBatteryLevel(73, 0)
-                        device.setState(nodomain.freeyourgadget.gadgetbridge.impl.GBDevice.State.INITIALIZED)
-                        val notification = nodomain.freeyourgadget.gadgetbridge.util.GB.createNotification(listOf(device), this@GroupTestActivity)
+                        device.setState(app.superhealth.engine.impl.GBDevice.State.INITIALIZED)
+                        val notification = app.superhealth.engine.util.GB.createNotification(listOf(device), this@GroupTestActivity)
                         check(notification.contentIntent.creatorPackage == packageName)
-                        nodomain.freeyourgadget.gadgetbridge.util.GB.notify(9051, notification, this@GroupTestActivity)
+                        app.superhealth.engine.util.GB.notify(9051, notification, this@GroupTestActivity)
                     }
                     "seed", "migrated-seed" -> {
                         if(operation=="migrated-seed") {
@@ -139,8 +139,8 @@ class GroupTestActivity : Activity() {
                             listOf("league_mailbox_v2","league_read_capability_v2","league_aes_read_key","league_owner_token_v2","league_published_hash_v2","league_published_at_v2","profile_avatar_media","profile_avatar_source","profile_avatar_at").forEach{app.superhealth.backup.Secrets.put(this@GroupTestActivity,it,null)}
                         }
                         val name = intent.getStringExtra("name")?.take(24) ?: "Test Groupe"
-                        nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().preferences.edit()
-                            .putString(nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_NAME, name).commit()
+                        app.superhealth.engine.GBApplication.getPrefs().preferences.edit()
+                            .putString(app.superhealth.engine.model.ActivityUser.PREF_USER_NAME, name).commit()
                         SuperPrefs.update { it.copy(onboarded = true, leagueEnabled = true,
                             socialFeedEnabled = true, watchModule = false, healthConnect = false, updateCheck = false,
                             features = setOf("NUTRITION", "TRAINING")) }

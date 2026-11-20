@@ -6,18 +6,18 @@
         android:icon="@drawable/ic_settings_applications"
         android:key="garmin_experimental_app_management"
         android:layout="@layout/preference_checkbox"
-        android:summary="Allow installed app management from Gadgetbridge. Not heavily tested. Uninstalling system apps might be dangerous."
+        android:summary="Allow installed app management from SuperHealth. Not heavily tested. Uninstalling system apps might be dangerous."
         android:title="App management" />
     <PreferenceCategory
         android:title="SleepTest"
         app:iconSpaceReserved="false">
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:icon="@drawable/ic_bedtime_on"
             android:key="garmin_experimental_sleep_SleepTime"
             android:title="Sleep Time"
             app:defaultValue="22:00"
             app:useSimpleSummaryProvider="true" />
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:icon="@drawable/ic_bedtime_off"
             android:key="garmin_experimental_sleep_WakeTime"
             android:title="Wake Time"

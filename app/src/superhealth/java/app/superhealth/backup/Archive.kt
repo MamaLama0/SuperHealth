@@ -18,16 +18,16 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupCallback
-import nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupExportJob
-import nodomain.freeyourgadget.gadgetbridge.util.backup.ZipBackupImportJob
+import app.superhealth.engine.util.backup.ZipBackupCallback
+import app.superhealth.engine.util.backup.ZipBackupExportJob
+import app.superhealth.engine.util.backup.ZipBackupImportJob
 
 /**
  * Sauvegarde complète en une archive : nutrition, musculation, réglages SuperHealth, saisies santé, tous les fichiers privés de
  * l'app ([BackupFiles] : photos de progression, courses importées, journaux, randonnées, cartes, Groupe…) et, dans
- * « montre.zip », la sauvegarde Gadgetbridge (base de la montre, réglages des appareils, fichiers .fit). La sauvegarde est
+ * « montre.zip », la sauvegarde du moteur montre (base de la montre, réglages des appareils, fichiers .fit). La sauvegarde est
  * chiffrée avec le code de récupération ([BackupCrypto]) ; l'export lisible ([writeReadable]) est la même archive en ZIP clair,
- * avec des CSV en plus. La restauration lit les deux, ainsi que les anciennes archives et les JSON de La Bouffe / La Salle.
+ * avec des CSV en plus. La restauration lit les deux, ainsi que les anciennes archives et les anciens exports JSON nutrition et musculation.
  */
 object Archive {
     const val EXT = "shbak"
@@ -159,7 +159,7 @@ object Archive {
         return if (done.isEmpty()) tr("Fichier illisible") else app.superhealth.ui.trf("Restauré : %1\$s", done.joinToString(", "))
     }
 
-    /** Exécute une tâche de sauvegarde Gadgetbridge (synchrone) et lève une erreur si elle échoue. */
+    /** Exécute une tâche de sauvegarde du moteur montre (synchrone) et lève une erreur si elle échoue. */
     private fun runGbJob(make: (ZipBackupCallback) -> Runnable) {
         var error: String? = null
         var ok = false

@@ -10,13 +10,13 @@ import kotlin.math.abs
 import kotlin.random.Random
 
 /**
- * Comparaison chiffrée des algorithmes de SuperHealth et de ceux documentés par NOOP (WHOOP), sur des scénarios simulés
+ * Comparaison chiffrée des algorithmes de SuperHealth et de méthodes publiées, sur des scénarios simulés
  * dont on connaît la vérité. Écrit build/algo-comparison.json (repris dans le rapport d'analyse).
  */
 class AlgorithmComparisonTest {
     private data class Scenario(val name: String, val tdee: (Int) -> Double, val intake: (Int) -> Double, val weighEvery: Int, val logged: Double)
 
-    /** Bilan énergétique de NOOP (AdaptiveExpenditureEngine) : 21 à 42 jours, pente des pesées × 7700, apports moyens. */
+    /** Bilan énergétique adaptatif publié : 21 à 42 jours, pente des pesées × 7700, apports moyens. */
     private fun energyBalance(day: Int, weights: Map<Int, Double>, intake: Map<Int, Double>): Double? {
         for (window in 42 downTo 21) {
             val from = day - window + 1
@@ -72,7 +72,7 @@ class AlgorithmComparisonTest {
             Scenario("Prise de masse : +300 kcal au jour 60", { 2600.0 }, { if (it < 60) 2600.0 else 2900.0 }, 1, 1.0),
         )
         val results = scenarios.map { run(it) }
-        // dette de sommeil : récurrence de NOOP (0,55) contre la somme brute des manques sur 14 nuits
+        // dette de sommeil : récurrence publiée (0,55) contre la somme brute des manques sur 14 nuits
         val nights = List(10) { 390.0 } + List(4) { 540.0 }
         val naive = nights.sumOf { maxOf(0.0, 480 - it) } - nights.sumOf { maxOf(0.0, it - 480) }.coerceAtMost(0.0)
         val sleep = mapOf("nuits" to "10 × 6 h 30 puis 4 × 9 h (besoin 8 h)", "noop_debt_min" to Scores.sleepDebt(nights, 480.0),

@@ -1,4 +1,4 @@
-[FitFileId{type=LOCATION, manufacturer=1, product=65534, serial_number=1, time_created=1774688353, number=1, product_name=Gadgetbridge},
+[FitFileId{type=LOCATION, manufacturer=1, product=65534, serial_number=1, time_created=1774688353, number=1, product_name=SuperHealth},
 FitFileCreator{software_version=246},
 FitLocation{2026-03-28 08:59:13.000, name=Aconcagua, position_lat=-32.65305555425584, position_long=-70.01166670583189, altitude=6967.2, timestamp=1774688353, message_index=0},
 FitLocation{2026-03-28 08:59:13.000, name=ים המלח, position_lat=31.499999966472387, position_long=35.4999999795109, altitude=-439.8, timestamp=1774688353, message_index=1},

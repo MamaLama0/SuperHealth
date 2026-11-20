@@ -57,7 +57,7 @@ internal fun plurals(text: String, english: Boolean): String {
 
 @JvmName("trExt") fun String.tr(): String = tr(this)
 
-/** Prénom saisi (profil Gadgetbridge, envoyé aux montres) ; null s'il n'a pas été renseigné. */
-fun userName(): String? = nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().name?.trim()?.takeIf { it.isNotBlank() && it != DEFAULT_GB_USER }
+/** Prénom saisi (profil de la montre, envoyé aux montres) ; null s'il n'a pas été renseigné. */
+fun userName(): String? = app.superhealth.engine.model.ActivityUser().name?.trim()?.takeIf { it.isNotBlank() && it != DEFAULT_GB_USER }
 
-private const val DEFAULT_GB_USER = "gadgetbridge-user"
+private const val DEFAULT_GB_USER = "superhealth-user"

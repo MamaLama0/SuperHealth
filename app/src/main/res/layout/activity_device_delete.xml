@@ -6,7 +6,7 @@
     android:gravity="center"
     android:orientation="vertical"
     android:padding="32dp"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.DeviceDeleteActivity">
+    tools:context="app.superhealth.engine.activities.DeviceDeleteActivity">
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/delete_progress_bar"

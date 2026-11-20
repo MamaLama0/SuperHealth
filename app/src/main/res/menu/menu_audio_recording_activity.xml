@@ -1,7 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.audiorecordings.AudioRecordingsActivity">
+    tools:context="app.superhealth.engine.activities.audiorecordings.AudioRecordingsActivity">
     <item
         android:id="@+id/audio_recording_search"
         android:icon="@drawable/ic_search"

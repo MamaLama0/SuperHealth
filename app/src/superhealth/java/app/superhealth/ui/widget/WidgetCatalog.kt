@@ -4,7 +4,7 @@ import app.superhealth.nutrition.widget.KcalWidgetReceiver
 import app.superhealth.nutrition.widget.TodayWidgetReceiver
 import app.superhealth.nutrition.widget.WeightWidgetReceiver
 import app.superhealth.training.widget.NextWorkoutWidgetReceiver
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** Source unique du catalogue dans l'app et du banc d'essai des vrais widgets Android. */
 object WidgetCatalog {

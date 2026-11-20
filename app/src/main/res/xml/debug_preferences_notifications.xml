@@ -94,7 +94,7 @@
             app:useSimpleSummaryProvider="true" />
 
         <EditTextPreference
-            android:defaultValue="Gadgetbridge"
+            android:defaultValue="SuperHealth"
             android:key="pref_debug_notifications_sourceName"
             android:title="sourceName"
             app:iconSpaceReserved="false"
@@ -115,7 +115,7 @@
             app:useSimpleSummaryProvider="true" />
 
         <EditTextPreference
-            android:defaultValue="0|nodomain.freeyourgadget.gadgetbridge|-493519667|null|10679"
+            android:defaultValue="0|app.superhealth.engine|-493519667|null|10679"
             android:key="pref_debug_notifications_key"
             android:title="key"
             app:iconSpaceReserved="false"

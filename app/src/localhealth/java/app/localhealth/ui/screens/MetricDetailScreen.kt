@@ -62,7 +62,7 @@ import java.time.format.FormatStyle
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 enum class Range(val label: Int) {
     DAY(R.string.lh_range_day), WEEK(R.string.lh_range_week), MONTH(R.string.lh_range_month),

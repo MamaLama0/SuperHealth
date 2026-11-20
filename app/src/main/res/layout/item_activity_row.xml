@@ -22,7 +22,7 @@
         android:paddingEnd="16dp"
         android:paddingBottom="12dp">
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.workouts.ActivityIconView
+        <app.superhealth.engine.activities.workouts.ActivityIconView
             android:id="@+id/activity_row_icon"
             android:layout_width="40dp"
             android:layout_height="40dp"

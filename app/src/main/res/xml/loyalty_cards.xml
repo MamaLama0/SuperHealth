@@ -5,7 +5,7 @@
         android:key="pref_key_header_loyalty_cards_catima"
         android:title="@string/loyalty_cards">
 
-        <nodomain.freeyourgadget.gadgetbridge.util.preferences.SubtitleListPreference
+        <app.superhealth.engine.util.preferences.SubtitleListPreference
             android:defaultValue="me.hackerchick.catima"
             android:entries="@array/pref_huami2021_empty_array"
             android:entryValues="@array/pref_huami2021_empty_array"

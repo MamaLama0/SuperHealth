@@ -80,7 +80,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.model.ActivityKind
 
 /*
  * Écran Sommeil : la nuit en détail (hypnogramme, phases face à vos habitudes, parties de Repos, cœur et signes vitaux de

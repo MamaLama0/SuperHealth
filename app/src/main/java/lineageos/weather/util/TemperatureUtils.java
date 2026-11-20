@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2016 The CyanogenMod Project
  *
- * Modified by Gadgetbridge contributors: class renamed from WeatherUtils to TemperatureUtils,
+ * Modified by SuperHealth contributors: class renamed from WeatherUtils to TemperatureUtils,
  * adapted for general temperature conversion and formatting, and switched to
- * nodomain.freeyourgadget.gadgetbridge.model.TemperatureUnit.
+ * app.superhealth.engine.model.TemperatureUnit.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ package lineageos.weather.util;
 
 import java.text.DecimalFormat;
 
-import nodomain.freeyourgadget.gadgetbridge.model.TemperatureUnit;
+import app.superhealth.engine.model.TemperatureUnit;
 
 /**
  * Helper class to perform operations and formatting of temperature data

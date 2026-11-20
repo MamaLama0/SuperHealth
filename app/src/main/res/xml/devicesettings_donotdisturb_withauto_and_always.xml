@@ -19,12 +19,12 @@
             app:useSimpleSummaryProvider="true"
             android:title="@string/mi2_prefs_do_not_disturb" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="01:00"
             android:key="do_not_disturb_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="06:00"
             android:key="do_not_disturb_end"
             android:title="@string/mi2_prefs_do_not_disturb_end" />

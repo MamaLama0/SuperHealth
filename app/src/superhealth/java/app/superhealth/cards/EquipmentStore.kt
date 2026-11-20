@@ -157,8 +157,8 @@ internal data class PackProgress(
 }
 
 internal object EquipmentStore {
-    private val build = nodomain.freeyourgadget.gadgetbridge.BuildConfig.ARSENAL_UNLIMITED
-    val unlimitedPacks = build && nodomain.freeyourgadget.gadgetbridge.BuildConfig.APPLICATION_ID == "app.superhealth.arsenalqa"
+    private val build = app.superhealth.engine.BuildConfig.ARSENAL_UNLIMITED
+    val unlimitedPacks = build && app.superhealth.engine.BuildConfig.APPLICATION_ID == "app.superhealth.arsenalqa"
 
     @Serializable
     data class Opening(val slot: EquipmentSlot, val pieces: List<EquipmentPiece>, val gold: Boolean,

@@ -10,7 +10,7 @@ java {
 }
 
 application {
-    mainClass = "org.gadgetbridge.kaitai_aux.main.KaitaiAuxGen"
+    mainClass = "app.superhealth.kaitai_aux.main.KaitaiAuxGen"
 }
 
 dependencies {

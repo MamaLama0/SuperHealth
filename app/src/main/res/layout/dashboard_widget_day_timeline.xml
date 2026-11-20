@@ -19,7 +19,7 @@
         android:gravity="center_vertical"
         android:orientation="vertical">
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.dashboard.DayTimelineView
+        <app.superhealth.engine.activities.dashboard.DayTimelineView
             android:id="@+id/tile_day_timeline"
             android:layout_width="match_parent"
             android:layout_height="28dp"

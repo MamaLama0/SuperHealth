@@ -34,16 +34,8 @@
             android:icon="@drawable/ic_encrypted_add">
             <intent
                 android:targetPackage="@string/applicationId"
-                android:targetClass="nodomain.freeyourgadget.gadgetbridge.activities.PermissionsActivity" />
+                android:targetClass="app.superhealth.engine.activities.PermissionsActivity" />
         </Preference>
-
-        <SwitchPreferenceCompat
-            android:defaultValue="true"
-            android:key="show_changelog"
-            android:layout="@layout/preference_checkbox"
-            android:summary="@string/pref_show_changelog_summary"
-            android:title="@string/pref_show_changelog"
-            android:icon="@drawable/ic_receipt" />
 
         <SwitchPreferenceCompat
             android:defaultValue="false"
@@ -438,7 +430,7 @@
 
         </PreferenceScreen>
 
-        <nodomain.freeyourgadget.gadgetbridge.util.preferences.SubtitleListPreference
+        <app.superhealth.engine.util.preferences.SubtitleListPreference
             android:defaultValue="de.dennisguse.opentracks"
             android:icon="@drawable/ic_deployed_code"
             android:key="opentracks_packagename"

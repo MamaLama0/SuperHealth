@@ -115,7 +115,7 @@ object Strings17 {
         "Aperçu : 2 140 kcal, 150 g de protéines." to "Preview: 2,140 kcal, 150 g of protein.",
         // montre avec son app officielle, association
         "Oui, avec son app" to "Yes, with its own app",
-        "Garmin Connect, NOOP, Zepp… restent installées : données via Health Connect" to "Garmin Connect, NOOP, Zepp… stay installed: data via Health Connect",
+        "Garmin Connect, WHOOP, Zepp… restent installées : données via Health Connect" to "Garmin Connect, WHOOP, Zepp… stay installed: data via Health Connect",
         "Activez le partage vers Health Connect dans l'app de la montre." to
             "Turn on sharing to Health Connect in the watch's app.",
         "Montre lue par Health Connect" to "Watch read through Health Connect",
@@ -162,7 +162,7 @@ object Strings17 {
         "Envoyé sans votre nom, e-mail, téléphone ni position." to "Sent without your name, email, phone or location.",
         "IA offerte ou votre clé." to "Free AI or your own key.",
         "Gratuite, sans clé." to "Free, no key.",
-        // 1.7.9 : Garmin Connect, NOOP, scores
+        // 1.7.9 : Garmin Connect, WHOOP, scores
         "Âge de forme" to "Fitness age",
         "ans" to "yrs",
         "L'âge d'une personne moyenne qui aurait votre forme cardio, d'après votre pouls au repos et votre Effort de la semaine (modèle de l'étude HUNT, Nes 2011). Calculé chaque samedi, à ±5 ans près : suivez sa tendance."

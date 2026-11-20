@@ -2,7 +2,7 @@ syntax = "proto2"; // we must use proto2 to serialize default values on the wire
 
 package zeblaze;
 
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.zeblaze";
+option java_package = "app.superhealth.engine.proto.zeblaze";
 option java_outer_classname = "ZeblazeProto";
 
 // Protobuf payloads of the Zeblaze Beyond 3 Pro "ZH_SDK" GATT protocol,

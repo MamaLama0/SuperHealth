@@ -5,8 +5,8 @@ import org.junit.Test
 import java.io.File
 
 class WatchCompatibilityTest {
-    @Test fun updatingGadgetbridgeRetainsEveryPreviouslyRegisteredDeviceIncludingWhoop() {
-        val source = File("src/main/java/nodomain/freeyourgadget/gadgetbridge/model/DeviceType.java").readText()
+    @Test fun updatingAppRetainsEveryPreviouslyRegisteredDeviceIncludingWhoop() {
+        val source = File("src/main/java/app/superhealth/engine/model/DeviceType.java").readText()
         val names = Regex("(?m)^\\s*([A-Z][A-Z0-9_]+)\\(").findAll(source).map { it.groupValues[1] }.toSet()
         val previous = File("src/testSuperhealth/resources/device-types-before-update.txt").readLines().filter { it.isNotBlank() }.toSet()
         assertTrue("Removed device types: ${previous - names}", names.containsAll(previous))

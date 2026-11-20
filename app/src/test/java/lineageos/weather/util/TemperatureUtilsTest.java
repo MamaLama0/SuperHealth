@@ -7,7 +7,7 @@ import org.junit.Test;
 import java.text.DecimalFormat;
 import java.util.Locale;
 
-import nodomain.freeyourgadget.gadgetbridge.model.TemperatureUnit;
+import app.superhealth.engine.model.TemperatureUnit;
 
 public class TemperatureUtilsTest {
 

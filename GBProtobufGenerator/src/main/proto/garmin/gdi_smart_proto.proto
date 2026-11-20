@@ -2,7 +2,7 @@ syntax = "proto2";
 
 package garmin_vivomovehr;
 
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.garmin.GdiSmartProto";
+option java_package = "app.superhealth.engine.proto.garmin.GdiSmartProto";
 option java_multiple_files = true;
 
 import "garmin/gdi_accessory_utilities.proto";

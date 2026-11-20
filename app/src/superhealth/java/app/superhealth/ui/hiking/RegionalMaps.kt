@@ -18,8 +18,8 @@ import app.superhealth.hiking.HikeRoute
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
 import kotlinx.coroutines.flow.MutableStateFlow
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.util.maps.MapsManager
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.util.maps.MapsManager
 import org.mapsforge.core.graphics.Style
 import org.mapsforge.core.model.BoundingBox
 import org.mapsforge.core.model.LatLong

@@ -32,13 +32,13 @@
             android:summary="@string/pref_summary_time_interval"
             android:title="@string/pref_title_time_interval" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="06:00"
             android:dependency="spo2_measurement_time"
             android:key="spo2_measurement_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="22:00"
             android:dependency="spo2_measurement_time"
             android:key="spo2_measurement_end"

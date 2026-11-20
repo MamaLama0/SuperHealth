@@ -2,7 +2,7 @@ syntax = "proto2"; // we must use proto2 to serialize default values on the wire
 
 package xiaomi;
 
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.xiaomi";
+option java_package = "app.superhealth.engine.proto.xiaomi";
 option java_outer_classname = "XiaomiProto";
 
 import "xiaomi/wear_account.proto";

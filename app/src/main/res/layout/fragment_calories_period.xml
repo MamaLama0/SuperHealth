@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.workouts.SectionHeaderView
+        <app.superhealth.engine.activities.workouts.SectionHeaderView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:sectionTitle="@string/calories_daily_active" />
@@ -46,7 +46,7 @@
             android:layout_height="250sp"
             >
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.charts.mpchart.GbChartView
+            <app.superhealth.engine.activities.charts.mpchart.GbChartView
                 android:id="@+id/calories_chart"
                 android:layout_width="0dp"
                 android:layout_height="fill_parent"

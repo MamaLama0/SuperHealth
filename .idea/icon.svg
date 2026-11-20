@@ -20,7 +20,7 @@
    inkscape:export-xdpi="648"
    inkscape:export-ydpi="648">
   <title
-     id="title4560">Gadgetbridge Icon</title>
+     id="title4560">SuperHealth Icon</title>
   <sodipodi:namedview
      id="base"
      pagecolor="#ffffff"
@@ -447,7 +447,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title>Gadgetbridge Icon</dc:title>
+        <dc:title>SuperHealth Icon</dc:title>
         <cc:license
            rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/" />
         <dc:date>18/07/2017</dc:date>
@@ -461,7 +461,7 @@
             <dc:title>CC (BY-SA)</dc:title>
           </cc:Agent>
         </dc:rights>
-        <dc:description>Launcher icon for Gadgetbridge. Based on Blue Minimal Template (GPLv3)</dc:description>
+        <dc:description>Launcher icon for SuperHealth. Based on Blue Minimal Template (GPLv3)</dc:description>
         <dc:source>https://github.com/scoute-dich/Blue-Minimal/tree/master/IconTemplates</dc:source>
         <dc:contributor>
           <cc:Agent>

@@ -12,10 +12,10 @@
         </encoder>
     </appender>
 
-    <!-- Raised to DEBUG or TRACE by nodomain.freeyourgadget.gadgetbridge.Logging, depending on
+    <!-- Raised to DEBUG or TRACE by app.superhealth.engine.Logging, depending on
          where the log is being written. This level applies until it does so. -->
     <root level="INFO">
         <appender-ref ref="STDOUT" />
-        <!-- The FILE appender is added programmatically by nodomain.freeyourgadget.gadgetbridge.Logging -->
+        <!-- The FILE appender is added programmatically by app.superhealth.engine.Logging -->
     </root>
 </configuration>

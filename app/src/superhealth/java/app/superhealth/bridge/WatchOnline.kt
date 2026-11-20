@@ -3,8 +3,8 @@ package app.superhealth.bridge
 import android.content.Context
 import android.location.LocationManager
 import app.superhealth.ui.tr
-import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec
-import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.http.interceptors.OnlineFallback
+import app.superhealth.engine.model.WeatherSpec
+import app.superhealth.engine.service.devices.garmin.http.interceptors.OnlineFallback
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
 /**
  * Ce que Garmin Connect fournit en ligne à la montre, sans Garmin Connect : la météo (Open-Meteo, gratuit et sans
  * compte) et les données satellites AGPS (téléchargées chez Garmin, à l'adresse exacte que la montre demande) pour un
- * GPS qui s'accroche vite. Branché dans Gadgetbridge par [OnlineFallback] ; rien n'est envoyé d'autre que la position
+ * GPS qui s'accroche vite. Branché dans le moteur montre par [OnlineFallback] ; rien n'est envoyé d'autre que la position
  * (arrondie à 0,01°, ~1 km) pour la météo.
  */
 object WatchOnline {
@@ -130,7 +130,7 @@ object WatchOnline {
         }
     }
 
-    /** Code météo WMO (Open-Meteo) → code OpenWeatherMap attendu par Gadgetbridge. */
+    /** Code météo WMO (Open-Meteo) → code OpenWeatherMap attendu par le moteur montre. */
     private fun owm(wmo: Int): Int = when (wmo) {
         0 -> 800; 1 -> 801; 2 -> 802; 3 -> 804
         45, 48 -> 741

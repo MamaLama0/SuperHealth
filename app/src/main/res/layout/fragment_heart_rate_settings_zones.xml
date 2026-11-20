@@ -220,7 +220,7 @@
                     android:text="Zone 1" />
             </RelativeLayout>
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.heartratezones.HeartRateZonesDividerView
+            <app.superhealth.engine.activities.heartratezones.HeartRateZonesDividerView
                 android:id="@+id/heart_rate_zone_5_divider"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -232,7 +232,7 @@
                 app:layout_constraintStart_toEndOf="@+id/layout_hr_zone_5"
                 app:layout_constraintTop_toTopOf="@+id/layout_hr_zone_values" />
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.heartratezones.HeartRateZonesDividerView
+            <app.superhealth.engine.activities.heartratezones.HeartRateZonesDividerView
                 android:id="@+id/heart_rate_zone_4_divider"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -244,7 +244,7 @@
                 app:layout_constraintStart_toEndOf="@+id/layout_hr_zone_4"
                 app:layout_constraintTop_toBottomOf="@+id/heart_rate_zone_5_divider" />
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.heartratezones.HeartRateZonesDividerView
+            <app.superhealth.engine.activities.heartratezones.HeartRateZonesDividerView
                 android:id="@+id/heart_rate_zone_3_divider"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -256,7 +256,7 @@
                 app:layout_constraintStart_toEndOf="@+id/layout_hr_zone_3"
                 app:layout_constraintTop_toBottomOf="@+id/heart_rate_zone_4_divider" />
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.heartratezones.HeartRateZonesDividerView
+            <app.superhealth.engine.activities.heartratezones.HeartRateZonesDividerView
                 android:id="@+id/heart_rate_zone_2_divider"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -268,7 +268,7 @@
                 app:layout_constraintStart_toEndOf="@+id/layout_hr_zone_2"
                 app:layout_constraintTop_toBottomOf="@+id/heart_rate_zone_3_divider" />
 
-            <nodomain.freeyourgadget.gadgetbridge.activities.heartratezones.HeartRateZonesDividerView
+            <app.superhealth.engine.activities.heartratezones.HeartRateZonesDividerView
                 android:id="@+id/heart_rate_zone_1_divider"
                 android:layout_width="0dp"
                 android:layout_height="0dp"

@@ -79,9 +79,9 @@ import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.util.Date
 import kotlin.math.roundToInt
-import nodomain.freeyourgadget.gadgetbridge.R
-import nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutDetailsActivity
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
+import app.superhealth.engine.R
+import app.superhealth.engine.activities.workouts.WorkoutDetailsActivity
+import app.superhealth.engine.model.ActivityUser
 
 fun userInitial(): String = ActivityUser().name?.trim()?.firstOrNull()?.uppercase() ?: "?"
 

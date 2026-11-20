@@ -58,7 +58,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.model.ActivityKind
 
 /**
  * Graphiques que l'on retrouve dans les applis de montre (Garmin Connect, WHOOP, Santé) : Charge et Effort, phases de

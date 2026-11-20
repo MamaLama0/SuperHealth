@@ -397,7 +397,7 @@ fun WeighInSheet(existing: WeighInEntity?, s: app.superhealth.nutrition.domain.S
     }
 }
 
-/** Silhouette MacroFactor la plus proche du % de masse grasse saisi. */
+/** Silhouette la plus proche du % de masse grasse saisi. */
 @Composable
 fun BodyFatSilhouette(sex: Sex, pct: Double, modifier: Modifier = Modifier) {
     val steps = if (sex == Sex.MALE) listOf(3, 6, 10, 15, 20, 25, 30, 35, 40) else listOf(10, 15, 20, 25, 30, 35, 40, 45, 50)

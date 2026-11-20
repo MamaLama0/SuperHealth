@@ -109,7 +109,7 @@ private fun buildWeb(context: android.content.Context, page: String, version: St
         // Removing a focused Android view inside the dashboard pager can start a reentrant Compose focus search.
         isFocusableInTouchMode = false
         isFocusable = false
-        if (nodomain.freeyourgadget.gadgetbridge.BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
+        if (app.superhealth.engine.BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         settings.javaScriptEnabled = true
         settings.allowFileAccess = false
         settings.allowContentAccess = false

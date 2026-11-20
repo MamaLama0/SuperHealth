@@ -121,8 +121,8 @@ import app.superhealth.ui.trf
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.model.ActivityUser
 
 /**
  * Réglages : une page d'accueil courte, en groupes (accueil, suivi, général, données, outils, à propos), chaque ligne
@@ -310,7 +310,7 @@ fun SettingsScreen(vm: SuperViewModel, nav: NavHostController) {
                 RowDivider(56.dp)
                 SettingRow(tr("Donner mon avis"), subtitle = tr("Note, idée ou problème · retour privé"), icon = Icons.Rounded.Feedback, hue = Mf.colors.accent) { nav.go("settings/feedback") }
                 RowDivider(56.dp)
-                SettingRow(tr("Sources et crédits"), subtitle = tr("Code, licences et données sur GitHub"), icon = Icons.Rounded.Code, hue = app.superhealth.ui.theme.Base.Grey) {
+                SettingRow(tr("Code source et licence"), subtitle = tr("Sur GitHub · licence AGPLv3"), icon = Icons.Rounded.Code, hue = app.superhealth.ui.theme.Base.Grey) {
                     uriHandler.openUri("https://github.com/MamaLama0/SuperHealth/tree/superhealth")
                 }
             }

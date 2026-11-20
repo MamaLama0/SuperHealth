@@ -13,7 +13,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Scores repris des méthodes publiées que documente NOOP (docs/ANALYTICS.md), calculés pour toute source (Garmin, WHOOP,
+ * Scores tirés de méthodes publiées, calculés pour toute source (Garmin, WHOOP,
  * autres montres, Health Connect) :
  *  - **Charge** (récupération, 0–100) : z-scores robustes de la VFC (55 %), du pouls au repos (20 %), du sommeil (15 %),
  *    de la respiration (5 %) et de l'écart de température (5 %) contre des références personnelles (moyennes mobiles
@@ -92,7 +92,7 @@ object Scores {
     /**
      * Charge du matin [today] à partir des nuits précédentes ([history], de la plus ancienne à la veille). VFC : moyenne
      * des 7 derniers jours contre votre zone normale ([hrvTrend], Plews) dès 30 jours d'historique ; avant, VFC de la nuit
-     * contre une moyenne mobile (méthode NOOP). Sans VFC (règle SuperHealth, pour les montres et applis qui n'en
+     * contre une moyenne mobile. Sans VFC (règle SuperHealth, pour les montres et applis qui n'en
      * fournissent pas) : mêmes termes et même logistique, poids renormalisés, à condition d'avoir la référence du pouls au
      * repos et au moins un autre terme. Null sinon (« en calibrage »).
      *
@@ -319,9 +319,9 @@ object Scores {
 
     fun invalidate() { chargeCache.clear(); effortCache.clear(); restCache.clear(); habits.clear(); priorSources.clear(); peakDays.clear(); sleepDurations.clear(); windows.clear(); app.superhealth.wellbeing.Form.Model.invalidate(); app.superhealth.wellbeing.BodyAlert.invalidate() }
 
-    private fun age(): Int = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().age }.getOrDefault(30).coerceIn(10, 100)
-    private fun female(): Boolean = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().gender ==
-        nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.GENDER_FEMALE }.getOrDefault(false)
+    private fun age(): Int = runCatching { app.superhealth.engine.model.ActivityUser().age }.getOrDefault(30).coerceIn(10, 100)
+    private fun female(): Boolean = runCatching { app.superhealth.engine.model.ActivityUser().gender ==
+        app.superhealth.engine.model.ActivityUser.GENDER_FEMALE }.getOrDefault(false)
 
     /** Pouls (s, bpm) du jour pour l'Effort. */
     suspend fun heart(date: LocalDate): List<Pair<Long, Int>> = Bridge.minuteHeart(date)
@@ -514,7 +514,7 @@ return dates.map { app.superhealth.wellbeing.Cycle.phaseForBaseline(it.toEpochDa
         // A 23/25-hour local day is not a comparable 1440-minute SRI window.
         if (NightSummary.noon(date.plusDays(1)) - start != 86_400_000L) return null
         val out = BooleanArray(1440)
-        night.filter { it.kind != nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP }.forEach { p ->
+        night.filter { it.kind != app.superhealth.engine.model.ActivityKind.AWAKE_SLEEP }.forEach { p ->
             val a = ((p.start - start) / 60_000).toInt().coerceIn(0, 1440); val b = ((p.end - start) / 60_000).toInt().coerceIn(0, 1440)
             for (m in a until b) out[m] = true
         }
@@ -591,13 +591,13 @@ return dates.map { app.superhealth.wellbeing.Cycle.phaseForBaseline(it.toEpochDa
     /** Parties de la nuit qui se termine le jour [date] ; part réparatrice seulement avec des phases. */
     suspend fun nightParts(date: LocalDate): NightParts? {
         val n = Bridge.sleepNight(date)?.takeIf { it.isNotEmpty() } ?: return null
-        fun minutes(k: nodomain.freeyourgadget.gadgetbridge.model.ActivityKind) = n.filter { it.kind == k }.sumOf { it.end - it.start } / 60000.0
-        val awake = minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP)
+        fun minutes(k: app.superhealth.engine.model.ActivityKind) = n.filter { it.kind == k }.sumOf { it.end - it.start } / 60000.0
+        val awake = minutes(app.superhealth.engine.model.ActivityKind.AWAKE_SLEEP)
         val asleep = n.sumOf { it.end - it.start } / 60000.0 - awake
         val inBed = asleep + awake
         if (asleep < 120 || inBed <= 0) return null
-        val restorative = if (Bridge.hasStages(n)) (minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.DEEP_SLEEP) +
-            minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.REM_SLEEP)) / asleep else null
+        val restorative = if (Bridge.hasStages(n)) (minutes(app.superhealth.engine.model.ActivityKind.DEEP_SLEEP) +
+            minutes(app.superhealth.engine.model.ActivityKind.REM_SLEEP)) / asleep else null
         return NightParts(asleep, (asleep / inBed).coerceIn(0.0, 1.0), restorative, (inBed - asleep).coerceAtLeast(0.0))
     }
 
@@ -639,12 +639,12 @@ return dates.map { app.superhealth.wellbeing.Cycle.phaseForBaseline(it.toEpochDa
     /** Parties de Repos de la nuit qui se termine le jour [date] ; null sans phases. */
     suspend fun restPartsOf(ctx: Context, date: LocalDate): RestParts? {
         val n = Bridge.sleepNight(date)?.takeIf { Bridge.hasStages(it) } ?: return null
-        fun minutes(vararg k: nodomain.freeyourgadget.gadgetbridge.model.ActivityKind) = n.filter { it.kind in k }.sumOf { it.end - it.start } / 60000.0
-        val awake = minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP)
+        fun minutes(vararg k: app.superhealth.engine.model.ActivityKind) = n.filter { it.kind in k }.sumOf { it.end - it.start } / 60000.0
+        val awake = minutes(app.superhealth.engine.model.ActivityKind.AWAKE_SLEEP)
         val asleep = n.sumOf { it.end - it.start } / 60000.0 - awake
         val h = sleepHabits(ctx, date)
-        return restParts(asleep, asleep + awake, minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.DEEP_SLEEP),
-            minutes(nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.REM_SLEEP), h.needMin, h.consistency)
+        return restParts(asleep, asleep + awake, minutes(app.superhealth.engine.model.ActivityKind.DEEP_SLEEP),
+            minutes(app.superhealth.engine.model.ActivityKind.REM_SLEEP), h.needMin, h.consistency)
     }
 
     // ---- Âge de forme -------------------------------------------------------------------------
@@ -686,6 +686,6 @@ return dates.map { app.superhealth.wellbeing.Cycle.phaseForBaseline(it.toEpochDa
     }
 
     /** Besoin de sommeil : l'objectif de sommeil du profil (en minutes). */
-    fun sleepNeed(): Double = runCatching { nodomain.freeyourgadget.gadgetbridge.model.ActivityUser().sleepDurationGoal.toDouble() }.getOrDefault(480.0)
+    fun sleepNeed(): Double = runCatching { app.superhealth.engine.model.ActivityUser().sleepDurationGoal.toDouble() }.getOrDefault(480.0)
         .takeIf { it in 300.0..720.0 } ?: 480.0
 }

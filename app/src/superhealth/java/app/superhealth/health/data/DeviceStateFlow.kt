@@ -8,8 +8,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import nodomain.freeyourgadget.gadgetbridge.devices.DeviceManager
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import app.superhealth.engine.devices.DeviceManager
+import app.superhealth.engine.impl.GBDevice
 
 data class DeviceUi(
     val address: String,
@@ -24,7 +24,7 @@ data class DeviceUi(
     val device: GBDevice,
 )
 
-/** Emits the paired device list whenever Gadgetbridge broadcasts a device change. */
+/** Emits the paired device list whenever the watch engine broadcasts a device change. */
 fun deviceStateFlow(context: Context): Flow<List<DeviceUi>> = callbackFlow {
     fun snapshot() = app.superhealth.bridge.Watch.devices().map { d ->
         DeviceUi(

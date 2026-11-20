@@ -10,13 +10,13 @@ import android.os.SystemClock
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import app.superhealth.MainActivity
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 import app.superhealth.training.WorkoutApp
 import app.superhealth.training.data.AppState
 import app.superhealth.training.domain.SetType
 
 /**
- * Séance en cours dans le tiroir de notifications (équivalent Android des Live Activities de MacroFactor Workouts) :
+ * Séance en cours dans le tiroir de notifications :
  * exercice et série à faire, progression des séries, chronomètre de séance ou compte à rebours du repos,
  * actions « −15 s / +15 s / Passer » pendant le repos.
  */

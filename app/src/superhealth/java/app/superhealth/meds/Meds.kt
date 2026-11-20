@@ -130,7 +130,7 @@ object Meds {
             .putExtra(app.superhealth.MainActivity.EXTRA_ROUTE, "meds").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val id = d.key.hashCode()
-        nm.notify(day.toString(), id, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_stat_meds)
+        nm.notify(day.toString(), id, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(app.superhealth.engine.R.drawable.ic_stat_meds)
             .setContentTitle(d.med.name).setContentText(d.med.dose.ifBlank { tr("C'est l'heure") }).setContentIntent(open).setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .addAction(0, tr("Pris"), action(ACTION_TAKEN, id))

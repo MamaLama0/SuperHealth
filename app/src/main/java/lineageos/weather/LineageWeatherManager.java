@@ -126,7 +126,7 @@ public class LineageWeatherManager {
             return sWeatherManagerService;
         }
 
-        // This is a Gadgetbridge hack
+        // This is a SuperHealth hack
         IBinder binder = null;
         try {
             Class<?> localClass = Class.forName("android.os.ServiceManager");

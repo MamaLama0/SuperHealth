@@ -351,8 +351,8 @@ class RegressionProbeActivity : Activity() {
             ProgramDay("qa-day", "Exercices QA", ex.mapIndexed { i, e -> ProgramExercise("qa-ex-$i", e.id, listOf(List(3) { TargetSet() })) })
         ), numCycles = 1)
         WorkoutApp.store.update { it.copy(programs = listOf(p), settings = it.settings.copy(onboarded = true, activeProgramId = p.id)) }
-        nodomain.freeyourgadget.gadgetbridge.GBApplication.getPrefs().preferences.edit()
-            .putString(nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_NAME, "QA Android").apply()
+        app.superhealth.engine.GBApplication.getPrefs().preferences.edit()
+            .putString(app.superhealth.engine.model.ActivityUser.PREF_USER_NAME, "QA Android").apply()
         app.superhealth.league.League.configure(this) { it.copy(shareActivities = true, syncsPerDay = 0) }
     }
 

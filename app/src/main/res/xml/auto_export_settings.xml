@@ -31,7 +31,7 @@
         android:title="@string/pref_title_auto_export_interval"
         app:iconSpaceReserved="false" />
 
-    <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+    <app.superhealth.engine.util.XTimePreference
         android:defaultValue="00:00"
         android:dependency="auto_export_enabled"
         android:icon="@drawable/ic_access_time"

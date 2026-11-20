@@ -226,7 +226,7 @@ fun Ring(fraction: Float, color: Color, size: Dp, stroke: Dp = 4.dp, track: Colo
 
 private fun ratio(v: Double, t: Double?) = if (t == null || t <= 0) 0f else (v / t).toFloat()
 
-/** Ligne « 🔥 583 / 2025 · P 22 / 98 · L 23 / 67 · G 84 / 256 » avec barres colorées, comme l'en-tête du journal MacroFactor. */
+/** Ligne « 🔥 583 / 2025 · P 22 / 98 · L 23 / 67 · G 84 / 256 » avec barres colorées. */
 @Composable
 fun MacroSummary(consumed: Macros, target: Macros?, energyValue: (Double) -> Double, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Flavor strings every Gadgetbridge flavor must define (see src/mainline/res) -->
-    <!-- Autorité propre à SuperHealth (comme les variantes nopebble/banglejs) : l'autorité Pebble d'origine est déjà prise
-         par Gadgetbridge ou LocalHealth s'ils sont installés, et Android refuse alors l'installation (CONFLICTING_PROVIDER). -->
+    <!-- Chaînes que chaque variante doit définir (voir src/mainline/res) -->
+    <!-- Autorité propre à SuperHealth (comme les variantes nopebble/banglejs) : l'autorité Pebble d'origine peut être déjà prise
+         par une autre app installée, et Android refuse alors l'installation (CONFLICTING_PROVIDER). -->
     <string translatable="false" name="pebble_content_provider">com.getpebble.android.nopebble.superhealth.provider</string>
     <string translatable="false" name="app_name">SuperHealth</string>
     <string translatable="false" name="title_activity_controlcenter">SuperHealth</string>
-    <string translatable="false" name="about_activity_title">@string/about_activity_title_generic</string>
-    <string translatable="false" name="about_description">@string/about_description_generic</string>
-    <string name="gadgetbridge_running">SuperHealth is connected to your watch</string>
+    <string name="about_activity_title">About SuperHealth</string>
+    <string name="about_description">Nutrition, training and health in one free app, with no account.</string>
+    <string name="app_running">SuperHealth is connected to your watch</string>
 </resources>

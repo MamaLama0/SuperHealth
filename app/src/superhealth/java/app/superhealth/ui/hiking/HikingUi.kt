@@ -213,11 +213,11 @@ private fun RoutePhoto(route:HikeRoute,modifier:Modifier) {
 private fun DifficultyLabel(route:HikeRoute) {
     if(route.difficulty.isBlank())return
     val (label,icon)=when(route.difficulty.lowercase(Locale.ROOT)) {
-        "very_easy","très facile" -> "Très facile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_easy
-        "easy","facile" -> "Facile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_easy
-        "moderate","moyenne","moyen" -> "Modérée" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_moderate
-        "difficult","hard","difficile" -> "Difficile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_hard
-        "strenuous","very_difficult","très difficile" -> "Très difficile" to nodomain.freeyourgadget.gadgetbridge.R.drawable.hike_difficulty_strenuous
+        "very_easy","très facile" -> "Très facile" to app.superhealth.engine.R.drawable.hike_difficulty_easy
+        "easy","facile" -> "Facile" to app.superhealth.engine.R.drawable.hike_difficulty_easy
+        "moderate","moyenne","moyen" -> "Modérée" to app.superhealth.engine.R.drawable.hike_difficulty_moderate
+        "difficult","hard","difficile" -> "Difficile" to app.superhealth.engine.R.drawable.hike_difficulty_hard
+        "strenuous","very_difficult","très difficile" -> "Très difficile" to app.superhealth.engine.R.drawable.hike_difficulty_strenuous
         else -> route.difficulty to 0
     }
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {

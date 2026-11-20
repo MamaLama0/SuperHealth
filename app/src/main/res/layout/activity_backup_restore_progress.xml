@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.BackupRestoreProgressActivity">
+    tools:context="app.superhealth.engine.activities.BackupRestoreProgressActivity">
 
     <RelativeLayout
         android:layout_width="fill_parent"

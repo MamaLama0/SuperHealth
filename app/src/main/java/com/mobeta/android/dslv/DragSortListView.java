@@ -51,7 +51,7 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.WrapperListAdapter;
 
-import nodomain.freeyourgadget.gadgetbridge.R;
+import app.superhealth.engine.R;
 
 /**
  * ListView subclass that mediates drag and drop resorting of items.

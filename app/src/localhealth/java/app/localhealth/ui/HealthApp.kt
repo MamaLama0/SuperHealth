@@ -49,7 +49,7 @@ import app.localhealth.ui.screens.StartScreen
 import app.localhealth.ui.screens.TodayTab
 import app.localhealth.ui.screens.userInitial
 import androidx.compose.material3.IconButton
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** Screens above the two home tabs, encoded as strings so the back stack survives rotation. */
 sealed interface Route {

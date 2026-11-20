@@ -2,7 +2,7 @@ package app.localhealth.data
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 
 /** How a metric is summarised over a period and drawn in its detail chart. */
 enum class Aggregation { SUM, AVERAGE, LAST }

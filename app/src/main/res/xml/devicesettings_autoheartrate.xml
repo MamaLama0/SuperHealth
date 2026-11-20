@@ -33,12 +33,12 @@
             app:useSimpleSummaryProvider="true"
             android:title="@string/prefs_autoheartrate_interval" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="06:00"
             android:key="pref_autoheartrate_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="23:00"
             android:key="pref_autoheartrate_end"
             android:title="@string/mi2_prefs_do_not_disturb_end" />

@@ -13,9 +13,8 @@
 | Randonnée, cartes hors ligne et Santé Connect | [Guide randonnée](HIKING.md) |
 | Catalogue de l’Arsenal (cartes d’équipement) | [Refonte de l’Arsenal](ARSENAL-REWORK.md) |
 | Choix des quêtes et de la gamification | [Gamification 2.9](GAMIFICATION-2.9.md) |
-| Sources et licences des ressources | [Crédits](CREDITS.md) |
 | Changements de chaque version | [Notes de version](updates/) |
 | Scripts de développement | [Outils](../tools/README.md) |
-| Documentation d’origine des montres | [README Gadgetbridge](upstream/README.md) |
+| Licence du code et des composants | [Licence](../README.md#licence) |
 
-Les `updates/UPDATE-*.md` décrivent les versions de SuperHealth (Android et iPhone portent le même numéro). Le dossier `upstream/` conserve l’historique et les attributions de Gadgetbridge. Les README sous `tools/` documentent leurs outils précis ; ils ne constituent pas des guides d’installation de l’app.
+Les `updates/UPDATE-*.md` décrivent les versions de SuperHealth (Android et iPhone portent le même numéro). Les README sous `tools/` documentent leurs outils précis ; ils ne constituent pas des guides d’installation de l’app.

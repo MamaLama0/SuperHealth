@@ -54,7 +54,7 @@
                 android:layout="@layout/preference_checkbox"
                 android:title="@string/pref_agps_expiry_reminder_enabled" />
 
-            <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+            <app.superhealth.engine.util.XTimePreference
                 android:defaultValue="20:00"
                 android:dependency="pref_agps_expiry_reminder_enabled"
                 android:key="pref_agps_expiry_reminder_time"

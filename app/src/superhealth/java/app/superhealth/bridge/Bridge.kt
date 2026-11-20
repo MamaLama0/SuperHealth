@@ -16,7 +16,7 @@ import app.superhealth.nutrition.domain.Settings
 import app.superhealth.training.WorkoutApp
 import app.superhealth.ui.Lang
 import java.time.LocalDate
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
+import app.superhealth.engine.model.ActivityKind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,8 +24,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.model.ActivityUser
 import kotlin.math.roundToInt
 import app.superhealth.training.domain.Language as TLanguage
 import app.superhealth.training.domain.Sex as TSex
@@ -37,7 +37,7 @@ import app.superhealth.training.domain.WeightUnit as TWeightUnit
  * - profil (sexe, naissance, taille), langue, thème et unités : module nutrition (questionnaire d'accueil, Réglages) ;
  * - poids de corps : dernière pesée du module nutrition (saisie, balance de la montre ou Health Connect) ;
  * - pas : la montre quand elle les mesure, sinon Health Connect.
- * Ces valeurs sont recopiées vers le module entraînement et vers le profil Gadgetbridge (envoyé aux montres).
+ * Ces valeurs sont recopiées vers le module entraînement et vers le profil de la montre (envoyé aux montres).
  */
 object Bridge {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -65,7 +65,7 @@ object Bridge {
                 language = TLanguage.valueOf(s.language.name),
             ))
         }
-        // Profil Gadgetbridge (chaînes, comme ses écrans de préférences) : sexe, âge, taille, poids, objectif de pas.
+        // Profil de la montre (chaînes, comme ses écrans de préférences) : sexe, âge, taille, poids, objectif de pas.
         val gb = GBApplication.getPrefs().preferences.edit()
         gb.putString(ActivityUser.PREF_USER_GENDER, (if (p.sex.name == "MALE") ActivityUser.GENDER_MALE else ActivityUser.GENDER_FEMALE).toString())
         gb.putString(ActivityUser.PREF_USER_DATE_OF_BIRTH, LocalDate.of(p.birthYear, 1, 1).toString())
@@ -73,7 +73,7 @@ object Bridge {
         weightKg?.let { gb.putString(ActivityUser.PREF_USER_WEIGHT_KG, it.roundToInt().toString()) }
         s.stepGoalFor(LocalDate.now()).takeIf { it > 0 }?.let { gb.putString(ActivityUser.PREF_USER_STEPS_GOAL, it.toString()) }
         gb.putString("pref_key_theme", s.themeMode.name.lowercase())
-        // Couleur d'accent des écrans Gadgetbridge : la plus proche de celle choisie dans SuperHealth.
+        // Couleur d'accent des écrans du moteur montre : la plus proche de celle choisie dans SuperHealth.
         gb.putString(GBApplication.PREF_ACCENT_COLOR, when (s.accent.name) {
             "PINK" -> "pink"; "GREEN" -> "green"; "YELLOW" -> "amber"; "PURPLE" -> "violet"; "ORANGE" -> "orange"; "GRAY" -> "white"; else -> "blue"
         })
@@ -86,7 +86,7 @@ object Bridge {
 
     /**
      * Montre → nutrition : pas des 14 derniers jours (ils affinent la dépense énergétique) et pesées d'une balance
-     * gérée par Gadgetbridge, pour les jours sans pesée saisie.
+     * gérée par le moteur montre, pour les jours sans pesée saisie.
      */
     suspend fun pullWatch(ctx: Context) {
         if (!Watch.enabled || HealthRepository.devices().isEmpty()) return
@@ -158,7 +158,7 @@ object Bridge {
         }
     }
 
-    /** Pouls minute par minute (s, bpm) du jour : montre gérée ici, sinon Health Connect (Garmin Connect, NOOP…). */
+    /** Pouls minute par minute (s, bpm) du jour : montre gérée ici, sinon Health Connect (Garmin Connect, WHOOP…). */
     suspend fun minuteHeart(date: LocalDate): List<Pair<Long, Int>> {
         if (Watch.enabled && HealthRepository.isSupported(Metric.HEART_RATE))
             HealthRepository.minuteHeart(date).takeIf { it.isNotEmpty() }?.let { return it }

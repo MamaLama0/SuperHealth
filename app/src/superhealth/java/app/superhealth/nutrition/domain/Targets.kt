@@ -9,7 +9,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Cibles caloriques et macros (MacroFactor-analyse/notes/15 §2).
+ * Cibles caloriques et macros.
  * Énergie : dépense retenue au check-in + taux visé × poids × 7700 / 7 (constantes du sélecteur de taux), bornée par le plancher.
  * Protéines : table observée (g/kg de masse maigre) selon objectif × entraînement × préférence.
  * Lipides / glucides : règles des 4 types de diète (0xaa24e0, 0xaa2700, 0xaa2920, 0xaa2b50).
@@ -135,7 +135,7 @@ object Targets {
     }
 
     /**
-     * Macros d'une journée. Quand protéines + lipides minimum ne laissent plus les glucides minimum, MacroFactor bascule en
+     * Macros d'une journée. Quand protéines + lipides minimum ne laissent plus les glucides minimum, on bascule en
      * cétogène (« we had to switch you over to a ketogenic program ») [INFÉRÉ : seuil exact de bascule].
      */
     fun macrosFor(kcal: Double, program: Program, goalType: GoalType, lbmKg: Double, heightCm: Double = 175.0, minProteinG: Double = 0.0): Macros {

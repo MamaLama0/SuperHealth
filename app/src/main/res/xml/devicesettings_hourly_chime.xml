@@ -14,13 +14,13 @@
             android:title="@string/prefs_hourly_chime"
             android:summary="@string/prefs_hourly_chime_summary" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="09:00"
             android:dependency="hourly_chime_enable"
             android:key="hourly_chime_start"
             android:title="@string/mi2_prefs_do_not_disturb_start" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="22:00"
             android:dependency="hourly_chime_enable"
             android:key="hourly_chime_end"

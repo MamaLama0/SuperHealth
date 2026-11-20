@@ -17,36 +17,36 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.database.DBHandler
-import nodomain.freeyourgadget.gadgetbridge.database.DBHelper
-import nodomain.freeyourgadget.gadgetbridge.devices.GenericMetricSampleProvider
-import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider
-import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCoordinator
-import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummaryDao
-import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
-import nodomain.freeyourgadget.gadgetbridge.model.MetricSample
-import nodomain.freeyourgadget.gadgetbridge.model.TimeSample
-import nodomain.freeyourgadget.gadgetbridge.util.Prefs
-import nodomain.freeyourgadget.gadgetbridge.widgets.DashboardQuery
-import nodomain.freeyourgadget.gadgetbridge.widgets.GBWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.WidgetConfig
-import nodomain.freeyourgadget.gadgetbridge.widgets.WidgetDataScope
-import nodomain.freeyourgadget.gadgetbridge.widgets.WidgetInstance
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.ActiveTimeWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.BodyEnergyWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.CaloriesActiveWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.DistanceWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.PaiWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepScoreWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.SleepWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.Spo2Widget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.StepsWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.StressSimpleWidget
-import nodomain.freeyourgadget.gadgetbridge.widgets.impl.Vo2MaxAnyWidget
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.database.DBHandler
+import app.superhealth.engine.database.DBHelper
+import app.superhealth.engine.devices.GenericMetricSampleProvider
+import app.superhealth.engine.devices.TimeSampleProvider
+import app.superhealth.engine.devices.garmin.GarminCoordinator
+import app.superhealth.engine.entities.BaseActivitySummaryDao
+import app.superhealth.engine.entities.DaoSession
+import app.superhealth.engine.impl.GBDevice
+import app.superhealth.engine.model.ActivityKind
+import app.superhealth.engine.model.ActivityUser
+import app.superhealth.engine.model.MetricSample
+import app.superhealth.engine.model.TimeSample
+import app.superhealth.engine.util.Prefs
+import app.superhealth.engine.widgets.DashboardQuery
+import app.superhealth.engine.widgets.GBWidget
+import app.superhealth.engine.widgets.WidgetConfig
+import app.superhealth.engine.widgets.WidgetDataScope
+import app.superhealth.engine.widgets.WidgetInstance
+import app.superhealth.engine.widgets.impl.ActiveTimeWidget
+import app.superhealth.engine.widgets.impl.BodyEnergyWidget
+import app.superhealth.engine.widgets.impl.CaloriesActiveWidget
+import app.superhealth.engine.widgets.impl.DistanceWidget
+import app.superhealth.engine.widgets.impl.PaiWidget
+import app.superhealth.engine.widgets.impl.SleepScoreWidget
+import app.superhealth.engine.widgets.impl.SleepWidget
+import app.superhealth.engine.widgets.impl.Spo2Widget
+import app.superhealth.engine.widgets.impl.StepsWidget
+import app.superhealth.engine.widgets.impl.StressSimpleWidget
+import app.superhealth.engine.widgets.impl.Vo2MaxAnyWidget
 import org.slf4j.LoggerFactory
 
 data class Workout(
@@ -80,8 +80,8 @@ sealed interface TimelineEvent {
 data class Point(val timestampMs: Long, val value: Double)
 
 /**
- * Reads health data from the Gadgetbridge database through its device-agnostic coordinators and
- * dashboard widgets, so every watch Gadgetbridge supports (Garmin or not) feeds the same screens.
+ * Reads health data from the SuperHealth database through its device-agnostic coordinators and
+ * dashboard widgets, so every watch SuperHealth supports (Garmin or not) feeds the same screens.
  */
 object HealthRepository {
     private val LOG = LoggerFactory.getLogger(HealthRepository::class.java)
@@ -322,7 +322,7 @@ object HealthRepository {
         emptyList()
     }
 
-    /** Runs a Gadgetbridge dashboard widget's loader; null when no paired device supports it. */
+    /** Runs a SuperHealth dashboard widget's loader; null when no paired device supports it. */
     private suspend fun <D> widget(widget: GBWidget<D>, query: DashboardQuery): D? {
         val instanceId = "localhealth_" + widget.id
         val config = WidgetConfig(

@@ -50,8 +50,6 @@ object Strings12 {
         "Fournisseur IA" to "AI provider",
         "Clé et modèle, partagés avec la nutrition" to "Key and model, shared with nutrition",
         "aucune version publiée" to "no published version",
-        "Gadgetbridge (montres, AGPL) · Open Food Facts (ODbL) · OSAV · Kenney (pixel-art, CC0)" to
-            "Gadgetbridge (watches, AGPL) · Open Food Facts (ODbL) · FSVO · Kenney (pixel art, CC0)",
         "Aucun traceur. Connexions : Open Food Facts (désactivable), l'IA si activée, ces cartes, GitHub (mises à jour et plugins) et votre sauvegarde." to
             "No trackers. Connections: Open Food Facts (can be turned off), AI if enabled, these maps, GitHub (updates and plugins) and your backup.",
 

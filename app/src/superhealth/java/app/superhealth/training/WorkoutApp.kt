@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Module entraînement (ex-application La Salle), initialisé par SuperHealthApp. */
+/** Module entraînement, initialisé par SuperHealthApp. */
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 object WorkoutApp {
     lateinit var store: Store

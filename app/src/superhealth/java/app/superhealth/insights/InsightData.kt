@@ -125,7 +125,7 @@ object InsightData {
             (trainOn || it.source != Bridge.Source.GYM) }.groupBy { java.time.Instant.ofEpochMilli(it.end).atZone(zone).toLocalDate() }
             .mapValues { (_, acts) -> java.time.Instant.ofEpochMilli(acts.maxOf { it.end }).atZone(zone).toLocalTime().toSecondOfDay() / 60 }
         val bedtime = (caffeine.keys + activity.keys).associateWith { d ->
-            Bridge.sleepNight(d.plusDays(1))?.filter { it.kind != nodomain.freeyourgadget.gadgetbridge.model.ActivityKind.AWAKE_SLEEP }?.minOfOrNull { it.start }
+            Bridge.sleepNight(d.plusDays(1))?.filter { it.kind != app.superhealth.engine.model.ActivityKind.AWAKE_SLEEP }?.minOfOrNull { it.start }
         }
         fun beforeSleep(times: Map<LocalDate, Int>, cutoff: Int) = times.filter { (d, minute) ->
             val time = d.atStartOfDay().plusMinutes(minute.toLong()).atZone(zone).toInstant().toEpochMilli()
@@ -167,7 +167,7 @@ object InsightData {
     fun invalidate() { cached = null }
 }
 
-/** Phrase du constat, courte (tutoiement comme MacroFactor en français). */
+/** Phrase du constat, courte (tutoiement). */
 fun Insights.Insight.text(s: app.superhealth.nutrition.domain.Settings): String {
     val v = abs(value)
     fun pct() = formatNumber(v, if (v < 10) 1 else 0)

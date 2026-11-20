@@ -42,7 +42,7 @@ import androidx.glance.text.TextStyle
 import androidx.compose.ui.unit.DpSize
 import app.superhealth.MainActivity
 import app.superhealth.nutrition.NutriApp
-import nodomain.freeyourgadget.gadgetbridge.R
+import app.superhealth.engine.R
 import app.superhealth.nutrition.domain.Macros
 import app.superhealth.nutrition.domain.NutritionWidgetWeek
 import app.superhealth.ui.widget.WK
@@ -139,7 +139,7 @@ private fun TodayContent(ctx: Context, s: Snapshot?) {
         GlanceModifier.fillMaxSize().background(W.bg).cornerRadius(24.dp).padding(14.dp).clickable(open(ctx, "log")),
     ) {
         if (s == null || !s.onboarded) {
-            Text("La Bouffe", style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
+            Text(tr("Nutrition"), style = TextStyle(color = W.text, fontSize = 16.sp, fontWeight = FontWeight.Bold))
             Text(tr("Ouvrez l'app pour configurer votre programme."), style = TextStyle(color = W.sub, fontSize = 12.sp))
             return@Column
         }
@@ -302,7 +302,7 @@ private fun KcalContent(ctx: Context, s: Snapshot?) {
         .clickable(open(ctx, "log")), verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = if (tall) Alignment.CenterHorizontally else Alignment.Start) {
         if (s == null || !s.onboarded) {
-            Text("La Bouffe", style = TextStyle(color = W.text, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            Text(tr("Nutrition"), style = TextStyle(color = W.text, fontSize = 13.sp, fontWeight = FontWeight.Bold))
             return@Column
         }
         val left = s.kcalTarget - s.kcal

@@ -52,19 +52,19 @@ import app.localhealth.ui.components.GsIcon
 import app.localhealth.ui.components.ListHeader
 import app.localhealth.ui.components.TwoColumnGrid
 import app.localhealth.ui.formatDuration
-import nodomain.freeyourgadget.gadgetbridge.R
-import nodomain.freeyourgadget.gadgetbridge.activities.AboutActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.AboutUserPreferencesActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2
-import nodomain.freeyourgadget.gadgetbridge.activities.DataManagementActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.OpenFwAppInstallerActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.discovery.DiscoveryActivityV2
-import nodomain.freeyourgadget.gadgetbridge.activities.preferences.HealthConnectPreferencesActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutDetailsActivity
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
+import app.superhealth.engine.R
+import app.superhealth.engine.activities.AboutActivity
+import app.superhealth.engine.activities.AboutUserPreferencesActivity
+import app.superhealth.engine.activities.ControlCenterv2
+import app.superhealth.engine.activities.DataManagementActivity
+import app.superhealth.engine.activities.OpenFwAppInstallerActivity
+import app.superhealth.engine.activities.SettingsActivity
+import app.superhealth.engine.activities.devicesettings.DeviceSettingsActivity
+import app.superhealth.engine.activities.discovery.DiscoveryActivityV2
+import app.superhealth.engine.activities.preferences.HealthConnectPreferencesActivity
+import app.superhealth.engine.activities.workouts.WorkoutDetailsActivity
+import app.superhealth.engine.impl.GBDevice
+import app.superhealth.engine.model.ActivityUser
 
 @Composable
 private fun Page(title: String, nav: Navigator, actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}, content: @Composable () -> Unit) {
@@ -268,7 +268,7 @@ private fun WorkoutList(workouts: List<Workout>) {
     }
 }
 
-/** Google Health's activity glyphs for the common Gadgetbridge activity kinds. */
+/** Google Health's activity glyphs for the common SuperHealth activity kinds. */
 private fun workoutIcon(w: Workout): Int {
     val k = w.kind.name
     return when {

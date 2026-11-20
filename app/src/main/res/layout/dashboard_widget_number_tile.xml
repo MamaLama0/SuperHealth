@@ -78,7 +78,7 @@
         android:layout_width="match_parent"
         android:layout_height="22dp">
 
-        <nodomain.freeyourgadget.gadgetbridge.activities.dashboard.MiniChartView
+        <app.superhealth.engine.activities.dashboard.MiniChartView
             android:id="@+id/tile_chart"
             android:layout_width="match_parent"
             android:layout_height="22dp"

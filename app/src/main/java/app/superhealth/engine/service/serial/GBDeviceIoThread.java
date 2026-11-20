@@ -1,0 +1,62 @@
+/*  Copyright (C) 2015-2024 Andreas Shimokawa, Carsten Pfeiffer
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.service.serial;
+
+import android.content.Context;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+import app.superhealth.engine.impl.GBDevice;
+
+/**
+ * @deprecated Use {@link app.superhealth.engine.service.btbr.AbstractBTBRDeviceSupport}
+ */
+@Deprecated
+public abstract class GBDeviceIoThread extends Thread {
+    private static final AtomicLong THREAD_COUNTER = new AtomicLong(0L);
+
+    protected final GBDevice gbDevice;
+    private final Context context;
+
+    public GBDeviceIoThread(GBDevice gbDevice, Context context) {
+        super("GBDeviceIoThread_" + THREAD_COUNTER.getAndIncrement());
+        this.gbDevice = gbDevice;
+        this.context = context;
+    }
+
+    public Context getContext() {
+        return context;
+    }
+
+    public GBDevice getDevice() {
+        return gbDevice;
+    }
+
+    protected boolean connect() {
+        return false;
+    }
+
+    @Override
+    public void run() {
+    }
+
+    synchronized public void write(byte[] bytes) {
+    }
+
+    public void quit() {
+    }
+}

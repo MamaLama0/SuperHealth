@@ -20,7 +20,7 @@
     <string name="lh_last_sync">Synchronisé %1$s</string>
     <string name="lh_device_settings">Paramètres de l\'appareil</string>
     <string name="lh_settings">Paramètres de l\'application LocalHealth</string>
-    <string name="lh_advanced">Avancé (Gadgetbridge)</string>
+    <string name="lh_advanced">Avancé (SuperHealth)</string>
     <string name="lh_help">À propos</string>
     <string name="lh_profile">Profil</string>
     <string name="lh_profile_edit">Appuyer pour modifier</string>

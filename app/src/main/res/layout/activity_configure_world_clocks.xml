@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.ConfigureWorldClocks">
+    tools:context="app.superhealth.engine.activities.ConfigureWorldClocks">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/world_clock_list"

@@ -4,7 +4,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Âge et poids (règle SuperHealth, pas MacroFactor) : quatre tranches, de plus en plus prudentes. Chaque tranche fixe la
+ * Âge et poids (règle SuperHealth) : quatre tranches, de plus en plus prudentes. Chaque tranche fixe la
  * zone d'IMC visée, l'IMC à partir duquel une perte est proposée, le déficit maximal, la perte maximale par objectif,
  * l'IMC plancher de la cible et le plancher protéique.
  *
@@ -79,7 +79,7 @@ object Senior {
 
     /**
      * Obésité sévère (IMC ≥ 35), à tout âge : NHLBI 1998 (Clinical Guidelines on Overweight and Obesity) propose « jusqu'à 500–1 000 kcal/j »,
-     * soit 0,5–1 kg/semaine et 10 % en 6 mois. Le 1 %/semaine de MacroFactor dépasserait ce plafond au-delà de 91 kg.
+     * soit 0,5–1 kg/semaine et 10 % en 6 mois. Un rythme de 1 %/semaine dépasserait ce plafond au-delà de 91 kg.
      */
     const val SEVERE_BMI = 35.0
     const val SEVERE_MAX_DEFICIT = 1000.0

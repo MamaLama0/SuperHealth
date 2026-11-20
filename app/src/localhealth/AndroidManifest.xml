@@ -20,9 +20,9 @@
             </intent-filter>
         </activity>
 
-        <!-- The Gadgetbridge control centre stays reachable from Settings > Advanced, not the launcher -->
+        <!-- The SuperHealth control centre stays reachable from Settings > Advanced, not the launcher -->
         <activity
-            android:name="nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2"
+            android:name="app.superhealth.engine.activities.ControlCenterv2"
             tools:node="merge">
             <intent-filter tools:node="removeAll" />
         </activity>

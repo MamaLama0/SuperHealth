@@ -73,14 +73,14 @@
             android:title="@string/mi2_prefs_inactivity_warnings_threshold"
             app:iconSpaceReserved="false" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="06:00"
             android:dependency="inactivity_warnings_enable"
             android:key="inactivity_warnings_start"
             android:title="@string/mi2_prefs_do_not_disturb_start"
             app:iconSpaceReserved="false" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="22:00"
             android:dependency="inactivity_warnings_enable"
             android:key="inactivity_warnings_end"

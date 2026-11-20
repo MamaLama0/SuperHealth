@@ -47,8 +47,8 @@ import app.superhealth.ui.charts.BarChart
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser
+import app.superhealth.engine.GBApplication
+import app.superhealth.engine.model.ActivityUser
 import kotlin.math.abs
 import kotlin.math.roundToInt
 

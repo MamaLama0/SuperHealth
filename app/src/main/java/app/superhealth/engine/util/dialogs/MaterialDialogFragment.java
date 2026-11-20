@@ -1,0 +1,54 @@
+/*  Copyright (C) 2023-2024 Arjan Schrijver
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.util.dialogs;
+
+import android.app.Dialog;
+import android.os.Bundle;
+import android.view.View;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.StyleRes;
+import androidx.fragment.app.DialogFragment;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+public class MaterialDialogFragment extends DialogFragment {
+    View theDialogView;
+
+    @NonNull
+    @Override
+    public Dialog onCreateDialog(Bundle savedInstanceState) {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireActivity(), getThemeOverlay());
+        theDialogView = onCreateView(getLayoutInflater(), null, savedInstanceState);
+        builder.setView(theDialogView);
+
+        return builder.create();
+    }
+
+    /**
+     * The theme overlay of the dialog, or 0 for the default theme.
+     */
+    @StyleRes
+    protected int getThemeOverlay() {
+        return 0;
+    }
+
+    @Override
+    public View getView() {
+        return theDialogView;
+    }
+}

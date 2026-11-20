@@ -1,5 +1,5 @@
 {
-  description = "Gadgetbridge Android development environment";
+  description = "SuperHealth Android development environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -40,7 +40,7 @@
           ];
 
           shellHook = ''
-            echo "🤖 Gadgetbridge development environment"
+            echo "🤖 SuperHealth development environment"
 
             # Set JAVA_HOME for Gradle
             export JAVA_HOME=${pkgs.jdk21}/lib/openjdk

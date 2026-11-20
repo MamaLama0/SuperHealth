@@ -1,0 +1,252 @@
+/*  Copyright (C) 2025 José Rebelo
+
+    This file is part of SuperHealth.
+
+    SuperHealth is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    SuperHealth is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package app.superhealth.engine.devices.gloryfit
+
+import app.superhealth.engine.R
+import app.superhealth.engine.activities.CameraActivity
+import app.superhealth.engine.activities.devicesettings.DeviceSpecificSettings
+import app.superhealth.engine.activities.devicesettings.DeviceSpecificSettingsCustomizer
+import app.superhealth.engine.activities.devicesettings.DeviceSpecificSettingsScreen
+import app.superhealth.engine.capabilities.HeartRateCapability.MeasurementInterval
+import app.superhealth.engine.devices.AbstractBLEDeviceCoordinator
+import app.superhealth.engine.devices.DeviceCardAction
+import app.superhealth.engine.devices.DeviceCoordinator
+import app.superhealth.engine.devices.GenericSpo2SampleProvider
+import app.superhealth.engine.devices.SampleProvider
+import app.superhealth.engine.devices.SleepSessionProvider
+import app.superhealth.engine.devices.TimeSampleProvider
+import app.superhealth.engine.entities.AbstractActivitySample
+import app.superhealth.engine.entities.DaoSession
+import app.superhealth.engine.impl.GBDevice
+import app.superhealth.engine.model.AbstractNotificationPattern
+import app.superhealth.engine.model.Spo2Sample
+import app.superhealth.engine.service.DeviceSupport
+import app.superhealth.engine.service.devices.gloryfit.GloryFitLanguage
+import app.superhealth.engine.service.devices.gloryfit.GloryFitSupport
+import app.superhealth.engine.service.devices.sony.wena3.protocol.packets.notification.defines.VibrationCount
+import app.superhealth.engine.service.devices.sony.wena3.protocol.packets.notification.defines.VibrationKind
+
+abstract class GloryFitCoordinator : AbstractBLEDeviceCoordinator() {
+    override fun getDefaultIconResource(): Int {
+        return R.drawable.ic_device_amazfit_bip
+    }
+
+    override fun getDeviceKind(device: GBDevice): DeviceCoordinator.DeviceKind {
+        return DeviceCoordinator.DeviceKind.WATCH
+    }
+
+    override fun getDeviceSupportClass(device: GBDevice): Class<out DeviceSupport> {
+        return GloryFitSupport::class.java
+    }
+
+    override fun getSampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): SampleProvider<out AbstractActivitySample>? {
+        return GloryFitActivitySampleProvider(device, session)
+    }
+
+    override fun getSleepSessionProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): SleepSessionProvider {
+        return GloryFitSleepSessionProvider(device, session)
+    }
+
+    override fun getSpo2SampleProvider(
+        device: GBDevice,
+        session: DaoSession
+    ): TimeSampleProvider<out Spo2Sample>? {
+        return GenericSpo2SampleProvider(device, session)
+    }
+
+    override fun getAlarmSlotCount(device: GBDevice): Int {
+        return 3
+    }
+
+    override fun suggestUnbindBeforePair(): Boolean {
+        return false
+    }
+
+    override fun supportsDataFetching(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsActivityTracking(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsActiveCalories(device: GBDevice): Boolean {
+        // TODO it does not, but we could try and match their formula in the samples
+        return false
+    }
+
+    override fun supportsSpo2(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsMusicInfo(device: GBDevice): Boolean {
+        // Not info, but supports music control
+        return true
+    }
+
+    override fun getCannedRepliesSlotCount(device: GBDevice): Int {
+        return 8
+    }
+
+    override fun getContactsSlotCount(device: GBDevice): Int {
+        return 100
+    }
+
+    override fun supportsHeartRateMeasurement(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsManualHeartRateMeasurement(device: GBDevice): Boolean {
+        return false // TODO supportsManualHeartRateMeasurement
+    }
+
+    override fun supportsRealtimeData(device: GBDevice): Boolean {
+        // TODO it does
+        return false
+    }
+
+    override fun supportsRemSleep(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsAwakeSleep(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsWeather(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsAppNotifications(device: GBDevice): Boolean = true
+
+    override fun supportsPhoneCalls(device: GBDevice): Boolean = true
+
+    override fun supportsCallControl(device: GBDevice): Boolean = true
+
+    override fun supportsSmsReply(device: GBDevice): Boolean = getCannedRepliesSlotCount(device) > 0
+
+    override fun supportsFindDevice(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsUnicodeEmojis(device: GBDevice): Boolean {
+        // Official app seems to just remove them outright
+        return false
+    }
+
+    override fun addBatteryPollingSettings(): Boolean {
+        // It only sends proactive updates during charging
+        return true
+    }
+
+    override fun supportsNotificationVibrationPatterns(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun supportsNotificationVibrationRepetitionPatterns(device: GBDevice): Boolean {
+        return true
+    }
+
+    override fun getNotificationVibrationPatterns(): Array<AbstractNotificationPattern?> {
+        return arrayOf(
+            VibrationKind.NONE,
+            VibrationKind.BASIC,
+        )
+    }
+
+    override fun getNotificationVibrationRepetitionPatterns(): Array<AbstractNotificationPattern?> {
+        return arrayOf(
+            VibrationCount.ONCE,
+            VibrationCount.TWICE,
+            VibrationCount.THREE,
+            VibrationCount.FOUR,
+        )
+    }
+
+    override fun getSupportedDeviceSpecificExperimentalSettings(device: GBDevice): IntArray? {
+        return intArrayOf(R.xml.devicesettings_sos_contact)
+    }
+
+    override fun getDeviceSpecificSettings(device: GBDevice): DeviceSpecificSettings {
+        val deviceSpecificSettings = DeviceSpecificSettings()
+
+        val dateTime = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.DATE_TIME)
+        dateTime.add(R.xml.devicesettings_timeformat)
+
+        val display = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.DISPLAY)
+        display.add(R.xml.devicesettings_liftwrist_display_noshed)
+        display.add(R.xml.devicesettings_screen_timeout)
+
+        val health = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.HEALTH)
+        health.add(R.xml.devicesettings_heartrate_automatic_enable)
+        health.add(R.xml.devicesettings_heartrate_alerts)
+        if (supportsSpo2(device)) {
+            health.add(R.xml.devicesettings_spo2)
+        }
+        health.add(R.xml.devicesettings_inactivity_dnd)
+
+        val notifications = deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.CALLS_AND_NOTIFICATIONS)
+        notifications.add(R.xml.devicesettings_transliteration)
+        if (getContactsSlotCount(device) > 0) {
+            notifications.add(R.xml.devicesettings_contacts)
+        }
+        notifications.add(R.xml.devicesettings_header_notifications)
+        notifications.add(R.xml.devicesettings_send_app_notifications)
+        notifications.add(R.xml.devicesettings_per_app_notifications)
+        notifications.add(R.xml.devicesettings_header_phone_calls)
+        notifications.add(R.xml.devicesettings_reject_call_method)
+        if (getCannedRepliesSlotCount(device) > 0) {
+            notifications.add(R.xml.devicesettings_sms_quick_reply)
+            notifications.add(R.xml.devicesettings_canned_reply_16)
+        }
+
+        return deviceSpecificSettings
+    }
+
+    override fun getDeviceSpecificSettingsCustomizer(device: GBDevice): DeviceSpecificSettingsCustomizer? {
+        return GloryFitSettingsCustomizer()
+    }
+
+    override fun getSupportedLanguageSettings(device: GBDevice): Array<String> {
+        // TODO fetch languages from device
+        return arrayOf("auto") + GloryFitLanguage.entries.map { it.locale }
+    }
+
+    override fun getHeartRateMeasurementIntervals(): List<MeasurementInterval?> {
+        // actually on/off
+        return listOf<MeasurementInterval?>(
+            MeasurementInterval.OFF,
+            MeasurementInterval.SMART
+        )
+    }
+
+    override fun getCustomActions(): List<DeviceCardAction> {
+        if (!CameraActivity.supportsCamera()) {
+            return emptyList()
+        }
+
+        return listOf(
+            DeviceCardAction.CameraAction()
+        )
+    }
+}

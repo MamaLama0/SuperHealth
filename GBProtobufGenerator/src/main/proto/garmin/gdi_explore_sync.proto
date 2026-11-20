@@ -1,7 +1,7 @@
 syntax = "proto2";
 
 package garmin_vivomovehr;
-option java_package = "nodomain.freeyourgadget.gadgetbridge.proto.garmin";
+option java_package = "app.superhealth.engine.proto.garmin";
 option java_outer_classname = "GdiExploreSync";
 
 // GDI ExploreSync sub-service definitions, restricted to what GB actually

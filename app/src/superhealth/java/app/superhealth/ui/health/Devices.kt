@@ -38,7 +38,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.NotificationsActive
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
+import app.superhealth.engine.GBApplication
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -65,14 +65,14 @@ import app.superhealth.ui.SuperViewModel
 import app.superhealth.ui.theme.Mf
 import app.superhealth.ui.tr
 import app.superhealth.ui.trf
-import nodomain.freeyourgadget.gadgetbridge.activities.AboutUserPreferencesActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2
-import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsActivity
-import nodomain.freeyourgadget.gadgetbridge.activities.preferences.HealthConnectPreferencesActivity
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import app.superhealth.engine.activities.AboutUserPreferencesActivity
+import app.superhealth.engine.activities.ControlCenterv2
+import app.superhealth.engine.activities.SettingsActivity
+import app.superhealth.engine.activities.devicesettings.DeviceSettingsActivity
+import app.superhealth.engine.activities.preferences.HealthConnectPreferencesActivity
+import app.superhealth.engine.impl.GBDevice
 
-/** Montres et capteurs (module LocalHealth) : association, synchronisation, réglages de chaque appareil. */
+/** Montres et capteurs (module montre) : association, synchronisation, réglages de chaque appareil. */
 @Composable
 fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
@@ -81,12 +81,12 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
     val pair = rememberPairing(onDone = {
         vm.bump()
         // montre associée : les autorisations facultatives (notifications, SMS, appels…) dans la foulée
-        if (nodomain.freeyourgadget.gadgetbridge.GBApplication.app().deviceManager.devices.isNotEmpty() && missingWatchPermissions(ctx) > 0)
+        if (app.superhealth.engine.GBApplication.app().deviceManager.devices.isNotEmpty() && missingWatchPermissions(ctx) > 0)
             nav.navigate("h/permissions")
     }, onUseHealthConnect = { nav.navigate("settings/hc") })
     DetailScaffold(tr("Montre et appareils"), onBack = { nav.popBackStack() }) {
         GroupCard {
-            SwitchRow(tr("Module montre (LocalHealth)"), tr("Connexion Bluetooth aux montres, bracelets et balances"), sh.watchModule) { vm.setWatchModule(it) }
+            SwitchRow(tr("Module montre"), tr("Connexion Bluetooth aux montres, bracelets et balances"), sh.watchModule) { vm.setWatchModule(it) }
         }
         if (!sh.watchModule) {
             Text(tr("Module désactivé : aucun appareil connecté. Les constantes viennent de Health Connect s'il est activé."),
@@ -140,11 +140,11 @@ fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {
                 nav.navigate("backup")
             }
             RowDivider()
-            SettingRow(tr("Réglages Gadgetbridge"), subtitle = tr("Notifications, connexion, journal"), icon = Icons.Rounded.Settings) {
+            SettingRow(tr("Réglages avancés de la montre"), subtitle = tr("Notifications, connexion, journal"), icon = Icons.Rounded.Settings) {
                 ctx.startActivity(Intent(ctx, SettingsActivity::class.java))
             }
             RowDivider()
-            SettingRow(tr("Centre de contrôle"), subtitle = tr("Interface complète de Gadgetbridge"), icon = Icons.Rounded.Tune) {
+            SettingRow(tr("Centre de contrôle"), subtitle = tr("Interface complète du module montre"), icon = Icons.Rounded.Tune) {
                 ctx.startActivity(Intent(ctx, ControlCenterv2::class.java))
             }
         }
@@ -172,7 +172,7 @@ private fun DeviceRow(d: DeviceUi, onSync: () -> Unit, onClick: () -> Unit) {
     }
 }
 
-/** Raccourcis de Gadgetbridge sous une montre connectée : la faire sonner, régler ses alarmes (si elle les gère). */
+/** Raccourcis du moteur montre sous une montre connectée : la faire sonner, régler ses alarmes (si elle les gère). */
 @Composable
 private fun DeviceActions(d: DeviceUi) {
     val ctx = LocalContext.current
@@ -190,7 +190,7 @@ private fun DeviceActions(d: DeviceUi) {
             runCatching { GBApplication.deviceService(d.device).onFindDevice(ringing) }
         }
         if (alarms) PillButton(tr("Alarmes"), strong = false, icon = Icons.Rounded.Alarm) {
-            ctx.startActivity(Intent(ctx, nodomain.freeyourgadget.gadgetbridge.activities.ConfigureAlarms::class.java)
+            ctx.startActivity(Intent(ctx, app.superhealth.engine.activities.ConfigureAlarms::class.java)
                 .putExtra(GBDevice.EXTRA_DEVICE, d.device))
         }
     }

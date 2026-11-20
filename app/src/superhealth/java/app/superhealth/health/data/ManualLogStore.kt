@@ -14,7 +14,7 @@ data class ManualLog(val id: Long, val metric: Metric, val timestampMs: Long, va
 
 /**
  * Values the user logs by hand (weight, hydration, glucose…), kept in a small local SQLite
- * database next to Gadgetbridge's, since those aren't tied to a paired device.
+ * database next to the watch engine's, since those aren't tied to a paired device.
  */
 class ManualLogStore private constructor(context: Context) :
     SQLiteOpenHelper(context, "localhealth_manual.db", null, 1) {

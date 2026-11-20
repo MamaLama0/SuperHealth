@@ -19,12 +19,12 @@
             app:useSimpleSummaryProvider="true"
             android:title="@string/prefs_wena3_auto_power_off_item" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="22:00"
             android:key="pref_wena3_power_schedule_start"
             android:title="@string/prefs_wena3_auto_power_off_turn_off_time_item" />
 
-        <nodomain.freeyourgadget.gadgetbridge.util.XTimePreference
+        <app.superhealth.engine.util.XTimePreference
             android:defaultValue="06:00"
             android:key="pref_wena3_power_schedule_end"
             android:title="@string/prefs_wena3_auto_power_off_turn_on_time_item" />

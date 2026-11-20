@@ -59,8 +59,8 @@ import app.localhealth.ui.formatWithUnit
 import app.localhealth.ui.theme.familyFor
 import app.localhealth.ui.unitOf
 import java.time.LocalDate
-import nodomain.freeyourgadget.gadgetbridge.R
-import nodomain.freeyourgadget.gadgetbridge.activities.AboutUserPreferencesActivity
+import app.superhealth.engine.R
+import app.superhealth.engine.activities.AboutUserPreferencesActivity
 
 private val DEFAULT_KEY_STATS = listOf(
     Metric.WEIGHT, Metric.CALORIES, Metric.STEPS, Metric.SLEEP,

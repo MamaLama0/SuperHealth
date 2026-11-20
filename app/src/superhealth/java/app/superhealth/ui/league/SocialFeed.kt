@@ -405,7 +405,7 @@ internal fun SocialPostCard(post: SocialPosts.Post, friend: League.Friend?, high
             Spacer(Modifier.weight(1f))
             if (!closed || replyCount > 0) Surface(onClick = { repliesOpen = !repliesOpen }, shape = androidx.compose.foundation.shape.CircleShape, color = if (repliesOpen) Mf.colors.accent.copy(alpha = .16f) else Mf.colors.chip) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(androidx.compose.ui.res.painterResource(nodomain.freeyourgadget.gadgetbridge.R.drawable.ic_group_comments), tr("Répondre"), Modifier.size(18.dp), tint = Mf.colors.textSecondary)
+                    Icon(androidx.compose.ui.res.painterResource(app.superhealth.engine.R.drawable.ic_group_comments), tr("Répondre"), Modifier.size(18.dp), tint = Mf.colors.textSecondary)
                     if (replyCount > 0) Text(" $replyCount", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Mf.colors.textSecondary)
                 }
             }
