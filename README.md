@@ -24,9 +24,10 @@ Pas de jailbreak, tout se supprime comme une app normale. [Guide détaillé](htt
 - **Santé** : montre (pas, cœur, sommeil, VFC…), scores de sommeil, récupération et effort, courses avec tracé.
   Sur Android, une Garmin se connecte sans Garmin Connect (météo et GPS rapide inclus).
 - **IA offerte** sans clé, ou la vôtre.
+- **Groupe** (plugin) : classement avec podium, amis par code ou QR, progression, séries, quêtes et badges. Fil à gauche du tableau de bord (glisser vers la droite) pour publier photos, vidéos, séances et courses entre amis. **Mes cartes** : cartes Athlète, paquets payés en or, combats entre amis, quêtes et album. Réglages dans Réglages → Groupe et amis.
 - **Randonnée** (plugin) : recherche de parcours dans le monde, favoris, import/export GPX, cartes hors ligne et suivi GPS avec pause/reprise. [Guide](docs/HIKING.md).
-- **Groupe** : classement avec podium, amis par code ou QR, progression, séries, quêtes et badges. Fil à gauche du dashboard (glisser vers la droite), publications de photos, vidéos, séances et courses entre amis ; désactivable dans Réglages → Groupe.
-- **Tableau de bord** personnalisable et **21 widgets Android**, dont 6 sociaux. Ajout depuis Réglages → Accueil → Widgets Android, ou depuis le menu de votre écran d’accueil.
+- **Autres plugins** : Meal Suggestion (planificateur de repas), rappel de médication, méditation, étirements, animations d'exercices. Tous s'installent et se retirent dans Réglages → Fonctionnalités → Plugins ; l'app de base reste légère.
+- **Tableau de bord** personnalisable et **29 widgets Android** (nutrition, santé, montre, Groupe et cartes). Ajout depuis Réglages → Écran d'accueil → Widgets Android, ou depuis le menu de votre écran d’accueil.
 - **Sauvegardes chiffrées**, français et anglais.
 
 ## Publier et retrouver ses amis
