@@ -58,14 +58,6 @@ fun StyleLabScreen(vm: SuperViewModel, nav: NavHostController) {
         Text(tr("Du plus neutre au plus vibrant. Tableau de bord et widgets de l'écran d'accueil suivent le choix."), style = MaterialTheme.typography.bodyMedium,
             color = Mf.colors.textSecondary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
 
-        app.superhealth.nutrition.ui.components.GroupHeader(tr("Version test"))
-        app.superhealth.nutrition.ui.components.GroupCard {
-            app.superhealth.nutrition.ui.components.SwitchRow(tr("Retouches de design"),
-                tr("Tons unis en sombre, alignements, puces. Coupez pour comparer avec la version publiée"), sh.stylePolish) { v ->
-                SuperPrefs.update { it.copy(stylePolish = v) }
-            }
-        }
-
         app.superhealth.nutrition.ui.components.GroupHeader(tr("Cartes · thème clair"))
         MfCard {
             ChipChoice(StyleLab.Cards.entries, pick(StyleLab.Cards.entries, sh.styleCardsLight, StyleLab.Cards.NEUTRAL), { tr(it.label) }) { c ->

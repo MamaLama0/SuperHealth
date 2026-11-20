@@ -506,13 +506,13 @@ fun DashboardScreen(vm: SuperViewModel, nav: NavHostController) {
                     }
                 }
                 Spacer(Modifier.height(4.dp))
-                if (app.superhealth.ui.theme.StyleLab.polish()) Row(Modifier.fillMaxWidth().clip(CircleShape).clickable(role = androidx.compose.ui.semantics.Role.Button) { nav.go("dash/edit") }
+                Row(Modifier.fillMaxWidth().clip(CircleShape).clickable(role = androidx.compose.ui.semantics.Role.Button) { nav.go("dash/edit") }
                     .heightIn(min = 48.dp).padding(horizontal = 20.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    // retouche : action secondaire en bas de page, en gris, sans fond
+                    // action secondaire en bas de page : en gris, sans fond
                     Icon(Icons.Rounded.Tune, null, Modifier.size(18.dp), tint = Mf.colors.textSecondary)
                     Spacer(Modifier.width(8.dp))
                     Text(tr("Personnaliser le tableau de bord"), style = MaterialTheme.typography.labelLarge, color = Mf.colors.textSecondary)
-                } else PillButton(tr("Personnaliser le tableau de bord"), Modifier.fillMaxWidth(), strong = false, icon = Icons.Rounded.Tune) { nav.go("dash/edit") }
+                }
             }
         }
     }

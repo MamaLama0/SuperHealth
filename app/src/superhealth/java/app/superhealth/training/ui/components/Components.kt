@@ -119,8 +119,8 @@ fun BigStat(value: String, label: String, modifier: Modifier = Modifier, unit: S
 /** Pastille de pourcentage colorée (fiche aliment). */
 @Composable
 fun PercentPill(pct: Int, color: Color) {
-    // retouche : en sombre, une couleur chaude en voile vire au brun ; fond neutre commun, la couleur passe au chiffre
-    val calm = Mf.colors.dark && app.superhealth.ui.theme.StyleLab.polish()
+    // en sombre, une couleur chaude en voile vire au brun : fond neutre commun, la couleur passe au chiffre
+    val calm = Mf.colors.dark
     Text("${pct} %", Modifier.clip(CircleShape).background(if (calm) Mf.colors.chip else color.copy(alpha = 0.28f)).padding(horizontal = 8.dp, vertical = 2.dp),
         style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = if (calm) androidx.compose.ui.graphics.lerp(color, Color.White, 0.25f) else Mf.colors.text)
 }

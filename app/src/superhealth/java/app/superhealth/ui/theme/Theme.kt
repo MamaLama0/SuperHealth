@@ -137,7 +137,7 @@ fun Color.container(strength: Float = 1f): Color =
  */
 @Composable
 fun Color.seriesContainer(strength: Float = 1f): Color =
-    if (Mf.colors.dark && StyleLab.polish()) androidx.compose.ui.graphics.lerp(Mf.colors.card, Color.White, 0.07f * strength) else container(strength)
+    if (Mf.colors.dark) androidx.compose.ui.graphics.lerp(Mf.colors.card, Color.White, 0.07f * strength) else container(strength)
 
 /**
  * Second ton du dégradé d'une donnée : teinte voisine (les froides glissent vers le bleu-violet, les chaudes vers le rose),

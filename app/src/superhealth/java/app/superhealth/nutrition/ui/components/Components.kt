@@ -422,7 +422,6 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
         Segmented(labels, options.indexOf(selected), modifier) { onSelect(options[it]) }
         return
     }
-    val polish = app.superhealth.ui.theme.StyleLab.polish()
     androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEachIndexed { i, o ->
             val sel = o == selected
@@ -431,12 +430,11 @@ fun <T> ChipChoice(options: List<T>, selected: T, label: (T) -> String, modifier
             Row(
                 Modifier.height(34.dp).clip(shape).background(if (sel) Mf.colors.accent.container(1.4f) else Color.Transparent)
                     .border(1.dp, if (sel) Color.Transparent else Mf.colors.divider.copy(alpha = 1f), shape).clickable { if (!sel) haptic.tick(); onSelect(o) }
-                    .padding(horizontal = if (polish) 14.dp else 10.dp),
+                    .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // retouche : la coche ne réserve plus sa place dans les puces non choisies (libellé centré)
-                if (!polish) { Box(Modifier.size(17.dp)) { if (sel) Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()) }; Spacer(Modifier.width(6.dp)) }
-                else if (sel) { Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()); Spacer(Modifier.width(6.dp)) }
+                // la coche ne réserve pas sa place dans les puces non choisies : leur libellé reste centré
+                if (sel) { Icon(androidx.compose.material.icons.Icons.Rounded.Check, null, Modifier.size(17.dp), tint = Mf.colors.accent.onContainer()); Spacer(Modifier.width(6.dp)) }
                 Text(labels[i], style = MaterialTheme.typography.labelLarge, color = if (sel) Mf.colors.accent.onContainer() else Mf.colors.text)
             }
         }
@@ -537,8 +535,8 @@ fun EmptyState(icon: ImageVector, title: String, text: String? = null, modifier:
 /** Pastille de pourcentage colorée (fiche aliment). */
 @Composable
 fun PercentPill(pct: Int, color: Color) {
-    // retouche : en sombre, une couleur chaude en voile vire au brun ; fond neutre commun, la couleur passe au chiffre
-    val calm = Mf.colors.dark && app.superhealth.ui.theme.StyleLab.polish()
+    // en sombre, une couleur chaude en voile vire au brun : fond neutre commun, la couleur passe au chiffre
+    val calm = Mf.colors.dark
     Text("${pct} %", Modifier.clip(CircleShape).background(if (calm) Mf.colors.chip else color.copy(alpha = 0.28f)).padding(horizontal = 8.dp, vertical = 2.dp),
         style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = if (calm) androidx.compose.ui.graphics.lerp(color, Color.White, 0.25f) else Mf.colors.text)
 }
