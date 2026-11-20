@@ -9,7 +9,10 @@ L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis l
 |---|---|---|
 | `coach` — Coach IA | `coach` | `prompts.json` (consignes du coach, tons, point du jour, questions suggérées) |
 | `hiking` — Randonnée | `hiking` | `hiking.json` (parcours, relief et repères), photos, fonds vectoriels et crédits ; recherche régionale et suivi GPS dans le moteur Android |
-| `meals` — Repas | `meals` | `planner.json` (consignes du planificateur IA, créneaux de repas : nom, part des calories, heure) |
+| `meals` — Meal Suggestion | `meals` | `planner.json` (consignes du planificateur IA, créneaux de repas : nom, part des calories, heure) |
+| `meds` — Rappel médication | `meds` | `meds.json` (moments de prise proposés : nom, heure) |
+| `meditation` — Méditation | `meditation` | `meditation.json` (séances, programmes, SOS), `audio/` (gongs, ambiances, voix enregistrées par `tools/plugins/build_meditation_audio.py` du dépôt de l'app) et `credits.txt` |
+| `stretch` — Étirements | `stretch` | `exercises.json` (exercices en vidéo et consignes), `mobility.json` (test de mobilité), `thumbs/` (vignettes) |
 | `league` — Groupe | `league` | `league.json` (règles du score de la semaine) ; l’app 3.7+ l’installe d’office pour qui avait le Groupe, il se retire comme les autres |
 | `animations` — Animations d'exercices | `animations` | `anim.json` (ordre de lecture et durée des images) et `anim/<illustration>.webp` (planches des images qui suivent l'image fixe de l'app) ; générés par `tools/exercises/exercise_illustrations.py` du dépôt de l'app, app 4.1.3+ avec le moteur |
 
@@ -22,5 +25,5 @@ L'app lit `dist/index.json`, télécharge l'archive, vérifie son SHA-256 puis l
 ## Source non vérifiée
 
 N'importe quel serveur HTTPS peut publier un `index.json` au même format ; l'app l'affiche comme « non vérifié ».
-Champs d'un plugin : `id`, `kind` (`coach`, `meals`), `name`, `summary`, `nameEn`, `summaryEn`, `version`,
+Champs d'un plugin : `id`, `kind` (le moteur, voir le tableau), `name`, `summary`, `nameEn`, `summaryEn`, `version`,
 `size`, `sha256`, `url` (relative à l'index), `minApp`, `color`.
