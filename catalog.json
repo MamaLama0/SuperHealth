@@ -72,6 +72,16 @@
       "nameEn": "Hiking",
       "summary": "Des parcours détaillés à découvrir dans le monde, avec photos, étapes, relief, cartes hors ligne et suivi GPS.",
       "summaryEn": "Discover detailed trails worldwide, with photos, directions, elevation, offline maps and GPS tracking."
+    },
+    {
+      "id": "animations",
+      "kind": "animations",
+      "minApp": "4.1.3",
+      "color": "#D9503A",
+      "name": "Animations d'exercices",
+      "nameEn": "Exercise animations",
+      "summary": "Les illustrations d'exercices prennent vie : le mouvement complet, en boucle, dans la fiche de chaque exercice et pendant la séance. Plus de 1 300 exercices animés.",
+      "summaryEn": "Exercise illustrations come to life: the full movement, on a loop, on every exercise page and during your workout. Over 1,300 animated exercises."
     }
   ]
 }

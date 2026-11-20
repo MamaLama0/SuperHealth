@@ -100,6 +100,20 @@
       "size": 2547534,
       "sha256": "21f4c56dc613142bfbdf4b79e40014deef16ffc6c58078a41076c892e8c2b8bf",
       "url": "hiking-1.1.0.zip"
+    },
+    {
+      "id": "animations",
+      "kind": "animations",
+      "minApp": "4.1.3",
+      "color": "#D9503A",
+      "name": "Animations d'exercices",
+      "nameEn": "Exercise animations",
+      "summary": "Les illustrations d'exercices prennent vie : le mouvement complet, en boucle, dans la fiche de chaque exercice et pendant la séance. Plus de 1 300 exercices animés.",
+      "summaryEn": "Exercise illustrations come to life: the full movement, on a loop, on every exercise page and during your workout. Over 1,300 animated exercises.",
+      "version": "1.0.0",
+      "size": 32191664,
+      "sha256": "a791a619d3d47811f45de41f7356ebf044f95e6bb782f058a6c6947779e39469",
+      "url": "animations-1.0.0.zip"
     }
   ]
 }
