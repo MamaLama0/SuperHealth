@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -63,6 +64,7 @@ import app.superhealth.training.domain.SetType
 import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.Assets
 import app.superhealth.training.ui.AsyncAsset
+import app.superhealth.training.ui.ExerciseIllustration
 import app.superhealth.training.ui.Picker
 import app.superhealth.training.ui.clean
 import app.superhealth.training.ui.components.ExerciseThumb
@@ -206,7 +208,7 @@ private fun swap(vm: AppViewModel, index: Int, newId: String) = vm.session { s -
     s.copy(exercises = s.exercises.toMutableList().also { it[index] = ex.copy(id = UUID.randomUUID().toString(), exerciseId = newId, sets = ex.sets.filter { it.done } + sets) })
 }
 
-/** Fiche exercice (exercise_info) : angles de caméra, muscles, équipement, technique, notes, historique et records. */
+/** Fiche exercice (exercise_info) : illustration, muscles, équipement, technique, notes, historique et records. */
 @Composable
 fun ExerciseInfoScreen(vm: AppViewModel, id: String, nav: NavHostController) {
     val st by vm.state.collectAsState()
@@ -220,14 +222,13 @@ fun ExerciseInfoScreen(vm: AppViewModel, id: String, nav: NavHostController) {
         if (db.isCustom(e.id)) IconButton(onClick = { nav.navigate("exerciseedit?id=${e.id}") }) { Icon(Icons.Rounded.Edit, tr("Modifier")) }
     }) {
         if (db.isCustom(e.id)) Text(tr("Exercice personnel"), style = MaterialTheme.typography.labelLarge, color = WorkoutBlue, modifier = Modifier.padding(bottom = 8.dp))
-        if (e.images.isEmpty()) {
+        val illustration = e.illustration
+        if (illustration == null) {
             val intensity = e.secondaryMuscleGroups.associate { it.key to 0.45f } + e.muscleGroups.associate { it.key to 1f }
             app.superhealth.training.ui.components.BodyMap(intensity, st.settings.sex, Modifier.fillMaxWidth().height(200.dp))
-        }
-        if (e.images.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            (listOfNotNull(e.preferredImage) + e.images.filter { it != e.preferredImage }).forEach { k ->
-                AsyncAsset("ex/${e.id}_${k}.webp", Modifier.width(170.dp).aspectRatio(360f / 640f).clip(RoundedCornerShape(16.dp)))
-            }
+        } else Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            // en grand : toute la largeur du téléphone, plafonnée sur tablette
+            ExerciseIllustration(illustration, Modifier.widthIn(max = 440.dp).fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp)))
         }
         Spacer(Modifier.height(12.dp))
         app.superhealth.ui.coach.CoachChip(if (points.isEmpty()) tr("Conseils du coach") else tr("Ma progression"),

@@ -1,6 +1,7 @@
 package app.superhealth.ui.settings
 
 import androidx.compose.material.icons.rounded.AccessibilityNew
+import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.animation.AnimatedVisibility
@@ -116,6 +117,7 @@ internal fun moduleIcon(kind: String): ImageVector = when (kind) {
     Modules.MEDITATION -> Icons.Rounded.SelfImprovement
     Modules.STRETCH -> Icons.Rounded.AccessibilityNew
     Modules.LEAGUE -> Icons.Rounded.EmojiEvents
+    Modules.ANIMATIONS -> Icons.Rounded.Animation
     else -> Icons.Rounded.Extension
 }
 
@@ -365,7 +367,8 @@ private fun ModuleCard(id: String, entry: Modules.Entry?, inst: Modules.Installe
                 when {
                     update != null && Modules.compatible(ctx, update.module) ->
                         PillButton(trf("Mettre à jour (v%1\$s)", update.module.version), Modifier.weight(1f)) { scope.launch { Modules.install(ctx, update) } }
-                    inst.enabled -> PillButton(tr("Ouvrir"), Modifier.weight(1f)) { openModule(kind, nav) }
+                    // les animations n'ont pas d'écran à elles : elles se voient dans les fiches et les séances
+                    inst.enabled && kind != Modules.ANIMATIONS -> PillButton(tr("Ouvrir"), Modifier.weight(1f)) { openModule(kind, nav) }
                 }
                 PillButton(tr("Désinstaller"), Modifier.weight(1f), strong = false) { confirmRemove = true }
             }

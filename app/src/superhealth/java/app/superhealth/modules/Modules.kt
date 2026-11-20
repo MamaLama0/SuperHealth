@@ -42,7 +42,9 @@ object Modules {
     const val MEDITATION = "meditation"
     const val LEAGUE = "league"
     const val HIKING = "hiking"
-    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION, HIKING, LEAGUE)
+    /** Animations des illustrations d'exercices (planches d'images lues par training/ui/ExerciseAnimations.kt). */
+    const val ANIMATIONS = "animations"
+    val engines = setOf(MEALS, MEDS, STRETCH, MEDITATION, HIKING, LEAGUE, ANIMATIONS)
 
     @Serializable
     data class Module(
@@ -95,6 +97,9 @@ object Modules {
     private val http by lazy { OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build() }
     private const val MAX_ARCHIVE = 24L * 1024 * 1024
     private const val MAX_UNZIPPED = 48L * 1024 * 1024
+    /** Les animations sont des centaines de planches d'images : seul type autorisé à dépasser la limite commune. */
+    private fun maxArchive(kind: String) = if (kind == ANIMATIONS) 64L * 1024 * 1024 else MAX_ARCHIVE
+    private fun maxUnzipped(kind: String) = if (kind == ANIMATIONS) 96L * 1024 * 1024 else MAX_UNZIPPED
 
     private lateinit var root: File
     private var bundledCatalog = emptyList<Entry>()
@@ -263,7 +268,7 @@ object Modules {
                     val buffer = ByteArray(32768)
                     while (true) {
                         val n = input.read(buffer); if (n < 0) break
-                        done += n; check(done <= MAX_ARCHIVE) { tr("archive trop volumineuse") }
+                        done += n; check(done <= maxArchive(m.kind)) { tr("archive trop volumineuse") }
                         output.write(buffer, 0, n); digest.update(buffer, 0, n)
                     }
                 } }
@@ -278,7 +283,7 @@ object Modules {
                         while (true) {
                             val n = input.read(buf); if (n < 0) break
                             done += n
-                            if (done > MAX_ARCHIVE) error(tr("archive trop volumineuse"))
+                            if (done > maxArchive(m.kind)) error(tr("archive trop volumineuse"))
                             o.write(buf, 0, n); digest.update(buf, 0, n)
                             if (total > 0) setJob(m.id, Job.Downloading((done.toFloat() / total).coerceIn(0f, 1f)))
                         }
@@ -290,7 +295,7 @@ object Modules {
             if (!sha.equals(m.sha256.trim(), ignoreCase = true)) { tmp.delete(); error(tr("archive altérée (empreinte différente)")) }
             setJob(m.id, Job.Installing)
             val staging = File(root, ".${m.id}.new").apply { deleteRecursively(); mkdirs() }
-            unzip(tmp, staging)
+            unzip(tmp, staging, maxUnzipped(m.kind))
             tmp.delete()
             val target = File(root, m.id)
             target.deleteRecursively()
@@ -309,7 +314,7 @@ object Modules {
     }
 
     /** Décompression sûre : pas de chemin qui sorte du dossier, pas d'archive qui gonfle sans limite. */
-    private fun unzip(zip: File, into: File) {
+    private fun unzip(zip: File, into: File, limit: Long) {
         val base = into.canonicalPath + File.separator
         var total = 0L
         ZipInputStream(zip.inputStream().buffered()).use { z ->
@@ -324,7 +329,7 @@ object Modules {
                     while (true) {
                         val n = z.read(buf); if (n < 0) break
                         total += n
-                        if (total > MAX_UNZIPPED) error(tr("archive trop volumineuse"))
+                        if (total > limit) error(tr("archive trop volumineuse"))
                         o.write(buf, 0, n)
                     }
                 }
@@ -377,6 +382,7 @@ object Modules {
             MEALS -> app.superhealth.meals.MealPlanner.invalidate()
             MEDS -> { app.superhealth.meds.Meds.invalidate(); app.superhealth.meds.Meds.schedule(ctx) }
             HIKING -> app.superhealth.hiking.Hiking.invalidate()
+            ANIMATIONS -> app.superhealth.training.ui.ExerciseAnimations.invalidate()
             STRETCH -> { app.superhealth.stretch.Stretch.invalidate(); if (on) addCard(app.superhealth.DashCard.STRETCH) }
             MEDITATION -> { app.superhealth.meditation.Meditation.invalidate(); if (on) addCard(app.superhealth.DashCard.MEDITATION) }
             LEAGUE -> {

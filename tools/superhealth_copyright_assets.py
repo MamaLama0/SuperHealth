@@ -33,7 +33,7 @@ CATEGORIES = [
     ("assets/body", "Silhouettes (tracés)", "MacroFactor Workouts", "training/ui/components/WorkoutWidgets.kt (BodyMap)"),
     ("assets/muscles", "Vignettes de muscles", "MacroFactor Workouts", "training/ui/components/WorkoutWidgets.kt"),
     ("assets/eq", "Équipements", "MacroFactor Workouts", "training/ui/Assets.kt"),
-    ("assets/ex", "Photos d'exercices", "MacroFactor Workouts", "training/ui/Assets.kt"),
+    ("assets/ex", "Illustrations d'exercices", "Gym visual", "training/ui/Assets.kt, training/ui/ExerciseAnimations.kt"),
     ("assets/md", "Fiches d'exercices (textes)", "MacroFactor Workouts", "training/ui/screens/ExerciseScreens.kt"),
     ("assets/db/exercises.json", "Base d'exercices", "MacroFactor Workouts", "training/domain/ExerciseDb.kt"),
     ("res/raw/beep.wav", "Son du minuteur", "MacroFactor Workouts", "training/ui/RestTimer.kt"),

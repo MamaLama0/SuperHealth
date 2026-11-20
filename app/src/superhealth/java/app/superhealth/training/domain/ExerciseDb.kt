@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.text.Normalizer
 
-/** Exercice de la base MacroFactor Workouts (assets/db/exercises.json, généré par tools/import_workout_assets.py). */
+/** Exercice de la base MacroFactor Workouts (assets/db/exercises.json, illustrations posées par tools/exercises/exercise_illustrations.py). */
 @Serializable
 data class Exercise(
     val id: String,
@@ -33,8 +33,8 @@ data class Exercise(
     @SerialName("st") val stability: Double? = null,
     /** Fraction du poids de corps soulevée (exercices au poids du corps). */
     @SerialName("bw") val bodyweight: Double? = null,
-    @SerialName("img") val images: List<String> = emptyList(),
-    @SerialName("pi") val preferredImage: String? = null,
+    /** Illustration (assets/ex/<illustration>.webp), partagée par les exercices proches ; null : pas d'image. */
+    @SerialName("il") val illustration: String? = null,
     @SerialName("md") val hasGuide: Boolean = false,
     val notes: List<List<String>> = emptyList(),
     @SerialName("b") val searchBoost: Double? = null,
@@ -49,7 +49,7 @@ data class Exercise(
     val usesWeight get() = metrics.any { it.startsWith("w") || it == "aw" }
     val usesReps get() = metrics.any { it.startsWith("r") }
     val usesDuration get() = metrics.any { it.startsWith("d") && it != "ds" && it != "dl" }
-    fun thumbnail(): String? = (preferredImage ?: images.firstOrNull())?.let { "ex/${id}_$it.webp" }
+    fun thumbnail(): String? = illustration?.let { "ex/$it.webp" }
 }
 
 @Serializable

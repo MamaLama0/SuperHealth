@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -131,6 +133,7 @@ import app.superhealth.training.domain.Settings
 import app.superhealth.training.domain.Workout
 import app.superhealth.training.ui.AppViewModel
 import app.superhealth.training.ui.AsyncAsset
+import app.superhealth.training.ui.ExerciseIllustration
 import app.superhealth.training.ui.Picker
 import app.superhealth.training.ui.clean
 import app.superhealth.training.ui.components.PillButton
@@ -600,13 +603,11 @@ private fun ExercisePage(
     }
 }
 
-/** En-tête : photo de l'exercice (angles a/b/c, en touchant), dégradé, nom et muscles. */
+/** En-tête : illustration de l'exercice (animée avec le plugin d'animations) ou silhouette des muscles, nom et muscles. */
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, groupSize: Int, supersetLetter: Char? = null, onRepeat: (() -> Unit)? = null, onInfo: () -> Unit) {
-    val angles = e?.images.orEmpty()
-    var angle by remember(e?.id) { mutableIntStateOf(0) }
-    val path = angles.getOrNull(angle)?.let { "ex/${e!!.id}_${it}.webp" } ?: e?.thumbnail()
+    val illustration = e?.illustration
     val heroStyle = app.superhealth.ui.theme.StyleLab.hero()
     if (heroStyle == app.superhealth.ui.theme.StyleLab.Hero.NONE) {
         // labo de style : en-tête sans photo, vignette ronde et nom
@@ -627,30 +628,35 @@ private fun Hero(e: Exercise?, settings: Settings, index: Int, count: Int, group
         }
         return
     }
-    val heroHeight = if (heroStyle == app.superhealth.ui.theme.StyleLab.Hero.COMPACT) 150.dp else 230.dp
+    val compact = heroStyle == app.superhealth.ui.theme.StyleLab.Hero.COMPACT
+    // L'illustration est carrée, sur fond blanc, et se montre entière : l'en-tête devient une carte blanche plus haute,
+    // le nom en sombre sous l'image (à côté d'elle en version compacte) au lieu d'un dégradé par-dessus une photo.
+    val heroHeight = if (compact) 150.dp else if (illustration != null) 320.dp else 230.dp
     Box(Modifier.padding(horizontal = 12.dp).fillMaxWidth().height(heroHeight).clip(RoundedCornerShape(24.dp))
-        .background(Mf.colors.chip)
-        .combinedClickable(onClick = { if (angles.size > 1) angle = (angle + 1) % angles.size else onInfo() }, onLongClick = onRepeat)) {
-        if (path != null && angles.isNotEmpty()) AsyncAsset(path, Modifier.fillMaxSize(), fallback = e?.name ?: "?")
-        else if (e != null) {
-            // Pas de photo dans l'APK : silhouette des muscles travaillés (principaux en plein, secondaires atténués)
+        .background(if (illustration != null) Color.White else Mf.colors.chip)
+        .combinedClickable(onClick = onInfo, onLongClick = onRepeat)) {
+        if (illustration != null) {
+            if (compact) ExerciseIllustration(illustration, Modifier.align(Alignment.CenterEnd).fillMaxHeight().aspectRatio(1f))
+            else ExerciseIllustration(illustration, Modifier.fillMaxSize().padding(top = 6.dp, bottom = 76.dp))
+        } else if (e != null) {
+            // Pas d'illustration : silhouette des muscles travaillés (principaux en plein, secondaires atténués)
             val intensity = e.secondaryMuscleGroups.associate { it.key to 0.45f } + e.muscleGroups.associate { it.key to 1f }
             app.superhealth.training.ui.components.BodyMap(intensity, settings.sex, Modifier.fillMaxSize().padding(top = 16.dp, bottom = 70.dp))
         }
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
+        if (illustration == null) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
         Row(Modifier.align(Alignment.TopStart).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("${index + 1} / ${count}", Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, style = MaterialTheme.typography.labelMedium)
             if (groupSize > 0) Text(app.superhealth.training.domain.Supersets.label(groupSize).tr() + (supersetLetter?.let { " $it" } ?: ""), Modifier.clip(CircleShape).background(WorkoutBlue).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, style = MaterialTheme.typography.labelMedium)
         }
-        if (angles.size > 1) Row(Modifier.align(Alignment.TopEnd).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            angles.indices.forEach { Box(Modifier.size(if (it == angle) 8.dp else 6.dp).clip(CircleShape).background(Color.White.copy(alpha = if (it == angle) 1f else 0.5f))) }
-        }
-        Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
-            Text(e?.name ?: tr("Exercice inconnu"), color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (e != null) Text(e.muscleGroups.joinToString(" · ") { it.label.tr() }, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+        // sur la carte blanche le texte est sombre quel que soit le thème
+        val ink = if (illustration != null) Color(0xFF15181D) else Color.White
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth(if (illustration != null && compact) 0.56f else 1f).padding(14.dp)) {
+            Text(e?.name ?: tr("Exercice inconnu"), color = ink, style = if (illustration != null) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (e != null) Text(e.muscleGroups.joinToString(" · ") { it.label.tr() }, color = ink.copy(alpha = if (illustration != null) 0.62f else 0.85f), style = MaterialTheme.typography.bodySmall,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

@@ -6,7 +6,7 @@ Scripts lancés depuis la racine du dépôt. Aucun n'est nécessaire pour compil
 | --- | --- |
 | `arsenal/` | Génération des cartes, boosters et créatures de l'Arsenal, et contrôles visuels (sorties dans `review/`, non versionné). |
 | `nutrition/` | Import de la base USDA et icônes d'aliments en pixel art. |
-| `exercises/` | Catalogues d'exercices Garmin et Zepp OS, images d'exercices. |
+| `exercises/` | Catalogues d'exercices Garmin et Zepp OS, illustrations d'exercices (images de l'app et animations du plugin). |
 | `ui/` | Couleurs du thème, icônes d'accent et animation de série. |
 | `qa/` | Vérifications sur téléphone : widgets, notifications, groupe. |
 | `plugins/` | Construction des modules (randonnée, étirements, méditation). |

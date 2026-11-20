@@ -1,0 +1,1313 @@
+# Exercice de la base -> illustration qui le représente. Un exercice absent reste sans image.
+# Correspondance relue par nom puis image par image ; les 17 cas sans illustration identique ont été tranchés à la main.
+# Après modification : python3 tools/exercises/exercise_illustrations.py <dossier des animations d'origine>
+exercise,illustration,name
+2a15c6f170d88066b38fd65f8757716f,8878,45° cable rear delt fly
+2aa5c6f170d880c08fcbf27e03a0e2dc,2224,45° glute-biased leg press
+1a05c6f170d880198e1aceac084f30eb,0047,45° incline barbell press
+1a05c6f170d8809da1e7fbc50ae7575b,1719,45° incline close grip press
+1a05c6f170d880ff9314c15594dd3671,0319,45° incline dumbbell fly
+1a05c6f170d8806b911acf558c5af4f6,0314,45° incline dumbbell press
+1a05c6f170d88039bf25fdc502f1fb53,0314,45° incline neutral grip dumbbell press
+1a05c6f170d8807590e2d79fc558e368,5011,45° incline pause barbell press
+1a05c6f170d88001a638d8c959467497,0314,45° incline pause dumbbell press
+1a05c6f170d8805b9dd1f99907b00278,1281,45° incline single arm dumbbell press
+1a05c6f170d880ccbf5aeb7f1b3fcee5,0757,45° incline Smith machine press
+1a05c6f170d880b1a11cd1e875b32025,0047,45° incline wide grip press
+1a25c6f170d88079a926dde776766181,0739,45° leg press
+1a15c6f170d88074b3d4e1548e32c508,1391,45° leg press calf raise
+2ab5c6f170d88083b07ce7a4c4efcc7d,0738,45° leg press calf “jump”
+2aa5c6f170d880b9ac35f31351088d34,2224,45° quad-biased leg press
+1a35c6f170d8800a96aed40708dde255,5583,Ab coaster exercise
+2865c6f170d88016b8e6e93207217cb6,5583,Ab coaster oblique exercise
+2875c6f170d880cfbe0bf23d4f700d8f,0857,Ab wheel plank rollout
+1a45c6f170d8805aae34cfd9a6eb7eec,0857,Ab wheel rollout
+2345c6f170d88028a336fb2275d7dbdc,0074,Above-the-knee block pull
+2335c6f170d880b2a5ecfddaa83b937c,0074,Above-the-knee rack pull
+2a25c6f170d88052ace5faa69e5a6fbc,0585,Accentuated eccentric leg extension
+2a25c6f170d880d0808effec1172895f,0585,Accentuated eccentric plate-loaded leg extension
+2ed5c6f170d88043a626e0dac247c52c,3893,Air biking
+1a15c6f170d880f59d33ed81d1f96f4d,0298,Alternating cross-body dumbbell hammer curl
+21d5c6f170d880fbabbbf2ef9b066f54,3695,Alternating dumbbell bench press
+1a15c6f170d880bc94aeee97f3ba0721,0285,Alternating dumbbell biceps curl
+1f35c6f170d880f6aa7de0dd972c388d,0619,Ankle weight hip flexion straight leg raise
+1a35c6f170d88025a7a1f34e94c394c5,6607,Ankle-banded lateral walk
+1a25c6f170d8800c8241f74bc4bc2ab2,3747,Assisted pistol squat
+2025c6f170d8802087dbe1cd4f961919,3367,Assisted skater squat
+1a15c6f170d880968bb2fe0b9b526520,2765,Asymmetrical weight forearm pronation
+1ee5c6f170d8804fada6efcfccce52a2,2765,Asymmetrical weight forearm pronation and supination
+1a15c6f170d8805196c7eefa5f50979f,4231,Asymmetrical weight forearm supination
+3a05c6f170d8805aa301e0b6da152756,0031,Axle biceps curl
+3a05c6f170d880099960c5b6d7267060,0028,Axle continental clean and press
+2ff5c6f170d8806e89c4cbbd400099a0,0032,Axle deadlift
+3a05c6f170d880acb429cc22116f4479,1162,Axle strict press
+2ee5c6f170d880d98e4fce18a6a6367e,10047,B-stance barbell Romanian deadlift
+2ee5c6f170d880c899dcdd917b32d865,4757,B-stance dumbbell Romanian deadlift
+2ee5c6f170d88026b7b3d16e0ca9991e,4861,B-stance kettlebell Romanian deadlift
+2ee5c6f170d88076931cd5574a882f38,4757,B-stance offset dumbbell Romanian deadlift
+2ee5c6f170d8803784f1cf9eac016ca9,4861,B-stance offset kettlebell Romanian deadlift
+3895c6f170d88002b51fdf96c7dc50e1,8712,B-stance shrug machine Romanian deadlift
+2d35c6f170d880a89c8dd0ed7878b2e9,2906,Backward sled drag with belt
+1a45c6f170d880b8937ae0a3e37f00e4,2906,Backward sled drag with handles
+3315c6f170d8805189f3df9113d267f0,4063,Band biceps curl
+3295c6f170d880daaee2e2962ae412dc,4075,Band chest fly
+3315c6f170d880d296abfb90dbd5aa6b,0978,Band front raise
+3315c6f170d8805a8e13ff6a504ddf82,0907,Band lateral raise
+1a15c6f170d88075bedff384fa3f8c3b,1503,Band pull-apart
+3315c6f170d880ed991de6eed4888002,1018,Band shrug
+30d5c6f170d880b280d7dd08039a0bfa,1004,Band squat
+2ce5c6f170d8809a8f3deb9e145171b0,4688,Band triceps pushdown
+3315c6f170d880b0b8bec18a4fc536c1,0934,Band upright row
+2a95c6f170d8805e8b27cb88e703eac7,4206,Band-assisted chin-up
+2995c6f170d8803d8ec1c1d7f755a8d9,4985,Band-assisted glute ham raise
+1a25c6f170d880d0b665c0079cfecf80,3530,Banded barbell back squat
+1a05c6f170d8808c80e6fb3e60b58d69,7620,Banded barbell bench press
+1a35c6f170d880ce8b93d26bb03a48a1,0032,Banded conventional deadlift
+34b5c6f170d8808383bbd5a7e846eb4a,4677,Banded donkey kick
+1a45c6f170d8802ba2dae19705a36c48,0979,Banded Pallof press
+1a05c6f170d8802db13bd5aa07cd1eaf,0915,Banded push-up
+3a05c6f170d88048933dd7b3f82a1d57,4203,Banded sumo deadlift
+1a25c6f170d8808a85dfe5d16227644e,10536,Banded terminal knee extension
+1a25c6f170d8803d8231d083fdd65458,3593,Barbell back squat
+2175c6f170d88016b116fd4b832edc5f,4962,Barbell back squat to a box
+1a15c6f170d8804687dfef42a3ca8dd6,3730,Barbell behind-the-back shrug
+19f5c6f170d8808bb424e98de4472a7e,0025,Barbell bench press
+1a15c6f170d880ee83eccf109356e208,0031,Barbell biceps curl
+1a25c6f170d880f6a715f65d5e8b425b,4962,Barbell box squat
+1a25c6f170d880d8bb7fef2de64a1e60,3030,Barbell Bulgarian split squat
+1a15c6f170d88068bb6dc7b853803537,0031,Barbell cheat curl
+1a15c6f170d8801ab4e9f6fd8b9576fb,0027,Barbell cheat row
+1a15c6f170d8808eb30fefbf4a18d7b8,5662,Barbell cheat shrug
+1f05c6f170d88048bb62c2359b9bd65d,1532,Barbell deficit Romanian deadlift
+1a15c6f170d880169a4dd5ff44c08a34,0038,Barbell drag curl
+3275c6f170d88015ba26d7b441303f44,10857,Barbell fixed-hip Jefferson curl
+1a05c6f170d8802a950df7b6c710ffb4,3724,Barbell floor press
+1a25c6f170d8804ab413dfaa62e6806f,0054,Barbell forward lunge
+1a25c6f170d880be85cdfb8dfcaba3eb,3030,Barbell front foot elevated split squat
+2965c6f170d880f8b368e35f599819f7,0041,Barbell front raise
+1a35c6f170d880968781e5e96679c367,1409,Barbell glute bridge
+1a35c6f170d880eda0b7e8540f9367a6,0044,Barbell good morning
+1a05c6f170d880efa92bd3886035c1c0,0045,Barbell guillotine press
+1a35c6f170d88059b804ff16ff621a1c,1060,Barbell hip thrust
+1a15c6f170d8807881c7facb5d5cdb97,0499,Barbell inverted row
+1a15c6f170d8801eba8df62057baf55a,10857,Barbell Jefferson curl
+1a15c6f170d88095b3fbfacf899488e7,0052,Barbell JM press
+1a05c6f170d880c5ad11c99b302b1bf9,1162,Barbell overhead press
+3595c6f170d880a5b6e6f54871c6297f,2928,Barbell overhead shrug
+1a25c6f170d880feb30bf825a7d3602a,0069,Barbell overhead squat
+1a15c6f170d880ac94cbc8d5a58b5f21,0109,Barbell overhead triceps extension
+1a25c6f170d8802fadf7d93d3f4130fb,5701,Barbell pin squat
+2875c6f170d880deb312df35b1dbdb52,0857,Barbell plank rollout
+1dc5c6f170d88089b852feeb63b0e9e2,0073,Barbell pullover
+1a05c6f170d8802d9233da6c4897b8e7,1200,Barbell push press
+1a15c6f170d8806390e7e1743452b88c,0080,Barbell reverse curl
+1a25c6f170d88086a350cb7e82849006,0078,Barbell reverse lunge
+1a45c6f170d880a8a935e8224408760c,0857,Barbell rollout
+1a35c6f170d880bebc64f4dce0d5f5f1,0085,Barbell Romanian deadlift
+2e35c6f170d880c0b0cde92fcc3eee3d,8798,Barbell seal row
+1a15c6f170d88061b074caacc5a76081,0095,Barbell shrug
+1a15c6f170d88029a037f1c1bea19636,0061,Barbell skull crusher
+1a25c6f170d88061a118d76e3aa03b1a,3030,Barbell split squat
+1f15c6f170d8804d99b1d1aedad699ce,1543,Barbell straight-leg deadlift
+30b5c6f170d880f095f4f7f423995a46,3305,Barbell thruster
+1a05c6f170d880639ca1ff8aeac1dd6e,0120,Barbell upright row
+1a25c6f170d880c09bd6c83da89ec395,5823,Barbell walking lunge
+1a05c6f170d8804191e6cdc4285a2aac,4866,Barbell Z press
+3015c6f170d88066b005e27ff4833597,0128,Battle rope alternating wave
+3015c6f170d8804a9b72c9014c748d51,3379,Battle rope double-arm wave
+1a15c6f170d88072bccad235c95fd002,6262,Behind-the-back barbell wrist curl
+2aa5c6f170d8801ea649e3ab0b03eac3,3342,Behind-the-back cable cuffed Y-raise
+2d05c6f170d880dcb0c4f8460301fa77,3342,Behind-the-back cable Y-raise
+30d5c6f170d880169baafa7dbe3cee89,0046,Behind-the-back deadlift
+2335c6f170d88028a033dcf3bd00abe9,0074,Below-the-knee rack pull
+1a15c6f170d8806f8280ccf956dc3e30,0812,Bench dip
+26d5c6f170d880ce8d6de5f381825c85,0129,Bench dip with bent knees
+2c15c6f170d880629145f1a8cc746294,4428,Bent-arm sled push
+2e85c6f170d88074a8fef350923d4e8e,4058,Bent-knee dragon flag
+1a45c6f170d880ff8f44dfd8ac3f86a2,0872,Bent-leg reverse crunch
+3a05c6f170d8805cbfe1dbb2fbf7d483,0027,Bent-over axle row
+30d5c6f170d880d69c07e45194b0e0a8,3899,Bent-over band row
+3315c6f170d8801cbe63c44ee31cd133,3721,Bent-over barbell high row
+1a15c6f170d880f89beacd8c81156f2d,0027,Bent-over barbell row
+2aa5c6f170d880748349eb342dab1446,8141,Bent-over cable fly
+3965c6f170d880b78741dbf085ed2103,4011,Bent-over dual cable bar row
+1a15c6f170d8802b95b4cce475976c58,0293,Bent-over dumbbell row
+1a15c6f170d8801ba086cdf6a79bd3a4,6156,Bent-over kettlebell row
+1a15c6f170d880f4923dda7e78db672f,2487,Bent-over neutral grip dumbbell rear delt fly
+1a15c6f170d88004a245f5a0ea564b67,0606,Bent-over neutral grip T-bar row
+1ae5c6f170d8800c86b0e19530eef337,2487,Bent-over overhand grip dumbbell rear delt fly
+3a15c6f170d88086bef0df37254b8a6d,4899,Bent-over overhand grip plate-loaded machine row
+1cf5c6f170d880b0b8dbf1af3f1cd45c,0606,Bent-over overhand grip T-bar row
+2fe5c6f170d88015b8cefcc4b6409e41,4899,Bent-over plate-loaded machine row
+1cf5c6f170d880b7a988c5c82888660c,0606,Bent-over semi-neutral grip T-bar row
+1a15c6f170d8800abe49f4321d63a1ef,0118,Bent-over underhand grip barbell row
+1d05c6f170d880d0a3ceff8d48eb959c,0606,Bent-over underhand grip T-bar row
+2ad5c6f170d880b297d2d3c9464652b7,0606,Bent-over wide grip T-bar row
+1a45c6f170d8801ea5f2d12645db5418,6211,Bicycle crunch
+1f55c6f170d8800ca9d6f5a31596a32d,1241,Bird dog
+1f55c6f170d880bba135e69b2b1a910b,1241,Bird dog regression with alternating arm lifts
+1f55c6f170d88099ad39d4b6cc1cefb6,4416,Bird dog regression with alternating leg lifts
+1a45c6f170d880a38622fc61f831f7f9,4384,Body saw
+1a25c6f170d880878b1ec1de56994a35,3743,Bodyweight Bulgarian split squat
+26c5c6f170d8803385dbcb10335259f6,0251,Bodyweight chest dip
+1a25c6f170d88081af74cf7f78977b75,2569,Bodyweight Cossack squat
+1a35c6f170d880ecbc83f9cf5358a9ba,0274,Bodyweight crunch with hands behind head
+1a35c6f170d8807d8f40c4a3acedfaf1,0274,Bodyweight crunch with hands on floor
+1a35c6f170d880509e05ec8dca53930a,0274,Bodyweight crunch with hands on shoulders
+34b5c6f170d880aba796c8e13346d86b,4677,Bodyweight donkey kick
+1a25c6f170d8801ea4a4fa5fde0b7544,3470,Bodyweight forward lunge
+1a25c6f170d880e1819fdfdaa60a8f08,4256,Bodyweight forward step-down
+1a35c6f170d8801c9ecaee22ba66fdbc,3181,Bodyweight frog pump
+1a25c6f170d88089a605f20d041c21f8,9315,Bodyweight front foot elevated split squat
+1a35c6f170d88098b977ca8114fdbe46,2471,Bodyweight glute bridge
+1a15c6f170d88078921cce8e88163f31,0489,Bodyweight glute ham developer back extension
+2725c6f170d8806fa867d75416d72046,0489,Bodyweight glute ham developer back extension with hands behind head
+1a35c6f170d88051954bc0ce0aac8b61,4762,Bodyweight glute ham developer hip hinge
+2725c6f170d880269864d4ebeb09e7cf,4762,Bodyweight glute ham developer hip hinge with hands behind head
+1fa5c6f170d88060a3b1e3360d05862d,1581,Bodyweight glute-dominant reverse lunge
+1a35c6f170d8805ba94ed9fe817cd059,2072,Bodyweight hip thrust
+1ec5c6f170d880ba8e43cf305531982d,10752,Bodyweight Jefferson curl
+1a25c6f170d880429224ffe41c809bab,2972,Bodyweight lateral lunge
+1a25c6f170d880c78e62db78503cba99,4256,Bodyweight lateral step-down
+29f5c6f170d880e2a2bcea5b32f82873,4000,Bodyweight lunge hold
+1a25c6f170d88013b184c7d40c4373bc,1489,Bodyweight machine sissy squat
+1a35c6f170d880a0b594cb71c38e868f,3561,Bodyweight marching glute bridge
+1a25c6f170d880f3a690d8bbd6bf4708,1581,Bodyweight reverse lunge
+1a25c6f170d880068d42d3d918cc0a1c,4256,Bodyweight reverse step-down
+1a05c6f170d8807b815ed7c1a7370575,0677,Bodyweight ring dip
+1a15c6f170d880e98ddcce17a2c0ddd1,4455,Bodyweight Roman chair back extension
+2725c6f170d88061b3fcd48c0e94e20c,4455,Bodyweight Roman chair back extension with hands behind head
+1a35c6f170d8801eada7c59fc061adfe,4455,Bodyweight Roman chair hip hinge
+2a95c6f170d8801098edf25968b3b06b,4455,Bodyweight Roman chair hip hinge with arms overhead
+1f85c6f170d880c187a3ddb2d3db92c4,4455,Bodyweight Roman chair hip hinge with hands behind head
+30c5c6f170d8801aaa48d5ae7033f414,5699,Bodyweight Roman chair side bend
+1a45c6f170d880039ab5db29125324be,0687,Bodyweight Russian twist
+1ff5c6f170d8809fb1eee51d32c9316b,3493,Bodyweight single leg box squat
+1a35c6f170d8800db688c4776155d095,0736,Bodyweight sit-up with hands behind head
+1a35c6f170d880f3b162c9b459eca0c6,0736,Bodyweight sit-up with hands on floor
+1a35c6f170d880c69859e6c12e048ba9,0736,Bodyweight sit-up with hands on shoulders
+1a25c6f170d880fc855cd36abbf96f85,3367,Bodyweight skater squat
+1a25c6f170d880c5ace3f56cc793d023,0781,Bodyweight split squat
+1a25c6f170d880728a49e54a8d583742,1197,Bodyweight squat
+1a25c6f170d8805fb925ea7f1d8c9917,0801,Bodyweight step-up
+1a25c6f170d8800bbb96e30cb3033b08,1460,Bodyweight walking lunge
+1a25c6f170d880e988f9f3837d4eb70b,0734,Bodyweight wall sit
+1a25c6f170d88059a472e442705b75fa,1546,Bodyweight wall squat
+3015c6f170d88085bd3eccbedfea3dc3,1307,Bosu ball push-up
+1a25c6f170d88002af2fe9c5835b7524,5659,Bottoms up pin squat
+2595c6f170d8809286d2f7e07221340b,7626,Bottoms-up landmine goblet squat
+1a05c6f170d88045aa23e20a3b1a6bc4,0105,Bradford press
+3005c6f170d8806bae7eff84cc27cbc9,0025,Buffalo bar bench press
+39d5c6f170d8800a8bd9f4e2b33c56b8,1436,Buffalo bar squat
+31c5c6f170d8800685abe9fd6c2983de,1160,Burpee
+1a15c6f170d880308073fc37f580cda4,0238,Cable bar straight arm lat pulldown
+3065c6f170d880e68bb8fb92cb0a36eb,2950,Cable belt squat
+1a05c6f170d8809d80ecf8e7406e4601,3359,Cable chest press
+2a05c6f170d880c897bbfc6bb80b7ab3,1631,Cable concentration curl
+2ad5c6f170d88063b135e91ac379e27f,0200,Cable dual rope diverging triceps pushdown
+2a05c6f170d88068b1f8e50b33c87079,1607,Cable EZ bar biceps curl
+1a15c6f170d88014a710f8ada9a1e94a,5609,Cable face pull
+2965c6f170d880fcbe4ef2971006df0a,0162,Cable front raise
+2c75c6f170d8808083fdcb7f9392abf4,5120,Cable glute kickback
+1a35c6f170d8806dac95e1ab4fa67605,3048,Cable hip abduction (leg behind body)
+1a35c6f170d8809484d3fbed0a740f30,3048,Cable hip abduction (leg in front of body)
+2a05c6f170d880a3a7b5c523968fc01b,0168,Cable hip adduction
+30c5c6f170d880968c76d48426cfa021,10858,Cable Lu raise
+1a45c6f170d880f1a98bd27d6a3de2e7,1202,Cable Pallof press
+2ac5c6f170d8805baa6df32488b6181e,1211,Cable press-around
+1a35c6f170d88060a2c3ca66424902ca,1206,Cable pull-through
+1a15c6f170d88047b707cb56112beab4,0206,Cable reverse curl
+1a35c6f170d8803b982fd250987f9fd8,6552,Cable Romanian deadlift
+1a15c6f170d8804f98d1f9c040eef407,0165,Cable rope hammer curl
+2c25c6f170d8802faccbc731f2c08731,11257,Cable rope high row
+1a15c6f170d880e8ad58cebec203e231,0194,Cable rope overhead triceps extension
+2ae5c6f170d8807da2dcd7bf23371d82,0237,Cable rope straight arm lat pulldown
+1a15c6f170d880479d38c49a76cb6b10,0200,Cable rope triceps pushdown
+2ad5c6f170d8800794e2f44d340d181e,0861,Cable row with dynamic back extension
+3dc5c6f170d8808b84cac857b5cea1a7,6437,Cable shoulder adduction
+1a15c6f170d880b1a93bc62261c8706b,0235,Cable shoulder external rotation with arm at side
+1a15c6f170d880ce9ec1d00a1dacc63d,5087,Cable shoulder external rotation with arm elevated
+1a15c6f170d88049b559fb117498028e,5088,Cable shoulder internal rotation with arm at side
+1a15c6f170d880349466f4a35a01933c,5089,Cable shoulder internal rotation with arm elevated
+2aa5c6f170d8805eba89d16e66093142,1862,Cable shoulder press
+1a15c6f170d8803fbfb3de3621bd96b5,0220,Cable shrug
+1a15c6f170d88085ac39d58628c8de89,0220,Cable shrug-in
+1a45c6f170d88088a607cb473ed28d7f,0222,Cable side bend
+2aa5c6f170d880d28254e00e74425bfc,0187,Cable skull crusher
+1a15c6f170d8809bba44ff563ead6a65,0868,Cable straight bar biceps curl
+1a15c6f170d880d2be19ea52502589f2,4115,Cable straight bar overhead triceps extension
+1a15c6f170d8801d9337dba3dcb34a88,2249,Cable straight bar triceps pushdown
+1a05c6f170d880638d90c257b0cb7fdd,0246,Cable upright row
+1b25c6f170d880bdab0fd60e200b2abf,4115,Cable V-bar overhead triceps extension
+1b15c6f170d88066b8c7cbfb822f1045,2249,Cable V-bar triceps pushdown
+3005c6f170d880b0855ce54eabed67d6,0025,Cambered bar bench press
+39c5c6f170d88013ba68c2b0cb9bff45,0044,Cambered bar good morning
+3565c6f170d880f09ea0dc8605d13ebe,0248,Cambered bar seal row
+3005c6f170d880eeb433c795c4f8cc5d,4219,Cambered bar squat
+1a45c6f170d880a7bbdff3def28c12c8,5107,Captain’s chair knee raise
+1a45c6f170d88024a964c29f6c9b4853,2963,Captain’s chair straight leg raise
+3065c6f170d880ea9e55f2c3f7a93b48,2127,Captain’s chair weighted knee raise
+3065c6f170d880fa8ca1fc1223bc98b8,2127,Captain’s chair weighted straight leg raise
+1a35c6f170d88097ba78ff6255530f23,0593,Center-pendulum reverse hyperextension
+1d35c6f170d88050aeecc0d8b5dfe696,9698,Chest-supported dumbbell high row
+1a15c6f170d8802d969ae139f42062fa,9698,Chest-supported dumbbell row (elbows-in)
+2ab5c6f170d880839baed369debc0459,9698,Chest-supported dumbbell row (elbows-out)
+1a15c6f170d880b0a06fdce7d1c48a03,3541,Chest-supported dumbbell Y-raise
+1a15c6f170d880e58105e80545e3f035,1194,Chest-supported neutral grip T-bar row
+1a15c6f170d880a2ac20d8a1281d1d37,1194,Chest-supported overhand grip T-bar row
+1a15c6f170d8803bb4dbc83c2279dbcf,1194,Chest-supported semi-neutral grip T-bar row
+39a5c6f170d88068a174c97856456c71,6513,Chest-supported underhand grip pin-loaded machine row
+1d05c6f170d880048a3bffc3b3c53e52,1194,Chest-supported underhand grip T-bar row
+2ad5c6f170d880f5acc9e563df86b423,1194,Chest-supported wide grip T-bar row
+1a15c6f170d880b6adcbff83e8bb6b0f,1326,Chin-up
+1a45c6f170d880bd9cd4e075a346c3ce,5287,Clean
+1a15c6f170d880aead54ef59165a07d5,5705,Clean grip high pull
+1a05c6f170d880db967edeae7b23fd4f,1456,Close grip barbell overhead press
+1a05c6f170d8807c9f16f226db24074d,0030,Close grip bench press
+1a15c6f170d880009c83d4273fef90bd,1327,Close grip chin-up
+1a15c6f170d880ac85f8eed3680b93ec,0446,Close grip EZ bar biceps curl
+2185c6f170d88067bf3bfe9d932891d1,1627,Close grip EZ bar preacher curl
+2a15c6f170d8803dbc49fa71c1995ec8,1701,Close grip medicine ball push-up
+1a05c6f170d880dfb02cf76f7519927d,0259,Close grip push-up
+23b5c6f170d8807fbea3e916bac10cfc,0751,Close grip Smith machine bench press
+3585c6f170d88032a92edeaaaac53bf6,1669,Concentration hammer curl
+2335c6f170d8800da97ad86a1eddbe37,0074,Conventional below-the-knee block pull
+1a35c6f170d880f7a755cd3780a63371,0032,Conventional deadlift
+1a35c6f170d880349a3beab3040acdc9,0074,Conventional low block pull
+2aa5c6f170d880a08b6fc14959d2a8ad,0274,Corpse crunch
+2025c6f170d88087aef4cccdc2c54900,4129,Counterbalanced skater squat
+1a25c6f170d88038b559cf1d5dbd8366,0042,Cross-arm grip front squat
+2aa5c6f170d8809c8e4cf406941af120,1204,Cross-body cable lat pull-around
+2795c6f170d88003959bf668d235bb04,1636,Crucifix curl
+2ed5c6f170d880d480c3f08b0578283f,2138,Cycling
+2775c6f170d8801eb7ccd455a85f58ff,0276,Dead bug
+1a15c6f170d880358201e8f16fbd355e,5055,Dead hang
+1a05c6f170d880c09936def7e47899b1,0033,Decline barbell press
+1a05c6f170d880d794e6d7964b850a4e,0033,Decline close grip press
+2565c6f170d8806394ede87aa0efff9d,0277,Decline crunch with hands behind head
+2565c6f170d88044b9e8dd1209a999a6,0277,Decline crunch with hands on shoulders
+1a05c6f170d8801d99bad664857c1efb,0301,Decline dumbbell press
+1a05c6f170d880b4b6e8e411160d35da,5010,Decline pause barbell press
+1a05c6f170d88025ae85dd6b7d9f417e,0301,Decline pause dumbbell press
+1a05c6f170d880cd8e13ef0e0d5a4637,0279,Decline push-up
+1a05c6f170d88061a44edbcda249b9d4,1617,Decline single arm dumbbell press
+1a35c6f170d880c6af22d69bbfc691fc,0282,Decline sit-up with hands behind head
+1a35c6f170d880f99982e1202f87f00b,0282,Decline sit-up with hands on shoulders
+1a05c6f170d880d7b571f212a9dcab01,0753,Decline Smith machine press
+2565c6f170d880dd8c9ee33300357ce5,2130,Decline weighted crunch
+1a35c6f170d88002a708fd4827890e8c,3670,Decline weighted sit-up
+1a05c6f170d880ed8b84f23cd12b6b96,0036,Decline wide grip press
+1a35c6f170d8809f90f5d4f2e2273493,5702,Deficit conventional deadlift
+2345c6f170d88001ba8ae07a9753ccfb,3322,Deficit kettlebell deadlift
+2a05c6f170d88091a3e9e33a249035ae,3017,Deficit Pendlay row
+1a05c6f170d8807e94eec0bc1e8af713,3812,Deficit push-up
+2335c6f170d880b3bf05fbd3fe896667,0283,Diamond push-up
+2945c6f170d880fd847ade9bb93afd91,0251,Dip
+3105c6f170d88055baf3fec9b346318c,1350,Diverging pin-loaded machine row (without chest support)
+1f55c6f170d880118a5ec54126ffadf2,1181,Double straight leg raise
+2e85c6f170d8804e8135c60af24fdd93,4058,Dragon flag
+3965c6f170d8809f9e0df3ed55f44d52,11268,Dual cable bar back squat
+3965c6f170d8807faa9de3abc977a2ac,0151,Dual cable bar bench press
+3965c6f170d8809984ecd90d865c2ad4,0157,Dual cable bar deadlift
+3965c6f170d88010a837f8811b40a8e6,7578,Dual cable bar front squat
+3965c6f170d880b8ae57f3b9792ad088,1862,Dual cable bar overhead press
+3965c6f170d8808785a5d20d0c00a5cd,6552,Dual cable bar Romanian deadlift
+2aa5c6f170d8806bb424dfab5c233b4b,4838,Dual cable Bayesian curl
+1a15c6f170d88067875bfd4347b883ef,0178,Dual cable lateral raise
+2ab5c6f170d880e4a70bf751fa1d3255,0201,Dual cable triceps press
+20c5c6f170d8808da9d7fa79ce7f1eca,0333,Dual dumbbell triceps kickback
+30d5c6f170d880e7a00ee1e7319b720d,7583,Dual handle cable lat pulldown
+3a15c6f170d880b2a33ac923355fa96f,2291,Dual handle cable lat pulldown (elbows-out)
+2cf5c6f170d88030b58fd481d9951983,4543,Dual kettlebell clean
+2e95c6f170d8809db22ced6e97059556,0533,Dual kettlebell front squat
+1a15c6f170d880f7b41ed136238884a6,5860,Dual kettlebell overhead triceps extension
+1a35c6f170d880f3af82ce83d7aee474,4861,Dual kettlebell Romanian deadlift
+1a15c6f170d880958b3cdace2a59c25c,5861,Dual kettlebell skull crusher
+1a15c6f170d88070b365f07cc7128474,4408,Dual kettlebell upright row
+1a15c6f170d88003b147f2f4c4910437,1044,Dual plate pinch
+1a05c6f170d8803ba48ec1443eab5978,0289,Dumbbell bench press
+1a25c6f170d8809eb8a5e76ff245649d,2290,Dumbbell Bulgarian split squat
+2a05c6f170d88069a986ea15fb228983,0294,Dumbbell cheat curl
+2a05c6f170d88072a129d4b65dfd9a53,0406,Dumbbell cheat shrug
+1a15c6f170d880d7b8cbf608580aaa50,0297,Dumbbell concentration curl
+3065c6f170d8807abd9fc6be633e0b19,0300,Dumbbell deadlift
+1a15c6f170d88079bb03fe2e496567d8,2917,Dumbbell farmer’s carry
+3275c6f170d880749691dfb12167a6bd,7329,Dumbbell fixed-hip Jefferson curl
+1a05c6f170d880e2b66afebd843e3b9f,3668,Dumbbell floor press
+1a05c6f170d8806ab70ee93a5c79d733,0308,Dumbbell fly
+1a25c6f170d88018b37de2f394db8bb8,0336,Dumbbell forward lunge
+2475c6f170d880a9a73df6833698d8c0,6160,Dumbbell frog pump
+1a25c6f170d8801db72ecae6e8e97a0b,2957,Dumbbell front foot elevated split squat
+1a35c6f170d880c5867ce22eefbc7cb7,3335,Dumbbell glute bridge
+1fa5c6f170d8803b97facd93900c62cf,0381,Dumbbell glute-dominant reverse lunge
+29f5c6f170d880daa4a5e61eeefcadff,5921,Dumbbell hammer cheat curl
+2a05c6f170d8804393a7c415bfa49b90,9698,Dumbbell Helms row
+1a35c6f170d8801d8819ce2fc219c047,4742,Dumbbell hip thrust
+1a15c6f170d88048ac0ae6539219933e,7329,Dumbbell Jefferson curl
+1a15c6f170d880148cade872878baf4c,0329,Dumbbell Kelso shrug
+1a25c6f170d88019bb29d293690154c8,4256,Dumbbell lateral step-down
+29f5c6f170d880fdba13cc79ea455578,0336,Dumbbell lunge hold
+3595c6f170d88049a505e34c26d57cdb,2928,Dumbbell overhead shrug
+29f5c6f170d8800f9577c4c1d85c2900,0372,Dumbbell preacher curl
+29f5c6f170d8803988fcc71c2940623e,5921,Dumbbell preacher hammer curl
+29f5c6f170d880ccaecefc37ee71e532,0384,Dumbbell preacher reverse curl
+1a15c6f170d8808b9721ff65d549d8ba,0375,Dumbbell pullover
+1a05c6f170d880e58be2eda50377286f,1700,Dumbbell push press
+3065c6f170d880d2bc77cba9edbf8ce9,2980,Dumbbell renegade row
+1a25c6f170d8802fb222d3b46b85b3c0,0381,Dumbbell reverse lunge
+1a25c6f170d880f0b4e7d867c4464038,4256,Dumbbell reverse step-down
+1a35c6f170d880489b7be1d31faff56b,1459,Dumbbell Romanian deadlift
+2a55c6f170d88077895ddf5fadda700f,3084,Dumbbell Scott curl
+1a15c6f170d880ec8eb2edff1260c7bc,0327,Dumbbell seal row (elbows-in)
+1d45c6f170d880c89281e6901f4c3849,0327,Dumbbell seal row (elbows-out)
+1a45c6f170d8805c8bc9f17b441a96d9,0407,Dumbbell side bend
+1a25c6f170d8800e9b49deb2095a6e36,3367,Dumbbell skater squat
+1a15c6f170d880f3b564c407768a11ac,0351,Dumbbell skull crusher
+1a15c6f170d880799ba1f1b6157da5f6,9931,Dumbbell spider curl
+1a25c6f170d88010b50df336db609e2e,2960,Dumbbell split squat
+1a25c6f170d880708256e9a8bf6337bf,0413,Dumbbell squat
+35a5c6f170d880f384f9f5b8cc05ed22,10042,Dumbbell squeeze press
+1a25c6f170d880e09445d806733a82a2,0431,Dumbbell step-up
+1a45c6f170d880bf927ac1d23ce0b0b9,2910,Dumbbell suitcase carry
+1a25c6f170d880aabf08c491ad0f9654,5121,Dumbbell sumo squat
+30b5c6f170d8801a93adf256da88a6c1,2968,Dumbbell thruster
+3075c6f170d880ab8a74cc4050deec97,0551,Dumbbell Turkish get-up
+1a05c6f170d880409e9cf644b585ca3a,0437,Dumbbell upright row
+1a45c6f170d880628072f26c2d37741a,3548,Dumbbell waiter walk
+1a25c6f170d8804ab65df93459dda6d3,4295,Dumbbell walking lunge
+1a05c6f170d88029aa15d08f03a7bd5a,5667,Dumbbell Z press
+1a45c6f170d8801a9695d6d4c20141b2,1775,Dynamic long lever Copenhagen plank
+1a45c6f170d880e495bcdf6e3bbeb895,1775,Dynamic short lever Copenhagen plank
+2ed5c6f170d880128cdaed779deea1a7,2192,Elliptical training
+1a45c6f170d88092a060d6c6e59dda03,0857,Extended-hip ab wheel rollout
+2875c6f170d880a3b551e60c99268218,0857,Extended-hip barbell rollout
+1a15c6f170d8803a891bf223d4468a8a,0447,EZ bar biceps curl
+30c5c6f170d8803f9e4dfbf1b6e684e5,0447,EZ bar cheat curl
+38f5c6f170d88040b88ffa81bdea9507,0041,EZ bar front raise
+1a15c6f170d88040bffdd2f6127e6d4c,6406,EZ bar preacher curl
+29f5c6f170d8804180a6c86ed8986df2,0452,EZ bar preacher reverse curl
+2335c6f170d880098d93feb9115ee7b4,3010,EZ bar pullover
+29f5c6f170d8801f925fc12b1f739eb1,0451,EZ bar reverse curl
+1a15c6f170d88003bf5cd77bef6a5034,5873,EZ bar skull crusher
+33a5c6f170d880d99bcee5db870f9351,7114,EZ bar upright row
+2965c6f170d88015958cc7ceb93f2ddd,0323,Facing-up incline dumbbell lateral raise
+2e85c6f170d880fa8134dc7a59a01943,3541,Facing-up incline dumbbell Y-raise
+3015c6f170d880ac961bd57278cf75fb,2133,Farmer’s handles farmer’s carry
+2a95c6f170d880df81b4fd53b4fee5d4,5921,Fat grip dumbbell preacher hammer curl
+1a35c6f170d880b9a7ade67d5d7fd6c7,3523,Feet-elevated bodyweight glute bridge
+1a35c6f170d8800b8569fc9da2916dfc,8358,Feet-elevated hamstring bridge
+1dd5c6f170d880649343dd1c78ef0f31,4447,Feet-elevated thigh-banded glute bridge
+1a05c6f170d88064bb2ede3eb9413258,6270,Feet-up barbell bench press
+2a65c6f170d880419684e5c8a768ae66,6272,Feet-up dumbbell bench press
+2ab5c6f170d88019aa12c43015e4e22c,0748,Feet-up Smith machine bench press
+2165c6f170d880048694f9a5579ba6ab,0029,Fingertip clean grip front squat
+2ab5c6f170d88077bf41c329e79f07b9,0025,Flat-back barbell bench press
+3e65c6f170d8809fa530ce548a5ba3df,4149,Floor dumbbell fly
+3e65c6f170d8802eb00fc933fbbddb60,4318,Floor dumbbell pullover
+2aa5c6f170d880b9930fc2a6a4fe3ee5,4151,Floor dumbbell skull crusher
+3e65c6f170d880608d78f16add1ed5d1,5858,Floor kettlebell fly
+3e65c6f170d8801392abdbee8ec6b254,4538,Floor kettlebell pullover
+1a45c6f170d880e58427deac0491a551,2891,Flutter kick with head down
+2345c6f170d880439d36f78be23bd003,2891,Flutter kick with head up
+1a35c6f170d8805ea54fce0183699c72,2473,Foot-elevated single leg bodyweight glute bridge
+1a35c6f170d880c2b5c7df3f36a8ac4d,9359,Foot-elevated single leg hamstring bridge
+1a45c6f170d880fabcebd578763b9c46,0463,Forearm plank
+2bf5c6f170d880e6aab7c3cc86586031,3021,Forearm plank scapular protraction
+1f55c6f170d8803dba14eefc04ac5e66,3501,Forearm plank with leg lift
+24b5c6f170d8802cb3f5c41748253a33,4068,Four-board press
+28e5c6f170d88028a450c005a7a8cf60,0042,Front squat
+1a25c6f170d880068daae293704193e0,0029,Full hand clean grip front squat
+2755c6f170d880a6afc3c21185dce74d,10639,Glute ham developer CrossFit-style sit-up
+1a35c6f170d880f3acdbd86f5b83b29a,10639,Glute ham developer sit-up
+1a35c6f170d880678e8cfcf2ec99f9ea,10639,Glute ham developer sit-up with hands behind head
+2995c6f170d880daa027fa6e51c2b961,3193,Glute ham raise
+1a35c6f170d880edaf07d28f69c9da2e,3193,Glute ham raise with arms by sides
+2995c6f170d88031a871dfcd10ef78b7,3193,Glute ham raise with hands behind head
+2005c6f170d880efa2d6d3946bf1d46c,7549,Goblet Bulgarian split squat
+1a45c6f170d880689118ebb8208ffb54,2916,Goblet carry
+1a25c6f170d880498510c96432b6d7ed,6193,Goblet Cossack squat
+1fb5c6f170d88074b831fef550bfadba,3574,Goblet forward lunge
+20f5c6f170d880cebc2bcee75c0904bc,4256,Goblet forward step-down
+1fd5c6f170d880a3b0abfe579c380c0b,2956,Goblet front foot elevated split squat
+1a25c6f170d8803c85d2d91f4fda839f,4045,Goblet lateral lunge
+20e5c6f170d880b992d2e086fe2c0e99,4256,Goblet lateral step-down
+1fd5c6f170d880bfb1a3ccaaebc1bdc3,3575,Goblet reverse lunge
+20f5c6f170d880b5a96dfb97669dc117,4256,Goblet reverse step-down
+1a35c6f170d880f2bac4d9f97e2077ca,5035,Goblet Roman chair hip hinge
+2035c6f170d880918334c79fd5fe63ca,3367,Goblet skater squat
+1fd5c6f170d8809f8bf4cbb9d8e6dbf1,3691,Goblet split squat
+1a25c6f170d8802c992bda97ded323ba,0534,Goblet squat
+20f5c6f170d88039a122cfbafbfa1cb9,0431,Goblet step-up
+1fd5c6f170d880efa105de08ecd6de91,4295,Goblet walking lunge
+1a25c6f170d88008a9adde9f71881c36,5516,Hack squat
+39d5c6f170d88024b85adc0f5362d92b,4070,Half board press
+2a05c6f170d88032be2ee6ccdc2bc2b9,4193,Half-kneeling cable Pallof press
+2ab5c6f170d880958085ee307ac4263c,0190,Half-kneeling single arm cable biceps curl (elbow-out)
+1a15c6f170d8804280dbcaba5f75cf49,4948,Half-kneeling single arm cable lat pulldown
+2ab5c6f170d880708a30f9f8872c6084,1636,Half-kneeling single arm crucifix curl
+3b15c6f170d880aebe45f5c3553357f4,9695,Half-kneeling single arm landmine press
+1d85c6f170d880fe9e2fd2ecaced1feb,8358,Hamstring bridge
+1a15c6f170d8809a878dd1577bac5536,2288,Hand gripper crushing
+2305c6f170d8809683abf39935685d38,3947,Hand release push-up
+1a15c6f170d880d392eae0869b5c9355,0471,Handstand push-up
+3a15c6f170d880d8a035ef19047c1358,10107,Hang clean high pull
+1a45c6f170d8802b8264c549a6af498d,5704,Hang power clean
+1a45c6f170d88038bf37f4ae6b68f2d5,1522,Hang power snatch
+3a15c6f170d880f4a19ada2cd3bee167,0776,Hang snatch high pull
+1a45c6f170d880ddb995d193e0cbfeea,9819,Hanging knee raise
+2a05c6f170d880a5a708e2c30cb4a5a2,11877,Hanging L-sit hold
+1a45c6f170d88065be3acba9f007a364,0475,Hanging straight leg raise
+3065c6f170d88084876ed25a72b08c47,9819,Hanging weighted knee raise
+3065c6f170d8800688cce06a99ff26ac,0475,Hanging weighted straight leg raise
+30b5c6f170d88071a717feab59110d45,4219,Hatfield squat
+2a05c6f170d88034b907c79fb8ed61b6,2409,Head harness neck curl
+2a05c6f170d880f99f47e1aed3f5f87c,0848,Head harness neck extension
+1a15c6f170d880e39adec8726186fa3f,9803,Heels-elevated tib raise
+2115c6f170d880dfb3e2ff8447c9a0b5,1436,High bar back squat
+29f5c6f170d8803b9bd7da5e16e2e6cc,4962,High bar box squat
+1a35c6f170d880e09409ca60499f2367,0811,High handle trap bar deadlift
+1a05c6f170d8803c872ecbe964e2f0ef,0047,High incline barbell press
+2245c6f170d8808883f9ea2d3b18530a,0314,High incline dumbbell press
+2405c6f170d8805e8629d8445d40121a,0757,High incline Smith machine press
+2ab5c6f170d8800b8acaf4881fbf8131,5609,High pulley cable face pull
+1a15c6f170d880c5bf1ffee363122476,1724,High pulley cable rope overhead triceps extension
+1a15c6f170d88060a7c8d05108bf2aef,5874,High pulley cable straight bar overhead triceps extension
+1b25c6f170d8801a9fa3c2dd66d17fa4,3040,High pulley cable V-bar overhead triceps extension
+1a45c6f170d88052a427c7804e342721,7584,High-to-low cable chop
+1a05c6f170d8803ca0c8e13ee1b0c37f,6542,High-to-low cable fly
+2815c6f170d8802483f6dec09280d25f,1246,Hollow body hold
+1a45c6f170d88035ab3afd5eb64455a4,0243,Horizontal cable chop
+1a05c6f170d880d08e75f6f7c2ebde9e,8141,Horizontal cable crossover
+1a05c6f170d880df946bdd6f42f0901c,0227,Horizontal cable fly
+3575c6f170d880b4a611eae88e33ed83,5516,Horizontal hack squat
+39b5c6f170d880299d20c111f173f856,1383,Horizontal hack squat calf raise
+2f15c6f170d88019a96fdf92d0202716,2335,Horizontal machine calf extension
+39a5c6f170d880639b9ac2f6254440d7,7177,Horizontal single leg machine calf extension
+3b25c6f170d8801ead3ade89b916e1af,0171,Incline cable fly
+3985c6f170d88046ba99e34c83a17099,0049,Incline chest-supported barbell row
+2965c6f170d880649702f40388962902,3685,Incline chest-supported dumbbell lateral raise
+2ab5c6f170d8806a8530f125edcbb0bd,2500,Incline chest-supported dumbbell rear delt fly
+39f5c6f170d8803caeeed41c9f9ba7f8,0329,Incline chest-supported Smith machine Kelso shrug
+3985c6f170d880e98d27f03cd0c100ac,11762,Incline chest-supported Smith machine row
+2a05c6f170d8807eaae8dd03a2958412,5160,Incline close grip push-up
+1a15c6f170d880b49e09fcbcd061fbdb,0315,Incline dumbbell biceps curl
+2965c6f170d8803c98cff1ab8fc0bf1e,1176,Incline dumbbell front raise
+1a15c6f170d880689ebcce6974abf61c,0325,Incline dumbbell I-raise
+35a5c6f170d880acb738d138ac06c557,5067,Incline dumbbell squeeze press
+1a15c6f170d88076a486ce1243ac39e5,3542,Incline dumbbell T-raise
+2ab5c6f170d88035b91be4763b499231,0315,Incline externally rotated dumbbell biceps curl
+1a15c6f170d88015841af06a4533b9b3,0320,Incline hammer curl
+2f15c6f170d8804ca94be396d74adb8b,5843,Incline machine fly
+2f15c6f170d880efbed8c9bdb245a013,0738,Incline plate-loaded machine calf press
+1a05c6f170d8808092c2da8955b361f1,0493,Incline push-up
+2bf5c6f170d8800bb84fd93d0ff6574b,3011,Incline tall plank scapular protraction
+2ea5c6f170d880dca6bed770e58a21d6,1080,Inverted ring row
+33e5c6f170d8801a99a6da686f7fbf63,1200,Jammer push press
+2ff5c6f170d880a6a051db7051c1058b,2612,Jump rope
+2ab5c6f170d880f29feeeb9b0a4ad894,11436,Katana triceps extension
+1a05c6f170d8806b87edcb2d2e547481,3738,Kettlebell bench press
+1a25c6f170d8805c8b30c1b4200ca82d,4444,Kettlebell Bulgarian split squat
+1a35c6f170d880828c2be446fb07ecff,3322,Kettlebell deadlift
+1e05c6f170d880468dbdd02342f2edd7,3576,Kettlebell farmer’s carry
+3275c6f170d880019380fe93ac3bd745,7329,Kettlebell fixed-hip Jefferson curl
+1a05c6f170d88071a523c5abb44472c9,1298,Kettlebell floor press
+1a25c6f170d880038f9af19f57ca716b,3574,Kettlebell forward lunge
+1a25c6f170d880c1a83fce9eab945df3,2957,Kettlebell front foot elevated split squat
+3315c6f170d880c3b12effad0524be67,5859,Kettlebell front raise
+3275c6f170d88063b9c9d0c80fca658d,3335,Kettlebell glute bridge
+3ab5c6f170d880e8804bf58853a118b4,8331,Kettlebell halo
+1a95c6f170d880db929ad4f53f8ec4a8,0313,Kettlebell hammer curl
+3205c6f170d880a9a43af95eb7b6486c,4742,Kettlebell hip thrust
+1a15c6f170d880c2b857e1479cb1c933,7329,Kettlebell Jefferson curl
+3315c6f170d8806ea037e628fead3b7c,3740,Kettlebell lateral raise
+3315c6f170d880af840afa6c72b76754,2487,Kettlebell rear delt fly
+1a25c6f170d88084a663f2a93f20b180,3575,Kettlebell reverse lunge
+1a15c6f170d880b2b06cf95892f97c0b,6194,Kettlebell shrug
+1a45c6f170d8804ea7cffb393945466c,4396,Kettlebell side bend
+1a25c6f170d880738de8effd6e64a5eb,4059,Kettlebell split squat
+1a45c6f170d8807d9c30f2f1398078a6,2910,Kettlebell suitcase carry
+1a35c6f170d8803da7d8d3df40fda893,0549,Kettlebell swing
+2f25c6f170d880ef9f0de24e1da83af5,9272,Kettlebell tib raise
+3065c6f170d8801caf05d43770d88dda,0551,Kettlebell Turkish get-up
+1a45c6f170d880f7a1bdff9807752d71,4244,Kettlebell waiter walk
+1a25c6f170d880298b20cb659f512be0,4441,Kettlebell walking lunge
+1a15c6f170d88002b269c08f8e9d61d3,0652,Kipping pull-up
+1a35c6f170d8807c8999d24ee4aaf939,0175,Kneeling cable crunch
+2a05c6f170d8807ca8d5d6bc4ba615c4,0238,Kneeling cable straight arm lat pulldown
+2305c6f170d88078a76adb67cce87454,2398,Kneeling close grip push-up
+1a45c6f170d8800b876ff183a578b045,10065,Kneeling machine lower torso rotation
+3195c6f170d88024b33cd1e10edad3a3,0582,Kneeling pin-loaded hamstring curl
+2905c6f170d880dd8407c3276e37f208,7589,Kneeling pin-loaded machine glute kickback
+3195c6f170d88047ade5ffba8d73534a,0582,Kneeling plate-loaded hamstring curl
+2905c6f170d88009a559d07490b443bb,7589,Kneeling plate-loaded machine glute kickback
+1a05c6f170d88083b873d58cf6251e56,3211,Kneeling push-up
+2305c6f170d8800693c2e97be7e4ff71,3211,Kneeling wide grip push-up
+2325c6f170d880148924f4d544fa58ed,4192,Knuckle push-up
+1a15c6f170d8807ba0e6d547d36adb0a,3418,L-sit pull-up
+3b15c6f170d880da9174c20b185cef90,0562,Landmine anti-rotation
+1a15c6f170d880f38e71dba3b3203cbb,5074,Landmine chest press
+1a25c6f170d880239ac5f3cb0637c2e1,7626,Landmine goblet squat
+3b15c6f170d88049bc4ae47a518c3134,5628,Landmine hack squat
+3b15c6f170d8802b8a59ee2a179b4840,10190,Landmine push press
+3b15c6f170d880d9bf13cc95da89e9c5,4040,Landmine reverse lunge
+2ee5c6f170d88099a4bad79e81730eab,4113,Landmine Romanian deadlift
+3b15c6f170d88023bf36c987ba0a7ad7,0562,Landmine rotation
+2fe5c6f170d88052ba08d4afbde9c5f4,5074,Landmine viking press
+2ab5c6f170d8809f93b3c208b193ebac,0356,Lean-in dumbbell lateral raise
+2705c6f170d88038bf28f3c74a0dc59a,0597,Leaned forward machine hip abduction
+2705c6f170d880128213e68f5606a514,0597,Leaned forward plate-loaded machine hip abduction
+2ab5c6f170d880a8b55bd7b41c2c327d,3880,Leaning cable lateral raise
+1a25c6f170d880c59f17ce7802758fc3,0585,Leg extension
+39b5c6f170d88044b009ea887eadb875,9494,Lever-arm belt squat machine B-stance Romanian deadlift
+32f5c6f170d8802b8047cd9bb83fae59,9494,Lever-arm belt squat machine Romanian deadlift
+2685c6f170d880b08f32cc85bad2bf64,2950,Lever-arm machine belt squat
+3105c6f170d8805a8e91c9ad449c185a,2267,Leverage leg press
+2fe5c6f170d8809c9102d308364d3f41,1875,Leverage machine squat
+3a25c6f170d8804b89b9f38cddf9110b,6733,Leverage squat machine good morning
+2425c6f170d880eda736d987feaeb08b,7621,Lockout pin bench press
+1a45c6f170d880d69885eaefae2ee848,0463,Long lever plank
+20d5c6f170d8801ebfe4d558ab32f1fe,8611,Long sitting banded ankle eversion
+1a25c6f170d8805a8982ddf0cc544287,1435,Low bar back squat
+1a35c6f170d880d0a972d8f5020b8a11,0811,Low handle trap bar deadlift
+1a05c6f170d88055b31ddbc6338d7074,0047,Low incline barbell press
+21b5c6f170d88065b2edd2323f4e0a77,6162,Low incline dumbbell fly
+2245c6f170d880238f4ff9500137ec89,0314,Low incline dumbbell press
+2e85c6f170d880b58e73e8afb2221002,0047,Low incline pause barbell press
+2405c6f170d88013a49ec0ebed04a154,0757,Low incline Smith machine press
+1a05c6f170d880778a62ef2d924b06d9,7621,Low pin bench press
+2ab5c6f170d88056b4b7ecef4d1ae9b4,5609,Low pulley cable face pull
+1a15c6f170d8801d8700fbf97435a960,0868,Low pulley dual cable biceps curl
+1a45c6f170d8809bb4c5e70bc31ea462,8193,Low-to-high cable chop
+1a05c6f170d8801f98afff449f6a3b05,0179,Low-to-high cable fly
+2ad5c6f170d88073b499feb22416b456,4214,Low-to-high machine low row
+24e5c6f170d880ec9400e968c0a2f1ee,0061,Lying barbell triceps extension pullover
+3b25c6f170d8804c9a1ad547a03def73,0185,Lying cable fly
+30d5c6f170d880139d7bf1580c178fc7,1661,Lying dumbbell biceps curl
+2e85c6f170d88003ac95df8c66b346ad,2470,Lying dumbbell rear delt fly
+24e5c6f170d880268182ee11311f01aa,0351,Lying dumbbell triceps extension pullover
+24c5c6f170d880d09637e940efe3e542,5873,Lying EZ bar triceps extension pullover
+2ab5c6f170d880b9b0f7e988c9ad46c5,1041,Lying feet-up plate-loaded machine chest press
+1a35c6f170d8800bab2dca0110e26c4a,0586,Lying hamstring curl
+2a45c6f170d880959fb9f6d6dde7671b,1300,Lying machine decline press
+39d5c6f170d880e2bb3ccc67aa1c3276,1041,Lying neutral grip pin-loaded machine chest press
+2695c6f170d8801483dcc92d594faa26,1041,Lying neutral grip plate-loaded machine chest press
+2ab5c6f170d8803388dff1a8b8452991,7591,Lying pause cable face pull
+2695c6f170d8800798edcc4962b408a1,1041,Lying pin-loaded machine chest press
+1a35c6f170d8805d8db1ecd651309719,0586,Lying plate-loaded hamstring curl
+2695c6f170d880809556d02e4cf5e3da,1041,Lying plate-loaded machine chest press
+3895c6f170d88001a6a1eaf6fcd1d32e,2974,Lying single arm plate-loaded machine chest press
+1a35c6f170d88040b8dfd3164ac15d8a,0586,Lying single leg hamstring curl
+1a35c6f170d8801e93a0e605a61d2274,0586,Lying single leg plate-loaded hamstring curl
+1a45c6f170d8801cbc4de021fccb0fd8,0573,Machine back extension
+1a15c6f170d8800ba699c5125f79af15,0575,Machine biceps curl with arms at sides
+2a35c6f170d8800c9b3de01d90acbc44,0604,Machine cheat shrug
+1a35c6f170d88050a8b7db0d4f1bc8f2,1452,Machine crunch (with overhead handles)
+2845c6f170d880f78920f5f18b59f2d7,1452,Machine crunch (with straight elbows)
+33c5c6f170d8800c96aff8711b3ab9a8,1350,Machine D.Y. row
+2a45c6f170d880589653e06d4066b50f,1030,Machine fly with arm pads
+2f25c6f170d880c0ae20d65312649ada,0575,Machine horizontal biceps curl
+3015c6f170d8802cadbef0f9d8b7d43e,0801,Machine step-up
+2fe5c6f170d8809c9e9de9929f46e34e,1299,Machine super incline press
+2f15c6f170d880e5a928ca7855c26785,9509,Machine tib raise
+2985c6f170d8800b94d6cc7918bfe6db,0607,Machine triceps extension
+28c5c6f170d8805cb02ae70c20b9350f,10065,Machine upper torso rotation (with arm or shoulder pads)
+1a45c6f170d880d2b252de4d7b72f96c,10065,Machine upper torso rotation (with chest pad)
+1a25c6f170d8809cbb0bc4413178b159,1875,Machine V-squat
+2fe5c6f170d8801682d9ceb13569f0f9,2719,Machine viking press
+38a5c6f170d880f4bf80d1376341f322,0247,Machine wrist curl
+3065c6f170d880af969ccfcd27b46502,2790,Machine wrist extension
+26b5c6f170d8804ea3d3f833cd04fd8b,0009,Machine-assisted chest dip
+2f45c6f170d880ec918afd0c11e016f9,0572,Machine-assisted chin-up
+2945c6f170d8800c8ffcdad2c4e5ffce,0009,Machine-assisted dip
+2fe5c6f170d880b9ae43dcd4a5b3df15,4204,Machine-assisted Nordic hamstring curl
+1a05c6f170d8808dba9beee24fca5e4e,1871,Machine-assisted triceps dip
+2785c6f170d880bf96c9d244273c7e69,0276,Marching dead bug
+1a45c6f170d880579273fc8857ae335e,0630,Marching mountain climber
+2775c6f170d880fd8e05f7964e101ea3,0276,Marching neutral dead bug
+39c5c6f170d88000b6c5d9f81b8c7830,5911,Marrs bar good morning
+2fe5c6f170d8807b94aff54e638e898b,1436,Marrs bar squat
+1a15c6f170d880008e4bd7c88314ca8a,4038,Meadows row
+1a35c6f170d880fd8a71e340d039d10a,0074,Mid-shin rack pull
+2425c6f170d880e2af1de815fef25730,7621,Midpoint pin bench press
+2ab5c6f170d88040b3b2f304bf353024,0861,Moto cable row
+39a5c6f170d88075895df332b966b775,2285,Multi flight machine pullover
+3895c6f170d880f58c37ec914c041543,0602,Multi flight rear delt fly
+3ab5c6f170d880b6a220ec4c26f009e9,0455,Multi-forearm finger curl
+3ab5c6f170d88003a728cdb1d4f1775e,8881,Multi-forearm machine pronation
+3ab5c6f170d8800ea99fe09326c1d33a,0247,Multi-forearm machine roller wrist curl
+3ab5c6f170d880248b54d21289676744,2790,Multi-forearm machine roller wrist extension
+3ab5c6f170d880dfb7b4ca3d9a645524,2766,Multi-forearm machine supination
+1a35c6f170d880649d21c43f501c2b70,1031,Multi-hip machine bent-knee hip extension
+2495c6f170d8804aa9fad2105cc974b7,1034,Multi-hip machine hip abduction
+2ab5c6f170d88035b077f2a722bf2659,1035,Multi-hip machine hip adduction
+2485c6f170d8803a8fd1c20db2725730,8191,Multi-hip machine hip flexion
+1a35c6f170d8801fbba8d7c384c3973e,1031,Multi-hip machine straight-knee hip extension
+1a15c6f170d8805383b3da6ad1c513a9,0631,Muscle-up
+32e5c6f170d880519671da392466c67d,1326,Negative chin-up
+32e5c6f170d880efad66d48095e79bdd,7385,Negative neutral grip pull-up
+1a15c6f170d8808bbb8ecd9aae199152,7583,Neutral close grip cable lat pulldown
+1ea5c6f170d8803fad6deac6a44ac402,0651,Neutral close grip pull-up
+1a45c6f170d88051b565eb1ea43255bc,0276,Neutral dead bug
+1ae5c6f170d8800b9065ee209498efee,1503,Neutral grip band pull-apart
+2a45c6f170d8802891cbf6897f304221,0970,Neutral grip band-assisted pull-up
+1a15c6f170d880efa82beae1d5828f6c,11254,Neutral grip cable rear delt fly
+1a15c6f170d88048b1ccfe9a74551d08,0861,Neutral grip cable row
+1a15c6f170d8800d8e3eee8e00854767,1728,Neutral grip cable triceps kickback
+2325c6f170d880b5893cf7a975a53389,0662,Neutral grip deficit push-up
+1a05c6f170d880a6b539ef74691f8c75,0289,Neutral grip dumbbell bench press
+2265c6f170d880078a82ff879d04021f,5667,Neutral grip dumbbell Z press
+1a15c6f170d8809b94d8f668bf45a229,4038,Neutral grip landmine T-bar row
+1a15c6f170d880db8633e3bec8b7e8fe,0602,Neutral grip machine rear delt fly
+1ec5c6f170d880e68b26fbc86bdd4d00,0017,Neutral grip machine-assisted pull-up
+2665c6f170d8807c94c0c69aa85510f5,0576,Neutral grip pin-loaded machine chest press
+3aa5c6f170d880f98633df6bbaf3663e,10867,Neutral grip pin-loaded machine incline row
+2ae5c6f170d8805da4e1d8dc785bc9ea,7583,Neutral grip pin-loaded machine lat pulldown
+1a15c6f170d8807188c0da98a91c30c3,1237,Neutral grip pin-loaded machine row
+1a15c6f170d880a19fdfee37bb2e5ee3,0587,Neutral grip pin-loaded machine shoulder press
+2e35c6f170d88064bd1ec50647b38148,7583,Neutral grip plate-loaded machine lat pulldown
+1a15c6f170d8809eabb9d8ff10141916,1237,Neutral grip plate-loaded machine row
+1a15c6f170d88076b7f5e24347a8d8a0,0587,Neutral grip plate-loaded machine shoulder press
+1ec5c6f170d880a69a11fa6bd5af0faa,0017,Neutral grip plate-loaded machine-assisted pull-up
+1a15c6f170d8808281eec44bc9b7fd67,0651,Neutral grip pull-up
+2925c6f170d88037b3d9c22ff48a9988,0841,Neutral grip weighted pull-up
+1ca5c6f170d88029b5f6c3464d50ea03,7583,Neutral shoulder width grip cable lat pulldown
+1ca5c6f170d880a3bd11ce80391ac1ef,7583,Neutral wide grip cable lat pulldown
+1d15c6f170d880809990ccd6b1a0cac0,0218,Neutral wide grip cable row
+1ea5c6f170d8809588bbf87798d8f746,0651,Neutral wide grip pull-up
+1a35c6f170d8804788fdd432b53f6df4,7746,Nordic hamstring curl
+2015c6f170d880aaa8ebc8025399466c,2290,Offset dumbbell Bulgarian split squat
+2025c6f170d880458ee4e2034877770a,2957,Offset dumbbell front foot elevated split squat
+2025c6f170d880df84cccd3735906a26,2960,Offset dumbbell split squat
+2025c6f170d880ae996eecb6a1440fd4,4444,Offset kettlebell Bulgarian split squat
+2025c6f170d88055a8f0f470ac301e5b,2957,Offset kettlebell front foot elevated split squat
+2025c6f170d880f09e66cc44d3a2347f,4059,Offset kettlebell split squat
+24b5c6f170d88089aa60dc0fdfa4478a,4070,One-board press
+1a15c6f170d880cb8d96e76abc77a0c4,0970,Overhand grip band-assisted pull-up
+1a15c6f170d8800d8fc9d2c235673bf6,2291,Overhand grip cable lat pulldown
+1af5c6f170d88005b6e9e40539c4bb11,11254,Overhand grip cable rear delt fly
+1a15c6f170d8802facb6eb0a316ae895,0861,Overhand grip cable row
+1a15c6f170d88095abb8c0c1b69b7157,0652,Overhand grip dead hang pull-up
+1d05c6f170d8805295d5c5c4637401f8,0606,Overhand grip landmine T-bar row
+1a15c6f170d88061a160d397574438af,0602,Overhand grip machine rear delt fly
+1a15c6f170d8802c8fcac7ee0b4ff011,0017,Overhand grip machine-assisted pull-up
+2ad5c6f170d880cdbed1eaa8667aec1c,7385,Overhand grip negative pull-up
+1a05c6f170d880cfb83be785c3640967,1030,Overhand grip pec deck fly
+3ab5c6f170d880b6bea9d22772736593,10646,Overhand grip pin-loaded machine incline row
+2ae5c6f170d88069bb1dc458458a3a78,0579,Overhand grip pin-loaded machine lat pulldown
+1a15c6f170d880409004f87e18f9b974,5447,Overhand grip pin-loaded machine row
+1a15c6f170d88014a0ccdeb82dfbc1f4,0579,Overhand grip plate-loaded machine lat pulldown
+1a15c6f170d8808386aac1a5806962b0,5447,Overhand grip plate-loaded machine row
+1eb5c6f170d8801a8641c62efb545970,0017,Overhand grip plate-loaded machine-assisted pull-up
+1a15c6f170d880a6adc9fcb38e55b8a9,0652,Overhand grip pull-up
+2ad5c6f170d8805e8114d97fb6e62c96,0841,Overhand grip weighted negative pull-up
+1a15c6f170d880bf8710e3cf4209936d,0841,Overhand grip weighted pull-up
+2735c6f170d880f3b90ecd520d315d5f,0027,Overhand grip Yates row
+24d5c6f170d88004b249d5b21f2aa501,5668,Overhead lockout pin press
+1a05c6f170d88088ab96e4088b138949,5668,Overhead low pin press
+1a45c6f170d880f3b0ead000932b5489,1354,Overhead medicine ball slam
+24d5c6f170d88067843cdd576ae017c7,5668,Overhead midpoint pin press
+2035c6f170d8808a9767fab48933d638,3366,Partial range of motion shrimp squat
+2025c6f170d8807fa81af9920531b960,3367,Partial range of motion skater squat
+1a25c6f170d880db8636d9788926a62d,3593,Pause back squat
+19f5c6f170d88013ae78cc9e6c967813,5013,Pause barbell bench press
+24d5c6f170d880e19102db0e4a0cb942,1162,Pause barbell overhead press
+29d5c6f170d8802888dff17fa2dbe04b,0085,Pause barbell Romanian deadlift
+29d5c6f170d8802294c4cd80d0007a95,0220,Pause cable shrug-in
+26c5c6f170d8801f872af3c4774900c5,0251,Pause chest dip
+2375c6f170d88097a709c94ec5d3e9fc,5013,Pause close grip bench press
+1a35c6f170d880d697d3f111b6bd16f5,5014,Pause conventional deadlift
+2945c6f170d880c5982df5f0136baa88,0251,Pause dip
+1a05c6f170d88017acc8c48b6ccdd639,0289,Pause dumbbell bench press
+29d5c6f170d88019a339f83d34c306e6,2290,Pause dumbbell Bulgarian split squat
+29d5c6f170d8800ab8cafa6d1de4f0af,1459,Pause dumbbell Romanian deadlift
+2175c6f170d88016a63deff6b692c180,0042,Pause front squat
+29c5c6f170d880278b3ec11248f37c9f,5516,Pause hack squat
+2a05c6f170d88018b4d1ed5ad11497ce,0009,Pause machine-assisted dip
+2a05c6f170d880dfa1f2d723c2a7a3a0,0009,Pause plate-loaded machine-assisted dip
+2315c6f170d8808181a4f18d581bd552,0662,Pause push-up
+2e55c6f170d880faaf6ac27b7f05bb46,0677,Pause ring dip
+23b5c6f170d8809aa142f91210536839,0748,Pause Smith machine bench press
+2985c6f170d880079f37d8c6cfcd84cd,1535,Pause snatch grip deadlift
+1a35c6f170d880548e7ec4399baa5441,0117,Pause sumo deadlift
+1a05c6f170d88094ba6ac1b79ded4cf9,0814,Pause triceps dip
+26c5c6f170d8808eb3fad30d37bdc3c3,1755,Pause weighted chest dip
+2945c6f170d880e0a4d5eb4a81d26159,1755,Pause weighted dip
+1a05c6f170d880c192f3c4c1c2fbbcba,1755,Pause weighted triceps dip
+2375c6f170d880f38392de77de639de7,5013,Pause wide grip bench press
+1a15c6f170d8804d834cef49a7b23f12,1030,Pec deck fly
+1a15c6f170d880e9bd65f120ac4908a0,3017,Pendlay row
+1a25c6f170d8800b8768c160b4808e67,4951,Pendulum squat
+1a15c6f170d880dfacd1c620c1010d79,2921,Pike push-up
+1f35c6f170d88021903dfb4b69eed77b,4851,Pin good morning
+2aa5c6f170d880609d4cccdf89ec7b9e,2267,Pin-loaded glute-biased leg press
+1a25c6f170d8802ea9b9ce71cd9d3d67,2951,Pin-loaded leg press
+1ac5c6f170d8803f915fec32a9820548,1385,Pin-loaded leg press calf raise
+2ab5c6f170d8800588eed5e2f0acad94,2335,Pin-loaded leg press calf “jump”
+3015c6f170d8809c8851e83b9e986ac6,0573,Pin-loaded machine 45° back extension (hip hinge)
+1a05c6f170d8807cbae8c6f25fc1a3be,0576,Pin-loaded machine chest press
+2835c6f170d88068b256c47ea3cc7c8e,0595,Pin-loaded machine crunch (with chest pad)
+2f25c6f170d880ef9e70c815672c40d5,1300,Pin-loaded machine decline press
+1a15c6f170d880caa8cfd43365a39d67,1253,Pin-loaded machine donkey calf raise
+3375c6f170d880eaa42ced4d8bce4849,0579,Pin-loaded machine front lat pulldown
+2fe5c6f170d880e4ad1fdc223b4c3387,0575,Pin-loaded machine high biceps curl
+30f5c6f170d88010a9c0dc8c3f5f33c4,0581,Pin-loaded machine high row
+2935c6f170d8807297f5f92ee1f47d68,2146,Pin-loaded machine hip thrust
+32d5c6f170d88043a59ed1eb330416c7,2282,Pin-loaded machine neck curl
+3015c6f170d880b0a405e6e840fc77ca,2282,Pin-loaded machine neck extension
+32d5c6f170d880eeb108fe8473bcca71,2283,Pin-loaded machine neck side bend
+1a15c6f170d880a8949ec06345dd11d1,7864,Pin-loaded machine overhead triceps extension
+1a15c6f170d880b08845d6f0fe186dd1,0592,Pin-loaded machine preacher curl
+1a15c6f170d880fb835cddd47e531ad0,2285,Pin-loaded machine pullover
+1a15c6f170d880fc9e97e840aa8098c7,0587,Pin-loaded machine shoulder press
+3c85c6f170d8805b9b54ce019cd6b4e8,1875,Pin-loaded machine squat
+3a65c6f170d880089793eaab0ba66e36,10113,Pin-loaded machine squatting hip abduction
+3b55c6f170d8800982aec9cb5ae2d235,0201,Pin-loaded machine triceps pushdown
+2aa5c6f170d8805592e1d2bcf9f94ff8,2267,Pin-loaded quad-biased leg press
+2725c6f170d880dd8bb9c908fcdacc35,0593,Pin-loaded reverse hyperextension
+2925c6f170d8809688d0f17e8a1a3328,5448,Pin-loaded row machine Kelso shrug
+2ab5c6f170d88084bd4cdfcad5daeb82,0294,Pinch grip dumbbell curl
+2955c6f170d88026baf6d53c5bd19bc3,4847,Plate front raise
+3ab5c6f170d880d1a0f9d0f94975b5ba,6077,Plate halo
+30c5c6f170d880dfa629e1ebd1a9114c,10114,Plate Lu raise
+2965c6f170d880048dd3e2730c6ecf96,4847,Plate overhead raise
+2085c6f170d880959b7ef4d14f58c269,6060,Plate pullover
+2ac5c6f170d880528867ff9573668f14,0406,Plate shrug
+3aa5c6f170d880919878d5f0fd7fb889,2276,Plate-loaded bench ab crunch
+3635c6f170d88026ad4aefea015a87a6,2951,Plate-loaded horizontal leg press
+1a25c6f170d880d5a6f1ec2faf744260,0585,Plate-loaded leg extension
+34a5c6f170d880be9c93c600ef5f237f,0573,Plate-loaded machine 45° back extension (hip hinge)
+28a5c6f170d8804c9154c16c44fce190,0573,Plate-loaded machine back extension
+2fe5c6f170d880be9a5bf3ff2b9fbc5b,0575,Plate-loaded machine biceps curl with arms at side
+2835c6f170d8809b876be6b88319b977,0595,Plate-loaded machine crunch (with chest pad)
+1a35c6f170d880f6bb05c7fcf46c4aa9,1452,Plate-loaded machine crunch (with overhead handles)
+2a25c6f170d88035b867d3bd6d5e1ecc,1300,Plate-loaded machine decline press
+1ac5c6f170d880879ea9c5c546d4d270,1253,Plate-loaded machine donkey calf raise
+2fe5c6f170d880139512cd2ba20bd35c,0575,Plate-loaded machine high biceps curl
+2e75c6f170d8804c8a2bdfec2fab3fc8,0581,Plate-loaded machine high row
+2925c6f170d880e5ba36f6cc1fb32a88,2146,Plate-loaded machine hip thrust (starting from the bottom)
+2935c6f170d880e9a219eca5177ee822,2146,Plate-loaded machine hip thrust (starting from the top)
+26a5c6f170d88029944ec98c4739da7f,2659,Plate-loaded machine incline bench press
+32d5c6f170d880fa9ad3ed4ac1e75536,2412,Plate-loaded machine neck curl
+3015c6f170d8803690e4cebe7bb8d0c2,2282,Plate-loaded machine neck extension
+32d5c6f170d880a08badffae8075d4c2,2283,Plate-loaded machine neck side bend
+25c5c6f170d880c1851ce5de31194766,7864,Plate-loaded machine overhead triceps extension
+2185c6f170d880508589f149c556677f,0592,Plate-loaded machine preacher curl
+1a15c6f170d8803a8018d7745dd7b6ce,2285,Plate-loaded machine pullover
+2f25c6f170d880d988d2eb4da119664b,0602,Plate-loaded machine rear delt fly
+1a15c6f170d880208cfdca4035bdedab,0587,Plate-loaded machine shoulder press
+3a15c6f170d8802d929dc7c562ac7e2c,10113,Plate-loaded machine squatting hip abduction
+2985c6f170d88033b7dbcb838dbd3faa,0607,Plate-loaded machine triceps extension
+3b25c6f170d88099bab5c480240fa61f,0201,Plate-loaded machine triceps pushdown
+3aa5c6f170d8809ba704c386e81ac68f,0576,Plate-loaded machine wide chest press
+26b5c6f170d8804fb91ce25638deff19,0009,Plate-loaded machine-assisted chest dip
+2f45c6f170d88029be9fc43fceda1500,0572,Plate-loaded machine-assisted chin-up
+2945c6f170d880d8acb0d440165917b9,0009,Plate-loaded machine-assisted dip
+26b5c6f170d880eaa94cfe7db44d961a,1871,Plate-loaded machine-assisted triceps dip
+2925c6f170d880aeaa8bd29ff96d84d1,5448,Plate-loaded row machine Kelso shrug
+1a45c6f170d8805bb5a0eca0cb756494,1043,Plate-weighted neck curl
+1a45c6f170d8808bb970dd2156495ae2,1042,Plate-weighted neck extension
+30c5c6f170d88031a491fe9159d82599,4431,Plate-weighted neck side bend
+2325c6f170d880689d2ad83e247c26c5,1306,Plyometric push-up
+1a45c6f170d8804a9e47ea9bf9442850,0648,Power clean
+1a45c6f170d88059b812cdecf366b404,1530,Power snatch
+2fe5c6f170d880b8a7b5c9524731a1bb,1875,Pro power squat
+1a15c6f170d880b38b79db68220c1a27,5040,Prone blackburn
+1a15c6f170d8804ba55ed0b633cc01b1,3436,Prone I-raise
+1a15c6f170d8801ab73ff043efc111f7,3225,Prone T-raise
+1a15c6f170d8803fb854e84471d6d2c9,5822,Prone Y-raise
+3a05c6f170d8809b92aeeb8bc621d673,9494,Pulley belt squat machine B-stance Romanian deadlift
+32e5c6f170d88062a346d3785a3958c3,9494,Pulley belt squat machine Romanian deadlift
+1a25c6f170d880c99d01f124c3424a13,2950,Pulley machine belt squat
+1a05c6f170d880a5b43fe13bcb1b6f3a,0662,Push-up
+2335c6f170d8806ca3efcb9b8fa09e94,3145,Push-up plus
+3ca5c6f170d88089830ad024c3f1a013,0597,Reclined machine 3D hip abduction
+2715c6f170d880968598e22593be442d,0597,Reclined machine hip abduction
+2715c6f170d8804ca482f3f6c6cae592,0598,Reclined machine hip adduction
+39d5c6f170d880458627c817d5bf4206,1299,Reclined neutral grip pin-loaded machine incline press
+26a5c6f170d880eb8aeccd0491568960,1299,Reclined pin-loaded machine incline press
+2715c6f170d8809d9053d14348011d17,0597,Reclined plate-loaded machine hip abduction
+2715c6f170d880cda8eaf9264129396b,0598,Reclined plate-loaded machine hip adduction
+1e75c6f170d880a2ba4bdf854dcdf5e3,5055,Regressed dead hang (feet on floor)
+1b45c6f170d880b690e9ea8e742a0167,0688,Regressed scapular pull-up (feet on floor)
+2a65c6f170d880e98f91e473693526b8,0032,Reset conventional deadlift
+2a65c6f170d8809a962ad4221635d902,0117,Reset sumo deadlift
+1a05c6f170d880a6b772ea673fe20b3d,5091,Reverse grip bench press
+1a25c6f170d880819de8ddcc87a7fb24,4722,Reverse Nordic curl
+1a45c6f170d880faa555d3e604efa65f,0867,Reverse plank
+2765c6f170d880f18fe7d3f722e98f57,3663,Reverse plank with alternating leg lifts
+3835c6f170d8806eaf00e87a208ff5c0,1875,Reverse V-squat
+2815c6f170d88084baa6d985c5689827,5008,Ring chin-up
+1a05c6f170d880ef985fe21b8048345d,4922,Ring fly
+1a15c6f170d8807dbb6ef4be8153acaa,5522,Ring pull-up
+3515c6f170d88045b18fdbcf9d511d5d,0235,Rotator cuff machine external rotation
+3515c6f170d8804194c0e3ee3b30d265,5088,Rotator cuff machine internal rotation
+2ed5c6f170d88006b245eb0b2d2f328d,1161,Rowing
+2ed5c6f170d880b09ed3f1ed697052c7,2197,Running
+2875c6f170d88010b52dcec52b219805,0630,Running mountain climber
+39c5c6f170d88040ab7be5efdac6895c,4962,Safety squat bar box squat
+1f35c6f170d880d59516f3a78b19b71d,5911,Safety squat bar good morning
+2145c6f170d88081a4a7d0b9630e7bb3,0078,Safety squat bar reverse lunge
+2145c6f170d8803694e4fe4d978383de,3030,Safety squat bar split squat
+2135c6f170d88076befdd9d49319cf5d,4219,Safety squat bar squat
+1a15c6f170d880cdb451e459ddf41d2a,0688,Scapular pull-up
+32d5c6f170d880fc9128daed81e228d0,0198,Scapular pulldown
+1a15c6f170d8806490d0e768051691f1,2945,Scapular wall slide
+2015c6f170d88007b3eae1f2b20dc6a5,0599,Seated accentuated eccentric hamstring curl
+2a25c6f170d880adb3e5cbe728a1eb05,6142,Seated Arnold press
+1a15c6f170d88064b709d85b6c065100,8611,Seated banded ankle eversion
+1a05c6f170d880ceb4edebad298afca7,0086,Seated barbell behind-the-neck overhead press
+1a15c6f170d8805b8898fd86e0d99d28,0126,Seated barbell finger flexion wrist curl
+1a05c6f170d8803c86effb7acb6ade56,0091,Seated barbell overhead press
+1a15c6f170d880098bcbe64c93b3cf31,0126,Seated barbell wrist curl
+1a15c6f170d88072bbede7169382ae90,0082,Seated barbell wrist extension
+1ad5c6f170d880d69d87f3105be45f06,2317,Seated bent-arm dumbbell lateral raise
+2bf5c6f170d880d49062efec2b0c98de,0573,Seated cable back extension
+2e35c6f170d8802eb8aae8f4330544ff,0157,Seated cable deadlift
+2a15c6f170d88066bc8ad397f7884a40,5658,Seated cable face pull
+2ae5c6f170d880d0b371e2747293bb3d,3869,Seated cable fly
+2e85c6f170d880b985c1f976e4ade790,4111,Seated cable Kelso shrug
+2e35c6f170d88027b28cf268e0d201a3,6552,Seated cable Romanian deadlift
+1a15c6f170d880fb9521f93aa126739f,0247,Seated cable wrist curl
+1a15c6f170d880a48120f245094f9530,2790,Seated cable wrist extension
+2ab5c6f170d88052bd13e33d9f5c0360,1643,Seated crucifix curl
+2ac5c6f170d88021a3a3d4aa413fda43,1641,Seated dual cable Bayesian curl
+1a15c6f170d88068bf2dc2d1866e0767,2189,Seated dual dumbbell overhead triceps extension
+33c5c6f170d88097a179d6e74e09af7b,0861,Seated dual handle cable row (elbows-in)
+3445c6f170d880118464dfb97c3e8b4a,0861,Seated dual handle cable row (elbows-out)
+1a15c6f170d880238ac4f9ccd90f1e08,1677,Seated dumbbell biceps curl
+1a15c6f170d880629cb0e70c9f87e027,0401,Seated dumbbell finger flexion wrist curl
+1a15c6f170d88021b875e863950a8388,0392,Seated dumbbell front raise
+1a15c6f170d880bab696d2c062c14ddd,1678,Seated dumbbell hammer curl
+2ab5c6f170d880d0b915ff1da3c9d7b9,4110,Seated dumbbell inverse Zottman curl
+1a15c6f170d88049a93dd5aded824eee,0396,Seated dumbbell lateral raise
+1a05c6f170d88060bbffeeb9acaa3c80,0405,Seated dumbbell overhead press
+1a15c6f170d88076aa27ee347803acb9,2188,Seated dumbbell overhead triceps extension
+1a15c6f170d880e18902d19b0f0c8b3d,3688,Seated dumbbell reverse curl
+32e5c6f170d880b58649dd5bf7bb2c31,5001,Seated dumbbell shoulder external rotation
+1a15c6f170d8801da273dbdc61789e83,0406,Seated dumbbell shrug
+1a15c6f170d880198cf6d0da1a319b0e,0401,Seated dumbbell wrist curl
+1a15c6f170d880d5bdf8fd24dec58684,0385,Seated dumbbell wrist extension
+2b25c6f170d88028809bfcde86c6e69e,4110,Seated dumbbell Zottman curl
+32e5c6f170d8800b9e2ada4601772e3e,0453,Seated EZ bar overhead triceps extension
+2a95c6f170d8809db965f6e67028f3af,1677,Seated fat grip dumbbell biceps curl
+2a95c6f170d880c7b6bcc399ea82429c,1678,Seated fat grip dumbbell hammer curl
+2fe5c6f170d88053bd4dd1f084745107,6523,Seated hack squat
+1a35c6f170d88029bc9ff9ded538758c,0599,Seated hamstring curl
+1a35c6f170d8801e907be574e89e5c65,0597,Seated machine hip abduction
+1a45c6f170d88070b25eec47bc2e1940,0598,Seated machine hip adduction
+1a15c6f170d88057bb86d20566082394,0584,Seated machine lateral raise
+28b5c6f170d88037bb6bde21e8f1712e,10065,Seated machine lower torso rotation
+1b85c6f170d88017af62c7f6947b251f,0604,Seated machine shrug
+1a05c6f170d88000945dfdee74e96234,0405,Seated neutral grip dumbbell overhead press
+1a15c6f170d88010a5b5f71c3ef7890d,2487,Seated neutral grip dumbbell rear delt fly
+2675c6f170d88060bcabcd3adf300956,0576,Seated neutral grip plate-loaded machine chest press
+3895c6f170d8802a8597f920e0b115e9,2974,Seated neutral grip single arm plate-loaded machine chest press
+1ae5c6f170d880da89bcf368bc01af0b,2487,Seated overhand grip dumbbell rear delt fly
+25d5c6f170d880c887a2fa457044342e,2335,Seated pin-loaded machine calf raise
+26a5c6f170d880c99e79e0597a0e816c,1451,Seated pin-loaded machine chest dip
+1a05c6f170d880088024e8984aed4e6a,1299,Seated pin-loaded machine incline press
+1b95c6f170d880609678f792d0762c00,0604,Seated pin-loaded machine shrug
+1a05c6f170d8807baa00ec5f6eee2896,1451,Seated pin-loaded machine triceps dip
+1a35c6f170d8801eb2ecf5da7cc1caea,0599,Seated plate-loaded hamstring curl
+1a15c6f170d8804bb9b4c6edc0ac59be,2335,Seated plate-loaded machine calf raise
+26a5c6f170d8801f894cc7620869b673,1451,Seated plate-loaded machine chest dip
+2f25c6f170d880b696a0cfc98fa59e7b,1030,Seated plate-loaded machine chest fly
+1a05c6f170d8803da198c200611265c3,0576,Seated plate-loaded machine chest press
+2fe5c6f170d880baa2dddd88503650ae,0455,Seated plate-loaded machine finger curl
+2705c6f170d880af8ae3e16679ad01c3,0597,Seated plate-loaded machine hip abduction
+2715c6f170d880b0b393dba8a2473347,0598,Seated plate-loaded machine hip adduction
+1a05c6f170d88007a78cd3f390c3dcdd,2659,Seated plate-loaded machine incline press
+1ad5c6f170d8801a99f3c05e565715ef,0584,Seated plate-loaded machine lateral raise
+25c5c6f170d88043b068f3225ed86f77,1451,Seated plate-loaded machine triceps dip
+1a15c6f170d88023adc2c02536b492c7,0214,Seated single arm cable row
+1a05c6f170d880f8b599f462f33ccd94,1231,Seated single arm dumbbell overhead press
+1a15c6f170d880b0aac2d96fb0f781ee,6158,Seated single arm dumbbell overhead triceps extension
+3895c6f170d8800fa56ccb8180ff6c5b,2974,Seated single arm plate-loaded machine chest press
+3725c6f170d880c49ad7fd2115889c62,0455,Seated single arm plate-loaded machine finger curl
+2cc5c6f170d8800798eddcf4b873de4c,5576,Seated single arm plate-loaded machine incline press
+3a05c6f170d88043a598fe2bf6ae061f,0584,Seated single arm plate-loaded machine lateral raise
+2e35c6f170d880f88707f8674c880239,6552,Seated single leg cable Romanian deadlift
+1a35c6f170d880f6884cda44975bf858,0599,Seated single leg hamstring curl
+25d5c6f170d8801a981fed5219ddbb4e,1216,Seated single leg pin-loaded machine calf raise
+1a35c6f170d880f99a95c9f681832465,0599,Seated single leg plate-loaded hamstring curl
+1a15c6f170d8800aa40be599172ecbfc,1216,Seated single leg plate-loaded machine calf raise
+2a25c6f170d8800b80a8d76a0abb6db4,0396,Seated super ROM dumbbell lateral raise
+2035c6f170d88080a706f7f7b7d76b18,3366,Shrimp squat
+32f5c6f170d8808eb560c564724e6671,10328,Shrug machine Bulgarian split squat
+32f5c6f170d88091935eeb5431c9d505,0578,Shrug machine deadlift
+30b5c6f170d880f5a655d2a1e9799364,8712,Shrug machine Romanian deadlift
+3895c6f170d88071b7f9d492f205d34a,1237,Shrug machine row
+36d5c6f170d880328a62e32cef125c41,1875,Shrug machine squat
+1a45c6f170d88034bc94c6276f361442,0715,Side plank
+1a45c6f170d8804eab30fb5da8fdb98c,0133,Side plank on knees
+2465c6f170d88096a94ddcb5ba527193,4863,Side plank with dynamic leg lift
+1a45c6f170d88034957fc586632329af,4863,Side plank with leg lift hold
+1a35c6f170d880ef8d83caf31fb0573e,2150,Side-lying banded clamshell
+1df5c6f170d880cf8f73c5df28bf5a2e,11644,Side-lying banded hip abduction leg raise
+1a35c6f170d8804b81cedee50cfee628,2461,Side-lying bodyweight clamshell
+1a35c6f170d880918125e6387c3849d5,4051,Side-lying bodyweight hip abduction leg raise
+2d55c6f170d880ab9677c32328d5d5f8,0863,Side-lying dumbbell shoulder external rotation
+2ab5c6f170d880c5a2b7fd382b30b40e,0323,Side-lying low incline dumbbell lateral raise
+1a35c6f170d880bd90eae6df2f7527e8,0837,Side-lying weighted hip abduction leg raise
+2715c6f170d880b38a5cf416f5f62b2d,0593,Side-plate-loaded reverse hyperextension
+2a05c6f170d88001926dfd6fada02197,9868,Single arm 45° cable rear delt fly
+1a15c6f170d88027bdddc238baa28936,2656,Single arm Bayesian curl
+30d5c6f170d880b3bd00fcbf8fe4d1e5,0192,Single arm behind-the-back cable lateral raise
+2ab5c6f170d8805e876ad553c17942b3,0190,Single arm cable biceps curl (elbow-out)
+1a15c6f170d8804c9235c935d487bda8,4838,Single arm cable biceps curl (facing toward machine)
+1a05c6f170d880c6a9d7d586318bbb31,11764,Single arm cable chest press
+2ab5c6f170d8801cb89dc244cc995c0a,0192,Single arm cable cuffed lateral raise
+1b05c6f170d880898c3ade3eb3d10e80,5524,Single arm cable face pull
+21c5c6f170d880019593eeff6244ee38,2689,Single arm cable front raise
+1a15c6f170d88069a1d3eb2d608c87b0,1204,Single arm cable lat pull-in
+1d55c6f170d88028a79af1239c96794e,1204,Single arm cable lat pulldown
+1ad5c6f170d88032a81cf4fb81eb0281,0192,Single arm cable lateral raise (with cable between legs)
+1ad5c6f170d880638826c5401d525ab6,0192,Single arm cable lateral raise (with cable in front of body)
+1a15c6f170d880bea7f6e5698ee2a6f7,11279,Single arm cable overhead triceps extension
+3065c6f170d880eea408cc28767961ae,4122,Single arm cable rear delt fly
+3065c6f170d8802ba1e2d2055f8bd410,0220,Single arm cable shrug
+39e5c6f170d880d3b599c613a5f1d604,1723,Single arm cable triceps press
+2e85c6f170d88038ad35d8d47a2b7f51,4163,Single arm cable wrist curl
+2ab5c6f170d8802dbf77ed77bb29092d,3719,Single arm cross-body cable triceps extension
+2aa5c6f170d88015886fdf8eb2580e76,3342,Single arm cross-body cable Y-raise
+2cc5c6f170d88074a5e5eff1282b47f2,1636,Single arm crucifix curl
+1a15c6f170d88086828becf503a509c6,5055,Single arm dead hang
+1a05c6f170d8803dad22e04308bd0a98,3333,Single arm dumbbell bench press
+1a15c6f170d88041ba65c740787dc48a,6757,Single arm dumbbell biceps curl
+26d5c6f170d88122a65ec353ea06cfdc,10329,Single arm dumbbell cheat row
+2e85c6f170d88005a5c1cb46a7840e3f,0364,Single arm dumbbell finger flexion wrist curl
+1a05c6f170d88086b7e3da51deb96425,5093,Single arm dumbbell floor press
+29d5c6f170d88047a8cfd79892e274d5,3084,Single arm dumbbell preacher curl
+29d5c6f170d880c18b4adece92b557f5,1663,Single arm dumbbell preacher hammer curl
+29f5c6f170d88040aad8d692c069b2f1,1414,Single arm dumbbell preacher reverse curl
+1a05c6f170d880dfbe8cd859723b5c99,1700,Single arm dumbbell push press
+1a55c6f170d88031b658c6e278a82a88,4837,Single arm dumbbell row (elbow-in)
+2a55c6f170d880f6aa9ed2abe35b5215,2393,Single arm dumbbell row (elbow-out)
+1a15c6f170d88081bd47d7fbc3bea9c0,0346,Single arm dumbbell skull crusher
+1a15c6f170d880c7b8d7f8060b06d9f4,0354,Single arm dumbbell triceps kickback
+2e85c6f170d88053bfc1d0a85ae07939,0364,Single arm dumbbell wrist curl
+2e85c6f170d8802f91e4e8f17dd763ad,0358,Single arm dumbbell wrist extension
+2265c6f170d8801388daf25ba257a0c3,10043,Single arm dumbbell Z press
+2a95c6f170d88030be42cfe71124d3a1,1663,Single arm fat grip dumbbell preacher hammer curl
+3895c6f170d880ae9888d61b42758fe5,1204,Single arm front lat pulldown
+2ab5c6f170d880d680edcd91f1766560,0192,Single arm high cable lateral raise
+21c5c6f170d88003a39bda54ea48d199,6542,Single arm high-to-low cable fly
+1d25c6f170d8800caecdf67ec170c9b9,6510,Single arm high-to-low cable row
+1a05c6f170d88058aa3bcb8cbc9102d6,6219,Single arm horizontal cable fly
+39b5c6f170d880fc8c9ece51fffd2d59,5843,Single arm incline machine fly
+2cf5c6f170d880ba964ffcbd097f377d,4543,Single arm kettlebell clean
+2cf5c6f170d8805498c1ec358b498bbc,0540,Single arm kettlebell push press
+1a15c6f170d880f09425c9edd56d2d73,0541,Single arm kettlebell row (elbow-in)
+1a15c6f170d8808aab66c6855e05e946,5094,Single arm landmine press
+1a15c6f170d880569efcc5eaf99b08ad,4038,Single arm landmine row
+21b5c6f170d880ae8df7c12086a855cd,0179,Single arm low-to-high cable fly
+2c35c6f170d880eeb903fb2fdbb249d8,4215,Single arm low-to-high machine low row
+3895c6f170d8804f9e7edf37ac311801,1235,Single arm machine D.Y. row
+39a5c6f170d8800f95d1d8b9bfaf04a8,0596,Single arm machine fly (with arm pad)
+2ad5c6f170d8802abf00e4d2809132fa,8990,Single arm machine rear delt fly
+39a5c6f170d880da819ed45a1e8a25b6,8990,Single arm multi flight rear delt fly
+1b15c6f170d8804d8c78f51d47b2d444,1723,Single arm neutral grip cable triceps pushdown
+24b5c6f170d880beb6cdfb1ffe89cddd,5093,Single arm neutral grip dumbbell floor press
+1a15c6f170d880cabfbff4d5b4e34294,1723,Single arm overhand grip cable triceps pushdown
+1a15c6f170d88023b537e3c7985ccadd,9862,Single arm pin-loaded machine preacher curl
+2ab5c6f170d880ab86d3fc93d8eaa4d3,6757,Single arm pinch grip dumbbell curl
+39a5c6f170d88087bf10eb9394053f4a,0596,Single arm plate-loaded machine chest fly
+3895c6f170d8804bb3d7ecc7cc945917,1300,Single arm plate-loaded machine decline press
+3895c6f170d88059bc07cb2265b3866c,1356,Single arm plate-loaded machine high row
+39b5c6f170d880c2a771ea514f221f2c,5576,Single arm plate-loaded machine incline bench press
+2185c6f170d8807192f5fde56bf665f3,9862,Single arm plate-loaded machine preacher curl
+3ab5c6f170d8801d8141e1e30c29e9a4,2974,Single arm plate-loaded machine wide grip chest press
+39a5c6f170d8801badfafab7637ed42e,8990,Single arm plate-loaded pec deck rear delt fly
+1a05c6f170d88066930edfaf0f233e20,0725,Single arm push-up
+2785c6f170d88038830fc9adcc21f458,1044,Single arm single plate pinch
+1b15c6f170d880fa97f2f6bce5cfa350,1723,Single arm underhand grip cable triceps pushdown
+1a15c6f170d8807a9ccdd19a4a1df2f4,4837,Single arm underhand grip dumbbell row
+39d5c6f170d880c09fc6ea1c1618de9d,4215,Single arm underhand grip low-to-high machine low row
+1a15c6f170d880d4a3b4c7727ede7730,5860,Single kettlebell overhead triceps extension
+3325c6f170d880a2a9b6e4391cc8390a,4861,Single kettlebell Romanian deadlift
+1a15c6f170d8802e9b7ecde43d2af104,5861,Single kettlebell skull crusher
+25f5c6f170d880c98516dcc2f1cb2aab,4408,Single kettlebell upright row
+1a25c6f170d8806ba0efd970f13028c3,2224,Single leg 45° leg press
+1a15c6f170d880bdacd4ebd2f59212d3,1392,Single leg 45° leg press calf raise
+2f45c6f170d8809595d5ce3ab6489d3d,1409,Single leg barbell glute bridge
+35b5c6f170d880e3834bcc80a18349c6,0085,Single leg barbell Romanian deadlift
+1a35c6f170d88042b608da098f0a9af6,3435,Single leg bodyweight glute bridge
+1a35c6f170d880e5a5e5fc58d493ca07,2071,Single leg bodyweight hip thrust
+3865c6f170d88092b9d0cd1122fa9f34,1170,Single leg bodyweight Roman chair hip hinge
+2095c6f170d8808ab010f67d13911f04,4971,Single leg bodyweight Romanian deadlift
+3895c6f170d880a5a954eaafa2af75c8,0593,Single leg center pendulum reverse hyperextension
+2aa5c6f170d880c0bf4bfd09f8e10edc,10754,Single leg dumbbell calf “jump”
+2f45c6f170d8806cb6fdd5f6e6186759,4291,Single leg dumbbell glute bridge
+2a15c6f170d880c18cd3d6a4c77b1ce3,4755,Single leg dumbbell hip thrust
+1a35c6f170d8802ebeecd725059973b2,1757,Single leg dumbbell Romanian deadlift
+2d45c6f170d880459efde25c32337f0e,3692,Single leg goblet box squat
+1db5c6f170d880b8bc06cf62acf06975,9359,Single leg hamstring bridge
+3275c6f170d880589233d014bca079c4,4291,Single leg kettlebell glute bridge
+3205c6f170d880668f40e922d7d28259,4755,Single leg kettlebell hip thrust
+1a35c6f170d880d89a3af6f1022532fd,4861,Single leg kettlebell Romanian deadlift
+2ee5c6f170d88007ae12e25b5f051466,6553,Single leg landmine Romanian deadlift
+1a25c6f170d880dcb28bc023b51f8285,0585,Single leg leg extension
+3895c6f170d880228be2f9b197f1e215,2287,Single leg leverage leg press
+37b5c6f170d8800bb6d9d95880021253,9509,Single leg machine tib raise
+2095c6f170d880058b21f3ded8e41d52,3338,Single leg offset dumbbell Romanian deadlift
+2095c6f170d88068a760c306a7de2106,4861,Single leg offset kettlebell Romanian deadlift
+1a25c6f170d880f6b70ce6d1eb56e712,2951,Single leg pin-loaded leg press
+1ac5c6f170d88096a00cda012fa6cad7,1392,Single leg pin-loaded leg press calf raise
+2935c6f170d880549716d3698fef4f0f,2148,Single leg pin-loaded machine hip thrust
+3895c6f170d88062aee4dcdb24332442,2951,Single leg plate-loaded horizontal leg press
+1a25c6f170d880b2a727d44db1872fd0,0585,Single leg plate-loaded leg extension
+2935c6f170d88090a53bf1651f70606c,2148,Single leg plate-loaded machine hip thrust (starting from the bottom)
+2935c6f170d88050a884d6eaff4ec24c,2148,Single leg plate-loaded machine hip thrust (starting from the top)
+2765c6f170d88019b20bc2a1cf268901,0867,Single leg reverse plank
+3895c6f170d880f2a7a8fc3d36f6abd6,11529,Single leg shrug machine Romanian deadlift
+3895c6f170d880d0ac84ef7ed54be14b,0593,Single leg side-plate-loaded reverse hyperextension
+2a55c6f170d88036bea4f5da83f8a83b,3395,Single leg slider leg curl
+27f5c6f170d880a59b85fcf9ca2a0a2d,3110,Single leg Smith machine hip thrust
+3bc5c6f170d880ab94cfc7b3f02f97d8,0770,Single leg Smith machine squat
+2425c6f170d8801eab38f106ba588559,5036,Single leg stability ball leg curl
+3895c6f170d880dcbc39fedb90a94a74,4327,Single leg vertical leg press
+2055c6f170d8805e89edc426eed603c6,0731,Single leg wall sit
+2055c6f170d8809db02ce4a60945c61e,4072,Single leg wall squat
+3865c6f170d880dab5e5e929bc2a892b,5035,Single leg weighted Roman chair hip hinge
+1a25c6f170d880e9a081d306d6073583,1489,Sissy squat
+1f45c6f170d88004a6bee730e626b917,1163,Six-inch leg raise with head down
+1a45c6f170d880968596e3d5aa284e0c,1163,Six-inch leg raise with head up
+2ed5c6f170d88092bdc2ff3abf3182ca,2142,SkiErg training
+2a15c6f170d8806c8595c7135a9d6349,3395,Slider leg curl
+2535c6f170d8801bab2af2748abfe4e1,0301,Slight decline dumbbell bench press
+1a25c6f170d8800a86efdcb6f902b9a9,0770,Smith machine back squat
+1a15c6f170d8801cac29f53975faddf2,0746,Smith machine behind-the-back shrug
+1a05c6f170d88058a3a0c07e098a9605,0748,Smith machine bench press
+1a25c6f170d8805a9e4bed646b9d0430,11568,Smith machine Bulgarian split squat
+2a15c6f170d880f8a62af0d9087dee31,0767,Smith machine cheat shrug
+1f15c6f170d880b18270e30e4cd15fcd,1532,Smith machine deficit Romanian deadlift
+2a15c6f170d880a8b0b0f63c15a8ba94,1359,Smith machine deficit row
+1a25c6f170d8808ab763ee31187a4149,9041,Smith machine front foot elevated split squat
+2a25c6f170d88045971df805ad7a516c,9041,Smith machine front foot elevated split squat hold
+3215c6f170d88092983edbabbff83076,1595,Smith machine front squat
+1a35c6f170d8808fa1c6e81741d5a44b,0749,Smith machine good morning
+1a35c6f170d880c0808de2493284ed5b,3110,Smith machine hip thrust
+2a15c6f170d880688ba8f6c9a4bfb59b,9385,Smith machine JM press
+1a25c6f170d880588132debba5074911,5825,Smith machine lunge
+2a25c6f170d880598e4cf19f74a6c0bb,5825,Smith machine lunge hold
+24f5c6f170d88077beffc838033a5eea,0766,Smith machine overhead press
+3215c6f170d8801087a4e85892bf3fe7,0770,Smith machine pause squat
+2a05c6f170d88048b677f623d7693a19,3017,Smith machine Pendlay row
+1a35c6f170d880e3a844c5b35bb2ad0b,0085,Smith machine Romanian deadlift
+2a15c6f170d8803c80eddc3aed1b7914,1359,Smith machine row
+1a15c6f170d8804cbd9afa04567bd5f7,0767,Smith machine shrug
+1a25c6f170d880898d9fe87c9aed69de,0768,Smith machine split squat
+30b5c6f170d8804cb292e901f7280737,0775,Smith machine upright row
+1a45c6f170d880bf9973dbce826b6934,1533,Snatch
+1a35c6f170d88065a9ddd9ff0c4a26eb,1535,Snatch grip deadlift
+1a15c6f170d8802a953aeaebbfbb6656,0776,Snatch grip high pull
+1ec5c6f170d880cba79eedde0d89a8c1,10857,Snatch grip Jefferson curl
+29d5c6f170d880409366c2590701e800,0085,Snatch grip Romanian deadlift
+1a15c6f170d880c68df7cd7ee49de492,4862,Snatch grip shrug
+1a45c6f170d88036bee3f0f5886078c1,1538,Split jerk
+2405c6f170d88066aa57f7e9c8af3988,5013,Spoto press
+29d5c6f170d880d58354c18dc65aa6f6,3593,Squat walkout
+2a25c6f170d88080a2efd70028c576e7,0271,Stability ball crunch
+1a35c6f170d880ce8ce1c99e4ba9837f,0569,Stability ball leg curl
+2785c6f170d880e2a185cdf3fda20df9,1706,Stability ball plank
+2d85c6f170d880c98191fe4f739ddaca,2296,Stability ball plank rollout
+2a25c6f170d880268432ceb1f40307a1,2296,Stability ball rollout
+2ed5c6f170d8805487b7e6835d0eba2e,3009,Stair climbing
+2ae5c6f170d88044bac9fce04daffe3f,3018,Standing accentuated eccentric bodyweight calf raise
+2ab5c6f170d8803299dbcbb1504228f7,0417,Standing accentuated eccentric dumbbell calf raise
+2ab5c6f170d8801a9c0eef1917dc7993,0605,Standing accentuated eccentric machine calf raise
+2ab5c6f170d88091a080f2624f923a3e,0605,Standing accentuated eccentric plate-loaded machine calf raise
+2a25c6f170d880f4b962fed4aa60820b,4108,Standing Arnold press
+3a35c6f170d880038bb5fa8cbb8f2b20,0416,Standing back-supported dumbbell biceps curl
+1a05c6f170d880e38c76ff16887b6f82,0086,Standing barbell behind-the-neck overhead press
+1a15c6f170d8804f9a59db17cc26d4d7,1372,Standing barbell calf raise
+1a15c6f170d880ec904af2674c86f570,6262,Standing barbell wrist curl
+1ad5c6f170d880f697ebda6951f20ea7,5631,Standing bent-arm dumbbell lateral raise
+1a35c6f170d880cdb0ded0d7ed778004,0226,Standing cable crunch
+2a25c6f170d8807cbb7bfbd8af135b9f,1547,Standing cable leg curl
+2e85c6f170d880ce885bfab5208e6986,6360,Standing cable wrist curl
+1a15c6f170d8802485a1f0c743200257,0430,Standing dual dumbbell overhead triceps extension
+1a15c6f170d8809a927ed538bf683443,5857,Standing dual kettlebell biceps curl
+1a15c6f170d880f1ba5ef781b583618a,0416,Standing dumbbell biceps curl
+1a15c6f170d880ec9256cb5ba349d32d,0417,Standing dumbbell calf raise
+1a15c6f170d880b987dfef02305048b6,0310,Standing dumbbell front raise
+1a15c6f170d880868c06f216e31047c3,0416,Standing dumbbell hammer curl
+2ab5c6f170d880829468c80cada5b976,0439,Standing dumbbell inverse Zottman curl
+1a05c6f170d880e28b6bfbd0e217fcbc,2234,Standing dumbbell lateral raise
+1a05c6f170d8802ba26bf25efbec5e68,0426,Standing dumbbell overhead press
+1a15c6f170d880a38049e295e9919e8e,6221,Standing dumbbell overhead triceps extension
+1a15c6f170d880fe98b5de3ab0e91186,0429,Standing dumbbell reverse curl
+1a15c6f170d8800abba4d3ef66a48aa6,0406,Standing dumbbell shrug
+1a15c6f170d880e79382e4a14d8116fc,0439,Standing dumbbell Zottman curl
+1a15c6f170d88047b7a9c99076376323,0109,Standing EZ bar overhead triceps extension
+2a95c6f170d880c79ad0e9ecc4f0d855,0416,Standing fat grip dumbbell biceps curl
+2a95c6f170d8807b8876cbb06d90c203,0313,Standing fat grip dumbbell hammer curl
+1a05c6f170d880d983adf3f27171db52,0553,Standing kettlebell overhead press
+1a15c6f170d880518057cd4d484cbecb,0605,Standing machine calf raise
+33e5c6f170d880e0922cc677a863e2a4,9398,Standing machine chest fly
+34a5c6f170d880e582d1f18f581e5054,9848,Standing machine hip thrust
+1a15c6f170d88055bfbcf0b2e871a481,8847,Standing machine lateral raise
+1a15c6f170d880129623ecf7b410009b,0604,Standing machine shrug
+1a05c6f170d88044b720f479bb37d97b,0426,Standing neutral grip dumbbell overhead press
+3a15c6f170d8808e95b2d089c18b2823,3758,Standing neutral grip plate-loaded machine chest press
+1a15c6f170d8803e9441ef80d1af7fb3,3018,Standing on ground bodyweight calf raise
+1a15c6f170d88036a293d329ecf9fd76,3712,Standing on ground single leg bodyweight calf raise
+1a15c6f170d880399804d982de6e0544,0773,Standing on ground Smith machine calf raise
+1a15c6f170d8805d8817ca59f7b2682f,3018,Standing on step bodyweight calf raise
+1a15c6f170d880d2b760e4a33b36f289,5052,Standing on step single leg bodyweight calf raise
+2a15c6f170d880bcb811f5264b2c9423,0409,Standing on step single leg dumbbell calf raise
+3585c6f170d880d0b1dcc35ca0c4f9ae,0773,Standing on step Smith machine calf raise
+1a35c6f170d88010a78aecec412b3fe4,4347,Standing pin-loaded hamstring curl
+1a35c6f170d8805391a2e2f61009d836,1031,Standing pin-loaded machine glute kickback
+34a5c6f170d880bfb433e70048ecd0d1,1034,Standing pin-loaded machine hip abduction
+1a35c6f170d880c18fc6d848bac682fd,4347,Standing plate-loaded hamstring curl
+1ac5c6f170d88080883cf1815a7949f5,0605,Standing plate-loaded machine calf raise
+29a5c6f170d88008b547f7c6d41acbbc,3758,Standing plate-loaded machine chest press
+29a5c6f170d880e7bc9afc9bfa7e57be,0455,Standing plate-loaded machine finger curl
+2905c6f170d8801699a5f87d766626b5,1031,Standing plate-loaded machine glute kickback
+34a5c6f170d88016895ef3573bbd9772,1034,Standing plate-loaded machine hip abduction
+1ae5c6f170d880cead37fc715a47205d,8847,Standing plate-loaded machine lateral raise
+1a15c6f170d880f9a7c3de4cae380ab5,5090,Standing single arm cable row
+1aa5c6f170d880b9ab00ea8320731145,0298,Standing single arm cross-body dumbbell hammer curl
+1a05c6f170d880ad9234c77a643b7d1b,0361,Standing single arm dumbbell overhead press
+1a15c6f170d8808fbb71ec4a23bd16a8,6158,Standing single arm dumbbell overhead triceps extension
+1a05c6f170d88060b7f3f259ca3140b0,0539,Standing single arm kettlebell overhead press
+39a5c6f170d880b5a8cdfd5687ac9676,8847,Standing single arm machine lateral raise
+39a5c6f170d88035a24bc93113f5bf0f,9398,Standing single arm machine pec fly
+3725c6f170d880189032d6fe278161fa,0455,Standing single arm plate-loaded machine finger curl
+3b25c6f170d880f887c5fdc11947af3a,8847,Standing single arm plate-loaded machine lateral raise
+1a15c6f170d8803aa8bffc5a0dae7406,0605,Standing single leg machine calf raise
+1ac5c6f170d8809394bfc3c118a7c9d1,0605,Standing single leg plate-loaded machine calf raise
+2a25c6f170d880fa81aefd1874c63d76,2234,Standing super ROM dumbbell lateral raise
+1a15c6f170d8801383bce169e240d03c,9803,Standing tib raise
+2e85c6f170d88097a650f71960adf734,0791,Standing weighted hip abduction
+2565c6f170d880f5a138e11e3ebd6f60,1775,Static long lever Copenhagen plank
+2565c6f170d8807d8432e15a74a42e25,1775,Static short lever Copenhagen plank
+26f5c6f170d88086af2aec60cfb8851e,1354,Step-into overhead medicine ball slam
+1a15c6f170d88002a98aca58c753277d,1326,Sternum chin-up
+1f05c6f170d880bdb9abfc920444c84c,1543,Stiff-leg deadlift from floor
+2ae5c6f170d880a9a492e31be3caf6e6,5445,Stomach vacuum
+1f55c6f170d8800b85b4c61116d095a6,1163,Straight leg reverse crunch
+1a45c6f170d880bdb21bde7f21618fbc,4428,Straight-arm sled push
+2165c6f170d88086b1b2c72025f4a497,0042,Strap front squat
+2ff5c6f170d880e39d3ffa1a195939df,1162,Strict log press
+1a35c6f170d880f398c6e0d9a10327b2,0074,Sumo below-the-knee block pull
+1a35c6f170d8807aae84e2c6eb136395,0117,Sumo deadlift
+2395c6f170d8800dbd1ac184188c0ee5,0074,Sumo low block pull
+23a5c6f170d8803da1bcf5b34ea5423d,3731,Sumo Romanian deadlift
+1a45c6f170d8807cae53dd7f488cd0f3,3436,Superman
+1a15c6f170d8807a903bf497e2880347,1080,Suspension trainer inverted row
+2ed5c6f170d8807c819ae5a51a8a1243,2870,Swimming
+1a05c6f170d880c4bcd7dfd978df3ac9,0025,Swiss bar bench press
+2915c6f170d880ccb3f2c234859d384a,5448,T-bar Kelso shrug
+2765c6f170d880e4ac3cc89dc17cac07,0867,Tabletop reverse plank
+1a45c6f170d88028b4f5e2009e0298a7,5159,Tall plank
+1f55c6f170d880dc9272fc21c90d01f5,9002,Tall plank bird dog
+2bf5c6f170d880a0af97cfd8c54d814c,3021,Tall plank scapular protraction
+1f55c6f170d8803db959ead2390b49ec,3501,Tall plank with alternating leg lifts
+1f55c6f170d8807e9830d734e7674ca6,3699,Tall plank with shoulder taps
+1a25c6f170d880ca9d79d2832be4d932,3593,Tempo back squat
+2385c6f170d8809c92c2dcca404e1e91,0025,Tempo bench press
+1a35c6f170d880d4b873c7916f5eb3c9,2760,Thigh-banded bodyweight hip thrust
+1a35c6f170d880749591f8b5e39a12bf,1004,Thigh-banded bodyweight squat
+1a35c6f170d880d6a7c1f6fd0a08993f,3181,Thigh-banded frog pump
+1a35c6f170d8803d9c7ae92671f4ce5b,2154,Thigh-banded glute bridge
+1a35c6f170d88043b47fffc9c066f89c,6607,Thigh-banded lateral walk
+24b5c6f170d8806d96d0ed684a3eb33c,4070,Three-board press
+3585c6f170d8804c9328f764225cfc6c,3891,Toes-to-bar
+2285c6f170d880d3b0e7c4fbfb5da392,0032,Touch-and-go conventional deadlift
+23a5c6f170d880619991ceb9000e3a7f,0117,Touch-and-go sumo deadlift
+1e25c6f170d8809193e0e6ead5da5816,0811,Trap bar block pull
+1a15c6f170d880239675f7013b087a83,2912,Trap bar farmer’s carry
+32e5c6f170d88091b119f0e332588c58,1581,Trap bar reverse lunge
+2ee5c6f170d8809a9e87d7a58d087ca3,0811,Trap bar Romanian deadlift
+1a15c6f170d88058affcfe5558485d48,4103,Trap bar shrug
+32e5c6f170d880a08e72ec6f243cae78,0781,Trap bar split squat
+1a05c6f170d880dfb155db9048527b8b,0814,Triceps dip
+3205c6f170d880289289de1aac3d6030,2393,Tripod dumbbell row (elbow-in)
+3505c6f170d880b2bf5cf674d12ff79b,2393,Tripod dumbbell row (elbow-out)
+3205c6f170d880d9953aec17bd072bad,0541,Tripod kettlebell row (elbow-in)
+3505c6f170d8802b8910d0893e674174,0541,Tripod kettlebell row (elbow-out)
+2a25c6f170d880e993b3f026d67b74c1,0276,Two-arms two-legs dead bug
+2b05c6f170d8807b8776cdfc9f03c27b,0276,Two-arms two-legs neutral dead bug
+24b5c6f170d880d0af22e611605460a4,4070,Two-board press
+3015c6f170d8800e9031f437108c44ff,0300,Ukranian deadlift
+1a15c6f170d880498730f15feec5e557,10503,Underhand close grip cable lat pulldown
+1a45c6f170d880cd8b06d551953d6054,1503,Underhand grip band pull-apart
+1a15c6f170d88086b226f5237d3b5ca4,5517,Underhand grip barbell inverted row
+2e35c6f170d880ab8134d260a3fb6cf4,8798,Underhand grip barbell seal row
+1a15c6f170d880b2a97ec3d948120f99,0245,Underhand grip cable lat pulldown
+1a15c6f170d880e89f71c03312fd37ba,0861,Underhand grip cable row
+1b05c6f170d880c885f6f10ea922b25b,0207,Underhand grip cable straight bar triceps pushdown
+1b15c6f170d880a4b130e3fd4e382c3f,1728,Underhand grip cable triceps kickback
+39d5c6f170d880028b2cce7b4f8b96b2,4214,Underhand grip low-to-high machine low row
+1d65c6f170d8806da486d7f5528de15f,0673,Underhand grip plate-loaded machine lat pulldown
+2a15c6f170d88047b9f6f714f2131299,1359,Underhand grip Smith machine deficit row
+2a15c6f170d8805aaf68ef29976580f7,1361,Underhand grip Smith machine row
+1a15c6f170d8808c80a4d05ecedeadc1,0118,Underhand grip Yates row
+1ca5c6f170d880de9d4efa853805659e,2291,Underhand wide grip cable lat pulldown
+3c85c6f170d880ab8742eca27e901378,1034,Upright machine 3D hip abduction
+1a45c6f170d880d7ba9aef42c91bf024,3622,V sit-up
+2fe5c6f170d880ffb230ffceb58e711c,4327,Vertical leg press
+2ed5c6f170d8802aacffdd1b108eddfa,2258,Walking
+32e5c6f170d88086bab0cf7f3f54a53c,7551,Weight vest Bulgarian split squat
+3305c6f170d8802f9b72ebea034d7ec6,3470,Weight vest forward lunge
+32e5c6f170d8805d854ff050b9d321ca,1581,Weight vest reverse lunge
+32e5c6f170d8801fb1e4edb487335d9c,1460,Weight vest walking lunge
+32e5c6f170d880fe932de274096a1e9e,6211,Weighted bicycle crunch
+26c5c6f170d8802ab4ede83743a22611,1755,Weighted chest dip
+1a15c6f170d88037945ece29e66bdf4d,4102,Weighted chin-up
+1a35c6f170d8801b9d6af6cb4040482f,0832,Weighted crunch
+1f75c6f170d88028ae70fb6ad1093f7e,10873,Weighted crunch (holding weight overhead)
+2945c6f170d8804492cdd8fcac26dbfb,1755,Weighted dip
+34b5c6f170d8805496beef327400434e,4677,Weighted donkey kick
+32e5c6f170d880fd875efafdc79958df,2135,Weighted forearm plank
+2735c6f170d8806eb2e7cde530f136f1,5035,Weighted glute ham developer back extension
+1a35c6f170d8809696b9f49a464504b0,4762,Weighted glute ham developer hip hinge
+30d5c6f170d88084bccbdddab0cf761f,10639,Weighted glute ham developer sit-up
+2995c6f170d88014be54d45044b391a8,3193,Weighted glute ham raise
+32e5c6f170d880efb190df52550f9f93,1184,Weighted inverted row
+2085c6f170d880668fb7c6b5bcd60351,0851,Weighted machine sissy squat
+2305c6f170d8801b8161c48e399d6bce,8076,Weighted push-up
+2ef5c6f170d880a59e8bd745a4365b27,0677,Weighted ring dip
+2725c6f170d880dda8f1c9962231c038,5035,Weighted Roman chair back extension
+1a35c6f170d880e2bf67fe2d8892d98c,4455,Weighted Roman chair hip hinge
+30c5c6f170d880cda373da8c97aa7074,10875,Weighted Roman chair side bend
+2765c6f170d8805887baffcb3def81fb,0846,Weighted Russian twist
+35a5c6f170d880e98cf5d110e1131632,0715,Weighted side plank
+1a35c6f170d880e18fc2d6f5b3c283a8,4756,Weighted sit-up
+1a05c6f170d880b59c2ec135e3c3e9f6,1755,Weighted triceps dip
+2055c6f170d880c7b7b7f7e7d69c809a,7559,Weighted wall sit
+2a25c6f170d880b99935d169af64e34f,0970,Wide grip band-assisted pull-up
+24f5c6f170d880ceb223d5626dbea9de,0086,Wide grip barbell behind-the-neck overhead press
+1d45c6f170d8809ab398df8048e00468,4770,Wide grip barbell inverted row
+1a05c6f170d8806c83bac84cb4b90d45,1457,Wide grip barbell overhead press
+1a15c6f170d880d2918fc166e7a820d1,1325,Wide grip behind-the-neck cable lat pulldown
+1a05c6f170d88051a776c0d609819787,0122,Wide grip bench press
+1a15c6f170d8809d8cdbf9394bfb079c,2291,Wide grip cable lat pulldown
+1d15c6f170d880a886e3e2426f08d7eb,0218,Wide grip cable row
+1ea5c6f170d88048b560ff1639535e0c,8189,Wide grip chin-up
+1a15c6f170d880da9085c9c6ed1ec342,0447,Wide grip EZ bar biceps curl
+2185c6f170d880028f61dcfb1b8376f4,6406,Wide grip EZ bar preacher curl
+2ae5c6f170d880999569cef30737fdcf,2291,Wide grip pin-loaded machine lat pulldown
+2ae5c6f170d880d0bd81c87b1814c805,1237,Wide grip pin-loaded machine row
+2ae5c6f170d8800eab34cca3ab2a2919,2291,Wide grip plate-loaded machine lat pulldown
+2ae5c6f170d880d3959cd70b4a714957,1237,Wide grip plate-loaded machine row
+1a15c6f170d880849033e0f75c6ee758,1429,Wide grip pull-up
+1a05c6f170d88091bae1f8c38abe474e,0662,Wide grip push-up
+2305c6f170d8802492b1d3682e0381dc,1308,Wide grip Smith machine bench press
+2ad5c6f170d8804aa21df1e164192910,0841,Wide grip weighted pull-up
+29f5c6f170d880e8b9ffd076b4e4abbb,4962,Wide stance barbell box squat
+1f25c6f170d880a0ba4fdffba6fa4a97,0044,Wide stance barbell good morning
+2995c6f170d880f995aed50527985177,5911,Wide stance safety squat bar good morning
+2995c6f170d88013930fe5be0247f177,0749,Wide stance Smith machine good morning
+1a45c6f170d880db8801de86d853258e,6705,Windshield wiper
+1a15c6f170d880c2bf39d2f4b0fd7b97,8882,Wrist roller wrist curl with arms directed down
+1ed5c6f170d880b299c9dfc5a8b8e76a,8882,Wrist roller wrist curl with arms raised
+1a15c6f170d88098805dfd8e8477a9dc,8882,Wrist roller wrist curl with bent elbows
+1ed5c6f170d880b7b5b9fcbfb42a308d,8882,Wrist roller wrist extension with arms directed down
+1a15c6f170d8802688a8fe6ec20d737d,8882,Wrist roller wrist extension with arms raised
+1a15c6f170d88028bfe2efd8ba6c88f7,8882,Wrist roller wrist extension with bent elbows
+3025c6f170d8808b9159e62adc205a93,2735,Yoke walk
+1a25c6f170d8808d85ace5605ff5b35e,0127,Zercher squat
+2165c6f170d88097ba97ce6ce53902de,0042,Zombie front squat
