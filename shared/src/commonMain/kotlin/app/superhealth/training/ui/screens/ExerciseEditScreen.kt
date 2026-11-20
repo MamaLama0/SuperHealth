@@ -63,7 +63,7 @@ private enum class Metric(val label: String, val codes: List<String>) {
 }
 
 /**
- * Création / modification d'un exercice personnel (edit_exercise_view de MacroFactor Workouts :
+ * Création / modification d'un exercice personnel (
  * « Build your exercise » → muscles, équipement, détails finaux). Rôle d'un muscle : touche = principal, encore = secondaire.
  */
 @OptIn(ExperimentalLayoutApi::class)

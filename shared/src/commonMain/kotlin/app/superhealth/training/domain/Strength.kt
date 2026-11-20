@@ -12,7 +12,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * Modèle de force de MacroFactor Workouts (StrengthService, Workouts-analyse/notes/03).
+ * Modèle de force (estimation des maximums à partir des séries).
  * Courbe charge ↔ répétitions jusqu'à l'échec (RTF = répétitions + RIR) :
  *   %1RM(n) = 0,8·b^(n−1) + 0,2, b = 0,965 (haut du corps) ou 0,975 (sinon)  — 0xa5c244 [OBSERVÉ]
  * Fatigue intra-séance : perte = 2,481·F^0,582 % pour F répétitions fatigantes cumulées — 0xa5f234 [OBSERVÉ]
@@ -40,8 +40,7 @@ object Strength {
     /**
      * Répétitions jusqu'à l'échec d'une série. Des partielles prouvent l'échec (RIR 0) et que la répétition complète
      * suivante était impossible : le RTF est donc entre reps et reps + 1. Bonus borné, croissant et vite saturé :
-     * 0,5·(1 − e^(−p/2)) → 1 partielle +0,20, 3 → +0,39, 5 → +0,46. Ce n'est pas un algorithme de MacroFactor : son
-     * StrengthService ne lit pas les partielles dans le binaire analysé (Workouts-analyse/notes/03 §7).
+     * 0,5·(1 − e^(−p/2)) → 1 partielle +0,20, 3 → +0,39, 5 → +0,46.
      */
     fun rtf(reps: Int, rir: Int?, partials: Int = 0): Double =
         if (partials > 0) reps + PARTIAL_MAX * (1 - exp(-partials / 2.0)) else (reps + (rir ?: 0)).toDouble()

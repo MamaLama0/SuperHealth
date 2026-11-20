@@ -182,10 +182,10 @@ import androidx.compose.material.icons.rounded.HeartBroken
 
 /**
  * Questionnaire d'accueil de SuperHealth : un seul parcours pour les trois modules.
- * - Vous : prénom, sexe, naissance, taille, poids, silhouette, activité, historique (questions de MacroFactor) ;
- * - Objectif : type, poids cible, durée (le rythme en découle, comme dans MacroFactor), protéines, diète, plancher, répartition ;
- * - Entraînement : type d'entraînement, puis expérience et salle si musculation (questions de MacroFactor Workouts) ;
- * - Connexions : montre (module LocalHealth, désactivable) et Health Connect ;
+ * - Vous : prénom, sexe, naissance, taille, poids, silhouette, activité, historique ;
+ * - Objectif : type, poids cible, durée (le rythme en découle), protéines, diète, plancher, répartition ;
+ * - Entraînement : type d'entraînement, puis expérience et salle si musculation ;
+ * - Connexions : montre (module montre, désactivable) et Health Connect ;
  * puis génération animée du programme nutrition et, au choix, du programme de musculation.
  */
 private enum class Step(val section: Int) {
@@ -200,7 +200,7 @@ private enum class Step(val section: Int) {
 
 private val SECTIONS = listOf("Profil", "Nutrition", "Musculation", "Connexions")
 
-/** Choix pour la montre : l'associer maintenant, plus tard, ou désactiver le module LocalHealth. */
+/** Choix pour la montre : l'associer maintenant, plus tard, ou désactiver le module montre. */
 private enum class WatchChoice(val label: String, val description: String) {
     PAIR("Oui, l'associer maintenant", "Recherche Bluetooth de votre montre ou bracelet"),
     LATER("Oui, plus tard", "Le module montre reste actif, à associer dans Réglages"),
@@ -302,7 +302,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
     var name by rememberSaveable { mutableStateOf(if (sim) "" else app.superhealth.ui.userName() ?: "") }
     var experience by rememberSaveable { mutableStateOf(if (sim) app.superhealth.training.domain.Experience.INTERMEDIATE else svm.training.state.value.settings.experience) }
     var gym by rememberSaveable { mutableStateOf(GymTemplate.COMMERCIAL) }
-    // Programme de musculation généré à la fin du questionnaire (questions essentielles de l'assistant de La Salle).
+    // Programme de musculation généré à la fin du questionnaire (questions essentielles de l'assistant de musculation).
     var wantProgram by rememberSaveable { mutableStateOf(true) }
     var liftGoal by rememberSaveable { mutableStateOf(app.superhealth.training.domain.Goal.HYPERTROPHY) }
     var liftDays by rememberSaveable { mutableIntStateOf(3) }
@@ -399,8 +399,8 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         targetKg >= app.superhealth.nutrition.domain.Senior.minTargetKg(age(), heightCm.toDouble(), weightKg) - 0.05
     fun targetOk() = (goal == GoalType.CUT && targetKg < weightKg - 0.05 && seniorFloorOk()) || (goal == GoalType.BULK && targetKg > weightKg + 0.05)
     /**
-     * Durée → rythme en % du poids par semaine (unité des programmes de MacroFactor) : écart / semaines / poids actuel.
-     * Les durées proposées gardent le rythme entre 0,1 % et le maximum de MacroFactor (1 % en perte, 0,5 % en prise).
+     * Durée → rythme en % du poids par semaine : écart / semaines / poids actuel.
+     * Les durées proposées gardent le rythme entre 0,1 % et le maximum (1 % en perte, 0,5 % en prise).
      */
     fun rateFor(w: Int) = abs(targetKg - weightKg) / w / weightKg * 100
     /** Cible par défaut : celle que conseillent l'âge et l'IMC (Senior), gardée si elle va déjà dans le bon sens. */
@@ -419,7 +419,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         val longest = (delta / (weightKg * 0.1 / 100)).toInt().coerceIn(shortest, 156)
         return (shortest..longest).toList()
     }
-    /** Durée par défaut : celle du rythme recommandé de MacroFactor (0,5 % en perte, 0,25 % en prise), 6 mois au moins dès 65 ans, puis le rythme exact qui en découle. */
+    /** Durée par défaut : celle du rythme recommandé (0,5 % en perte, 0,25 % en prise), 6 mois au moins dès 65 ans, puis le rythme exact qui en découle. */
     fun initPace() {
         val options = paceWeeks()
         val pref = abs(targetKg - weightKg) / (weightKg * minOf(if (goal == GoalType.BULK) 0.25 else 0.5, maxPace()) / 100)
@@ -503,7 +503,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
         val s = withGoals(settings.copy(weightUnit = unit, healthConnect = health,
             language = if (Lang.english) Language.EN else Language.FR))
         val p = draftProgram(); val g = draftGoal()
-        // Prénom : profil Gadgetbridge (envoyé aux montres qui l'affichent).
+        // Prénom : profil de la montre (envoyé aux montres qui l'affichent).
         app.superhealth.health.data.ActivityUser.edit().putString(app.superhealth.health.data.ActivityUser.PREF_USER_NAME, name.trim()).apply()
         vm.repo.prefs.setProfile(draftProfile())
         vm.repo.prefs.setProgram(p)
@@ -888,7 +888,7 @@ fun OnboardingScreen(svm: SuperViewModel, mode: OnboardingMode = OnboardingMode.
                         }
                         val kgWeek = weightKg * rate / 100
                         val (_, ci) = remember(rate, targetKg, goal) { draftCheckIn() }
-                        // repères sur l'échelle de MacroFactor, pas sur le plafond d'âge : le rythme ESPEN n'est pas « ambitieux »
+                        // repères sur l'échelle des rythmes, pas sur le plafond d'âge : le rythme ESPEN n'est pas « ambitieux »
                         val max = if (goal == GoalType.BULK) 0.5 else 1.0
                         Spacer(Modifier.height(12.dp))
                         Text(trf("%1\$s %% du poids / semaine", num(rate, 2)), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
@@ -1215,7 +1215,7 @@ private fun RowStat(label: String, value: String) {
     }
 }
 
-/** Sélecteur à molette (comme les pickers de MacroFactor). */
+/** Sélecteur à molette. */
 @Composable
 private fun Wheel(values: List<String>, initial: Int, height: Int = 220, modifier: Modifier = Modifier, onIndex: (Int) -> Unit) {
     val itemH = 44.dp
@@ -1372,7 +1372,7 @@ private fun MacroStat(label: String, g: Double, color: Color, modifier: Modifier
     }
 }
 
-/** Grille de silhouettes MacroFactor (assets body_fat) pour choisir son % de masse grasse. */
+/** Grille de silhouettes (assets body_fat) pour choisir son % de masse grasse. */
 @Composable
 fun BodyFatPicker(sex: Sex, selected: Double?, onPick: (Int) -> Unit) {
     val steps = if (sex == Sex.MALE) listOf(6, 10, 15, 20, 25, 30, 35, 40) else listOf(15, 20, 25, 30, 35, 40, 45, 50)

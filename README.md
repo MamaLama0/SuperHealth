@@ -40,3 +40,7 @@ Les journaux sont conservés sur le téléphone. Les partages entre amis sont fa
 Le flux personnel SHG1 reste compatible avec Android. Les cercles utilisent un flux distinct et des clés par époque. Le portage accepte les cartes d’indice des versions Android récentes. Le calcul propre à iOS conserve son modèle actuel et les comparaisons entre modèles différents restent désactivées.
 
 L’export social référence les fichiers multimédias distants. La sécurisation d’un ancien appareil migre les médias personnels et attend les confirmations nécessaires des autres participants. Une révocation ne peut pas effacer les copies déjà reçues. Aucun envoi APNs ne donne de garantie de notification instantanée. iOS choisit les réveils en arrière-plan.
+
+## Licence
+
+Le code est publié sous licence [GNU AGPL v3](LICENSE), comme la version Android : utilisation, modification et redistribution libres à condition de publier les modifications sous la même licence, sans aucune garantie. Les polices et ressources incluses gardent leur propre licence ; leurs textes sont dans [`assets/licenses/`](assets/licenses/) et à côté des ressources concernées.

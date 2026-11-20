@@ -88,8 +88,8 @@ enum class DashCard(val label: String, val section: Section, val watch: Boolean 
     enum class Section(val label: String) { NUTRITION("Nutrition"), HEALTH("Santé et constantes"), TRAINING("Entraînement"), SOCIAL("Social") }
 
     companion object {
-        /** Cartes ajoutées avec la reprise des tableaux de bord MacroFactor et MacroFactor Workouts. */
-        val newMacroFactorCards = listOf(NEXT_WORKOUT, HABITS, BALANCE, TRAINING_TRENDS, MUSCLE_SETS, LIFTS)
+        /** Cartes ajoutées au tableau de bord (habitudes, bilan, prochaine séance, tendances…). */
+        val newDashboardCards = listOf(NEXT_WORKOUT, HABITS, BALANCE, TRAINING_TRENDS, MUSCLE_SETS, LIFTS)
 
         /** Cartes « montre » de la 1.1 (graphiques des applis de montre, scores WHOOP), ajoutées une fois. */
         val watchCards11 = listOf(CHARGE, EFFORT, SLEEP_STAGES, DAY_TIMELINE, HRV_STATUS, STRESS_DAY, HR_ZONES, LOAD)
@@ -266,7 +266,7 @@ data class SuperSettings(
     val appLock: Boolean = false,
     val lockDelaySec: Int = 0,
     val secureScreen: Boolean = false,
-    /** Module LocalHealth (moteur Gadgetbridge : montres et capteurs Bluetooth). Désactivable. */
+    /** Module montre (montres et capteurs Bluetooth). Désactivable. */
     val watchModule: Boolean = true,
     /** Health Connect activé (lecture et écriture, voir HealthConnectHub). */
     val healthConnect: Boolean = false,
@@ -327,7 +327,7 @@ data class SuperSettings(
     val rings: List<String> = listOf("MOVE", "EXERCISE", "KCAL"),
     /** Anneaux du jour déjà placés au-dessus des constantes (migration unique). */
     val ringsAdded: Boolean = false,
-    /** Cartes reprises de MacroFactor (habitudes, bilan, prochaine séance…) déjà proposées (migration unique). */
+    /** Cartes du tableau de bord (habitudes, bilan, prochaine séance…) déjà proposées (migration unique). */
     val mfCardsAdded: Boolean = false,
     /** Cartes montre 1.1 et Progression déjà ajoutées (migration unique). */
     val watchCardsAdded: Boolean = false,
@@ -377,7 +377,7 @@ data class SuperSettings(
     val coachBrief: Boolean = true,
     /** Planificateur de repas : aliments à éviter (texte libre, transmis au fournisseur). */
     val mealsExclude: String = "",
-    /** Mesures corporelles suivies (codes de BodyMetric), comme le choix des mesures visibles de MacroFactor. */
+    /** Mesures corporelles suivies (codes de BodyMetric). */
     val bodyMetrics: List<String> = listOf("w", "h", "c", "b", "lb", "rb", "lt", "rt"),
     /** Photos de progression : paliers de l'objectif déjà photographiés ou écartés (0, 25, 50, 75, 100 %), pour l'objectif commencé le [photoGoalStart]. */
     val photoMilestones: List<Int> = emptyList(),
@@ -510,14 +510,14 @@ object SuperPrefs {
         }
         // Anneaux du jour : ajoutés une fois, juste au-dessus des constantes.
         if (!_settings.value.ringsAdded) update { it.copy(dashboard = withRings(it.dashboard), ringsAdded = true) }
-        // Nouvelles cartes MacroFactor : ajoutées une fois en fin de tableau de bord (retirables dans Personnaliser).
+        // Nouvelles cartes : ajoutées une fois en fin de tableau de bord (retirables dans Personnaliser).
         // 1.7.5 : mesures et photos de nouveau visibles, en carte du tableau de bord (après « À faire »)
         if (!_settings.value.bodyCardAdded) update { s ->
             val i = s.dashboard.indexOf(DashCard.FOCUS)
             s.copy(dashboard = if (DashCard.BODY in s.dashboard) s.dashboard else s.dashboard.toMutableList().apply { add(if (i >= 0) i + 1 else size, DashCard.BODY) },
                 bodyCardAdded = true)
         }
-        if (!_settings.value.mfCardsAdded) update { it.copy(dashboard = (it.dashboard + DashCard.newMacroFactorCards).distinct(), mfCardsAdded = true) }
+        if (!_settings.value.mfCardsAdded) update { it.copy(dashboard = (it.dashboard + DashCard.newDashboardCards).distinct(), mfCardsAdded = true) }
         // Insights sous les anneaux (ou en tête), corrélations en fin de tableau de bord.
         if (!_settings.value.insightsAdded) update { s ->
             val cards = s.dashboard.toMutableList()

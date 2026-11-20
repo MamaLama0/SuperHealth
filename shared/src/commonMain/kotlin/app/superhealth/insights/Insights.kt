@@ -9,11 +9,11 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * Insights automatiques, façon MacroFactor : des constats calculés sur les données, sans IA. Chaque règle a ses seuils
+ * Insights automatiques : des constats calculés sur les données, sans IA. Chaque règle a ses seuils
  * (nombre minimal de jours, écart minimal, et test de Welch |t| ≥ 2 quand on compare deux groupes de jours) : en dessous,
- * pas de phrase. Règles propres à SuperHealth (MacroFactor ne les publie pas), couvertes par InsightsTest.
+ * pas de phrase. Règles propres à SuperHealth, couvertes par InsightsTest.
  *
- * Le sommeil d'une date est celui de la nuit qui s'y termine (réveil ce jour-là), comme dans Gadgetbridge et Health Connect.
+ * Le sommeil d'une date est celui de la nuit qui s'y termine (réveil ce jour-là), comme dans Health Connect.
  */
 object Insights {
     enum class Type { LIFT, SLEEP_TRAINING, STEPS_WEEK, WEIGHT_RATE, KCAL_WEEK, PROTEIN_WEEK, RESTING_HR, TRAINING_MONTH, STRAIN_SIGNALS }
@@ -156,7 +156,7 @@ object Insights {
     }
 
     /**
-     * Signaux de fatigue (alerte de NOOP) : les 2 derniers jours contre une référence de ~28 jours qui s'arrête 3 jours
+     * Signaux de fatigue : les 2 derniers jours contre une référence de ~28 jours qui s'arrête 3 jours
      * avant (pour ne pas s'y diluer). Pouls au repos ≥ +5 bpm, VFC ≤ −20 %, température cutanée ≥ +0,6 °C, respiration
      * ≥ +1,5 /min : au moins deux signaux ensemble, avec 14 jours de référence. [count] = nombre de signaux.
      */

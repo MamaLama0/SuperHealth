@@ -8,8 +8,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Dépense énergétique V3 de MacroFactor (noyau 0x12c46ac, appelé 3 fois par 0x12c41cc).
- * Décodage complet : MacroFactor-analyse/notes/14 §3.
+ * Dépense énergétique V3.
  */
 object ExpenditureV3 {
 
@@ -178,7 +177,7 @@ object ExpenditureV3 {
         if (cur.type == prev.type) return 0.0
         val since = day - cur.startDay
         if (since <= 0 || since > 14 || level <= 0) return 0.0
-        // [À VÉRIFIER] MacroFactor soustrait une fraction (7·s/L) à un pourcentage : reproduit tel quel.
+        // [À VÉRIFIER] la formule soustrait une fraction (7·s/L) à un pourcentage : reproduit tel quel.
         val total = memo.getOrPut(cur.startDay) { tdee * (signedRate(cur) - 7 * slope / level) * 4 / 100 }
         return if (total == 0.0) 0.0 else total / 14
     }

@@ -47,7 +47,7 @@ data class Point(val timestampMs: Long, val value: Double)
 
 /**
  * Données santé de la plateforme (HealthSources : HealthKit sur iOS) et saisies à la main, avec la même interface que la
- * version Android (qui lisait la base Gadgetbridge) : les écrans, les scores et les insights restent identiques.
+ * version Android (qui lisait la base de la montre) : les écrans, les scores et les insights restent identiques.
  */
 object HealthRepository {
     private val LOG = LoggerFactory.getLogger("HealthRepository")

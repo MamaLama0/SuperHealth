@@ -72,7 +72,7 @@ data class RecipeItemEntity(
     val microsJson: String? = null,
 )
 
-/** Mesure corporelle (enum BodyMetric de MacroFactor : tour de taille, hanches…), en cm. */
+/** Mesure corporelle (tour de taille, hanches…), en cm. */
 @Serializable
 @Entity(tableName = "body_metrics", primaryKeys = ["epochDay", "metric"])
 data class BodyMetricEntity(val epochDay: Long, val metric: String, val value: Double)
@@ -87,7 +87,7 @@ data class ProgressPhotoEntity(
     val file: String,
 )
 
-/** Entrée du journal : valeurs figées au moment de l'ajout (comme MacroFactor). */
+/** Entrée du journal : valeurs figées au moment de l'ajout. */
 @Serializable
 @Entity(tableName = "food_entries", indices = [Index("epochDay")])
 data class FoodEntryEntity(

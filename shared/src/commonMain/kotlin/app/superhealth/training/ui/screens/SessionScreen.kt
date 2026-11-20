@@ -155,7 +155,7 @@ import androidx.compose.foundation.horizontalScroll
 internal val Danger = app.superhealth.ui.theme.Base.Red
 
 /**
- * Séance en cours, sur le modèle de WorkoutSessionView de MacroFactor Workouts :
+ * Séance en cours :
  * une page par exercice (PageView) synchronisée avec la rangée d'exercices (ExerciseRow), actions de l'exercice
  * (Info, Warm Up, Targets, Swap, Superset, Equipment, More), séries terminées repliées, minuteur de repos et
  * menu « Workout Options » (pause, réduire, terminer, abandonner).
@@ -858,7 +858,7 @@ private fun BigField(value: String, hint: String?, unit: String, modifier: Modif
     }
 }
 
-/** RIR : touche → échelle de MacroFactor (« No reps in reserve » … « Many reps in reserve »). */
+/** RIR : touche → échelle (« No reps in reserve » … « Many reps in reserve »). */
 @Composable
 private fun RirField(rir: Int?, hint: Int?, modifier: Modifier, onPick: (Int) -> Unit) {
     var open by remember { mutableStateOf(false) }

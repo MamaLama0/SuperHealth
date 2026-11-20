@@ -15,7 +15,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Scores repris des méthodes publiées que documente NOOP (docs/ANALYTICS.md), calculés pour toute source (Garmin, WHOOP,
+ * Scores tirés de méthodes publiées, calculés pour toute source (Garmin, WHOOP,
  * autres montres, Health Connect) :
  *  - **Charge** (récupération, 0–100) : z-scores robustes de la VFC (55 %), du pouls au repos (20 %), du sommeil (15 %),
  *    de la respiration (5 %) et de l'écart de température (5 %) contre des références personnelles (moyennes mobiles
@@ -94,7 +94,7 @@ object Scores {
     /**
      * Charge du matin [today] à partir des nuits précédentes ([history], de la plus ancienne à la veille). VFC : moyenne
      * des 7 derniers jours contre votre zone normale ([hrvTrend], Plews) dès 30 jours d'historique ; avant, VFC de la nuit
-     * contre une moyenne mobile (méthode NOOP). Sans VFC (règle SuperHealth, pour les montres et applis qui n'en
+     * contre une moyenne mobile. Sans VFC (règle SuperHealth, pour les montres et applis qui n'en
      * fournissent pas) : mêmes termes et même logistique, poids renormalisés, à condition d'avoir la référence du pouls au
      * repos et au moins un autre terme. Null sinon (« en calibrage »).
      *

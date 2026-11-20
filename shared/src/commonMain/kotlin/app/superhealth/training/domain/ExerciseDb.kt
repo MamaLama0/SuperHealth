@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import app.superhealth.platform.Normalizer
 
-/** Exercice de la base MacroFactor Workouts (assets/db/exercises.json, généré par tools/import_workout_assets.py). */
+/** Exercice de la base d'exercices (assets/db/exercises.json, généré par tools/import_workout_assets.py). */
 @Serializable
 data class Exercise(
     val id: String,

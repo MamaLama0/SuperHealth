@@ -72,7 +72,7 @@ import app.superhealth.nutrition.ui.components.SectionLabel
 
 /**
  * Apple Santé et montre : sur iOS, l'Apple Watch (et les montres dont l'app écrit dans Santé : Garmin Connect, Polar,
- * Withings…) passe par Apple Santé. Remplace l'écran des appareils Gadgetbridge d'Android.
+ * Withings…) passe par Apple Santé. Remplace l'écran des appareils d'Android.
  */
 @Composable
 fun DevicesScreen(vm: SuperViewModel, nav: NavHostController) {

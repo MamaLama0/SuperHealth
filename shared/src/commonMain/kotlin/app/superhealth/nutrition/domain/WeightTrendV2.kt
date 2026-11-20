@@ -11,8 +11,7 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
- * Tendance de poids V2 de MacroFactor : filtre de Kalman à 3 états (niveau, pente, transitoire) + lissage RTS.
- * Décodage : MacroFactor-analyse/notes/15 §1 (weight_trend_service, 0xaa9dcc, 0xab0fbc, 0xaaf868).
+ * Tendance de poids V2 : filtre de Kalman à 3 états (niveau, pente, transitoire) + lissage RTS.
  *
  * Sorties par jour : trend = niveau, transient = eau/contenu digestif, tween = niveau + transitoire
  * (ce que la balance afficherait sans bruit), noise = pesée − tween.

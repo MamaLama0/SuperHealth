@@ -181,7 +181,7 @@ fun BackupScreen(vm: SuperViewModel, nav: NavHostController) {
                 exportFile()
             }
             RowDivider()
-            SettingRow(tr("Restaurer un fichier"), subtitle = tr("SuperHealth (chiffré ou non), La Bouffe ou La Salle"), icon = Icons.Rounded.Restore) {
+            SettingRow(tr("Restaurer un fichier"), subtitle = tr("SuperHealth (chiffré ou non) ou anciens exports nutrition et musculation"), icon = Icons.Rounded.Restore) {
                 importFile()
             }
         }

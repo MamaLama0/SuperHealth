@@ -918,7 +918,7 @@ private fun usual(v: List<Double>): Pair<Double, Double>? {
 }
 
 /**
- * Pouls à afficher : en direct quand une montre le diffuse (médiane des 10 dernières secondes, lissage de NOOP), sinon la dernière
+ * Pouls à afficher : en direct quand une montre le diffuse (médiane des 10 dernières secondes), sinon la dernière
  * mesure du jour. L'écoute ne dure que le temps où la carte est à l'écran, puis la montre repasse en économie (LiveHeart).
  */
 @Composable

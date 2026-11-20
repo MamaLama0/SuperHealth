@@ -4,7 +4,7 @@ import app.superhealth.platform.*
 
 /**
  * Lecteur de fichiers FIT (profil ANT+/Garmin) limité aux messages d'une activité : « record » (20) pour le tracé et
- * « session » (18) pour le résumé. Remplace le FitFile de Gadgetbridge, absent sur iOS.
+ * « session » (18) pour le résumé. Remplace le lecteur FIT du moteur montre Android, absent sur iOS.
  */
 object FitParser {
     class Record(val ms: Long, val lat: Double?, val lon: Double?, val alt: Double?, val hr: Int?, val cad: Int?, val dist: Double?, val speed: Double?)

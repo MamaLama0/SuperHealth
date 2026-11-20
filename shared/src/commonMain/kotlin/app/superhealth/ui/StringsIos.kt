@@ -1,6 +1,6 @@
 package app.superhealth.ui
 
-/** Textes propres à la version iOS (Apple Santé à la place de la montre Gadgetbridge et de Health Connect). */
+/** Textes propres à la version iOS (Apple Santé à la place du moteur montre et de Health Connect). */
 object StringsIos {
     val map: Map<String, String> = mapOf(
         "Vos courses apparaîtront ici après synchronisation ou import d’un fichier." to "Your runs will appear here after syncing or importing a file.",

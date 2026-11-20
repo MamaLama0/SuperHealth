@@ -42,7 +42,8 @@ fun trf(fmt: String, vararg args: Any?): String = String.format(Lang.locale, tr(
 
 @kotlin.jvm.JvmName("trExt") fun String.tr(): String = tr(this)
 
-/** Prénom saisi (profil Gadgetbridge, envoyé aux montres) ; null s'il n'a pas été renseigné. */
-fun userName(): String? = app.superhealth.health.data.ActivityUser().name?.trim()?.takeIf { it.isNotBlank() && it != DEFAULT_GB_USER }
+/** Prénom saisi (profil de la montre, envoyé aux montres) ; null s'il n'a pas été renseigné. */
+fun userName(): String? = app.superhealth.health.data.ActivityUser().name?.trim()?.takeIf { it.isNotBlank() && it !in DEFAULT_USER_NAMES }
 
-private const val DEFAULT_GB_USER = "gadgetbridge-user"
+// Noms par défaut du profil montre Android (actuel, puis 4.2 et avant), venus d'une sauvegarde restaurée
+private val DEFAULT_USER_NAMES = setOf("superhealth-user", "gadgetbridge-user")

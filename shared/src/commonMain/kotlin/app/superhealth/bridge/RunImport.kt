@@ -41,7 +41,7 @@ object RunImport {
 
     @Serializable
     data class Run(
-        /** Négatif : distinct des séances de la montre (identifiants de la base Gadgetbridge). */
+        /** Négatif : distinct des séances de la montre (identifiants de la base de la montre). */
         val id: Long,
         val name: String,
         val kind: String,

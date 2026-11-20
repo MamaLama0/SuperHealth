@@ -80,7 +80,7 @@ import androidx.compose.ui.geometry.Size
 import app.superhealth.ui.theme.container
 
 /*
- * Cartes reprises des tableaux de bord de MacroFactor (habitudes, bilan) et de MacroFactor Workouts (prochaine séance,
+ * Cartes de tableau de bord : nutrition (habitudes, bilan) et musculation (prochaine séance,
  * tendances, séries par muscle, progression des exercices).
  */
 

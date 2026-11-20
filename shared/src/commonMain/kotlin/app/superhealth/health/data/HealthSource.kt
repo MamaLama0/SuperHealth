@@ -3,7 +3,7 @@ package app.superhealth.health.data
 import app.superhealth.platform.*
 
 /**
- * Types d'activité et de phases de sommeil, mêmes noms que l'ActivityKind de Gadgetbridge sur Android
+ * Types d'activité et de phases de sommeil, mêmes noms que l'ActivityKind du moteur montre Android
  * (les écrans et Bridge.kindOf les reconnaissent par leur nom).
  */
 enum class ActivityKind(val code: Int) {
@@ -25,7 +25,7 @@ data class SourceDevice(val address: String, val name: String, val model: String
 
 /**
  * Accès aux données de santé de la plateforme. Sur iOS : HealthKit (Apple Watch, iPhone, apps qui écrivent dans Santé) ;
- * sur l'aperçu ordinateur : des données de démonstration. Le moteur Gadgetbridge et Health Connect d'Android sont remplacés
+ * sur l'aperçu ordinateur : des données de démonstration. Le moteur montre et Health Connect d'Android sont remplacés
  * par cette source unique.
  */
 interface HealthSource {
@@ -127,8 +127,8 @@ object NoHealthSource : HealthSource {
 }
 
 /**
- * Profil d'activité (ex-ActivityUser de Gadgetbridge) : prénom, âge et objectifs quotidiens, recopiés par Bridge depuis le
- * profil nutrition. Mêmes valeurs par défaut que Gadgetbridge.
+ * Profil d'activité (ActivityUser du moteur montre Android) : prénom, âge et objectifs quotidiens, recopiés par Bridge depuis le
+ * profil nutrition. Mêmes valeurs par défaut que sur Android.
  */
 class ActivityUser {
     private val sp get() = appContext.getSharedPreferences("activity_user", Context.MODE_PRIVATE)
@@ -139,7 +139,7 @@ class ActivityUser {
     val caloriesBurntGoal: Int get() = sp.getString(PREF_USER_CALORIES_BURNT, null)?.toIntOrNull() ?: 350
     val distanceGoalMeters: Int get() = sp.getString(PREF_USER_DISTANCE_METERS, null)?.toIntOrNull() ?: 5000
     val activeTimeGoalMinutes: Int get() = sp.getString(PREF_USER_ACTIVETIME_MINUTES, null)?.toIntOrNull() ?: 60
-    /** Objectif de sommeil en minutes (Gadgetbridge : 7 h). */
+    /** Objectif de sommeil en minutes (7 h par défaut). */
     val sleepDurationGoal: Int get() = (sp.getString(PREF_USER_SLEEP_DURATION, null)?.toIntOrNull() ?: 7) * 60
     /** Objectif d'eau fixe (ml), quand l'objectif calculé est désactivé. */
     val hydrationGoalMl: Int get() = sp.getString(PREF_USER_GOAL_HYDRATION_ML, null)?.toIntOrNull() ?: 2000

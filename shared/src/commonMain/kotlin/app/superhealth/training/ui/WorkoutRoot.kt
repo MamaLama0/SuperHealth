@@ -95,7 +95,7 @@ object Picker {
 
 /**
  * Routes du module entraînement dans la navigation de SuperHealth. L'onglet « activities » (programme, autres activités)
- * est enregistré par la coque ; les sous-écrans de La Salle sont ici.
+ * est enregistré par la coque ; les sous-écrans de l'entraînement sont ici.
  */
 fun NavGraphBuilder.trainingGraph(vm: AppViewModel, nav: NavHostController) {
     composable("session") { SessionScreen(vm, nav) }

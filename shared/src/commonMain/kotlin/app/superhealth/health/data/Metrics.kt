@@ -37,7 +37,7 @@ enum class Aggregation { SUM, AVERAGE, LAST }
 
 enum class ChartKind { BARS, LINE, DOTS }
 
-/** Familles de mesures (catégories « Stats importantes » de Google Health), couleur MacroFactor de chacune. */
+/** Familles de mesures et couleur de chacune. */
 enum class Category(val label: String, private val hue: () -> Color) {
     HEART("Cœur", { HealthHues.Heart }),
     METABOLISM("Métabolisme", { HealthHues.Body }),
@@ -54,7 +54,7 @@ enum class Category(val label: String, private val hue: () -> Color) {
 }
 
 /**
- * Mesures santé lues dans Gadgetbridge (montre) ou saisies à la main. Libellés en français, traduits par tr().
+ * Mesures santé lues sur la montre ou saisies à la main. Libellés en français, traduits par tr().
  * Le poids et la masse grasse ne sont plus ici : ils passent par les pesées du module nutrition.
  */
 enum class Metric(
@@ -105,7 +105,7 @@ enum class Metric(
     TEMPERATURE("Température cutanée", "°C", Icons.Rounded.Thermostat, Aggregation.AVERAGE, ChartKind.DOTS, Category.TEMPERATURE, digits = 1,
         about = "Température du poignet la nuit. Seuls ses écarts à votre normale ont un sens."),
     RECOVERY("Charge", "%", Icons.Rounded.BatteryChargingFull, Aggregation.LAST, ChartKind.DOTS, Category.VITALS,
-        about = "Récupération du matin (0–100) : votre VFC de la nuit comparée à votre propre référence, avec le pouls au repos, le sommeil, la respiration et la température. Méthodes publiées reprises par NOOP ; pas le score officiel de WHOOP. Sans VFC, elle repose sur le pouls au repos et le sommeil."),
+        about = "Récupération du matin (0–100) : votre VFC de la nuit comparée à votre propre référence, avec le pouls au repos, le sommeil, la respiration et la température, d'après des méthodes publiées. Sans VFC, elle repose sur le pouls au repos et le sommeil."),
     EFFORT("Effort", null, Icons.Rounded.Whatshot, Aggregation.LAST, ChartKind.BARS, Category.FITNESS,
         about = "Charge cardiovasculaire de la journée (0–100) : le temps passé dans chaque zone de réserve cardiaque (Karvonen, Edwards), sur une échelle logarithmique où 100 reste exceptionnel."),
     SLEEP_DEBT("Dette de sommeil", null, Icons.Rounded.Bedtime, Aggregation.LAST, ChartKind.BARS, Category.SLEEP,

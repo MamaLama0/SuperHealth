@@ -9,7 +9,7 @@ import kotlin.math.roundToInt
  * Grammes des aliments choisis pour un repas : les calories du repas tombent sur sa cible, puis protéines, lipides et
  * glucides s'en approchent au mieux (moindres carrés, écarts comptés en kcal : 4 / 9 / 4 kcal par gramme).
  *
- * Règle propre à SuperHealth (pas de MacroFactor) : l'écart de protéines pèse double, comme dans la consigne du
+ * Règle propre à SuperHealth : l'écart de protéines pèse double, comme dans la consigne du
  * planificateur IA (« les protéines d'abord »). Chaque aliment choisi garde au moins [MIN_G] g et au plus [MAX_G] g.
  *
  * Problème convexe (quadratique, une égalité, bornes) résolu par gradient projeté : la projection sur

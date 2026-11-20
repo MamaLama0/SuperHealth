@@ -1239,7 +1239,7 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
     val day = h.heartToday.map { it.timestampMs to it.value }
     val rest = h.latest(Metric.RESTING_HR)?.second
     val now = livePts.lastOrNull()?.first ?: System.currentTimeMillis()
-    // en direct : médiane des 10 dernières secondes, qui écarte un battement aberrant sans retarder la valeur (lissage de NOOP)
+    // en direct : médiane des 10 dernières secondes, qui écarte un battement aberrant sans retarder la valeur
     val current = livePts.filter { it.first >= now - 10_000 }.map { it.second }.sorted().let { w -> w.getOrNull(w.size / 2) }
         ?: day.lastOrNull()?.second
     Tile(c, tr("Cœur"), modifier, onClick = { nav.go("h/metric/HEART_RATE") }, bottom = {
@@ -1277,7 +1277,7 @@ private fun HeartCard(c: DashCard, h: HealthSnap, nav: NavHostController, modifi
     }
 }
 
-/** Macro restante : pastille teintée de la couleur MacroFactor de la macro. */
+/** Macro restante : pastille teintée de la couleur de la macro. */
 @Composable
 private fun MacroPill(label: String, value: Double, target: Double, color: Color) {
     val left = target - value

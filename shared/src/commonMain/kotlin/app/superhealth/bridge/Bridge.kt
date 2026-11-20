@@ -38,7 +38,7 @@ import app.superhealth.training.domain.WeightUnit as TWeightUnit
  * - profil (sexe, naissance, taille), langue, thème et unités : module nutrition (questionnaire d'accueil, Réglages) ;
  * - poids de corps : dernière pesée du module nutrition (saisie, balance de la montre ou Health Connect) ;
  * - pas : la montre quand elle les mesure, sinon Health Connect.
- * Ces valeurs sont recopiées vers le module entraînement et vers le profil Gadgetbridge (envoyé aux montres).
+ * Ces valeurs sont recopiées vers le module entraînement et vers le profil de la montre (envoyé aux montres).
  */
 object Bridge {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -78,7 +78,7 @@ object Bridge {
 
     /**
      * Montre → nutrition : pas des 14 derniers jours (ils affinent la dépense énergétique) et pesées d'une balance
-     * gérée par Gadgetbridge, pour les jours sans pesée saisie.
+     * gérée par le moteur montre, pour les jours sans pesée saisie.
      */
     suspend fun pullWatch(ctx: Context) {
         if (!Watch.enabled || HealthRepository.devices().isEmpty()) return

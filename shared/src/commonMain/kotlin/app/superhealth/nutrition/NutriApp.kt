@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 
-/** Module nutrition (ex-application La Bouffe), initialisé par SuperHealthApp. */
+/** Module nutrition, initialisé par SuperHealthApp. */
 object NutriApp {
     lateinit var repository: Repository
         private set

@@ -35,6 +35,5 @@ object Strings13 {
         "Musculation, rien n'est enregistré" to "Strength training, nothing is saved",
         "Refaire le questionnaire" to "Redo the questionnaire",
         "« Passer » annule" to "\"Skip\" cancels",
-        "Gadgetbridge (AGPL) · Open Food Facts (ODbL) · OSAV" to "Gadgetbridge (AGPL) · Open Food Facts (ODbL) · FSVO",
     )
 }

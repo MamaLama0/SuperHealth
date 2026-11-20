@@ -7,7 +7,7 @@ import app.superhealth.training.data.AppState
 import app.superhealth.training.domain.SetType
 
 /**
- * Séance en cours hors de l'app (équivalent des Live Activities de MacroFactor Workouts ; notification permanente sur
+ * Séance en cours hors de l'app (équivalent des Live Activities ; notification permanente sur
  * Android) : exercice et série à faire, séries faites, chronomètre de séance ou compte à rebours du repos.
  */
 object SessionNotification {

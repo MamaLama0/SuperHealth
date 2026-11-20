@@ -4,7 +4,7 @@ import app.superhealth.platform.*
 
 import kotlinx.serialization.Serializable
 
-// Enums alignés sur ceux observés dans MacroFactor (notes/09 §3, objs.txt de dae).
+// Énumérations du domaine nutrition.
 
 @Serializable enum class Sex { MALE, FEMALE }
 
@@ -24,12 +24,13 @@ import kotlinx.serialization.Serializable
 }
 
 /**
- * Équation du métabolisme de base. MACROFACTOR_B = sélection automatique observée (0x12bee54) :
+ * Équation du métabolisme de base. AUTO = sélection automatique :
  * non-athlète → équation B, athlète « récréatif » → moyenne A/B, sportif/athlète → équation A.
  */
 @Serializable enum class BmrEquation(val label: String) {
-    MACROFACTOR_B("Automatique"),
-    MACROFACTOR_A("Masse maigre seule"),
+    // Noms enregistrés dans les profils et sauvegardes existants
+    @kotlinx.serialization.SerialName("MACROFACTOR_B") AUTO("Automatique"),
+    @kotlinx.serialization.SerialName("MACROFACTOR_A") LEAN_MASS("Masse maigre seule"),
     CUNNINGHAM("Cunningham (1980)"),
 }
 
@@ -96,7 +97,7 @@ import kotlinx.serialization.Serializable
 /** Taille du texte de toute l'app, multipliée à celle choisie dans les réglages du téléphone. */
 @Serializable enum class TextSize(val label: String, val scale: Float) { SMALL("Petite", 0.9f), NORMAL("Normale", 1f), LARGE("Grande", 1.12f), XLARGE("Très grande", 1.25f) }
 
-/** Couleurs d'accent proposées par MacroFactor (enum ThemeColor observé : pink, blue, green, yellow, purple, orange, gray). */
+/** Couleurs d'accent proposées (rose, bleu, vert, jaune, violet, orange, gris). */
 @Serializable enum class AccentColor(val label: String) {
     BLUE("Bleu"), PINK("Rose"), GREEN("Vert"), YELLOW("Jaune"), PURPLE("Violet"), ORANGE("Orange"), GRAY("Gris")
 }
@@ -114,7 +115,7 @@ data class Profile(
     val bodyFatPct: Double? = null,
     val weightChange: WeightChange = WeightChange.UNKNOWN,
     val lifetimeWeight: LifetimeWeight = LifetimeWeight.UNKNOWN,
-    val bmrEquation: BmrEquation = BmrEquation.MACROFACTOR_B,
+    val bmrEquation: BmrEquation = BmrEquation.AUTO,
     val athlete: Athlete = Athlete.NONE,
     val exercise: ExerciseLevel = ExerciseLevel.NONE,
 )
@@ -134,7 +135,7 @@ data class Program(
     val staticTdee: Double = 2200.0,
     /** Dépense initiale saisie à la main ; null = calcul BMR × activité. */
     val initialTdeeOverride: Double? = null,
-    /** 1 = lundi … 7 = dimanche (lundi par défaut, comme MacroFactor). */
+    /** 1 = lundi … 7 = dimanche (lundi par défaut). */
     val checkInDay: Int = 1,
     /** Cibles manuelles (style MANUAL). */
     val manualKcal: Double = 2000.0,
@@ -281,7 +282,7 @@ data class CheckIn(
 @Serializable
 data class DayTarget(val kcal: Double, val protein: Double, val fat: Double, val carbs: Double)
 
-/** Mesures corporelles (enum BodyMetric observé, codes courts de MacroFactor), en cm. */
+/** Mesures corporelles (codes courts), en cm. */
 enum class BodyMetric(val code: String, val label: String, val bilateral: Boolean = false) {
     NECK("n", "Cou"), SHOULDERS("s", "Épaules"), CHEST("c", "Poitrine"), BUST("b", "Buste"),
     WAIST("w", "Taille"), HIPS("h", "Hanches"),

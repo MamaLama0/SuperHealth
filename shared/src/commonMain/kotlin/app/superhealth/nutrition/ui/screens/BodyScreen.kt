@@ -117,7 +117,7 @@ private fun pairLabel(m: BodyMetric) = when (m) {
     BodyMetric.LEFT_THIGH -> "Cuisses"; BodyMetric.LEFT_CALF -> "Mollets"; BodyMetric.LEFT_ANKLE -> "Chevilles"; else -> m.label
 }
 
-/** Mesures proposées selon le sexe (poitrine ou buste, comme MacroFactor). */
+/** Mesures proposées selon le sexe (poitrine ou buste). */
 internal fun bodyMetricsFor(sex: Sex) = BodyMetric.entries.filter { (it != BodyMetric.BUST || sex == Sex.FEMALE) && (it != BodyMetric.CHEST || sex == Sex.MALE) }
 
 /** Photo enregistrée dans filesDir/photos : redressée (orientation de l'appareil photo appliquée), réduite à 1600 px. */
@@ -144,7 +144,7 @@ internal fun PhotoThumb(ctx: Context, file: String, modifier: Modifier, sample: 
 /**
  * Corps : photos de progression (comparaison avant / après, paliers de l'objectif) et mesures (celles choisies, saisie en
  * feuille, tendance de chacune, comparaison de toutes les mesures entre la première et la dernière date), comme l'écran
- * « Body Metrics » de MacroFactor.
+ * Mesures corporelles.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -439,7 +439,7 @@ private fun MeasureSheet(shown: List<BodyMetric>, byMetric: Map<String, List<Bod
     }
 }
 
-/** Mesures suivies (comme le choix des données visibles de MacroFactor). */
+/** Mesures suivies. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChooseSheet(available: List<BodyMetric>, chosen: List<String>, onDismiss: () -> Unit) {

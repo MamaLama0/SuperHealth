@@ -97,7 +97,7 @@ private fun PlateRow.macros(): Macros {
 private fun loadJpeg(jpeg: ByteArray): ByteArray? = runCatching { downscaleJpeg(jpeg, 1024, 85) }.getOrNull()
 
 /**
- * Journalisation par IA (« AI Describe » / photo de MacroFactor) : description et/ou photo → assiette à vérifier → journal.
+ * Journalisation par IA (description ou photo) : description et/ou photo → assiette à vérifier → journal.
  */
 @Composable
 fun AiLogScreen(vm: AppViewModel, onBack: () -> Unit, onSettings: () -> Unit, onAdded: () -> Unit = onBack) {
@@ -321,7 +321,7 @@ fun AiSettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
 }
 
 /**
- * Import par IA (« Import with AI » et étiquettes nutritionnelles de MacroFactor) :
+ * Import par IA (texte et étiquettes nutritionnelles) :
  * [recipe] = photo et/ou texte d'une recette → brouillon de recette ; sinon photo d'étiquette → nouvel aliment.
  */
 @Composable

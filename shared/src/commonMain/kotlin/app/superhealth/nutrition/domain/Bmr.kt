@@ -53,7 +53,7 @@ object Bmr {
     }
 
     /**
-     * % masse grasse sans mesure (règle SuperHealth) : le défaut de MacroFactor (25 / 35 %), relevé par CUN-BAE quand
+     * % masse grasse sans mesure (règle SuperHealth) : 25 / 35 % par défaut, relevé par CUN-BAE quand
      * l'IMC le dit plus haut. En obésité sévère, 25 % surestimait la masse maigre de 30 à 40 kg, donc les protéines.
      */
     fun estimatedBodyFat(sex: Sex, ageYears: Int?, weightKg: Double?, heightCm: Double?): Double {
@@ -84,15 +84,15 @@ object Bmr {
         // règle SuperHealth : en obésité sans masse grasse mesurée, les équations à masse maigre reposent sur une estimation ;
         // Mifflin-St Jeor n'en a pas besoin et reste la plus juste dans cette population
         val bmi = if (profile.heightCm >= 100) weightKg / (profile.heightCm / 100).let { it * it } else 0.0
-        if (profile.bmrEquation == BmrEquation.MACROFACTOR_B && measured == null && bmi >= MIFFLIN_BMI)
+        if (profile.bmrEquation == BmrEquation.AUTO && measured == null && bmi >= MIFFLIN_BMI)
             return mifflin(profile.sex, weightKg, profile.heightCm, ageYears) * factor
         val a = equationA(lbm, factor)
         val b = equationB(lbm, fatMass(weightKg, bf), ageYears, factor)
         return when (profile.bmrEquation) {
             BmrEquation.CUNNINGHAM -> cunningham(lbm)
-            BmrEquation.MACROFACTOR_A -> a
+            BmrEquation.LEAN_MASS -> a
             // Sélection observée (0x12bee54) selon AthleteOptions.
-            BmrEquation.MACROFACTOR_B -> when (profile.athlete) {
+            BmrEquation.AUTO -> when (profile.athlete) {
                 Athlete.NONE -> b
                 Athlete.RECREATIONAL -> (a + b) / 2
                 Athlete.SPORTING, Athlete.ATHLETE -> a

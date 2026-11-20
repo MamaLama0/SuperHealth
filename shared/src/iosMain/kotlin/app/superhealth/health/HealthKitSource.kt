@@ -151,7 +151,7 @@ import platform.HealthKit.unitDividedByUnit
 /**
  * Apple Santé : l'Apple Watch (et toute app qui écrit dans Santé : Garmin Connect, Polar Flow, Withings…) fournit pas,
  * pouls, VFC, sommeil par phases, SpO2, respiration, température au poignet, VO2 max et séances avec tracé GPS.
- * Remplace le moteur Gadgetbridge et Health Connect de la version Android.
+ * Remplace le moteur montre et Health Connect de la version Android.
  */
 object HealthKitSource : HealthSource {
     private val store by lazy { HKHealthStore() }

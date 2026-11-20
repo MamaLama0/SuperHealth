@@ -85,7 +85,7 @@ fun ScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? 
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier, trailing: @Composable () -> Unit = {}) = app.superhealth.nutrition.ui.components.SectionLabel(tr(text), modifier, trailing)
 
-/** Icône d'aliment MacroFactor associée au nom ; pastille neutre si aucune ne correspond. */
+/** Icône d'aliment associée au nom ; pastille neutre si aucune ne correspond. */
 @Composable
 fun AssetImage(path: String, modifier: Modifier = Modifier, crop: Boolean = false) {
     val bmp = remember(path) { Assets.bitmap(path) }

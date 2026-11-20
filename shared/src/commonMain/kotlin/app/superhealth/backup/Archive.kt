@@ -21,9 +21,9 @@ import kotlinx.coroutines.withContext
 /**
  * Sauvegarde complète en une archive : nutrition, musculation, réglages SuperHealth et saisies santé, au même format que
  * l'app Android (une sauvegarde Android se restaure sur iPhone avec son code ; sa partie « montre.zip », la base
- * Gadgetbridge, est ignorée : sur iOS les données de montre viennent d'Apple Santé). Toujours chiffrée avec le code de
- * récupération ([BackupCrypto]) ; la restauration lit aussi les anciennes archives ZIP en clair et les JSON de La Bouffe /
- * La Salle.
+ * de la montre, est ignorée : sur iOS les données de montre viennent d'Apple Santé). Toujours chiffrée avec le code de
+ * récupération ([BackupCrypto]) ; la restauration lit aussi les anciennes archives ZIP en clair et les anciens
+ * exports JSON nutrition et musculation.
  */
 object Archive {
     const val EXT = "shbak"

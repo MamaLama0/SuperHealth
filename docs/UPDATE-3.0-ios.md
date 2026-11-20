@@ -15,7 +15,7 @@ Portage des interfaces et fonctions de la version Android `v3.0` (`7b304eba69`),
 
 Les widgets s'ajoutent depuis la galerie iOS : appui long sur l'écran d'accueil, Modifier, Ajouter un widget, SuperHealth. Les widgets existants (calories, anneaux, poids, séance, sommeil, constantes et journée) restent disponibles.
 
-iOS décide des actualisations en arrière-plan. La fréquence demandée au relais est un intervalle minimum ; l'ouverture de l'app permet une mise à jour immédiate. Les données de montre viennent d'Apple Santé ; la connexion directe Gadgetbridge reste propre à Android.
+iOS décide des actualisations en arrière-plan. La fréquence demandée au relais est un intervalle minimum ; l'ouverture de l'app permet une mise à jour immédiate. Les données de montre viennent d'Apple Santé ; la connexion directe aux montres reste propre à Android.
 
 Le visuel de série utilise l'illustration locale et le compteur, sans moteur Rive Android. Les contrôles vidéo sont ceux d'iOS. Les ambiances synthétiques du module Méditation sont converties en AAC pour AVAudioPlayer.
 

@@ -136,7 +136,7 @@ object InsightData {
     fun invalidate() { cached = null }
 }
 
-/** Phrase du constat, courte (tutoiement comme MacroFactor en français). */
+/** Phrase du constat, courte (tutoiement). */
 fun Insights.Insight.text(s: app.superhealth.nutrition.domain.Settings): String {
     val v = abs(value)
     fun pct() = formatNumber(v, if (v < 10) 1 else 0)

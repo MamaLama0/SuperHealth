@@ -63,7 +63,7 @@ object AiGift {
 }
 
 /**
- * Journalisation par IA (photo et/ou texte), calquée sur le pipeline de MacroFactor (ai_features/search, notes/16) :
+ * Journalisation par IA (photo et/ou texte) :
  * 1. analyze_food : le modèle liste les aliments en lignes délimitées par « | » (comme AnalyzedFoods / NutritionLabelFoodDsvParser),
  *    avec ici une estimation nutritionnelle par aliment (rôle de generate_food) ;
  * 2. query_foods : recherche locale (bibliothèque + base suisse) à la place de Typesense ;
@@ -322,7 +322,7 @@ object AiFood {
             requestMethod = "POST"; doOutput = true; connectTimeout = 15000; readTimeout = 90000
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Authorization", "Bearer ${cfg.effectiveKey}")
-            if (cfg.provider == AiProvider.OPENROUTER) { setRequestProperty("X-Title", "La Bouffe") }
+            if (cfg.provider == AiProvider.OPENROUTER) { setRequestProperty("X-Title", "SuperHealth") }
         }
         try {
             conn.outputStream.use { it.write(body.toString().toByteArray()) }

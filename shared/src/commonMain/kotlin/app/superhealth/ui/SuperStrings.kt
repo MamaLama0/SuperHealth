@@ -236,7 +236,6 @@ object SuperStrings {
 
         // Montre et appareils
         "Montre et appareils" to "Watch & Devices",
-        "Module montre (LocalHealth)" to "Watch module (LocalHealth)",
         "Connexion Bluetooth aux montres, bracelets et balances" to "Bluetooth connection to watches, bands and scales",
         "Module désactivé : aucun appareil connecté. Les constantes viennent de Apple Santé s'il est activé." to "Module off: no device connected. Vitals come from Apple Health if enabled.",
         "Appareils" to "Devices",
@@ -248,10 +247,8 @@ object SuperStrings {
         "Pas, cœur, sommeil et séances enregistrés par la montre" to "Steps, heart, sleep and workouts recorded by the watch",
         "Données de la montre" to "Watch data",
         "Export, import et sauvegarde automatique" to "Export, import and auto backup",
-        "Réglages Gadgetbridge" to "Gadgetbridge settings",
         "Notifications, connexion, journal" to "Notifications, connection, logs",
         "Centre de contrôle" to "Control center",
-        "Interface complète de Gadgetbridge" to "Full Gadgetbridge interface",
         "Sexe, âge, taille, poids et objectif de pas sont envoyés à la montre." to "Sex, age, height, weight and step goal are sent to the watch.",
         "Batterie %1\$s %%" to "Battery %1\$s%%",
         "Synchro" to "Sync",
@@ -275,7 +272,6 @@ object SuperStrings {
         "Plugins" to "Plugins",
         "Programme, bases d'aliments, IA, algorithmes" to "Program, food databases, AI, algorithms",
         "Salles, progression, échauffements, repos" to "Gyms, progression, warm-ups, rest",
-        "Montre (LocalHealth)" to "Watch (LocalHealth)",
         "%1\$s appareil(s) associé(s)" to "%1\$s paired device(s)",
         "Désactivé" to "Off",
         "Associer, synchroniser, réglages de la montre" to "Pair, sync, watch settings",
@@ -300,8 +296,6 @@ object SuperStrings {
         "À propos" to "About",
         "Usage personnel · sans compte · données sur l'appareil" to "Personal use · no account · on-device data",
         "Sources" to "Sources",
-        "MacroFactor et MacroFactor Workouts (interface, algorithmes) · Gadgetbridge (montres, AGPL) · Open Food Facts (ODbL) · OSAV" to
-            "MacroFactor and MacroFactor Workouts (interface, algorithms) · Gadgetbridge (watches, AGPL) · Open Food Facts (ODbL) · FSVO",
         "Annuler" to "Cancel",
         "Valider" to "Save",
         "Sauvegarde exportée" to "Backup exported",
@@ -345,8 +339,6 @@ object SuperStrings {
         "Le module montre est désactivé (réactivable dans Réglages)" to "The watch module is turned off (you can turn it back on in Settings)",
         "Montre associée" to "Watch paired",
         "Rechercher ma montre" to "Find my watch",
-        "Compatible avec les montres prises en charge par Gadgetbridge (Garmin, Amazfit, Xiaomi, Huawei, Pebble…)." to
-            "Works with watches supported by Gadgetbridge (Garmin, Amazfit, Xiaomi, Huawei, Pebble…).",
         "Échange avec vos autres apps santé, sans quitter le téléphone." to "Shares data with your other health apps, without leaving the phone.",
         "Fréquence cardiaque, sommeil et activités des autres apps" to "Heart rate, sleep and activities from other apps",
         "Repas, pesées et séances partagés avec vos autres apps" to "Meals, weigh-ins and workouts shared with your other apps",

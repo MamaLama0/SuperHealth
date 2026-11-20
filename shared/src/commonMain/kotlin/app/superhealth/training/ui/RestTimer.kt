@@ -3,7 +3,7 @@ package app.superhealth.training.ui
 import app.superhealth.platform.*
 
 /**
- * Fin du repos (RestTimerSoundChannel de MacroFactor Workouts) : notification locale programmée avec le son de l'app,
+ * Fin du repos : notification locale programmée avec le son de l'app,
  * affichée même app ouverte (bandeau et son), comme l'alarme système d'Android.
  */
 object RestTimer {

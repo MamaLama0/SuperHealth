@@ -12,12 +12,11 @@ import app.superhealth.platform.LruCache
 import app.superhealth.platform.Normalizer
 
 /**
- * Icônes d'aliments en pixel-art uniquement, repérées par les identifiants MacroFactor (iNNNN) et un index de termes anglais
- * (assets/foods/index.json, construit depuis icon_metadata.jsonl par tools/import_mf_assets.sh) ; les images MacroFactor
- * elles-mêmes ne sont plus dans l'APK (originaux dans ../Asset-free/assets/foods).
+ * Icônes d'aliments en pixel-art uniquement, repérées par des identifiants (iNNNN) et un index de termes anglais
+ * (assets/foods/index.json).
  * Les noms français sont traduits mot à mot via [FR_EN] avant la recherche.
  * assets/foods/pack.json échange une partie de ces icônes contre le pack pixel-art acheté (foods/pack/NNN.png, 16×16)
- * et ajoute quelques aliments absents de MacroFactor (identifiants « pNNN ») ; les autres ont une version pixel-art générée
+ * et ajoute quelques aliments absents de l'index (identifiants « pNNN ») ; les autres ont une version pixel-art générée
  * dans le même style (foods/gen/iNNNN.png, tools/pixel_food_icons.js).
  */
 object FoodIcons {

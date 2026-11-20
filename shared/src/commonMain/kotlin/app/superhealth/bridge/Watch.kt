@@ -8,7 +8,7 @@ import app.superhealth.health.data.HealthSources
 import app.superhealth.health.data.SourceDevice
 
 /**
- * Module santé : sur iOS, Apple Santé (HealthKit) tient le rôle du moteur Gadgetbridge d'Android. Les montres (Apple Watch,
+ * Module santé : sur iOS, Apple Santé (HealthKit) tient le rôle du moteur montre d'Android. Les montres (Apple Watch,
  * Garmin via Garmin Connect…) écrivent dans Santé ; SuperHealth lit Santé. Désactivé, ses cartes disparaissent.
  */
 object Watch {

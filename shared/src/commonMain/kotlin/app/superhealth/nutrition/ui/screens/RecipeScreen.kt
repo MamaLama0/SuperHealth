@@ -55,7 +55,7 @@ import app.superhealth.nutrition.ui.toNum
 import kotlinx.coroutines.launch
 
 /**
- * Éditeur de recette (RecipeWizardService de MacroFactor) : nom, portions, poids final facultatif (cuisson),
+ * Éditeur de recette : nom, portions, poids final facultatif (cuisson),
  * ingrédients ajoutés depuis la recherche. Les valeurs par portion sont recalculées en direct.
  */
 @Composable

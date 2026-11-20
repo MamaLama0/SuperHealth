@@ -106,7 +106,7 @@ fun FoodSearchScreen(vm: AppViewModel, mode: Int, minuteArg: Int, onDone: () -> 
     var selected by remember { mutableStateOf<FoodEntity?>(null) }
     var createBarcode by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
-    /** Ajouts faits depuis l'ouverture : l'écran reste ouvert pour enchaîner les aliments (comme MacroFactor). */
+    /** Ajouts faits depuis l'ouverture : l'écran reste ouvert pour enchaîner les aliments */
     var added by remember { mutableStateOf(0) }
     var notice by remember { mutableStateOf<String?>(null) }
     /** Entrées du dernier ajout, pour « Annuler ». */

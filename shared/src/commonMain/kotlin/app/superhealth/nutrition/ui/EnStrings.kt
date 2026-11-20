@@ -3,7 +3,7 @@ package app.superhealth.nutrition.ui
 import app.superhealth.platform.*
 
 
-/** Dictionnaire français → anglais (libellés MacroFactor quand ils existent). Généré depuis les appels tr()/trf(). */
+/** Dictionnaire français → anglais. Généré depuis les appels tr()/trf(). */
 object EnStrings {
     val map: Map<String, String> = hashMapOf(
         "7 j · Macros" to "7 days · Macros",
@@ -320,7 +320,6 @@ object EnStrings {
         "Effacer toutes les données" to "Erase all data",
         "À propos" to "About",
         "Usage personnel · sans compte · données sur l'appareil" to "Personal use · no account · data on device",
-        "Open Food Facts (ODbL) · OSAV (naehrwertdaten.ch) · MacroFactor" to "Open Food Facts (ODbL) · FSVO (naehrwertdaten.ch) · MacroFactor",
         "Tout effacer ?" to "Erase everything?",
         "Tout sera supprimé définitivement. Pensez à exporter une sauvegarde." to "Everything will be permanently deleted. Consider exporting a backup.",
         "Non disponible sur cet appareil" to "Not available on this device",
@@ -531,7 +530,6 @@ object EnStrings {
         "Année de naissance" to "Year of birth",
         "Taille" to "Height",
         "Masse grasse de référence (facultatif)" to "Reference body fat (optional)",
-        "Sans valeur : %1\$s %% (valeur par défaut de MacroFactor)." to "Default: %1\$s %% (MacroFactor default).",
         "Activité hors entraînement" to "Basic Activity Level",
         "Profil sportif" to "Athletic profile",
         "Évolution récente du poids" to "Recent weight change",
@@ -547,7 +545,6 @@ object EnStrings {
         "J'ai déjà pesé nettement plus" to "I used to weigh much more",
         "Jamais plus lourd qu'aujourd'hui" to "Never heavier than today",
         "Je ne sais pas" to "I don't know",
-        "MacroFactor (masse maigre seule)" to "MacroFactor (lean mass only)",
         "Non" to "No",
         "Loisir" to "Recreational",
         "Sportif" to "Sporting",
